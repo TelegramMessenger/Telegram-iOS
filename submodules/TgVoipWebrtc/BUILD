@@ -346,6 +346,54 @@ cc_test(
 )
 
 cc_test(
+    name = "content_negotiation_test",
+    srcs = ["tgcalls/tgcalls/v2/ContentNegotiationTest.cpp"],
+    copts = [
+        "-I{}/tgcalls/tgcalls".format("submodules/TgVoipWebrtc"),
+        "-Ithird-party/webrtc/webrtc",
+        "-Ithird-party/webrtc/dependencies",
+        "-Ithird-party/webrtc/absl",
+        "-Ithird-party/libyuv",
+        "-DRTC_ENABLE_VP9",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-w",
+    ] + select({
+        "@platforms//os:linux": ["-DWEBRTC_LINUX", "-DWEBRTC_POSIX"],
+        "//conditions:default": ["-DWEBRTC_MAC", "-DWEBRTC_POSIX"],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": ["-lpthread", "-lm", "-ldl"],
+        "//conditions:default": ["-framework", "CoreFoundation", "-framework", "Security"],
+    }),
+    deps = [":tgcalls_core"],
+)
+
+cc_test(
+    name = "signaling_sctp_options_test",
+    srcs = ["tgcalls/tgcalls/v2/SignalingSctpOptionsTest.cpp"],
+    copts = [
+        "-I{}/tgcalls/tgcalls".format("submodules/TgVoipWebrtc"),
+        "-Ithird-party/webrtc/webrtc",
+        "-Ithird-party/webrtc/dependencies",
+        "-Ithird-party/webrtc/absl",
+        "-Ithird-party/libyuv",
+        "-DRTC_ENABLE_VP9",
+        "-DNDEBUG",
+        "-std=c++17",
+        "-w",
+    ] + select({
+        "@platforms//os:linux": ["-DWEBRTC_LINUX", "-DWEBRTC_POSIX"],
+        "//conditions:default": ["-DWEBRTC_MAC", "-DWEBRTC_POSIX"],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": ["-lpthread", "-lm", "-ldl"],
+        "//conditions:default": ["-framework", "CoreFoundation", "-framework", "Security"],
+    }),
+    deps = [":tgcalls_core"],
+)
+
+cc_test(
     name = "streaming_audio_renderer_test",
     srcs = ["tgcalls/tgcalls/group/StreamingAudioRendererTest.cpp"],
     copts = [

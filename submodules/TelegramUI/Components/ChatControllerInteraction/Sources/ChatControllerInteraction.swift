@@ -391,11 +391,13 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
             
             if let isOpeningMediaSignal = self.isOpeningMediaSignal {
                 self.isOpeningMediaValue = true
-                self.isOpeningMediaDisposable = (isOpeningMediaSignal |> filter { !$0 } |> take(1) |> timeout(1.0, queue: .mainQueue(), alternate: .single(false)) |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                // A gallery reports `false` once it is on screen; that waits for its first item (up to 2 s), so the
+                // longer timeout only matters should it never report.
+                self.isOpeningMediaDisposable = (chatIsOpeningMedia(blockInteraction: isOpeningMediaSignal, unannouncedTimeout: 1.0, announcedTimeout: 4.0, queue: .mainQueue()) |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                     guard let self else {
                         return
                     }
-                    self.isOpeningMediaValue = false
+                    self.isOpeningMediaValue = value
                 })
             }
         }

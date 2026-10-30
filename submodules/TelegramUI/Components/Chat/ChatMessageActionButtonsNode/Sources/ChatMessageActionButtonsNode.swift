@@ -12,6 +12,8 @@ import TextLoadingEffect
 import ComponentFlow
 import ComponentDisplayAdapters
 import EmojiStatusComponent
+import ChatMessageItemCommon
+import StaticGlassBackground
 
 private let titleFont = Font.medium(16.0)
 
@@ -82,6 +84,15 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     private var maskPath: CGPath?
     private var loadingEffectView: TextLoadingEffectView?
     
+    // Bubble mode off: the button stands on a capsule captured from glass. The button view and everything drawn on the
+    // capsule live in its content view, as plain UIKit views. A node is built for one mode; switching the mode builds a
+    // new one, so a node with bubbles never carries any of this.
+    let isGlass: Bool
+    private var glassView: StaticGlassBackgroundView?
+    private var glassContentView: UIView?
+    private var glassTitleView: ImmediateTextView?
+    private var glassIconView: UIImageView?
+    
     private var absolutePosition: (CGRect, CGSize)?
     
     private var button: ReplyMarkupButton?
@@ -94,7 +105,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     
     private var progressDisposable: Disposable?
     
-    override init() {
+    init(isGlass: Bool) {
+        self.isGlass = isGlass
         self.accessibilityArea = AccessibilityAreaNode()
         self.accessibilityArea.accessibilityTraits = .button
         
@@ -124,6 +136,17 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             if let strongSelf = self {
                 if let button = strongSelf.button, case .disabled = button.action {
                     // No press feedback for a disabled button — it must not read as tappable.
+                    return
+                }
+                if let glassView = strongSelf.glassView {
+                    // The capsule dims as the plate does.
+                    if highlighted {
+                        glassView.layer.removeAnimation(forKey: "opacity")
+                        glassView.alpha = 0.55
+                    } else {
+                        glassView.alpha = 1.0
+                        glassView.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    }
                     return
                 }
                 if highlighted {
@@ -184,7 +207,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 let loadingEffectView = TextLoadingEffectView(frame: CGRect())
                 self.loadingEffectView = loadingEffectView
                 
-                if let iconNode = self.iconNode, iconNode.view.superview != nil {
+                if let glassContentView = self.glassContentView {
+                    glassContentView.insertSubview(loadingEffectView, at: 0)
+                } else if let iconNode = self.iconNode, iconNode.view.superview != nil {
                     self.view.insertSubview(loadingEffectView, belowSubview: iconNode.view)
                 } else if let titleNode = self.titleNode, titleNode.view.superview != nil {
                     self.view.insertSubview(loadingEffectView, belowSubview: titleNode.view)
@@ -222,6 +247,193 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         
     }
     
+    /// Bubble mode off: the button as a capsule captured from glass, in place of the plate, its mask and the wallpaper
+    /// views behind it.
+    /// The title and icons are laid out as on the plate, except the type icon, which moves to the capsule's right end.
+    fileprivate func applyGlass(width: CGFloat, button: ReplyMarkupButton, customInfo: ChatMessageActionButtonsNode.CustomInfo?, theme: ChatPresentationThemeData, attributedTitle: NSAttributedString, titleLayout: TextNodeLayout, titleConstrainedSize: CGSize, iconImage: UIImage?, tintColor: UIColor?, emojiIconSize: CGSize, emojiIconSpacing: CGFloat, titleColor: UIColor, context: AccountContext, message: EngineMessage, title: String, animation: ListViewItemUpdateAnimation) {
+        let height = chatMessageBubblelessGlassCapsuleHeight
+        let capsuleFrame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: height))
+        
+        let glassView: StaticGlassBackgroundView
+        let glassContentView: UIView
+        if let currentGlassView = self.glassView, let currentContentView = self.glassContentView {
+            glassView = currentGlassView
+            glassContentView = currentContentView
+            animation.animator.updateFrame(layer: glassView.layer, frame: capsuleFrame, completion: nil)
+            animation.animator.updateFrame(layer: glassContentView.layer, frame: capsuleFrame, completion: nil)
+        } else {
+            glassView = StaticGlassBackgroundView()
+            glassView.frame = capsuleFrame
+            self.glassView = glassView
+            self.view.insertSubview(glassView, at: 0)
+            
+            glassContentView = UIView(frame: capsuleFrame)
+            glassContentView.isUserInteractionEnabled = false
+            self.glassContentView = glassContentView
+            glassView.contentView.addSubview(glassContentView)
+        }
+        // The capsule's rim and shadow reach past it.
+        self.clipsToBounds = false
+        
+        let isEnabled = customInfo?.isEnabled ?? true
+        let glassTint: StaticGlassTint
+        switch button.style?.color {
+        case .primary:
+            glassTint = .color(theme.theme.list.itemAccentColor.withMultipliedAlpha(chatMessageBubblelessGlassTintAlpha))
+        case .danger:
+            glassTint = .color(theme.theme.contextMenu.destructiveColor.withMultipliedAlpha(chatMessageBubblelessGlassTintAlpha))
+        case .success:
+            glassTint = .color(theme.theme.list.freeTextSuccessColor.withMultipliedAlpha(chatMessageBubblelessGlassTintAlpha))
+        case .none:
+            glassTint = .panel
+        }
+        glassView.update(size: capsuleFrame.size, cornerRadius: height * 0.5, isDark: theme.theme.overallDarkAppearance, tint: glassTint, updateFrame: { view, frame in
+            animation.animator.updateFrame(layer: view.layer, frame: frame, completion: nil)
+        })
+        // The loading shimmer follows the capsule.
+        self.maskPath = UIBezierPath(roundedRect: capsuleFrame, cornerRadius: height * 0.5).cgPath
+        
+        if let buttonView = self.buttonView {
+            if buttonView.superview !== glassView.contentView {
+                glassView.contentView.addSubview(buttonView)
+            }
+            buttonView.frame = capsuleFrame
+            buttonView.isEnabled = isEnabled
+        }
+        // A disabled button dims what it carries, as the plate's does.
+        glassContentView.alpha = isEnabled ? 1.0 : 0.55
+        
+        if let iconImage {
+            let iconView: UIImageView
+            if let current = self.glassIconView {
+                iconView = current
+            } else {
+                iconView = UIImageView()
+                iconView.contentMode = .center
+                self.glassIconView = iconView
+                glassContentView.addSubview(iconView)
+            }
+            // On a styled capsule the type icon takes the title's colour.
+            if let iconTint = chatMessageBubblelessGlassIconTint(isStyled: button.style?.color != nil, iconTint: tintColor, titleColor: titleColor) {
+                iconView.image = iconImage.withRenderingMode(.alwaysTemplate)
+                iconView.tintColor = iconTint
+            } else {
+                iconView.image = iconImage
+            }
+        } else if let iconView = self.glassIconView {
+            self.glassIconView = nil
+            iconView.removeFromSuperview()
+        }
+        
+        let titleView: ImmediateTextView
+        if let current = self.glassTitleView {
+            titleView = current
+        } else {
+            titleView = ImmediateTextView()
+            titleView.isUserInteractionEnabled = false
+            titleView.maximumNumberOfLines = 1
+            titleView.truncationType = .end
+            titleView.textAlignment = .center
+            titleView.insets = UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)
+            self.glassTitleView = titleView
+            glassContentView.addSubview(titleView)
+        }
+        // The same arguments as the title node's, which measured it: the view lays the text out again only when it
+        // changes.
+        titleView.attributedText = attributedTitle
+        let _ = titleView.updateLayout(titleConstrainedSize)
+        
+        let titleSize = titleLayout.size
+        var titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((height - titleSize.height) / 2.0) + 1.0), size: titleSize)
+        if button.style?.iconFileId != nil {
+            let contentOriginX = floorToScreenPixels((width - titleSize.width - emojiIconSize.width - emojiIconSpacing) * 0.5)
+            // The icon leads the title in reading order, so it follows the title visually in RTL.
+            if titleLayout.hasRTL {
+                titleFrame.origin.x = contentOriginX
+            } else {
+                titleFrame.origin.x = contentOriginX + emojiIconSize.width + emojiIconSpacing
+            }
+        } else if let image = self.glassIconView?.image, customInfo?.icon != nil {
+            if customInfo?.icon == .actionArrow {
+                titleFrame.origin.x = floorToScreenPixels((width - titleSize.width - image.size.width + 1.0) * 0.5)
+            } else {
+                titleFrame.origin.x = floorToScreenPixels((width - titleSize.width - image.size.width - 3.0) * 0.5) + 3.0 + image.size.width
+            }
+        }
+        titleView.layer.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+        animation.animator.updatePosition(layer: titleView.layer, position: CGPoint(x: titleFrame.midX, y: titleFrame.midY), completion: nil)
+        
+        if let iconView = self.glassIconView, let image = iconView.image {
+            let iconFrame: CGRect
+            if customInfo?.icon == .actionArrow {
+                iconFrame = CGRect(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - image.size.height) * 0.5) - 1.0, width: image.size.width, height: image.size.height)
+            } else if customInfo?.icon != nil {
+                iconFrame = CGRect(x: titleFrame.minX - 3.0 - image.size.width, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - image.size.height) * 0.5) - 1.0, width: image.size.width, height: image.size.height)
+            } else {
+                iconFrame = chatMessageBubblelessGlassTypeIconFrame(buttonWidth: width)
+            }
+            animation.animator.updateFrame(layer: iconView.layer, frame: iconFrame, completion: nil)
+        }
+        
+        if let iconFileId = button.style?.iconFileId {
+            let icon: ComponentView<Empty>
+            var iconTransition = animation.animator
+            if let current = self.icon {
+                icon = current
+            } else {
+                iconTransition = ListViewItemUpdateAnimation.None.animator
+                icon = ComponentView()
+                self.icon = icon
+            }
+            
+            var animationContent: EmojiStatusComponent.AnimationContent = .customEmoji(fileId: iconFileId)
+            if let file = message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: iconFileId)] as? TelegramMediaFile {
+                animationContent = .file(file: file)
+            }
+            
+            let _ = icon.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: .animation(
+                        content: animationContent,
+                        size: emojiIconSize,
+                        placeholderColor: theme.theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1),
+                        themeColor: titleColor,
+                        loopMode: .forever
+                    ),
+                    isVisibleForAnimations: true,
+                    action: nil
+                )),
+                environment: {},
+                containerSize: emojiIconSize
+            )
+            
+            let contentX: CGFloat
+            if titleLayout.hasRTL {
+                contentX = titleFrame.maxX + emojiIconSpacing
+            } else {
+                contentX = titleFrame.origin.x - emojiIconSize.width - emojiIconSpacing
+            }
+            
+            let iconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((height - emojiIconSize.height) * 0.5) - 1.0), size: emojiIconSize)
+            if let iconView = icon.view {
+                if iconView.superview !== glassContentView {
+                    glassContentView.addSubview(iconView)
+                }
+                iconTransition.updateFrame(layer: iconView.layer, frame: iconFrame, completion: nil)
+            }
+        } else if let icon = self.icon {
+            self.icon = nil
+            icon.view?.removeFromSuperview()
+        }
+        
+        self.accessibilityArea.accessibilityLabel = title
+        self.accessibilityArea.frame = capsuleFrame
+    }
+    
     class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ message: EngineMessage, _ button: ReplyMarkupButton, _ customInfo: ChatMessageActionButtonsNode.CustomInfo?, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
@@ -231,7 +443,18 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             
             let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
             
+            let isGlass = !bubbleCorners.bubbleMode
+            
             var titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
+            if isGlass, let color = button.style?.color {
+                // A styled capsule is tinted with its colour: on the night theme the accent is white, so a primary
+                // button takes the colour the theme pairs with its accent.
+                if case .primary = color {
+                    titleColor = theme.theme.list.itemCheckColors.foregroundColor
+                } else {
+                    titleColor = .white
+                }
+            }
             if case .disabled = button.action {
                 // inlineButtonTypeDisabled reads as present-but-unavailable, not absent.
                 titleColor = titleColor.withMultipliedAlpha(0.5)
@@ -301,7 +524,12 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             }
             
             let sideInset: CGFloat = 8.0
-            let minimumSideInset: CGFloat = 4.0 + (iconImage?.size.width ?? 0.0)
+            var minimumSideInset: CGFloat = 4.0 + (iconImage?.size.width ?? 0.0)
+            // A glass capsule's type icon sits in the middle of its right end; the title keeps clear of it on both sides.
+            let centersTypeIcon = isGlass && customInfo?.icon == nil && iconImage != nil
+            if centersTypeIcon, let iconImage {
+                minimumSideInset = chatMessageBubblelessGlassTitleSideInset(iconWidth: iconImage.size.width)
+            }
             
             var title = button.title
             if case .payment = button.action {
@@ -340,17 +568,20 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             }
             
             let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset - customIconSpaceWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
-            let contentWidth = titleSize.size.width + sideInset + sideInset + customIconSpaceWidth
+            var contentWidth = titleSize.size.width + sideInset + sideInset + customIconSpaceWidth
+            if centersTypeIcon {
+                contentWidth = max(contentWidth, titleSize.size.width + minimumSideInset * 2.0)
+            }
 
             return (contentWidth, { width in
                 return (CGSize(width: width, height: 42.0), { animation in
                     var animation = animation
                     
                     let node: ChatMessageActionButtonNode
-                    if let maybeNode = maybeNode {
+                    if let maybeNode = maybeNode, maybeNode.isGlass == isGlass {
                         node = maybeNode
                     } else {
-                        node = ChatMessageActionButtonNode()
+                        node = ChatMessageActionButtonNode(isGlass: isGlass)
                         animation = .None
                     }
                     
@@ -362,6 +593,13 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         node.longTapRecognizer?.isEnabled = true
                     default:
                         node.longTapRecognizer?.isEnabled = false
+                    }
+                    
+                    if isGlass {
+                        node.applyGlass(width: width, button: button, customInfo: customInfo, theme: theme, attributedTitle: attributedTitle, titleLayout: titleSize, titleConstrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset - customIconSpaceWidth), height: CGFloat.greatestFiniteMagnitude), iconImage: iconImage, tintColor: tintColor, emojiIconSize: emojiIconSize, emojiIconSpacing: emojiIconSpacing, titleColor: titleColor, context: context, message: message, title: title, animation: animation)
+                        // The title node only measures: it stays out of the hierarchy, its layout kept for the next pass.
+                        node.titleNode = titleApply()
+                        return node
                     }
                     
                     if node.backgroundBlurView == nil {
@@ -676,7 +914,7 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
         
         return { context, theme, chatBubbleCorners, strings, backgroundNode, replyMarkup, customInfos, message, constrainedWidth in
             let buttonHeight: CGFloat = 42.0
-            let buttonSpacing: CGFloat = 2.0
+            let buttonSpacing: CGFloat = chatMessageActionButtonSpacing(bubbleMode: chatBubbleCorners.bubbleMode)
             
             var overallMinimumRowWidth: CGFloat = 0.0
             

@@ -12,8 +12,6 @@ private let markdownImageURLAttribute = NSAttributedString.Key("NSImageURL")
 private let markdownAlternateDescriptionAttribute = NSAttributedString.Key("NSAlternateDescription")
 
 @available(iOS 15.0, *)
-private let markdownSoftBreakInlineIntent = InlinePresentationIntent(rawValue: 1 << 6)
-@available(iOS 15.0, *)
 private let markdownHardBreakInlineIntent = InlinePresentationIntent(rawValue: 1 << 7)
 @available(iOS 15.0, *)
 private let markdownInlineHTMLInlineIntent = InlinePresentationIntent(rawValue: 1 << 8)
@@ -335,16 +333,19 @@ private final class MarkdownConversionContext {
     fileprivate let documentURL: URL?
     fileprivate let formulasByPlaceholder: [String: MarkdownFormulaDescriptor]
     fileprivate let budget: MarkdownConversionBudget
+    /// Pasted text (`MarkdownSourceLineBreaks.keep`): see `inputRichTextAttributeFromText`.
+    fileprivate let keepsSourceLineBreaks: Bool
     private var nextRemoteMediaId: Int64 = 0
     private var nextLocalMediaId: Int64 = 0
 
     private(set) var media: [EngineMedia.Id: EngineRawMedia] = [:]
 
-    init(context: AccountContext, documentURL: URL?, formulasByPlaceholder: [String: MarkdownFormulaDescriptor], budget: MarkdownConversionBudget) {
+    init(context: AccountContext, documentURL: URL?, formulasByPlaceholder: [String: MarkdownFormulaDescriptor], budget: MarkdownConversionBudget, keepsSourceLineBreaks: Bool) {
         self.context = context
         self.documentURL = documentURL
         self.formulasByPlaceholder = formulasByPlaceholder
         self.budget = budget
+        self.keepsSourceLineBreaks = keepsSourceLineBreaks
     }
 
     func makePageResult(blocks: [InstantPageBlock]) -> MarkdownPageResult {
@@ -1010,14 +1011,28 @@ func markdownWebpage(context: AccountContext, file: FileMediaReference) -> (webP
     return (webPage, fileURL)
 }
 
-public func inputRichTextAttributeFromText(context: AccountContext, text: String) -> RichTextMessageAttribute? {
+/// How a markdown source's own line breaks are read.
+public enum MarkdownSourceLineBreaks {
+    /// CommonMark: a single newline inside a paragraph is a soft break, read as a space, and blank lines only
+    /// separate blocks. What a document (or a message typed as markdown) means.
+    case commonMark
+    /// Pasted text (a reply copied from ChatGPT, say) as it reads: a single newline stays a line break, and a
+    /// blank line between two top-level blocks becomes an empty `.paragraph(.empty)` between them — the only
+    /// empty paragraphs the parse emits — so a caller can keep it as a blank line or drop it. The blank lines
+    /// come from the parser's source positions (iOS 16; none on iOS 15), which miss the one after an indented
+    /// code block (`markdownTopLevelBlockSourceLines`). A thematic break (`---`) becomes that empty paragraph
+    /// itself.
+    case keep
+}
+
+public func inputRichTextAttributeFromText(context: AccountContext, text: String, lineBreaks: MarkdownSourceLineBreaks = .commonMark) -> RichTextMessageAttribute? {
     guard #available(iOS 15.0, *) else {
         return nil
     }
     guard let data = text.data(using: .utf8) else {
         return nil
     }
-    guard let webpage = markdownWebpage(context: context, file: nil, data: data), case let .Loaded(content) = webpage.content, let instantPage = content.instantPage else {
+    guard let webpage = markdownWebpage(context: context, file: nil, data: data, keepsSourceLineBreaks: lineBreaks == .keep), case let .Loaded(content) = webpage.content, let instantPage = content.instantPage else {
         return nil
     }
     return RichTextMessageAttribute(instantPage: instantPage._parse(), fullInstantPage: nil)
@@ -1191,7 +1206,7 @@ public func richMarkdownAttributeIfNeeded(context: AccountContext, attributedTex
 }
 
 @available(iOS 15.0, *)
-private func markdownWebpage(context: AccountContext, file: (file: FileMediaReference, url: URL)?, data: Data) -> TelegramMediaWebpage? {
+private func markdownWebpage(context: AccountContext, file: (file: FileMediaReference, url: URL)?, data: Data, keepsSourceLineBreaks: Bool = false) -> TelegramMediaWebpage? {
     let limits = markdownSafetyLimits
     guard markdownPassesPreflight(data: data, limits: limits) else {
         return nil
@@ -1209,9 +1224,13 @@ private func markdownWebpage(context: AccountContext, file: (file: FileMediaRefe
         } else {
             baseURL = nil
         }
+        var options = AttributedString.MarkdownParsingOptions()
+        if keepsSourceLineBreaks, #available(iOS 16.0, *) {
+            options.appliesSourcePositionAttributes = true
+        }
         attributedString = try NSAttributedString(
             markdown: Data(preparedSource.text.utf8),
-            options: .init(),
+            options: options,
             baseURL: baseURL
         )
     } catch {
@@ -1219,7 +1238,7 @@ private func markdownWebpage(context: AccountContext, file: (file: FileMediaRefe
     }
     
     let budget = MarkdownConversionBudget(limits: limits)
-    let conversionContext = MarkdownConversionContext(context: context, documentURL: file?.url, formulasByPlaceholder: preparedSource.formulasByPlaceholder, budget: budget)
+    let conversionContext = MarkdownConversionContext(context: context, documentURL: file?.url, formulasByPlaceholder: preparedSource.formulasByPlaceholder, budget: budget, keepsSourceLineBreaks: keepsSourceLineBreaks)
     guard let pageResult = markdownPageResult(from: attributedString, context: conversionContext) else {
         return nil
     }
@@ -1345,8 +1364,40 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
     guard !didAbort, !context.budget.isExceeded else {
         return nil
     }
+    if context.keepsSourceLineBreaks {
+        return markdownPageResultKeepingBlankLines(rootNodes: rootNodes, rootSourceLines: markdownTopLevelBlockSourceLines(attributedString), context: context)
+    }
     guard let blocks = markdownBlocks(from: rootNodes, context: context, depth: 0), !context.budget.isExceeded else {
         return nil
+    }
+    return context.makePageResult(blocks: blocks)
+}
+
+/// The top-level blocks with an empty paragraph wherever the source had a blank line between two of them
+/// (`MarkdownSourceLineBreaks.keep`). A block whose source lines are unknown (iOS 15, a thematic break) gets none
+/// before or after it.
+@available(iOS 15.0, *)
+private func markdownPageResultKeepingBlankLines(rootNodes: [MarkdownIntentNode], rootSourceLines: [Int: ClosedRange<Int>], context: MarkdownConversionContext) -> MarkdownPageResult? {
+    var blocksByNode: [(blocks: [InstantPageBlock], lines: ClosedRange<Int>?)] = []
+    for node in rootNodes {
+        guard let nodeBlocks = markdownBlocks(from: [node], context: context, depth: 0), !context.budget.isExceeded else {
+            return nil
+        }
+        if nodeBlocks.count == 1, case .divider = nodeBlocks[0] {
+            // A thematic break between sections has no composer form (a divider becomes nothing) and no
+            // source position: it is the blank line between them, and its unknown lines add none beside it.
+            blocksByNode.append(([.paragraph(.empty)], nil))
+        } else if !nodeBlocks.isEmpty {
+            blocksByNode.append((nodeBlocks, rootSourceLines[node.identity]))
+        }
+    }
+    let blankLineBefore = markdownBlankLineBeforeBlocks(blocksByNode.map(\.lines))
+    var blocks: [InstantPageBlock] = []
+    for (index, item) in blocksByNode.enumerated() {
+        if blankLineBefore[index] {
+            blocks.append(.paragraph(.empty))
+        }
+        blocks.append(contentsOf: item.blocks)
     }
     return context.makePageResult(blocks: blocks)
 }
@@ -1713,11 +1764,18 @@ private func markdownInlineContent(from attributedString: NSAttributedString, co
         }
 
         if consumeNextSoftBreak {
-            if let inlineIntent, inlineIntent.contains(markdownSoftBreakInlineIntent), text == " " {
+            if markdownRunIsSoftBreak(attributes, text: text) {
                 consumeNextSoftBreak = false
                 return
             }
             consumeNextSoftBreak = false
+        }
+
+        // The run's own formatting carries over, so a break inside `**…**` does not split the entity in two.
+        // (Foundation emits no soft break inside a link's label: it drops it, joining the two words.)
+        if context.keepsSourceLineBreaks, markdownRunIsSoftBreak(attributes, text: text) {
+            fragments.append(.richText(markdownApplyHTMLStyles(htmlStyles, to: markdownApplyingInlineIntent(inlineIntent, to: .plain("\n")))))
+            return
         }
 
         if let image = context.resolveImage(attributes: attributes) {

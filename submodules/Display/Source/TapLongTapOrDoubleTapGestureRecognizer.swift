@@ -91,6 +91,10 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     private var timer: Foundation.Timer?
     public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
+    /// How far, in points, a touch may move and still be a tap or a long tap. The 2pt default keeps a tap in a scrolling
+    /// list (a message bubble) from holding on to what becomes a scroll; a control outside one (the chat title) can allow
+    /// a finger's natural drift, as UIKit's own gestures do, or a tap that moves 3pt is lost.
+    public var maximumTapMovement: CGFloat = 2.0
     public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
     public var longTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
     public var secondaryTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
@@ -290,7 +294,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         if let touch = touches.first, let (touchLocation, _) = self.touchLocationAndTimestamp {
             let location = touch.location(in: self.view)
             let distance = CGPoint(x: location.x - touchLocation.x, y: location.y - touchLocation.y)
-            if distance.x * distance.x + distance.y * distance.y > 4.0 {
+            if distance.x * distance.x + distance.y * distance.y > self.maximumTapMovement * self.maximumTapMovement {
                 self.state = .cancelled
             }
         }

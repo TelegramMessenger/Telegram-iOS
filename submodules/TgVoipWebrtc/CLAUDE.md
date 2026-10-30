@@ -78,7 +78,7 @@ The callee's `Connect()` and processing of the caller's INIT happen synchronousl
 
 Key files:
 - `SignalingSctpConnection.cpp` — `SignalingPacketTransport` writable state, `setWritable()`, constructor takes `isInitiator`
-- `InstanceV2Impl.cpp` / `InstanceV2ReferenceImpl.cpp` — pass `_encryptionKey.isOutgoing` as `isInitiator`
+- `InstanceV2Impl.cpp` / `InstanceV2ReferenceImpl.cpp` / `InstanceV2CompatImpl.cpp` — pass `_encryptionKey.isOutgoing` as `isInitiator`
 - `third-party/webrtc/webrtc/media/sctp/dcsctp_transport.cc:662-667` — `MaybeConnectSocket()` gate (unmodified)
 
 ### Timer Tuning (CustomDcSctpSocket)
@@ -98,23 +98,133 @@ Default signaling SCTP timer values (set in `SignalingSctpConnection::Options`):
 
 Retry pattern: 400ms, 750ms, 750ms, 750ms... (~18 attempts in 15s). At 30% loss, 100% success rate over 5000 runs.
 
-These values are configurable via JSON custom parameters (passed to `InstanceV2Impl` via `config.customParameters`):
-- `network_sctp_t1_init_ms` — T1-init timeout (0 = use default 400ms)
-- `network_sctp_t1_cookie_ms` — T1-cookie timeout (0 = use default 400ms)
-- `network_sctp_max_backoff_ms` — max timer backoff cap (0 = use default 750ms)
+These values are configurable via JSON custom parameters (`config.customParameters`), read through
+`SignalingSctpConnection::Options::fromCustomParameters` by every call version whose signaling
+runs over SCTP:
+
+| version | engine | SCTP signaling |
+|---|---|---|
+| 7.0.0, 8.0.0, 9.0.0 | `InstanceV2Impl` | no (`network_kcp_experiment` moves them onto it) |
+| 10.0.0 | `InstanceV2ReferenceImpl` | no |
+| **11.0.0** | `InstanceV2ReferenceImpl` | yes |
+| **12.0.0, 13.0.0** | `InstanceV2Impl` | yes, unless `network_signaling_nosctp` |
+| **14.0.0** | `InstanceV2CompatImpl` | yes, unless `network_signaling_nosctp` (on `dev/android`, always) |
+| **18.0.0, 19.0.0** | `CallCoreHost` | yes |
+
+Mind the names: `InstanceV2ReferenceImpl`'s "V2" signaling is the SCTP one, `InstanceV2Impl`'s
+"V2" (8.0.0/9.0.0) is not, and its SCTP mode is "V3". Until 2026-10-27 only `InstanceV2Impl` read
+the keys; `InstanceV2CompatImpl` gained them that day, and 11.0.0 and 18/19 later the same day
+(tgcalls `8d5e7e0`). Before that those engines ran the defaults whatever the server sent.
+- `network_sctp_t1_init_ms` — T1-init timeout (default 400ms)
+- `network_sctp_t1_cookie_ms` — T1-cookie timeout (default 400ms)
+- `network_sctp_max_backoff_ms` — max timer backoff cap (default 750ms)
+
+An absent key, a non-number or a value outside 1–60000 ms (RFC 4960's RTO.Max) keeps the default;
+a fraction is truncated. Before the range check a negative value silently ran dcsctp's own
+1000/1000/3000 ms, and a seconds-for-milliseconds slip held the first INIT retransmission for
+minutes. `//submodules/TgVoipWebrtc:signaling_sctp_options_test` pins this. The constructor takes
+`Options` with no default, so a new engine cannot silently skip the overrides.
+
+Every connection logs the values it runs with, e.g. `SignalingSctpConnection: initiator, t1_init
+400 ms, t1_cookie 400 ms, max backoff 750 ms`, so a call log shows whether an override arrived.
+Check an engine with `tgcalls_cli --mode p2p --version V --delay 5000-5000 --custom-params
+'{"network_sctp_t1_init_ms":1500,"network_sctp_max_backoff_ms":3000}'` (same for
+`--custom-params2`), V being one of the SCTP versions above. The callee's `adding data of 44 bytes`
+lines, the caller's INIT retries, must arrive 1.5 s and then 3.0 s apart. With the defaults they
+arrive 0.4 s, then every 0.75 s.
+
+`network_signaling_nosctp` drops the SCTP layer altogether (`ExternalSignalingConnection`, same
+gzip + `encryptRawPacket` framing). It changes the wire, so every engine that speaks 13.0.0's
+signaling must honour it: until 2026-10-27 `InstanceV2CompatImpl` ignored it, and a 14.0.0 ↔ 13.0.0
+call under the flag never connected (one side sent SCTP INITs the other could not parse).
 
 Key files:
 - `tgcalls/v2/CustomDcSctpSocket.h/.cpp` — patched `DcSctpSocket` copy
-- `tgcalls/v2/SignalingSctpConnection.cpp` — `CustomDcSctpSocketFactory`, timer option plumbing
-- `tgcalls/v2/InstanceV2Impl.cpp` — reads JSON params, passes `Options` to `SignalingSctpConnection`
+- `tgcalls/v2/SignalingSctpConnection.h/.cpp` — `CustomDcSctpSocketFactory`, timer option plumbing, `Options::fromCustomParameters`
 
 ## InstanceV2CompatImpl (version 14.0.0)
 
 A 13.0.0-protocol endpoint whose media engine is a WebRTC PeerConnection. It speaks `InstanceV2Impl`'s
 signaling (`InitialSetupMessage`, `NegotiateChannelsMessage`, `CandidatesMessage`, `MediaStateMessage`)
-so it interoperates with 7.0.0–13.0.0 and with itself. Rewritten 2026-10-11, when it carried
-two-way media in no pairing (design record: telegram-ios
-`docs/superpowers/specs/2026-10-11-tgcalls-compatimpl-v2-protocol-design.md`).
+and interoperates with itself and with `InstanceV2Impl` under the **same call version**: constructed
+as 7.0.0, 8.0.0, 9.0.0, 12.0.0 or 13.0.0 it talks to an unchanged client of that version (since
+2026-10-27; before that it always used 13.0.0's framing, and 7.0.0/8.0.0/9.0.0 peers rejected every
+packet). Rewritten 2026-10-11, when it carried two-way media in no pairing (design record:
+telegram-ios `docs/superpowers/specs/2026-10-11-tgcalls-compatimpl-v2-protocol-design.md`).
+
+### Legacy call versions: the framing is chosen by `descriptor.version`
+
+Only the signaling framing differs between `InstanceV2Impl`'s versions (`_signalingProtocolVersion`
+is its one version-dependent branch); messages, channel protocol and glare rules are the same since
+2022-03, before 8.0.0 existed, and the message parser is unchanged since 8.0.0 shipped (2022-05)
+apart from the rotation-field fix and the empty-ssrc-group check. CompatImpl mirrors the map:
+
+| version | framing | transport |
+|---|---|---|
+| 7.0.0 | `encryptRawPacket`, no gzip | `ExternalSignalingConnection` |
+| 8.0.0, 9.0.0 | EncryptedConnection's reliable messages (`prepareForSendingRawMessage(msg, true)` / `handleIncomingRawPacket`, seq + acks + resends after 3–5 s), no gzip | `ExternalSignalingConnection` |
+| anything else (12.0.0, 13.0.0, **14.0.0**) | gzip + `encryptRawPacket` | SCTP, or bare under `network_signaling_nosctp` |
+
+`network_kcp_experiment` moves any version to the last row, as in `InstanceV2Impl`. **Unlike
+`InstanceV2Impl`'s map, an unknown version is V3, not V2**: copying its default would move every
+14.0.0 call to V2. 9.0.0 was SCTP-framed from 2022-05 to 2023-04, so a 9.0.0 client built in that
+window speaks V3 and will not interoperate (with `InstanceV2Impl` either).
+
+**Routing is the server's and the registry's.** The server returns one version for both ends and
+`Meta::Create` builds whatever the client registered for it; `Meta::RegisterOne` keeps the *first*
+registration per version. Today the app registers `InstanceV2Impl` first and CompatImpl's
+`GetVersions` lists only 14.0.0, so an 8.0.0 call gets `InstanceV2Impl` until the registration says
+otherwise. The CLI runs CompatImpl under a version with `--version compat:8.0.0`.
+
+**The target is "compat + 8.0.0 no worse than 8.0.0 + 8.0.0"**, against clients that cannot change.
+`tools/cli/run-parity-tests.sh` measures exactly that (CompatImpl as caller and as callee against
+8 ↔ 8, per scenario: failures with a Fisher p, first audio and first video per side). Two
+CompatImpl defects stood between the framing alone and parity; both are fixed, and both are V2-only,
+so 14.0.0 is unchanged:
+
+- **A message sent with nothing queued had no resend timer.** `EncryptedConnection` arms its 5 s
+  resend timer only from a packet sent while an earlier message still waits for its ack
+  (`prepareForSendingMessageInternal` calls `appendAdditionalMessages` before queueing the new
+  message, and that returns early on an empty queue). `InstanceV2Impl` never meets it for answers:
+  it answers synchronously, ahead of the ack packet for the offer, and that packet arms the timer.
+  CompatImpl answers from the PeerConnection's callbacks, after the ack, so a lost answer was resent
+  only when something else went out — never, in a quiet call: the callee then never sent the video
+  it had just offered (4/48 vs 0/48 as callee) and every later exchange was skewed. CompatImpl now
+  sends one service packet (`prepareForSendingService(0)`, ~21 bytes) after each V2 message, which
+  arms the timer. 8.0.0's *own* offers keep the quirk (resent only inside its next ack); that is
+  part of the baseline.
+- **An offer sent right behind an answer crossed the callee's.** A 13.0.0-protocol callee keeps its
+  changes while its offer awaits our answer and offers them the moment the answer lands; an offer
+  sent straight after the answer crossed it, and the callee drops its offer for good (see "Known
+  limitation"). With V2's 3–5 s resends changes pile up behind a lost answer, so this was common.
+  As caller, under V2, CompatImpl holds its own offers for 1 s after sending an answer
+  (`kPostAnswerOfferHoldMs`; the callee's offer arrived 0.2–0.3 s after the answer in the CLI, so it
+  is sized for that plus margin — real signaling RTT may be larger). CompatImpl also cannot apply a
+  NegotiateChannels before the peer's InitialSetup, which 8.0.0 sends after its offer and resends
+  3–5 s after a loss; that wait is what most often put our answer and our camera offer back to back.
+
+Measured 2026-10-27, against today's `InstanceV2Impl` under 8.0.0 (not a 2022 binary), on a shared
+host under heavy load:
+
+- `run-parity-tests.sh`, all eight scenarios (528 calls, `-j 16`): no failure in any scenario
+  without signaling loss (delay, cameras at start and mid-call, mute), in either role; at 30% loss
+  audio-only and with cameras at start, at most one failure per pairing (0–1 vs 0–1). As **caller**
+  CompatImpl connects and gets first audio and video 0.06–0.16 s later at p50 in the no-loss
+  scenarios: applying the callee's answer and offer and answering it are three PeerConnection
+  operations where `InstanceV2Impl` answers synchronously (measured under heavy host load, which
+  inflates them). As callee it is level or faster on every timing.
+- The stress case (30% loss, cameras at 3 s / 5 s), 64 calls per arm at `-j 6`: the callee's video
+  is lost in 33/64 with CompatImpl as caller vs 32/64 for 8 ↔ 8 (p = 0.50), 44/64 (p = 0.02) without
+  the post-answer hold; the caller's video in 1/64 vs 2/64; callee first video within 6.5 s 26/64 vs
+  25/64. CompatImpl as callee: 1/64 and 0/64 against 32/64 and 2/64, since it re-offers after
+  yielding.
+- Earlier batches (32–64 calls in parallel, before the CLI read its counts before teardown) are not
+  comparable: an overloaded host stalled teardowns for minutes while media kept flowing, which
+  counted late media as received.
+- 7.0.0 has no ordering at all: at 100–300 ms random delay a callee's offer overtakes its own answer
+  and the caller ignores it as glare. 7 ↔ 7 loses the callee's video in 4/6 runs, CompatImpl in either
+  role 2/4 (before the two fixes above, which do not apply to V1). 9.0.0 connected with video both
+  ways in 4/4 per role.
 
 ```
 PeerConnection <-> SignalingTranslator <-> EncryptedConnection <-> SignalingSctpConnection
@@ -182,6 +292,8 @@ the caller-wins rule makes that callee drop its offer, and 13.0.0 never re-offer
 `_needNegotiation` was cleared when the offer was made): its camera stays unnegotiated until its next
 camera change. 13 ↔ 13 does the same (5/8 at 30% signaling loss with both cameras toggled 2 s apart;
 14 → 13 measured identically). 14 ↔ 14 is not affected: a CompatImpl callee re-offers after yielding.
+Under 8.0.0's framing a CompatImpl caller holds its offers for 1 s after each answer, which removes
+the crossings it would otherwise add (see "Legacy call versions"); the ones 8 ↔ 8 has remain.
 
 ### Testing
 
@@ -221,6 +333,41 @@ finds the transceiver by receiver, and it reads `network_reflector_resolve_remot
 `network_use_mtproto`. Deliberately not ported: 11.0.0's `AddTrack` transceivers (`network_reference_use_addtrack`,
 default on there since 2026-10-12; tgcalls `CLAUDE.md` "Do not implement" for CompatImpl) and `network_reference_allow_hostname_ice_servers` (`SocketAddress::IsComplete()`
 is already true for a hostname with a port, so the gate it lifts never dropped a hostname).
+
+Ported 2026-10-27, from the other engines:
+
+- **13.0.0's signaling options**: `network_sctp_t1_init_ms` / `_t1_cookie_ms` / `_max_backoff_ms`
+  and `network_signaling_nosctp` (see "SCTP Signaling" above). With `--drop-rate 1.0` and the
+  timers set to 1500/3000 the caller's INITs now go out at 0, 1.5, 4.5, 7.5 s, as 13.0.0's do
+  (before: 0, 0.4, 1.17, 1.91 s, the defaults).
+- **Mute stops the audio send stream** (`applyOutgoingAudioMuteState`, the sender's
+  `encodings[0].active`), as 13.0.0's `OutgoingAudioChannel::setIsMuted` does and as
+  `GroupInstanceReferenceImpl` was fixed to on 2026-09-15. A disabled track alone kept encoding and
+  sending a zeroed Opus stream for the whole time the user was muted. No renegotiation; the ADM
+  microphone mute is not applied (13.0.0's 1:1 path does not either). Check: `--mute-participants 0
+  --unmute-after 4 --log-file …` must show the muted side's `AudioSendStream::Start` and `First audio
+  RTP packet sent to pacer` only after the `tgcalls_cli: unmuting` marker. 11.0.0 still mutes by
+  disabling the track.
+
+  **`active` does not survive a rollback by itself, so `onNegotiationStepCompleted` re-applies it.**
+  `RtpSenderBase::SetSsrc` applies the sender's init encodings once; a rollback
+  (`sdp_offer_answer.cc`, `set_init_send_encodings`) restores the ones saved at the transceiver's
+  first `SetLocalDescription`, and the re-sent offer applies them to a new SSRC, whatever the mute
+  state is by then. A callee that unmuted between its first offer and a glare stayed **silent for the
+  rest of the call** (a callee muted in that window would send again). Reproduce:
+  13.0.0 → 14.0.0, `--delay 0-1200 --mute-participants 1 --unmute-after 3`, caller camera swept with
+  `--video-late-caller-ms 1000…4000` (the 13.0.0 caller's camera offer crosses the callee's first
+  audio offer in ~27 of 31 runs): without the re-apply the callee's last audio SSRC never logs
+  `AudioSendStream::Start` in 1, 17 and 11 of 31 runs for an unmute at 2, 3 and 4 s; with it, 0.
+
+Checked and not needed here: 11.0.0's DTLS-role backstop (2026-10-12) — `SignalingTranslator` pins
+`setup` by role in both directions, so a rejected answer cannot leave this engine without a role or
+make both sides clients; its `OnRenegotiationNeeded` → `requestRenegotiation` (2026-10-22) and the
+initial camera folded into the first offer (2026-09-17) were already in the 2026-10-11 rewrite.
+From the Android branch (`github/dev/android`, `45fc400`): its `InstanceV2Impl::setVideoCapture`
+reorder concerns 13.0.0's separate screencast channel, which this engine does not have, and its
+`audioLevelsUpdated(float, float)` is an Android-only API change. Neither PeerConnection engine
+fires `audioLevelUpdated` (13.0.0 does, from a raw audio sink): an older gap, not a recent fix.
 
 Key files:
 - `tgcalls/v2/InstanceV2CompatImpl.h/.cpp` — engine, negotiation queue, glare rules

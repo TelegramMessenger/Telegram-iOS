@@ -66,9 +66,16 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//Telegram/NotificationService:NotificationServiceTests`,
 `//submodules/TelegramUI/Components/Chat/EditableTokenListNode:EditableTokenListNodeTests`,
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
-`//submodules/UndoUI:UndoUITests`, `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,
+`//submodules/UndoUI:UndoUITests`, `//submodules/ContactsPeerItem:ContactsPeerItemTests`,
+`//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteractionTests`,
+`//submodules/PasswordSetupUI:PasswordSetupUITests`,
+`//submodules/ItemListUI:ItemListUITests`,
+`//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,
 `//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests`,
 `//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests`,
+`//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests`,
+`//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests`,
+`//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`,
 `//submodules/TelegramPresentationData:TelegramPresentationDataTests`,
 `//submodules/MtProtoKit:MtProtoKitTests` (also `swift test` in `submodules/MtProtoKit` on macOS), and the targets the
 subsystem guides name. `PresentationStrings` cannot be built in a test process (it asserts without the app bundle's
@@ -184,6 +191,8 @@ subsystem from elsewhere.
 - **Chat history list, send animation, a non-contact's unaccepted chat**: `submodules/TelegramUI/Sources/CLAUDE.md`;
   the CoreList backend: `submodules/TelegramUI/Components/CoreList/CLAUDE.md`,
   [`docs/chat/corelist-chat-history-backend.md`](docs/chat/corelist-chat-history-backend.md).
+- **News tab** (its CoreList feeds and header, Compact / Expanded posts):
+  `submodules/TelegramUI/Components/News/CLAUDE.md`.
 - **Opening chats, history fills** (holes, poll gate, forum topics and skeletons, News feed opens, non-member read
   state): `submodules/TelegramCore/Sources/State/CLAUDE.md`; a post's comments:
   `submodules/TelegramCore/Sources/TelegramEngine/Messages/CLAUDE.md`.

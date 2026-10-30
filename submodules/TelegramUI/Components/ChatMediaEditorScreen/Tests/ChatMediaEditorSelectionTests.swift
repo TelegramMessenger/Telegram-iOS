@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import MediaEditor
 import ChatMediaEditorScreen
+import Display
 
 private final class FakeSelectionAdapter: ChatMediaEditorSelectionAdapter {
     let selectionLimit: Int
@@ -102,6 +103,20 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0)).minY, 25.0)
     }
 
+    // iPhone Duo's unfolded screen in portrait (669x951): the 134x82 status island stands at the top right, its band the
+    // top safe inset. The check sits on the island's clock line (centre 47), left of the island, not below its band.
+    func testCheckSitsOnTheStatusIslandsClockLine() {
+        let size = CGSize(width: 669.0, height: 951.0)
+        let safeInsets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)
+        let island = ChatMediaEditorStatusIslandRow(clockLineY: 47.0, trailingInset: 134.0)
+        let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, statusIsland: island)
+        XCTAssertEqual(check.midY, 47.0)
+        XCTAssertEqual(check.maxX, chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets).maxX - 134.0)
+        XCTAssertLessThanOrEqual(check.maxX, size.width - 134.0)
+        // Without an island (every other device) the frame is the one it always was.
+        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, statusIsland: nil), chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets))
+    }
+
     func testCheckAndCounterRingsKeepTheEdgeInset() {
         let size = CGSize(width: 402.0, height: 874.0)
         for safeInsets in [UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)] {
@@ -109,7 +124,7 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
             let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets)
             let checkRingMaxX = check.maxX - 4.0 + 5.0 / 6.0
             XCTAssertEqual(edge - checkRingMaxX, chatMediaEditorScreenEdgeInset, accuracy: 0.25)
-            let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: false)
+            let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: false)
             let counterRingMaxX = counter.minX + chatMediaEditorCounterCircleFrame.maxX + 0.75
             XCTAssertEqual(edge - counterRingMaxX, chatMediaEditorScreenEdgeInset, accuracy: 0.25)
         }
@@ -134,8 +149,8 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         let size = CGSize(width: 402.0, height: 874.0)
         let safeInsets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
         let toolbarMinY = size.height - safeInsets.bottom - 49.0
-        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: false), CGRect(x: 402.0 - 64.0, y: 874.0 - 49.0 - 52.0 - 50.0 - 34.0, width: 64.0, height: 38.0))
-        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true).minY, 874.0 - 49.0 - 52.0 - 50.0 - 34.0 - 46.0)
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: false), CGRect(x: 402.0 - 64.0, y: 874.0 - 49.0 - 52.0 - 50.0 - 34.0, width: 64.0, height: 38.0))
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true).minY, 874.0 - 49.0 - 52.0 - 50.0 - 34.0 - 46.0)
         let cellSize = CGSize(width: 128.0, height: 128.0)
         XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: false, cellSize: cellSize), CGRect(x: 4.0, y: 874.0 - 49.0 - 52.0 - 136.0 - 64.0 - 34.0, width: 402.0 - 8.0, height: 136.0))
         XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true, cellSize: cellSize).minY, 874.0 - 49.0 - 52.0 - 136.0 - 64.0 - 34.0 - 46.0)

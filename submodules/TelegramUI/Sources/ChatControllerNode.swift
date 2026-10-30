@@ -1038,7 +1038,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self?.paste(data)
         }
         self.textInputPanelNode?.pastedMarkdownParser = { context, text in
-            return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+            return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: true)
         }
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
             self?.displayAttachmentMenu()
@@ -2887,6 +2887,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if let emojisPanelNode = inputContextPanelNode as? EmojisChatInputContextPanelNode {
                     emojisPanelNode.cursorAnchorX = self.textInputPanelNode?.currentCaretRect(in: emojisPanelNode.view)?.midX
                 }
+                inputContextPanelNode.coveredBottomInset = insets.bottom
                 inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
 
@@ -2894,6 +2895,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if let emojisPanelNode = inputContextPanelNode as? EmojisChatInputContextPanelNode {
                 emojisPanelNode.cursorAnchorX = self.textInputPanelNode?.currentCaretRect(in: emojisPanelNode.view)?.midX
             }
+            inputContextPanelNode.coveredBottomInset = insets.bottom
             inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
         }
         
@@ -4855,7 +4857,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.controller?.presentFormulaEditor(initialValue: initialValue, completion: completion)
                 },
                 pastedMarkdownParser: { context, text in
-                    return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+                    // The expanded composer keeps a pasted reply's blank lines as the inline one does: it sends the same
+                    // text + entities whenever the content allows.
+                    return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: true)
                 }
             )
             editorScreen.navigationPresentation = .modal
@@ -5718,6 +5722,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
         let titleAccessoryPanelSnapshot: UIView?
         let inputPanelNodeSnapshot: UIView?
+        let inputPanelOverscrollIslandHandOver: ((UIView) -> Void)?
 
         fileprivate init(
             backgroundNode: WallpaperBackgroundNode,
@@ -5726,7 +5731,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
             titleAccessoryPanelSnapshot: UIView?,
-            inputPanelNodeSnapshot: UIView?
+            inputPanelNodeSnapshot: UIView?,
+            inputPanelOverscrollIslandHandOver: ((UIView) -> Void)?
         ) {
             self.backgroundNode = backgroundNode
             self.historySnapshotState = historySnapshotState
@@ -5735,6 +5741,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.navigationButtonsSnapshotState = navigationButtonsSnapshotState
             self.titleAccessoryPanelSnapshot = titleAccessoryPanelSnapshot
             self.inputPanelNodeSnapshot = inputPanelNodeSnapshot
+            self.inputPanelOverscrollIslandHandOver = inputPanelOverscrollIslandHandOver
         }
     }
 
@@ -5744,9 +5751,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     ) -> SnapshotState {
         let titleAccessoryPanelSnapshot: UIView? = nil
         var inputPanelNodeSnapshot: UIView?
+        var inputPanelOverscrollIslandHandOver: ((UIView) -> Void)?
         if let inputPanelNode = self.inputPanelNode, let snapshot = inputPanelNode.view.snapshotView(afterScreenUpdates: false) {
             snapshot.frame = inputPanelNode.frame
             inputPanelNodeSnapshot = snapshot
+            // Bubble-free mode: a "next channel" island leaves with the panel's snapshot (nil without one).
+            inputPanelOverscrollIslandHandOver = inputPanelNode.overscrollIslandHandOver()
         }
         return SnapshotState(
             backgroundNode: self.backgroundNode,
@@ -5755,7 +5765,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             avatarSnapshotState: avatarSnapshotState,
             navigationButtonsSnapshotState: self.navigateButtons.prepareSnapshotState(),
             titleAccessoryPanelSnapshot: titleAccessoryPanelSnapshot,
-            inputPanelNodeSnapshot: inputPanelNodeSnapshot
+            inputPanelNodeSnapshot: inputPanelNodeSnapshot,
+            inputPanelOverscrollIslandHandOver: inputPanelOverscrollIslandHandOver
         )
     }
 
@@ -5779,6 +5790,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
 
         if let inputPanelNode = self.inputPanelNode, let inputPanelNodeSnapshot = snapshotState.inputPanelNodeSnapshot {
             inputPanelNode.view.superview?.insertSubview(inputPanelNodeSnapshot, belowSubview: inputPanelNode.view)
+            snapshotState.inputPanelOverscrollIslandHandOver?(inputPanelNodeSnapshot)
 
             inputPanelNodeSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputPanelNodeSnapshot] _ in
                 inputPanelNodeSnapshot?.removeFromSuperview()

@@ -1592,9 +1592,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 previewHeight = placement.size.height
             }
             if !isTablet {
-                if availableSize.height < previewHeight + 30.0 {
-                    controlsBottomInset = -70.0
-                }
+                controlsBottomInset = storyCameraControlsBottomInset(containerHeight: availableSize.height, viewfinderHeight: previewHeight)
             }
             
             let hasAllRequiredAccess = cameraScreenHasAllRequiredAccess(mode: modeKind, camera: CameraScreenAccessStatus(component.cameraAuthorizationStatus), microphone: CameraScreenAccessStatus(component.microphoneAuthorizationStatus))
@@ -1825,7 +1823,7 @@ private final class CameraScreenComponent: CombinedComponent {
             if isTablet {
                 captureControlsPosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0)
             } else {
-                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: component.chatScreenLayout?.shutterCenterY ?? (availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66)))
+                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: component.chatScreenLayout?.shutterCenterY ?? storyCameraShutterCenterY(containerHeight: availableSize.height, bottomInset: environment.safeInsets.bottom, controlsBottomInset: controlsBottomInset))
             }
             context.add(captureControls
                 .position(captureControlsPosition)
@@ -5107,32 +5105,31 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             let dualCameraSize: CGFloat = 160.0
             let circleSide = floorToScreenPixels(previewSize.width * dualCameraSize / 393.0)
-            let circleOffset = CGPoint(x: previewSize.width * (dualCameraSize + 107.0) / 1080.0, y: previewSize.width * (dualCameraSize + 278.0) / 1080.0)
-            
+
             let pipLeftInset = max(0.0, layout.safeInsets.left - previewContainerFrame.minX)
             let pipRightInset = max(0.0, previewContainerFrame.maxX - (layout.size.width - layout.safeInsets.right))
-            var origin: CGPoint
-            switch self.pipPosition {
-            case .topLeft:
-                origin = CGPoint(x: pipLeftInset + circleOffset.x, y: circleOffset.y)
-                if !isDualCameraEnabled {
-                    origin = origin.offsetBy(dx: -180.0, dy: 0.0)
-                }
-            case .topRight:
-                origin = CGPoint(x: previewFrame.width - pipRightInset - circleOffset.x, y: circleOffset.y)
-                if !isDualCameraEnabled {
-                    origin = origin.offsetBy(dx: 180.0, dy: 0.0)
-                }
-            case .bottomLeft:
-                origin = CGPoint(x: pipLeftInset + circleOffset.x, y: previewFrame.height - circleOffset.y)
-                if !isDualCameraEnabled {
-                    origin = origin.offsetBy(dx: -180.0, dy: 0.0)
-                }
-            case .bottomRight:
-                origin = CGPoint(x: previewFrame.width - pipRightInset - circleOffset.x, y: previewFrame.height - circleOffset.y)
-                if !isDualCameraEnabled {
-                    origin = origin.offsetBy(dx: 180.0, dy: 0.0)
-                }
+            let pipIsLeft = self.pipPosition == .topLeft || self.pipPosition == .bottomLeft
+            let pipIsBottom = self.pipPosition == .bottomLeft || self.pipPosition == .bottomRight
+            // On iPhone Duo unfolded the viewfinder's bottom edge is below the screen: a bottom corner keeps to the shutter
+            // instead.
+            var pipShutterCenterY: CGFloat?
+            if !isTablet && layout.reservedCorners != .none {
+                let shutterCenterY = storyCameraShutterCenterY(containerHeight: layout.size.height, bottomInset: bottomInset, controlsBottomInset: storyCameraControlsBottomInset(containerHeight: layout.size.height, viewfinderHeight: previewSize.height))
+                pipShutterCenterY = shutterCenterY - previewContainerFrame.minY
+            }
+            var origin = cameraDualPreviewCenter(
+                isLeft: pipIsLeft,
+                isBottom: pipIsBottom,
+                viewfinderWidth: previewSize.width,
+                containerSize: previewFrame.size,
+                visibleHeight: layout.size.height - previewContainerFrame.minY,
+                leftInset: pipLeftInset,
+                rightInset: pipRightInset,
+                shutterCenterY: pipShutterCenterY,
+                shutterCenterAboveViewfinderBottom: storyCameraShutterCenterAboveViewfinderBottom
+            )
+            if !isDualCameraEnabled {
+                origin = origin.offsetBy(dx: pipIsLeft ? -180.0 : 180.0, dy: 0.0)
             }
             
             if let pipTranslation = self.pipTranslation {
@@ -6083,6 +6080,19 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.scheduleCameraActivation()
         }
     }
+}
+
+// A 9:16 viewfinder that leaves no room below it for the controls (home-button phones, iPhone Duo) lifts them.
+private func storyCameraControlsBottomInset(containerHeight: CGFloat, viewfinderHeight: CGFloat) -> CGFloat {
+    return containerHeight < viewfinderHeight + 30.0 ? -70.0 : 0.0
+}
+
+// Where the viewfinder fits above the controls, the shutter's centre is this far above its bottom edge.
+private let storyCameraShutterCenterAboveViewfinderBottom: CGFloat = maximumShutterSize.height / 2.0 + 5.0
+
+// The shutter's centre on a phone, outside the chat camera's own layout (`CameraScreenChatScreenLayout`).
+private func storyCameraShutterCenterY(containerHeight: CGFloat, bottomInset: CGFloat, controlsBottomInset: CGFloat) -> CGFloat {
+    return containerHeight - bottomInset - storyCameraShutterCenterAboveViewfinderBottom + floorToScreenPixels(controlsBottomInset * 0.66)
 }
 
 private func pipPositionForLocation(layout: ContainerViewLayout, centerX: CGFloat, position: CGPoint, velocity: CGPoint) -> CameraScreenImpl.PIPPosition {

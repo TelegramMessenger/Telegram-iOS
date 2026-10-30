@@ -158,6 +158,7 @@ struct MixedPassStep: CustomStringConvertible {
     let transition: CoreListTransition
     let advanceAfter: TimeInterval
     let actions: [MixedPassAction]
+    var anchorMode: CoreListAnchorMode = .automatic
 
     var actionDescription: String {
         actions.map(\.description).joined(separator: " + ")
@@ -168,6 +169,7 @@ struct MixedPassStep: CustomStringConvertible {
             + "insets=\(insets) scroll=\(String(describing: scrollTo)) "
             + "duration=\(transition.duration) curve=\(String(describing: transition.curve)) "
             + "advance=\(advanceAfter)"
+            + (anchorMode == .automatic ? "" : " anchor=\(anchorMode)")
     }
 }
 
@@ -184,22 +186,35 @@ struct MixedPassScenario {
     /// depends on a specific pass producing a crossing carry), so drawing attachment actions from
     /// `rng` would silently hand every one of them a different scenario.
     private var attachmentRNG: SeededRNG
+    /// Anchor modes draw from a third generator, for the same reason.
+    private var anchorRNG: SeededRNG
     private var nextIdentity: Int
     private var positivePassSerial = 0
     /// Opt-in: only the stress suite wants attachments. Off, the scenario is byte-for-byte what it
     /// was before attachments existed.
     private let includesAttachments: Bool
+    /// Opt-in as well: off, every step anchors `.automatic`, as every step did before anchor modes
+    /// existed.
+    private let includesAnchorModes: Bool
+    /// The row the last scroll landed, which a later `.preserveItem` names: it is likely still loaded,
+    /// so the mode's own path runs rather than its fallback.
+    private var lastScrollTargetID: Int?
 
     static let heights: [CGFloat] = [44, 60, 75, 96, 128]
     static let durations: [TimeInterval] = [0, 0.15, 0.35, 0.5]
     static let phases: [Double] = [0, 0.1, 0.5, 0.9]
 
-    init(seed: UInt64, itemCount: Int, includesAttachments: Bool = false) {
+    init(seed: UInt64,
+         itemCount: Int,
+         includesAttachments: Bool = false,
+         includesAnchorModes: Bool = false) {
         precondition(itemCount > 0)
         self.seed = seed
         self.includesAttachments = includesAttachments
+        self.includesAnchorModes = includesAnchorModes
         rng = SeededRNG(seed: seed)
         attachmentRNG = SeededRNG(seed: seed &+ 0x9E37_79B9_7F4A_7C15)
+        anchorRNG = SeededRNG(seed: seed &+ 0xD1B5_4A32_D192_ED03)
         items = (0..<itemCount).map {
             MixedPassItem(
                 id: $0,
@@ -258,6 +273,7 @@ struct MixedPassScenario {
             let index = rng.int(in: items.indices)
             actions.append(.scroll(index: index, pointOffset: pointOffset))
             scrollTo = CoreListScrollTarget(index: index, pointOffset: pointOffset)
+            lastScrollTargetID = items[index].id
         }
         if actions.isEmpty {
             actions.append(.sameTarget)
@@ -276,6 +292,7 @@ struct MixedPassScenario {
                 : .linear(duration: duration)
         }
         let phase = Self.phases[rng.int(in: 0..<Self.phases.count)]
+        let anchorMode = includesAnchorModes ? nextAnchorMode() : .automatic
         let step = MixedPassStep(
             items: items,
             size: size,
@@ -283,10 +300,33 @@ struct MixedPassScenario {
             scrollTo: scrollTo,
             transition: transition,
             advanceAfter: duration * phase,
-            actions: actions
+            actions: actions,
+            anchorMode: anchorMode
         )
         actionLog.append(step.description)
         return step
+    }
+
+    /// One of the four modes, a quarter each. `.preserveItem` names the row the last scroll landed (one
+    /// of the first rows before any scroll) or, half the time, any row, which is most likely not loaded
+    /// and exercises the fallback to `.preserveVisibleContent`.
+    mutating private func nextAnchorMode() -> CoreListAnchorMode {
+        switch anchorRNG.int(in: 0..<4) {
+        case 0:
+            return .preserveVisibleContent
+        case 1:
+            return .preserveCentredContent
+        case 2:
+            if anchorRNG.bool() {
+                return .preserveItem(AnyHashable(items[anchorRNG.int(in: items.indices)].id))
+            }
+            if let id = lastScrollTargetID, items.contains(where: { $0.id == id }) {
+                return .preserveItem(AnyHashable(id))
+            }
+            return .preserveItem(AnyHashable(items[min(anchorRNG.int(in: 0..<8), items.count - 1)].id))
+        default:
+            return .automatic
+        }
     }
 
     /// Re-derives every row's group from its POSITION, which splits and merges runs — the operation

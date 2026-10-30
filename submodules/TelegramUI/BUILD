@@ -9,6 +9,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# The static glass assets alone (they are also in TelegramUIResources), for hosts that need only them.
+filegroup(
+    name = "StaticGlassResources",
+    srcs = glob(["Resources/StaticGlass/*.bin"]),
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "TelegramUIAssets",
     srcs = glob(["Images.xcassets/**"]),
@@ -323,6 +330,7 @@ swift_library(
         "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
         "//submodules/TelegramUI/Components/CoreListComponentHost",
+        "//submodules/TelegramUI/Components/ListViewItemCoreListHost",
         "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
         "//submodules/TelegramUI/Components/News/NewsScreen",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",

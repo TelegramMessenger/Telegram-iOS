@@ -64,12 +64,39 @@ private func bodyQuarterTurns(_ orientation: UIDeviceOrientation) -> Int {
     }
 }
 
+/// The interface orientation of a window, measured against the device body instead of its own screen: the interface
+/// orientation whose device equivalent (`deviceOrientationMatching`) is the body position in which the window reads
+/// upright. This is what `resolveCallVideoRotationAngle` takes as `interfaceOrientation`.
+///
+/// `screenPortrait` is the body position in which the screen's own portrait reads upright
+/// (`DeviceMetrics.screenPortraitDeviceOrientation(size:)`). It is portrait wherever a screen's orientation and the
+/// device's are measured from the same position, and the conversion returns `interfaceOrientation` unchanged there. On
+/// iPhone Duo's inner screen it is landscape-left: that screen's portrait interface is the body in landscape-left.
+public func callInterfaceOrientationInDeviceFrame(_ interfaceOrientation: UIInterfaceOrientation, screenPortrait: UIDeviceOrientation) -> UIInterfaceOrientation {
+    var quarterTurns = bodyQuarterTurns(deviceOrientationMatching(interfaceOrientation)) + bodyQuarterTurns(screenPortrait)
+    quarterTurns %= 4
+    let bodyOrientation: UIDeviceOrientation
+    switch quarterTurns {
+    case 1:
+        bodyOrientation = .landscapeLeft
+    case 2:
+        bodyOrientation = .portraitUpsideDown
+    case 3:
+        bodyOrientation = .landscapeRight
+    default:
+        bodyOrientation = .portrait
+    }
+    return interfaceOrientationMatching(bodyOrientation)
+}
+
 /// Resolves the on-screen rotation of a call video frame.
 ///
 /// Two rotations can sit between a frame and the viewer, and every caller passes both:
 ///
 /// - `interfaceOrientation` is how far UIKit turned the drawing surface away from the device
-///   body. Every frame is drawn on that surface, so its rotation is undone for every frame.
+///   body. Every frame is drawn on that surface, so its rotation is undone for every frame. A
+///   window's own interface orientation is measured against its screen, which is not the body on
+///   every screen; callers convert it with `callInterfaceOrientationInDeviceFrame`.
 /// - `deviceOrientation` is how far the body itself is turned away from gravity. A remote frame
 ///   carries the sender's gravity-relative rotation, so the body rotation is undone for it as
 ///   well. A local frame (`followsDeviceOrientation`) is body-relative already and reads upright
@@ -148,8 +175,9 @@ final class VideoContainerView: HighlightTrackingButton {
         var controlsHidden: Bool
         var isMinimized: Bool
         var isAnimatedOut: Bool
+        var isMinimizedCentered: Bool
         
-        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool) {
+        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, isMinimizedCentered: Bool) {
             self.size = size
             self.insets = insets
             self.interfaceOrientation = interfaceOrientation
@@ -158,6 +186,7 @@ final class VideoContainerView: HighlightTrackingButton {
             self.controlsHidden = controlsHidden
             self.isMinimized = isMinimized
             self.isAnimatedOut = isAnimatedOut
+            self.isMinimizedCentered = isMinimizedCentered
         }
     }
     
@@ -229,6 +258,7 @@ final class VideoContainerView: HighlightTrackingButton {
     private var params: Params?
     private var videoMetrics: VideoMetrics?
     private var appliedVideoMetrics: VideoMetrics?
+    private var panRecognizer: UIPanGestureRecognizer?
     
     private var highlightedState: Bool = false
     
@@ -375,7 +405,9 @@ final class VideoContainerView: HighlightTrackingButton {
         }
         self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         
-        self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        self.panRecognizer = panRecognizer
+        self.addGestureRecognizer(panRecognizer)
     }
     
     required init?(coder: NSCoder) {
@@ -560,8 +592,11 @@ final class VideoContainerView: HighlightTrackingButton {
         self.update(previousParams: params, params: params, transition: transition)
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: ComponentTransition) {
-        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, deviceOrientation: deviceOrientation, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut)
+    /// - Parameters:
+    ///   - isMinimizedCentered: the minimized video sits at the center of the area `insets` leave and cannot be
+    ///     dragged to a corner (the half-folded screen's lower half).
+    func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, deviceOrientation: UIDeviceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, isMinimizedCentered: Bool, transition: ComponentTransition) {
+        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, deviceOrientation: deviceOrientation, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut, isMinimizedCentered: isMinimizedCentered)
         if self.params == params {
             return
         }
@@ -569,7 +604,8 @@ final class VideoContainerView: HighlightTrackingButton {
         let previousParams = self.params
         self.params = params
         
-        if let previousParams, previousParams.controlsHidden != params.controlsHidden {
+        self.panRecognizer?.isEnabled = !params.isMinimizedCentered
+        if let previousParams, previousParams.controlsHidden != params.controlsHidden || previousParams.isMinimizedCentered != params.isMinimizedCentered {
             self.dragPosition = nil
             self.dragPositionAnimatorLink = nil
         }
@@ -595,7 +631,11 @@ final class VideoContainerView: HighlightTrackingButton {
             videoIsRotated = true
         }
         
-        let minimizedBoundingSize: CGFloat = params.controlsHidden ? 140.0 : 240.0
+        var minimizedBoundingSize: CGFloat = params.controlsHidden ? 140.0 : 240.0
+        let availableFrame = CGRect(x: params.insets.left, y: params.insets.top, width: max(1.0, params.size.width - params.insets.left - params.insets.right), height: max(1.0, params.size.height - params.insets.top - params.insets.bottom))
+        if params.isMinimizedCentered {
+            minimizedBoundingSize = min(minimizedBoundingSize, availableFrame.width, availableFrame.height)
+        }
         let videoSize = rotatedResolution.aspectFitted(CGSize(width: minimizedBoundingSize, height: minimizedBoundingSize))
         
         let videoResolution = rotatedResolution.aspectFittedOrSmaller(CGSize(width: 1280, height: 1280)).aspectFittedOrSmaller(CGSize(width: videoSize.width * 3.0, height: videoSize.height * 3.0))
@@ -604,7 +644,9 @@ final class VideoContainerView: HighlightTrackingButton {
         let rotatedVideoSize = videoIsRotated ? CGSize(width: videoSize.height, height: videoSize.width) : videoSize
         
         let rotatedVideoFrame: CGRect
-        if applyDragPosition, let dragPosition = self.dragPosition {
+        if params.isMinimizedCentered {
+            rotatedVideoFrame = videoSize.centered(around: availableFrame.center)
+        } else if applyDragPosition, let dragPosition = self.dragPosition {
             rotatedVideoFrame = videoSize.centered(around: dragPosition)
         } else {
             switch self.minimizedPosition {

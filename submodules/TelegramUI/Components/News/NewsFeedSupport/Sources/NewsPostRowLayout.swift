@@ -13,6 +13,8 @@ public enum NewsPostRowMetrics {
     public static let thumbnailSize: CGFloat = 82.0
     public static let thumbnailSpacing: CGFloat = 16.0
     public static let thumbnailCornerRadius: CGFloat = 10.0
+    /// "▶ 0:12" on a video's thumbnail sits this far in from its bottom-left corner (Feed2 FeedRow.swift:436-442).
+    public static let videoLabelInset: CGFloat = 6.0
     /// The text starts under the header line.
     public static var textTop: CGFloat {
         return topInset + headerHeight

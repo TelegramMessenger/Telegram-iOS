@@ -557,7 +557,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 let _ = captionPanelView.updateContainerLayoutSize?(layout.size, safeAreaInset: safeInsets, bottomInset: bottomInset, keyboardHeight: keyboardHeight, animated: transition.isAnimated)
             }
 
-            let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size)
+            let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout))
             transition.updateFrame(view: self.recipientArrowView, frame: recipientLayout.arrowFrame)
             transition.updateFrame(view: self.recipientLabel, frame: recipientLayout.labelFrame)
             let recipientAlpha: CGFloat = isToolActive || isInterfaceHidden || self.isEditingCaption || keyboardHeight > 0.0 ? 0.0 : 0.6

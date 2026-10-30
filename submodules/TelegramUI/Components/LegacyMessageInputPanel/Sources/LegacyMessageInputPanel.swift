@@ -371,101 +371,125 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             hasTimer = false
         }
 
+        let isLandscapePhone = width > maxHeight && UIDevice.current.userInterfaceIdiom != .pad
+        let collapsedCaptionTopInset = self.currentSafeAreaInset.top + 48.0
+        let expandedCaptionTopInset = self.currentSafeAreaInset.top + 8.0
+
+        // iPhone Duo: in a full-screen container the panel's rows keep clear of a status corner block they reach (a
+        // caption above the media in folded portrait). Everywhere else the panel spans the full width. A landscape phone
+        // parks the panel off-screen, so the container is portrait here.
+        let reservedCorners: ContainerViewLayoutCorners = self.usesContainerLayout && !isLandscapePhone ? reservedCornersForHostedLayout(size: CGSize(width: width, height: maxHeight), orientation: .portrait) : .none
+        let safeAreaInset = self.currentSafeAreaInset
+        func rowSideInsets(from minY: CGFloat, to maxY: CGFloat) -> (left: CGFloat, right: CGFloat) {
+            return legacyMessageInputPanelSideInsets(forRowsFrom: minY, to: maxY, containerHeight: maxHeight, safeInsets: safeAreaInset, reservedCorners: reservedCorners)
+        }
+        // Rows anchored below the top reach a top block exactly when the first one does; a panel above the bottom
+        // edge is checked against its actual rows once laid out, below.
+        var panelSideInsets: (left: CGFloat, right: CGFloat)
+        if self.currentIsCaptionAbove {
+            panelSideInsets = rowSideInsets(from: expandedCaptionTopInset, to: collapsedCaptionTopInset + self.baseHeight())
+        } else {
+            panelSideInsets = rowSideInsets(from: maxHeight - 1.0, to: maxHeight)
+        }
+
         self.inputPanel.parentState = self.state
-        let inputPanelSize = self.inputPanel.update(
-            transition: ComponentTransition(transition),
-            component: AnyComponent(
-                MessageInputPanelComponent(
-                    externalState: self.inputPanelExternalState,
-                    context: self.context,
-                    theme: theme,
-                    strings: presentationData.strings,
-                    style: .media,
-                    placeholder: .plain(presentationData.strings.MediaPicker_AddCaption),
-                    sendPaidMessageStars: nil,
-                    maxLength: Int(self.context.userLimits.maxCaptionLength),
-                    queryTypes: [.mention, .hashtag],
-                    alwaysDarkWhenHasText: false,
-                    resetInputContents: resetInputContents,
-                    nextInputMode: { [weak self] _ in
-                        guard let self else {
-                            return .emoji
-                        }
-                        switch self.currentInputMode {
-                        case .text:
-                            return .emoji
-                        case .emoji:
-                            return .text
-                        default:
-                            return .emoji
-                        }
-                    },
-                    areVoiceMessagesAvailable: false,
-                    presentController: self.present,
-                    presentInGlobalOverlay: self.presentInGlobalOverlay,
-                    sendMessageAction: { [weak self] _ in
-                        if let self {
-                            self.sendPressed?(self.caption())
-                            let _ = self.dismissInput()
-                        }
-                    },
-                    sendMessageOptionsAction: nil,
-                    sendStickerAction: { _ in },
-                    setMediaRecordingActive: nil,
-                    lockMediaRecording: nil,
-                    stopAndPreviewMediaRecording: nil,
-                    discardMediaRecordingPreview: nil,
-                    attachmentAction: { [weak self] in
-                        self?.toggleIsCaptionAbove()
-                    },
-                    attachmentButtonMode: self.currentIsCaptionAbove ? .captionDown : .captionUp,
-                    myReaction: nil,
-                    likeAction: nil,
-                    likeOptionsAction: nil,
-                    inputModeAction: { [weak self] in
-                        self?.toggleInputMode()
-                    },
-                    timeoutAction: hasTimer ? { [weak self] sourceView, gesture in
-                        self?.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
-                    } : nil,
-                    forwardAction: nil,
-                    paidMessageAction: nil,
-                    moreAction: nil,
-                    presentCaptionPositionTooltip: { [weak self] sourceView in
-                        self?.presentCaptionPositionTooltip(sourceView: sourceView)
-                    },
-                    presentVoiceMessagesUnavailableTooltip: nil,
-                    presentTextLengthLimitTooltip: nil,
-                    presentTextFormattingTooltip: nil,
-                    paste: { _ in },
-                    audioRecorder: nil,
-                    videoRecordingStatus: nil,
-                    isRecordingLocked: false,
-                    hasRecordedVideo: false,
-                    recordedAudioPreview: nil,
-                    hasRecordedVideoPreview: false,
-                    wasRecordingDismissed: false,
-                    timeoutValue: timeoutValue,
-                    timeoutSelected: timeoutSelected,
-                    displayGradient: false,
-                    bottomInset: 0.0,
-                    isFormattingLocked: false,
-                    hideKeyboard: self.currentInputMode == .emoji,
-                    customInputView: nil,
-                    forceIsEditing: self.currentInputMode == .emoji,
-                    disabledPlaceholder: nil,
-                    header: nil,
-                    isChannel: false,
-                    storyItem: nil,
-                    chatLocation: self.chatLocation,
-                    aiCompose: self.isAIEnabled ? { [weak self] in
-                        self?.openAICompose()
-                    } : nil
-                )
-            ),
-            environment: {},
-            containerSize: CGSize(width: width, height: maxInputPanelHeight)
-        )
+        func updateInputPanel(width panelWidth: CGFloat, resetInputContents: MessageInputPanelComponent.SendMessageInput?) -> CGSize {
+            return self.inputPanel.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(
+                    MessageInputPanelComponent(
+                        externalState: self.inputPanelExternalState,
+                        context: self.context,
+                        theme: theme,
+                        strings: presentationData.strings,
+                        style: .media,
+                        placeholder: .plain(presentationData.strings.MediaPicker_AddCaption),
+                        sendPaidMessageStars: nil,
+                        maxLength: Int(self.context.userLimits.maxCaptionLength),
+                        queryTypes: [.mention, .hashtag],
+                        alwaysDarkWhenHasText: false,
+                        resetInputContents: resetInputContents,
+                        nextInputMode: { [weak self] _ in
+                            guard let self else {
+                                return .emoji
+                            }
+                            switch self.currentInputMode {
+                            case .text:
+                                return .emoji
+                            case .emoji:
+                                return .text
+                            default:
+                                return .emoji
+                            }
+                        },
+                        areVoiceMessagesAvailable: false,
+                        presentController: self.present,
+                        presentInGlobalOverlay: self.presentInGlobalOverlay,
+                        sendMessageAction: { [weak self] _ in
+                            if let self {
+                                self.sendPressed?(self.caption())
+                                let _ = self.dismissInput()
+                            }
+                        },
+                        sendMessageOptionsAction: nil,
+                        sendStickerAction: { _ in },
+                        setMediaRecordingActive: nil,
+                        lockMediaRecording: nil,
+                        stopAndPreviewMediaRecording: nil,
+                        discardMediaRecordingPreview: nil,
+                        attachmentAction: { [weak self] in
+                            self?.toggleIsCaptionAbove()
+                        },
+                        attachmentButtonMode: self.currentIsCaptionAbove ? .captionDown : .captionUp,
+                        myReaction: nil,
+                        likeAction: nil,
+                        likeOptionsAction: nil,
+                        inputModeAction: { [weak self] in
+                            self?.toggleInputMode()
+                        },
+                        timeoutAction: hasTimer ? { [weak self] sourceView, gesture in
+                            self?.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
+                        } : nil,
+                        forwardAction: nil,
+                        paidMessageAction: nil,
+                        moreAction: nil,
+                        presentCaptionPositionTooltip: { [weak self] sourceView in
+                            self?.presentCaptionPositionTooltip(sourceView: sourceView)
+                        },
+                        presentVoiceMessagesUnavailableTooltip: nil,
+                        presentTextLengthLimitTooltip: nil,
+                        presentTextFormattingTooltip: nil,
+                        paste: { _ in },
+                        audioRecorder: nil,
+                        videoRecordingStatus: nil,
+                        isRecordingLocked: false,
+                        hasRecordedVideo: false,
+                        recordedAudioPreview: nil,
+                        hasRecordedVideoPreview: false,
+                        wasRecordingDismissed: false,
+                        timeoutValue: timeoutValue,
+                        timeoutSelected: timeoutSelected,
+                        displayGradient: false,
+                        bottomInset: 0.0,
+                        isFormattingLocked: false,
+                        hideKeyboard: self.currentInputMode == .emoji,
+                        customInputView: nil,
+                        forceIsEditing: self.currentInputMode == .emoji,
+                        disabledPlaceholder: nil,
+                        header: nil,
+                        isChannel: false,
+                        storyItem: nil,
+                        chatLocation: self.chatLocation,
+                        aiCompose: self.isAIEnabled ? { [weak self] in
+                            self?.openAICompose()
+                        } : nil
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: panelWidth, height: maxInputPanelHeight)
+            )
+        }
+        var inputPanelSize = updateInputPanel(width: width - panelSideInsets.left - panelSideInsets.right, resetInputContents: resetInputContents)
         let inputPanelHeight = inputPanelSize.height - 8.0
         var totalHeight = inputPanelHeight
         var inputMediaHeight: CGFloat = 0.0
@@ -601,11 +625,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             totalHeight += retainedInputHeight
         }
 
-        let isLandscapePhone = width > maxHeight && UIDevice.current.userInterfaceIdiom != .pad
-        let collapsedCaptionTopInset = self.currentSafeAreaInset.top + 48.0
-        let expandedCaptionTopInset = self.currentSafeAreaInset.top + 8.0
-
-        var inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: inputPanelSize)
+        var inputPanelFrame = CGRect(origin: CGPoint(x: panelSideInsets.left, y: -8.0), size: inputPanelSize)
         var inputMediaFrame = CGRect(origin: CGPoint(x: 0.0, y: inputPanelHeight), size: CGSize(width: width, height: inputMediaHeight))
 
         if self.usesContainerLayout {
@@ -627,6 +647,21 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     inputPanelFrame.origin.y = maxHeight - inputPanelHeight - bottomOffset - 8.0
                 }
                 inputMediaFrame.origin.y = maxHeight
+            }
+
+            // A panel above the bottom edge (or the keyboard) that has grown up into a corner block is laid out again
+            // for its rows' actual band. Narrowing only makes it taller, so its rows still reach the block.
+            let rowsSideInsets = rowSideInsets(from: inputPanelFrame.minY + 8.0, to: inputPanelFrame.maxY)
+            if rowsSideInsets != panelSideInsets {
+                panelSideInsets = rowsSideInsets
+                inputPanelSize = updateInputPanel(width: width - panelSideInsets.left - panelSideInsets.right, resetInputContents: nil)
+                let heightDelta = inputPanelSize.height - inputPanelFrame.height
+                totalHeight += heightDelta
+                if !self.currentIsCaptionAbove {
+                    inputPanelFrame.origin.y -= heightDelta
+                }
+                inputPanelFrame.origin.x = panelSideInsets.left
+                inputPanelFrame.size = inputPanelSize
             }
         }
 

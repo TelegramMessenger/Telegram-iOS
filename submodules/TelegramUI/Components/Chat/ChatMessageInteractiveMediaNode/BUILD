@@ -45,6 +45,7 @@ swift_library(
         "//submodules/Utils/RangeSet",
         "//submodules/MediaResources",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",

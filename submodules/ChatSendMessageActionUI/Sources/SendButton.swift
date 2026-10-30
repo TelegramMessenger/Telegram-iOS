@@ -29,6 +29,10 @@ final class SendButton: HighlightTrackingButton {
     
     private let containerView: UIView
     private let backgroundView: UIImageView
+    // Stands in for `backgroundView` when the source button is glass (bubble mode off), so the copy looks the same.
+    private var glassContainerView: GlassBackgroundContainerView?
+    private var glassView: GlassBackgroundView?
+    private var glassIconImage: (source: UIImage, image: UIImage)?
     private let iconView: UIImageView
     private var activityIndicator: RadialStatusNode?
     
@@ -117,18 +121,61 @@ final class SendButton: HighlightTrackingButton {
         self.containerView.isHidden = false
         self.extractedContainerView = nil
 
+        let sourceButtonNode = sourceSendButton.asyncdisplaykit_node as? ChatSendMessageActionSheetControllerSourceSendButtonNode
+        let glassTintColor = sourceButtonNode?.sendButtonGlassTintColor
+        
         let innerSize: CGSize
-        if size.height == 40.0 {
-            innerSize = CGSize(width: size.width - 3.0 * 2.0, height: size.height - 3.0 * 2.0)
+        let containerFrame: CGRect
+        if glassTintColor != nil, let sourceGlassFrame = sourceButtonNode?.sendButtonGlassFrame {
+            // A glass button keeps exactly its size and place: this view is the source's frame aligned to its right
+            // edge (see ChatSendMessageContextScreen), so the glass moves by the width the menu cut off.
+            innerSize = sourceGlassFrame.size
+            containerFrame = sourceGlassFrame.offsetBy(dx: size.width - sourceSendButton.bounds.width, dy: 0.0)
         } else {
-            innerSize = CGSize(width: isAnimatedIn ? 38.0 : size.width - 5.0 * 2.0, height: 33.0)
+            if size.height == 40.0 {
+                innerSize = CGSize(width: size.width - 3.0 * 2.0, height: size.height - 3.0 * 2.0)
+            } else {
+                innerSize = CGSize(width: isAnimatedIn ? 38.0 : size.width - 5.0 * 2.0, height: 33.0)
+            }
+            containerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize)
         }
-        let containerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize)
         transition.setFrame(view: self.containerView, frame: containerFrame)
         transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: innerSize.height * 0.5)
         
         self.backgroundView.tintColor = presentationData.theme.chat.inputPanel.actionControlFillColor
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: innerSize))
+        
+        if let glassTintColor {
+            let glassContainerView: GlassBackgroundContainerView
+            let glassView: GlassBackgroundView
+            var glassTransition = transition
+            if let currentContainer = self.glassContainerView, let current = self.glassView {
+                glassContainerView = currentContainer
+                glassView = current
+            } else {
+                glassTransition = .immediate
+                glassContainerView = GlassBackgroundContainerView(spacing: 0.0)
+                glassContainerView.isUserInteractionEnabled = false
+                glassView = GlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                glassContainerView.contentView.addSubview(glassView)
+                self.glassContainerView = glassContainerView
+                self.glassView = glassView
+                self.containerView.insertSubview(glassContainerView, aboveSubview: self.backgroundView)
+            }
+            glassTransition.setFrame(view: glassContainerView, frame: CGRect(origin: CGPoint(), size: innerSize))
+            glassContainerView.update(size: innerSize, isDark: presentationData.theme.overallDarkAppearance, transition: glassTransition)
+            glassTransition.setFrame(view: glassView, frame: CGRect(origin: CGPoint(), size: innerSize))
+            glassView.update(size: innerSize, cornerRadius: innerSize.height * 0.5, isDark: presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .custom(style: .default, color: glassTintColor)), transition: glassTransition)
+            self.backgroundView.isHidden = true
+        } else {
+            if let glassContainerView = self.glassContainerView {
+                self.glassContainerView = nil
+                self.glassView = nil
+                glassContainerView.removeFromSuperview()
+            }
+            self.backgroundView.isHidden = false
+        }
         
         if self.previousIsAnimatedIn != isAnimatedIn {
             self.previousIsAnimatedIn = isAnimatedIn
@@ -169,6 +216,16 @@ final class SendButton: HighlightTrackingButton {
             sourceCustomContentTransition.setPosition(view: sourceCustomContentView, position: sourceCustomContentFrame.center)
             sourceCustomContentTransition.setBounds(view: sourceCustomContentView, bounds: CGRect(origin: CGPoint(), size: sourceCustomContentFrame.size))
             sourceCustomContentTransition.setAlpha(view: sourceCustomContentView, alpha: isAnimatedIn ? 0.0 : 1.0)
+        }
+        
+        if glassTintColor != nil, let source = self.iconView.image, self.glassIconImage?.image !== source {
+            // The glass button draws a white glyph whatever the theme's glyph colour, as the source button does.
+            if let cache = self.glassIconImage, cache.source === source {
+                self.iconView.image = cache.image
+            } else if let tinted = generateTintedImage(image: source, color: .white) {
+                self.glassIconImage = (source, tinted)
+                self.iconView.image = tinted
+            }
         }
         
         if let icon = self.iconView.image {

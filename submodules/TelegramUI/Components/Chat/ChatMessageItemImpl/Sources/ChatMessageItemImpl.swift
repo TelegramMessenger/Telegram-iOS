@@ -28,6 +28,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
     public let disableDate: Bool
     public let effectiveAuthorId: EnginePeer.Id?
     public let additionalContent: ChatMessageItemAdditionalContent?
+    public let bubbleStyle: ChatMessageBubbleStyle
     
     let dateHeader: ChatMessageDateHeader
     let topicHeader: ChatMessageDateHeader?
@@ -44,7 +45,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             dateHeaderId: self.dateHeader.id,
             topicHeaderId: self.topicHeader?.id,
             merge: ChatMessageMergeFingerprint(message: self.message,
-                                               accountPeerId: self.context.account.peerId)
+                                               accountPeerId: self.context.account.peerId,
+                                               bubbleless: !self.presentationData.chatBubbleCorners.bubbleMode),
+            isSelected: self.presentationData.chatBubbleCorners.bubbleMode ? nil : chatMessageBubblelessNeighborSelection(bubbleMode: false, selected: self.selectedStates, drawsBand: self.drawsBubblelessSelectionBand)
         ))
     }
 
@@ -112,6 +115,13 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         self.disableDate = disableDate || !controllerInteraction.chatIsRotated
         self.additionalContent = additionalContent
         
+        var isMessageOptions = false
+        if case .messageOptions = associatedData.subject {
+            isMessageOptions = true
+        }
+        let bubbleStyle = chatMessageBubbleStyle(bubbleMode: presentationData.chatBubbleCorners.bubbleMode, isMessageOptions: isMessageOptions, incoming: content.effectivelyIncoming(context.account.peerId, associatedData: associatedData), message: content.firstMessage)
+        self.bubbleStyle = bubbleStyle
+        
         var avatarHeader: ChatMessageAvatarHeader?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
         let isEphemeralMessage = Namespaces.Message.allEphemeral.contains(content.firstMessage.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(content.firstMessage.id.namespace)
@@ -161,6 +171,12 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 
                 if let _ = content.firstMessage.guestChatAttribute {
                     displayAuthorInfo = true
+                }
+                
+                // Without bubbles, in a chat with a person their avatar and name head their runs, as in a group, so their
+                // side reads apart from yours; the item nodes keep the avatar column clear from the same answer.
+                if bubbleStyle.isBubbleless, chatMessageBubblelessPrivateChatHasAvatar(style: bubbleStyle, isPreview: presentationData.isPreview, chatPeer: content.firstMessage.peers[peerId].flatMap({ EnginePeer($0) })) {
+                    displayAuthorInfo = effectiveAuthor != nil
                 }
                 
                 if let chatPeer = content.firstMessage.peers[content.firstMessage.id.peerId], chatPeer.isForumOrMonoForum {
@@ -224,9 +240,14 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         
         if displayAuthorInfo {
             let message = content.firstMessage
-            var hasActionMedia = false
+            // Without bubbles a service message, expired media included, has no avatar beside it.
+            var hasActionMedia = bubbleStyle == .bubblelessService
             for media in message.media {
                 if media is TelegramMediaAction {
+                    // Bubble mode off: a call is a card from the person, avatar included.
+                    if bubbleStyle == .bubblelessCard {
+                        continue
+                    }
                     hasActionMedia = true
                     break
                 }
@@ -384,7 +405,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 }
             }
             
-            let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -419,24 +440,30 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             bottom = previousTop
         }
 
+        let bubbleless = !self.presentationData.chatBubbleCorners.bubbleMode
         let selfFingerprint = ChatMessageMergeFingerprint(message: self.message,
-                                                          accountPeerId: self.context.account.peerId)
+                                                          accountPeerId: self.context.account.peerId,
+                                                          bubbleless: bubbleless)
         let isWelcomeMessage = Namespaces.Message.allWelcomeMessages.contains(self.message.id.namespace)
 
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = ChatMessageHeaderSpec(hasDate: false, hasTopic: false)
 
-        if case let .message(topDateHeaderId, _, topMerge) = top {
+        if case let .message(topDateHeaderId, _, topMerge, _) = top {
             if topDateHeaderId != self.dateHeader.id && !isWelcomeMessage {
                 mergedBottom = .none
+            } else if bubbleless {
+                // Bubble mode off: runs merge by author and time, whatever their media (`chatMessageBubblelessMerge`).
+                mergedBottom = chatMessageBubblelessMerge(upper: selfFingerprint, lower: topMerge)
+                dateAtBottom.hasBubbleBelow = topMerge.keepsBubbleWithoutBubbleMode
             } else {
                 mergedBottom = chatMessageMerge(upper: selfFingerprint, lower: topMerge)
             }
         }
 
         switch bottom {
-        case let .message(bottomDateHeaderId, bottomTopicHeaderId, bottomMerge):
+        case let .message(bottomDateHeaderId, bottomTopicHeaderId, bottomMerge, _):
             if bottomDateHeaderId != self.dateHeader.id && !isWelcomeMessage {
                 mergedTop = .none
                 dateAtBottom.hasDate = true
@@ -447,7 +474,12 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
 
             if !(dateAtBottom.hasDate || dateAtBottom.hasTopic) {
-                mergedTop = chatMessageMerge(upper: bottomMerge, lower: selfFingerprint)
+                if bubbleless {
+                    mergedTop = chatMessageBubblelessMerge(upper: bottomMerge, lower: selfFingerprint)
+                    dateAtBottom.hasBubbleAbove = bottomMerge.keepsBubbleWithoutBubbleMode
+                } else {
+                    mergedTop = chatMessageMerge(upper: bottomMerge, lower: selfFingerprint)
+                }
             }
         case let .unread(bottomDateHeaderId), let .replyCount(bottomDateHeaderId):
             if bottomDateHeaderId != self.dateHeader.id {
@@ -463,7 +495,46 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
         }
 
+        if bubbleless {
+            // `bottom` is the row above this one and `top` the row below (see the swap for unrotated lists above).
+            let selectedNeighbors = chatMessageBubblelessSelectedNeighbors(above: bottom, below: top, dateHeaderId: self.dateHeader.id, topicHeaderId: self.topicHeader?.id)
+            dateAtBottom.selectedAbove = selectedNeighbors.above
+            dateAtBottom.selectedBelow = selectedNeighbors.below
+        }
+
         return (mergedTop, mergedBottom, dateAtBottom)
+    }
+    
+    /// Whether this item draws a selection band without bubbles, as the item nodes decide.
+    private var drawsBubblelessSelectionBand: Bool {
+        var isRoundVideo = false
+        var isUnsupportedMessage = false
+        for (message, _) in self.content {
+            for media in message.media {
+                if let file = media as? TelegramMediaFile, file.isInstantVideo {
+                    isRoundVideo = true
+                } else if media is TelegramMediaUnsupported {
+                    isUnsupportedMessage = true
+                }
+            }
+        }
+        return chatMessageBubblelessItemDrawsSelectionBand(style: self.bubbleStyle, isRoundVideo: isRoundVideo, isUnsupportedMessage: isUnsupportedMessage)
+    }
+    
+    /// Whether each message of this item is selected, for the bubble-free neighbour descriptor.
+    private var selectedStates: [Bool] {
+        func isSelected(_ selection: ChatHistoryMessageSelection) -> Bool {
+            if case let .selectable(selected, _) = selection {
+                return selected
+            }
+            return false
+        }
+        switch self.content {
+        case let .message(_, _, selection, _, _):
+            return [isSelected(selection)]
+        case let .group(messages):
+            return messages.map { isSelected($0.2) }
+        }
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
@@ -488,7 +559,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                         }
                     }
                     
-                    let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false) : dateAtBottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom, disableDate ? ChatMessageHeaderSpec(hasDate: false, hasTopic: false, hasBubbleAbove: dateAtBottom.hasBubbleAbove, hasBubbleBelow: dateAtBottom.hasBubbleBelow) : dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, { info in
                             apply(animation, info, false)

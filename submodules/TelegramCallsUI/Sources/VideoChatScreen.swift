@@ -19,6 +19,7 @@ import PresentationDataUtils
 import UndoUI
 
 import AvatarNode
+import CallScreen
 import TelegramAudio
 import LegacyComponents
 import TooltipUI
@@ -2914,7 +2915,7 @@ final class VideoChatScreenComponent: Component {
                     layout: participantsLayout,
                     expandedInsets: participantsExpandedInsets,
                     safeInsets: participantsSafeInsets,
-                    interfaceOrientation: environment.orientation ?? .portrait,
+                    interfaceOrientation: callInterfaceOrientationInDeviceFrame(environment.orientation ?? .portrait, screenPortrait: environment.deviceMetrics.screenPortraitDeviceOrientation(size: availableSize)),
                     enableVideoSharpening: self.enableVideoSharpening,
                     openParticipantContextMenu: { [weak self] id, sourceView, gesture in
                         guard let self else {
@@ -3777,6 +3778,7 @@ final class VideoChatScreenComponent: Component {
                         animationCache: call.accountContext.animationCache,
                         presentationData: call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
                         style: .glass(isTinted: true),
+                        glassHasTail: false,
                         items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                         selectedItems: Set(),
                         title: nil,

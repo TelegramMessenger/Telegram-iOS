@@ -160,5 +160,16 @@ public func chatMessageBubbleImageContentCorners(relativeContentPosition positio
             }
     }
     
+    // Bubble mode off: nothing has a tail, so media keeps a plain corner where the tail would join.
+    if !chatPresentationData.chatBubbleCorners.bubbleMode {
+        func untailed(_ corner: ImageCorner) -> ImageCorner {
+            if case let .Tail(radius, _) = corner {
+                return .Corner(radius)
+            }
+            return corner
+        }
+        return ImageCorners(topLeft: topLeftCorner, topRight: topRightCorner, bottomLeft: untailed(bottomLeftCorner), bottomRight: untailed(bottomRightCorner))
+    }
+    
     return ImageCorners(topLeft: topLeftCorner, topRight: topRightCorner, bottomLeft: bottomLeftCorner, bottomRight: bottomRightCorner)
 }

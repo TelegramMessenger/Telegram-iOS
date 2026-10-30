@@ -832,13 +832,21 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.localVideo = nil
                 callScreenState.remoteVideo = nil
             }
-            let interfaceOrientation = layout.metrics.orientation ?? .portrait
+            // Against the device body, which `deviceOrientation` is measured from too (iPhone Duo's inner screen is a
+            // quarter turn from it).
+            let interfaceOrientation = callInterfaceOrientationInDeviceFrame(layout.metrics.orientation ?? .portrait, screenPortrait: layout.deviceMetrics.screenPortraitDeviceOrientation(size: layout.size))
             var callScreenInsets = layout.insets(options: [.statusBar])
             if layout.safeInsets.left != layout.safeInsets.right {
                 // iPhone Duo: the side strip is a safe inset, which `insets(options:)` leaves out. The screen keeps its
                 // content and top-right button clear of it; equal side insets keep the old insets.
                 callScreenInsets.left = max(callScreenInsets.left, layout.safeInsets.left)
                 callScreenInsets.right = max(callScreenInsets.right, layout.safeInsets.right)
+            }
+            // iPhone Duo's inner screen half open, with the fold running across the screen (its portrait): the
+            // call splits at the fold. A fold running top to bottom keeps the whole-screen layout.
+            var fold: CGRect?
+            if let division = layout.division, division.width >= layout.size.width - 1.0, division.height < layout.size.height * 0.5 {
+                fold = division
             }
             self.callScreen.sideColumnBackButtonFrame = layout.sideColumnNavigationButtonFrame
             self.callScreen.update(
@@ -847,6 +855,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 interfaceOrientation: interfaceOrientation,
                 deviceOrientation: self.deviceOrientation ?? deviceOrientationMatching(interfaceOrientation),
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
+                fold: fold,
                 state: callScreenState,
                 transition: ComponentTransition(transition)
             )

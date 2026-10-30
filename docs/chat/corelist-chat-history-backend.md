@@ -27,6 +27,24 @@ drifted when the default moved and the Debug Settings switch stopped being the w
 See the "ChatHistoryListNode composition" section of `submodules/TelegramUI/Sources/CLAUDE.md` for the backend seam
 (`ChatHistoryListViewBackend`) this conforms to.
 
+## Scroll trace
+
+Debug Settings ▸ "Chat: CoreList scroll trace" (`ExperimentalUISettings.coreListScrollTrace`) switches CoreList's
+`FlightTrace` on for the app whenever a chat's list is made (`makeCoreListChatHistoryBackend(rotated:scrollTrace:)`), so
+reopen the chat after toggling it. Lines go to the app's log (tag `CoreListScroll`, so they arrive with Send Logs) and
+to `Documents/flight-trace.txt` in the app's own container (moved to `flight-trace.1.txt` past 8 MB), each starting with
+the media time, the clock touch timestamps share:
+
+- the engine: `TOUCH-DOWN`, every `PAN` event, `RELEASE` (the velocity it decelerates at, the repeated-flick multiplier
+  and streak), the flight (`launch`, `CATCH`, `shift`, `REBAKE`, `FINALIZE`), and each programmatic offset write
+  (`SET-OFFSET`, `HALT`, `REANCHOR-DRAG`) with the functions that called it (mangled: `xcrun swift-demangle`);
+- the backend: each `TX` with what the chat asked for (scroll target, stationary range, options in hex) and its `TX-END`,
+  `RANGE` changes, overscroll holds, each with the offset, the displayed range and the timestamps of the messages at
+  its two ends, which is what tells a jump from a scroll.
+
+From a device: `xcrun devicectl device copy from --device <id> --domain-type appDataContainer --domain-identifier
+ph.telegra.Telegraph --source Documents/flight-trace.txt --destination <file>`.
+
 ## Scope
 
 The backend targets **display / scroll / load-more only**. Every `ChatHistoryListViewBackend` member
@@ -1233,9 +1251,12 @@ fresh history node has `pinToTopStableId == nil`, so opening a chat with an answ
 fires it on the first view.
 
 **Release is permanent for that answer**, and is an event rather than a measurement: finger-down
-(`engine.onWillBeginDragging`), the pinned row leaving the collection, or a full replace. Dragging away
-mid-stream and scrolling back does **not** re-pin — only a new pinned message does. That is
-`ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+(`engine.onWillBeginDragging`), a jump the list holds landing on another message (a tap on a reply), the pinned row
+leaving the collection, or a full replace. Dragging away mid-stream and scrolling back does **not** re-pin — only a
+new pinned message does. That is `ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+The held jump is not: `ListViewImpl` keeps no jump (the chat never sets `experimentalSnapScrollToItem`), so there the
+next pass after any jump re-snaps to the pin. Here a held jump ends it (the user, 2026-10-29: while a scrolled-to
+message is held, a widget resizing keeps its own edge, which a pin pulling the list back would undo).
 
 **The slack still has to be computed inside the pass, and that is why it lives in CoreList.** It
 depends on the measured heights of the rows above the pin, which change on every streamed token — and
@@ -1493,13 +1514,14 @@ host-layer fade CoreList already installs.)
 
 **The track must be list-owned, not a raw CA animation on the row's layer.** Position tracks in
 `ListAnimationModel` are additive offsets decaying to zero, and `capturePresentedPositionOffsets()`
-reads `presented − model` on every bound live layer at the START of the next pass to recover exactly
-that quantity. An animation the backend added itself is indistinguishable from a track the model owns,
-so a second message landing mid-slide would resume against a displacement the model never issued —
-the same class of double-count that shipped once as every row snapping a whole growth backwards (see
-"Granular animation contract" in the CoreList `CLAUDE.md`). Going through
-`CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)` also makes an overlapping
-arrival compose: `transitionPositionOffset` folds the in-flight `currentOffset` into the new track.
+reads presented minus the committed base on every live row with a running position track at the START
+of the next pass to recover exactly that quantity. On such a row an animation the backend added itself
+is indistinguishable from the track the model owns, so a second message landing mid-slide would resume
+against a displacement the model never issued — the same class of double-count that shipped once as
+every row snapping a whole growth backwards (see "Granular animation contract" in the CoreList
+`CLAUDE.md`). Going through `CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)`
+also makes an overlapping arrival compose: `transitionPositionOffset` folds the in-flight
+`currentOffset` into the new track.
 
 **The block, not the row, is the unit.** Every named row takes the SAME offset — the run's total
 settled height, reserved space included — so a run arriving together keeps its spacing for the whole

@@ -195,8 +195,10 @@ public final class ChatMessageBubbleContentItem {
     public let attributes: ChatMessageEntryAttributes
     public let isItemPinned: Bool
     public let isItemEdited: Bool
+    /// The item's style (`ChatMessageItem.bubbleStyle`): content nodes read it rather than deciding again.
+    public let bubbleStyle: ChatMessageBubbleStyle
     
-    public init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: EngineRawMessage, topMessage: EngineRawMessage, content: ChatMessageItemContent, read: Bool, chatLocation: ChatLocation, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData, attributes: ChatMessageEntryAttributes, isItemPinned: Bool, isItemEdited: Bool) {
+    public init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: EngineRawMessage, topMessage: EngineRawMessage, content: ChatMessageItemContent, read: Bool, chatLocation: ChatLocation, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData, attributes: ChatMessageEntryAttributes, isItemPinned: Bool, isItemEdited: Bool, bubbleStyle: ChatMessageBubbleStyle = .bubble) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.message = message
@@ -209,6 +211,7 @@ public final class ChatMessageBubbleContentItem {
         self.attributes = attributes
         self.isItemPinned = isItemPinned
         self.isItemEdited = isItemEdited
+        self.bubbleStyle = bubbleStyle
     }
 }
 
@@ -289,6 +292,12 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     /// content: a run collapses to one pill, but two runs stay two pills.
     open func unsupportedContentAreas() -> [CGRect] {
         return []
+    }
+    
+    /// Without bubbles: what this node shows, in its own coordinates, for the card a pressed message lifts on (spec 5.9,
+    /// 6.9). From frames the node already laid out; the default is the whole node as a block.
+    open func bubblelessLiftParts() -> [ChatMessageBubblelessLiftPart] {
+        return [.block(self.bounds)]
     }
 
     open func updateHiddenMedia(_ media: [EngineRawMedia]?) -> Bool {

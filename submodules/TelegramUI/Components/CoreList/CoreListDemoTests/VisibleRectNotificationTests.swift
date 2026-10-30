@@ -34,6 +34,30 @@ final class VisibleRectNotificationTests: XCTestCase {
         XCTAssertTrue(row.wasNotifiedNil, "a loaded but off-viewport row must be notified nil")
     }
 
+    /// `visibleRectInsets` ends visibility before the viewport does (a host whose list runs on under the keyboard): with a
+    /// 230pt bottom band, the line is at 570. Row 9 (540...600) straddles it, row 10 (600...660) is wholly past it.
+    func testTheVisibleRectInsetsEndVisibilityAtTheirLine() throws {
+        let (fixture, items) = makeFixture()
+        fixture.listView.visibleRectInsets = UIEdgeInsets(top: 0, left: 0, bottom: 230, right: 0)
+        XCTAssertEqual(try view(fixture, items, 9).lastRect, CGRect(x: 0, y: 0, width: 390, height: 30))
+        XCTAssertTrue(try view(fixture, items, 10).wasNotifiedNil, "a row past the line is still visible")
+        XCTAssertEqual(try view(fixture, items, 0).lastRect, CGRect(x: 0, y: 0, width: 390, height: rowHeight))
+
+        // The band holds through a scroll.
+        fixture.scroll(to: fixture.boundsOriginY + 30)
+        XCTAssertEqual(try view(fixture, items, 9).lastRect, CGRect(x: 0, y: 0, width: 390, height: 60),
+                       "row 9 (510...570) is wholly inside the band")
+        XCTAssertTrue(try view(fixture, items, 10).wasNotifiedNil, "row 10 (570...630) only touches the line")
+    }
+
+    /// The top inset of the band clips the same way from above.
+    func testTheVisibleRectInsetsClipFromTheTop() throws {
+        let (fixture, items) = makeFixture()
+        fixture.listView.visibleRectInsets = UIEdgeInsets(top: 90, left: 0, bottom: 0, right: 0)
+        XCTAssertTrue(try view(fixture, items, 0).wasNotifiedNil, "row 0 (0...60) is above the band")
+        XCTAssertEqual(try view(fixture, items, 1).lastRect, CGRect(x: 0, y: 30, width: 390, height: 30))
+    }
+
     func testRowStraddlingTheBottomEdgeIsClippedAndItemLocal() throws {
         let (fixture, items) = makeFixture()
         // 780...840 clipped to 800 -> 20pt tall, expressed from the row's own origin.

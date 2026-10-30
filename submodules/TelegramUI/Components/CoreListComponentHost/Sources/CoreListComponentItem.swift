@@ -3,14 +3,23 @@ import UIKit
 import ComponentFlow
 import CoreList
 
+/// A component view that wants to know the attachment views of the runs its row belongs to (a floating
+/// avatar, say), as `CoreListItemView.attachedItemsUpdated` tells the row.
+public protocol CoreListComponentAttachmentsReceiver: AnyObject {
+    func attachedItemsUpdated(_ attachments: [UIView & CoreListAttachedItemView])
+}
+
 /// A CoreList row whose content is one ComponentFlow component, laid out at the row's width.
 public final class CoreListComponentItem: CoreListItem {
     public let identity: AnyHashable
     public let component: AnyComponent<Empty>
+    /// The run attachments the row publishes (`CoreListItem.attachedItems`): none by default.
+    public let attachedItems: [AnyHashable: CoreListAttachedItem]
 
-    public init(identity: AnyHashable, component: AnyComponent<Empty>) {
+    public init(identity: AnyHashable, attachedItems: [AnyHashable: CoreListAttachedItem] = [:], component: AnyComponent<Empty>) {
         self.identity = identity
         self.component = component
+        self.attachedItems = attachedItems
     }
 
     public func view() -> UIView & CoreListItemView {
@@ -57,6 +66,10 @@ public final class CoreListComponentItemView: UIView, CoreListItemView {
 
     func setComponent(_ component: AnyComponent<Empty>) {
         self.component = component
+    }
+
+    public func attachedItemsUpdated(_ attachments: [UIView & CoreListAttachedItemView]) {
+        (self.hostedView.view as? CoreListComponentAttachmentsReceiver)?.attachedItemsUpdated(attachments)
     }
 
     public func update(width: CGFloat, transition: CoreListTransition) -> CGFloat {

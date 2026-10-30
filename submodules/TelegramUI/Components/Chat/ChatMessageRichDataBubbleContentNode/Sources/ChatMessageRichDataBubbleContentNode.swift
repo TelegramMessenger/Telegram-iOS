@@ -169,6 +169,8 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                                     richPageKey: ResolvedRichDataPageKey,
                                     showMoreExpanded: Bool,
                                     codeHighlight: CachedMessageSyntaxHighlight?,
+                                    // Without bubbles the page lays out on its own (`InstantPageV2ContainerStyle`).
+                                    containerStyle: InstantPageV2ContainerStyle,
                                     layout: InstantPageV2Layout)?
     private var currentExpandedDetails: [Int: Bool] = [:]
     /// Quotes the reader expanded, keyed by structural block path. Lives on the content node, so
@@ -700,7 +702,10 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 // edge + side inset, mirroring TextBubble's bubbleInsets. The page itself is inset by
                 // `pageContentInset` (below), so the value handed to the layout is smaller by that
                 // much; these two must not be conflated, or the status and date drift off the text.
-                let pageHorizontalInset: CGFloat = 11.0
+                // Without bubbles an incoming page has no bubble to inset from: it starts on the text column like a
+                // plain message, and nothing clips its media, code bands and quotes, which round themselves.
+                let isBubblelessPage = item.bubbleStyle == .bubbleless
+                let pageHorizontalInset: CGFloat = isBubblelessPage ? 0.0 : 11.0
 
                 // The whole page is inset by this much on all four sides, so full-width media sits
                 // INSIDE the bubble background (corners clipped by the rounded container) instead of
@@ -713,7 +718,8 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 // each side: the first point only reaches the background edge (which is why the old
                 // container sat at x = 1 and read as flush), and the second is the visible inset.
                 // Measure any change to this against the background, not against these bounds.
-                let pageContentInset: CGFloat = 2.0
+                let pageContentInset: CGFloat = isBubblelessPage ? 0.0 : 2.0
+                let containerStyle: InstantPageV2ContainerStyle = isBubblelessPage ? .bubbleless(mainRadius: layoutConstants.image.defaultCornerRadius, blockCornerRadius: chatMessageBubblelessInlineBlockCornerRadius, codeBlockMinimumPadding: chatMessageBubblelessCodeBlockMinimumPadding, separateMediaSpacing: chatMessageBubblelessSeparateMediaSpacing) : .bubble
 
                 // The text inset INSIDE the page — what the layout is given, and the origin that
                 // page-space frames are measured from. Smaller than `pageHorizontalInset` by the
@@ -793,7 +799,18 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     primaryText: messageTheme.primaryTextColor,
                     secondaryText: messageTheme.secondaryTextColor
                 )
-                let tableHeaderColor = isDark || !isIncoming ? messageTheme.accentControlColor.withMultipliedAlpha(0.1) : UIColor(white: 0.0, alpha: 0.05)
+                // On a neutral surface (an incoming bubble in a light theme, or the page itself without a bubble) tables
+                // and code blocks take neutral grays; inside a dark or coloured bubble, a tint of its accent.
+                let neutralBlocks = isIncoming && (!isDark || isBubblelessPage)
+                let tableHeaderColor: UIColor
+                let tableBorderColor: UIColor
+                if neutralBlocks {
+                    tableHeaderColor = isDark ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.05)
+                    tableBorderColor = isDark ? UIColor(white: 1.0, alpha: 0.2) : UIColor(white: 0.0, alpha: 0.1)
+                } else {
+                    tableHeaderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.1)
+                    tableBorderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.25)
+                }
                 
                 let checkboxFill = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.fillColor : messageTheme.accentControlColor
                 var checkboxForeground = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.foregroundColor : item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
@@ -830,7 +847,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     panelPrimaryColor: messageTheme.primaryTextColor,
                     panelSecondaryColor: messageTheme.secondaryTextColor,
                     panelAccentColor: messageTheme.accentTextColor,
-                    tableBorderColor: isDark || !isIncoming ? messageTheme.accentControlColor.withMultipliedAlpha(0.25) : UIColor(white: 0.0, alpha: 0.1),
+                    tableBorderColor: tableBorderColor,
                     tableHeaderColor: tableHeaderColor,
                     controlColor: messageTheme.accentControlColor,
                     imageTintColor: nil,
@@ -945,6 +962,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                        // persisted, and never painted, because the node would keep serving the layout it
                        // cached before the job finished.
                        current.codeHighlight == cachedMessageSyntaxHighlight,
+                       current.containerStyle == containerStyle,
                        current.layout.formattedDateUpdatePeriod == nil {
                         // Reuse the cached layout only when it has no relative `textDate`. A relative
                         // date's formatted string ("N minutes ago") is baked into the laid-out text at
@@ -969,7 +987,8 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                             fitToWidth: true,
                             computeRevealCharacterRects: hasDraft || hadDraft,
                             edgeSpacingReduction: pageContentInset,
-                            contentScale: instantPageChatMessageContentScale(baseFontSize: baseFontSize)
+                            contentScale: instantPageChatMessageContentScale(baseFontSize: baseFontSize),
+                            containerStyle: containerStyle
                         )
                     }
                 }
@@ -1079,6 +1098,10 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 } else if !item.presentationData.chatBubbleCorners.hasTails {
                     displayStatus = false
                 } else if case let .messageOptions(_, _, info) = item.associatedData.subject, case let .link(link) = info, link.isCentered {
+                    displayStatus = false
+                }
+                if item.bubbleStyle.hidesIncomingStatus {
+                    // Without bubbles the time is in the author header.
                     displayStatus = false
                 }
                 
@@ -1418,6 +1441,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                                 resolvedContent.key,
                                 showMoreExpanded,
                                 cachedMessageSyntaxHighlight,
+                                containerStyle,
                                 pageLayout
                             )
                             if case .original = resolvedContent.key, !resolvedContent.isTranslated, !resolvedContent.isTranslating, let quotablePage = resolvedContent.quotablePage {

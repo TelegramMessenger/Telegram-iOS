@@ -3,6 +3,8 @@ import UIKit
 import TelegramCore
 import AccountContext
 import ChatPresentationInterfaceState
+import ComponentFlow
+import ChatInputAccessoryPanel
 @testable import ComposerHarnessLib
 
 /// An inline bot's placeholder (`botInfo.inlinePlaceholder`, "Search..." once "@bot " is typed) is one line the panel draws
@@ -64,5 +66,75 @@ final class HarnessInlinePlaceholderTests: XCTestCase {
         // icon's padding the panel gives back to `.input` (`nextButtonTopRight`), and before the clear button.
         XCTAssertLessThanOrEqual(placeholderFrame.maxX, inputButton.frame.minX + 2.5, "the placeholder \(placeholderFrame) runs under the input-mode button \(inputButton.frame)")
         XCTAssertLessThanOrEqual(placeholderFrame.maxX, clearFrame.minX, "the placeholder \(placeholderFrame) runs under the clear button \(clearFrame)")
+        // And it is truncated there, not earlier: the line is far longer than the field, so it ends within the width of
+        // the ellipsis and a glyph of that edge.
+        XCTAssertGreaterThan(placeholderFrame.maxX, inputButton.frame.minX - 30.0, "the placeholder \(placeholderFrame) ends well before the input-mode button \(inputButton.frame)")
+    }
+
+    /// The placeholder line sits on the typed text's line, as the field's own placeholder does, with a reply / edit panel
+    /// over the field too: it was placed 52 pt down whatever the panel's height (52 is today's only panel's), and by the
+    /// panel's hide offset again inside a container that already has it.
+    func testTheInlinePlaceholderSitsOnTheTextsLineUnderAnAccessoryPanel() throws {
+        let root = try HarnessEngine.root()
+        let host = try XCTUnwrap(root.panelHost)
+        let previousAccessoryPanel = host.panel.textInputAccessoryPanel
+        var originalPanelState = ChatTextInputPanelState()
+        // Registered before anything changes, so a later early exit cannot leave the stub panel to the next case.
+        defer {
+            host.panel.textInputAccessoryPanel = previousAccessoryPanel
+            host.updatePresentationInterfaceState { $0.updatedInputTextPanelState { _ in originalPanelState } }
+            host.setInputContent(ChatInputContent())
+            HarnessEngine.settle(root)
+        }
+        host.panel.textInputAccessoryPanel = { _, _, _, _ in
+            return AnyComponentWithIdentity(id: "harness.accessoryPanel", component: AnyComponent(HarnessStubAccessoryPanel(height: 70.0)))
+        }
+        let username = "@asmico_widget_bot"
+        host.setInputContent(ChatInputContent(blocks: [HarnessEdited.paragraph([HarnessEdited.run(username + " ")])]))
+        let font = UIFont.systemFont(ofSize: 17.0)
+        let placeholder = NSMutableAttributedString(string: username, attributes: [.font: font, .foregroundColor: UIColor.clear])
+        placeholder.append(NSAttributedString(string: " Search...", attributes: [.font: font, .foregroundColor: UIColor.gray]))
+        let accessoryItems: [ChatTextInputAccessoryItem] = [.input(isEnabled: true, inputMode: .emoji)]
+        host.updatePresentationInterfaceState { state in
+            originalPanelState = state.inputTextPanelState
+            return state.updatedInputTextPanelState { _ in
+                return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: placeholder, mediaRecordingState: nil)
+            }
+        }
+        host.panel.updateInputTextState(host.panel.inputTextState, keepSendButtonEnabled: false, extendedSearchLayout: true, accessoryItems: accessoryItems, animated: false)
+        HarnessEngine.settle(root)
+
+        let placeholderNode = try XCTUnwrap(host.panel.contextPlaceholderNode, "the panel shows no inline placeholder")
+        // Below the 70 pt panel whatever the field's own placeholder does (a check independent of its formula).
+        XCTAssertGreaterThanOrEqual(placeholderNode.frame.minY, 70.0, "the inline placeholder \(placeholderNode.frame) is under the accessory panel")
+        let fieldPlaceholderFrame = host.panel.textPlaceholderNode.frame
+        XCTAssertGreaterThan(fieldPlaceholderFrame.minY, 60.0, "precondition: the accessory panel is not over the field: \(fieldPlaceholderFrame)")
+        XCTAssertEqual(placeholderNode.frame.minY, fieldPlaceholderFrame.minY, accuracy: 0.5, "the inline placeholder \(placeholderNode.frame) is off the text's line \(fieldPlaceholderFrame)")
+    }
+}
+
+/// An accessory panel (the reply / edit bar over the field) of a chosen height.
+private final class HarnessStubAccessoryPanel: Component {
+    typealias EnvironmentType = ChatInputAccessoryPanelEnvironment
+
+    let height: CGFloat
+
+    init(height: CGFloat) {
+        self.height = height
+    }
+
+    static func ==(lhs: HarnessStubAccessoryPanel, rhs: HarnessStubAccessoryPanel) -> Bool {
+        return lhs.height == rhs.height
+    }
+
+    final class View: UIView {
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+        return CGSize(width: availableSize.width, height: self.height)
     }
 }

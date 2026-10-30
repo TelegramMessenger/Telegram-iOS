@@ -145,11 +145,18 @@ public struct ChatMediaEditorRecipientLayout: Equatable {
     public var labelFrame: CGRect
 }
 
-public func chatMediaEditorRecipientLayout(size: CGSize, safeInsets: UIEdgeInsets, arrowSize: CGSize, labelSize: CGSize) -> ChatMediaEditorRecipientLayout {
+public func chatMediaEditorRecipientLayout(size: CGSize, safeInsets: UIEdgeInsets, arrowSize: CGSize, labelSize: CGSize, statusIsland: ChatMediaEditorStatusIslandRow? = nil) -> ChatMediaEditorRecipientLayout {
     let screenWidth = min(size.width, size.height)
-    let labelWidth = max(0.0, min(labelSize.width, screenWidth - 150.0))
+    var labelWidth = max(0.0, min(labelSize.width, screenWidth - 150.0))
     let topInset = safeInsets.top
-    let arrowFrame = CGRect(origin: CGPoint(x: safeInsets.left + chatMediaEditorScreenEdgeInset, y: topInset + 16.0), size: arrowSize)
+    var arrowFrame = CGRect(origin: CGPoint(x: safeInsets.left + chatMediaEditorScreenEdgeInset, y: topInset + 16.0), size: arrowSize)
+    if let statusIsland {
+        // Beside iPhone Duo's status island the row sits on the island's clock line with the check button, which moved
+        // left of the island: a long chat name stops 8pt short of the check.
+        arrowFrame.origin.y = statusIsland.clockLineY - arrowSize.height / 2.0
+        let checkFrame = chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, statusIsland: statusIsland)
+        labelWidth = max(0.0, min(labelSize.width, checkFrame.minX - 8.0 - (arrowFrame.maxX + 6.0)))
+    }
     let labelFrame = CGRect(x: arrowFrame.maxX + 6.0, y: arrowFrame.minY - 2.0, width: labelWidth, height: labelSize.height)
     return ChatMediaEditorRecipientLayout(arrowFrame: arrowFrame, labelFrame: labelFrame)
 }

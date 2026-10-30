@@ -95,6 +95,19 @@ public extension DeviceMetrics {
         }
         return matchesSize(portraitSize(size), CGSize(width: 669.0, height: 951.0))
     }
+
+    /// The device position, as `UIDevice.orientation` reports it, in which the portrait of the screen showing a window of
+    /// `size` reads upright. `UIDevice.orientation` is measured against the device body on both of iPhone Duo's screens,
+    /// while a window's interface orientation is measured against its own screen, and the inner screen's portrait is the
+    /// body held in landscape-left (measured on an iPhone19,4, iOS 27.1, with `AVCaptureDevice.RotationCoordinator`: in
+    /// the inner screen's portrait the coordinator's capture angle is the one the cover screen gets in landscape-left,
+    /// and the inner screen's landscape-right is the body upside down). Portrait on every other device and screen.
+    func screenPortraitDeviceOrientation(size: CGSize) -> UIDeviceOrientation {
+        if self.isIPhoneDuoInnerScreen(size: size) {
+            return .landscapeLeft
+        }
+        return .portrait
+    }
 }
 
 /// The reserved corners for a full-screen layout built outside the window's own layout pass (a legacy host that hands
@@ -429,6 +442,23 @@ public extension ContainerViewLayout {
             stripLeft.isZero ? base : max(base, stripLeft + 16.0),
             stripRight.isZero ? base : max(base, stripRight + 16.0)
         )
+    }
+
+    /// A list narrowed by `base` on each side (a centred blocks-style list): its `left` and `width` in this layout,
+    /// `listSideMargins(base:)` from the edges, and the safe insets its rows still need. A side strip (iPhone Duo) is
+    /// outside the list then, so that side's inset is 0; rows that fill the list's width with their background while
+    /// their card stops at the inset would otherwise show the strip's width of background beside the card. Without
+    /// a strip: `base` on each side and `safeInsets`.
+    func centeredListPlacement(base: CGFloat) -> (left: CGFloat, width: CGFloat, safeInsets: UIEdgeInsets) {
+        let margins = self.listSideMargins(base: base)
+        var safeInsets = self.safeInsets
+        if self.sideStrip(edge: .left) != nil {
+            safeInsets.left = 0.0
+        }
+        if self.sideStrip(edge: .right) != nil {
+            safeInsets.right = 0.0
+        }
+        return (margins.left, self.size.width - margins.left - margins.right, safeInsets)
     }
 
     /// Frames for a top-anchored column of `count` controls of `itemSize`, `spacing` apart, in the side

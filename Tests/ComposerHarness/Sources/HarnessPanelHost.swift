@@ -115,15 +115,10 @@ public final class HarnessPanelHost {
             }
         )
 
-        // The app's own wiring (`ChatInterfaceStateInputPanels.swift`, `pastedMarkdownParser`), whose
-        // body is TelegramUI's `chatInputContentFromPastedMarkdown`: TelegramUI itself is not linkable
-        // here, so its four lines are repeated over the same public parsers.
+        // The app's own wiring (`ChatInterfaceStateInputPanels.swift`, `pastedMarkdownParser`): the same
+        // BrowserUI decision, with the chat composer's blank lines.
         self.panel.pastedMarkdownParser = { context, text in
-            guard let attribute = inputRichTextAttributeFromText(context: context, text: text) else {
-                return nil
-            }
-            let content = chatInputContentStrippingSelfReferentialLinks(chatInputContent(fromInstantPage: attribute.instantPage))
-            return pastedMarkdownContentIsRicherThanPlain(content) ? content : nil
+            return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: true)
         }
 
         // The chat builds the input node lazily, on first use. The harness has no "first use" to

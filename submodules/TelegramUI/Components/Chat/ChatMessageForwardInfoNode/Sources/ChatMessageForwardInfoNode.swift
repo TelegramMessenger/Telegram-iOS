@@ -374,7 +374,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 }
             case .standalone:
                 let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-                titleColor = serviceColor.primaryText
+                // Bubble mode off: the forward header beside a sticker stands on glass, in the primary text colour.
+                titleColor = !presentationData.chatBubbleCorners.bubbleMode ? presentationData.theme.theme.list.itemPrimaryTextColor : serviceColor.primaryText
                 
                 if let psaType = psaType {
                     var customFormat: String?

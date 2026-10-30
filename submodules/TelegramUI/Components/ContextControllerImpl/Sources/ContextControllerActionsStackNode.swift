@@ -1781,6 +1781,14 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         return self.itemContainers.last?.storedScrollingState
     }
     
+    /// The submenu on top, when one has been pushed onto the root menu.
+    public var topPushedItemId: ObjectIdentifier? {
+        guard self.itemContainers.count > 1, let itemContainer = self.itemContainers.last else {
+            return nil
+        }
+        return ObjectIdentifier(itemContainer)
+    }
+    
     public init(
         context: AccountContext?,
         getController: @escaping () -> ContextControllerProtocol?,

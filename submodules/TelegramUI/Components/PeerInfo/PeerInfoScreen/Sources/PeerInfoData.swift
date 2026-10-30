@@ -287,6 +287,9 @@ final class TelegramGlobalSettings {
     let notificationAuthorizationStatus: AccessType
     let notificationWarningSuppressed: Bool
     let notificationExceptions: NotificationExceptionsList?
+    /// Contacts access is off while contacts sync is on, and the warning was not dismissed: Settings ▸ Contacts shows
+    /// "!" (`contactsPermissionWarning`).
+    let contactsWarning: Bool
     let inAppNotificationSettings: InAppNotificationSettings
     let privacySettings: AccountPrivacySettings?
     let unreadTrendingStickerPacks: Int
@@ -311,6 +314,7 @@ final class TelegramGlobalSettings {
         notificationAuthorizationStatus: AccessType,
         notificationWarningSuppressed: Bool,
         notificationExceptions: NotificationExceptionsList?,
+        contactsWarning: Bool,
         inAppNotificationSettings: InAppNotificationSettings,
         privacySettings: AccountPrivacySettings?,
         unreadTrendingStickerPacks: Int,
@@ -334,6 +338,7 @@ final class TelegramGlobalSettings {
         self.notificationAuthorizationStatus = notificationAuthorizationStatus
         self.notificationWarningSuppressed = notificationWarningSuppressed
         self.notificationExceptions = notificationExceptions
+        self.contactsWarning = contactsWarning
         self.inAppNotificationSettings = inAppNotificationSettings
         self.privacySettings = privacySettings
         self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
@@ -858,6 +863,27 @@ private func peerInfoPersonalOrLinkedChannel(context: AccountContext, peerId: En
     |> distinctUntilChanged
 }
 
+/// Whether Settings ▸ Contacts shows "!": contacts access is neither allowed nor limited while contacts sync is on,
+/// and the permission warning has not been dismissed (it was the Contacts tab's badge).
+private func contactsPermissionWarning(context: AccountContext) -> Signal<Bool, NoError> {
+    return combineLatest(
+        DeviceAccess.authorizationStatus(subject: .contacts),
+        context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!),
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.contactsSettings))
+    )
+    |> map { status, noticeView, preferences -> Bool in
+        let settings: ContactsSettings = preferences?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
+        if !settings.synchronizeContacts {
+            return false
+        }
+        if let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) }), timestamp > 0 {
+            return false
+        }
+        return ![.allowed, .limited].contains(status)
+    }
+    |> distinctUntilChanged
+}
+
 func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>, starsContext: StarsContext?, tonContext: StarsContext?) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
@@ -1000,7 +1026,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         activeSessionsContextAndCount,
         privacySettings,
         preferences,
-        combineLatest(notificationExceptions, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()),
+        combineLatest(notificationExceptions, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), contactsPermissionWarning(context: context)),
         combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
         hasPassport,
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.appConfiguration)),
@@ -1024,7 +1050,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         walletBalance
     )
     |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState, tonState, businessConnectedBot, walletBalance -> PeerInfoScreenData in
-        let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
+        let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed, contactsWarning) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
         let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
@@ -1059,6 +1085,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             notificationAuthorizationStatus: notificationsAuthorizationStatus,
             notificationWarningSuppressed: notificationsWarningSuppressed,
             notificationExceptions: notificationExceptions,
+            contactsWarning: contactsWarning,
             inAppNotificationSettings: inAppNotificationSettings,
             privacySettings: privacySettings,
             unreadTrendingStickerPacks: unreadTrendingStickerPacks,
@@ -1700,6 +1727,7 @@ func peerInfoScreenData(
                         notificationAuthorizationStatus: .notDetermined,
                         notificationWarningSuppressed: false,
                         notificationExceptions: nil,
+                        contactsWarning: false,
                         inAppNotificationSettings: InAppNotificationSettings(playSounds: false, vibrate: false, displayPreviews: false, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .chats, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: false, displayNotificationsFromAllAccounts: false, customSound: nil),
                         privacySettings: privacySettings,
                         unreadTrendingStickerPacks: 0,

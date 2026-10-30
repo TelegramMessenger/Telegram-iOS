@@ -165,6 +165,10 @@ swift_library(
         "//submodules/TextSelectionNode",
         # WRSession and WREffectStore, for the effect tests (CSS filters paint only where there is a Metal device).
         "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS",
+        # The chat backend's list and its scroll engine (`@testable`), for the resize test that releases the pin as a
+        # drag does, without a finger.
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
+        "//submodules/TelegramUI/Components/CoreList",
     ],
 )
 

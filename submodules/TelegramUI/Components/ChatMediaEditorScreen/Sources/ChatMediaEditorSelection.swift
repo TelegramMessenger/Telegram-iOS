@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import SwiftSignalKit
 import MediaEditor
 import ChatMediaSend
@@ -178,12 +179,49 @@ public let chatMediaEditorCheckButtonRingInset: CGFloat = 3.0
 public let chatMediaEditorCounterButtonSize = CGSize(width: 64.0, height: 38.0)
 public let chatMediaEditorCounterCircleFrame = CGRect(x: 16.0, y: 1.0, width: 31.0, height: 31.0)
 
-public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
-    let topInset = safeInsets.top
-    return CGRect(origin: CGPoint(x: size.width - safeInsets.right - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset), y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
+/// iPhone Duo's unfolded screen in portrait: the status island at the top right. The editor's top row sits on the
+/// island's clock line, centred `clockLineY` from the top, its trailing control `trailingInset` further left, as the story
+/// editor's does (rule 4 in docs/iphone-duo-layout.md); below the island it stood under the island's whole band.
+public struct ChatMediaEditorStatusIslandRow: Equatable {
+    public var clockLineY: CGFloat
+    public var trailingInset: CGFloat
+
+    public init(clockLineY: CGFloat, trailingInset: CGFloat) {
+        self.clockLineY = clockLineY
+        self.trailingInset = trailingInset
+    }
 }
 
-public func chatMediaEditorCounterButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool) -> CGRect {
+/// The status island beside the editor's top row, or nil: every other device and posture.
+public func chatMediaEditorStatusIslandRow(layout: ContainerViewLayout) -> ChatMediaEditorStatusIslandRow? {
+    guard layout.topBarStatusIsland != nil else {
+        return nil
+    }
+    return ChatMediaEditorStatusIslandRow(clockLineY: (layout.navigationBarStatusBarHeight ?? 0.0) + 31.0, trailingInset: layout.navigationBarTrailingButtonsInset)
+}
+
+public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, statusIsland: ChatMediaEditorStatusIslandRow? = nil) -> CGRect {
+    let topInset = safeInsets.top
+    var frame = CGRect(origin: CGPoint(x: size.width - safeInsets.right - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset), y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
+    if let statusIsland {
+        frame.origin.x -= statusIsland.trailingInset
+        frame.origin.y = statusIsland.clockLineY - frame.height / 2.0
+    }
+    return frame
+}
+
+/// The counter and the camera button beside it sit at the bottom: they span the side strip, keeping clear only of a
+/// corner block that reaches the bottom edge (`bottomEdgeSideInsets`). Equal to `safeInsets` on every other device.
+func chatMediaEditorBottomRowSafeInsets(_ safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> UIEdgeInsets {
+    let sideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: reservedCorners)
+    var result = safeInsets
+    result.left = sideInsets.left
+    result.right = sideInsets.right
+    return result
+}
+
+public func chatMediaEditorCounterButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool) -> CGRect {
+    let safeInsets = chatMediaEditorBottomRowSafeInsets(safeInsets, reservedCorners: reservedCorners)
     return CGRect(origin: CGPoint(x: size.width - chatMediaEditorCounterButtonSize.width - safeInsets.right, y: toolbarMinY - captionBaseHeight - 50.0 - (hasVideoHeader ? 46.0 : 0.0)), size: chatMediaEditorCounterButtonSize)
 }
 

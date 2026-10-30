@@ -35,6 +35,9 @@ import GiftItemComponent
 import MediaResources
 import UIKitRuntimeUtils
 import ShimmerEffect
+import GlassBackgroundComponent
+
+private let statusGlassTintColor = GlassBackgroundView.TintColor(kind: .custom(style: .default, color: UIColor(white: 0.0, alpha: 0.3)))
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -466,6 +469,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var media: EngineMedia?
     private var mediaIndex: Int?
     private var themeAndStrings: (PresentationTheme, PresentationStrings, String, Bool)?
+    // Bubble mode off: the play/download control stands on live dark glass, which blurs the media behind it; the badge
+    // over media on the media glass image.
+    private var isBubblelessGlassPlates = false
+    private var statusGlassView: GlassBackgroundView?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
     private var wideLayout: Bool?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
@@ -1899,6 +1906,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.mediaIndex = mediaIndex
                             strongSelf.wideLayout = wideLayout
                             strongSelf.themeAndStrings = (presentationData.theme.theme, presentationData.strings, dateTimeFormat.decimalSeparator, presentationData.isPreview)
+                            strongSelf.isBubblelessGlassPlates = !presentationData.chatBubbleCorners.bubbleMode
                             strongSelf.sizeCalculation = sizeCalculation
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
@@ -2000,6 +2008,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 statusFrame.origin.x = floor(imageFrame.width / 2.0 - statusFrame.width / 2.0)
                                 statusFrame.origin.y = floor(imageFrame.height / 2.0 - statusFrame.height / 2.0)
                                 statusNode.frame = statusFrame
+                                if strongSelf.statusGlassView != nil {
+                                    strongSelf.updateStatusGlass(statusNode: statusNode)
+                                }
                             }
                             
                             var videoTimestamp: Int32?
@@ -2624,6 +2635,39 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         self.playerUpdateTimer = nil
     }
     
+    /// The dark glass under the control (live, tinted black 0.3), inside the control's own view so that it follows its
+    /// frame, its hiding and its removal; nil takes it away, dissolving it (`animated`) while the glyph scales out, as
+    /// live glass ignores its alpha.
+    private func updateStatusGlass(statusNode: RadialStatusNode?, animated: Bool = false) {
+        if let statusNode {
+            let glassView: GlassBackgroundView
+            if let current = self.statusGlassView {
+                glassView = current
+            } else {
+                glassView = GlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.statusGlassView = glassView
+            }
+            if glassView.superview !== statusNode.view {
+                statusNode.view.insertSubview(glassView, at: 0)
+            }
+            let size = statusNode.bounds.size
+            glassView.frame = CGRect(origin: CGPoint(), size: size)
+            glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: statusGlassTintColor, transition: .immediate)
+        } else if let glassView = self.statusGlassView {
+            self.statusGlassView = nil
+            if animated {
+                let size = glassView.bounds.size
+                glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: statusGlassTintColor, isVisible: false, transition: .easeInOut(duration: 0.2))
+                Queue.mainQueue().after(0.2, { [weak glassView] in
+                    glassView?.removeFromSuperview()
+                })
+            } else {
+                glassView.removeFromSuperview()
+            }
+        }
+    }
+    
     private func updateStatus(animated: Bool) {
         guard let (theme, strings, decimalSeparator, isPreview) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message?._asMessage(), let attributes = self.attributes, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
             return
@@ -2731,6 +2775,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     statusNode?.removeFromSupernode()
                 })
                 self.statusNode = nil
+                // The glyph always scales out here (a photo done uploading or downloading): the glass dissolves with it.
+                if self.statusGlassView != nil {
+                    self.updateStatusGlass(statusNode: nil, animated: true)
+                }
             }
         }
         
@@ -3089,6 +3137,14 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             })
             statusNode.backgroundNodeColor = backgroundColor
+            if self.isBubblelessGlassPlates && !isSecretMedia && state != .none && !removeStatusNode {
+                statusNode.backgroundNodeColor = .clear
+                self.updateStatusGlass(statusNode: statusNode)
+            } else if self.statusGlassView != nil {
+                self.updateStatusGlass(statusNode: nil, animated: animated && removeStatusNode)
+            }
+        } else if self.statusGlassView != nil {
+            self.updateStatusGlass(statusNode: nil)
         }
         if var badgeContent = badgeContent {
             if self.badgeNode == nil {
@@ -3126,6 +3182,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     badgeContent = .text(inset: 0.0, backgroundColor: backgroundColor, foregroundColor: foregroundColor, text: NSAttributedString(string: duration), iconName: nil)
                 }
             }
+            self.badgeNode?.isGlass = self.isBubblelessGlassPlates
             self.badgeNode?.update(theme: theme, content: badgeContent, mediaDownloadState: mediaDownloadState, animated: animated)
         } else if let badgeNode = self.badgeNode {
             self.badgeNode = nil
@@ -3159,7 +3216,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             displaySpoiler = true
         } else if isSecretMedia {
             displaySpoiler = true
-        } else if message.isSensitiveContent(platform: "ios") {
+        } else if let context = self.context, message.isSensitiveContent(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
             if !self.showSensitiveContent {
                 displaySpoiler = true
                 icon = .eye
@@ -3177,7 +3234,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     guard let self else {
                         return
                     }
-                    if message.isSensitiveContent(platform: "ios") {
+                    if message.isSensitiveContent(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
                         self.activateAgeRestrictedMedia?()
                     } else {
                         self.internallyVisible = true

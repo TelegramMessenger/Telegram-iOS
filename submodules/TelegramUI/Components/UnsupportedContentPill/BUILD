@@ -17,6 +17,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/AppBundle",
+        "//submodules/TelegramUI/Components/StaticGlassBackground",
     ],
     visibility = [
         "//visibility:public",
@@ -30,6 +31,7 @@ swift_library(
         "Tests/**/*.swift",
     ]),
     deps = [
+        "//submodules/TelegramUI/Components/StaticGlassBackground",
         ":UnsupportedContentPill",
         "//submodules/Display",
     ],

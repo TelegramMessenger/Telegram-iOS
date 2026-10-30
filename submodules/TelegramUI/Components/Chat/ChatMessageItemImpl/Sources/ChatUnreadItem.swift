@@ -88,6 +88,9 @@ public class ChatUnreadItemNode: ListViewItemNode {
     private var wallpaperBackgroundNode: WallpaperBackgroundNode?
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     
+    /// Without bubbles (bubble mode off): no strip, just the gray label with a row of down chevrons on each side.
+    private var bubblelessDecorations: (leading: UIImageView, trailing: UIImageView)?
+    
     private var absolutePosition: (CGRect, CGSize)?
     
     private var theme: ChatPresentationThemeData?
@@ -150,8 +153,11 @@ public class ChatUnreadItemNode: ListViewItemNode {
                 updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.presentationData.theme.theme)
             }
             
+            let isBubbleless = !item.presentationData.chatBubbleCorners.bubbleMode
+            let textColor = isBubbleless ? item.presentationData.theme.theme.chat.serviceMessage.dateTextColor.withoutWallpaper : item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor
+            
             let string = item.presentationData.strings.Conversation_UnreadMessages
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: string, font: titleFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: string, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: params.width, height: 25.0)
             
@@ -195,6 +201,35 @@ public class ChatUnreadItemNode: ListViewItemNode {
                         }
                     } else {
                         strongSelf.backgroundNode.isHidden = false
+                    }
+                    
+                    if isBubbleless {
+                        strongSelf.backgroundNode.isHidden = true
+                        strongSelf.backgroundContent?.isHidden = true
+                        
+                        let decorations: (leading: UIImageView, trailing: UIImageView)
+                        if let current = strongSelf.bubblelessDecorations {
+                            decorations = current
+                        } else {
+                            decorations = (UIImageView(), UIImageView())
+                            strongSelf.bubblelessDecorations = decorations
+                            strongSelf.view.addSubview(decorations.leading)
+                            strongSelf.view.addSubview(decorations.trailing)
+                        }
+                        let color = textColor.withMultipliedAlpha(0.6)
+                        decorations.leading.image = chatBubblelessChevronsImage(color: color, leading: true)
+                        decorations.trailing.image = chatBubblelessChevronsImage(color: color, leading: false)
+                        
+                        let decorationSize = chatBubblelessSeparatorSize
+                        let decorationY = floorToScreenPixels(labelFrame.midY - decorationSize.height * 0.5)
+                        animation.animator.updateFrame(layer: decorations.leading.layer, frame: CGRect(origin: CGPoint(x: labelFrame.minX - chatBubblelessSeparatorSpacing - decorationSize.width, y: decorationY), size: decorationSize), completion: nil)
+                        animation.animator.updateFrame(layer: decorations.trailing.layer, frame: CGRect(origin: CGPoint(x: labelFrame.maxX + chatBubblelessSeparatorSpacing, y: decorationY), size: decorationSize), completion: nil)
+                    } else if let decorations = strongSelf.bubblelessDecorations {
+                        // Back in bubbles: undo what the bubble-free layout changed, and nothing else.
+                        strongSelf.bubblelessDecorations = nil
+                        decorations.leading.removeFromSuperview()
+                        decorations.trailing.removeFromSuperview()
+                        strongSelf.backgroundContent?.isHidden = false
                     }
                 }
             })

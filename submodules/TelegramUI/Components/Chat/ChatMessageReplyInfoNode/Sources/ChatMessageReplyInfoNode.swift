@@ -93,6 +93,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let animationCache: AnimationCache?
         public let animationRenderer: MultiAnimationRenderer?
         public let associatedData: ChatMessageItemAssociatedData
+        /// The replying message's style: without a bubble its reply block sits on the page.
+        public let bubbleStyle: ChatMessageBubbleStyle
         
         public init(
             presentationData: ChatPresentationData,
@@ -110,7 +112,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
             animationRenderer: MultiAnimationRenderer?,
-            associatedData: ChatMessageItemAssociatedData
+            associatedData: ChatMessageItemAssociatedData,
+            bubbleStyle: ChatMessageBubbleStyle = .bubble
         ) {
             self.presentationData = presentationData
             self.strings = strings
@@ -128,6 +131,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
             self.associatedData = associatedData
+            self.bubbleStyle = bubbleStyle
         }
     }
     
@@ -283,7 +287,10 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 placeholderColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             case .standalone:
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
-                titleColor = serviceColor.primaryText
+                // Bubble mode off: the reply beside a sticker stands on glass, in the primary text colour.
+                let isBubbleless = !arguments.presentationData.chatBubbleCorners.bubbleMode
+                let primaryText = isBubbleless ? arguments.presentationData.theme.theme.list.itemPrimaryTextColor : serviceColor.primaryText
+                titleColor = primaryText
                 if dashSecondaryColor != nil {
                     secondaryColor = .clear
                 }
@@ -291,9 +298,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     tertiaryColor = .clear
                 }
                 
-                mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
+                mainColor = isBubbleless ? primaryText : serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
                 dustColor = titleColor
-                placeholderColor = serviceColor.primaryText.withAlphaComponent(0.2)
+                placeholderColor = primaryText.withAlphaComponent(0.2)
             }
             
             if let message = arguments.message {
@@ -955,6 +962,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 var isTransparent: Bool = false
                 if case .standalone = arguments.type {
                     isTransparent = true
+                }
+                // Without bubbles a reply sits on the page, where its block is rounder.
+                if arguments.bubbleStyle.isBubbleless, case .bubble = arguments.type {
+                    node.backgroundView.clipCornerRadius = chatMessageBubblelessInlineBlockCornerRadius
+                } else {
+                    node.backgroundView.clipCornerRadius = nil
                 }
                 node.backgroundView.update(
                     size: backgroundFrame.size,
