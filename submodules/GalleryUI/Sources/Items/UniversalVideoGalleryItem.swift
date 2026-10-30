@@ -3852,7 +3852,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 innerSubject = .pollOption(opaqueIdentifier)
                             }
                                 
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil, subject: innerSubject), timecode: nil, setupReply: false)))
+                            let galleryController = strongSelf.galleryController() as? GalleryController
+                            let chatLocation = galleryController?.chatLocation ?? .peer(peer)
+                            let chatLocationContextHolder = galleryController?.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil, subject: innerSubject), timecode: nil, setupReply: false)))
                             
                             Queue.mainQueue().after(0.3) {
                                 strongSelf.completeCustomDismiss(false)
