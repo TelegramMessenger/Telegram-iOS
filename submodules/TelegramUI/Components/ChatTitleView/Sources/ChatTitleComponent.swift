@@ -285,6 +285,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
     }
 }
 
+
+/// How far a tap on the chat title may drift (UIKit's own tap tolerance) before it is not a tap.
+private let chatTitleTapMovement: CGFloat = 10.0
 public final class ChatTitleComponent: Component {
     public struct Activities: Equatable {
         public struct Item: Equatable {
@@ -381,7 +384,12 @@ public final class ChatTitleComponent: Component {
         return true
     }
     
-    public final class View: UIView {
+    public final class View: UIView, InteractiveTransitionGestureRecognizerTapTarget {
+        // A tap on the title may drift this far, and a back swipe that starts on it takes the touch only past it.
+        public var interactiveTransitionMinimumMovement: CGFloat {
+            return chatTitleTapMovement
+        }
+        
         private var backgroundView: GlassBackgroundView?
         private let contentContainer: UIView
         /// While a navigation transition draws the pill, the pill is hidden and what it shows is lent to the transition
@@ -536,6 +544,10 @@ public final class ChatTitleComponent: Component {
             recognizer.tapActionAtPoint = { _ in
                 return .waitForSingleTap
             }
+            // The title is not in a scrolling list: a tap may drift as far as UIKit's own (`chatTitleTapMovement`). With the
+            // recognizer's 2pt, and the back swipe taking a touch after 2pt to the right, a finger that moved 3pt lost the
+            // tap, and the profile opened only some of the time.
+            recognizer.maximumTapMovement = chatTitleTapMovement
             self.contentContainer.addGestureRecognizer(recognizer)
         }
         
