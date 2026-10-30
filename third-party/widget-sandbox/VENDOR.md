@@ -1,6 +1,13 @@
-# widget-sandbox v0.4.0 (vendored)
+# widget-sandbox v0.5.0 (vendored)
 
-Taken from `~/build/widget-sandbox` at the tag **`v0.4.0`** (`9a27e70`, 2026-10-30).
+Taken from `~/build/widget-sandbox` at the tag **`v0.5.0`** (`3a7acf1`, 2026-10-30).
+- **v0.5.0:** the wallet. A widget can pay (`TelegramWidget.wallet.sendTransaction`) or sign (`wallet.signData`)
+  through Gram Wallet in TON Connect's formats, and `request(data, { wallet: true })` gives its bot the user's wallet;
+  the gate's grant lets one wallet call follow the answer to a tap's call within 10 s. The policy's checks
+  (`checkWalletTransaction`, `checkSignDataPayload`, `checkRequestOptions`, `RequestGate::decideWallet`, the grant),
+  the fixture's `walletTransactions` and `signDataPayloads`, three `wallet-*` attacks and
+  `corpus/interactive/05-wallet.html`. How this client follows it is in the message widgets guide and the runtime
+  record.
 - **v0.4.0:** the client's time over a widget with no caption below it, the content safe area: `env(safe-area-inset-*)`
   in profile 1 (`P1-safe-area`), the six `--tg-content-safe-area-*` root variables, the UA layer's body padding,
   `TelegramWidget.contentSafeAreaInset` and `contentSafeAreaChanged`; the conformance cases `auto/36-safe-area` and
@@ -36,7 +43,7 @@ linger in the bundles: v0.1.1 split `visual/03, 05, 08, 09` into `-a` and `-b`; 
 replaced `visual/sdk/16-bot-edit` with `16-state-edit`.
 
 ```sh
-V=v0.4.0
+V=v0.5.0
 W=third-party/widget-sandbox
 X=$(mktemp -d)
 D=packages/desktop/sandbox
@@ -73,9 +80,10 @@ ratchet: `conformance_report.sh --record` retires checks a tag renamed (`Conform
 
 Taken:
 - `corpus/` (all of it):
-  - `attacks/`: 110 pages and `mem-cap-probe.js`. v0.2.0 added the five `request-*` pages, v0.2.2
-    `haptic-timer-buzz`, and v0.3.0 five from the tweb audit (`activation-pointer-capture`, `activation-touch-swipe`,
-    `css-light-dark-url`, `mem-huge-bitmaps`, `timer-id-reuse`). TEST FIXTURES ONLY, never in an app bundle.
+  - `attacks/`: 113 pages and `mem-cap-probe.js`. v0.2.0 added the five `request-*` pages, v0.2.2
+    `haptic-timer-buzz`, v0.3.0 five from the tweb audit (`activation-pointer-capture`, `activation-touch-swipe`,
+    `css-light-dark-url`, `mem-huge-bitmaps`, `timer-id-reuse`), and v0.5.0 three on the wallet (`wallet-no-activation`,
+    `wallet-forged-wire`, `wallet-grant-reuse`). TEST FIXTURES ONLY, never in an app bundle.
   - `bot-demos/` (v0.3.0): an order, a poll, an RSVP, tic-tac-toe, a ticker and a reaction, built as bots build them;
     `auto/28`–`30` reproduce their renderer patterns.
   - `common/` and `compat/`.
@@ -85,7 +93,7 @@ Taken:
     twins.
   - `htmlbubbles-ported/`.
   - `interactive/` (v0.2.0): a poll, tic-tac-toe, a live ticker and a promo code, played against the bot named in
-    `<meta name="tw-bot">`.
+    `<meta name="tw-bot">`; v0.5.0's `05-wallet` pays and signs against the `shop` bot.
   - `out-of-profile/`: widgets using what profile 1 leaves out.
   - `resize/` (v0.1.3): one widget per resize anchor.
   - `safe-area/` (v0.4.0): seven widgets that show what the client passed as its content safe area (a diagnostic,
@@ -176,7 +184,9 @@ Taken:
   - `:SdkPolicy` is what WidgetRuntime runs:
     - `TelegramWidget.setResizeAnchor` checks its edge with `checkResizeAnchor`;
     - since v0.2.2's vendoring, `HostState` runs the `RequestGate` and the `HapticGate` with its press and release, and
-      the state, viewer, chat type, request, copy and answer checks.
+      the state, viewer, chat type, request, copy and answer checks;
+    - since v0.5.0's, `TelegramWidget` checks the wallet's calls and the request's options with it, and the gate's
+      `decideWallet` and grant run in `HostState`.
   - `:SdkPolicyTests` is upstream's `sdk_policy_shared_fixture` over the fixture, plus
     `sdk_request_strings_refuse_surrogates_and_invalid_utf8` (`gesture/SdkPolicyTests.cpp`, ours around them).
 

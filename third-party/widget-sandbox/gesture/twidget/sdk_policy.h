@@ -102,13 +102,75 @@ struct WidgetContext {
     /// as usual, but no input, no bridge calls but `ready` / `setResizeAnchor` (`PREVIEW_METHODS`), no chat type or
     /// viewer, and Web Storage that is never preloaded or committed. The request flags are ignored.
     bool preview = false;
+    /// The client has Gram Wallet for this user: it supports the wallet and the wallet is available in the user's
+    /// country (docs/sdk-v1.md §2.18). The widget gets `TelegramWidget.wallet` only with `canQuery` too, never in a preview.
+    bool wallet = false;
 };
 
 /// What the client sends to the bot, as a callback button's press: `data` (1–64 bytes). Whether it came from a tap is
 /// the framework's business only (the request gate): the server and the bot cannot tell.
 struct WidgetRequest {
     std::string data;
-    bool operator==(const WidgetRequest& o) const { return data == o.data; }
+    /// The widget asked for the user's wallet (only on a tap, only with `WidgetContext::wallet`): ask the server to attach
+    /// the wallet card (`with_wallet`); it creates the wallet if the user had none.
+    bool wallet = false;
+    bool operator==(const WidgetRequest& o) const { return data == o.data && wallet == o.wallet; }
+};
+
+/// One message of a transaction, as TON Connect's `sendTransaction` has it: the destination, nanotons as a decimal
+/// string, a body and a `StateInit` (bags of cells in base64).
+struct WalletMessage {
+    std::string address;
+    std::string amount;
+    std::optional<std::string> payload;
+    std::optional<std::string> stateInit;
+    bool operator==(const WalletMessage& o) const { return address == o.address && amount == o.amount && payload == o.payload && stateInit == o.stateInit; }
+    Json toJson() const;
+};
+
+/// A transaction the widget asks the user to send (`TelegramWidget.wallet.sendTransaction`, docs/sdk-v1.md §2.18,
+/// checked): TON Connect's `sendTransaction` request. The client hands it to its TON Connect window as is (`toJson`:
+/// the protocol's field names); the wallet checks the network and the sender against the account, the cells, the expiry.
+struct WalletTransaction {
+    /// `valid_until`, Unix seconds.
+    std::optional<int64_t> validUntil;
+    /// "-239" (the mainnet) or "-3" (the testnet).
+    std::optional<std::string> network;
+    std::optional<std::string> from;
+    /// 1–4 messages.
+    std::vector<WalletMessage> messages;
+    bool operator==(const WalletTransaction& o) const { return validUntil == o.validUntil && network == o.network && from == o.from && messages == o.messages; }
+    Json toJson() const;
+};
+
+/// What the widget asks the user to sign (`TelegramWidget.wallet.signData`, checked): TON Connect's `signData` payload,
+/// `type` "text" (`text`), "binary" (`bytes`, base64) or "cell" (`cell`, base64, with its TL-B `schema`). The client signs
+/// for the bot of the message (the domain `bot<bot_id>`), never a domain the widget names.
+struct SignDataPayload {
+    std::string type;
+    std::optional<std::string> text, bytes, schema, cell, network, from;
+    bool operator==(const SignDataPayload& o) const {
+        return type == o.type && text == o.text && bytes == o.bytes && schema == o.schema && cell == o.cell && network == o.network && from == o.from;
+    }
+    Json toJson() const;
+};
+
+/// A wallet call that passed its checks (docs/sdk-v1.md §2.18): the client shows its own wallet window with the bot of
+/// the message, sends the transaction (or signs the payload) on the user's confirmation, sends the outcome to the bot as
+/// a query with `data` (1–64 bytes, a request's) and completes with the bot's answer. `transaction` is set for
+/// `SendTransaction`, `payload` for `SignData`.
+struct WalletCall {
+    enum class Method { SendTransaction, SignData } method = Method::SendTransaction;
+    WalletTransaction transaction;
+    SignDataPayload payload;
+    std::string data;
+    /// "sendTransaction" or "signData".
+    std::string_view methodName() const { return method == Method::SignData ? "signData" : "sendTransaction"; }
+    bool operator==(const WalletCall& o) const {
+        return method == o.method && data == o.data && (method == Method::SignData ? payload == o.payload : transaction == o.transaction);
+    }
+    /// {method, transaction | payload, data}, as the fixture writes it.
+    Json toJson() const;
 };
 
 /// The bot's answer as the client hands it over: the server's `result` (text of at most 1024 bytes, no NUL; none is
@@ -119,7 +181,9 @@ struct WidgetRequestAnswer {
 };
 
 /// A request the client could not complete: the bot did not answer in time, a flood wait, anything else. `None`: answered.
-enum class WidgetRequestFailure { None, Timeout, RateLimited, Failed };
+/// For a wallet call also `Rejected` (the user declined in the wallet window) and `BadRequest` (the wallet refused the
+/// transaction or the payload); a request's failure turns them into FAILED.
+enum class WidgetRequestFailure { None, Timeout, RateLimited, Failed, Rejected, BadRequest };
 
 /// What the client reports for a request (`respond`): the answer when `failure` is `None`, else the failure.
 struct WidgetRequestOutcome {
@@ -203,7 +267,25 @@ inline constexpr int MAX_VIEWER_USERNAME_LENGTH = 32;
 /// The chat kinds a host may report (`Chat.type` of the Bot API); a value outside them is no chat type.
 inline constexpr std::array<std::string_view, 4> CHAT_TYPES = {"private", "group", "supergroup", "channel"};
 /// What a refused or failed request rejects with in the widget (`error.code`).
-inline constexpr std::array<std::string_view, 6> REQUEST_ERRORS = {"NOT_ALLOWED", "BUSY", "RATE_LIMITED", "TIMEOUT", "FAILED", "INVALID_ANSWER"};
+/// What a refused or failed request rejects with in the widget (`error.code`); REJECTED and BAD_REQUEST only for a wallet call.
+inline constexpr std::array<std::string_view, 8> REQUEST_ERRORS = {"NOT_ALLOWED", "BUSY", "RATE_LIMITED", "TIMEOUT", "FAILED", "INVALID_ANSWER", "REJECTED", "BAD_REQUEST"};
+
+// ── the wallet (docs/sdk-v1.md §2.18): TON Connect's formats, Gram Wallet only ──
+
+/// Messages in one transaction: what Gram Wallet takes (its TON Connect `maxMessages`).
+inline constexpr size_t MAX_WALLET_MESSAGES = 255;
+/// Characters of a message's `payload` or `stateInit` (a bag of cells in base64).
+inline constexpr size_t MAX_WALLET_BOC_LENGTH = 8192;
+/// Characters of every message's `payload` and `stateInit` together.
+inline constexpr size_t MAX_WALLET_BOC_TOTAL = 65536;
+/// UTF-8 bytes of a `signData` text; characters of its `bytes` or `cell` (base64).
+inline constexpr size_t MAX_SIGN_DATA_LENGTH = 4096;
+/// UTF-8 bytes of a `cell` payload's TL-B schema.
+inline constexpr size_t MAX_SIGN_DATA_SCHEMA_BYTES = 1024;
+/// After the answer to a call made by a tap (a request or a wallet call) reached the widget, one wallet call may follow without a new tap this long.
+inline constexpr double WALLET_GRANT_MS = 10000;
+/// TON Connect's network ids: the mainnet and the testnet.
+inline constexpr std::array<std::string_view, 2> WALLET_NETWORKS = {"-239", "-3"};
 
 bool isPrivilegedMethod(std::string_view method);
 /// Exactly one of `PREVIEW_METHODS` (case-sensitive).
@@ -260,13 +342,23 @@ struct BridgeCall {
         int64_t id = 0;
         /// 1–64 bytes of UTF-8, well-formed.
         std::string data;
-        bool operator==(const Request& o) const { return id == o.id && data == o.data; }
+        /// The widget asks the server to attach the user's wallet (docs/sdk-v1.md §2.18).
+        bool wallet = false;
+        bool operator==(const Request& o) const { return id == o.id && data == o.data && wallet == o.wallet; }
+    };
+    /// `wallet`: a wallet call, the shim's id and the checked call (the request gate, then the client's `onWallet`).
+    struct Wallet {
+        int64_t id = 0;
+        WalletCall call;
+        bool operator==(const Wallet& o) const { return id == o.id && call == o.call; }
     };
     std::optional<WidgetAction> action;
     /// `setResizeAnchor`: "top" or "bottom".
     std::optional<std::string> resizeAnchor;
     /// `request`.
     std::optional<Request> request;
+    /// `wallet` (docs/sdk-v1.md §2.18).
+    std::optional<Wallet> wallet;
     /// `copyText`: 1–256 UTF-16 code units, well-formed.
     std::optional<std::string> copyText;
     /// `watchPublicData` (round 7): whether the widget watches its shared `public_data` (`watchPublicData()` /
@@ -274,16 +366,33 @@ struct BridgeCall {
     std::optional<bool> watchPublicData;
 
     bool operator==(const BridgeCall& o) const {
-        return action == o.action && resizeAnchor == o.resizeAnchor && request == o.request && copyText == o.copyText && watchPublicData == o.watchPublicData;
+        return action == o.action && resizeAnchor == o.resizeAnchor && request == o.request && wallet == o.wallet && copyText == o.copyText && watchPublicData == o.watchPublicData;
     }
     /// The TS `BridgeCall` shape: the action's (`WidgetAction::toJson`), {kind:'setResizeAnchor', edge},
-    /// {kind:'request', id, data}, {kind:'copyText', text} or {kind:'watchPublicData', on}.
+    /// {kind:'request', id, data[, wallet: true]}, {kind:'wallet', id, call}, {kind:'copyText', text} or {kind:'watchPublicData', on}.
     Json toJson() const;
 };
 
 /// The checked call, or nullopt when the method is unknown or its arguments are wrong (`bridge-rejected`).
 /// Before v0.1.3 this returned `std::optional<WidgetAction>`; the action is now `->action`.
 std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args);
+
+/// Whether a `request`'s options ask for the wallet, or nullopt: an object with at most `wallet`, a boolean (absent or null: false).
+std::optional<bool> checkRequestOptions(const Json& options);
+/// A TON address, or nullopt: raw (`0:` or `-1:` and 64 hex digits) or user-friendly (48 characters of base64 or base64url); a transaction's `from`.
+std::optional<std::string> checkWalletAddress(const Json& address);
+/// A message's destination, or nullopt: user-friendly only (TON Connect: the wallet must refuse a raw one).
+std::optional<std::string> checkWalletDestination(const Json& address);
+/// A transaction for `sendTransaction`, or nullopt: TON Connect's fields only (`valid_until`, `network`, `from`,
+/// `messages`), 1–255 messages of `address`, `amount` and optionally `payload` and `stateInit`. `valid_until` an integer
+/// of 1 to 2^32 − 1, `network` "-239" or "-3", `from` raw or user-friendly, a message's `address` user-friendly only,
+/// amounts decimal strings of nanotons (at most 37 digits, no leading zero), payloads base64 of at most 8192 characters
+/// each and 65536 together. Null fields are left out.
+std::optional<WalletTransaction> checkWalletTransaction(const Json& tx);
+/// A `signData` payload, or nullopt: TON Connect's three kinds with their fields only, and optionally `network` and
+/// `from` as a transaction's. "text": 1–4096 UTF-8 bytes; "binary": `bytes`, base64 of at most 4096 characters; "cell":
+/// `schema` (TL-B, 1–1024 UTF-8 bytes) and `cell`, base64 of at most 4096 characters. Null fields are left out.
+std::optional<SignDataPayload> checkSignDataPayload(const Json& payload);
 
 /// A request's `data`, or nullopt: a well-formed string of 1–64 UTF-8 bytes.
 std::optional<std::string> checkRequestData(std::string_view data);
@@ -344,6 +453,8 @@ std::optional<CheckedAnswer> checkRequestAnswer(const WidgetRequestAnswer& answe
 
 /// What the widget's promise rejects with for a client's failure: "TIMEOUT", "RATE_LIMITED", anything else "FAILED".
 std::string_view requestFailureCode(WidgetRequestFailure failure);
+/// The same for a wallet call: also "REJECTED" and "BAD_REQUEST".
+std::string_view walletFailureCode(WidgetRequestFailure failure);
 
 /**
  * The verdict on a request (docs/sdk-v1.md §2.14): `Foreground` (it consumes the task's press) and `Background` go to
@@ -351,9 +462,11 @@ std::string_view requestFailureCode(WidgetRequestFailure failure);
  * widget appears on screen (`RequestGate::show`); the rest are refused: `Disabled` (the message has no `canQuery`),
  * `Busy` (one request in flight per widget, a held one included), `NoActivation` (no press and no `backgroundQuery`),
  * `RateLimited` (a background request sooner than 5 s after the last one, unless the widget appeared on screen since).
+ * A wallet call (`RequestGate::decideWallet`), or a request that asks for the wallet, goes out only as `Foreground` or
+ * `Granted` (no press, but within 10 s of the answer to a call made by a tap); `NoWallet` when the client has no wallet.
  */
-enum class RequestVerdict { Foreground, Background, Held, Disabled, Busy, NoActivation, RateLimited };
-/// The TS verdict: "foreground", "background", "held", "disabled", "busy", "no-activation", "rate-limited".
+enum class RequestVerdict { Foreground, Background, Held, Granted, Disabled, NoWallet, Busy, NoActivation, RateLimited };
+/// The TS verdict: "foreground", "background", "held", "granted", "disabled", "no-wallet", "busy", "no-activation", "rate-limited".
 std::string_view requestVerdictName(RequestVerdict verdict);
 /// What the widget's promise rejects with for a refused request ("BUSY", "RATE_LIMITED", "NOT_ALLOWED"); nullopt for
 /// the three that go to the client.
@@ -366,7 +479,13 @@ std::optional<std::string_view> requestRefusal(RequestVerdict verdict);
  * background request, while it stays visible; one made while it is off screen is held (`Held`) and is the one of its
  * next appearance (`show` returns true: the glue sends it then). `gesture`: the task has a press no privileged call
  * consumed yet (the glue consumes it on `Foreground`). `finish` when the answer or the failure has gone into the
- * widget, or when the glue drops a held request (the widget stopped). Same order of checks as the TS class.
+ * widget, or when the glue drops a held request (the widget stopped); `answeredAtMs` when an answer with no error went
+ * in then. Same order of checks as the TS class.
+ *
+ * The wallet (docs/sdk-v1.md §2.18): only with `wallet` (the client has Gram Wallet for this user). A request that asks
+ * for the wallet (`withWallet`) and a wallet call (`decideWallet`) need the visible widget and a press, or the grant: the
+ * answer to the last call made by a press or a grant (a request or a wallet call) lets one wallet call follow within
+ * 10 s. Any call that goes out as `Foreground` or `Granted` uses up the grant; its answer brings the next one.
  */
 class RequestGate {
 public:
@@ -375,18 +494,39 @@ public:
         bool visible = false;
         bool canQuery = false;
         bool backgroundQuery = false;
+        bool withWallet = false;
+        bool wallet = false;
+    };
+    struct WalletConditions {
+        bool gesture = false;
+        bool visible = false;
+        bool canQuery = false;
+        bool wallet = false;
     };
     RequestVerdict decide(double nowMs, const Conditions& s);
-    void finish() { inFlight_ = held_ = false; }
+    /// A wallet call (`sendTransaction`, `signData`): on a press, or on the grant within 10 s of its answer.
+    RequestVerdict decideWallet(double nowMs, const WalletConditions& s);
+    void finish(std::optional<double> answeredAtMs = std::nullopt) {
+        if (granting_ && answeredAtMs) grantAt_ = answeredAtMs;
+        inFlight_ = held_ = granting_ = false;
+    }
     /// The widget appeared on screen (it was hidden): its next background request may go out at once. True when a held
     /// request goes out now, as this appearance's background request (the glue sends it; it stays in flight).
     bool show(double nowMs);
     bool busy() const { return inFlight_; }
 
 private:
+    RequestVerdict out(RequestVerdict verdict) {
+        inFlight_ = granting_ = true;
+        grantAt_.reset();
+        return verdict;
+    }
     bool inFlight_ = false;
     bool held_ = false;
     std::optional<double> lastBackground_;
+    /// The call in flight went out on a press or the grant: its answer grants one wallet call.
+    bool granting_ = false;
+    std::optional<double> grantAt_;
 };
 
 /**

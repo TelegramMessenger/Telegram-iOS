@@ -12,6 +12,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageItemCommon
 import ChatControllerInteraction
 import MessageWidget
+import WalletContext
 import TextSelectionNode
 import UnsupportedContentPill
 import WallpaperBackgroundNode
@@ -74,6 +75,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private var timeCorner: CGRect?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
+    /// Whether the last applied layout passed the wallet in the widget's context (widget-sandbox v0.5.0); nil before it.
+    private var laidOutWallet: Bool?
     /// What the last applied layout showed, for the resize anchor of the next height change (`resizeAnchor`), and the
     /// widget's source and cache key to read the anchor by.
     private var laidOutResize: (height: MessageWidgetLaidOutHeight, source: String, heightKey: AnyHashable)?
@@ -147,7 +150,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             guard let self, let item = self.item, let laidOutEnabled = self.laidOutEnabled else {
                 return
             }
-            if chatMessageWidgetRenderingEnabled() != laidOutEnabled {
+            // widget-sandbox v0.5.0: the wallet set up or removed changes the context, which re-boots the widget with it.
+            if chatMessageWidgetRenderingEnabled() != laidOutEnabled || (self.laidOutWallet.map { $0 != MessageWidgetWalletAvailability.isReady(accountId: item.context.account.peerId.id._internalGetInt64Value()) } ?? false) {
                 item.controllerInteraction.requestMessageUpdate(item.message.id, false, nil)
             }
         })
@@ -160,11 +164,11 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 return
             }
             switch call {
-            case let .request(id, data):
+            case let .request(id, data, wallet):
                 // widget-sandbox v0.2 (design §4.A): a request the widget's gate admitted goes to its bot
                 // (messages.getBotWidgetQueryAnswer), on a disposable of its own. Exactly one outcome reaches the widget
                 // (the engine's 30 s guard); a widget destroyed meanwhile ignores it.
-                self.requests.send(id: id, MessageWidgetNetwork.requestAnswer(item.context, item.message.id, data), deliver: { [weak instance] outcome in
+                self.requests.send(id: id, MessageWidgetNetwork.requestAnswer(item.context, item.message.id, .data(withWallet: wallet), data), deliver: { [weak instance] outcome in
                     instance?.completeRequest(id: id, outcome: outcome)
                 })
             case let .copyText(text):
@@ -188,6 +192,30 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     }
                     item.controllerInteraction.displayUndo(.info(title: nil, text: info, timeout: nil, customUndoText: nil))
                 }
+            case let .wallet(id, call):
+                // widget-sandbox v0.5.0 (sdk-v1 §2.18, §5.13): the wallet window over the chat with the message's bot,
+                // then the bot's query with the outcome. The coordinator holds the call, never this node: a payment that
+                // went out reaches the bot even if the node shows another message; a widget gone by then hears nothing.
+                let context = item.context
+                let messageId = item.message.id
+                let bot = messageWidgetBot(EngineMessage(item.message))
+                let navigationController = item.controllerInteraction.navigationController
+                MessageWidgetWalletCalls.shared.handle(call: call, hasBot: bot != nil, perform: { done in
+                    guard let bot else {
+                        return
+                    }
+                    MessageWidgetWallet.perform(MessageWidgetWallet.Request(context: context, bot: bot, call: call, present: { controller in
+                        guard let navigationController = navigationController() else {
+                            return false
+                        }
+                        navigationController.pushViewController(controller)
+                        return true
+                    }), done)
+                }, query: { queryType, data in
+                    return MessageWidgetNetwork.requestAnswer(context, messageId, queryType, data)
+                }, completion: { [weak instance] outcome in
+                    instance?.completeRequest(id: id, outcome: outcome)
+                })
             case .watchPublicData:
                 // The polling follows `onPublicDataPollingChange`, which the same change has reported.
                 break
@@ -459,7 +487,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     // context, another widget: a forward's echo replaced by the server's message); its state is handed to the
                     // running widget as a change.
                     if let widget {
-                        registry.context = messageWidgetContext(widget: widget, chatPeer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init), accountPeer: item.associatedData.accountPeer, accountPeerId: item.context.account.peerId)
+                        let wallet = MessageWidgetWalletAvailability.isReady(accountId: item.context.account.peerId.id._internalGetInt64Value())
+                        registry.context = messageWidgetContext(widget: widget, chatPeer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init), accountPeer: item.associatedData.accountPeer, accountPeerId: item.context.account.peerId, wallet: wallet)
+                        self?.laidOutWallet = wallet
                         registry.state = MessageWidgetState(chatData: widget.chatData, publicData: widget.publicData)
                     }
                     // Not asked when it may not run: the pass then ends with no widget, which destroys a running one

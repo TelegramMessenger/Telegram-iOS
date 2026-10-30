@@ -52,7 +52,7 @@ final class WidgetHarnessStressTests: XCTestCase {
         XCTAssertEqual(file["platform"] as? String, "ios")
         XCTAssertEqual(file["rendererKind"] as? String, "own")
         XCTAssertEqual(file["pass"] as? String, "measure")
-        XCTAssertEqual(file["framework"] as? String, "v0.4.0")
+        XCTAssertEqual(file["framework"] as? String, "v0.5.0")
         XCTAssertNotNil(file["device"] as? [String: Any])
         let applied = (file["config"] as? [String: Any])?["applied"] as? [String: Any]
         XCTAssertEqual(applied?["policy"] as? String, "compat")

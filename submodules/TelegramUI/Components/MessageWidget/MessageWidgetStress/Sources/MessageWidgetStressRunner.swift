@@ -172,11 +172,11 @@ public final class MessageWidgetStressRunner {
         ]
         let formatter = ISO8601DateFormatter()
         return [
-            "kit": ["version": self.kit.version, "commit": "v0.4.0"],
+            "kit": ["version": self.kit.version, "commit": "v0.5.0"],
             "platform": "ios",
             "client": "Telegram for iOS",
             "clientBuild": "\(version) (\(build)), \(configuration)",
-            "framework": "v0.4.0",
+            "framework": "v0.5.0",
             "renderer": "telegram-native",
             "rendererKind": "own",
             "engine": "WidgetRuntime: a C++ DOM on QuickJS (quickjs-ng fork), laid out by twidget's litehtml fork, drawn by CoreGraphics",

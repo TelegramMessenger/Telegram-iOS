@@ -41,14 +41,18 @@ public struct MessageWidgetContext: Hashable {
     public var viewer: MessageWidgetViewer?
     /// An inline result shown before it is sent (sdk-v1 §2.16).
     public var isPreview: Bool
+    /// The client has Gram Wallet for this user (sdk-v1 §2.18, §5.13; widget-sandbox v0.5.0): the widget gets
+    /// `TelegramWidget.wallet` where it may ask the bot.
+    public var wallet: Bool
 
-    public init(isCopy: Bool = false, canQuery: Bool = false, backgroundQuery: Bool = false, chatType: MessageWidgetChatType? = nil, viewer: MessageWidgetViewer? = nil, isPreview: Bool = false) {
+    public init(isCopy: Bool = false, canQuery: Bool = false, backgroundQuery: Bool = false, chatType: MessageWidgetChatType? = nil, viewer: MessageWidgetViewer? = nil, isPreview: Bool = false, wallet: Bool = false) {
         self.isCopy = isCopy
         self.canQuery = canQuery
         self.backgroundQuery = backgroundQuery
         self.chatType = chatType
         self.viewer = viewer
         self.isPreview = isPreview
+        self.wallet = wallet
     }
 }
 
@@ -90,11 +94,37 @@ public struct MessageWidgetContentSafeArea: Equatable {
     }
 }
 
-/// The client's outcome for a widget's request (sdk-v1 §2.14): the bot's answer (its `result` bytes, nil for none), or a
-/// failure the widget sees as TIMEOUT, RATE_LIMITED or FAILED.
+/// The client's outcome for a widget's request or wallet call (sdk-v1 §2.14, §2.18): the bot's answer (its `result`
+/// bytes, nil for none), or a failure the widget sees as TIMEOUT, RATE_LIMITED or FAILED; for a wallet call also REJECTED
+/// (the user declined in the wallet window) and BAD_REQUEST (the wallet refused it), which a request sees as FAILED.
 public enum MessageWidgetRequestOutcome: Equatable {
     case answered(Data?)
     case timeout
     case rateLimited
     case failed
+    case rejected
+    case badRequest
+}
+
+/// A wallet call the runtime admitted (sdk-v1 §2.18, widget-sandbox v0.5.0): TON Connect's `sendTransaction` request or
+/// its `signData` payload as the runtime checked it, as JSON in TON Connect's field names (keys sorted), and `data`, the
+/// label the bot gets with the outcome (1–64 bytes). The client shows its wallet window with the message's bot, sends or
+/// signs on the user's confirmation, asks the bot with the outcome and answers with `completeRequest(id:outcome:)`.
+public enum MessageWidgetWalletCall: Equatable {
+    case sendTransaction(json: String, data: Data)
+    case signData(json: String, data: Data)
+
+    public var json: String {
+        switch self {
+        case let .sendTransaction(json, _), let .signData(json, _):
+            return json
+        }
+    }
+
+    public var data: Data {
+        switch self {
+        case let .sendTransaction(_, data), let .signData(_, data):
+            return data
+        }
+    }
 }

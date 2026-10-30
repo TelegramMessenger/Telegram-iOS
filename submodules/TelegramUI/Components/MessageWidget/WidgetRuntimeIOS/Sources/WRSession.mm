@@ -668,7 +668,7 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
-- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(NSString*)chatType viewer:(WRWidgetViewer*)viewer preview:(BOOL)preview {
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(NSString*)chatType viewer:(WRWidgetViewer*)viewer preview:(BOOL)preview wallet:(BOOL)wallet {
     WR_GUARD(, {
         if (_runtime) {
             twidget::WidgetContext context;
@@ -677,6 +677,7 @@ static WRStepResult stepOf(wr::StepResult result) {
             context.backgroundQuery = backgroundQuery;
             context.chatType = chatType.UTF8String ?: "";
             context.preview = preview;
+            context.wallet = wallet;
             if (viewer) {
                 twidget::WidgetViewer checked;
                 checked.id = viewer.userId;
@@ -763,6 +764,12 @@ static std::optional<std::string> bytesOf(NSData* data) {
                 break;
             case WRRequestFailureFailed:
                 outcome.failure = twidget::WidgetRequestFailure::Failed;
+                break;
+            case WRRequestFailureRejected:
+                outcome.failure = twidget::WidgetRequestFailure::Rejected;
+                break;
+            case WRRequestFailureBadRequest:
+                outcome.failure = twidget::WidgetRequestFailure::BadRequest;
                 break;
             }
             JSContext* ctx = _runtime->context();

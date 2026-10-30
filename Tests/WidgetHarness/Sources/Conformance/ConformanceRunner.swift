@@ -214,7 +214,10 @@ public final class ConformanceRunner {
         let active = Active(test: test, run: run, instance: instance, view: view, deadline: Date(timeIntervalSinceNow: timeout), bot: bot, state: message.state)
         instance.onBridge = { [weak active, weak instance] call in
             switch call {
-            case let .request(id, data):
+            case let .wallet(id, _):
+                // The set passes no context with the wallet (widget-sandbox v0.5.0 adds no conformance case for it).
+                instance?.completeRequest(id: id, outcome: .failed)
+            case let .request(id, data, _):
                 // The bot edits first, then answers (upstream's test bot): the edit reaches the widget before the result.
                 guard let active, let instance else {
                     return

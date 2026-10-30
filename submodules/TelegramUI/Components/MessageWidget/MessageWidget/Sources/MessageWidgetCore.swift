@@ -200,7 +200,7 @@ final class MessageWidgetCore {
         session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
         let context = self.context
         let viewer = context.viewer.map { WRWidgetViewer(id: $0.id, firstName: $0.firstName, lastName: $0.lastName, username: $0.username, isPremium: $0.isPremium) }
-        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview)
+        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview, wallet: context.wallet)
         session.setChatData(self.widgetState.chatData, publicData: self.widgetState.publicData)
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
@@ -289,7 +289,7 @@ final class MessageWidgetCore {
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 
-    /// The client's outcome for the widget's request `id` (sdk-v1 §2.14), settled in this task.
+    /// The client's outcome for the widget's request or wallet call `id` (sdk-v1 §2.14, §2.18), settled in this task.
     func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {
         guard self.state == .live, let session = self.session else {
             return
@@ -303,6 +303,10 @@ final class MessageWidgetCore {
             session.completeRequest(id, result: nil, failure: .rateLimited)
         case .failed:
             session.completeRequest(id, result: nil, failure: .failed)
+        case .rejected:
+            session.completeRequest(id, result: nil, failure: .rejected)
+        case .badRequest:
+            session.completeRequest(id, result: nil, failure: .badRequest)
         }
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
@@ -580,8 +584,8 @@ final class MessageWidgetCore {
 
     /// The runtime posts a link call only once it has checked the URL (SDK v1 §2.5) and the press allowed it; the host
     /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). A request, a
-    /// copyText and watchPublicData (widget-sandbox v0.2) arrive checked by the runtime's policy. Any other method is
-    /// ignored.
+    /// copyText and watchPublicData (widget-sandbox v0.2) and a wallet call (v0.5.0) arrive checked by the runtime's
+    /// policy. Any other method is ignored.
     fileprivate func bridge(_ method: String, argsJson: String) {
         guard method.count <= MessageWidgetCore.maximumBridgeMethodLength else {
             self.appendDiag("bridge-ignored", String(method.prefix(MessageWidgetCore.maximumBridgeMethodLength)))
@@ -605,11 +609,28 @@ final class MessageWidgetCore {
             }
             self.bridgeCalls.append(.haptic(kind: first, value: args.count > 1 ? args[1] as? String : nil))
         case "request":
-            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it).
-            guard args.count == 2, let id = Int64(first), let data = args[1] as? String else {
+            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it); a request for the
+            // user's wallet card (§2.18) adds {"wallet": true}.
+            guard args.count == 2 || args.count == 3, let id = Int64(first), let data = args[1] as? String else {
                 return
             }
-            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8)))
+            let wallet = args.count == 3 && ((args[2] as? [String: Any])?["wallet"] as? Bool ?? false)
+            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8), wallet: wallet))
+        case "wallet":
+            // sdk-v1 §2.18: [id, method, the checked transaction or payload, data].
+            guard args.count == 4, let id = Int64(first), let method = args[1] as? String, let argument = args[2] as? [String: Any], let data = args[3] as? String,
+                  let json = try? JSONSerialization.data(withJSONObject: argument, options: [.sortedKeys, .withoutEscapingSlashes]),
+                  let text = String(data: json, encoding: .utf8) else {
+                return
+            }
+            switch method {
+            case "sendTransaction":
+                self.bridgeCalls.append(.wallet(id: id, call: .sendTransaction(json: text, data: Data(data.utf8))))
+            case "signData":
+                self.bridgeCalls.append(.wallet(id: id, call: .signData(json: text, data: Data(data.utf8))))
+            default:
+                self.appendDiag("bridge-ignored", "wallet." + method)
+            }
         case "copyText":
             guard !first.isEmpty else {
                 return

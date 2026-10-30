@@ -63,12 +63,15 @@ typedef NS_ENUM(NSInteger, WRResizeAnchor) {
     WRResizeAnchorBottom,
 };
 
-/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer.
+/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer. `Rejected` (the user declined in the
+/// wallet window) and `BadRequest` (the wallet refused it) are a wallet call's (§2.18); a request sees them as FAILED.
 typedef NS_ENUM(NSInteger, WRRequestFailure) {
     WRRequestFailureNone = 0,
     WRRequestFailureTimeout,
     WRRequestFailureRateLimited,
     WRRequestFailureFailed,
+    WRRequestFailureRejected,
+    WRRequestFailureBadRequest,
 };
 
 /// The account looking at the widget (sdk-v1 §2.13, Mini Apps' WebAppUser), as the client passes it; the runtime checks
@@ -279,8 +282,8 @@ typedef struct {
 - (void)setLocale:(NSString *)locale;
 /// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context, the server's flags as they are, the chat type
 /// ("private", "group", "supergroup", "channel", or nil) and the viewer; fixed for the widget's life. Set it before the
-/// boot.
-- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview;
+/// boot. `wallet` (v0.5.0, §2.18): the client has Gram Wallet for this user.
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview wallet:(BOOL)wallet;
 /// SDK v1 §2.13: the bot's state, as the server's bytes. Before the boot it is the state the widget starts with; after
 /// it, a change: the widget gets chatDataChanged and publicDataChanged for the values that changed, in a task.
 - (void)setChatData:(nullable NSData *)chatData publicData:(nullable NSData *)publicData;
@@ -289,8 +292,8 @@ typedef struct {
 /// now and the widget gets a fresh TelegramWidget.contentSafeAreaInset and contentSafeAreaChanged, in a task. An equal
 /// value is nothing.
 - (void)setContentSafeAreaTop:(double)top right:(double)right bottom:(double)bottom left:(double)left cornerLeft:(double)cornerLeft cornerRight:(double)cornerRight;
-/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` bridge call), settled in a
-/// task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
+/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` or `wallet` bridge call),
+/// settled in a task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
 - (void)completeRequest:(int64_t)requestId result:(nullable NSData *)result failure:(WRRequestFailure)failure;
 - (void)setVisible:(BOOL)visible;
 /// One phase of a tap at `point` (CSS px), queued as a task: a touch's.

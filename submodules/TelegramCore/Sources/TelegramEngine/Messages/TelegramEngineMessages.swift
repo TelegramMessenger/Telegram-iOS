@@ -1113,9 +1113,10 @@ public extension TelegramEngine {
             return self.account.viewTracker.widgetPublicDataPolling.poll(messageId: messageId, widgetId: widgetId)
         }
 
-        /// A message widget's request to its bot (widget-sandbox v0.2): the answer's `result`, or why there is none.
-        public func requestBotWidgetQueryAnswer(messageId: EngineMessage.Id, data: Data) -> Signal<Data?, BotWidgetQueryError> {
-            return _internal_requestBotWidgetQueryAnswer(postbox: self.account.postbox, network: self.account.network, messageId: messageId, data: data)
+        /// A message widget's query to its bot (widget-sandbox v0.2; its type since v0.5.0): the answer's `result`, or
+        /// why there is none.
+        public func requestBotWidgetQueryAnswer(messageId: EngineMessage.Id, queryType: BotWidgetQueryType, data: Data) -> Signal<Data?, BotWidgetQueryError> {
+            return _internal_requestBotWidgetQueryAnswer(postbox: self.account.postbox, network: self.account.network, messageId: messageId, queryType: queryType, data: data)
         }
 
         public func debugAddHoles() -> Signal<Never, NoError> {

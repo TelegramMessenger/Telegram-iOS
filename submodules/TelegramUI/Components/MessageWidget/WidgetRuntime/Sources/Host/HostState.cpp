@@ -120,13 +120,24 @@ bool HostState::activationAvailable(JSContext* ctx) const {
            std::find(m_consumedPresses.begin(), m_consumedPresses.end(), m_activePress) == m_consumedPresses.end();
 }
 
-twidget::sdk::RequestVerdict HostState::decideRequest(JSContext* ctx) {
+twidget::sdk::RequestVerdict HostState::decideRequest(JSContext* ctx, bool withWallet) {
     twidget::sdk::RequestGate::Conditions conditions;
     conditions.gesture = this->activationAvailable(ctx);
     conditions.visible = !DOMState::of(ctx).document().isHidden();
     conditions.canQuery = m_widgetContext.canQuery;
     conditions.backgroundQuery = m_widgetContext.backgroundQuery;
+    conditions.withWallet = withWallet;
+    conditions.wallet = m_widgetContext.wallet;
     return m_requestGate.decide(m_loop.currentTime(), conditions);
+}
+
+twidget::sdk::RequestVerdict HostState::decideWallet(JSContext* ctx) {
+    twidget::sdk::RequestGate::WalletConditions conditions;
+    conditions.gesture = this->activationAvailable(ctx);
+    conditions.visible = !DOMState::of(ctx).document().isHidden();
+    conditions.canQuery = m_widgetContext.canQuery;
+    conditions.wallet = m_widgetContext.wallet;
+    return m_requestGate.decideWallet(m_loop.currentTime(), conditions);
 }
 
 int64_t HostState::nextRequestId() {
@@ -213,6 +224,7 @@ void HostState::setContext(JSContext* ctx, const twidget::WidgetContext& context
     state.isForward = !context.preview && context.isCopy;
     state.canQuery = !context.preview && context.canQuery;
     state.backgroundQuery = !context.preview && context.backgroundQuery;
+    state.wallet = state.canQuery && context.wallet;
     if (!state.preview && !state.isForward) {
         state.chatType = twidget::sdk::checkChatType(context.chatType);
     }

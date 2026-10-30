@@ -146,13 +146,15 @@ public final class MessageWidgetInstance {
     /// §2.6: a haptic the runtime let through its rate limit: `impact` with a style, `notification` with a type, or
     /// `selection` with none.
     /// widget-sandbox v0.2 (sdk-v1 §2.13–§2.15): a request the runtime's gate admitted, to answer with
-    /// `completeRequest(id:outcome:)` exactly once; a text to copy, after a tap; whether the widget watches its shared
-    /// state.
+    /// `completeRequest(id:outcome:)` exactly once (`wallet`, v0.5.0: it asks for the user's wallet card); a text to copy,
+    /// after a tap; whether the widget watches its shared state. v0.5.0 (§2.18): a wallet call the gate admitted, answered
+    /// the same way.
     public enum BridgeCall: Equatable {
         case openLink(String)
         case openTelegramLink(String)
         case haptic(kind: String, value: String?)
-        case request(id: Int64, data: Data)
+        case request(id: Int64, data: Data, wallet: Bool)
+        case wallet(id: Int64, call: MessageWidgetWalletCall)
         case copyText(String)
         case watchPublicData(Bool)
     }
@@ -471,7 +473,8 @@ public final class MessageWidgetInstance {
         }
     }
 
-    /// The client's outcome for the widget's request `id` (`BridgeCall.request`, sdk-v1 §2.14), settled in the widget's
+    /// The client's outcome for the widget's request or wallet call `id` (`BridgeCall.request`, `.wallet`; sdk-v1 §2.14,
+    /// §2.18), settled in the widget's
     /// next task; never waited for. Nothing once the widget is destroyed, and the runtime ignores an id it has no request
     /// out for.
     public func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {

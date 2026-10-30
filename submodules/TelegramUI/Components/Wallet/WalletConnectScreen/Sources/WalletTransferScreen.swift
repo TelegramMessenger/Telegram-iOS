@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
+import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import PresentationDataUtils
@@ -298,6 +299,7 @@ private final class WalletTransferSheetContent: Component {
 
     let context: AccountContext
     let request: WalletContext.TonConnectOperationRequest
+    let requester: EnginePeer?
     let walletState: WalletContext.State?
     let bottomInset: CGFloat
     let infoPressed: () -> Void
@@ -306,6 +308,7 @@ private final class WalletTransferSheetContent: Component {
     init(
         context: AccountContext,
         request: WalletContext.TonConnectOperationRequest,
+        requester: EnginePeer?,
         walletState: WalletContext.State?,
         bottomInset: CGFloat,
         infoPressed: @escaping () -> Void,
@@ -313,6 +316,7 @@ private final class WalletTransferSheetContent: Component {
     ) {
         self.context = context
         self.request = request
+        self.requester = requester
         self.walletState = walletState
         self.bottomInset = bottomInset
         self.infoPressed = infoPressed
@@ -321,6 +325,7 @@ private final class WalletTransferSheetContent: Component {
 
     static func ==(lhs: WalletTransferSheetContent, rhs: WalletTransferSheetContent) -> Bool {
         return lhs.request == rhs.request
+            && lhs.requester == rhs.requester
             && lhs.walletState == rhs.walletState
             && lhs.bottomInset == rhs.bottomInset
     }
@@ -445,7 +450,8 @@ private final class WalletTransferSheetContent: Component {
                 component: AnyComponent(WalletConnectAppIconComponent(
                     context: component.context,
                     applicationName: component.request.applicationName,
-                    icon: component.request.icon
+                    icon: component.request.icon,
+                    peer: component.requester
                 )),
                 environment: {},
                 containerSize: appIconSize
@@ -500,11 +506,7 @@ private final class WalletTransferSheetContent: Component {
 
             let domainItems: [AnyComponentWithIdentity<Empty>] = [AnyComponentWithIdentity(
                 id: "domain",
-                component: AnyComponent(Text(
-                    text: component.request.domain,
-                    font: Font.semibold(15.0),
-                    color: accentColor
-                ))
+                component: walletRequestSourceLine(request: component.request, requester: component.requester, font: Font.semibold(15.0), domainColor: accentColor, nameColor: secondaryTextColor, usernameColor: accentColor)
             )]
             self.domain.parentState = state
             let domainSize = self.domain.update(
@@ -781,17 +783,20 @@ private final class WalletTransferSheetComponent: CombinedComponent {
     let context: AccountContext
     let walletContext: WalletContext
     let request: WalletContext.TonConnectOperationRequest
+    let requester: EnginePeer?
     let confirm: (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void
 
     init(
         context: AccountContext,
         walletContext: WalletContext,
         request: WalletContext.TonConnectOperationRequest,
+        requester: EnginePeer?,
         confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void
     ) {
         self.context = context
         self.walletContext = walletContext
         self.request = request
+        self.requester = requester
         self.confirm = confirm
     }
 
@@ -799,6 +804,7 @@ private final class WalletTransferSheetComponent: CombinedComponent {
         return lhs.context === rhs.context
             && lhs.walletContext === rhs.walletContext
             && lhs.request == rhs.request
+            && lhs.requester == rhs.requester
     }
 
     final class State: ComponentState {
@@ -946,6 +952,7 @@ private final class WalletTransferSheetComponent: CombinedComponent {
                     component: AnyComponent(WalletTransferSheetContent(
                         context: component.context,
                         request: component.request,
+                        requester: component.requester,
                         walletState: componentState.walletState,
                         bottomInset: contentBottomInset,
                         infoPressed: { [weak componentState] in
@@ -987,17 +994,14 @@ private final class WalletTransferSheetComponent: CombinedComponent {
                     ),
                     AnyComponentWithIdentity(
                         id: "domain",
-                        component: AnyComponent(Text(
-                            text: component.request.domain,
-                            font: Font.regular(13.0),
-                            color: theme.actionSheet.secondaryTextColor
-                        ))
+                        component: walletRequestSourceLine(request: component.request, requester: component.requester, font: Font.regular(13.0), domainColor: theme.actionSheet.secondaryTextColor, nameColor: theme.actionSheet.secondaryTextColor, usernameColor: theme.actionSheet.controlAccentColor)
                     )
                 ], spacing: 0.0))
                 rightItem = AnyComponent(WalletTransferNavigationAppIconComponent(
                     context: component.context,
                     applicationName: component.request.applicationName,
-                    icon: component.request.icon
+                    icon: component.request.icon,
+                    peer: component.requester
                 ))
             } else {
                 titleItem = nil
@@ -1092,6 +1096,13 @@ private final class WalletTransferSheetComponent: CombinedComponent {
 
 public final class WalletTransferScreen: ViewControllerComponentContainer {
     private let cancelled: () -> Void
+    private let ignoresTouchesFor: Double
+    /// The window's first `ignoresTouchesFor` seconds: a clear view over the whole window that takes every touch and does
+    /// nothing with it, so the second tap of a double tap over a widget neither confirms nor reaches what is behind the
+    /// sheet. It has transparent `contents`, not just a clear background: a layer that draws nothing gets no real touches
+    /// on iOS 26/27.
+    private var touchShield: UIView?
+    private static let transparentContents: CGImage? = UIGraphicsImageRenderer(size: CGSize(width: 1.0, height: 1.0)).image { _ in }.cgImage
     public var tonConnectClosed: (() -> Void)?
     private var finishResult: WalletTransferFinishResult?
     fileprivate var isDismissed = false
@@ -1101,14 +1112,20 @@ public final class WalletTransferScreen: ViewControllerComponentContainer {
         super.dismiss(animated: flag, completion: completion)
     }
 
+    /// `requester`: a Telegram peer that asks instead of a dApp (a message widget's bot, widget-sandbox v0.5.0, sdk-v1
+    /// §5.13), its avatar in the header. `ignoresTouchesFor`: seconds after it loads that the window swallows every touch,
+    /// so the second tap of a double tap over a widget neither confirms nor reaches the chat behind it (§5.13: 0.5–1 s).
     public init(
         context: AccountContext,
         walletContext: WalletContext,
         request: WalletContext.TonConnectOperationRequest,
+        requester: EnginePeer? = nil,
+        ignoresTouchesFor: Double = 0.0,
         cancelled: @escaping () -> Void,
         confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void
     ) {
         self.cancelled = cancelled
+        self.ignoresTouchesFor = ignoresTouchesFor
 
         super.init(
             context: context,
@@ -1116,6 +1133,7 @@ public final class WalletTransferScreen: ViewControllerComponentContainer {
                 context: context,
                 walletContext: walletContext,
                 request: request,
+                requester: requester,
                 confirm: confirm
             ),
             navigationBarAppearance: .none,
@@ -1135,6 +1153,26 @@ public final class WalletTransferScreen: ViewControllerComponentContainer {
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.view.disablesInteractiveModalDismiss = true
+        if self.ignoresTouchesFor > 0.0 {
+            let shield = UIView(frame: self.view.bounds)
+            shield.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            shield.layer.contents = WalletTransferScreen.transparentContents
+            self.view.addSubview(shield)
+            self.touchShield = shield
+            DispatchQueue.main.asyncAfter(deadline: .now() + self.ignoresTouchesFor) { [weak self] in
+                self?.touchShield?.removeFromSuperview()
+                self?.touchShield = nil
+            }
+        }
+    }
+
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        // Kept frontmost and sized to the view on every layout, should a layout add a view above it.
+        if let touchShield = self.touchShield {
+            self.view.bringSubviewToFront(touchShield)
+            touchShield.frame = self.view.bounds
+        }
     }
 
     fileprivate func finish(
@@ -1188,4 +1226,14 @@ public final class WalletTransferScreen: ViewControllerComponentContainer {
             self.finish(.cancelled, animated: false, animateOut: nil)
         }
     }
+}
+
+/// Where the request comes from, under the window's title: a dApp's domain, or the Telegram peer asking instead
+/// (`WalletRequesterLineComponent`: its name in `nameColor`, then its username in `usernameColor`, never the part that
+/// gives way).
+private func walletRequestSourceLine(request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, font: UIFont, domainColor: UIColor, nameColor: UIColor, usernameColor: UIColor) -> AnyComponent<Empty> {
+    if let requester {
+        return AnyComponent(WalletRequesterLineComponent(name: requester.compactDisplayTitle, username: requester.addressName, font: font, nameColor: nameColor, usernameColor: usernameColor))
+    }
+    return AnyComponent(Text(text: request.domain, font: font, color: domainColor))
 }

@@ -9,9 +9,9 @@ TL `string`s since the 2026-10-27 schema), `ph` (`public_data_hash`) and `wi` (`
 compressed as the server does, zlib at level 9, through the SDK's `zlib`, never Compression's `COMPRESSION_ZLIB`, which
 is raw deflate);
 `ChatMessageWidgetBubbleContentNode` draws it as a live widget in a bubble of its own, the message's text as its
-caption below. The authority is widget-sandbox, vendored at tag v0.4.0 in `third-party/widget-sandbox` (`corpus/`,
+caption below. The authority is widget-sandbox, vendored at tag v0.5.0 in `third-party/widget-sandbox` (`corpus/`,
 `conformance/`, `stress/`; v0.3.0 brought strict limits, the finger rule, held requests, `openTelegramLink` and the
-stress kit, v0.4.0 the time over the widget, the content safe area); the client's spec is
+stress kit, v0.4.0 the time over the widget, the content safe area, v0.5.0 the wallet); the client's spec is
 `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md` (milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions), and v0.2's (the bot's
 state, the message context, requests) is `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. The runtime, `WidgetRuntime`, has its own record:
 [`docs/message-widgets-native-runtime.md`](../../../../docs/message-widgets-native-runtime.md). Code:
@@ -320,7 +320,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 - **The runtime opens nothing; the app asks Telegram's server for a widget in exactly two ways** (widget-sandbox v0.2;
   the user's decision, `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md` §4.A). Both requests go only
   to Telegram's server, carry only the bot's data and never a URL, and `openLink` always prompts.
-  - **`messages.getBotWidgetQueryAnswer`** answers a widget's `TelegramWidget.request`. The runtime's request gate (the
+  - **`messages.getBotWidgetQueryAnswer`** answers a widget's `TelegramWidget.request`, and (v0.5.0) reports a wallet
+    call's outcome to the bot (the wallet below; its query type says which). The runtime's request gate (the
     vendored policy's `RequestGate`, `HostState::decideRequest`) admits it only in these cases:
     - on a tap, where the message's server flags say `can_query`;
     - without a tap, in the bot's private chat when the server sets `background_query`: one when the widget appears on
@@ -336,6 +337,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     The only way out is the bridge (`MessageWidgetCore.bridge`):
     - `openLink` behind its prompt, `openTelegramLink` as a link in the message's text opens (below), one per tap;
     - `request`;
+    - a wallet call (v0.5.0), on a tap or the gate's grant;
     - `copyText`, on a tap;
     - `watchPublicData`;
     - haptics.
@@ -411,6 +413,65 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   - **The harness replaces the seam** (`WidgetHarnessNetworkTests`, `Fixtures/widget-request.html`). The engine's call
     is pinned in TelegramCore (`WidgetQueryRequestTests`), and the cancellation in `MessageWidgetRequestsTests`.
 
+- **The wallet** (widget-sandbox v0.5.0, sdk-v1 §2.18, §5.13; the user's decisions of 2026-10-30; the plan
+  `docs/superpowers/plans/2026-10-30-message-widgets-v0.5.0.md`, its ledger's rulings). A widget pays
+  (`TelegramWidget.wallet.sendTransaction`, TON Connect's transaction) or signs (`wallet.signData`, TON Connect's
+  payload) through Gram Wallet, and `request(data, { wallet: true })` gives its bot the user's wallet card. The rules:
+  - **Who has it.** The context's `wallet` (`MessageWidgetWalletAvailability`, per account and per owner, set by
+    `AccountContextImpl`, whose release clears only its own answer: an older context of the account released after a
+    newer one answered leaves the newer answer) is
+    the app configuration's `wallet_available` ∧ a wallet context (the main app) ∧ a wallet this device can sign for
+    (`WalletContext.widgetWalletReady`). The last is the user's call and a divergence from §5.13: without a signing
+    wallet here `TelegramWidget.wallet` is null, so a widget never makes the server create a wallet. The context is
+    part of a widget's key: the wallet set up or removed re-boots the widgets on screen once (the bubble's availability
+    observer compares `laidOutWallet`; `testTheWalletSetUpReachesAWidgetOnScreen`).
+  - **The runtime** checks every argument as upstream's shim does and runs the gate's grant (the runtime record's "The
+    wallet"); a call that passes is `BridgeCall.wallet` with the checked TON Connect JSON
+    (`MessageWidgetWalletCall`), answered through `completeRequest` with `.rejected` / `.badRequest` among the outcomes.
+  - **The bot of the message** asks (`messageWidgetBot`): the via bot, else the author if a bot, else a forward's
+    original author if a bot; none, `FAILED`. Its avatar, name and `@username` are the window's header; its id the
+    signature's domain `bot<bot_id>`. Nothing the widget says reaches the window. **A channel post a bot sent names no
+    bot** (its author is the channel, and the media carries no bot id), so its wallet calls are `FAILED` with no window:
+    an open question for the maintainer (the bot's id on `messageMediaWidget`).
+  - **The window is the TON Connect one** (`WalletTransferScreen` through `makeWalletTransferScreen`, pushed on the
+    chat's navigation): `requester` puts the bot's avatar in its header and names it under the title
+    (`WalletRequesterLineComponent`: the name on one line, shortened with an ellipsis to what `· @username` leaves it;
+    when that is not even a few letters, `@username` alone, shortened in the middle only when even it does not fit, so
+    its `…_bot` end stays; the name in the secondary colour, the username in the accent, so a long name, or one that
+    reads like another username, neither pushes the real one off nor looks like it; the request's `domain` is
+    `@username`, or the name when there is none), and `ignoresTouchesFor` (0.8 s, `MessageWidgetWalletWindow.ignoresTouchesFor`: counted from the
+    push, the sheet's 0.22 s slide-in leaves about 0.58 s once it is in place, within §5.13's 0.5–1 s; measured on the
+    iOS 27 simulator with Debug Settings ▸ "Show widget wallet window", which also showed the shield taking a Confirm tap
+    and a dim tap on iOS 27) lays a clear shield over the
+    whole window that swallows every touch, so the second tap of a double tap over the widget neither confirms nor
+    reaches the chat behind the sheet (switching the window's interaction off would let it fall through). A dApp's window
+    passes neither. Binary and cell payloads show its warning. **The window holds its call**
+    (`MessageWidgetWalletWindowLifetime`, an associated object of the screen): a window that goes any way but its own
+    buttons (an account switch, a navigation stack replaced) ends its call as declined, freeing the one-window flag and
+    the widget's gate; once Confirm has begun it ends nothing, the send's own outcome does.
+  - **A transaction goes out the wallet's own way** (the user: `wallet.sendTransfer`): `WalletContext.prepareWidgetTransaction`
+    checks it against the wallet as a TON Connect wallet would, emulates it (`previewSend`) and registers a prepared
+    transfer of all its messages (no gasless); `submitWidgetTransaction` sends it with `submitTransfer`, and the bot's
+    query carries the server's message hash (`updateSentWalletTransaction`), never a local one. A signature is the TON
+    Connect signing path's, for `bot<bot_id>`, and the query carries TON Connect's `SignDataResponse` with the card's
+    public key and StateInit (`userWallet.state_init`).
+  - **Outcomes:** a decline (or a cancelled passcode) `REJECTED`; the wallet's refusal before the window (expiry, another
+    network or sender, a testnet or malformed destination, cells, an incomplete emulation, the balance: no top-up, by
+    the user's call) `BAD_REQUEST` with no window; after the confirmation only an expiry or the balance are still
+    `BAD_REQUEST`, anything else `FAILED`, the window closed first so it shows no alert of its own. The query's own
+    failures map as a request's. **A send whose server reply is lost** (`.submissionUnknown`: the transfer accepted
+    with no `sentTransfer`) answers `FAILED` and asks the bot nothing, though the transfer may resolve later: §2.18's
+    "may have been sent", which the bot settles from the chain by the card's address; reporting it once the wallet
+    resolves it is a follow-up.
+  - **The coordinator holds the call, not the bubble** (`MessageWidgetWalletCalls`): the bot's query that reports a
+    payment is never cancelled with the bubble (`MessageWidgetRequests.cancelAll`), so money that moved always reaches
+    the bot; a late answer reaches nothing. One wallet window at a time in the app: a call while one is up is
+    `REJECTED`.
+  - **Seams:** `MessageWidgetWallet.perform` (the window and the wallet; the harness's mock wallet) and
+    `MessageWidgetNetwork.requestAnswer`, which takes the query type. `MessageWidgetWalletCallsTests` (the coordinator),
+    `WalletWidgetCallsTests` (the wallet's pure parts), `WidgetHarnessWalletTests` (Tier 1, `Fixtures/wallet/pay.html`)
+    and the runtime's `WalletTests` pin it; the window's look and its touch delay are checked on a device or the
+    simulator, not by a test.
 - **A shared widget's state is polled while it watches on screen** (W2; design §4 calls 3–4, upstream integration.md).
   The bubble subscribes to `MessageWidgetNetwork.pollPublicData` (default `engine.messages.pollWidgetPublicData`)
   exactly while all of these hold:

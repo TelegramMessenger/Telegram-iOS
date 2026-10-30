@@ -980,6 +980,38 @@ takes. The bubble's numbers and its touches are the message widgets guide's ("Th
   `SafeAreaTests`): a change is a waited `.layout` task, which a frozen widget is not given
   (`testAFrozenWidgetQueuesNoChange`; one that failed to start still gets it, and its core drops it).
 
+## The wallet (widget-sandbox v0.5.0)
+
+sdk-v1 §2.18, §3 (the `request` and `wallet` bridge rows, the gate's wallet paragraph), §5.13. A widget pays and signs
+through Gram Wallet in TON Connect's formats; the client's side (who has the wallet, the window, the send, the bot's
+query) is the message widgets guide's ("The wallet").
+
+- **`TelegramWidget.wallet`**: a frozen `{ sendTransaction, signData }` (two own enumerable methods, as the shim's
+  `Object.freeze`), the same object for the runtime's life, where the context has the wallet and `canQuery`
+  (`HostState::WidgetContextState::wallet`, never in a preview); else null. The IDL's attribute is `any`: the object is
+  built natively, not an interface, so it is the shim's shape (`WalletTests`).
+- **The arguments are checked as the shim checks the JS value.** The vendored policy's twin checks JSON
+  (`checkWalletTransaction`, `checkSignDataPayload`, `checkRequestOptions`), so `walletArgumentJson` converts the value
+  by the shim's rules: the value itself a non-null, non-array object that is not a function; below it `Object.keys` and
+  `Array.isArray` (through proxies), `undefined` kept as null so `onlyKeys` sees its key, a function, symbol or bigint
+  as `{}` (refused wherever one stands), nothing read below the deepest field a check reads, and refusals before
+  reading on for more keys than any check allows (5), an array past 255 or a string past 65,536 code units. Getters and
+  proxies run, as in the shim. A refusal throws `TypeError` with upstream's text; the label `data` is a request's.
+- **The gate** (`HostState::decideRequest(ctx, withWallet)`, `decideWallet`): a request for the wallet needs the
+  wallet (`no-wallet`) and a press, never the background, never held; a wallet call needs a press or the grant. The
+  grant: the answer with no error to a call that went out on a press or the grant (`settleRequest`'s
+  `finishRequest(answered)`, `RequestGate::finish(answeredAt)` on the step's clock) lets one wallet call follow within
+  10 s; any call that goes out on a press or the grant uses it up; a refusal, a failure, `INVALID_ANSWER` or a
+  background request's answer brings none. One call in flight with the requests (`BUSY`). The refusal diagnostics are
+  upstream's glue's texts (`WALLET_REFUSED`, the wallet request's no-activation line).
+- **Out**: a call that passes posts the bridge call `wallet` with `[id, method, the checked argument's toJson, data]`
+  (`postBridgeCallJson`); a request for the wallet posts `[id, data, {"wallet":true}]`. Its outcome comes back as a
+  request's (`completeRequest`), and its failures keep `REJECTED` and `BAD_REQUEST` (`walletFailureCode`) where a
+  request's are `FAILED`.
+- **Upward**: `WRSession`'s context gains `wallet:`, `WRRequestFailure` gains `Rejected` and `BadRequest`;
+  `MessageWidgetContext.wallet` (part of the registry's key), `BridgeCall.request(id:data:wallet:)` and
+  `.wallet(id:call:)`, `MessageWidgetRequestOutcome.rejected` / `.badRequest` (Swift `StateTests`, `RegistryTests`).
+
 ## Profile enforcement (V4)
 
 V4 (2026-10-21) enforces widget-sandbox v0.1.0's profile 1 on the renderer's copy of a widget, never on its DOM: script
@@ -1603,6 +1635,27 @@ purpose. One line each:
     finger's down point through that shrink, several points toward the corner, so a touch begun on the pill's edge
     would otherwise reach the widget late (the message widgets guide, "The time over the widget").
 
+## Divergences from widget-sandbox v0.5.0 (for the maintainers)
+
+What this client does differently from v0.5.0's shim and glue, on purpose. One line each:
+
+1. **No wallet for a user whose device cannot sign** (the user, 2026-10-30): `context.wallet` needs a wallet this device
+   holds the key for, beside `wallet_available`, so a widget never makes the server create a wallet (§5.13 says whether
+   the user has one is not part of it).
+2. **No top-up** (the user, 2026-10-30): an unaffordable transaction is `BAD_REQUEST` before any window.
+3. **Our promise errors' `message` is the code**, for wallet calls as for requests since v0.2, not the shim's sentences
+   (`wallet.sendTransaction: the user declined in the wallet window`); the diagnostics carry the glue's texts.
+4. **The transaction's messages are read by index** up to `length`, where the shim's `for…of` takes the iterator:
+   different only for an array whose iterator was replaced, and what is posted is what was checked either way.
+5. **A failed emulation trace opens the window with its warning**, as for a dApp; only an incomplete emulation is
+   refused (`BAD_REQUEST`), as the wallet's own raw-payload transfers are.
+6. **A send whose server reply is lost reaches the bot only through the chain**: the transfer accepted with no message
+   hash (`.submissionUnknown`) is `FAILED` to the widget, and no query reports it, though the wallet may resolve it
+   later (§2.18's "may have been sent").
+7. **A channel post a bot sent cannot pay or sign**: the client finds no bot for it (no via bot, the channel as the
+   author, no bot id on the media), so its wallet calls are `FAILED` with no window; the bot's id on
+   `messageMediaWidget` would close this.
+
 ## What the corpus still trips on
 
 `CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots every corpus file but `attacks` with no crash and no
@@ -1761,6 +1814,29 @@ The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox
   fidelity"). Open: what needs a device or real messages: rotation, right-to-left, the bot's real layer-233 messages
   end to end (forward, edit, delete), the SDK group's interactive rows (links, haptics, an app restart), the feed
   bench on a low-end device, an iPad trackpad, and a resize during a drag.
+- **The wallet (v0.5.0, 2026-10-31).** Unverified: the real path (prepare, the window, the send or the signature, the
+  bot's query with `msg_hash` or the signature) has not run end to end; it needs a wallet this device signs for, a
+  bot's widget that can query, and the server's side of layer 233's wallet queries. The window itself was seen only
+  through Debug Settings ▸ "Show widget wallet window (nothing is sent)". For the maintainer: the bot's id on
+  `messageMediaWidget`, so a bot's channel post can pay (divergence 7); whether a send the wallet resolves later should
+  reach the bot (divergence 6). `userWallet#454d2737` is the maintainer's (their schema of 2026-10-31). Follow-ups,
+  none blocking:
+  - the window: a cancelled passcode closes it (a dApp's stays for a retry); after a failure past Confirm the sheet
+    leaves in one frame instead of sliding out (`dismiss(completion:)` on a pushed sheet, and the screen has no public
+    animated close that does not report `cancelled`); a window prepared after the chat closed is pushed over whatever
+    the chat's navigation shows; the bot line has no accessibility label, and no unit test (the screen's module
+    reaches AccountContext);
+  - the bot line: a name of invisible characters that are not whitespace (U+3164, U+2060, U+FEFF) survives trimming
+    and leaves `· @username` after an invisible name; a short name that would fit is dropped when less than
+    `ceil(3 × font size)` points are left; a name with a newline inside could overflow by an ellipsis;
+  - the wallet's side: a transient engine failure while preparing maps to `BAD_REQUEST`; a sent transaction's card
+    carries no signing data (the server attaches the card); on a cold start a widget on screen may boot twice when the
+    wallet's state loads; the availability's `set(false)` clears another owner's answer (by design, the latest answer
+    wins);
+  - the runtime: the argument converter reads every own value before `onlyKeys` refuses an extra key (a getter on an
+    extra key runs here, not in the shim); its 65,536-unit string limit could be 8,192 (no check takes more);
+  - Debug Settings' row hardcodes the shield's 0.8 s (`MessageWidgetWalletWindow.ignoresTouchesFor` is in another
+    module).
 - **After V6** (the spec's §5): WPT rendering (reftests and `check-layout-th.js` tests through litehtml, with their own
   ratcheting expectations); the boot measured against main's 20 ms wait on a device.
 

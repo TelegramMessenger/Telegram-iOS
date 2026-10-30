@@ -118,12 +118,14 @@ public:
     void hapticReleased() { m_hapticGate.release(m_loop.currentTime()); }
     /// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context as the widget sees it, after the glue's stripping
     /// (upstream's SandboxEngine.widgetContext): a preview's flags are ignored; a copy and a preview have no chat type;
-    /// the viewer is there only where the widget may send requests.
+    /// the viewer is there only where the widget may send requests; the wallet (widget-sandbox v0.5.0) too.
     struct WidgetContextState {
         bool isForward = false;
         bool canQuery = false;
         bool backgroundQuery = false;
         bool preview = false;
+        /// SDK v1 §2.18: the client has Gram Wallet for this user and the widget may ask the bot (`TelegramWidget.wallet`).
+        bool wallet = false;
         std::optional<std::string> chatType;
         std::optional<twidget::WidgetViewer> viewer;
     };
@@ -159,9 +161,14 @@ public:
     uint64_t contextGeneration() const { return m_contextGeneration; }
     /// SDK v1 §2.14: the request gate (the SDK policy's RequestGate) on the step's clock (EventLoop::currentTime), with
     /// this context's flags and `gesture` as activationAvailable. The caller consumes the press on Foreground.
-    twidget::sdk::RequestVerdict decideRequest(JSContext* ctx);
-    /// The request in flight has its outcome: the gate takes the next.
-    void finishRequest() { m_requestGate.finish(); }
+    /// `withWallet` (v0.5.0, §2.18): the request asks for the user's wallet, which needs the wallet and a press.
+    twidget::sdk::RequestVerdict decideRequest(JSContext* ctx, bool withWallet = false);
+    /// SDK v1 §2.18: the gate's verdict on a wallet call: a press, or the grant (within 10 s of the answer to a call made by
+    /// a press or the grant), on the step's clock. The caller consumes the press on Foreground.
+    twidget::sdk::RequestVerdict decideWallet(JSContext* ctx);
+    /// The request or wallet call in flight has its outcome: the gate takes the next. `answered`: an answer with no error
+    /// went into the widget now, which grants one wallet call when the call had a press or the grant.
+    void finishRequest(bool answered) { m_requestGate.finish(answered ? std::optional<double>(m_loop.currentTime()) : std::nullopt); }
     /// The next request's number, 1 … MAX_REQUEST_ID (then 1 again); every call gets one, refused or not.
     int64_t nextRequestId();
     /// The host's: the client's outcome for request `id` (sdk-v1 §2.14; HostState's only way in for it). Queues the task

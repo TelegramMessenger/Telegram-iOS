@@ -5,8 +5,9 @@ import MessageWidget
 /// The context of a widget message (widget-sandbox v0.2, sdk-v1 §2.13, §2.14; the v0.2 design §4 call 10): the media's
 /// server flags as they are (the client derives none), the chat's type from its peer, and the account as the viewer.
 /// The runtime strips what the widget may not see. `isPreview` is false here: an inline result's preview sets it.
-public func messageWidgetContext(widget: TelegramMediaWidget, chatPeer: EnginePeer?, accountPeer: EnginePeer?, accountPeerId: EnginePeer.Id) -> MessageWidgetContext {
-    return MessageWidgetContext(isCopy: widget.isCopy, canQuery: widget.canQuery, backgroundQuery: widget.backgroundQuery, chatType: messageWidgetChatType(chatPeer), viewer: messageWidgetViewer(accountPeer: accountPeer, accountPeerId: accountPeerId))
+/// `wallet` (v0.5.0, sdk-v1 §5.13): the client has Gram Wallet for the account's user (`MessageWidgetWalletAvailability`).
+public func messageWidgetContext(widget: TelegramMediaWidget, chatPeer: EnginePeer?, accountPeer: EnginePeer?, accountPeerId: EnginePeer.Id, wallet: Bool = false) -> MessageWidgetContext {
+    return MessageWidgetContext(isCopy: widget.isCopy, canQuery: widget.canQuery, backgroundQuery: widget.backgroundQuery, chatType: messageWidgetChatType(chatPeer), viewer: messageWidgetViewer(accountPeer: accountPeer, accountPeerId: accountPeerId), wallet: wallet)
 }
 
 /// The Bot API's `Chat.type` of a peer: a user and a secret chat are private, a basic group is a group, a channel a

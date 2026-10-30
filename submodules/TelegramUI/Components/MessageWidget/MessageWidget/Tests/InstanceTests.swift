@@ -286,7 +286,7 @@ class InstanceTests: MessageWidgetTestCase {
         }
         RecordingURLProtocol.reset()
         let pages = WidgetCorpus.files(in: "attacks")
-        XCTAssertEqual(pages.count, 110)
+        XCTAssertEqual(pages.count, 113)
         var rafBurnFrames: String?
         var rafBurnReason: String?
         var layoutLoopReason: String?

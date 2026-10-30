@@ -744,6 +744,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case mediaGridLegacy(Bool)
     case sharedMediaGridLegacy(Bool)
     case runWidgetStressKit(production: Bool)
+    case showWidgetWalletWindow
     case storyLegacyVideoWriter(Bool)
     case chatLegacyVideoWriter(Bool)
     case chatSideListLegacy(Bool)
@@ -799,7 +800,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .coreListScrollTrace, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter, .chatSideListLegacy, .runWidgetStressKit:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter, .chatSideListLegacy, .runWidgetStressKit, .showWidgetWalletWindow:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -978,6 +979,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 83
         case let .runWidgetStressKit(production):
             return production ? 85 : 84
+        case .showWidgetWalletWindow:
+            return 86
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1609,6 +1612,49 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
                 presenter.present(controller, animated: true)
             })
+        case .showWidgetWalletWindow:
+            // widget-sandbox v0.5.0: the wallet window a message widget opens, with a bot of the account's in its header
+            // and its touch shield (0.8 s, as MessageWidgetWalletWindow's), to look at on a device or the simulator.
+            // Confirm only closes it: nothing is sent.
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Show widget wallet window (nothing is sent)", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context, let walletContext = context.walletContext else {
+                    return
+                }
+                let _ = (context.engine.contacts.searchLocalPeers(query: "bot")
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { peers in
+                    let bot = peers.compactMap { $0.peer }.first(where: { peer in
+                        if case let .user(user) = peer {
+                            return user.botInfo != nil
+                        }
+                        return false
+                    })
+                    guard let bot else {
+                        return
+                    }
+                    guard case let .user(user) = bot else {
+                        return
+                    }
+                    let requester = WalletContext.WidgetWalletRequester(botId: user.id.id._internalGetInt64Value(), name: bot.compactDisplayTitle, username: user.addressName)
+                    let request = WalletContext.TonConnectOperationRequest(
+                        id: "debug-widget-wallet",
+                        applicationName: requester.name,
+                        domain: requester.displayDomain,
+                        icon: nil,
+                        method: .sendTransaction,
+                        messages: [WalletContext.TonConnectOperationRequest.Message(id: "debug-widget-wallet:0", destination: "EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N", amountNanograms: "1500000000", payload: .empty, stateInit: nil)],
+                        feeNanograms: "3000000",
+                        validUntil: UInt64(Date().timeIntervalSince1970) + 3600,
+                        relayerWillSubmit: false,
+                        needsWalletStateInit: false,
+                        warnings: [],
+                        actions: []
+                    )
+                    arguments.pushController(context.sharedContext.makeWalletTransferScreen(context: context, walletContext: walletContext, request: request, requester: bot, ignoresTouchesFor: 0.8, cancelled: {}, confirm: { completion in
+                        completion(.success(()))
+                    }))
+                })
+            })
         case let .respectSystemMicrophone(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Recording: respect system microphone", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -2173,6 +2219,9 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.chatSideListLegacy(experimentalSettings.chatSideListLegacy))
         entries.append(.runWidgetStressKit(production: false))
         entries.append(.runWidgetStressKit(production: true))
+        #if DEBUG
+        entries.append(.showWidgetWalletWindow)
+        #endif
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

@@ -1,6 +1,6 @@
 // widget-sandbox's SDK policy (its C++ copy, sdk_policy.cpp) against the fixture its four copies share
 // (fixtures/sdk-policy.json): upstream's `sdk_policy_shared_fixture` and `sdk_request_strings_refuse_surrogates_and_invalid_utf8`
-// (packages/desktop/tests/test_main.cpp at the vendored tag, v0.2.2), with this file's own checks around them.
+// (packages/desktop/tests/test_main.cpp at the vendored tag, v0.5.0), with this file's own checks around them.
 // WidgetRuntime's `setResizeAnchor` checks its edge with it, and its HostState runs the request and haptic gates and the
 // state, viewer, chat type and answer checks.
 #include "twidget/sdk_policy.h"
@@ -100,16 +100,17 @@ void sdkPolicySharedFixture(const char* fixturePath) {
         if (h) { got = Json::object(); got.set("haptic", h->haptic); if (h->value) got.set("value", *h->value); }
         CHECK_MSG(jsonEqual(got, c["expect"]), c["args"].dump() + " → " + got.dump());
     }
-    int anchors = 0, requests = 0, copies = 0, watches = 0;
+    int anchors = 0, requests = 0, copies = 0, watches = 0, wallets = 0;
     for (const auto& c : (*root)["bridge"].arr()) {
         cases++;
         auto a = sdk::checkBridgeCall(c["method"], c["args"]);
         Json got = a ? a->toJson() : Json();
         CHECK_MSG(jsonEqual(got, c["expect"]), c["method"].dump() + " " + c["args"].dump() + " → " + got.dump());
-        // Exactly one of the five: the action, setResizeAnchor's edge, the request, the text to copy, the watch flag.
+        // Exactly one of the six: the action, setResizeAnchor's edge, the request, the text to copy, the watch flag, the wallet call.
         if (a) CHECK_MSG(int(a->action.has_value()) + int(a->resizeAnchor.has_value()) + int(a->request.has_value()) + int(a->copyText.has_value()) +
-                                 int(a->watchPublicData.has_value()) == 1,
+                                 int(a->watchPublicData.has_value()) + int(a->wallet.has_value()) == 1,
                          c["method"].dump());
+        wallets += a && a->wallet;
         const std::string method = c["method"].isString() ? c["method"].asString() : "";
         anchors += method == "setResizeAnchor";
         requests += method == "request";
@@ -206,13 +207,18 @@ void sdkPolicySharedFixture(const char* fixturePath) {
         sdk::RequestGate gate;
         int i = 0;
         for (const auto& s : c["steps"].arr()) {
-            if (s["op"].asString() == "finish") gate.finish();
+            if (s["op"].asString() == "finish") gate.finish(s["answeredAt"].isNumber() ? std::optional<double>(s["answeredAt"].asNumber()) : std::nullopt);
+            else if (s["op"].asString() == "decideWallet") {
+                sdk::RequestGate::WalletConditions at{s["gesture"].asBool(), s["visible"].asBool(), s["canQuery"].asBool(), s["wallet"].asBool()};
+                std::string got(sdk::requestVerdictName(gate.decideWallet(s["at"].asNumber(), at)));
+                CHECK_MSG(got == s["expect"].asString(), c["name"].asString() + ", step " + std::to_string(i) + ": " + got);
+            }
             else if (s["op"].asString() == "show") {
                 bool busy = gate.busy();
                 CHECK_MSG(gate.show(s["at"].asNumber()) == s["expect"].asBool(), c["name"].asString() + ", step " + std::to_string(i));
                 CHECK_MSG(gate.busy() == busy, c["name"].asString() + ", step " + std::to_string(i) + ": show changes nothing in flight");
             } else {
-                sdk::RequestGate::Conditions at{s["gesture"].asBool(), s["visible"].asBool(), s["canQuery"].asBool(), s["backgroundQuery"].asBool()};
+                sdk::RequestGate::Conditions at{s["gesture"].asBool(), s["visible"].asBool(), s["canQuery"].asBool(), s["backgroundQuery"].asBool(), s["withWallet"].asBool(), s["wallet"].asBool()};
                 std::string got(sdk::requestVerdictName(gate.decide(s["at"].asNumber(), at)));
                 CHECK_MSG(got == s["expect"].asString(), c["name"].asString() + ", step " + std::to_string(i) + ": " + got);
             }
@@ -223,8 +229,9 @@ void sdkPolicySharedFixture(const char* fixturePath) {
     std::vector<std::string> verdicts;
     for (const auto& c : (*root)["requestRefusals"].arr()) {
         cases++;
-        sdk::RequestVerdict all[] = {sdk::RequestVerdict::Foreground, sdk::RequestVerdict::Background, sdk::RequestVerdict::Held, sdk::RequestVerdict::Disabled,
-                                     sdk::RequestVerdict::Busy, sdk::RequestVerdict::NoActivation, sdk::RequestVerdict::RateLimited};
+        sdk::RequestVerdict all[] = {sdk::RequestVerdict::Foreground, sdk::RequestVerdict::Background, sdk::RequestVerdict::Held, sdk::RequestVerdict::Granted,
+                                     sdk::RequestVerdict::Disabled, sdk::RequestVerdict::NoWallet, sdk::RequestVerdict::Busy, sdk::RequestVerdict::NoActivation,
+                                     sdk::RequestVerdict::RateLimited};
         const sdk::RequestVerdict* v = std::find_if(std::begin(all), std::end(all), [&](sdk::RequestVerdict x) { return sdk::requestVerdictName(x) == c["verdict"].asString(); });
         CHECK_MSG(v != std::end(all), c["verdict"].asString());
         if (v == std::end(all)) continue;
@@ -233,7 +240,21 @@ void sdkPolicySharedFixture(const char* fixturePath) {
         Json got = refusal ? Json(*refusal) : Json();
         CHECK_MSG(jsonEqual(got, c["expect"]), c["verdict"].asString() + " → " + got.dump());
     }
-    CHECK_MSG(verdicts.size() == 7, std::to_string(verdicts.size()) + " verdicts"); // every verdict once
+    CHECK_MSG(verdicts.size() == 9, std::to_string(verdicts.size()) + " verdicts"); // every verdict once
+    CHECK_MSG(wallets == 3, std::to_string(wallets) + " valid wallet calls");
+    // The wallet (docs/sdk-v1.md §2.18): TON Connect's transaction and signData payload, checked.
+    for (const auto& c : (*root)["walletTransactions"].arr()) {
+        cases++;
+        std::optional<WalletTransaction> tx = sdk::checkWalletTransaction(expandRepeat(c["input"]));
+        Json got = tx ? tx->toJson() : Json();
+        CHECK_MSG(jsonEqual(got, expandRepeat(c["expect"])), (c["note"].isString() ? c["note"].asString() : c["input"].dump().substr(0, 100)) + " → " + got.dump().substr(0, 120));
+    }
+    for (const auto& c : (*root)["signDataPayloads"].arr()) {
+        cases++;
+        std::optional<SignDataPayload> p = sdk::checkSignDataPayload(expandRepeat(c["input"]));
+        Json got = p ? p->toJson() : Json();
+        CHECK_MSG(jsonEqual(got, expandRepeat(c["expect"])), (c["note"].isString() ? c["note"].asString() : c["input"].dump().substr(0, 100)) + " → " + got.dump().substr(0, 120));
+    }
     // The server's spec or later (the server's flags, answers of a result only, no NUL in data); a stale copy fails here.
     int flagged = 0, shows = 0, nulData = 0, edits = 0;
     for (const auto& c : (*root)["requestGate"].arr())
@@ -250,7 +271,7 @@ void sdkPolicySharedFixture(const char* fixturePath) {
     std::printf("    %d fixture cases\n", cases);
     CHECK(cases > 150);
     for (const char* section : {"links", "haptics", "bridge", "hapticGate", "themeParams", "locales", "storage", "utf8",
-                                "widgetData", "viewer", "chatType", "answers", "requestGate", "requestRefusals", "previewMethods"})
+                                "widgetData", "viewer", "chatType", "answers", "requestGate", "requestRefusals", "previewMethods", "walletTransactions", "signDataPayloads"})
         CHECK_MSG((*root)[section].size() > 0, section);
 }
 

@@ -121,6 +121,27 @@ class RegistryTests: MessageWidgetTestCase {
         registry.destroyAll()
     }
 
+    /// widget-sandbox v0.5.0: the wallet is part of the context, so the wallet set up (or removed) makes a new widget, which
+    /// sees it.
+    func testTheWalletIsPartOfTheContext() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        registry.context = MessageWidgetContext(canQuery: true, chatType: .private)
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let first = self.instance(in: registry, path: [], source: source)
+        XCTAssertEqual(first?.evaluateForTesting("String(TelegramWidget.wallet)"), "null")
+        registry.context = MessageWidgetContext(canQuery: true, chatType: .private, wallet: true)
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let instance = self.instance(in: registry, path: [], source: source)
+        XCTAssertFalse(first === instance)
+        XCTAssertEqual(instance?.evaluateForTesting("typeof TelegramWidget.wallet.sendTransaction"), "function")
+        registry.destroyAll()
+    }
+
     private func instance(in registry: MessageWidgetRegistry, path: [Int], source: String) -> MessageWidgetInstance? {
         return (registry.view(path: path, source: source) as? MessageWidgetView)?.instance
     }

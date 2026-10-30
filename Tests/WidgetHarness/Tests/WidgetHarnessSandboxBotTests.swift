@@ -13,7 +13,7 @@ import ChatMessageWidgetBubbleContentNode
 /// but not against a live bot has a bot that does not answer as the sandbox's does.
 final class WidgetHarnessSandboxBotTests: XCTestCase {
     private let tickerPath = "interactive/03-live-ticker.html"
-    private var savedRequestAnswer: ((AccountContext, EngineMessage.Id, Data) -> Signal<Data?, BotWidgetQueryError>)?
+    private var savedRequestAnswer: ((AccountContext, EngineMessage.Id, BotWidgetQueryType, Data) -> Signal<Data?, BotWidgetQueryError>)?
 
     override func setUp() {
         super.setUp()
@@ -66,7 +66,7 @@ final class WidgetHarnessSandboxBotTests: XCTestCase {
     /// widget asks as it appears, shows each price, asks again 5 s later, and draws the likes the bot's edit carries.
     func testTheLiveTickerShowsTheSandboxBotsPrices() throws {
         var asked: [String] = []
-        MessageWidgetNetwork.requestAnswer = { _, _, data in
+        MessageWidgetNetwork.requestAnswer = { _, _, _, data in
             let request = String(decoding: data, as: UTF8.self)
             asked.append(request)
             guard request == "tick" else {
@@ -97,7 +97,7 @@ final class WidgetHarnessSandboxBotTests: XCTestCase {
     /// What the Widget Bot on the test servers answers (2026-10-27): an echo of the data, base64. The request succeeds,
     /// so the widget says it is live, but the answer is no price, and the price stays "—": the screen seen in the app.
     func testAnEchoingBotLeavesThePriceEmpty() throws {
-        MessageWidgetNetwork.requestAnswer = { _, _, data in
+        MessageWidgetNetwork.requestAnswer = { _, _, _, data in
             return .single(Data(("echo: " + data.base64EncodedString().replacingOccurrences(of: "=", with: "")).utf8))
         }
         let (root, _, instance) = try self.loadTicker()

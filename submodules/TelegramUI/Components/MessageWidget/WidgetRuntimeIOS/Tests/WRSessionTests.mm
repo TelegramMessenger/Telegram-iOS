@@ -246,7 +246,7 @@ void drain(WRSession* session) {
 - (void)testACompletionAfterTheSessionStoppedIsIgnored {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
-    [session setContextCopy:NO canQuery:YES backgroundQuery:NO chatType:@"private" viewer:nil preview:NO];
+    [session setContextCopy:NO canQuery:YES backgroundQuery:NO chatType:@"private" viewer:nil preview:NO wallet:NO];
     XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head><style>body{margin:0;padding:0} button{position:"
                                             "absolute;left:0;top:0;width:100px;height:40px}</style></head><body><button "
                                             "onclick=\"TelegramWidget.request('ping').then(r => TelegramWidget.openLink("

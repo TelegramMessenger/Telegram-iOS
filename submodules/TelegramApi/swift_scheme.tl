@@ -495,9 +495,9 @@ updateWalletGaslessInfo#a8ae1cac flags:# available:flags.0?true left:int reset_a
 updateWalletTonConnectSession#50a38e0e session:TonConnectSession = Update;
 updateWalletTonConnectPendingDisconnect#d1ee8199 session_ids:Vector<long> = Update;
 updateEditForumTopic#2366665c flags:# peer:Peer topic_id:int title:flags.0?string icon_emoji_id:flags.1?long closed:flags.2?Bool hidden:flags.3?Bool = Update;
-updateBotWidgetQuery#26816906 flags:# query_id:long user_id:long peer:Peer msg_id:int chat_instance:long chat_type:string data:bytes widget_id:flags.0?long = Update;
-updateInlineBotWidgetQuery#ab6fb64b flags:# query_id:long user_id:long inline_message_id:InputBotInlineMessageID chat_instance:long chat_type:string data:bytes widget_id:flags.0?long = Update;
-updateBotWidgetCopyQuery#b3323f58 flags:# query_id:long user_id:long data:bytes widget_id:long = Update;
+updateBotWidgetQuery#b373fe68 flags:# query_id:long query_type:WidgetQueryType user_id:long peer:Peer msg_id:int chat_instance:long chat_type:string data:bytes widget_id:flags.0?long wallet_card:flags.1?wallet.Card = Update;
+updateInlineBotWidgetQuery#a5f07e08 flags:# query_id:long query_type:WidgetQueryType user_id:long inline_message_id:InputBotInlineMessageID chat_instance:long chat_type:string data:bytes widget_id:flags.0?long wallet_card:flags.1?wallet.Card = Update;
+updateBotWidgetCopyQuery#fa89bef7 flags:# query_id:long query_type:WidgetQueryType user_id:long data:bytes widget_id:long wallet_card:flags.1?wallet.Card = Update;
 updateMessageWidgetData#bbb078dd flags:# peer:Peer msg_id:int public_data:flags.0?string public_data_hash:flags.0?long chat_data:flags.1?string pts:int pts_count:int = Update;
 updateTranscribedAudioFile#734c2e7b flags:# pending:flags.0?true transcription_id:long text:string = Update;
 
@@ -2389,6 +2389,12 @@ wallet.card#8ed043b1 flags:# stickers:flags.0?Vector<wallet.CardSticker> bg_nft_
 
 payments.starGiftDepositPayload#725bb4eb nft_address:string payload:bytes amount:long = payments.StarGiftDepositPayload;
 
+userWallet#454d2737 flags:# address:string balance:long public_key:flags.0?bytes state_init:flags.0?bytes = UserWallet;
+
+widgetQueryTypeData#16d8cf0b flags:# with_wallet:flags.0?true = WidgetQueryType;
+widgetQueryTypeSignData#192047dc wallet:UserWallet sign_data:DataJSON = WidgetQueryType;
+widgetQueryTypeSentTransaction#ff3b33b4 wallet:UserWallet msg_hash:string = WidgetQueryType;
+
 messages.botWidgetQueryAnswer#95b73023 flags:# result:flags.0?string = messages.BotWidgetQueryAnswer;
 
 messages.widgetPublicDataNotModified#b9196e57 period:int = messages.WidgetPublicData;
@@ -2868,7 +2874,7 @@ messages.composeRichMessageWithAI#8d7ae6af flags:# proofread:flags.0?true emojif
 messages.requestChatJoinWebView#ba9ee679 flags:# query_id:long theme_params:flags.0?DataJSON platform:string = WebViewResult;
 messages.setShareTheme#698a9b1a peer:InputPeer theme:ShareTheme = Bool;
 messages.getShareThemeBackdrops#f4599ef2 hash:int = ShareThemeBackdrops;
-messages.getBotWidgetQueryAnswer#d78dba1a peer:InputPeer msg_id:int data:bytes = messages.BotWidgetQueryAnswer;
+messages.getBotWidgetQueryAnswer#5c550579 peer:InputPeer msg_id:int query_type:WidgetQueryType data:bytes = messages.BotWidgetQueryAnswer;
 messages.setBotWidgetQueryAnswer#f8cdec6a flags:# query_id:long result:flags.0?string = Bool;
 messages.editMessageWidgetData#f624bc1e flags:# peer:InputPeer id:int public_data:flags.0?string chat_data:flags.1?string = Updates;
 messages.editInlineBotMessageWidgetData#6396ce2b flags:# id:InputBotInlineMessageID public_data:flags.0?string chat_data:flags.1?string = Bool;

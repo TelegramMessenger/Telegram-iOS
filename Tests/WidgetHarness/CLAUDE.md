@@ -68,7 +68,7 @@ One leading dash (`--widget-set` is ignored silently).
 
 | Argument | Values | Default |
 |---|---|---|
-| `-widget-set` | `conformance` (widget-sandbox v0.4.0's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
+| `-widget-set` | `conformance` (widget-sandbox v0.5.0's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
 | `-widget-posts` | whole widget paths, comma-separated: only these posts, in this order (oldest first), e.g. `fixture/tall-box.html,fixture/resize/grow-top.html` | all |
 | `-widget-kill-switch` | `on` (the app config's `ios_killswitch_disable_message_widgets` engaged: every widget a pill) | `off` |
@@ -129,7 +129,7 @@ contextMenuEnded fixture/open-link.html
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
 - Changing the format means changing every test that parses it.
 
-## The conformance set (widget-sandbox v0.4.0, `conformance/CLIENTS.md`)
+## The conformance set (widget-sandbox v0.5.0, `conformance/CLIENTS.md`)
 
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
@@ -213,6 +213,15 @@ edits a post's caption and where it shows as a message edit does (`testACaptionE
   `Fixtures/widget-watch.html` watches its shared state from the start (a tap on `#toggle` stops or starts) and logs
   `watching|<state>` or `not|<state>`; `replaceWidgetState(…, widgetId:)` gives a post the widget id a shared widget's
   message has, which polling needs.
+- **The wallet** (widget-sandbox v0.5.0; `WidgetHarnessWalletTests`): the harness has no wallet context, so a test
+  replaces the wallet's part, `MessageWidgetWallet.perform` (the window and the send: the mock answers with a sent
+  transaction, a signature or a failure), and the bot, `MessageWidgetNetwork.requestAnswer` (which takes the query type),
+  and passes the wallet in the context as the app does where this device can sign
+  (`MessageWidgetWalletAvailability.set(_:accountId:)` with `WidgetHarnessListHost.accountPeerIdValue`, cleared in
+  `tearDown`). The coordinator between them is the shipping one. `Fixtures/wallet/pay.html` (a folder fixture, loaded
+  by its path) pays on `#pay` (y 20: a request with the wallet, then the answer's transaction on the grant) and signs on
+  `#sign` (y 80), logging `wallet` or `no-wallet` at load, then `paid:<result>`, `signed:<result>` or `err:<code>`; its
+  posts come from the chat's bot (`botChat`, `incoming`), the message's bot the window would name.
 - **Inline previews** (W3; `WidgetHarnessPreviewTests`): a `MessageWidgetPreviewNode` in the root's view, with no list.
   `Fixtures/preview/widget-preview.html` asks a request at load and logs
   `isPreview|chatType|viewer.id|chatData|publicData|request outcome|pointer count`, each value written with `String(…)`

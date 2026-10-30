@@ -9,6 +9,8 @@
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/ErrorReporting.h"
 #include "Sources/Host/HostState.h"
+#include "Sources/Host/WalletArguments.h"
+#include "Sources/Host/Window.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
 #include "twidget/sdk_policy.h"
@@ -36,6 +38,13 @@ void postBridgeCall(JSContext* ctx, std::string_view method, std::initializer_li
     }
     String text = String::adopt(ctx, JS_DupValue(ctx, json.get()));
     HostState::of(ctx).bridgeCall(ctx, method, text.utf8());
+}
+
+void postBridgeCallJson(JSContext* ctx, std::string_view method, const twidget::Json& args) {
+    if (HostState::of(ctx).isPreview() && !twidget::sdk::allowedInPreview(method)) {
+        return;
+    }
+    HostState::of(ctx).bridgeCall(ctx, method, args.dump());
 }
 
 bool refusedInPreview(JSContext* ctx, std::string_view method) {
@@ -242,11 +251,39 @@ std::string refusalDetail(twidget::sdk::RequestVerdict verdict) {
         return "a background request from a widget off screen";
     case RequestVerdict::RateLimited:
         return "background requests at most once per 5 s";
+    case RequestVerdict::NoWallet:
+        return "the client has no wallet for this user (no WidgetContext.wallet)";
     case RequestVerdict::Foreground:
     case RequestVerdict::Background:
+    case RequestVerdict::Granted:
         break;
     }
     return std::string(twidget::sdk::requestVerdictName(verdict));
+}
+
+/// Where the glue's words for a refused wallet call differ from a request's (upstream's WALLET_REFUSED).
+std::string walletRefusalDetail(twidget::sdk::RequestVerdict verdict) {
+    using twidget::sdk::RequestVerdict;
+    switch (verdict) {
+    case RequestVerdict::NoActivation:
+        return "it needs a tap on the visible widget, or the answer to a call made by a tap within 10 s; one call each";
+    case RequestVerdict::Busy:
+        return "a request or a wallet call is already in flight";
+    default:
+        return refusalDetail(verdict);
+    }
+}
+
+/// The wallet object's methods (magic 0: sendTransaction, 1: signData).
+JSValue walletMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic) {
+    return glue(ctx, [&]() -> JSValue {
+        const char* name = magic == 1 ? "signData" : "sendTransaction";
+        auto argument = [&](int i) {
+            return argc > i && !JS_IsUndefined(argv[i]) ? std::optional<Value>(convert<Value>(ctx, argv[i], ArgInfo{"TelegramWidget.wallet", name, i}))
+                                                         : std::optional<Value>();
+        };
+        return toJS(ctx, HostState::of(ctx).window().TelegramWidget(ctx)->walletCall(ctx, magic == 1, argument(0), argument(1)));
+    });
 }
 
 /// A string argument converted only up to `maxBytes + 1` UTF-8 bytes (a lone surrogate as WTF-8, which the SDK policy
@@ -284,13 +321,23 @@ void TelegramWidget::removeRequest(JSRuntime* rt, int64_t id) {
     }
 }
 
-Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
+Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data, std::optional<Value> options) {
     std::optional<std::string> checked = boundedUTF8(ctx, data, size_t(twidget::sdk::MAX_REQUEST_DATA_BYTES));
     if (checked) {
         checked = twidget::sdk::checkRequestData(*checked);
     }
     if (!checked) {
         throw TypeError{"TelegramWidget.request: data must be a string of 1–64 bytes (UTF-8)"};
+    }
+    // v0.5.0 (§2.18): the options, after the data, as the shim checks them.
+    bool withWallet = false;
+    if (options) {
+        const std::optional<twidget::Json> json = walletArgumentJson(ctx, options->get());
+        const std::optional<bool> wallet = json ? twidget::sdk::checkRequestOptions(*json) : std::nullopt;
+        if (!wallet) {
+            throw TypeError{"TelegramWidget.request: options must be an object with at most `wallet` (a boolean)"};
+        }
+        withWallet = *wallet;
     }
     HostState& host = HostState::of(ctx);
     PendingRequest pending;
@@ -304,7 +351,7 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
         host.queueRequestRefusal(ctx, id, "NOT_ALLOWED");
         return promise;
     }
-    const twidget::sdk::RequestVerdict verdict = host.decideRequest(ctx);
+    const twidget::sdk::RequestVerdict verdict = host.decideRequest(ctx, withWallet);
     if (verdict == twidget::sdk::RequestVerdict::Held) {
         // widget-sandbox v0.3.0: a background request off screen waits for the widget to appear, holding the gate's
         // one-in-flight slot; its promise stays pending meanwhile (sendHeldRequest).
@@ -314,7 +361,10 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
         return promise;
     }
     if (const std::optional<std::string_view> refusal = twidget::sdk::requestRefusal(verdict)) {
-        host.reportCapped(ctx, "request-blocked", "request refused (" + std::string(twidget::sdk::requestVerdictName(verdict)) + "): " + refusalDetail(verdict));
+        const std::string detail = withWallet && verdict == twidget::sdk::RequestVerdict::NoActivation
+                                       ? "a request for the wallet needs a tap on the visible widget, one request per tap"
+                                       : refusalDetail(verdict);
+        host.reportCapped(ctx, "request-blocked", "request refused (" + std::string(twidget::sdk::requestVerdictName(verdict)) + "): " + detail);
         host.queueRequestRefusal(ctx, id, std::string(*refusal));
         return promise;
     }
@@ -322,9 +372,96 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
         host.consumeActivation(ctx);
     }
     this->pendingRequest(id)->outgoing = true;
+    if (withWallet) {
+        twidget::Json options = twidget::Json::object();
+        options.set("wallet", true);
+        twidget::Json args = twidget::Json::array();
+        args.push(std::to_string(id)).push(*checked).push(std::move(options));
+        postBridgeCallJson(ctx, "request", args);
+        return promise;
+    }
     const String idText = String::fromUTF8(ctx, std::to_string(id));
     const String dataText = String::fromUTF8(ctx, *checked);
     postBridgeCall(ctx, "request", {&idText, &dataText});
+    return promise;
+}
+
+Value TelegramWidget::wallet(JSContext* ctx) {
+    if (!HostState::of(ctx).widgetContext().wallet) {
+        return Value::adopt(ctx, JS_NULL);
+    }
+    if (m_wallet.isUndefined()) {
+        // The shim's Object.freeze({ sendTransaction, signData }): two own enumerable methods, frozen.
+        Value object = Value::adopt(ctx, checked(ctx, JS_NewObject(ctx)));
+        const char* names[] = {"sendTransaction", "signData"};
+        for (int i = 0; i < 2; i++) {
+            JSValue method = checked(ctx, JS_NewCFunctionMagic(ctx, walletMethod, names[i], 2, JS_CFUNC_generic_magic, i));
+            check(ctx, JS_DefinePropertyValueStr(ctx, object.get(), names[i], method, JS_PROP_C_W_E));
+        }
+        check(ctx, JS_FreezeObject(ctx, object.get()));
+        m_wallet.set(JS_GetRuntime(ctx), JS_DupValue(ctx, object.get()));
+    }
+    return Value::dup(ctx, m_wallet.value);
+}
+
+Value TelegramWidget::walletCall(JSContext* ctx, bool signData, std::optional<Value> argument, std::optional<Value> data) {
+    const std::string method = signData ? "signData" : "sendTransaction";
+    const std::optional<twidget::Json> json = argument ? walletArgumentJson(ctx, argument->get()) : std::nullopt;
+    twidget::Json checkedArgument;
+    if (signData) {
+        const std::optional<twidget::SignDataPayload> payload = json ? twidget::sdk::checkSignDataPayload(*json) : std::nullopt;
+        if (!payload) {
+            throw TypeError{"TelegramWidget.wallet.signData: expected TON Connect's payload: { type: 'text', text } (at most 4096 bytes), "
+                            "{ type: 'binary', bytes } or { type: 'cell', schema, cell } (base64 of at most 4096 characters); no domain"};
+        }
+        checkedArgument = payload->toJson();
+    } else {
+        const std::optional<twidget::WalletTransaction> transaction = json ? twidget::sdk::checkWalletTransaction(*json) : std::nullopt;
+        if (!transaction) {
+            throw TypeError{"TelegramWidget.wallet.sendTransaction: expected TON Connect's transaction: { valid_until?, network?, from?, messages: "
+                            "[{ address, amount, payload?, stateInit? }] }, 1 to 255 messages, user-friendly addresses, amounts as decimal strings of "
+                            "nanotons, payloads in base64 (at most 8192 characters each, 65536 together)"};
+        }
+        checkedArgument = transaction->toJson();
+    }
+    std::optional<std::string> label = boundedUTF8(ctx, data, size_t(twidget::sdk::MAX_REQUEST_DATA_BYTES));
+    if (label) {
+        label = twidget::sdk::checkRequestData(*label);
+    }
+    if (!label) {
+        throw TypeError{"TelegramWidget.wallet." + method + ": data must be a string of 1–64 bytes (UTF-8)"};
+    }
+    HostState& host = HostState::of(ctx);
+    PendingRequest pending;
+    pending.id = host.nextRequestId();
+    pending.wallet = true;
+    makePending(ctx, pending.slot, false);
+    Value promise = Value::dup(ctx, pending.slot.promise.value);
+    const int64_t id = pending.id;
+    m_requests.push_back(std::move(pending));
+    // The shim's: no wallet, NOT_ALLOWED (the object is null then, but a reference may outlive a context set again).
+    if (!host.widgetContext().wallet) {
+        host.queueRequestRefusal(ctx, id, "NOT_ALLOWED");
+        return promise;
+    }
+    // The glue's order: a preview, then the gate (a press or the grant, never the background), then the press it consumes.
+    if (refusedInPreview(ctx, "wallet")) {
+        host.queueRequestRefusal(ctx, id, "NOT_ALLOWED");
+        return promise;
+    }
+    const twidget::sdk::RequestVerdict verdict = host.decideWallet(ctx);
+    if (const std::optional<std::string_view> refusal = twidget::sdk::requestRefusal(verdict)) {
+        host.reportCapped(ctx, "request-blocked", "wallet." + method + " refused (" + std::string(twidget::sdk::requestVerdictName(verdict)) + "): " + walletRefusalDetail(verdict));
+        host.queueRequestRefusal(ctx, id, std::string(*refusal));
+        return promise;
+    }
+    if (verdict == twidget::sdk::RequestVerdict::Foreground) {
+        host.consumeActivation(ctx);
+    }
+    this->pendingRequest(id)->outgoing = true;
+    twidget::Json args = twidget::Json::array();
+    args.push(std::to_string(id)).push(method).push(std::move(checkedArgument)).push(*label);
+    postBridgeCallJson(ctx, "wallet", args);
     return promise;
 }
 
@@ -349,13 +486,17 @@ void TelegramWidget::settleRequest(JSContext* ctx, int64_t id, const twidget::Wi
     }
     HostState& host = HostState::of(ctx);
     // The gate is free before the widget hears the outcome, so its handler may ask again at once.
-    host.finishRequest();
     if (outcome.failure != twidget::WidgetRequestFailure::None) {
-        queueRejectWithRequestError(ctx, request->slot, twidget::sdk::requestFailureCode(outcome.failure), std::string(twidget::sdk::requestFailureCode(outcome.failure)));
+        host.finishRequest(false);
+        // A wallet call keeps the wallet's codes (REJECTED, BAD_REQUEST); a request's are FAILED.
+        const std::string_view code = request->wallet ? twidget::sdk::walletFailureCode(outcome.failure) : twidget::sdk::requestFailureCode(outcome.failure);
+        queueRejectWithRequestError(ctx, request->slot, code, std::string(code));
         this->removeRequest(JS_GetRuntime(ctx), id);
         return;
     }
     const std::optional<twidget::sdk::CheckedAnswer> answer = twidget::sdk::checkRequestAnswer(outcome.answer);
+    // v0.5.0 (§2.18): an answer with no error grants one wallet call when the call had a press or the grant.
+    host.finishRequest(answer.has_value());
     if (!answer) {
         Runtime::from(ctx).host().diagnostic("answer-rejected", "the answer's result is not text of at most " + std::to_string(twidget::sdk::MAX_REQUEST_RESULT_BYTES) +
                                                                     " bytes (UTF-8, no NUL); the widget gets INVALID_ANSWER");
@@ -653,6 +794,7 @@ void TelegramWidget::trace(JSRuntime* rt, JS_MarkFunc* mark) const {
     m_themeParams.mark(rt, mark);
     m_viewer.mark(rt, mark);
     m_contentSafeAreaInset.mark(rt, mark);
+    m_wallet.mark(rt, mark);
     m_hapticFeedback.mark(rt, mark);
     for (const PendingRequest& request : m_requests) {
         request.slot.mark(rt, mark);
@@ -669,6 +811,7 @@ void TelegramWidget::dispose(JSRuntime* rt) {
     m_themeParams.clear(rt);
     m_viewer.clear(rt);
     m_contentSafeAreaInset.clear(rt);
+    m_wallet.clear(rt);
     m_hapticFeedback.clear(rt);
     for (PendingRequest& request : m_requests) {
         request.slot.clear(rt);
