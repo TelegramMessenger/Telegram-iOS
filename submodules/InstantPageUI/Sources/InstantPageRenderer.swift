@@ -391,6 +391,13 @@ public final class InstantPageV2View: UIView {
         // sublayer/subview stack matches `layout.items` order.
         for view in newItemViews {
             self.bringSubviewToFront(view)
+            // Details bodies and table cells have their own renderer. Forward button actions
+            // after every update, including when expanding a reused details view creates a body.
+            for nested in InstantPageV2View.nestedV2Views(of: view) {
+                nested.buttonTapped = { [weak self] button, progress in
+                    self?.buttonTapped?(button, progress)
+                }
+            }
         }
 
         self.itemViews = newItemViews
