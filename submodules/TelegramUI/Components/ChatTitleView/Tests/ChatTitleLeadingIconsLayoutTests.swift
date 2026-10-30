@@ -31,4 +31,11 @@ final class ChatTitleLeadingIconsLayoutTests: XCTestCase {
         XCTAssertNil(layout.lockIconFrame)
         XCTAssertEqual(layout.verificationIconFrame, CGRect(x: 100.0 - 4.0 - 20.0, y: 2.0, width: 20.0, height: 20.0))
     }
+
+    func testOutermostIconComesBeforeVerification() {
+        let titleFrame = CGRect(x: 100.0, y: 10.0, width: 50.0, height: 20.0)
+        let layout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: CGSize(width: 22.0, height: 22.0), lockIconSpacing: 6.0, verificationIconSize: CGSize(width: 20.0, height: 20.0), verificationIconSpacing: 4.0, lockIconIsOutermost: true)
+        XCTAssertEqual(layout.verificationIconFrame?.minX, 76.0)
+        XCTAssertEqual(layout.lockIconFrame?.minX, 48.0)
+    }
 }

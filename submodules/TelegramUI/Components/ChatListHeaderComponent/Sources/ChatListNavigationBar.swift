@@ -246,6 +246,8 @@ public final class ChatListNavigationBar: Component {
         public let headerContent = ComponentView<Empty>()
         
         public private(set) var searchContentNode: NavigationBarSearchContentNode?
+        /// A screen is expanding out of this header: see `updateExpansionContentStaysInScreen`.
+        fileprivate var expansionContentStaysInScreen = false
         
         private var component: ChatListNavigationBar?
         private weak var state: EmptyComponentState?
@@ -1112,7 +1114,23 @@ extension ChatListNavigationBar.View: NavigationBarComponentTransitionSource {
     }
 
     private func applyEdgeEffectVisibility() {
-        self.edgeEffectBackgroundView.alpha = self.transitionRole == nil || self.keepsOwnBackdrop ? 1.0 : 0.0
+        self.edgeEffectBackgroundView.alpha = self.transitionRole == nil || self.keepsOwnBackdrop || self.expansionContentStaysInScreen ? 1.0 : 0.0
+    }
+
+    /// A screen expands out of this header (or back into it): nothing slides then, and the lifted content stays above that
+    /// screen. What the expansion doesn't take (the search field, the edge effect) stays out of the lift, here in this
+    /// header's own screen, where the expanding screen covers and uncovers it as it does the rest.
+    public func updateExpansionContentStaysInScreen(_ staysInScreen: Bool) {
+        guard self.expansionContentStaysInScreen != staysInScreen else {
+            return
+        }
+        self.expansionContentStaysInScreen = staysInScreen
+        let host: UIView = staysInScreen ? self : self.contentView
+        host.insertSubview(self.edgeEffectView, at: 0)
+        if let searchContentNode = self.searchContentNode {
+            host.insertSubview(searchContentNode.view, aboveSubview: self.edgeEffectView)
+        }
+        self.applyEdgeEffectVisibility()
     }
 
     public func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {

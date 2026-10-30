@@ -5,7 +5,7 @@ import TelegramPresentationData
 import ComponentFlow
 import GlassBackgroundComponent
 
-/// The agent composer's bottom row, inside the input container: the attachment button and the model and speed chips.
+/// The agent composer's bottom row, inside the input container: the attachment button and the model and effort chips.
 /// The emoji button and the mic/send button share the row but stay the panel's own nodes, placed at its right end.
 final class AgentComposerToolbarView: UIView {
     /// A chip is its menu's morph source. UIKit's morph goes astray when its source takes a touch while it runs (a tap
@@ -108,7 +108,7 @@ final class AgentComposerToolbarView: UIView {
     let attachmentButton: HighlightTrackingButton
     private let attachmentIconView: UIImageView
     let modelChip: Chip
-    let speedChip: Chip
+    let effortChip: Chip
 
     override init(frame: CGRect) {
         self.attachmentGlassView = GlassBackgroundView()
@@ -116,7 +116,7 @@ final class AgentComposerToolbarView: UIView {
         self.attachmentIconView = UIImageView()
         self.attachmentIconView.isUserInteractionEnabled = false
         self.modelChip = Chip()
-        self.speedChip = Chip()
+        self.effortChip = Chip()
 
         super.init(frame: frame)
 
@@ -124,9 +124,9 @@ final class AgentComposerToolbarView: UIView {
         self.attachmentGlassView.contentView.addSubview(self.attachmentButton)
         self.addSubview(self.attachmentGlassView)
         self.addSubview(self.modelChip)
-        self.addSubview(self.speedChip)
+        self.addSubview(self.effortChip)
         self.addSubview(self.modelChip.button)
-        self.addSubview(self.speedChip.button)
+        self.addSubview(self.effortChip.button)
 
         self.attachmentButton.highligthedChanged = { [weak self] highlighted in
             guard let self else {
@@ -145,7 +145,7 @@ final class AgentComposerToolbarView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func update(size: CGSize, theme: PresentationTheme, glassTintColor: GlassBackgroundView.TintColor, modelTitle: String, speedTitle: String, isAttachmentEnabled: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, theme: PresentationTheme, glassTintColor: GlassBackgroundView.TintColor, modelTitle: String, effortTitle: String, isAttachmentEnabled: Bool, transition: ContainedViewLayoutTransition) {
         let chipHeight: CGFloat = 34.0
 
         // Measured from the design: the attachment icon is centred 25pt from the container's left edge, the first chip
@@ -174,9 +174,9 @@ final class AgentComposerToolbarView: UIView {
         transition.updateFrame(view: self.modelChip.button, frame: modelFrame)
         x += modelSize.width + 6.0
 
-        let speedSize = self.speedChip.update(title: speedTitle, icon: nil, theme: theme, height: chipHeight)
-        let speedFrame = CGRect(origin: CGPoint(x: x, y: chipY), size: speedSize)
-        transition.updateFrame(view: self.speedChip, frame: speedFrame)
-        transition.updateFrame(view: self.speedChip.button, frame: speedFrame)
+        let effortSize = self.effortChip.update(title: effortTitle, icon: nil, theme: theme, height: chipHeight)
+        let effortFrame = CGRect(origin: CGPoint(x: x, y: chipY), size: effortSize)
+        transition.updateFrame(view: self.effortChip, frame: effortFrame)
+        transition.updateFrame(view: self.effortChip.button, frame: effortFrame)
     }
 }

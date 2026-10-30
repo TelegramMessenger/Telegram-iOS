@@ -17287,3 +17287,10 @@ Error: %8$@";
 "Agent.Connected.Text" = "You can now use %@.";
 "Agent.Connected.Start" = "Start";
 "Agent.InputPlaceholder" = "Ask Agent anything";
+"Agent.Effort" = "Effort";
+
+"Chat.SideList.Open" = "Show Chat List";
+"Chat.SideList.Close" = "Hide Chat List";
+"Chat.SideList.NewTopic" = "New Topic";
+"Chat.SideList.DirectMessages" = "Direct messages";
+"Chat.SideList.AllMessages" = "All Messages";

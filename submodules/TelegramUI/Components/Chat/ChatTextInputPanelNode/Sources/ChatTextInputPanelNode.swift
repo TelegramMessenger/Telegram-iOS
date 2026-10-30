@@ -331,9 +331,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var agentSelection: AgentChatPlaceholderOptions.Selection?
     private var agentSelectionPeerId: EnginePeer.Id?
     private let agentSelectionDisposable = MetaDisposable()
-    // A chip's menu morphs out of it and back; opened and closed too fast, the morph glitches.
-    private let agentModelMenuCooldown = ContextMenuCooldown()
-    private let agentSpeedMenuCooldown = ContextMenuCooldown()
+    // A chip's menu morphs out of it and back; closed too soon after opening, the morph glitches.
+    private let agentMenuCooldown = ContextMenuCooldown()
+    /// A chip's menu is up, or UIKit's morph still holds the chip it folded into: the composer's glass does not stretch
+    /// meanwhile (see `openAgentMenu`).
+    private var isAgentMenuActive = false
+    private var agentMenuId = 0
+    /// Whether the composer's glass was last laid out stretching under a finger.
+    private var isTextInputGlassInteractive = true
+    /// The last chip menu, which stays in the window until its close morph has let go of the chip.
+    private weak var agentMenuController: ViewController?
+    private var isAgentMenuOpenWaiting = false
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var initializedPlaceholder = false
@@ -1123,8 +1131,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     deinit {
         self.statusDisposable.dispose()
         self.agentSelectionDisposable.dispose()
-        self.agentModelMenuCooldown.cancel()
-        self.agentSpeedMenuCooldown.cancel()
+        self.agentMenuCooldown.cancel()
         self.tooltipController?.dismiss()
         self.currentEmojiSuggestion?.disposable.dispose()
     }
@@ -1718,7 +1725,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.absoluteRect = (rect, containerSize)
 
         if !self.sendActionButtons.frame.width.isZero {
-            self.sendActionButtons.updateAbsoluteRect(CGRect(origin: rect.origin.offsetBy(dx: self.sendActionButtons.frame.minX, dy: self.sendActionButtons.frame.minY), size: self.sendActionButtons.frame.size), within: containerSize, transition: transition)
+            let sendActionButtonsFrame = self.view.convert(self.sendActionButtons.frame, from: self.sendActionButtons.view.superview)
+            self.sendActionButtons.updateAbsoluteRect(CGRect(origin: rect.origin.offsetBy(dx: sendActionButtonsFrame.minX, dy: sendActionButtonsFrame.minY), size: sendActionButtonsFrame.size), within: containerSize, transition: transition)
         }
         
         let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
@@ -3327,7 +3335,15 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.updateCounterTextNode(backgroundSize: textInputContainerBackgroundFrame.size, transition: transition)
         
         let textInputContainerBackgroundTransition = ComponentTransition(transition)
-        self.textInputContainerBackgroundView.update(size: textInputContainerBackgroundFrame.size, cornerRadius: isAgentLayout ? 20.0 : floor(minimalInputHeight * 0.5), isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, transition: textInputContainerBackgroundTransition)
+        let isTextInputGlassInteractive = !(isAgentLayout && self.isAgentMenuActive)
+        self.textInputContainerBackgroundView.update(size: textInputContainerBackgroundFrame.size, cornerRadius: isAgentLayout ? 20.0 : floor(minimalInputHeight * 0.5), isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: isTextInputGlassInteractive, transition: textInputContainerBackgroundTransition)
+        if isTextInputGlassInteractive != self.isTextInputGlassInteractive {
+            self.isTextInputGlassInteractive = isTextInputGlassInteractive
+            // UIKit's stretch (`_UIFlexInteraction`) follows neither change of the effect on an effect view: it stays
+            // after the effect turns non-interactive, and does not come back when it turns interactive again. A new
+            // effect view, made with the effect as it now is, has it or not.
+            self.textInputContainerBackgroundView.renewNativeView()
+        }
         
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: textInputContainerBackgroundFrame)
         transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
@@ -3631,9 +3647,20 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         } else if mediaActionButtonsHidden {
             mediaActionButtonsFrame.origin.x = width + 8.0
         }
+        // In the agent layout the mic and send buttons sit inside the input container, so they go on its glass and
+        // follow it when it is pressed and stretches. Their frames stay in the panel's space and are offset into it.
+        let actionButtonsParent: UIView = isAgentLayout ? self.textInputContainerBackgroundView.contentView : self.glassBackgroundContainer.contentView
+        let actionButtonsOffset: CGPoint = isAgentLayout ? textInputContainerBackgroundFrame.origin : CGPoint()
+        var actionButtonsTransition = transition
+        if self.mediaActionButtons.view.superview !== actionButtonsParent {
+            actionButtonsParent.addSubview(self.mediaActionButtons.view)
+            actionButtonsParent.addSubview(self.sendActionButtons.view)
+            actionButtonsTransition = .immediate
+        }
+        
         let mediaActionButtonsScale: CGFloat = (isAgentLayout && mediaActionButtonsHidden) ? 0.001 : 1.0
         transition.updateTransformScale(node: self.mediaActionButtons, scale: mediaActionButtonsScale)
-        transition.updatePosition(node: self.mediaActionButtons, position: mediaActionButtonsFrame.center)
+        actionButtonsTransition.updatePosition(node: self.mediaActionButtons, position: mediaActionButtonsFrame.offsetBy(dx: -actionButtonsOffset.x, dy: -actionButtonsOffset.y).center)
         transition.updateBounds(node: self.mediaActionButtons, bounds: CGRect(origin: CGPoint(), size: mediaActionButtonsFrame.size))
         if let (rect, containerSize) = self.absoluteRect {
             self.mediaActionButtons.updateAbsoluteRect(CGRect(x: rect.origin.x + mediaActionButtonsFrame.origin.x, y: rect.origin.y + mediaActionButtonsFrame.origin.y, width: mediaActionButtonsFrame.width, height: mediaActionButtonsFrame.height), within: containerSize, transition: transition)
@@ -3694,7 +3721,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         transition.updateTransformScale(node: self.sendActionButtons, scale: CGPoint(x: sendActionsScale, y: sendActionsScale))
-        transition.updatePosition(node: self.sendActionButtons, position: sendActionButtonsFrame.center)
+        actionButtonsTransition.updatePosition(node: self.sendActionButtons, position: sendActionButtonsFrame.offsetBy(dx: -actionButtonsOffset.x, dy: -actionButtonsOffset.y).center)
         
         transition.updateBounds(node: self.sendActionButtons, bounds: CGRect(origin: CGPoint(), size: sendActionButtonsFrame.size))
         if let (rect, containerSize) = self.absoluteRect {
@@ -3722,7 +3749,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     }
                     return true
                 }
-                self.glassBackgroundContainer.contentView.insertSubview(mediaRecordingAccessibilityArea.view, aboveSubview: self.mediaActionButtons.view)
+                self.glassBackgroundContainer.contentView.addSubview(mediaRecordingAccessibilityArea.view)
             }
             self.mediaActionButtons.isAccessibilityElement = false
             let size: CGFloat = 120.0
@@ -6187,60 +6214,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             self.agentToolbarView = agentToolbarView
             self.textInputContainerBackgroundView.contentView.addSubview(agentToolbarView)
             agentToolbarView.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
-            agentToolbarView.modelChip.action = { [weak self] chip in
-                self?.agentModelMenuCooldown.perform { [weak self, weak chip] in
-                    if let self, let chip {
-                        self.openAgentModelMenu(sourceView: chip)
-                    }
-                }
+            // Either chip opens the same menu: the models, then the effort slider.
+            let chipAction: (AgentComposerToolbarView.Chip) -> Void = { [weak self] chip in
+                self?.openAgentMenuAfterPreviousCloses(sourceView: chip)
             }
-            agentToolbarView.speedChip.action = { [weak self] chip in
-                self?.agentSpeedMenuCooldown.perform { [weak self, weak chip] in
-                    if let self, let chip {
-                        self.openAgentSpeedMenu(sourceView: chip)
-                    }
-                }
-            }
+            agentToolbarView.modelChip.action = chipAction
+            agentToolbarView.effortChip.action = chipAction
         }
         transition.updateFrame(view: agentToolbarView, frame: toolbarFrame)
         transition.updateAlpha(layer: agentToolbarView.layer, alpha: alpha)
         agentToolbarView.isUserInteractionEnabled = alpha > 0.0
-        agentToolbarView.update(size: toolbarFrame.size, theme: interfaceState.theme, glassTintColor: glassTintColor, modelTitle: selection.model.title, speedTitle: selection.speed.title, isAttachmentEnabled: isEnabled, transition: toolbarTransition)
-    }
-    
-    private func presentAgentMenu(sourceView: UIView, items: [ContextMenuItem], cooldown: ContextMenuCooldown) {
-        guard let context = self.context else {
-            return
-        }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        // The chips' menus hold a few short titles: no wider than they need, and growing up and right from the chip.
-        var menuItems = ContextController.Items(content: .list(items))
-        menuItems.minimumListWidth = 160.0
-        let controller = makeContextController(
-            presentationData: presentationData,
-            source: .reference(AgentChipMenuReferenceSource(sourceView: sourceView)),
-            items: .single(menuItems),
-            gesture: nil
-        )
-        cooldown.markOpened()
-        controller.dismissed = {
-            cooldown.markClosed()
-        }
-        self.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
-    }
-    
-    private func agentMenuCheckIcon(isSelected: Bool) -> (PresentationTheme) -> UIImage? {
-        return { theme in
-            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-            if isSelected {
-                return image
-            } else {
-                // A blank of the check's size keeps the unselected rows' titles aligned with the selected one.
-                return image.flatMap { generateImage($0.size, rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                }) }
-            }
-        }
+        agentToolbarView.update(size: toolbarFrame.size, theme: interfaceState.theme, glassTintColor: glassTintColor, modelTitle: selection.model.title, effortTitle: selection.effort.title, isAttachmentEnabled: isEnabled, transition: toolbarTransition)
     }
     
     /// Lays the chips out at the new value before the menu starts closing: the closing morph shrinks back into the
@@ -6251,42 +6235,93 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         AgentChatPlaceholderOptions.shared.update(peerId: peerId, { _ in selection })
     }
     
-    private func openAgentModelMenu(sourceView: UIView) {
-        guard let peerId = self.agentSelectionPeerId, let selection = self.agentSelection else {
+    /// On iOS 26 a menu that morphs out of a chip still held by the previous menu's close morph shows its contents
+    /// without its glass until that morph ends, so it opens once the previous menu has left the window. iOS 27 hands the
+    /// chip over and the menu opens at once.
+    private func openAgentMenuAfterPreviousCloses(sourceView: UIView) {
+        if #unavailable(iOS 27.0), let controller = self.agentMenuController, controller.isViewLoaded, controller.view.window != nil {
+            // Taps while one open is waiting are dropped.
+            guard !self.isAgentMenuOpenWaiting else {
+                return
+            }
+            self.isAgentMenuOpenWaiting = true
+            Queue.mainQueue().after(0.05, { [weak self, weak sourceView] in
+                guard let self else {
+                    return
+                }
+                self.isAgentMenuOpenWaiting = false
+                if let sourceView {
+                    self.openAgentMenuAfterPreviousCloses(sourceView: sourceView)
+                }
+            })
             return
         }
-        let options = AgentChatPlaceholderOptions.shared
-        let items: [ContextMenuItem] = options.models.map { model in
-            return .action(ContextMenuActionItem(text: model.title, icon: self.agentMenuCheckIcon(isSelected: model == selection.model), action: { [weak self] _, f in
-                var updated = selection
-                updated.model = model
-                self?.applyAgentSelection(updated, peerId: peerId)
-                let delay = self?.agentModelMenuCooldown.dismissDelay ?? 0.0
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    f(.default)
-                }
-            }))
-        }
-        self.presentAgentMenu(sourceView: sourceView, items: items, cooldown: self.agentModelMenuCooldown)
+        self.openAgentMenu(sourceView: sourceView)
     }
     
-    private func openAgentSpeedMenu(sourceView: UIView) {
-        guard let peerId = self.agentSelectionPeerId, let selection = self.agentSelection else {
+    private func openAgentMenu(sourceView: UIView) {
+        guard let context = self.context, let peerId = self.agentSelectionPeerId, let selection = self.agentSelection else {
             return
         }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let options = AgentChatPlaceholderOptions.shared
-        let items: [ContextMenuItem] = options.speeds.map { speed in
-            return .action(ContextMenuActionItem(text: speed.title, icon: self.agentMenuCheckIcon(isSelected: speed == selection.speed), action: { [weak self] _, f in
-                var updated = selection
-                updated.speed = speed
-                self?.applyAgentSelection(updated, peerId: peerId)
-                let delay = self?.agentSpeedMenuCooldown.dismissDelay ?? 0.0
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    f(.default)
+        
+        var items: [ContextMenuItem] = options.models.map { model in
+            return .custom(AgentComposerModelItem(model: model, isSelected: model == selection.model, action: { [weak self] in
+                guard let self, var updated = self.agentSelection else {
+                    return
                 }
-            }))
+                updated.model = model
+                self.applyAgentSelection(updated, peerId: peerId)
+            }, dismissDelay: { [weak self] in
+                return self?.agentMenuCooldown.dismissDelay ?? 0.0
+            }), false)
         }
-        self.presentAgentMenu(sourceView: sourceView, items: items, cooldown: self.agentSpeedMenuCooldown)
+        items.append(.custom(AgentComposerEffortSliderItem(efforts: options.efforts, effort: selection.effort, effortChanged: { [weak self] effort in
+            guard let self, var updated = self.agentSelection else {
+                return
+            }
+            updated.effort = effort
+            self.applyAgentSelection(updated, peerId: peerId)
+        }), false))
+        
+        let controller = makeContextController(
+            presentationData: presentationData,
+            source: .reference(AgentChipMenuReferenceSource(sourceView: sourceView)),
+            items: .single(ContextController.Items(content: .list(items))),
+            gesture: nil
+        )
+        // UIKit's morph holds the chip until about a second after it looks landed, and a press on the glass meanwhile
+        // reaches the morph through the glass's flex interaction (its stretch under a finger), which flies the chip's
+        // contents up and lands them again. The glass stops stretching (and gets a new effect view, see `updateLayout`)
+        // before the menu starts morphing out of the chip that it holds.
+        self.agentMenuId += 1
+        let menuId = self.agentMenuId
+        self.agentMenuController = controller
+        if !self.isAgentMenuActive {
+            self.isAgentMenuActive = true
+            self.requestLayout(transition: .immediate)
+        }
+        self.agentMenuCooldown.markOpened()
+        controller.dismissed = { [weak self, weak controller] in
+            self?.restoreAgentGlassStretch(menuId: menuId, controller: controller)
+        }
+        self.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
+    }
+    
+    /// The menu stays in the window until the morph has let go of the chip; the glass stretches again from then on.
+    private func restoreAgentGlassStretch(menuId: Int, controller: ViewController?) {
+        Queue.mainQueue().after(0.1, { [weak self, weak controller] in
+            guard let self, self.agentMenuId == menuId else {
+                return
+            }
+            if let controller, controller.isViewLoaded, controller.view.window != nil {
+                self.restoreAgentGlassStretch(menuId: menuId, controller: controller)
+                return
+            }
+            self.isAgentMenuActive = false
+            self.requestLayout(transition: .immediate)
+        })
     }
     
     @objc func attachmentButtonPressed() {
@@ -6504,7 +6539,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     public func frameForInputActionButton() -> CGRect? {
         if !self.mediaActionButtons.alpha.isZero && self.mediaActionButtons.frame.minX < self.bounds.width {
-            return self.mediaActionButtons.frame.insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: -3.0, dy: 0.0)
+            return self.view.convert(self.mediaActionButtons.frame, from: self.mediaActionButtons.view.superview).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: -3.0, dy: 0.0)
         }
         return nil
     }

@@ -1595,6 +1595,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private var verticalExpansionPopContainer: NavigationContainer?
 
+    /// The bar part of a push or pop ends at once, running or only its glass still animating above the bar it ended on:
+    /// for a screen about to move a bar away, which the transition's glass would not follow.
+    public func endNavigationBarTransitionNow() {
+        if let rootContainer = self.rootContainer, case let .flat(container) = rootContainer {
+            container.endNavigationBarTransitionNow()
+        }
+    }
+
     public func beginVerticalExpansionPop(from controller: ViewController, anchor: CGPoint) -> Bool {
         guard let rootContainer = self.rootContainer, case let .flat(container) = rootContainer, container.controllers.last === controller else {
             return false

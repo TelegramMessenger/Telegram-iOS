@@ -18,6 +18,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AvatarNode",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",

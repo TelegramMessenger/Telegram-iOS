@@ -530,6 +530,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PostSuggestionsSettingsScreen",
         "//submodules/TelegramUI/Components/ForumSettingsScreen",
         "//submodules/TelegramUI/Components/Chat/ChatSideTopicsPanel",
+        "//submodules/TelegramUI/Components/Chat/ChatSideListPanel",
         "//submodules/TelegramUI/Components/GifVideoLayer",
         "//submodules/TelegramUI/Components/BatchVideoRendering",
         "//submodules/TelegramUI/Components/ComposeTodoScreen",

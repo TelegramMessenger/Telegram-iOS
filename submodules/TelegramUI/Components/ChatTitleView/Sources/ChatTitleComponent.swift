@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Display
 import ComponentFlow
+import AvatarNode
 import TelegramPresentationData
 import AccountContext
 import TelegramUIPreferences
@@ -58,6 +59,16 @@ private func chatTitleActivityColor(_ state: ChatTitleActivityNodeState) -> UICo
     }
 }
 
+/// An icon before a chat's title, standing in for the avatar the header has no room for.
+public enum ChatTitleLeadingIcon: Equatable {
+    /// Saved Messages' avatar (its own chat, not My Notes).
+    case savedMessages
+    /// A topic's or thread's icon.
+    case emojiStatus(EmojiStatusComponent.Content)
+    /// A peer's avatar: the other side of a Saved Messages or direct-messages chat.
+    case peer(EnginePeer, imageOverride: AvatarNodeImageOverride?)
+}
+
 public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTitleView {
     private final class ContentData: Equatable {
         let context: AccountContext
@@ -69,8 +80,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         let nameDisplayOrder: PresentationPersonNameOrder
         let content: ChatTitleContent
         let labelsWithoutGlass: Bool
+        let leadingIcon: ChatTitleLeadingIcon?
         
-        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent, labelsWithoutGlass: Bool) {
+        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent, labelsWithoutGlass: Bool, leadingIcon: ChatTitleLeadingIcon?) {
             self.context = context
             self.theme = theme
             self.preferClearGlass = preferClearGlass
@@ -80,6 +92,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             self.nameDisplayOrder = nameDisplayOrder
             self.content = content
             self.labelsWithoutGlass = labelsWithoutGlass
+            self.leadingIcon = leadingIcon
         }
         
         static func ==(lhs: ContentData, rhs: ContentData) -> Bool {
@@ -108,6 +121,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                 return false
             }
             if lhs.labelsWithoutGlass != rhs.labelsWithoutGlass {
+                return false
+            }
+            if lhs.leadingIcon != rhs.leadingIcon {
                 return false
             }
             return true
@@ -193,6 +209,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         nameDisplayOrder: PresentationPersonNameOrder,
         content: ChatTitleContent,
         labelsWithoutGlass: Bool = false,
+        leadingIcon: ChatTitleLeadingIcon? = nil,
         transition: ComponentTransition,
         ignoreParentTransitionRequests: Bool = false
     ) -> Bool {
@@ -206,7 +223,8 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             dateTimeFormat: dateTimeFormat,
             nameDisplayOrder: nameDisplayOrder,
             content: content,
-            labelsWithoutGlass: labelsWithoutGlass
+            labelsWithoutGlass: labelsWithoutGlass,
+            leadingIcon: leadingIcon
         )
         let isUpdated = self.contentData != contentData
         self.contentData = contentData
@@ -254,6 +272,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                     displayBackground: displayBackground,
                     content: contentData.content,
                     labelsWithoutGlass: contentData.labelsWithoutGlass,
+                    leadingIcon: contentData.leadingIcon,
                     activities: self.activities,
                     networkState: self.networkState,
                     tapped: { [weak self] in
@@ -329,6 +348,8 @@ public final class ChatTitleComponent: Component {
     /// Bubble mode off: a title that is only a label (how many messages are selected, forward options…) is not a
     /// button, so it stands without the glass a tappable title has.
     public let labelsWithoutGlass: Bool
+    /// An icon before the title, as the chat side list's chats show it (the right avatar gives way to its button).
+    public let leadingIcon: ChatTitleLeadingIcon?
     public let activities: Activities?
     public let networkState: AccountNetworkState?
     public let tapped: () -> Void
@@ -344,6 +365,7 @@ public final class ChatTitleComponent: Component {
         displayBackground: Bool,
         content: ChatTitleContent,
         labelsWithoutGlass: Bool = false,
+        leadingIcon: ChatTitleLeadingIcon? = nil,
         activities: Activities?,
         networkState: AccountNetworkState?,
         tapped: @escaping () -> Void,
@@ -358,6 +380,7 @@ public final class ChatTitleComponent: Component {
         self.displayBackground = displayBackground
         self.content = content
         self.labelsWithoutGlass = labelsWithoutGlass
+        self.leadingIcon = leadingIcon
         self.activities = activities
         self.networkState = networkState
         self.tapped = tapped
@@ -390,6 +413,9 @@ public final class ChatTitleComponent: Component {
             return false
         }
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.leadingIcon != rhs.leadingIcon {
             return false
         }
         if lhs.activities != rhs.activities {
@@ -425,7 +451,7 @@ public final class ChatTitleComponent: Component {
         private var lentContentWrapper: UIView?
 
         /// The pill's frame in this view, nil without one.
-        var glassPillFrame: CGRect? {
+        public var glassPillFrame: CGRect? {
             guard let backgroundView = self.backgroundView, !backgroundView.frame.isEmpty else {
                 return nil
             }
@@ -467,7 +493,7 @@ public final class ChatTitleComponent: Component {
         /// assigns roles, after the expansion has borrowed. The expansion's end returns them (`reclaimExpansionLabels`);
         /// the pill's re-attachment does not, because the bars' transition ends before the expansion's and the
         /// expansion's end takes its views out.
-        func lendExpansionLabels() -> ChatTitleExpansionLabels? {
+        public func lendExpansionLabels() -> ChatTitleExpansionLabels? {
             guard self.lentExpansionLabels == nil, self.lentContentWrapper == nil, let component = self.component, let layout = self.expansionLayout, let titleView = self.title.view, titleView.superview === self.contentContainer else {
                 return nil
             }
@@ -493,7 +519,7 @@ public final class ChatTitleComponent: Component {
             return labels
         }
 
-        func reclaimExpansionLabels() {
+        public func reclaimExpansionLabels() {
             guard let labels = self.lentExpansionLabels else {
                 return
             }
@@ -534,6 +560,12 @@ public final class ChatTitleComponent: Component {
         private var subtitleNode: ChatTitleActivityNode?
         private var activityMeasureSubtitleNode: ChatTitleActivityNode?
         private var leftIcon: ComponentView<Empty>?
+        private enum LeftIconKind {
+            case icon
+            case emojiStatus
+            case avatar
+        }
+        private var leftIconKind: LeftIconKind = .icon
         private var rightIcon: ComponentView<Empty>?
         private var credibilityIcon: ComponentView<Empty>?
         private var verifiedIcon: ComponentView<Empty>?
@@ -612,7 +644,7 @@ public final class ChatTitleComponent: Component {
         
         func update(component: ChatTitleComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let statusIconsSpacing: CGFloat = 4.0
-            let leftTitleIconSpacing: CGFloat = 3.0
+            var leftTitleIconSpacing: CGFloat = 3.0
             let rightTitleIconSpacing: CGFloat = 3.0
             let containerSideInset: CGFloat = 14.0
             
@@ -622,6 +654,8 @@ public final class ChatTitleComponent: Component {
             
             var titleSegments: [AnimatedTextComponent.Item] = []
             var titleLeftIcon: TitleIconComponent.Kind?
+            var leadingEmojiStatus: EmojiStatusComponent.Content?
+            var leadingAvatar: (peer: EnginePeer, imageOverride: AvatarNodeImageOverride?)?
             var titleRightIcon: TitleIconComponent.Kind?
             var animatesBadgeWithNewsSpring = false
             var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
@@ -696,7 +730,9 @@ public final class ChatTitleComponent: Component {
                                 )]
                             }
                         }
-                        if peer.id != component.context.account.peerId {
+                        // A topic's title (its own, with the peer's status hidden) is not the peer's name: its marks don't apply.
+                        let isTopicTitle = customTitle != nil && hidePeerStatus
+                        if peer.id != component.context.account.peerId, !isTopicTitle {
                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with({ $0 }))
                             if peer.isFake {
                                 titleCredibilityIcon = .fake
@@ -718,6 +754,20 @@ public final class ChatTitleComponent: Component {
                     }
                     if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
                         titleLeftIcon = .lock
+                    } else if case .savedMessages = component.leadingIcon, customTitle == nil, peerView.peerId == component.context.account.peerId, !peerView.isSavedMessages {
+                        titleLeftIcon = .savedMessages
+                        leftTitleIconSpacing = 6.0
+                    } else if case let .emojiStatus(content) = component.leadingIcon {
+                        leadingEmojiStatus = content
+                        // General's "#" has room of its own inside its image.
+                        if case .image = content {
+                            leftTitleIconSpacing = 2.0
+                        } else {
+                            leftTitleIconSpacing = 6.0
+                        }
+                    } else if case let .peer(peer, imageOverride) = component.leadingIcon {
+                        leadingAvatar = (peer, imageOverride)
+                        leftTitleIconSpacing = 6.0
                     }
                     if let isMuted {
                         if isMuted {
@@ -1160,7 +1210,14 @@ public final class ChatTitleComponent: Component {
             }
             
             var leftIconSize: CGSize?
-            if let titleLeftIcon {
+            let leftIconKind: LeftIconKind = leadingEmojiStatus != nil ? .emojiStatus : (leadingAvatar != nil ? .avatar : .icon)
+            if let leftIcon = self.leftIcon, self.leftIconKind != leftIconKind {
+                // A different kind of view: the old one goes, a new one comes.
+                self.leftIcon = nil
+                leftIcon.view?.removeFromSuperview()
+            }
+            self.leftIconKind = leftIconKind
+            if titleLeftIcon != nil || leadingEmojiStatus != nil || leadingAvatar != nil {
                 let leftIcon: ComponentView<Empty>
                 var leftIconTransition = transition
                 if let current = self.leftIcon {
@@ -1170,14 +1227,43 @@ public final class ChatTitleComponent: Component {
                     leftIcon = ComponentView()
                     self.leftIcon = leftIcon
                 }
+                let leftIconComponent: AnyComponent<Empty>
+                let leftIconContainerSize: CGSize
+                if let leadingEmojiStatus {
+                    leftIconComponent = AnyComponent(EmojiStatusComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        content: leadingEmojiStatus,
+                        isVisibleForAnimations: true,
+                        action: nil
+                    ))
+                    // An image (General's "#") takes its own size, so the spacing to the title is the image's.
+                    if case let .image(image, _) = leadingEmojiStatus, let image {
+                        leftIconContainerSize = image.size
+                    } else {
+                        leftIconContainerSize = TitleIconComponent.savedMessagesSize
+                    }
+                } else if let leadingAvatar {
+                    leftIconComponent = AnyComponent(TitleAvatarComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        peer: leadingAvatar.peer,
+                        imageOverride: leadingAvatar.imageOverride
+                    ))
+                    leftIconContainerSize = TitleIconComponent.savedMessagesSize
+                } else {
+                    leftIconComponent = AnyComponent(TitleIconComponent(
+                        kind: titleLeftIcon ?? .lock,
+                        color: component.theme.chat.inputPanel.panelControlColor
+                    ))
+                    leftIconContainerSize = CGSize(width: 100.0, height: 100.0)
+                }
                 leftIconSize = leftIcon.update(
                     transition: leftIconTransition,
-                    component: AnyComponent(TitleIconComponent(
-                        kind: titleLeftIcon,
-                        color: component.theme.chat.inputPanel.panelControlColor
-                    )),
+                    component: leftIconComponent,
                     environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
+                    containerSize: leftIconContainerSize
                 )
             } else if let leftIcon = self.leftIcon {
                 self.leftIcon = nil
@@ -1397,9 +1483,14 @@ public final class ChatTitleComponent: Component {
             }
             self.expansionLayout = ExpansionLayout(titleFrame: titleFrame, statusFrame: subtitleViewFrame, statusTextSize: subtitleSize, containerFrame: component.displayBackground ? CGRect(origin: CGPoint(), size: containerFrame.size) : containerFrame)
             
-            let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing)
+            let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing, lockIconIsOutermost: leadingEmojiStatus != nil || leadingAvatar != nil)
             
-            if let leftIconFrame = leadingIconsLayout.lockIconFrame, let leftIconView = self.leftIcon?.view {
+            var leadingLeftIconFrame = leadingIconsLayout.lockIconFrame
+            if titleLeftIcon == .savedMessages || leadingEmojiStatus != nil || leadingAvatar != nil, let frame = leadingLeftIconFrame {
+                // An avatar sits on the title's centre line, not on the lock's baseline offset.
+                leadingLeftIconFrame = CGRect(origin: CGPoint(x: frame.minX, y: floorToScreenPixels(titleFrame.midY - frame.height * 0.5)), size: frame.size)
+            }
+            if let leftIconFrame = leadingLeftIconFrame, let leftIconView = self.leftIcon?.view {
                 if leftIconView.superview == nil {
                     leftIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(leftIconView)

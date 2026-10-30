@@ -744,6 +744,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case insertWidgetGames
     case mediaGridLegacy(Bool)
     case sharedMediaGridLegacy(Bool)
+    case chatSideListLegacy(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
     case videoMessageCameraMode(ExperimentalUISettings.VideoMessageCameraMode)
@@ -798,7 +799,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .coreListScrollTrace, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .chatSideListLegacy:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -971,6 +972,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 79
         case .sharedMediaGridLegacy:
             return 80
+        case .chatSideListLegacy:
+            return 81
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1510,6 +1513,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.sharedMediaGridLegacy = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .chatSideListLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat side list: legacy strip", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.chatSideListLegacy = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -2132,6 +2145,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.insertWidgetGames)
         entries.append(.mediaGridLegacy(experimentalSettings.mediaGridLegacy))
         entries.append(.sharedMediaGridLegacy(experimentalSettings.sharedMediaGridLegacy))
+        entries.append(.chatSideListLegacy(experimentalSettings.chatSideListLegacy))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

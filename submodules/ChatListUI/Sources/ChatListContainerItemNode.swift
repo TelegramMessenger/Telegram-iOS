@@ -75,12 +75,17 @@ final class ChatListContainerItemNode: ASDisplayNode {
         self.isInlineMode = isInlineMode
         self.isUnderChatListNavigationBar = controller != nil
         
-        self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady, isMainTab: isMainTab)
+        self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, isSideList: isInlineMode && (controller?.isSideList ?? false), autoSetReady: autoSetReady, isMainTab: isMainTab)
         
         if let controller, case .chatList(groupId: .root) = controller.location {
             self.listNode.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight + ChatListNavigationBar.storiesScrollHeight
         }
-        
+        if isInlineMode && (controller?.isSideList ?? false) {
+            // The chat side list scrolls only as far as its rows reach: a short list does not pad itself out so its
+            // search can hide under the header.
+            self.listNode.keepMinimalScrollHeightWithTopInset = nil
+        }
+
         self.edgeEffectView = EdgeEffectView()
         
         super.init()
@@ -146,7 +151,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         }
                     }
                     
-                    let emptyNode = ChatListEmptyNode(context: context, subject: subject, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
+                    let emptyNode = ChatListEmptyNode(context: context, subject: subject, isLoading: isLoading, hidesButton: strongSelf.isInlineMode && (strongSelf.controller?.isSideList ?? false), theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
                         self?.emptyAction(filter)
                     }, secondaryAction: {
                         self?.secondaryEmptyAction()

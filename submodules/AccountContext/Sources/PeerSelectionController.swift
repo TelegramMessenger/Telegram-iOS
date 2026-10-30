@@ -35,6 +35,8 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let excludeUsers = ChatListNodePeersFilter(rawValue: 1 << 15)
     public static let excludeBots = ChatListNodePeersFilter(rawValue: 1 << 16)
     public static let includeCommunities = ChatListNodePeersFilter(rawValue: 1 << 17)
+    /// A search of one chat's threads and messages (the chat side list): nothing global, no other chats.
+    public static let onlyLocationResults = ChatListNodePeersFilter(rawValue: 1 << 18)
     
     public static let includeSelf = ChatListNodePeersFilter(rawValue: 1 << 7)
 }
