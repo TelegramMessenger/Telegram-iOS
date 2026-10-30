@@ -15,6 +15,14 @@ public var navigationBarOverflowMenuPresenter: ((_ sourceView: UIView, _ items: 
 /// The navigation bar every `ViewController` gets: `NavigationBarComponent` driven by the screen's
 /// `UINavigationItem`, in a glass container under an edge effect, with the screen's content nodes, title view and
 /// iPhone Duo side column.
+/// The bar's `contentView`: its buttons, title, side column and extra content all take a tap that drifts up to
+/// `navigationBarTapMovement` before the screen's swipe back does. A transition that lifts the view carries it along.
+private final class NavigationBarNodeContentView: UIView, InteractiveTransitionGestureRecognizerTapTarget {
+    var interactiveTransitionMinimumMovement: CGFloat {
+        return navigationBarTapMovement
+    }
+}
+
 public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBarComponentTransitionSource {
     private struct Layout {
         var size: CGSize
@@ -136,7 +144,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         self.edgeEffectViewImpl.isUserInteractionEnabled = false
         self.glassContainer = GlassBackgroundContainerView()
 
-        self.contentView = UIView()
+        self.contentView = NavigationBarNodeContentView()
         self.backdropHost = UIView()
         self.backdropHost.isUserInteractionEnabled = false
         self.rowHost = SparseContainerView()

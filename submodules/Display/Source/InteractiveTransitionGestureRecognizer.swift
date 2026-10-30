@@ -38,9 +38,9 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Horizonta
     }
 }
 
-/// A view whose own tap tolerates some drift (the chat title): a navigation swipe that starts on it validates only past
-/// `interactiveTransitionMinimumMovement` points, not after the usual 2pt, so a tap that drifts a little sideways stays
-/// a tap, and a real swipe from it still navigates back.
+/// A view whose own tap tolerates some drift (the chat title, a navigation bar's buttons): a navigation swipe that starts
+/// on it validates only past `interactiveTransitionMinimumMovement` points, not after the usual 2pt, so a tap that drifts
+/// a little sideways stays a tap, and a real swipe from it still navigates back.
 public protocol InteractiveTransitionGestureRecognizerTapTarget: AnyObject {
     var interactiveTransitionMinimumMovement: CGFloat { get }
 }

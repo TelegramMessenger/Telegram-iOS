@@ -162,6 +162,32 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertFalse(node.isBackInSideColumn)
     }
 
+    // A tap on any of the bar's buttons may drift `navigationBarTapMovement` before the screen's swipe back takes it:
+    // the swipe asks the touched view and its ancestors (`InteractiveTransitionGestureRecognizerTapTarget`), as here.
+    func test_barButtons_letATapDriftBeforeTheSwipeBack() {
+        let node = self.makeNode()
+        let target = ActionCounter()
+        let item = UINavigationItem(title: "Blocked")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: target, action: #selector(ActionCounter.fire))
+        node.item = item
+        node.previousItem = .item(UINavigationItem(title: "Privacy"))
+        self.layout(node)
+
+        func slack(at point: CGPoint) -> CGFloat? {
+            var current = node.view.hitTest(point, with: nil)
+            while let view = current {
+                if let tapTarget = view as? InteractiveTransitionGestureRecognizerTapTarget {
+                    return tapTarget.interactiveTransitionMinimumMovement
+                }
+                current = view.superview
+            }
+            return nil
+        }
+        XCTAssertEqual(slack(at: CGPoint(x: 38.0, y: 79.0)), navigationBarTapMovement)
+        XCTAssertEqual(slack(at: CGPoint(x: 352.0, y: 79.0)), navigationBarTapMovement)
+        XCTAssertEqual(navigationBarTapMovement, 10.0)
+    }
+
     // ComposePoll, ComposeTodo and the article editor put their own top buttons over the bar.
     func test_overBackgroundControl_takesTouchesUnderTheRow() {
         let node = self.makeNode()
