@@ -41,7 +41,7 @@ private:
 class TestList : public wr::PlatformObject {
 public:
     static wr::Ref<TestList> make(JSContext* ctx, uint32_t count);
-    /// A list whose length stops the widget as an exhausted budget does: an uncatchable "interrupted" error.
+    /// A list whose length stops the widget as a stop does: an uncatchable "interrupted" error.
     static wr::Ref<TestList> makeInterrupting(JSContext* ctx, uint32_t count);
     uint32_t length(JSContext* ctx);
     TestSample* item(JSContext* ctx, uint32_t index);

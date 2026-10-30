@@ -11,7 +11,7 @@ namespace wr {
 namespace {
 
 // Ruling E3: past this many Backdrop items in either tree everything changed (nullopt), which bounds the backdrop
-// step at 64 × 64; a hostile page of many backdrop-filter elements would otherwise make every flush quadratic, uncharged.
+// step at 64 × 64; a hostile page of many backdrop-filter elements would otherwise make every flush quadratic.
 constexpr size_t kMaxDiffedBackdrops = 64;
 
 // How a rect in some layer's coordinates reaches the root: through `matrix` (the enclosing groups' matrices,

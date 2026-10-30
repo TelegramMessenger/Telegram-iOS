@@ -7,6 +7,12 @@
 namespace litehtml
 {
     bool  svg_geometry(const element::ptr& el, vector_path& path);
+    // Telegram (VENDOR.md edit 72): a path's box (x, y, width, height) from its points and its curves' extrema, never
+    // sampled; false for a path with no points.
+    bool  svg_path_bounds(const vector_path& path, float box[4]);
+    // Telegram (VENDOR.md edit 72): the transform the painter applies to an SVG element in its parent's user space (its
+    // CSS transform about its transform-box, else its transform attribute); identity outside an <svg>.
+    transform_matrix svg_element_transform(const element::ptr& el);
     float svg_path_length(const vector_path& path, float at, float* x, float* y);
     void svg_set_group_cache_enabled(bool enabled);
     // Telegram (VENDOR.md edit 30.2): an SVG property as the painter resolves it (the element's declaration, else its
@@ -16,6 +22,7 @@ namespace litehtml
     class el_svg : public html_tag
     {
         friend bool svg_geometry(const element::ptr& el, vector_path& path);
+        friend transform_matrix svg_element_transform(const element::ptr& el);
         bool view_box(float box[4]) const;
         uint64_t m_last_paint_key = 0;
         int      m_stable_draws   = 0;

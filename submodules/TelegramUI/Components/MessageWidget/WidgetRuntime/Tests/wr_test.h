@@ -36,9 +36,16 @@ inline int runAll(int argc, char** argv) {
             continue;
         }
         int before = failures();
-        c.run();
+        // A test that lets an exception out (an Aborted from a stop it did not expect) fails, and the rest still run.
+        try {
+            c.run();
+        } catch (...) {
+            failures()++;
+            std::printf("  an exception escaped the test\n");
+        }
         ran++;
         std::printf("%s %s\n", failures() == before ? "PASS" : "FAIL", c.name);
+        std::fflush(stdout);
     }
     std::printf("%d cases, %d failed checks\n", ran, failures());
     return failures() == 0 && ran > 0 ? 0 : 1;

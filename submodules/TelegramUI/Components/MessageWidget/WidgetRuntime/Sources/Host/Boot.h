@@ -19,11 +19,11 @@ struct BootOptions {
 };
 
 /// Sets the main document's URL and readiness ("loading"), parses `options.html` into it, and queues the first script
-/// task (or "the end"). Runs no script. The parse is M1a's parseDocumentInto, charged as it is; the host runs boot
-/// under its parse ceiling (spec section 5, step 2).
+/// task (or "the end"). Runs no script. The parse is M1a's parseDocumentInto, bounded by `options.limits` (spec section
+/// 5, step 2); the host runs boot on no CPU slice.
 /// The main document must be empty: one with children breaks the contract, and the widget stops (Internal) with
 /// nothing parsed.
-/// A step boundary (Ruling C1): it never throws. A stop inside it (the budget, the memory limit) or a native failure
+/// A step boundary (Ruling C1): it never throws. A stop inside it (a counted cap, the memory limit) or a native failure
 /// latches the runtime and ends the boot; a runtime that stopped before it boots nothing. The host checks
 /// Runtime::stopReason() after boot: while it is not None, the returned ParseOutcome means nothing.
 ParseOutcome boot(JSContext* ctx, const BootOptions& options);

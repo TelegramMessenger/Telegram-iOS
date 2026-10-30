@@ -1,9 +1,10 @@
-// Web Storage per SDK v1 §2.8 (V2a plan, Task 2): localStorage and sessionStorage, 16 KB of keys and values in UTF-8
+// Web Storage per SDK v1 §2.8 (V2a plan, Task 2): localStorage and sessionStorage, 4 KB of keys and values in UTF-8
 // per area (QuotaExceededError past it, nothing stored), named properties, the stored area there at the first read, and
 // a changed area committed to the host at the end of the task that changed it.
 #include <string>
 
 #include "Sources/Host/HostState.h"
+#include "Sources/Host/Storage.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -25,17 +26,18 @@ WR_TEST(testStorageReadsAndWrites) {
     CHECK_EQ(env.eval("localStorage.setItem('getItem', 'x'); typeof localStorage.getItem"), std::string("function"));
 }
 
-WR_TEST(testTheQuotaIsSixteenKilobytesOfUtf8) {
+// widget-sandbox v0.3.0: 4 KB (16 KB before).
+WR_TEST(testTheQuotaIsFourKilobytesOfUtf8) {
     HostEnv env;
-    // Exactly 16384 bytes: key 'a' and 16383 bytes of value.
-    CHECK_EQ(env.eval("localStorage.setItem('a', 'x'.repeat(16383)); localStorage.getItem('a').length"), std::string("16383"));
+    // Exactly 4096 bytes: key 'a' and 4095 bytes of value.
+    CHECK_EQ(env.eval("localStorage.setItem('a', 'x'.repeat(4095)); localStorage.getItem('a').length"), std::string("4095"));
     CHECK_EQ(env.eval("try { localStorage.setItem('b', ''); 'stored' } catch (e) { e.name + ':' + (e instanceof DOMException) }"),
              std::string("QuotaExceededError:true"));
     CHECK_EQ(env.eval("localStorage.getItem('b')"), std::string("null"));
     // Replacing a value counts its new bytes only.
-    CHECK_EQ(env.eval("localStorage.setItem('a', 'y'.repeat(16383)); localStorage.getItem('a')[0]"), std::string("y"));
-    // UTF-8: 'é' is two bytes, so 8191 of them and a key of two bytes fill the area.
-    CHECK_EQ(env.eval("localStorage.clear(); localStorage.setItem('ab', 'é'.repeat(8191)); "
+    CHECK_EQ(env.eval("localStorage.setItem('a', 'y'.repeat(4095)); localStorage.getItem('a')[0]"), std::string("y"));
+    // UTF-8: 'é' is two bytes, so 2047 of them and a key of two bytes fill the area.
+    CHECK_EQ(env.eval("localStorage.clear(); localStorage.setItem('ab', 'é'.repeat(2047)); "
                       "try { localStorage.setItem('c', 'x'); 'stored' } catch (e) { e.name }"),
              std::string("QuotaExceededError"));
     // The named setter goes through the same quota.
@@ -47,7 +49,7 @@ WR_TEST(testSessionStorageIsSeparate) {
     CHECK_EQ(env.eval("sessionStorage.setItem('s', '1'); [sessionStorage.getItem('s'), localStorage.getItem('s'),"
                       " sessionStorage === sessionStorage, localStorage !== sessionStorage].join()"),
              std::string("1,,true,true"));
-    CHECK_EQ(env.eval("try { sessionStorage.setItem('s', 'x'.repeat(16384)); 'stored' } catch (e) { e.name }"),
+    CHECK_EQ(env.eval("try { sessionStorage.setItem('s', 'x'.repeat(4096)); 'stored' } catch (e) { e.name }"),
              std::string("QuotaExceededError"));
 }
 
@@ -85,16 +87,11 @@ WR_TEST(testAWriteInTheRenderingUpdateIsCommittedInItsStep) {
 }
 
 /// The final review's I3: a key is converted only as far as the quota could hold one (a longer key cannot be stored,
-/// so it is absent), and that bounded scan is charged.
-WR_TEST(testAHugeKeyIsAbsentAndItsScanBounded) {
+/// so it is absent).
+WR_TEST(testAHugeKeyIsAbsent) {
     HostEnv env;
     env.eval("window.huge = 'a'.repeat(3000000); localStorage.setItem('k', 'v'); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("String(localStorage.getItem(huge))"), std::string("null"));
-    const uint64_t spent = JS_GetWorkUnits(rt) - before;
-    CHECK(spent >= 16384 / 8);
-    CHECK(spent < 3000000 / 8);
     CHECK_EQ(env.eval("localStorage.removeItem(huge); localStorage.length"), std::string("1"));
 }
 
@@ -122,13 +119,13 @@ size_t diagnosticsOfKind(HostEnv& env, const std::string& kind) {
 WR_TEST(testAPreloadOverTheQuotaIsDroppedWhole) {
     {
         HostEnv env;
-        env.host().storedAreas["local"] = {{"a", std::string(8191, 'x')}, {"b", std::string(8191, 'y')}};
+        env.host().storedAreas["local"] = {{"a", std::string(2047, 'x')}, {"b", std::string(2047, 'y')}};
         CHECK_EQ(env.eval("localStorage.length"), std::string("2"));
         CHECK_EQ(diagnosticsOfKind(env, "storage-rejected"), size_t(0));
     }
     {
         HostEnv env;
-        env.host().storedAreas["local"] = {{"a", std::string(8191, 'x')}, {"b", std::string(8192, 'y')}};
+        env.host().storedAreas["local"] = {{"a", std::string(2047, 'x')}, {"b", std::string(2048, 'y')}};
         CHECK_EQ(env.eval("[localStorage.length, localStorage.getItem('a')].join()"), std::string("0,"));
         CHECK_EQ(diagnosticsOfKind(env, "storage-rejected"), size_t(1));
     }
@@ -137,10 +134,11 @@ WR_TEST(testAPreloadOverTheQuotaIsDroppedWhole) {
 /// V2b plan, Task 1: once the runtime has stopped nothing more is committed, so the writes of the task that stopped
 /// never reach the host.
 WR_TEST(testNothingIsCommittedAfterAStop) {
+    wr_test::ScopedProductSlices slices;
     HostEnv env;
     env.eval("setTimeout(() => { localStorage.setItem('k', 'v'); for (;;) {} }, 0); 1");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 300000);
+    wr_test::stopAfter(env.runtime());
     env.advance(1);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK_EQ(env.host().storageCommits.size(), size_t(0));
 }

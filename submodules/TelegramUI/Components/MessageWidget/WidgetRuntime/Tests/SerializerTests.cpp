@@ -1,7 +1,6 @@
 #include <pthread.h>
 
 #include <algorithm>
-#include <chrono>
 #include <string>
 
 #include "Sources/DOM/DOM.h"
@@ -100,16 +99,6 @@ WR_TEST(testInsertAdjacent) {
     CHECK_JS(env, "document.documentElement.lastChild.localName === 'p'");
 }
 
-WR_TEST(testSerializationIsCharged) {
-    DOMEnv env;
-    addDiv(env);
-    env.eval("div.textContent = 'x'.repeat(400000)");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_JS(env, "div.innerHTML.length === 400000");
-    CHECK(JS_GetWorkUnits(rt) - before >= 400000 / 4 * wr::work::kSerializeFourBytes);
-}
-
 static void* serializeDeepTree(void* result) {
     DOMEnv env;
     env.eval("var deepest = document.body; for (let i = 0; i < 100000; i++) deepest = deepest.appendChild(document.createElement('div'));");
@@ -119,6 +108,8 @@ static void* serializeDeepTree(void* result) {
 
 // A tree 100,000 deep (built by script, so no parser cap applies) serializes on a 512 KiB stack.
 WR_TEST(testDeepTreeSerializesWithoutRecursion) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     pthread_attr_t attributes;
     pthread_attr_init(&attributes);
     pthread_attr_setstacksize(&attributes, 512 * 1024);
@@ -170,6 +161,8 @@ static void* serializeNestedTemplates(void* result) {
 // Template contents are a second child list; going into them joins the same loop, so templates nested in each other's
 // contents 20,000 deep serialize on a 512 KiB stack too.
 WR_TEST(testNestedTemplatesSerializeWithoutRecursion) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     pthread_attr_t attributes;
     pthread_attr_init(&attributes);
     pthread_attr_setstacksize(&attributes, 512 * 1024);
@@ -206,31 +199,16 @@ WR_TEST(testMarkupInAnXMLDocumentIsNotSupported) {
 
 namespace {
 
-/// The best of five wall times of `code`, in seconds, and its work units (the same each time).
-struct Timed {
-    double seconds;
-    uint64_t units;
-};
-
-Timed timed(DOMEnv& env, const std::string& code) {
-    JSRuntime* rt = env.runtime().jsRuntime();
-    Timed t{1e9, 0};
-    for (int run = 0; run < 5; run++) {
-        uint64_t before = JS_GetWorkUnits(rt);
-        auto start = std::chrono::steady_clock::now();
-        env.eval(code);
-        t.seconds = std::min(t.seconds, std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count());
-        t.units = JS_GetWorkUnits(rt) - before;
-    }
-    return t;
+/// The least CPU time of five runs of `code`, in milliseconds.
+double timed(DOMEnv& env, const std::string& code) {
+    return wr_test::leastCpuMs([&] { env.eval(code); }, 5);
 }
 
 } // namespace
 
 // The fragment parser looks its context element's local name up among gumbo's tags (Task 18, fix round 1). Only an
-// ASCII name no longer than gumbo's longest tag name can be one, so a 4 Mi-unit name is not converted to UTF-8 (12 MB,
-// charged nothing, on every innerHTML, outerHTML and insertAdjacentHTML set). Units cannot show that work, which was
-// never charged: the times do, by three orders of magnitude, and the units must not grow either.
+// ASCII name no longer than gumbo's longest tag name can be one, so a 4 Mi-unit name is not converted to UTF-8 (12 MB on
+// every innerHTML, outerHTML and insertAdjacentHTML set). The CPU times show it, by three orders of magnitude.
 WR_TEST(testAFragmentContextsLongNameIsNotConverted) {
     DOMEnv env;
     env.eval("var long = document.createElement('a' + '\\u4e00'.repeat(1 << 22)), short = document.createElement('a');"
@@ -248,14 +226,12 @@ WR_TEST(testAFragmentContextsLongNameIsNotConverted) {
             onLong += "; long.appendChild(document.createElement('i'))";
             onShort += "; short.appendChild(document.createElement('i'))";
         }
-        Timed l = timed(env, onLong), s = timed(env, onShort);
-        bool fast = l.seconds <= 20 * s.seconds + 0.001;
-        if (!fast || l.units > s.units + 8) {
-            std::printf("  %s: long name %.6f s, %llu units; short %.6f s, %llu units\n", set, l.seconds, (unsigned long long)l.units, s.seconds,
-                        (unsigned long long)s.units);
+        const double l = timed(env, onLong), s = timed(env, onShort);
+        const bool fast = l <= 20 * s + 1;
+        if (!fast) {
+            std::printf("  %s: long name %.3f ms, short %.3f ms\n", set, l, s);
         }
         CHECK(fast);
-        CHECK(l.units <= s.units + 8);
     }
     CHECK_JS(env, "long.childNodes.length === 1 && long.firstChild.localName === 'i' && short.childNodes.length === 1");
     // A real tag name is still looked up, in either case: a table context makes rows, a div context drops them.

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import MessageWidgetStress
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -742,6 +743,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case insertWidgetGames
     case mediaGridLegacy(Bool)
     case sharedMediaGridLegacy(Bool)
+    case runWidgetStressKit(production: Bool)
     case storyLegacyVideoWriter(Bool)
     case chatLegacyVideoWriter(Bool)
     case chatSideListLegacy(Bool)
@@ -797,7 +799,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .coreListScrollTrace, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter, .chatSideListLegacy:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter, .chatSideListLegacy, .runWidgetStressKit:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -974,6 +976,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 82
         case .chatSideListLegacy:
             return 83
+        case let .runWidgetStressKit(production):
+            return production ? 85 : 84
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1586,6 +1590,25 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
+        case let .runWidgetStressKit(production):
+            // widget-sandbox v0.3.0's renderer stress kit (packages/stress CLIENTS.md): run on a device, with no debugger
+            // attached, low power mode off and the device cool; the run file is offered to share at the end. DEBUG builds
+            // carry the kit; elsewhere the item does nothing.
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: production ? "Run widget stress kit (production)" : "Run widget stress kit (measure)", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let root = widgetStressDebugKitRoot(), let kit = try? MessageWidgetStressKit(root: root), let presenter = arguments.getRootController() else {
+                    return
+                }
+                let controller = MessageWidgetStressViewController(kit: kit, options: MessageWidgetStressRunner.Options(pass: production ? .production : .measure))
+                controller.modalPresentationStyle = .fullScreen
+                controller.onFinish = { [weak controller] url in
+                    let share = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+                    share.completionWithItemsHandler = { [weak controller] _, _, _, _ in
+                        controller?.dismiss(animated: true)
+                    }
+                    controller?.present(share, animated: true)
+                }
+                presenter.present(controller, animated: true)
+            })
         case let .respectSystemMicrophone(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Recording: respect system microphone", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -2148,6 +2171,8 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.storyLegacyVideoWriter(experimentalSettings.storyLegacyVideoWriter))
         entries.append(.chatLegacyVideoWriter(experimentalSettings.chatLegacyVideoWriter))
         entries.append(.chatSideListLegacy(experimentalSettings.chatSideListLegacy))
+        entries.append(.runWidgetStressKit(production: false))
+        entries.append(.runWidgetStressKit(production: true))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

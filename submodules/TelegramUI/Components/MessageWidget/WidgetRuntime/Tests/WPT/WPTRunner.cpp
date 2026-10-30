@@ -1,8 +1,8 @@
 // The headless WPT runner (M1b plan, Task 17; spec section 9 item 3). Every vendored testharness page in kDirs that
 // wpt-skip.txt does not list is booted with wr::boot on a virtual clock, with the harness's report replaced by
 // wpt-report.js. Each page runs until the harness completes, until its harness timeout (10 s, or 60 s for a long
-// test) plus a second of grace has passed in virtual time, or until it has spent kWorkCap work units. The results
-// are compared with wpt-expectations.txt, which only ratchets up.
+// test) plus a second of grace has passed in virtual time, or until it stops (each step runs in the harness's slice on
+// its fake clock, which stops a runaway). The results are compared with wpt-expectations.txt, which only ratchets up.
 //
 //   ./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeWPTTests
 //   ./build-input/bazel-9.2.0-darwin-arm64 run //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeWPTTests -- --update
@@ -12,7 +12,6 @@
 //                          tree; under `bazel test`, the test's undeclared outputs.
 //   --allow-regressions    let --update lower a result.
 //   --filter=<text>        run only the tests whose key contains <text>, and compare only those.
-//   --work-cap=<units>     the per-page work cap (default kWorkCap).
 //   --verbose              print every page's diagnostics, not only those of a page whose harness status is not OK.
 //
 // A page that crashes the process is named by the last "RUN" line printed. Under a page whose harness status is not
@@ -38,7 +37,6 @@ namespace {
 constexpr double kNormalTimeoutMs = 10000;
 constexpr double kLongTimeoutMs = 60000;
 constexpr double kGraceMs = 1000;
-constexpr uint64_t kWorkCap = 500000000;
 constexpr uint64_t kMaxSteps = 1000000;
 /// The most diagnostic lines printed for one page, and the most bytes of each.
 constexpr size_t kMaxDiagnosticLines = 20;
@@ -69,7 +67,6 @@ struct Options {
     bool update = false;
     bool allowRegressions = false;
     std::string filter;
-    uint64_t workCap = kWorkCap;
     bool verbose = false;
 };
 
@@ -172,7 +169,7 @@ struct PageResult {
     std::map<std::string, std::string> messages;  // subtest -> message, for non-passing subtests
     /// The host's diagnostics ("<kind>: <detail>"), then the srcs the loader refused for this page, in order.
     std::vector<std::string> diagnostics;
-    uint64_t units = 0;
+    double cpuMs = 0;
     double virtualMs = 0;
     std::string end;
 };
@@ -185,20 +182,18 @@ PageResult runPage(const wr_wpt::Page& page, wr_wpt::WPTLoader& loader, const Op
     wr::BootOptions boot;
     boot.html = page.html;
     boot.url = page.url;
-    uint64_t start = 0;
+    const double start = wr_test::threadCpuMs();
     std::unique_ptr<wr_test::HostEnv> env = wr_test::HostEnv::booted(boot, 1, [&](wr_test::HostEnv& e) {
         JSContext* ctx = e.ctx();
         e.host().loader = &loader;
         e.runtime().setGlobal("__wptSubtest", JS_NewCFunction(ctx, wptSubtest, "__wptSubtest", 3));
         e.runtime().setGlobal("__wptDone", JS_NewCFunction(ctx, wptDone, "__wptDone", 2));
-        start = JS_GetWorkUnits(e.runtime().jsRuntime());
-        e.runtime().setWorkLimit(start + options.workCap);
     });
     double limit = (page.longTimeout ? kLongTimeoutMs : kNormalTimeoutMs) + kGraceMs;
     wr_test::DriveEnd end = wr_test::driveVirtualTime(*env, limit, [&] { return report.done; }, kMaxSteps);
 
     PageResult result;
-    result.units = JS_GetWorkUnits(env->runtime().jsRuntime()) - start;
+    result.cpuMs = wr_test::threadCpuMs() - start;
     result.virtualMs = env->host().now;
     result.end = wr_test::driveEndName(end);
     wr_wpt::Record harness{page.test, true, "", ""};
@@ -252,8 +247,6 @@ int main(int argc, char** argv) {
             options.allowRegressions = true;
         } else if (arg.rfind("--filter=", 0) == 0) {
             options.filter = arg.substr(9);
-        } else if (arg.rfind("--work-cap=", 0) == 0) {
-            options.workCap = std::strtoull(arg.c_str() + 11, nullptr, 10);
         } else if (arg == "--verbose") {
             options.verbose = true;
         } else {
@@ -305,8 +298,8 @@ int main(int argc, char** argv) {
                 passed += r.status == "PASS";
             }
         }
-        std::printf("  %s, %d/%d pass, %llu units, %.0f ms virtual, %s\n", result.records[0].status.c_str(), passed, total,
-                    (unsigned long long)result.units, result.virtualMs, result.end.c_str());
+        std::printf("  %s, %d/%d pass, %.1f CPU ms, %.0f ms virtual, %s\n", result.records[0].status.c_str(), passed, total, result.cpuMs,
+                    result.virtualMs, result.end.c_str());
         if (options.verbose || result.records[0].status != "OK") {
             for (size_t i = 0; i < result.diagnostics.size() && i < kMaxDiagnosticLines; i++) {
                 std::printf("    %s\n", result.diagnostics[i].c_str());

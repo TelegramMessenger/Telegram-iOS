@@ -6,7 +6,6 @@
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -187,7 +186,6 @@ Ref<TextEncoder> TextEncoder::construct(JSContext* ctx) {
 
 Value TextEncoder::encode(JSContext* ctx, USVString input) {
     const uint32_t n = input.length();
-    chargeScan(ctx, n);
     Vector<uint8_t> out{JSAllocator<uint8_t>(JS_GetRuntime(ctx))};
     out.reserve(n);
     for (uint32_t i = 0; i < n;) {
@@ -209,7 +207,6 @@ Value TextEncoder::encodeInto(JSContext* ctx, USVString source, Value destinatio
     const ByteSpan span = bufferSourceBytes(ctx, destination.get(), "encodeInto");
     uint8_t* bytes = const_cast<uint8_t*>(span.data);
     const uint32_t n = source.length();
-    chargeScan(ctx, std::min<uint64_t>(n, span.size));
     uint32_t read = 0;
     size_t written = 0;
     while (read < n) {
@@ -355,7 +352,6 @@ USVString TextDecoder::decode(JSContext* ctx, std::optional<Value> input, std::o
         bytes = bufferSourceBytes(ctx, input->get(), "decode");
     }
     m_doNotFlush = stream;
-    chargeScan(ctx, bytes.size);
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     out.reserve(bytes.size);
     if (!m_decoder.feed(bytes.data, bytes.size, !m_doNotFlush, m_fatal, out)) {

@@ -88,8 +88,16 @@ public struct ConformanceTest {
     public let message: ConformanceMessageSpec?
     /// The bot's answers by exact request data (v0.2.1).
     public let bot: [String: ConformanceBotAction]
+    /// widget-sandbox v0.3.0: the start of the reason the host must stop the widget with (a counted cap passed on
+    /// purpose, `auto/31`–`35`); such a run waits for the stop, not `done`, and passes its `covers` only on that stop.
+    public let stops: String?
+    /// The catalogue IDs the test covers.
+    public let covers: [String]
+    /// widget-sandbox v0.4.0: the content safe area its runner passes (the header's `safeArea`: the reference band of a
+    /// time drawn over the widget), `none` for every other test.
+    public var safeArea: MessageWidgetContentSafeArea = .none
 
-    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = [], loadOnly: Bool = false, message: ConformanceMessageSpec? = nil, bot: [String: ConformanceBotAction] = [:]) {
+    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = [], loadOnly: Bool = false, message: ConformanceMessageSpec? = nil, bot: [String: ConformanceBotAction] = [:], stops: String? = nil, covers: [String] = []) {
         self.id = id
         self.fileURL = fileURL
         self.themes = themes
@@ -100,6 +108,8 @@ public struct ConformanceTest {
         self.loadOnly = loadOnly
         self.message = message
         self.bot = bot
+        self.stops = stops
+        self.covers = covers
     }
 
     /// The widget's file name without its folder and extension (`auto/03-layout-a` → `03-layout-a`).
@@ -182,7 +192,9 @@ public enum ConformanceManifest {
                 throw LoadError.unreadable("a test without id or file")
             }
             let themes = (entry["themes"] as? [String]).flatMap { $0.isEmpty ? nil : $0 } ?? ["light"]
-            return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: [], stages: [], host: [], loadOnly: true, message: self.message(entry), bot: self.bot(entry))
+            var test = ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: [], stages: [], host: [], loadOnly: true, message: self.message(entry), bot: self.bot(entry))
+            test.safeArea = self.safeArea(entry)
+            return test
         }
     }
 
@@ -262,6 +274,17 @@ public enum ConformanceManifest {
             }
             return ConformanceCheck(id: id, name: name)
         }
-        return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected, message: self.message(entry), bot: self.bot(entry))
+        var test = ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected, message: self.message(entry), bot: self.bot(entry), stops: entry["stops"] as? String, covers: (entry["covers"] as? [String]) ?? [])
+        test.safeArea = self.safeArea(entry)
+        return test
+    }
+
+    /// widget-sandbox v0.4.0: the header's `safeArea` (the reference band of a time drawn over the widget), `none` without.
+    private static func safeArea(_ entry: [String: Any]) -> MessageWidgetContentSafeArea {
+        guard let area = entry["safeArea"] as? [String: Any] else {
+            return .none
+        }
+        let value = { (key: String) in CGFloat((area[key] as? NSNumber)?.doubleValue ?? 0.0) }
+        return MessageWidgetContentSafeArea(top: value("top"), right: value("right"), bottom: value("bottom"), left: value("left"), cornerLeft: value("cornerLeft"), cornerRight: value("cornerRight"))
     }
 }

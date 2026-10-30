@@ -120,6 +120,8 @@ namespace litehtml
         {_place_content_,   {_align_content_, _justify_content_}                                                      },
         {_place_items_,     {_align_items_, _justify_items_}                                                          },
         {_place_self_,      {_align_self_, _justify_self_}                                                            },
+        // Telegram (VENDOR.md edit 66): grid-template's rows and columns.
+        {_grid_template_,   {_grid_template_rows_, _grid_template_columns_}                                           },
 
         {_text_decoration_,
          {_text_decoration_color_, _text_decoration_line_, _text_decoration_style_, _text_decoration_thickness_}      },
@@ -1140,6 +1142,43 @@ namespace litehtml
                 }
                 if(valid)
                     add_parsed_property(name, property_value(flags, important));
+            }
+            break;
+
+        // Telegram (VENDOR.md edit 66): grid-template as `none` or `<rows> / <columns>`; its areas form (strings) is not
+        // supported and drops the declaration, as an invalid one.
+        case _grid_template_:
+            if(ident == "none")
+            {
+                add_parsed_property(_grid_template_rows_, property_value(value, important));
+                add_parsed_property(_grid_template_columns_, property_value(value, important));
+            } else
+            {
+                int slash = 0;
+                while(slash < int(value.size()) && value[slash].ch != '/')
+                {
+                    slash++;
+                }
+                bool strings = false;
+                for(const auto& tok : value)
+                {
+                    strings = strings || tok.type == STRING;
+                }
+                if(!strings && slash > 0 && slash + 1 < int(value.size()))
+                {
+                    add_parsed_property(_grid_template_rows_, property_value(slice(value, 0, slash), important));
+                    add_parsed_property(_grid_template_columns_, property_value(slice(value, slash + 1), important));
+                }
+            }
+            break;
+
+        // Telegram (VENDOR.md edit 72).
+        case _transform_box_:
+            if(is_one_of(ident, "fill-box", "content-box", "stroke-box", "border-box", "view-box"))
+            {
+                add_parsed_property(name, property_value(ident == "view-box" ? int(transform_box_view_box)
+                                                                             : int(transform_box_fill_box),
+                                                         important));
             }
             break;
 

@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "Sources/Events/Taps.h"
@@ -63,7 +64,7 @@ public:
     ScriptElements& scripts() { return *m_scripts; }
     /// The host's page visibility: queues a task that runs HTML's "update the visibility state" (no change: nothing;
     /// else visibilitychange at the document, bubbling). The host's, as the loop's steps are: it never throws, and a
-    /// stopped widget queues nothing. A task it cannot queue (the work limit, the memory limit) stops the widget.
+    /// stopped widget queues nothing. A task it cannot queue (the memory limit) stops the widget.
     void setVisible(JSContext* ctx, bool visible);
     /// The host's pointer (M1d plan, Task 2): one phase of a tap at (x, y) in CSS px, hit-tested on the published layout
     /// and dispatched as a task (Sources/Events/Taps.h). The host's, as setVisible is: it never throws, and a stopped
@@ -80,6 +81,8 @@ public:
     GestureClaim gestureClaim() const { return m_taps.claim(); }
     /// Whether the last press takes taps (TapState::takesTaps), once its down task has run.
     bool pressTakesTaps() const { return m_taps.takesTaps(); }
+    /// The newest press's down task has not run yet (TapState::downPending).
+    bool pressDownPending() const { return m_taps.downPending(); }
     /// SDK v1 §5.6 (widget-sandbox v0.1.3): the edge of the bubble the widget asked to stay put when its height changes
     /// (TelegramWidget::setResizeAnchor), reported with the height; Top until it asks.
     ResizeAnchor resizeAnchor() const { return m_resizeAnchor; }
@@ -88,7 +91,7 @@ public:
     TapState& taps() { return m_taps; }
     /// SDK v1 §2.5, user activation (widget-sandbox v0.1.0 packages/core/src/host/user-activation.ts): each trusted
     /// pointer press (Taps, from its pointerdown to its click) is numbered, and its number is active while one of its
-    /// pointer and mouse events dispatches (PressScope), and so in the microtask checkpoint after each of their
+    /// pointer and mouse events dispatches (PressScope), a contextmenu excepted (widget-sandbox's TYPES), and so in the microtask checkpoint after each of their
     /// listeners (the reference's settle drains the jobs inside the press's task, with its gesture); never in a timer, a
     /// frame, a touch event, or a job of a later task. consumeActivation answers true once per press, while it is active and the widget visible.
     /// Fingers press at once and lift in any order, so each press is consumed on its own, until endPress forgets it.
@@ -131,9 +134,23 @@ public:
     /// that is not text of at most 1024 bytes; a copy's chatData is dropped silently).
     void setInitialData(JSContext* ctx, const twidget::WidgetData& data);
     /// The host's, after the boot (sdk-v1 §2.13): the full new state, checked as setInitialData's. A task puts it in
-    /// place and fires chatDataChanged, then publicDataChanged, each only for a value that changed. Never throws, and a
-    /// stopped widget queues nothing.
+    /// place and fires chatDataChanged, then publicDataChanged, each only for a value that changed. While the boot's
+    /// tasks run (holdInputsUntilLoad, up to its load), each change waits, in order with the content safe area's, for the
+    /// load, as upstream's inputs wait for its boot. Never throws, and a stopped widget queues nothing.
     void setData(JSContext* ctx, const twidget::WidgetData& data);
+    /// The host's, before the boot's first layout (SDK v1 §2.17, §5.12): what the client draws over the widget, checked
+    /// (checkContentSafeArea), in the root's variables and TelegramWidget.contentSafeAreaInset, with no event.
+    void setInitialContentSafeArea(JSContext* ctx, const ContentSafeArea& area);
+    /// The host's, after the boot (SDK v1 §2.17, §5.12): what the client draws over the widget changed with the bubble's
+    /// layout. Checked; an equal value is nothing. The root's variables change and the document lays out at the call
+    /// (EventLoop::flushForHostChange, a `safeArea` step); then a `safeArea` task, never deferred, gives
+    /// TelegramWidget.contentSafeAreaInset a fresh object and fires contentSafeAreaChanged (held for the load as
+    /// setData's are). Never throws, and a stopped widget takes nothing.
+    void setContentSafeArea(JSContext* ctx, const ContentSafeArea& area);
+    /// The boot's: its tasks are queued, and the host's inputs (setData, setContentSafeArea) wait until releaseHeldInputs.
+    void holdInputsUntilLoad() { m_holdingInputs = true; }
+    /// The boot's load: the inputs that waited are queued, in order, and later ones at once. Throws as queueTask does.
+    void releaseHeldInputs(JSContext* ctx);
     const WidgetContextState& widgetContext() const { return m_widgetContext; }
     bool isPreview() const { return m_widgetContext.preview; }
     const std::optional<std::string>& chatData() const { return m_chatData; }
@@ -201,6 +218,13 @@ public:
     const ThemeButtonTokens& buttonTokens() const { return m_buttonTokens; }
     /// The text tokens as checked, for the root's --tg-text-* variables.
     const ThemeTextTokens& textTokens() const { return m_textTokens; }
+    /// What the client draws over the widget, checked (SDK v1 §2.17): the renderer's (the root's variables), from the
+    /// call on.
+    const ContentSafeArea& contentSafeArea() const { return m_contentSafeArea; }
+    /// The same for script (TelegramWidget.contentSafeAreaInset): the boot's, then each change from its task on, and the
+    /// generation it was set in.
+    const ContentSafeArea& sdkContentSafeArea() const { return m_sdkContentSafeArea; }
+    uint64_t contentSafeAreaGeneration() const { return m_contentSafeAreaGeneration; }
     /// Counts the changes of themeParams, so TelegramWidget keeps one object between them.
     uint64_t themeGeneration() const { return m_themeGeneration; }
     /// The main document's focus, hover and active state (Sources/Events/UserActions.h), installed as its ElementState.
@@ -268,6 +292,16 @@ private:
     uint64_t m_contextGeneration = 0;
     std::optional<std::string> m_chatData;
     std::optional<std::string> m_publicData;
+    ContentSafeArea m_contentSafeArea;
+    ContentSafeArea m_sdkContentSafeArea;
+    uint64_t m_contentSafeAreaGeneration = 0;
+    bool m_holdingInputs = false;
+    /// The host's inputs that wait for the load, in order: a state change (setData's) or a content safe area.
+    std::vector<std::variant<twidget::sdk::CheckedWidgetData, ContentSafeArea>> m_heldInputs;
+    /// The bridge task that puts `checked` in place (setData's).
+    void queueData(JSContext* ctx, twidget::sdk::CheckedWidgetData checked);
+    /// The safeArea task that puts `area` in place for script and fires contentSafeAreaChanged (setContentSafeArea's).
+    void queueContentSafeArea(JSContext* ctx, const ContentSafeArea& area);
     twidget::sdk::RequestGate m_requestGate;
     int64_t m_lastRequestId = 0;
     bool m_watchesPublicData = false;

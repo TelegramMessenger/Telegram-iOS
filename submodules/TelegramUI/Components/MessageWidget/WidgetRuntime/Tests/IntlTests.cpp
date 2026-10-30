@@ -1,11 +1,10 @@
 // Intl's core (V5b plan, Task 1; ECMA-402 §9 and §8.3): the lazy global, getCanonicalLocales, the locale every request
-// names, and the `intl` capability itself: requests written as widget-sandbox's shim writes them, charged before the host
-// is asked, untouched by a widget's toJSON, and answers taken as the host's text.
+// names, and the `intl` capability itself: requests written as widget-sandbox's shim writes them, untouched by a
+// widget's toJSON, and answers taken as the host's text.
 #include <string>
 
 #include "Sources/Host/HostState.h"
 #include "Sources/Host/Intl.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 
 using wr_test::HostEnv;
@@ -37,16 +36,6 @@ WR_TEST(testGetCanonicalLocales) {
              std::string("RangeError,RangeError,RangeError,RangeError,RangeError,RangeError,RangeError"));
     CHECK_EQ(env.eval("[[1], [null]].map(l => err(() => Intl.getCanonicalLocales(l))).join()"), std::string("TypeError,TypeError"));
     CHECK_EQ(env.eval("Intl.NumberFormat.supportedLocalesOf(['EN-us', 'xx']).join()"), std::string("en-US,xx"));
-}
-
-/// Review Focus 2: a long locale list is charged per entry before it is read.
-WR_TEST(testALongLocaleListIsCharged) {
-    HostEnv env;
-    env.eval("window.many = new Array(100000).fill('en'); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_EQ(env.eval("Intl.getCanonicalLocales(many).join()"), std::string("en"));
-    CHECK(JS_GetWorkUnits(rt) - before >= 100000 * wr::work::kNodeVisit);
 }
 
 /// A request names the first requested locale, else the host's, with the unicode extension keywords its constructor
@@ -126,32 +115,16 @@ WR_TEST(testManyDistinctLocalesAreRefused) {
     CHECK_EQ(env.eval("Intl.getCanonicalLocales(Array.from({ length: 128 }, (_, i) => 'en-x-' + i.toString(36))).length"), std::string("128"));
 }
 
-/// A request is charged before the host is asked (work::kIntlRequest, a date's kinds more, and its bytes), its answer's
-/// bytes after; an answer past kMaxIntlAnswer is refused.
-WR_TEST(testARequestIsChargedAndItsAnswerBounded) {
+/// An answer past kMaxIntlAnswer is refused.
+WR_TEST(testARequestsAnswerIsBounded) {
     HostEnv env;
     env.eval(kErr);
     env.host().intlAnswer = wr_test::echoIntl;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("new Intl.ListFormat('en').format(['" + std::string(100000, 'a') + "']).length > 100000"), std::string("true"));
-    const std::string& request = env.host().intlRequests.back();
-    CHECK(JS_GetWorkUnits(rt) - before >= wr::work::kIntlRequest + 2 * request.size() * wr::work::kIntlByte);
-    // A date's kinds at their own rates: the host may make a formatter for each, and one per field for parts.
-    env.eval("window.dtf = new Intl.DateTimeFormat('en'); 1");
-    before = JS_GetWorkUnits(rt);
-    env.eval("dtf.format(0); 1");
-    const uint64_t format = JS_GetWorkUnits(rt) - before;
-    CHECK(format >= wr::work::kIntlDateRequest);
-    before = JS_GetWorkUnits(rt);
-    env.eval("dtf.formatToParts(0); 1");
-    CHECK(JS_GetWorkUnits(rt) - before >= wr::work::kIntlDateRequest + wr::work::kIntlDateParts);
     env.host().intlAnswer = [](std::string_view) { return std::string(wr::intl::kMaxIntlAnswer + 1, 'x'); };
     CHECK_EQ(env.eval("err(() => (1).toLocaleString())"), std::string("RangeError"));
-    before = JS_GetWorkUnits(rt);
     env.host().intlAnswer = [](std::string_view) { return std::string(wr::intl::kMaxIntlAnswer, 'x'); };
     CHECK_EQ(env.eval("(1).toLocaleString().length"), std::string("4194304"));
-    CHECK(JS_GetWorkUnits(rt) - before >= wr::intl::kMaxIntlAnswer * wr::work::kIntlByte);
 }
 
 /// A request is written in native code, never through JSON.stringify: a widget's toJSON reaches none of it.

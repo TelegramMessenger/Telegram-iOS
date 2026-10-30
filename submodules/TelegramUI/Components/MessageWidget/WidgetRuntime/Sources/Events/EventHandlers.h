@@ -30,9 +30,8 @@ struct EventHandlerEntry {
 class EventHandlerMap {
 public:
     explicit EventHandlerMap(JSRuntime* rt) : m_entries(JSAllocator<EventHandlerEntry>(rt)) {}
-    /// Charges work::kNodeVisit per entry visited.
     EventHandlerEntry* find(JSContext* ctx, JSAtom type);
-    /// Throws std::bad_alloc at the memory limit, and Thrown as find() does.
+    /// Throws std::bad_alloc at the memory limit.
     EventHandlerEntry& findOrAdd(JSContext* ctx, JSAtom type);
     void trace(JSRuntime* rt, JS_MarkFunc* mark) const;
     void dispose(JSRuntime* rt);

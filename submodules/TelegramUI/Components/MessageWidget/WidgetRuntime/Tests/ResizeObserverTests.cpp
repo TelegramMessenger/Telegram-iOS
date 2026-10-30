@@ -5,7 +5,6 @@
 
 #include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -96,11 +95,11 @@ WR_TEST(testASelfResizingCallbackIsBounded) {
     env.env().eval("window.n = 0; window.errors = []; addEventListener('error', e => errors.push(e.message));"
                    "new ResizeObserver(es => { n++; a.style.width = (100 + n) + 'px'; }).observe(a); 1");
     settle(env);
-    CHECK_EQ(env.env().eval("n"), std::to_string(wr::work::kResizeObserverRounds));
+    CHECK_EQ(env.env().eval("n"), std::string("4"));
     CHECK_EQ(env.env().eval("errors.join()"), std::string("ResizeObserver loop completed with undelivered notifications."));
     // What was left is delivered at the next update.
     settle(env);
-    CHECK(std::stoi(env.env().eval("n")) > int(wr::work::kResizeObserverRounds));
+    CHECK(std::stoi(env.env().eval("n")) > 4);
 }
 
 WR_TEST(testADroppedObserverKeepsObserving) {
@@ -141,5 +140,5 @@ WR_TEST(testLeftoversAskForAFrame) {
     settle(env);
     CHECK(wr::HostState::of(env.ctx()).loop().wantsAnimationFrame());
     env.env().frame();
-    CHECK(std::stoi(env.env().eval("n")) > int(wr::work::kResizeObserverRounds));
+    CHECK(std::stoi(env.env().eval("n")) > 4);
 }

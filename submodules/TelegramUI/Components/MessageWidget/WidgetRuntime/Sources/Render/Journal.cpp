@@ -1,7 +1,6 @@
 #include "Sources/Render/Journal.h"
 
 #include "Sources/DOM/DOM.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -15,7 +14,6 @@ void Journal::record(JSContext* ctx, Node& node, JournalKind kind) {
     if (m_rebuild) {
         return;
     }
-    charge(ctx, work::kJournalEntry);
     auto found = m_index.find(&node);
     if (found != m_index.end()) {
         m_entries[found->second].kinds |= journalBit(kind);

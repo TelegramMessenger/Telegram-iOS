@@ -184,6 +184,8 @@ void runOnSmallStack(void (*body)()) {
 // Clone and equality walk the tree without recursing: a 30,000-deep chain is copied and compared on a 512 KiB stack,
 // where a native frame per level (at least 64 bytes each) would need several times that.
 WR_TEST(testDeepTreesCloneAndCompare) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     runOnSmallStack([] {
         DOMEnv env;
         env.eval("var root = document.createElement('div'); var cur = root; for (let i = 0; i < 30000; i++) { cur = cur.appendChild(document.createElement('div')); } cur.append('leaf')");
@@ -198,6 +200,8 @@ WR_TEST(testDeepTreesCloneAndCompare) {
 // joins the same loop. Script nests templates as deep as it likes, so a clone that recursed per template would
 // overflow the stack: 20,000 templates, each in the contents of the one before, on 512 KiB.
 WR_TEST(testDeeplyNestedTemplatesClone) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     runOnSmallStack([] {
         DOMEnv env;
         env.eval("var outer = document.createElement('template'); var cur = outer; for (let i = 0; i < 20000; i++) { cur = cur.content.appendChild(document.createElement('template')); } cur.content.append('leaf')");
@@ -242,99 +246,44 @@ WR_TEST(testCompareDocumentPositionAndContains) {
     CHECK_JS(env, "b.contains(d) && b.contains(b) && !d.contains(b) && !b.contains(null)");
 }
 
-// Every native ancestor walk is charged (Global Constraints, "Work"), and inserting a leaf walks nothing: a chain
-// built by appendChild costs linear work (1,000 vs 2,000 deep: ~2x; a walk per insert makes it ~3.4x), while
-// contains() on the innermost node costs its depth.
-static uint64_t workToBuildChain(int depth) {
-    DOMEnv env;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval(("var deepest = document.documentElement.lastChild; for (let i = 0; i < " + std::to_string(depth) + "; i++) deepest = deepest.appendChild(document.createElement('div'));").c_str());
-    return JS_GetWorkUnits(rt) - before;
-}
-
-WR_TEST(testAncestorWalksAreCharged) {
-    uint64_t shallow = workToBuildChain(1000);
-    uint64_t deep = workToBuildChain(2000);
-    CHECK(deep * 2 < shallow * 5);
-    DOMEnv env;
-    env.eval("var deepest = document.documentElement.lastChild; for (let i = 0; i < 2000; i++) deepest = deepest.appendChild(document.createElement('div'));");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_JS(env, "document.documentElement.contains(deepest) && deepest.isConnected");
-    CHECK(JS_GetWorkUnits(rt) - before >= 2 * 2000 * wr::work::kNodeVisit);
-}
-
-namespace {
-
-/// The work of one evaluation of `code`, after a first one (which makes the interfaces and atoms it uses).
-uint64_t workOf(DOMEnv& env, const std::string& code) {
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval(code);
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval(code);
-    return JS_GetWorkUnits(rt) - before;
-}
-
-} // namespace
-
-// The sibling and child walks a view hides are charged too: a read that walks 10,000 children costs at least their
-// visits, where an uncharged one would cost a binding call.
-WR_TEST(testSiblingAndChildWalksAreCharged) {
-    DOMEnv env;
-    env.eval("var p = document.createElement('p'); for (let i = 0; i < 10000; i++) p.append(document.createComment('c')); var e = p.appendChild(document.createElement('e')); var t = p.firstChild;"
-             "var f = new DocumentFragment(); for (let i = 0; i < 10000; i++) f.append(document.createComment('c')); f.append(document.createTextNode('t'));");
-    // 9,000 visits, under the 10,000 walked: the margin is for nothing else (the uncharged walk costs ~100 units).
-    uint64_t floor = 9000 * wr::work::kNodeVisit;
-    CHECK(workOf(env, "p.firstElementChild") >= floor);
-    CHECK(workOf(env, "p.childElementCount") >= floor);
-    CHECK(workOf(env, "t.nextElementSibling") >= floor);
-    CHECK(workOf(env, "e.previousElementSibling") >= floor);
-    // A fragment that cannot go into the document is still counted before it is refused.
-    CHECK(workOf(env, "try { document.appendChild(f); } catch (e) {}") >= floor);
-    CHECK_JS(env, "f.lastChild.data === 't' && f.firstChild.nodeType === 8");
-    // A text run's wholeText walks its siblings. Empty ones: the walk, not the copying, is what is measured.
-    env.eval("var q = document.createElement('q'); for (let i = 0; i < 10000; i++) q.append(''); var last = q.lastChild;");
-    CHECK(workOf(env, "last.wholeText") >= floor);
-}
-
-namespace {
-
-/// The work of `how`, which empties `p` (built with `children` children) or moves the `children` children of the
-/// fragment `f` into `q`.
-uint64_t workToRemoveAll(int children, const char* how) {
-    DOMEnv env;
-    std::string n = std::to_string(children);
-    env.eval("var p = document.createElement('p'), q = document.createElement('q'), f = new DocumentFragment();"
-             "for (let i = 0; i < " + n + "; i++) { p.appendChild(document.createElement('i')); f.appendChild(document.createElement('i')); }");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    std::string result = env.eval(std::string("(") + how + ", p.firstChild === null && f.firstChild === null)");
-    uint64_t units = JS_GetWorkUnits(rt) - before;
-    if (result != "true" && result != "false") {
-        std::printf("  %s: %s\n", how, result.c_str());
-    }
-    return units;
-}
-
-} // namespace
-
 // Removing every child of a node is one detach (Node::removeAllChildren), not a removal per child from the front,
-// which moved and renumbered every later sibling (~n^2/2 visits: 4 x 10^8 units for 20,000 children): linear in the
+// which moved and renumbered every later sibling (~n^2/2 visits: 2 x 10^8 for 20,000 children): linear in the
 // children, whichever path empties the node (replace all, through textContent and replaceChildren, and a fragment
-// giving up its children on insert). Emptying costs ~3 visits a child: the detach and the Ref the algorithm keeps.
-// Moving the fragment's children costs ~11: its insert into q adds a visit and q's share of growing its child list.
+// giving up its children on insert): twice the children take about twice the CPU time (a removal per child from the
+// front, four times).
+
+namespace {
+
+/// The least thread CPU time of three runs of emptying a node of `children` children by `how`, each in a fresh document.
+double cpuToRemoveAll(int children, const char* how) {
+    double least = 1e300;
+    for (int run = 0; run < 3; run++) {
+        DOMEnv env;
+        const std::string n = std::to_string(children);
+        env.eval("var p = document.createElement('p'), q = document.createElement('q'), f = new DocumentFragment();"
+                 "for (let i = 0; i < " + n + "; i++) { p.appendChild(document.createElement('i')); f.appendChild(document.createElement('i')); }");
+        const double start = wr_test::threadCpuMs();
+        const std::string result = env.eval(std::string("(") + how + ", p.firstChild === null && f.firstChild === null)");
+        least = std::min(least, wr_test::threadCpuMs() - start);
+        if (result != "true" && result != "false") {
+            std::printf("  %s: %s\n", how, result.c_str());
+        }
+    }
+    return least;
+}
+
+} // namespace
+
 WR_TEST(testRemovingAllChildrenIsLinear) {
-    struct Case {
-        const char* how;
-        uint64_t visitsPerChild;
-    };
-    for (const Case& c : {Case{"p.textContent = ''", 5}, Case{"p.replaceChildren()", 5}, Case{"q.appendChild(f)", 15}}) {
-        uint64_t once = workToRemoveAll(20000, c.how);
-        uint64_t twice = workToRemoveAll(40000, c.how);
-        std::printf("  %s: %llu units for 20,000 children, %llu for 40,000\n", c.how, (unsigned long long)once, (unsigned long long)twice);
-        CHECK(once <= c.visitsPerChild * 20000 * wr::work::kNodeVisit);
-        CHECK(twice <= 3 * once);
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    for (const char* how : {"p.textContent = ''", "p.replaceChildren()", "q.appendChild(f)"}) {
+        const double once = cpuToRemoveAll(20000, how);
+        const double twice = cpuToRemoveAll(40000, how);
+        if (twice > 3 * once + 1) {
+            std::printf("  %s: %.3f CPU ms for 20,000 children, %.3f for 40,000\n", how, once, twice);
+        }
+        CHECK(twice <= 3 * once + 1);
     }
 }
 

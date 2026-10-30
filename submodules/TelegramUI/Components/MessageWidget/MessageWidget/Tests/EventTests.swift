@@ -5,10 +5,11 @@ import XCTest
 /// or demoted; one frame task at a time; the newest visibility replaces one still queued.
 class EventTests: MessageWidgetTestCase {
     /// A cap that ends a held task's wait at once in test time (planning ruling 8).
-    private let capped = MessageWidgetWaitPolicy(cap: 0.05, allowance: nil)
+    private let capped = MessageWidgetWaitPolicy(cap: 0.05)
     private static let ticker = "<!doctype html><p id=n>0</p><script>window.n = 0; setInterval(function () { document.getElementById('n').textContent = String(++window.n) }, 20)</script>"
-    /// ~2,000,000 units (2 per iteration): past the demotion threshold, far inside every budget.
-    private static let heavyLoop = "var s = 0; for (var i = 0; i < 1000000; i++) s = (s + i) | 0;"
+    /// 20 ms of the widget thread's CPU under `useWallTimeAsCpu()`: past the demotion threshold (10 ms), far inside the
+    /// slice and the quota.
+    private static let heavyLoop = MessageWidgetTestCase.spin(20)
 
     private func frameTasks(_ instance: MessageWidgetInstance) -> Int {
         let frames = instance.queuedForTesting[.frame]
@@ -43,8 +44,10 @@ class EventTests: MessageWidgetTestCase {
         instance.destroy()
     }
 
-    /// Fails first (it does not build: there is no demotion yet).
-    func testATimerTaskPastAMillionUnitsDemotesTheWidget() {
+    /// Fails first (it does not build: there is no demotion yet). A background drain past 10 ms of the widget thread's
+    /// CPU demotes (the CPU-clock limits design; a million units before).
+    func testABackgroundDrainPast10msDemotes() {
+        self.useWallTimeAsCpu()
         let instance = self.make("<!doctype html><p>x</p><script>setInterval(function () { \(EventTests.heavyLoop) }, 20)</script>")
         _ = instance.layout(width: 360.0)
         XCTAssertFalse(instance.demoted)
@@ -56,14 +59,15 @@ class EventTests: MessageWidgetTestCase {
     }
 
     /// Fails first (it does not build). Boots and taps are what the user waits for: they never demote.
-    func testABootOrATapPastAMillionUnitsDoesNotDemote() {
+    func testABootOrATapPast10msDoesNotDemote() {
+        self.useWallTimeAsCpu()
         let loop = EventTests.heavyLoop
         let instance = self.make("<!doctype html><body style='margin:0'><button id=b style='display:block;width:200px;height:40px' onclick='\(loop)'>b</button><script>\(loop)</script></body>")
         _ = instance.layout(width: 360.0)
-        XCTAssertGreaterThan(instance.bootWorkForTesting, MessageWidgetInstance.demotionUnits)
+        XCTAssertGreaterThan(instance.largestTaskCpuMillisecondsForTesting(.boot), MessageWidgetInstance.demotionCpuMilliseconds)
         instance.touch(action: 0, at: CGPoint(x: 20.0, y: 20.0), pointer: 0, primary: true)
         instance.touch(action: 2, at: CGPoint(x: 20.0, y: 20.0), pointer: 0, primary: true)
-        XCTAssertGreaterThan(instance.largestTaskWorkForTesting, MessageWidgetInstance.demotionUnits)
+        XCTAssertGreaterThan(instance.largestTaskCpuMillisecondsForTesting(.touch), MessageWidgetInstance.demotionCpuMilliseconds)
         XCTAssertFalse(instance.demoted)
         instance.destroy()
     }

@@ -1,5 +1,5 @@
 // The render build (M1c plan, Task 5): the whole litehtml document built from the runtime's DOM, laid out, recorded
-// and published atomically. What is not rendered (Ruling 4), the render limits (Ruling 7), the charges (Ruling 9), a
+// and published atomically. What is not rendered (Ruling 4), the render limits (Ruling 7), a
 // stop in the middle of a build (Review Focus 2) and hostile sizes (Review Focus 4).
 #include <algorithm>
 #include <cstdint>
@@ -179,16 +179,6 @@ size_t heapInUse() {
     return stats.size_in_use;
 }
 
-// Rebuilds, and answers whether it threw Aborted.
-bool rebuildAborts(RenderEnv& env) {
-    try {
-        env.rebuild();
-    } catch (const wr::Aborted&) {
-        return true;
-    }
-    return false;
-}
-
 // The largest single operator-new allocation while tracking is on (testLongNamesAreChargedBeforeConversion). A
 // conversion that is freed when the stop unwinds leaves no heap growth behind, but its allocation is seen here.
 std::atomic<bool> gTrackAllocations{false};
@@ -280,7 +270,7 @@ WR_TEST(testBuildPathParity) {
             // the root: the UA layer's values read them.
             litehtml::document::ptr parsed = litehtml::document::createFromString(
                 litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.render().options().hostCSS),
-                "html{" + env.render().options().rootDeclarations + "}");
+                "html{" + wr::rootDeclarationsOf(env.render().options()) + "}");
             parsed->render(litehtml::pixel_t(float(env.render().options().width)));
             theirs = wr::dumpLayout(*parsed);
         }
@@ -379,6 +369,8 @@ WR_TEST(testStyleTextIsItsTextChildren) {
 }
 
 WR_TEST(testCssCaps) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     auto sheet = [](const std::string& rule, size_t bytes) {
         std::string text = rule + "/*";
         text.append(bytes - text.size() - 2, 'x');
@@ -415,6 +407,8 @@ WR_TEST(testCssCaps) {
 }
 
 WR_TEST(testRenderByteBudget) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // Profile 1 caps one text at 65,536 units and the document's at 262,144 (V4 plan, Task 7), so the bytes are taken by an
     // attribute the text budgets do not count.
     const std::string a(1000 * 1000, 'a');
@@ -444,7 +438,9 @@ struct HostileCase {
 
 } // namespace
 
-WR_TEST(testHostileSizesAreBoundedAndCharged) {
+WR_TEST(testHostileSizesAreBounded) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // RenderTree.h's memory bound: each hostile single build's heap growth stays under 160 MB.
     const size_t kCeiling = size_t(160) * 1000 * 1000;
     const HostileCase cases[] = {
@@ -540,21 +536,6 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
         CHECK(growth < kCeiling);
         hostile.check(env);
 
-        // The same build under a budget: it stops inside the build, and the published state is the one before.
-        litehtml::document* document = env.render().document();
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string dump = env.render().layoutDump();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + 1000);
-        bool aborted = false;
-        onSmallStack(rt, [&] { aborted = rebuildAborts(env); });
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-        CHECK_EQ(env.render().layoutDump(), dump);
-        // Stops are final: a stopped runtime builds nothing.
-        CHECK(rebuildAborts(env));
-        CHECK(env.render().layerTree() == tree);
     }
 }
 
@@ -585,37 +566,6 @@ WR_TEST(testFormControlLimit) {
     // Each build posts it again, once.
     env.rebuild();
     CHECK_EQ(diagnosticCount(env, "render-limit", "form-controls"), size_t(2));
-}
-
-// I1: the DOM bounds no name's length, so a name is charged before it is converted. A 1,000,000-character tag name, or
-// attribute name, stops the widget under a budget of 1,000 units with no allocation the size of the name.
-WR_TEST(testLongNamesAreChargedBeforeConversion) {
-    const char* const scripts[] = {
-        "{ const e = document.createElement('a'.repeat(1000000)); e.setAttribute('b'.repeat(1000000), 'v');"
-        " document.body.appendChild(e); }",
-        "{ const e = document.createElement('div'); e.setAttribute('b'.repeat(1000000), 'v');"
-        " document.body.appendChild(e); }",
-    };
-    for (const char* script : scripts) {
-        RenderEnv env(kEmpty);
-        CHECK_EQ(env.env().eval(std::string(script) + " 'ok'"), std::string("ok"));
-        litehtml::document* published = env.render().document();
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + 1000);
-        const size_t heapBefore = heapInUse();
-        gLargestAllocation = 0;
-        gTrackAllocations = true;
-        const bool aborted = rebuildAborts(env);
-        gTrackAllocations = false;
-        const size_t heapAfter = heapInUse();
-        const size_t growth = heapAfter > heapBefore ? heapAfter - heapBefore : 0;
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == published);
-        CHECK(growth < 256 * 1024);
-        CHECK(gLargestAllocation.load() < 256 * 1024);
-        std::printf("  long names: heap growth %zu B, largest allocation %zu B\n", growth, gLargestAllocation.load());
-    }
 }
 
 WR_TEST(testRenderInputIsKeptOnlyWhenAsked) {
@@ -673,61 +623,6 @@ WR_TEST(testLoadsGoThroughTheContainer) {
     CHECK_EQ(env.host().decodedMimeTypes.size(), size_t(2));
 }
 
-namespace {
-
-// A build whose charges are mostly in its layout pre-charge: 2,000 elements and a 65,536-byte word (profile 1's cap on
-// one text, V4 plan, Task 7).
-std::string atomicFixture(char letter) {
-    std::string html = "<!doctype html><html><head></head><body>";
-    for (int i = 0; i < 2000; i++) {
-        html += "<div></div>";
-    }
-    // One word kept whole (the UA layer's `overflow-wrap: break-word` would cut it into fragments).
-    return html + "<p id=t style='overflow-wrap:normal'>" + std::string(65536, letter) + "</p></body></html>";
-}
-
-} // namespace
-
-WR_TEST(testRebuildIsAtomic) {
-    // The units one build of the fixture takes: charges do not depend on anything but the DOM.
-    uint64_t units = 0;
-    {
-        RenderEnv env(atomicFixture('a'));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.rebuild();
-        units = JS_GetWorkUnits(rt) - before;
-    }
-    CHECK(units > 30000);
-    // Inside the build (a third of the way), then inside the layout pre-charge (it is the last charge before
-    // render(), and holds the 65,536-byte word's 8,192 units).
-    const uint64_t limits[] = {units / 3, units - 1000};
-    for (uint64_t limit : limits) {
-        RenderEnv env(atomicFixture('a'));
-        env.rebuild();
-        litehtml::document* document = env.render().document();
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string input = env.render().renderInput();
-        const std::string dump = env.render().layoutDump();
-        const uint64_t builds = env.render().buildCount();
-        // The same length, so the next build charges the same.
-        CHECK_EQ(env.env().eval("const t = document.getElementById('t').firstChild; t.data = 'b'.repeat(t.data.length);"
-                                "t.data.length"),
-                 std::string("65536"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + limit);
-        CHECK(rebuildAborts(env));
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-        CHECK_EQ(env.render().renderInput(), input);
-        CHECK_EQ(env.render().layoutDump(), dump);
-        CHECK_EQ(env.render().buildCount(), builds);
-        CHECK(input.find("bbbb") == std::string::npos);
-        CHECK(tree && findText(*tree, std::string(65536, 'a')) != nullptr);
-    }
-}
-
 WR_TEST(testRebuildReleasesNodes) {
     RenderEnv env(kEmpty);
     env.rebuild();
@@ -776,4 +671,111 @@ WR_TEST(testCacheWindowFollowsTheBuildOrder) {
         CHECK_EQ(env.host().fontsCreated, fonts);
         CHECK_EQ(env.host().decodedMimeTypes.size(), images);
     }
+}
+
+namespace {
+
+/// 1,000 elements and one word kept whole (the UA layer's `overflow-wrap: break-word` would cut it into fragments) of
+/// `length` letters.
+std::string atomicFixture(char letter, size_t length) {
+    std::string html = "<!doctype html><html><head></head><body>";
+    for (int i = 0; i < 1000; i++) {
+        html += "<div></div>";
+    }
+    return html + "<p id=t style='overflow-wrap:normal'>" + std::string(length, letter) + "</p></body></html>";
+}
+
+/// What a rebuild must leave as it was when it stops partway.
+struct Published {
+    litehtml::document* document;
+    std::shared_ptr<const wr::LayerTree> tree;
+    std::string input;
+    std::string dump;
+    uint64_t builds;
+};
+
+Published publishedOf(RenderEnv& env) {
+    return {env.render().document(), env.render().layerTree(), env.render().renderInput(), env.render().layoutDump(), env.render().buildCount()};
+}
+
+void checkUnchanged(RenderEnv& env, const Published& was, char letter, size_t length) {
+    CHECK(env.render().document() == was.document);
+    CHECK(env.render().layerTree() == was.tree);
+    CHECK_EQ(env.render().renderInput(), was.input);
+    CHECK_EQ(env.render().layoutDump(), was.dump);
+    CHECK_EQ(env.render().buildCount(), was.builds);
+    CHECK(was.tree && findText(*was.tree, std::string(length, letter)) != nullptr);
+}
+
+} // namespace
+
+/// The final review's I2: a rebuild stopped partway leaves the published document, maps, render input and tree as they
+/// were. Two stops still land inside a build: a strict cap, judged in tree order (here a text past 32,768 units after a
+/// thousand elements), and an allocation of the build's maps or input refused at the memory limit (swept over the
+/// build, each refusal latching Memory).
+WR_TEST(testARebuildStoppedPartwayIsAtomic) {
+    {
+        RenderEnv env(atomicFixture('a', 30000));
+        env.rebuild();
+        const Published was = publishedOf(env);
+        CHECK_EQ(env.env().eval("document.getElementById('t').firstChild.data = 'b'.repeat(40000); 1"), std::string("1"));
+        bool aborted = false;
+        try {
+            env.rebuild();
+        } catch (const wr::Aborted&) {
+            aborted = true;
+        }
+        CHECK(aborted);
+        CHECK(env.env().runtime().stopReason() == wr::StopReason::Limit);
+        checkUnchanged(env, was, 'a', 30000);
+    }
+    // Past the strict caps, which would stop the widget first: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    // A rebuild under a memory limit `slack` bytes above what the runtime holds before it: whether it stopped, checked
+    // either way (stopped: Memory, everything as it was; completed: the new text in the render input).
+    const auto rebuildWithSlack = [](size_t slack) {
+        RenderEnv env(atomicFixture('a', 65536));
+        env.rebuild();
+        const Published was = publishedOf(env);
+        // The same length, so the build allocates as much as the last.
+        CHECK_EQ(env.env().eval("const t = document.getElementById('t').firstChild; t.data = 'b'.repeat(t.data.length); 1"),
+                 std::string("1"));
+        JSRuntime* rt = env.env().runtime().jsRuntime();
+        JSMemoryUsage usage;
+        JS_ComputeMemoryUsage(rt, &usage);
+        JS_SetMemoryLimit(rt, size_t(usage.malloc_size) + slack);
+        bool stopped = false;
+        try {
+            env.rebuild();
+        } catch (const wr::Aborted&) {
+            stopped = true;
+        }
+        JS_SetMemoryLimit(rt, wr::Runtime::Options().memoryLimitBytes);
+        if (stopped) {
+            CHECK(env.env().runtime().stopReason() == wr::StopReason::Memory);
+            checkUnchanged(env, was, 'a', 65536);
+        } else {
+            CHECK(env.env().runtime().stopReason() == wr::StopReason::None);
+            CHECK(env.render().renderInput().find("bbbb") != std::string::npos);
+        }
+        return stopped;
+    };
+    // The least slack the build completes with, to 256 bytes; then refusals swept finely over the build below it, so
+    // each of its allocations of any size is likely refused once (the fix waves' M-5: eight coarse points before).
+    size_t refused = 0;
+    size_t completes = size_t(8) << 20;
+    CHECK(!rebuildWithSlack(completes));
+    while (completes - refused > 256) {
+        const size_t mid = refused + (completes - refused) / 2;
+        (rebuildWithSlack(mid) ? refused : completes) = mid;
+    }
+    int stopped = 0;
+    constexpr int kSweep = 64;
+    for (int i = 0; i < kSweep; i++) {
+        stopped += rebuildWithSlack(refused * size_t(i) / kSweep);
+    }
+    if (stopped < kSweep / 2) {
+        std::printf("  %d of %d rebuilds below %zu bytes of slack stopped\n", stopped, kSweep, completes);
+    }
+    CHECK(stopped >= kSweep / 2);
 }

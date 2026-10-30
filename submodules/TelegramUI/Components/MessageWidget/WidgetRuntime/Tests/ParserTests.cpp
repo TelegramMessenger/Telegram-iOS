@@ -210,6 +210,8 @@ WR_TEST(testCaps) {
 }
 
 WR_TEST(testNodeLimitIsReported) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     std::string html;
     for (int i = 0; html.size() < 16 * 1024; i++) {
         html += "<div><b a=" + std::to_string(i) + "></div>";
@@ -271,17 +273,15 @@ WR_TEST(testScriptMarkupLengthCap) {
     CHECK_THROWS(env, "d.innerHTML = 'x'.repeat((1 << 20) + 1)", "NotSupportedError");
     env.eval("d.innerHTML = 'x'.repeat(1 << 20)");
     CHECK_JS(env, "d.childNodes.length === 1 && d.firstChild.data.length === (1 << 20)");
-    // The refusal is O(1): with both strings already built, refusing an over-cap string charges far less than parsing
-    // an at-cap one (no precharge, no utf8(), no parse) — a small constant versus length * kParseByte.
-    JSRuntime* rt = env.runtime().jsRuntime();
+    // The refusal is O(1): with both strings already built, refusing an over-cap string takes far less CPU time than
+    // parsing an at-cap one (no utf8(), no parse).
     env.eval("var big = 'y'.repeat((1 << 20) + 1); var atCap = 'z'.repeat(1 << 20);");
-    uint64_t b0 = JS_GetWorkUnits(rt);
-    env.eval("(() => { try { d.innerHTML = big; } catch (e) {} })()");
-    uint64_t overCap = JS_GetWorkUnits(rt) - b0;
-    uint64_t b1 = JS_GetWorkUnits(rt);
-    env.eval("d.innerHTML = atCap");
-    uint64_t atCapCost = JS_GetWorkUnits(rt) - b1;
-    CHECK(overCap < 10000 && overCap * 100 < atCapCost);
+    const double overCap = wr_test::leastCpuMs([&] { env.eval("(() => { try { d.innerHTML = big; } catch (e) {} })()"); });
+    const double atCapCost = wr_test::leastCpuMs([&] { env.eval("d.innerHTML = atCap"); });
+    if (overCap * 20 >= atCapCost) {
+        std::printf("  over the cap %.3f ms, at it %.3f ms\n", overCap, atCapCost);
+    }
+    CHECK(overCap * 20 < atCapCost);
     // outerHTML (under a parent) and insertAdjacentHTML are covered too.
     env.eval("document.body.appendChild(d); var c = d.appendChild(document.createElement('i'));");
     CHECK_THROWS(env, "c.outerHTML = 'z'.repeat((1 << 20) + 1)", "NotSupportedError");
@@ -613,6 +613,8 @@ static double secondsToParse(const std::string& html) {
 // Review Focus 1, at the DOM: gumbo is linear (Task 14), and building the DOM from its tree must add nothing
 // worse. 4x the input in at most 8x the time, and 256 KiB in at most 10x what plain paragraphs take.
 WR_TEST(testPathologicalMarkupParsesLinearly) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     const double plain = secondsToParse(repeat("<p>text</p>", 256 * 1024));
     const std::vector<std::string (*)(size_t)> classes = {
         [](size_t n) { return repeat("<div>", n); },

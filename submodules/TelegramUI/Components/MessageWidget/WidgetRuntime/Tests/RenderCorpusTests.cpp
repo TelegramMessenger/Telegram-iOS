@@ -5,7 +5,8 @@
 // - the build path (litehtml's own parse of the render input) and the mirror (Task 10b) paint what the published
 //   document paints;
 // - a widget's image loads reach the container, which refuses every URL, and the host only ever gets decoded bytes.
-// Run with WR_CORPUS_FILES set (the Bazel target does).
+// Each step runs in the harness's slice on its fake clock, which stops only a runaway. Run with WR_CORPUS_FILES set (the
+// Bazel target does).
 #include <malloc/malloc.h>
 #include <pthread.h>
 
@@ -39,10 +40,6 @@ namespace {
 
 using wr_test::RenderEnv;
 
-/// CorpusBootTests.cpp's caps: the boot's (today's parse ceiling plus its boot budget) and the virtual second's (today's
-/// task budget 60 times over), so that only a runaway stops.
-constexpr uint64_t kBootCap = 448000000;
-constexpr uint64_t kSecondCap = 28000000ull * 60;
 constexpr double kWidth = 360;
 
 std::vector<std::string> corpusFiles(bool attacks) {
@@ -74,23 +71,22 @@ std::string shortName(const std::string& file) {
 const char* stopName(wr::StopReason reason) {
     switch (reason) {
     case wr::StopReason::None: return "-";
-    case wr::StopReason::Budget: return "budget";
     case wr::StopReason::Memory: return "memory";
     case wr::StopReason::Internal: return "internal";
     case wr::StopReason::LayoutQuery: return "layout-query";
+    case wr::StopReason::Limit: return "limit";
+    case wr::StopReason::Cpu: return "cpu";
     }
     return "?";
 }
 
-/// Boot (to idle at time 0) then one virtual second, under the caps. Returns false when a drive ran out of steps.
+/// Boot (to idle at time 0) then one virtual second. Returns false when a drive ran out of steps.
 bool run(wr_test::HostEnv& env) {
-    JSRuntime* rt = env.runtime().jsRuntime();
     wr_test::DriveEnd boot = wr_test::driveVirtualTime(env, 0, {}, 1000000);
     if (boot == wr_test::DriveEnd::StepLimit) {
         return false;
     }
     if (env.runtime().stopReason() == wr::StopReason::None) {
-        env.runtime().setWorkLimit(JS_GetWorkUnits(rt) + kSecondCap);
         if (wr_test::driveVirtualTime(env, 1000, {}, 1000000) == wr_test::DriveEnd::StepLimit) {
             return false;
         }
@@ -98,22 +94,19 @@ bool run(wr_test::HostEnv& env) {
     return true;
 }
 
-/// The runtime's boot with no render tree: the control run, and the units the parse alone costs.
+/// The runtime's boot with no render tree: the control run, and the CPU time the parse alone takes.
 struct PlainRun {
     wr::StopReason stop = wr::StopReason::None;
-    uint64_t bootUnits = 0;
+    double bootCpuMs = 0;
 };
 
 PlainRun runWithoutTree(const std::string& html) {
     PlainRun result;
-    uint64_t start = 0;
     wr::BootOptions boot;
     boot.html = html;
-    std::unique_ptr<wr_test::HostEnv> env = wr_test::HostEnv::booted(boot, 1, [&](wr_test::HostEnv& e) {
-        start = JS_GetWorkUnits(e.runtime().jsRuntime());
-        e.runtime().setWorkLimit(start + kBootCap);
-    });
-    result.bootUnits = JS_GetWorkUnits(env->runtime().jsRuntime()) - start;
+    const double start = wr_test::threadCpuMs();
+    std::unique_ptr<wr_test::HostEnv> env = wr_test::HostEnv::booted(boot, 1);
+    result.bootCpuMs = wr_test::threadCpuMs() - start;
     run(*env);
     result.stop = env->runtime().stopReason();
     return result;
@@ -195,7 +188,7 @@ WR_TEST(testCorpusRenders) {
     const std::vector<std::string> files = corpusFiles(false);
     CHECK(files.size() >= 200);
     std::vector<std::string> stopped, stopsOnlyWithTree, skipped, emptyTree, nonImage, buildMismatch, mirrorMismatch;
-    std::vector<uint64_t> firstFlush;
+    std::vector<double> firstFlush;
     size_t parityChecked = 0;
     size_t maxStyleCharge = 0, totalStyleCharge = 0;
     std::string maxStyleFile;
@@ -207,12 +200,9 @@ WR_TEST(testCorpusRenders) {
         const std::string html = readFile(file);
         wr::RenderOptions options;
         options.width = kWidth;
-        uint64_t start = 0, afterBoot = 0;
-        RenderEnv env(html, options, false, [&](wr_test::HostEnv& e) {
-            start = JS_GetWorkUnits(e.runtime().jsRuntime());
-            e.runtime().setWorkLimit(start + kBootCap);
-        });
-        afterBoot = JS_GetWorkUnits(env.env().runtime().jsRuntime());
+        const double start = wr_test::threadCpuMs();
+        RenderEnv env(html, options, false);
+        const double afterBoot = wr_test::threadCpuMs();
         const bool finished = run(env.env());
         if (!finished) {
             std::printf("  %s: a drive ran out of steps\n", name.c_str());
@@ -223,7 +213,7 @@ WR_TEST(testCorpusRenders) {
         } catch (const wr::Aborted&) {
         }
         const wr::StopReason stop = env.env().runtime().stopReason();
-        CHECK(stop == wr::StopReason::None || stop == wr::StopReason::Budget);
+        CHECK(stop == wr::StopReason::None || stop == wr::StopReason::Cpu);
         if (stop != wr::StopReason::None) {
             stopped.push_back(name + " (" + stopName(stop) + ")");
         }
@@ -234,9 +224,8 @@ WR_TEST(testCorpusRenders) {
             stopsOnlyWithTree.push_back(name + " (" + stopName(stop) + ")");
         }
         // The first flush runs inside the boot after the parse, scripts queued; the control's boot is the parse alone.
-        const uint64_t withTree = afterBoot - start;
-        const uint64_t flushUnits = withTree > plain.bootUnits ? withTree - plain.bootUnits : 0;
-        firstFlush.push_back(flushUnits);
+        const double flushCpuMs = std::max(0.0, afterBoot - start - plain.bootCpuMs);
+        firstFlush.push_back(flushCpuMs);
 
         // Edit 21: the style-byte budget. No corpus file may reach it.
         if (env.render().document()) {
@@ -292,11 +281,11 @@ WR_TEST(testCorpusRenders) {
                 wr::WidgetContainer container(env.host(), env.render().options());
                 std::string theirs;
                 {
-                    // The theme's root declarations (twidget edit 26), which the UA layer's values read, as a user rule on the
-                    // root: a parse cannot set them before it finalizes.
+                    // The root's declarations (twidget edit 26: the theme's and the content safe area's), which the UA
+                    // layer's values read, as a user rule on the root: a parse cannot set them before it finalizes.
                     litehtml::document::ptr parsed = litehtml::document::createFromString(
                         litehtml::estring(parseInput), &container, wr::masterWithHostCSS(env.render().options().hostCSS),
-                        "html{" + env.render().options().rootDeclarations + "}");
+                        "html{" + wr::rootDeclarationsOf(env.render().options()) + "}");
                     parsed->render(litehtml::pixel_t(float(env.render().options().width)));
                     theirs = wr::dumpLayout(*parsed);
                 }
@@ -325,7 +314,7 @@ WR_TEST(testCorpusRenders) {
                 }
             }
         }
-        std::printf("%10llu units  %4llu refused  %s%s\n", (unsigned long long)flushUnits,
+        std::printf("%10.3f CPU ms  %4llu refused  %s%s\n", flushCpuMs,
                     (unsigned long long)env.render().refusedLoads(), name.c_str(), parity ? "" : "  (parity skipped)");
     }
 
@@ -348,8 +337,8 @@ WR_TEST(testCorpusRenders) {
         CHECK(hit.starts_with("attacks/"));
     }
     std::printf("\nparity checked on %zu of %zu documents\n", parityChecked, files.size());
-    std::printf("first flush: median %llu units, p90 %llu, max %llu\n", (unsigned long long)percentile(firstFlush, 0.5),
-                (unsigned long long)percentile(firstFlush, 0.9), (unsigned long long)percentile(firstFlush, 1.0));
+    std::printf("first flush: median %.3f CPU ms, p90 %.3f, max %.3f\n", percentile(firstFlush, 0.5), percentile(firstFlush, 0.9),
+                percentile(firstFlush, 1.0));
     // Nothing is skipped silently: a document that cannot survive a re-parse must be named in an explicit list, with its
     // reason, before it may skip parity. Today there is none.
     CHECK(skipped.empty());
@@ -362,6 +351,8 @@ WR_TEST(testCorpusRenders) {
 }
 
 WR_TEST(testDeclarationAmplificationIsMeasured) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // Ruling E13: litehtml copies each declaration's tokens into every element's style, so a large value applied to many
     // elements multiplies. Printed, never asserted on size: the fix is the owner's decision. Each case must build.
     constexpr int kElements = 9000;
@@ -457,6 +448,8 @@ WR_TEST(testDeclarationAmplificationIsMeasured) {
 }
 
 WR_TEST(testPlainDocumentStyleCharge) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // Edit 21's measurement: what a plainly styled 10,000-element document charges (it sizes the budget).
     const std::string css =
         "* { margin:0; padding:0; box-sizing:border-box }"
@@ -484,17 +477,13 @@ WR_TEST(testPlainDocumentStyleCharge) {
 WR_TEST(testAttackCorpusLoadsNothing) {
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
     const std::vector<std::string> files = corpusFiles(true);
-    CHECK_EQ(files.size(), size_t(105));
+    CHECK_EQ(files.size(), size_t(110));
     std::set<std::string> seen;
     for (const std::string& file : files) {
         const std::string name = shortName(file);
         wr::RenderOptions options;
         options.width = kWidth;
-        uint64_t start = 0;
-        RenderEnv env(readFile(file), options, false, [&](wr_test::HostEnv& e) {
-            start = JS_GetWorkUnits(e.runtime().jsRuntime());
-            e.runtime().setWorkLimit(start + kBootCap);
-        });
+        RenderEnv env(readFile(file), options, false);
         bool finished = wr_test::driveVirtualTime(env.env(), 1000, {}, 1000000) != wr_test::DriveEnd::StepLimit;
         CHECK(finished);
         try {

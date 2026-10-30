@@ -1,4 +1,4 @@
-// The runtime's M1b hooks (M1b plan, Task 5): extension slots, the host, the work limit and its latch, script depth
+// The runtime's M1b hooks (M1b plan, Task 5): extension slots, the host, the CPU stop and its latch, script depth
 // and the cleanup hook, calls into JS, uncaught exceptions, out of memory, and the document through DOMState.
 #include <cstdint>
 #include <cstdio>
@@ -88,7 +88,7 @@ JSValue throwBadAlloc(JSContext* ctx, JSValueConst, int, JSValueConst*) {
 }
 
 /// globalThis.throwUncatchable(): a native that leaves an uncatchable error pending without latching anything, as
-/// BindingTests' interrupting list does. Nothing in the runtime does that (the budget's interrupt latches first), so
+/// BindingTests' interrupting list does. Nothing in the runtime does that (its interrupt latches first), so
 /// an uncatchable error with work left is an internal failure.
 JSValue throwUncatchable(JSContext* ctx, JSValueConst, int, JSValueConst*) {
     return wr::glue(ctx, [&]() -> JSValue {
@@ -125,12 +125,12 @@ JSValue tick(JSContext* ctx, JSValueConst, int, JSValueConst*) {
     return JS_UNDEFINED;
 }
 
-/// globalThis.limitWorkTo(n): the work limit n units from now, so a stop lands inside what the script does next.
-JSValue limitWorkTo(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+/// globalThis.stopAfter(n): the CPU deadline n fake milliseconds (interrupt checks) from now, so a stop lands inside what
+/// the script does next.
+JSValue stopAfterNative(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     int32_t n = 0;
     JS_ToInt32(ctx, &n, argc > 0 ? argv[0] : JS_UNDEFINED);
-    wr::Runtime& runtime = wr::Runtime::from(ctx);
-    runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + uint64_t(n));
+    wr_test::stopAfter(wr::Runtime::from(ctx), double(n));
     return JS_UNDEFINED;
 }
 
@@ -203,9 +203,9 @@ Outcome evaluate(wr::Runtime& runtime, const char* code) {
     }
 }
 
-/// A runtime whose work limit trips 200,000 units from now.
+/// A runtime whose CPU slice ends 200 fake milliseconds from now.
 void limitWork(wr_test::DOMEnv& env) {
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 200000);
+    wr_test::stopAfter(env.runtime());
 }
 
 } // namespace
@@ -236,25 +236,25 @@ WR_TEST(testTheDocumentComesFromDOMState) {
     CHECK_JS(env, "new DocumentFragment().ownerDocument === document");
 }
 
-WR_TEST(testTheWorkLimitStopsScriptsForGood) {
+WR_TEST(testTheCpuLimitStopsScriptsForGood) {
     wr_test::TestHost host;
     wr_test::DOMEnv env(host);
     wr::Runtime& runtime = env.runtime();
-    runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 200000);
+    wr_test::stopAfter(runtime);
     CHECK(aborts(runtime, "for (;;) {}"));
-    CHECK(runtime.stopReason() == wr::StopReason::Budget);
-    // Latched: a higher limit does not revive it, and nothing runs.
-    runtime.setWorkLimit(UINT64_MAX);
+    CHECK(runtime.stopReason() == wr::StopReason::Cpu);
+    // Latched: a new slice does not revive it, and nothing runs.
+    wr_test::stopAfter(runtime, 1e9);
     CHECK(aborts(runtime, "globalThis.ran = true"));
     CHECK(JS_IsUndefined(global(env.ctx(), "ran").get()));
-    CHECK(runtime.stopReason() == wr::StopReason::Budget);
+    CHECK(runtime.stopReason() == wr::StopReason::Cpu);
 }
 
-WR_TEST(testTryCatchCannotSwallowTheBudget) {
+WR_TEST(testTryCatchCannotSwallowTheStop) {
     wr_test::TestHost host;
     wr_test::DOMEnv env(host);
     wr::Runtime& runtime = env.runtime();
-    runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 200000);
+    wr_test::stopAfter(runtime);
     CHECK(aborts(runtime, "try { for (;;) {} } catch (e) { globalThis.caught = true } globalThis.after = true"));
     CHECK(JS_IsUndefined(global(env.ctx(), "caught").get()));
     CHECK(JS_IsUndefined(global(env.ctx(), "after").get()));
@@ -278,7 +278,7 @@ WR_TEST(testCallFunctionHasThreeOutcomes) {
     CHECK(env.runtime().stopReason() == wr::StopReason::None);
 
     wr::Value loop = evalValue(ctx, "(() => { for (;;) {} })");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 200000);
+    wr_test::stopAfter(env.runtime());
     bool aborted = false;
     try {
         wr::callFunction(ctx, loop.get(), JS_UNDEFINED, 0, nullptr);
@@ -286,7 +286,7 @@ WR_TEST(testCallFunctionHasThreeOutcomes) {
         aborted = true;
     }
     CHECK(aborted);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
 }
 
 WR_TEST(testCallInterfaceFollowsWebIDL) {
@@ -336,7 +336,7 @@ WR_TEST(testTheCleanupHookRunsWhenTheOutermostScriptReturns) {
     CHECK_EQ(recorder->afterScripts, 2);
 
     // A stop runs no cleanup.
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 200000);
+    wr_test::stopAfter(env.runtime());
     CHECK(aborts(env.runtime(), "callThrough(() => { for (;;) {} })"));
     CHECK_EQ(recorder->afterScripts, 2);
     CHECK_EQ(env.runtime().scriptDepth(), 0);
@@ -405,24 +405,6 @@ WR_TEST(testTheUncaughtExceptionLogIsCut) {
     CHECK(env.runtime().stopReason() == wr::StopReason::None);
 }
 
-WR_TEST(testARopeIsChargedBeforeItIsFlattened) {
-    // Flattening a thrown rope copies all of it, and QuickJS notices the allocation only at its next poll. The report
-    // charges the length first, so a rope the budget cannot pay for stops the widget before the copy. (An object whose
-    // toString returns a rope is flattened inside JS_ToString, QuickJS's own conversion, which counts the allocation
-    // itself: not charged here.)
-    wr_test::TestHost host;
-    wr_test::DOMEnv env(host);
-    CHECK(env.runtime().runScript("var big = 'x'.repeat(1 << 20) + '!'", "<setup>", false));
-    // `big` is a rope, not a flat string: a flat one would never be flattened.
-    JSStringView view{nullptr, nullptr, 0};
-    CHECK(!JS_GetStringView(global(env.ctx(), "big").get(), &view));
-    // Room for the script, not for the 131,072 units of the rope's scan.
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 50000);
-    CHECK(run(env.runtime(), "throw big") == Outcome::Aborted);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    CHECK(host.logs.empty());
-}
-
 WR_TEST(testOutOfMemoryStopsTheRuntime) {
     wr_test::TestHost host;
     wr_test::DOMEnv env(host);
@@ -458,21 +440,14 @@ WR_TEST(testOutOfMemoryStopsAtEveryLimit) {
 WR_TEST(testOutOfMemoryCannotBeCaught) {
     // QuickJS's out-of-memory error is an ordinary error, but the allocator latched the stop when it refused (quickjs-ng
     // change 9), and from then on no exception can be caught (change 10): the catch does not run, and the widget stops
-    // there, long before its work limit would.
+    // there, with no other limit.
     wr_test::TestHost host;
     wr_test::DOMEnv env(host);
     wr::Runtime& runtime = env.runtime();
     JS_SetMemoryLimit(runtime.jsRuntime(), size_t(32) << 20);
-    uint64_t start = JS_GetWorkUnits(runtime.jsRuntime());
-    runtime.setWorkLimit(start + 10000000);
     CHECK(run(runtime, "try { new ArrayBuffer(256 << 20) } catch (e) { globalThis.caught = true } for (;;) {}") == Outcome::Aborted);
     CHECK(runtime.stopReason() == wr::StopReason::Memory);
     CHECK(JS_IsUndefined(global(env.ctx(), "caught").get()));
-    uint64_t spent = JS_GetWorkUnits(runtime.jsRuntime()) - start;
-    if (spent >= 10000) {
-        std::printf("  %llu units spent\n", (unsigned long long)spent);
-    }
-    CHECK(spent < 10000);
 }
 
 WR_TEST(testOutOfMemoryInAPromiseStops) {
@@ -510,7 +485,6 @@ WR_TEST(testAStopIsNotCaughtWhenItsErrorCannotBeBuilt) {
     wr_test::DOMEnv env(host);
     wr::Runtime& runtime = env.runtime();
     runtime.setGlobal("squeezeMemory", JS_NewCFunction(env.ctx(), squeezeMemory, "squeezeMemory", 0));
-    runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 50000000);
     // The globals exist before the squeeze: assigning them allocates nothing.
     CHECK(run(runtime, "var n = 0, caught = 0; squeezeMemory(); try { new ArrayBuffer(1024) } catch (e) { caught++ }"
                        " for (let i = 0; i < 100000; i++) { try { for (;;) {} } catch (e) { n++ } }") == Outcome::Aborted);
@@ -523,8 +497,10 @@ WR_TEST(testDisposalEndsAtTheStop) {
     // A disposal calls every remaining disposer, collecting their exceptions; once a stop is latched the first disposer to
     // throw ends it (quickjs-ng change 10): in a DisposableStack (also through `using`) and in a scope's `using`
     // declarations. Before that a stack of 100,000 defers ran millions of units past its budget's stop.
+    // QuickJS polls its interrupt every 10,000 calls and jumps (stock quickjs-ng since the CPU-clock limits plan's
+    // Task 2), so the scope's disposers are more than that many.
     std::string scope = "function scope() { using a0 = d";
-    for (int i = 1; i < 1000; i++) {
+    for (int i = 1; i < 20000; i++) {
         scope += ", a" + std::to_string(i) + " = d";
     }
     scope += "; }";
@@ -536,34 +512,31 @@ WR_TEST(testDisposalEndsAtTheStop) {
     const std::string stack = "var s = new DisposableStack(); for (let i = 0; i < 100000; i++) s.defer(tick)";
     const std::string declarations = "var d = { [Symbol.dispose]: tick }; " + scope;
     const Case cases[] = {
-        {stack.c_str(), "limitWorkTo(500); s.dispose()", 100000},
-        {stack.c_str(), "limitWorkTo(500); { using t = s; }", 100000},
-        {declarations.c_str(), "limitWorkTo(5); scope()", 1000},
+        {stack.c_str(), "stopAfter(1); s.dispose()", 100000},
+        {stack.c_str(), "stopAfter(1); { using t = s; }", 100000},
+        {declarations.c_str(), "stopAfter(1); scope()", 20000},
     };
     for (const Case& c : cases) {
         wr_test::TestHost host;
         wr_test::DOMEnv env(host);
         wr::Runtime& runtime = env.runtime();
         runtime.setGlobal("tick", JS_NewCFunction(env.ctx(), tick, "tick", 0));
-        runtime.setGlobal("limitWorkTo", JS_NewCFunction(env.ctx(), limitWorkTo, "limitWorkTo", 1));
+        runtime.setGlobal("stopAfter", JS_NewCFunction(env.ctx(), stopAfterNative, "stopAfter", 1));
         CHECK(run(runtime, c.setup) == Outcome::Completed);
         g_ticks = Ticks{};
         CHECK(run(runtime, c.dispose) == Outcome::Aborted);
-        CHECK(runtime.stopReason() == wr::StopReason::Budget);
+        CHECK(runtime.stopReason() == wr::StopReason::Cpu);
         // The stop landed inside the disposal, and at most one disposer ran after it.
         CHECK(g_ticks.calls > 0 && g_ticks.calls < c.total);
         CHECK(g_ticks.afterStop <= 1);
-        uint64_t past = JS_GetWorkUnits(runtime.jsRuntime()) - runtime.workLimit();
-        if (g_ticks.afterStop > 1 || past >= 1000) {
-            std::printf("  `%s`: %d of %d disposers ran, %d after the stop, %llu units past the limit\n", c.dispose, g_ticks.calls,
-                        c.total, g_ticks.afterStop, (unsigned long long)past);
+        if (g_ticks.afterStop > 1 || g_ticks.calls >= c.total) {
+            std::printf("  `%s`: %d of %d disposers ran, %d after the stop\n", c.dispose, g_ticks.calls, c.total, g_ticks.afterStop);
         }
-        CHECK(past < 1000);
     }
 }
 
-WR_TEST(testABudgetStopIsNotCaught) {
-    // The budget's interrupt cannot be caught: with memory to spare it is QuickJS's uncatchable error; with none (the
+WR_TEST(testACpuStopIsNotCaught) {
+    // The slice's interrupt cannot be caught: with memory to spare it is QuickJS's uncatchable error; with none (the
     // squeeze) it is bare null, which only the latch's stop makes uncatchable (quickjs-ng change 10). Before that change
     // the squeezed loop caught every poll.
     for (bool squeeze : {false, true}) {
@@ -571,11 +544,11 @@ WR_TEST(testABudgetStopIsNotCaught) {
         wr_test::DOMEnv env(host);
         wr::Runtime& runtime = env.runtime();
         runtime.setGlobal("squeezeMemory", JS_NewCFunction(env.ctx(), squeezeMemory, "squeezeMemory", 0));
-        runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 100000);
+        wr_test::stopAfter(runtime);
         std::string script = std::string("var n = 0; ") + (squeeze ? "squeezeMemory(); " : "") +
                              "for (let i = 0; i < 100000; i++) { try { for (;;) {} } catch (e) { n++ } }";
         CHECK(run(runtime, script.c_str()) == Outcome::Aborted);
-        CHECK(runtime.stopReason() == wr::StopReason::Budget);
+        CHECK(runtime.stopReason() == wr::StopReason::Cpu);
         CHECK_EQ(globalInt(runtime, "n"), 0);
     }
 }
@@ -601,9 +574,9 @@ WR_TEST(testNativeOutOfMemoryCannotBeCaught) {
     CHECK(JS_IsUndefined(global(env.ctx(), "caught").get()));
 }
 
-WR_TEST(testAnUncatchableErrorWithWorkLeftIsInternal) {
-    // One classifier serves every path that latches on an exception (PF5): out of memory is Memory, an uncatchable
-    // error is Budget only when the work limit is spent, and otherwise Internal.
+WR_TEST(testAnUncatchableErrorWithoutALatchIsInternal) {
+    // One classifier serves every path that latches on an exception (PF5): out of memory is Memory, a stop latched at
+    // the interrupt keeps its own reason, and any other uncatchable error is Internal.
     {
         // An exception a script's evaluation ends with (runScript).
         wr_test::TestHost host;
@@ -644,7 +617,7 @@ WR_TEST(testAnUncatchableErrorWithWorkLeftIsInternal) {
 }
 
 WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
-    // A Promise executor that the budget stops: the stop propagates (quickjs-ng change 8), so nothing after the
+    // A Promise executor that the CPU slice stops: the stop propagates (quickjs-ng change 8), so nothing after the
     // constructor runs. stackTraceLimit 0: otherwise the backtrace's allocation re-arms the poll and stops it by
     // accident.
     const char* executor = "Error.stackTraceLimit = 0; new Promise(() => { for (;;) {} }); globalThis.after = true";
@@ -656,7 +629,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr_test::DOMEnv env(host);
         limitWork(env);
         CHECK(run(env.runtime(), executor) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
         CHECK(JS_IsUndefined(global(env.ctx(), "after").get()));
     }
     {
@@ -664,7 +637,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr_test::DOMEnv env(host);
         limitWork(env);
         CHECK(run(env.runtime(), tried) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
         CHECK_EQ(env.runtime().scriptDepth(), 0);
     }
     {
@@ -672,7 +645,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr_test::DOMEnv env(host);
         limitWork(env);
         CHECK(run(env.runtime(), "for (;;) {}", true) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     }
     {
         wr_test::TestHost host;
@@ -681,7 +654,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr::Value viaExecutor = evalValue(ctx, (std::string("(() => { ") + executor + " })").c_str());
         limitWork(env);
         CHECK(call(ctx, viaExecutor.get()) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
         CHECK(JS_IsUndefined(global(ctx, "after").get()));
     }
     {
@@ -691,7 +664,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr::Value viaTry = evalValue(ctx, (std::string("(() => { ") + tried + " })").c_str());
         limitWork(env);
         CHECK(call(ctx, viaTry.get()) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
         CHECK_EQ(env.runtime().scriptDepth(), 0);
     }
     {
@@ -700,7 +673,7 @@ WR_TEST(testAStopThatAPromiseSwallowedStillAborts) {
         wr_test::DOMEnv env(host);
         limitWork(env);
         CHECK(evaluate(env.runtime(), tried) == Outcome::Aborted);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
         CHECK_EQ(env.runtime().scriptDepth(), 0);
     }
 }
@@ -763,7 +736,7 @@ WR_TEST(testAStoppedRuntimeCallsNothing) {
     JSContext* ctx = env.ctx();
     wr::Value f = evalValue(ctx, "(() => { globalThis.called = true })");
     env.runtime().stop(wr::StopReason::Internal);
-    env.runtime().stop(wr::StopReason::Budget);
+    env.runtime().stop(wr::StopReason::Cpu);
     CHECK(env.runtime().stopReason() == wr::StopReason::Internal);
     bool aborted = false;
     try {
@@ -823,9 +796,9 @@ WR_TEST(testThrowIfFatalLatchesOnlyWhatCannotBeCaught) {
         wr_test::TestHost host;
         wr_test::DOMEnv env(host);
         wr::Value error = evalValue(env.ctx(), "new TypeError('t')");
-        env.runtime().stop(wr::StopReason::Budget);
+        env.runtime().stop(wr::StopReason::Cpu);
         CHECK(fatal(env.ctx(), error.get()));
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     }
 }
 

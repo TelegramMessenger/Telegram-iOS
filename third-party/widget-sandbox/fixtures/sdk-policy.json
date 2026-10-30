@@ -1,5 +1,5 @@
 {
-  "_": "Shared fixture for src/shared/sdk-policy.ts, ios SdkPolicy.swift, android SdkPolicy.kt and desktop sdk_policy.cpp (copies made by scripts/build-native-bundles.ts). links: checkLink(method, url) → the URL opened or null. haptics: checkHaptic(args). bridge: checkBridgeCall(method, args) → the action (or, for setResizeAnchor, the anchor the host keeps: {kind: \"setResizeAnchor\", edge}; for watchPublicData, whether the widget watches its shared public_data: {kind: \"watchPublicData\", on}) or null. hapticGate: steps on one HapticGate: decide(at, visible) → play | drop | report, or touch down / up: press(at) / release(at), the host's trusted presses. A touch (a finger down, then 5 s after it is lifted) lets haptics through under the rate limit; outside one the first call opens a series whose first second passes, the next series needs a touch or 10 s since the last began; a press with no release counts as lifted 30 s after it began. themeParams: checkThemeParams(input). locales: checkLocale(input). storage: checkStorageCommit(input) → the commit or null; strings in `repeat` are expanded (s repeated n times) before the check. utf8: utf8Length(s). The bot's data and requests: bridge has request ([id, data]: id 1–2147483647, data 1–64 UTF-8 bytes) and copyText ([text]: 1–256 UTF-16 code units). widgetData: checkWidgetData(input, copy) → {chatData, publicData, rejected}: each field text of 1–1024 UTF-8 bytes without a NUL or null, the empty string null, a broken field null and listed in rejected (chatData then publicData), a copy drops chatData without listing it. viewer: checkViewer(input) → {viewer, rejected}: the input and the viewer have the widget's field names (Mini Apps' WebAppUser: id, first_name, last_name, username, is_premium); no viewer (null) without an integer id of 1 to 2^53 − 1; a name is 1–64 UTF-16 code units, a username 5–32 characters of A–Z, a–z, 0–9 and _, is_premium kept only when true; a field that breaks its rule is left out and listed in rejected (first_name, last_name, username, is_premium); strings in `repeat` are expanded. chatType: checkChatType(input). answers: checkRequestAnswer(input) → {result} or null when result is over 1024 bytes or has a NUL (an absent result is null). requestGate: steps on one RequestGate, decide(at, {gesture, visible, canQuery, backgroundQuery}) → foreground | background | disabled | busy | no-activation | hidden | rate-limited, finish(), or show() (the widget appeared on screen: its next background request may go out at once). requestRefusals: requestRefusal(verdict) → the error code or null. previewMethods: allowedInPreview(method) → whether a preview (an inline result not sent yet) may make that bridge call: only ready and setResizeAnchor (a preview never watches its public_data). Inputs here are typed as the native hosts take them (strings or null, integer ids). No lone surrogates here: they cannot cross every platform's string type unchanged.",
+  "_": "Shared fixture for src/shared/sdk-policy.ts, ios SdkPolicy.swift, android SdkPolicy.kt and desktop sdk_policy.cpp (copies made by scripts/build-native-bundles.ts). links: checkLink(method, url) → the URL opened or null. haptics: checkHaptic(args). bridge: checkBridgeCall(method, args) → the action (or, for setResizeAnchor, the anchor the host keeps: {kind: \"setResizeAnchor\", edge}; for watchPublicData, whether the widget watches its shared public_data: {kind: \"watchPublicData\", on}) or null. hapticGate: steps on one HapticGate: decide(at, visible) → play | drop | report, or touch down / up: press(at) / release(at), the host's trusted presses. A touch (a finger down, then 5 s after it is lifted) lets haptics through under the rate limit; outside one the first call opens a series whose first second passes, the next series needs a touch or 10 s since the last began; a press with no release counts as lifted 30 s after it began. themeParams: checkThemeParams(input). locales: checkLocale(input). storage: checkStorageCommit(input) → the commit or null; strings in `repeat` are expanded (s repeated n times) before the check. utf8: utf8Length(s). The bot's data and requests: bridge has request ([id, data]: id 1–2147483647, data 1–64 UTF-8 bytes) and copyText ([text]: 1–256 UTF-16 code units). widgetData: checkWidgetData(input, copy) → {chatData, publicData, rejected}: each field text of 1–1024 UTF-8 bytes without a NUL or null, the empty string null, a broken field null and listed in rejected (chatData then publicData), a copy drops chatData without listing it. viewer: checkViewer(input) → {viewer, rejected}: the input and the viewer have the widget's field names (Mini Apps' WebAppUser: id, first_name, last_name, username, is_premium); no viewer (null) without an integer id of 1 to 2^53 − 1; a name is 1–64 UTF-16 code units, a username 5–32 characters of A–Z, a–z, 0–9 and _, is_premium kept only when true; a field that breaks its rule is left out and listed in rejected (first_name, last_name, username, is_premium); strings in `repeat` are expanded. chatType: checkChatType(input). answers: checkRequestAnswer(input) → {result} or null when result is over 1024 bytes or has a NUL (an absent result is null). requestGate: steps on one RequestGate, decide(at, {gesture, visible, canQuery, backgroundQuery}) → foreground | background | held | disabled | busy | no-activation | rate-limited, finish(), or show(at) → expect (the widget appeared on screen: its next background request may go out at once; true when the request held while it was off screen goes out now). requestRefusals: requestRefusal(verdict) → the error code or null. previewMethods: allowedInPreview(method) → whether a preview (an inline result not sent yet) may make that bridge call: only ready and setResizeAnchor (a preview never watches its public_data). Inputs here are typed as the native hosts take them (strings or null, integer ids). No lone surrogates here: they cannot cross every platform's string type unchanged.",
   "links": [
     { "method": "openLink", "url": "https://example.com/", "expect": "https://example.com/" },
     { "method": "openLink", "url": "https://example.com", "expect": "https://example.com" },
@@ -701,7 +701,7 @@
           "k": {
             "repeat": [
               "x",
-              16383
+              4095
             ]
           }
         }
@@ -711,12 +711,12 @@
           "k": {
             "repeat": [
               "x",
-              16383
+              4095
             ]
           }
         }
       },
-      "note": "1 + 16383 = 16384 bytes"
+      "note": "1 + 4095 = 4096 bytes"
     },
     {
       "input": {
@@ -724,13 +724,13 @@
           "k": {
             "repeat": [
               "x",
-              16384
+              4096
             ]
           }
         }
       },
       "expect": null,
-      "note": "16385 bytes"
+      "note": "4097 bytes"
     },
     {
       "input": {
@@ -738,7 +738,7 @@
           "k": {
             "repeat": [
               "ж",
-              8191
+              2047
             ]
           }
         }
@@ -748,12 +748,12 @@
           "k": {
             "repeat": [
               "ж",
-              8191
+              2047
             ]
           }
         }
       },
-      "note": "1 + 2 × 8191 = 16383 bytes"
+      "note": "1 + 2 × 2047 = 4095 bytes"
     },
     {
       "input": {
@@ -761,13 +761,13 @@
           "kk": {
             "repeat": [
               "ж",
-              8192
+              2048
             ]
           }
         }
       },
       "expect": null,
-      "note": "2 + 2 × 8192 = 16386 bytes"
+      "note": "2 + 2 × 2048 = 4098 bytes"
     },
     {
       "input": {
@@ -775,7 +775,7 @@
           "k": {
             "repeat": [
               "😀",
-              4095
+              1023
             ]
           }
         }
@@ -785,12 +785,12 @@
           "k": {
             "repeat": [
               "😀",
-              4095
+              1023
             ]
           }
         }
       },
-      "note": "1 + 4 × 4095 = 16381 bytes"
+      "note": "1 + 4 × 1023 = 4093 bytes"
     },
     {
       "input": {
@@ -798,13 +798,13 @@
           "k": {
             "repeat": [
               "😀",
-              4096
+              1024
             ]
           }
         }
       },
       "expect": null,
-      "note": "1 + 4 × 4096 = 16385 bytes"
+      "note": "1 + 4 × 1024 = 4097 bytes"
     },
     {
       "input": {
@@ -812,7 +812,7 @@
           "k": {
             "repeat": [
               "x",
-              16000
+              4000
             ]
           }
         },
@@ -820,7 +820,7 @@
           "k": {
             "repeat": [
               "x",
-              16000
+              4000
             ]
           }
         }
@@ -830,7 +830,7 @@
           "k": {
             "repeat": [
               "x",
-              16000
+              4000
             ]
           }
         },
@@ -838,7 +838,7 @@
           "k": {
             "repeat": [
               "x",
-              16000
+              4000
             ]
           }
         }
@@ -920,13 +920,18 @@
   "requestGate": [
     {"name": "a tap: one request in flight, the next tap after the answer", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}, {"op": "decide", "at": 10, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "busy"}, {"op": "finish"}, {"op": "decide", "at": 20, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}]},
     {"name": "no tap and no backgroundQuery (a group, via bot, a live copy): refused", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}]},
-    {"name": "backgroundQuery: visible only, one per 5 s from the start of the last", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 4999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5000, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "hidden"}, {"op": "decide", "at": 5000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "decide", "at": 6000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "decide", "at": 6000, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "foreground"}, {"op": "finish"}, {"op": "decide", "at": 9999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 10000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
+    {"name": "backgroundQuery: visible only, one per 5 s from the start of the last", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 4999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "decide", "at": 6000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "decide", "at": 6000, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "foreground"}, {"op": "finish"}, {"op": "decide", "at": 9999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 10000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
     {"name": "no canQuery (sent without allow_queries, or a copy of one sent without fwd_allow_queries): never, with a tap or without", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": true, "canQuery": false, "backgroundQuery": false, "expect": "disabled"}, {"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": false, "backgroundQuery": true, "expect": "disabled"}]},
-    {"name": "a tap on a hidden widget is no tap", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": false, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 0, "gesture": true, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "hidden"}]},
+    {"name": "a tap on a hidden widget is no tap", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": false, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 0, "gesture": true, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}]},
     {"name": "a refused request leaves nothing in flight", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 1, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}]},
     {"name": "busy before the background rules; a tap's request does not count toward the interval", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "foreground"}, {"op": "decide", "at": 100, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "decide", "at": 100, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
-    {"name": "the widget appears on screen: its next background request goes out at once, then one per 5 s", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 1000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "show"}, {"op": "decide", "at": 1000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 2000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 6000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
-    {"name": "show changes nothing in flight, without canQuery or without backgroundQuery", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}, {"op": "show"}, {"op": "decide", "at": 10, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "show"}, {"op": "decide", "at": 20, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "show"}, {"op": "decide", "at": 30, "gesture": false, "visible": true, "canQuery": false, "backgroundQuery": true, "expect": "disabled"}]}
+    {"name": "the widget appears on screen: its next background request goes out at once, then one per 5 s", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 1000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "show", "at": 1000, "expect": false}, {"op": "decide", "at": 1000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 2000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5999, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 6000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
+    {"name": "show changes nothing in flight, without canQuery or without backgroundQuery", "steps": [{"op": "decide", "at": 0, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}, {"op": "show", "at": 5, "expect": false}, {"op": "decide", "at": 10, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "show", "at": 15, "expect": false}, {"op": "decide", "at": 20, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "show", "at": 25, "expect": false}, {"op": "decide", "at": 30, "gesture": false, "visible": true, "canQuery": false, "backgroundQuery": true, "expect": "disabled"}]},
+    {"name": "a background request off screen is held (in flight) and goes out when the widget appears, as that appearance's; then one per 5 s from then", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}, {"op": "decide", "at": 10, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "show", "at": 100, "expect": true}, {"op": "decide", "at": 200, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "decide", "at": 200, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "busy"}, {"op": "finish"}, {"op": "decide", "at": 300, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5099, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 5100, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
+    {"name": "a held request goes out once: a second appearance with nothing held sends nothing, and only frees the next background request", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}, {"op": "show", "at": 10, "expect": true}, {"op": "show", "at": 20, "expect": false}, {"op": "finish"}, {"op": "decide", "at": 30, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 40, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}, {"op": "show", "at": 50, "expect": true}, {"op": "finish"}, {"op": "decide", "at": 60, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}]},
+    {"name": "finish drops a held request (the widget stopped): nothing goes out when it appears", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}, {"op": "finish"}, {"op": "show", "at": 10, "expect": false}, {"op": "decide", "at": 20, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]},
+    {"name": "nothing is held without backgroundQuery or canQuery: the hidden request is refused, and an appearance sends nothing", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 0, "gesture": true, "visible": false, "canQuery": true, "backgroundQuery": false, "expect": "no-activation"}, {"op": "decide", "at": 0, "gesture": false, "visible": false, "canQuery": false, "backgroundQuery": true, "expect": "disabled"}, {"op": "show", "at": 10, "expect": false}, {"op": "decide", "at": 20, "gesture": true, "visible": true, "canQuery": true, "backgroundQuery": false, "expect": "foreground"}]},
+    {"name": "held after a visible background request: the interval does not apply off screen, the appearance sends it at once", "steps": [{"op": "decide", "at": 0, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}, {"op": "finish"}, {"op": "decide", "at": 1000, "gesture": false, "visible": false, "canQuery": true, "backgroundQuery": true, "expect": "held"}, {"op": "show", "at": 1500, "expect": true}, {"op": "finish"}, {"op": "decide", "at": 2000, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "rate-limited"}, {"op": "decide", "at": 6500, "gesture": false, "visible": true, "canQuery": true, "backgroundQuery": true, "expect": "background"}]}
   ],
   "requestRefusals": [
     {"verdict": "foreground", "expect": null},
@@ -934,7 +939,7 @@
     {"verdict": "disabled", "expect": "NOT_ALLOWED"},
     {"verdict": "busy", "expect": "BUSY"},
     {"verdict": "no-activation", "expect": "NOT_ALLOWED"},
-    {"verdict": "hidden", "expect": "NOT_ALLOWED"},
+    {"verdict": "held", "expect": null},
     {"verdict": "rate-limited", "expect": "RATE_LIMITED"}
   ],
   "previewMethods": [

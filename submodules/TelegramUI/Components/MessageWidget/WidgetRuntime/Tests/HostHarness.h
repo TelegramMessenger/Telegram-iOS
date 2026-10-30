@@ -86,6 +86,7 @@ public:
 /// Selects HostEnv's booting constructor.
 struct BootTag {};
 
+
 /// A runtime with the DOM, the Window and (Task 9) the loop installed, over a TestHost it owns.
 class HostEnv {
 public:
@@ -94,8 +95,8 @@ public:
     /// (wr::boot): the parse's scripts and "the end" are queued, not run; drain() runs them.
     HostEnv(BootTag, std::string_view html, std::string url = "about:srcdoc", uint64_t randomSeed = 1, wr::ParseLimits limits = {});
     /// A HostEnv whose main document is empty until wr::boot parses options.html into it. `beforeBoot` runs after the
-    /// DOM, the Window and the loop are installed and before the parse: it installs natives, sets host().loader, sets
-    /// a work limit. The scripts and "the end" are queued, and no step has run. (Tasks 17 and 18 boot through this.)
+    /// DOM, the Window and the loop are installed and before the parse: it installs natives, sets host().loader. The
+    /// scripts and "the end" are queued, and no step has run. (Tasks 17 and 18 boot through this.)
     static std::unique_ptr<HostEnv> booted(const wr::BootOptions& options, uint64_t randomSeed = 1,
                                            const std::function<void(HostEnv&)>& beforeBoot = {});
     const wr::ParseOutcome& bootOutcome() const { return m_bootOutcome; }
@@ -130,5 +131,10 @@ private:
     std::unique_ptr<wr::Runtime> m_runtime;
     wr::ParseOutcome m_bootOutcome;
 };
+
+/// The fake clock's natives (testClock()): `burn(ms)`, the widget's JS running `ms`; `render(ms)`, our renderer
+/// working `ms` in a render scope, as a flush does; `query(ms)`, a layout query's flush taking `ms`; `elapse(ms)`, the
+/// host's clock (TestHost::now) moving `ms` within the task.
+void installClockNatives(HostEnv& env);
 
 } // namespace wr_test

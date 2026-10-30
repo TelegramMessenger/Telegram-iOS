@@ -78,8 +78,7 @@ public:
     char16_t at(uint32_t index) const;
     /// The characters, without copying ({nullptr, nullptr, 0} for the default).
     JSStringView view() const;
-    /// Charges work::kScanEightUnits per eight units compared, before comparing (strings of different lengths compare
-    /// nothing). Throws Thrown when the budget stops the widget.
+    /// Compares the characters (strings of different lengths compare nothing).
     bool equals(JSContext* ctx, const String& other) const;
     bool equalsASCII(std::string_view ascii) const;
     bool equalsIgnoringASCIICase(std::string_view ascii) const;
@@ -89,7 +88,7 @@ public:
     std::string utf8() const { return this->utf8Prefix(SIZE_MAX, nullptr); }
     /// UTF-8 for the HTML parser: a lone surrogate becomes one U+FFFD (EF BF BD) rather than WTF-8, which gumbo would
     /// reject byte by byte into three U+FFFD. Same byte count as utf8() for every character (a lone surrogate is three
-    /// bytes either way), so a caller's byte-based precharge is unaffected.
+    /// bytes either way).
     std::string utf8ForParse() const { return this->utf8Prefix(SIZE_MAX, nullptr, true); }
     /// The longest prefix of utf8() that is at most `maxBytes` and ends at a character boundary, converting only that
     /// much; *cut (when given) says whether anything was left out. `replaceLoneSurrogates` makes a lone surrogate one

@@ -1,0 +1,105 @@
+stop -
+drive idle
+bridge ready []
+refused-loads 0
+
+== dom
+<html><head><meta name="tw-bot" content="duel">
+<style></style>
+</head><body><div id="sc"><div id="px" class="pl on"><svg viewBox="0 0 24 24" class="mx k"><path pathLength="1" d="M6.5 6.5l11 11"></path><path pathLength="1" d="M17.5 6.5l-11 11"></path></svg><span class="e">Open</span></div><b id="s">0 : 0</b><div id="po" class="pl"><svg viewBox="0 0 24 24" class="mo k"><circle pathLength="1" cx="12" cy="12" r="6.5" transform="rotate(-90 12 12)"></circle></svg><span class="e">Open</span></div></div>
+<div id="tl" class=""><svg viewBox="0 0 24 24" class="mx k"><path pathLength="1" d="M6.5 6.5l11 11"></path><path pathLength="1" d="M17.5 6.5l-11 11"></path></svg>Tap any cell to play</div>
+<div id="bd"><div id="g"><button></button><button></button><button></button><button></button><button></button><button></button><button></button><button></button><button></button></div><svg viewBox="0 0 300 300"><path id="gr" d="M100 8v284M200 8v284M8 100h284M8 200h284"></path><line id="wl" pathLength="1" class="x"></line></svg></div>
+<button id="rm" class="x">Rematch<small id="rs"></small></button>
+<button id="pb" class="x">Play your own: @undefined</button>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 366.25
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 12 332 340.25
+    div 14 12 332 34.25
+      div 23 19 120 20.25
+        -tag-before 14 12 138 34.25
+        svg 23 19.125 20 20
+          path 0 0 0 0
+          path 0 0 0 0
+        span 50 19 32 20.25
+      b 160 14.275 40 29.7
+      div 217 19 120 20.25
+        -tag-before 208 12 138 34.25
+        svg 317 19.125 20 20
+          circle 0 0 0 0
+        span 278 19 32 20.25
+    div 14 58.25 332 22
+      svg 89 61.25 16 16
+        path 0 0 0 0
+        path 0 0 0 0
+    div 48 88.25 264 264
+      div 48 88.25 264 264
+        button 48 88.25 88 88
+        button 136 88.25 88 88
+        button 224 88.25 88 88
+        button 48 176.25 88 88
+        button 136 176.25 88 88
+        button 224 176.25 88 88
+        button 48 264.25 88 88
+        button 136 264.25 88 88
+        button 224 264.25 88 88
+      svg 48 88.25 264 264
+        path 0 0 0 0
+        line 0 0 0 0
+    button 0 0 0 0
+      small 0 0 0 0
+    button 0 0 0 0
+
+== paint
+root 360x366.25 items=30
+  set-clip bounds=(89,61.25,16,16) pos=(89,61.25,16,16) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(89,61.25,16,16)
+    group opacity=1 matrix=(0.666667,0,0,0.666667,89,61.25) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-0.5,-0.5,25,25) ops=(0,1) points=(6.5,6.5,17.5,17.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#3390ecff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-0.5,-0.5,25,25) ops=(0,1) points=(17.5,6.5,6.5,17.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#3390ecff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(152,12,24,32) pos=(160,20,8,16) color=#000000ff text="0" font=f1 glyphs=1 advance=8
+  text bounds=(168,12,24,32) pos=(176,20,8,16) color=#000000ff text=":" font=f1 glyphs=1 advance=8
+  text bounds=(184,12,24,32) pos=(192,20,8,16) color=#000000ff text="0" font=f1 glyphs=1 advance=8
+  text bounds=(103,53,40,32) pos=(111,61,24,16) color=#000000ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(135,53,40,32) pos=(143,61,24,16) color=#000000ff text="any" font=f2 glyphs=3 advance=24
+  text bounds=(167,53,48,32) pos=(175,61,32,16) color=#000000ff text="cell" font=f2 glyphs=4 advance=32
+  text bounds=(207,53,32,32) pos=(215,61,16,16) color=#000000ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(231,53,48,32) pos=(239,61,32,16) color=#000000ff text="play" font=f2 glyphs=4 advance=32
+  group opacity=0.13 matrix=(1,0,0,1,0,0) backface=0 bounds=(12,10,142,38.25) exact=1
+    solid-fill bounds=(14,12,138,34) layer=(border=(14,12,138,34),radius=(0,0,0,0,0,0,0,0),clip=(14,12,138,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  set-clip bounds=(23,19.125,20,20) pos=(23,19.125,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,19.125,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,23,19.125) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-0.5,-0.5,25,25) ops=(0,1) points=(6.5,6.5,17.5,17.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#3390ecff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-0.5,-0.5,25,25) ops=(0,1) points=(17.5,6.5,6.5,17.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#3390ecff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(50,19,32,20.25) pos=(50,19,32,20.25) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(42,13,48,32) pos=(50,21,32,16) color=#707579ff text="Open" font=f3 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(206,10,142,38.25) exact=1
+    solid-fill bounds=(208,12,138,34) layer=(border=(208,12,138,34),radius=(0,0,0,0,0,0,0,0),clip=(208,12,138,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e53935ff
+  set-clip bounds=(317,19.125,20,20) pos=(317,19.125,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(317,19.125,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,317,19.125) backface=0 bounds=(0,0,24,24) exact=0
+      group opacity=1 matrix=(-4.37114e-08,-1,1,-4.37114e-08,9.53674e-07,24) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-1.5,-1.5,27,27) ops=(0,3,3,3,3,4) points=(18.5,12,18.5,15.5899,15.5899,18.5,12,18.5,8.41015,18.5,5.5,15.5899,5.5,12,5.5,8.41015,8.41015,5.5,12,5.5,15.5899,5.5,18.5,8.41015,18.5,12) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e53935ff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(278,19,32,20.25) pos=(278,19,32,20.25) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(270,13,48,32) pos=(278,21,32,16) color=#707579ff text="Open" font=f3 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(48,88.25,264,264) pos=(48,88.25,264,264) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(48,88.25,264,264)
+    group opacity=1 matrix=(0.88,0,0,0.88,48,88.25) backface=0 bounds=(0,0,300,300) exact=0
+      group opacity=0.35 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(1,1,298,298) ops=(0,1,0,1,0,1,0,1) points=(100,8,100,292,200,8,200,292,8,100,292,100,8,200,292,200) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#707579ff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.88,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f3 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

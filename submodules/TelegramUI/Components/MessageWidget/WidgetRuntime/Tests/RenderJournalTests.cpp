@@ -114,11 +114,12 @@ WR_TEST(testBootBuildsTheParsedMarkup) {
 
 // Spec §5: a first script that never ends still leaves the parsed markup laid out.
 WR_TEST(testHangingFirstScriptLeavesTheParsedMarkup) {
+    wr_test::ScopedProductSlices slices;
     RenderEnv env("<p>parsed</p><script>for(;;){}</script>", {}, false, [](HostEnv& host) {
-        host.runtime().setWorkLimit(JS_GetWorkUnits(host.runtime().jsRuntime()) + 1000000);
+        wr_test::stopAfter(host.runtime());
     });
     env.env().drain();
-    CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.env().runtime().stopReason() == wr::StopReason::Cpu);
     CHECK(env.render().renderInput().find("<p>parsed</p>") != std::string::npos);
     CHECK(hasText(env.render(), "parsed"));
     CHECK_EQ(env.render().buildCount(), uint64_t(1));
@@ -191,6 +192,8 @@ WR_TEST(testFrameMutationsAreFlushed) {
 }
 
 WR_TEST(testDetachedBuildsAreNotJournaled) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kEmpty);
     const uint64_t builds = env.render().buildCount();
     // A div built by script and never attached: spans appended into it, attributes set before and after, text, a
@@ -219,6 +222,8 @@ WR_TEST(testDetachedBuildsAreNotJournaled) {
 }
 
 WR_TEST(testJournalCollapses) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kEmpty);
     const uint64_t builds = env.render().buildCount();
     // Distinct nodes: one div inserted and given attributes is one node, and the body's children another.
@@ -295,6 +300,8 @@ WR_TEST(testStyleTextChangesAreJournaled) {
 // The node the byte budget cut is not mapped (Ruling 7: neither it nor anything after it renders), but its parent is:
 // a change that makes it fit is journaled, and it renders again.
 WR_TEST(testACutNodeComesBack) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env("<!doctype html><p id=a>first</p><p id=b>second</p>");
     CHECK_EQ(env.env().eval("setTimeout(() => document.getElementById('b').title = 'x'.repeat(1100000)); 'ok'"),
              std::string("ok"));
@@ -327,6 +334,7 @@ std::string themeDeclarations(wr::Theme theme) {
 } // namespace
 
 WR_TEST(testAStoppedWidgetKeepsItsLastFlush) {
+    wr_test::ScopedProductSlices slices;
     RenderEnv env("<!doctype html><p id=t>before</p>");
     std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
     const std::string input = env.render().renderInput();
@@ -335,11 +343,9 @@ WR_TEST(testAStoppedWidgetKeepsItsLastFlush) {
     CHECK_EQ(env.env().eval("setTimeout(() => { document.getElementById('t').textContent = 'after';"
                             " document.body.append('more'); for (;;) {} }); 'ok'"),
              std::string("ok"));
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + 1000000);
     env.env().host().now += 1;
     CHECK(env.env().step() == wr::StepResult::Stopped);
-    CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.env().runtime().stopReason() == wr::StopReason::Cpu);
     // The task mutated: the journal has it, and nothing was built from it.
     CHECK(env.render().journalNodes() > 0);
     CHECK(env.render().layerTree() == tree);

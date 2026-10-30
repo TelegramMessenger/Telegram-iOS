@@ -207,21 +207,22 @@ WR_TEST(testDataImagesDecodeOnce) {
         container.endBuild();
         CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore);
 
-        // An image/* data: URL the host cannot decode is asked once, reports no size and is not a refusal.
+        // An image/* data: URL of bytes no decoder takes (widget-sandbox v0.3.0) never reaches the host, reports no
+        // size and is not a refusal.
         container.beginBuild();
         container.load_image("data:image/png;base64,AAEC", nullptr, true);
         container.get_image_size("data:image/png;base64,AAEC", nullptr, size);
         container.endBuild();
         CHECK(isZero(size));
-        CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/png"}));
+        CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png"}));
         CHECK_EQ(container.refusedLoads(), uint64_t(0));
 
         // A GIF: the host is handed the type's essence.
         container.beginBuild();
-        container.get_image_size("data:image/gif;base64,R0lGODlhBQAHAAAAACw=", nullptr, size);
+        container.get_image_size("data:image/gif;base64,R0lGODlhBQAHAAAAACwAAAAABQAHAAACAkwBADs=", nullptr, size);
         CHECK(float(size.width) == 5 && float(size.height) == 7);
         container.endBuild();
-        CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/png", "image/gif"}));
+        CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/gif"}));
     }
     CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore);
 }

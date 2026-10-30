@@ -59,6 +59,8 @@ swift_library(
         "//third-party/widget-sandbox:debug_build": [
             "//third-party/widget-sandbox:WidgetConformanceBundle",
             "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
+            # The renderer stress kit, for Debug Settings' "Run widget stress kit" (widget-sandbox v0.3.0).
+            "//third-party/widget-sandbox:WidgetStressBundle",
         ],
         "//conditions:default": [],
     }),

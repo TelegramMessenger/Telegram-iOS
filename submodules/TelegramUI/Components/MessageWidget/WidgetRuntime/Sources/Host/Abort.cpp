@@ -37,7 +37,7 @@ Ref<AbortSignal> AbortSignal::timeout(JSContext* ctx, uint64_t milliseconds) {
     loop.queueTaskAt(deadline, TaskSource::Timer, makeTask(ctx, [held = std::move(held)](JSContext* ctx) {
         auto* target = static_cast<AbortSignal*>(payloadOfKnown(held.get()));
         target->signalAbort(ctx, domException(ctx, "TimeoutError", "signal timed out"));
-    }));
+    }), TaskKind::Timer);
     return signal;
 }
 

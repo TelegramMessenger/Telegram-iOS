@@ -16,7 +16,6 @@
 #include "Sources/Host/TelegramWidget.h"
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -55,7 +54,6 @@ std::string keyword(JSContext* ctx, const Element& element, std::string_view nam
         return std::string();
     }
     std::string text = value->utf8();
-    chargeScan(ctx, text.size());
     size_t begin = text.find_first_not_of(" \t\n\f\r");
     size_t end = text.find_last_not_of(" \t\n\f\r");
     if (begin == std::string::npos) {
@@ -112,7 +110,6 @@ void forEachInGroup(JSContext* ctx, Element& radio, F visit) {
         root = parent;
     }
     for (Node* n = root; n; n = n->nextInTreeOrder(root)) {
-        charge(ctx, work::kNodeVisit);
         if (!n->isElement() || n == &radio) {
             continue;
         }
@@ -356,7 +353,6 @@ void runActivation(JSContext* ctx, HTMLElement& element, Event& event) {
         if (!href) {
             return;
         }
-        chargeScan(ctx, href->length());
         // SDK v1 §2.5: by host to openTelegramLink or openLink, as the press allows; a fragment does nothing.
         followAnchor(ctx, *href);
         return;
@@ -370,7 +366,6 @@ void runActivation(JSContext* ctx, HTMLElement& element, Event& event) {
             }
         } else {
             for (Node* n = element.firstChildNode(); n; n = n->nextInTreeOrder(&element)) {
-                charge(ctx, work::kNodeVisit);
                 if (n->isElement() && isLabelable(ctx, static_cast<Element&>(*n))) {
                     control = static_cast<Element*>(n);
                     break;

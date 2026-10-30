@@ -132,17 +132,6 @@ WR_TEST(testARootMadeByAGetterStaysAlive) {
     CHECK_EQ(env.env().eval("io.root.id"), std::string("made"));
 }
 
-namespace {
-
-uint64_t unitsOf(RenderEnv& env, const char* code) {
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().eval(code);
-    return JS_GetWorkUnits(rt) - before;
-}
-
-} // namespace
-
 /// The final review's I1: an option that cannot be valid is refused before it is copied into native memory: a
 /// rootMargin past its longest form, a threshold that is not a finite number (WebIDL's restricted double: TypeError).
 WR_TEST(testAHugeRootMarginOrThresholdIsRefusedEarly) {
@@ -150,10 +139,8 @@ WR_TEST(testAHugeRootMarginOrThresholdIsRefusedEarly) {
     env.env().eval("window.margin = '0 '.repeat(100000); window.holes = []; holes.length = 1000000; 1");
     CHECK_EQ(env.env().eval("try { new IntersectionObserver(() => {}, { rootMargin: margin }); 'no' } catch (e) { e.name }"),
              std::string("SyntaxError"));
-    CHECK(unitsOf(env, "try { new IntersectionObserver(() => {}, { rootMargin: margin }); } catch (e) {} 1") < 20000);
     CHECK_EQ(env.env().eval("try { new IntersectionObserver(() => {}, { threshold: holes }); 'no' } catch (e) { e.name }"),
              std::string("TypeError"));
-    CHECK(unitsOf(env, "try { new IntersectionObserver(() => {}, { threshold: holes }); } catch (e) {} 1") < 20000);
     CHECK_EQ(env.env().eval("try { new IntersectionObserver(() => {}, { threshold: NaN }); 'no' } catch (e) { e.name }"),
              std::string("TypeError"));
     CHECK_EQ(env.env().eval("try { new IntersectionObserver(() => {}, { threshold: [0.5, 2] }); 'no' } catch (e) { e.name }"),

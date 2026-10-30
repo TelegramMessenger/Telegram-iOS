@@ -102,6 +102,34 @@ cc_test(
     deps = [":SdkPolicy"],
 )
 
+# widget-sandbox's CPU quota policy, its C++ copy (packages/desktop/sandbox at the vendored tag): WidgetRuntime's event
+# loop decides each step with it (the JS quota and the main-thread window).
+cc_library(
+    name = "CpuBudget",
+    srcs = ["gesture/cpu_budget.cpp"],
+    hdrs = ["gesture/twidget/cpu_budget.h"],
+    strip_include_prefix = "gesture",
+    copts = ["-std=c++20"],
+    visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
+)
+
+# The CPU quota policy against the fixture its four copies share:
+# `./build-input/bazel-9.2.0-darwin-arm64 test //third-party/widget-sandbox:CpuBudgetTests`.
+cc_test(
+    name = "CpuBudgetTests",
+    srcs = [
+        "gesture/CpuBudgetTests.cpp",
+        "gesture/twidget/json.h",
+    ],
+    copts = [
+        "-std=c++20",
+        "-Ithird-party/widget-sandbox/gesture",
+    ],
+    data = ["fixtures/cpu-budget.json"],
+    env = {"WS_CPU_BUDGET": "$(rootpath fixtures/cpu-budget.json)"},
+    deps = [":CpuBudget"],
+)
+
 # The corpus' documents as plain files, for host tests (WidgetRuntime's measurements).
 filegroup(
     name = "CorpusFiles",
@@ -172,6 +200,34 @@ apple_resource_bundle(
         "conformance/manifest.json",
     ]),
     strip_structured_resources_prefixes = ["conformance"],
+    visibility = ["//visibility:public"],
+)
+
+plist_fragment(
+    name = "WidgetStressInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>org.telegram.WidgetStress</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>WidgetStress</string>
+    """
+)
+
+# The renderer stress kit (stress/CLIENTS.md, widget-sandbox v0.3.0): manifest.json and widgets/, at the bundle's root,
+# for MessageWidgetStress's runner in the widget harness and DEBUG app builds' Debug Settings. Never in a release app.
+apple_resource_bundle(
+    name = "WidgetStressBundle",
+    bundle_name = "WidgetStress",
+    infoplists = [":WidgetStressInfoPlist"],
+    structured_resources = glob([
+        "stress/widgets/**",
+        "stress/manifest.json",
+    ]),
+    strip_structured_resources_prefixes = ["stress"],
     visibility = ["//visibility:public"],
 )
 

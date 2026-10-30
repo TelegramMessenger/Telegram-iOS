@@ -85,6 +85,9 @@ void runLink(JSContext* ctx, Link& link) {
         fireEvent(ctx, DOMState::of(ctx).document(), Atom::fromUTF8(ctx, "DOMContentLoaded").get(), true, false);
         return;
     case Phase::Load:
+        // The host's inputs that waited for the load (state changes, the content safe area) run after it, in order
+        // (their tasks queued first, so a catchable error below cannot keep them).
+        HostState::of(ctx).releaseHeldInputs(ctx);
         // The parsed images' load and error first: the window's load waits for them (V5d plan, Task 5).
         fireParsedImageEvents(ctx);
         updateReadiness(ctx, DOMState::of(ctx).document(), DocumentReadiness::Complete);
@@ -127,8 +130,8 @@ std::optional<Link> nextLink(JSContext* ctx, Link link) {
 
 void queueLink(JSContext* ctx, Link link);
 
-/// Queues the link after `link` while the widget runs. Never throws: its own failure (the budget, the memory limit)
-/// latches the stop, as a step's would.
+/// Queues the link after `link` while the widget runs. Never throws: its own failure (the memory limit) latches the
+/// stop, as a step's would.
 void queueNextLink(JSContext* ctx, Link& link) noexcept {
     if (Runtime::from(ctx).stopReason() != StopReason::None) {
         return;
@@ -150,12 +153,16 @@ void queueNextLink(JSContext* ctx, Link& link) noexcept {
 /// survives, cannot end the chain. Never before the work: an async script's task, queued while a parse task prepares
 /// it, must run right after that task, ahead of the next one. Throws as queueTask and makeTask do.
 void queueLink(JSContext* ctx, Link link) {
-    EventLoop::of(ctx).queueTask(TaskSource::DOMManipulation, makeTask(ctx, [link = std::move(link)](JSContext* ctx) mutable {
+    // A script's link runs it: a slice of its own, `script` in a CPU stop's message (upstream's pumpScripts).
+    const TaskSource source =
+        link.phase == Phase::ParserScripts || link.phase == Phase::ScriptsAfterParsing ? TaskSource::Script : TaskSource::DOMManipulation;
+    EventLoop::of(ctx).queueTask(source, makeTask(ctx, [link = std::move(link)](JSContext* ctx) mutable {
         struct QueueNext {
             JSContext* ctx;
             Link& link;
             ~QueueNext() { queueNextLink(ctx, link); }
         } queueNext{ctx, link};
+        EventLoop::of(ctx).markBootLinkStep();
         runLink(ctx, link);
     }));
 }
@@ -187,8 +194,6 @@ ParseOutcome boot(JSContext* ctx, const BootOptions& options) {
             runtime.stop(StopReason::Internal);
             return outcome;
         }
-        // setURL converts the host's URL to a string: charged per byte first.
-        chargeScan(ctx, options.url.size());
         document.setURL(ctx, options.url);
         document.setReadiness(DocumentReadiness::Loading);
         {
@@ -206,11 +211,13 @@ ParseOutcome boot(JSContext* ctx, const BootOptions& options) {
         Scripts scripts{JSAllocator<Ref<HTMLScriptElement>>(JS_GetRuntime(ctx))};
         JSAtom script = DOMState::of(ctx).name(Name::script);
         for (Node* n = document.firstChildNode(); n; n = n->nextInTreeOrder(&document)) {
-            charge(ctx, work::kNodeVisit);
             if (n->isElement() && static_cast<Element*>(n)->hasHTMLName(script) && static_cast<HTMLScriptElement*>(n)->parserInserted()) {
                 scripts.push_back(Ref<HTMLScriptElement>::retain(ctx, static_cast<HTMLScriptElement*>(n)));
             }
         }
+        // Upstream's inputs wait for its boot: the host's state and content safe area changes wait for the load
+        // (HostState::setData, setContentSafeArea).
+        HostState::of(ctx).holdInputsUntilLoad();
         if (scripts.empty()) {
             queueLink(ctx, phaseLink(ctx, Phase::Interactive));
         } else {
@@ -218,8 +225,8 @@ ParseOutcome boot(JSContext* ctx, const BootOptions& options) {
         }
     } catch (...) {
         // Ruling C1: the boot is a step boundary. The parse runs attribute change steps outside any binding call, and
-        // a stop inside them (Aborted), a charge the budget refused (Thrown), the memory limit or any other failure
-        // latches what it means here and ends the boot: nothing reaches the host, and the stopped widget runs nothing.
+        // a stop inside them (Aborted), the memory limit (Thrown, std::bad_alloc) or any other failure latches what it
+        // means here and ends the boot: nothing reaches the host, and the stopped widget runs nothing.
         try {
             abortForCaughtException(ctx);
         } catch (const Aborted&) {

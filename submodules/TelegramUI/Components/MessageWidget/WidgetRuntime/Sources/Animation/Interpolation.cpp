@@ -8,7 +8,6 @@
 
 #include "Sources/Animation/CSSText.h"
 #include "Sources/Animation/Easing.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::animation {
 
@@ -431,28 +430,19 @@ std::string scaled(std::string_view value, double factor) {
 } // namespace
 
 std::string interpolate(JSContext* ctx, std::string_view a, std::string_view b, double t) {
-    chargeScan(ctx, a.size() + b.size());
     return mix(a, b, t);
 }
 
 std::string compositeValue(JSContext* ctx, std::string_view property, std::string_view underlying, std::string_view value, bool accumulate) {
-    chargeScan(ctx, underlying.size() + value.size());
     return add(property, underlying, value, accumulate);
 }
 
 std::string scaledValue(JSContext* ctx, std::string_view value, double factor) {
-    chargeScan(ctx, value.size());
     return scaled(value, factor);
 }
 
 std::string effectValue(JSContext* ctx, std::span<const PropertyFrame> input, std::string_view property, double progress,
                         double iteration, Composite effectComposite, bool accumulateIterations, std::string_view underlying) {
-    uint64_t bytes = underlying.size();
-    for (const PropertyFrame& f : input) {
-        bytes += f.value ? f.value->size() : 0;
-    }
-    // Each value is normalised, tokenized and combined a few times; charged once per pass.
-    chargeScan(ctx, 4 * bytes);
     if (input.empty()) {
         return std::string(underlying);
     }

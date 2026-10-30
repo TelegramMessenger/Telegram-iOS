@@ -106,8 +106,8 @@ T.step(function () {
   T.ok('css.value.content', 'counters: counter-reset / increment / counter()', W('#cnt-last') > 4 && CS('#cnt-last', 'content', '::before') !== 'none', CS('#cnt-last', 'content', '::before'));
   T.ok('css.value.content', 'quotes', /«/.test(CS('#quotes', 'quotes')), CS('#quotes', 'quotes'));
 
-  var env = W('#env');
-  T.ok('css.value.env', 'env() resolves to its fallback or is dropped', Math.abs(env - 31) < 0.5 || Math.abs(env - 200) < 0.5, 'w ' + env);
+  var SA = typeof TelegramWidget != 'undefined' && TelegramWidget.contentSafeAreaInset;
+  T.near('css.value.env', "env(safe-area-inset-left, 31px) is the client's", W('#env'), SA ? SA.left : 0, 0.5);
 });
 T.run();
 </script>

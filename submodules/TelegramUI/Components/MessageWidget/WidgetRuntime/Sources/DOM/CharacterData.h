@@ -11,6 +11,18 @@ public:
     String dataString(JSContext* ctx) const;
     /// Replaces the data (DOM "replace data" for the whole range, without the range bookkeeping).
     void setDataString(JSContext* ctx, String data);
+    /// limit.batch: counts a change of the data, once per batch (Node::countsChange); setDataString counts its own.
+    void countDataChange(JSContext* ctx);
+    /// Takes `other`'s place in the count, its data's stamp included (replaceAllChildren's sole text).
+    void takeTextCountOf(const CharacterData& other) {
+        this->takeCountOf(other);
+        m_dataOpBatch = other.m_dataOpBatch;
+    }
+    /// Counts as a node never inserted, its data's stamp included (Node::forgetCount).
+    void forgetTextCount() {
+        this->forgetCount();
+        m_dataOpBatch = 0;
+    }
 
     String data(JSContext* ctx) { return this->dataString(ctx); }
     void setData(JSContext* ctx, LegacyNullToEmptyString value) { this->setDataString(ctx, std::move(value)); }
@@ -31,6 +43,8 @@ public:
 
 private:
     Held m_data;
+    /// The batch of the data's last counted change (countDataChange).
+    uint64_t m_dataOpBatch = 0;
 };
 
 class Text : public CharacterData {

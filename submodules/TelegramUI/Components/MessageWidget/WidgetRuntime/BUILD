@@ -138,6 +138,8 @@ cc_library(
         "//third-party/gumbo",
         # Selectors parse with litehtml's CSS Syntax tokenizer (Sources/DOM/Selectors.cpp), the policy layer's.
         "//third-party/twidget:litehtml_fork",
+        # The CPU quota and the main-thread window (Sources/Host/EventLoop.cpp).
+        "//third-party/widget-sandbox:CpuBudget",
         "//third-party/widget-sandbox:GesturePolicy",
         "//third-party/widget-sandbox:SdkPolicy",
     ],
@@ -150,13 +152,13 @@ cc_test(
     name = "WidgetRuntimeTests",
     srcs = glob(["Tests/*Tests.cpp"], exclude = [
         "Tests/BindingTests.cpp",
-        "Tests/WorkCostTests.cpp",
         "Tests/MeasurementTests.cpp",
         "Tests/BuilderHtml5libTests.cpp",
         "Tests/CorpusBootTests.cpp",
         "Tests/RenderCorpusTests.cpp",
         "Tests/CorpusGoldenTests.cpp",
         "Tests/NoIOScanTests.cpp",
+        "Tests/NoWorkUnitsScanTests.cpp",
         "Tests/URLDataTests.cpp",
         "Tests/IntlCasesTests.cpp",
         "Tests/BidiTests.cpp",
@@ -240,30 +242,6 @@ cc_test(
     deps = [
         ":WidgetRuntime",
         "//third-party/gumbo:html5lib_dat",
-    ],
-)
-
-# Run optimized and by hand (M1a plan, Task 18): the work-rate calibration and the measurements for spec 6.2.
-cc_test(
-    name = "WidgetRuntimeWorkCostTests",
-    srcs = [
-        "Tests/DOMHarness.cpp",
-        "Tests/DOMHarness.h",
-        "Tests/FakeRenderHost.cpp",
-        "Tests/FakeRenderHost.h",
-        "Tests/HostHarness.cpp",
-        "Tests/HostHarness.h",
-        "Tests/RenderHarness.cpp",
-        "Tests/RenderHarness.h",
-        "Tests/VirtualTime.cpp",
-        "Tests/VirtualTime.h",
-        "Tests/WorkCostTests.cpp",
-    ],
-    copts = WR_COPTS,
-    tags = ["manual"],
-    deps = [
-        ":WidgetRuntime",
-        ":WidgetRuntimeTestSupport",
     ],
 )
 
@@ -460,11 +438,40 @@ cc_test(
     name = "WidgetRuntimeNoIOScanTests",
     srcs = [
         "Tests/NoIOScanTests.cpp",
+        "Tests/SourceScan.h",
         "Tests/TestMain.cpp",
         "Tests/wr_test.h",
     ],
     copts = WR_COPTS,
     data = [":ScanSources"],
     env = {"WR_SCAN_FILES": "$(locations :ScanSources)"},
+    includes = ["."],
+)
+
+# No work units in the runtime, its iOS glue or quickjs-ng (the CPU-clock limits plan, Task 7):
+# `./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeNoWorkUnitsScanTests`.
+filegroup(
+    name = "WorkScanSources",
+    testonly = True,
+    srcs = glob([
+        "Sources/**/*.cpp",
+        "Sources/**/*.h",
+    ]) + [
+        "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS:ScanSources",
+        "//third-party/quickjs-ng:ScanSources",
+    ],
+)
+
+cc_test(
+    name = "WidgetRuntimeNoWorkUnitsScanTests",
+    srcs = [
+        "Tests/NoWorkUnitsScanTests.cpp",
+        "Tests/SourceScan.h",
+        "Tests/TestMain.cpp",
+        "Tests/wr_test.h",
+    ],
+    copts = WR_COPTS,
+    data = [":WorkScanSources"],
+    env = {"WR_SCAN_FILES": "$(locations :WorkScanSources)"},
     includes = ["."],
 )

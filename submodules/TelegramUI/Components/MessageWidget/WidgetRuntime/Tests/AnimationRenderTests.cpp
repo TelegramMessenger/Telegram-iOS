@@ -161,19 +161,46 @@ WR_TEST(testValuesThatWouldEscapeTheirDeclaration) {
               "30,1");
 }
 
+// widget-sandbox v0.3.0, limit.animations: the first 64 live script animations render (compat: 1,024).
 WR_TEST(testTheAnimationLimit) {
-    RenderEnv env(kPage);
-    env.env().eval("window.boxes = []; for (let i = 0; i < 1100; i++) { const d = document.createElement('div'); document.body.append(d);"
-                   " boxes.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
-    env.env().frame(16);
-    env.env().frame(16);
-    checkEval(env, "[getComputedStyle(boxes[0]).opacity, getComputedStyle(boxes[1023]).opacity, getComputedStyle(boxes[1024]).opacity].join()",
-              "0.5,0.5,1");
-    int limits = 0;
-    for (const auto& [kind, detail] : env.env().host().diagnostics) {
-        limits += kind == "animation-limit" && detail == "more than 1024 live script animations; further ones are not rendered";
+    for (const bool strict : {true, false}) {
+        wr_test::ScopedLimits limits(strict ? wr::Limits::strict() : wr::Limits::compat());
+        const int cap = strict ? 64 : 1024;
+        RenderEnv env(kPage);
+        env.env().eval("window.boxes = []; for (let i = 0; i < 1100; i++) { const d = document.createElement('div'); document.body.append(d);"
+                       " boxes.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
+        env.env().frame(16);
+        env.env().frame(16);
+        checkEval(env, "[getComputedStyle(boxes[0]).opacity, getComputedStyle(boxes[" + std::to_string(cap - 1) + "]).opacity, getComputedStyle(boxes[" +
+                           std::to_string(cap) + "]).opacity].join()",
+                  "0.5,0.5,1");
+        int noted = 0;
+        for (const auto& [kind, detail] : env.env().host().diagnostics) {
+            noted += kind == "animation-limit" && detail == "more than " + std::to_string(cap) + " live script animations; further ones are not rendered";
+        }
+        CHECK_EQ(noted, 1);
     }
-    CHECK_EQ(limits, 1);
+}
+
+// widget-sandbox v0.3.0, limit.animations: the cap counts live script animations, as upstream's validator does (its
+// `MAX_LIVE_ANIMS`, over the shim's animation records); CSS animations and transitions are the renderer's own. A widget
+// animating a hundred tiles with CSS (corpus htmlbubbles-ported/10-game-night/08-kai) loses none.
+WR_TEST(testTheAnimationLimitCountsScriptAnimationsOnly) {
+    RenderEnv env(kPage);
+    env.env().eval("const s = document.createElement('style'); s.textContent = '@keyframes fade { from { opacity: 0.75 } to"
+                   " { opacity: 0.75 } }'; document.head.append(s);"
+                   " window.css = []; for (let i = 0; i < 100; i++) { const d = document.createElement('div');"
+                   " d.style.animation = 'fade 100s infinite'; document.body.append(d); css.push(d); }"
+                   " window.run = []; for (let i = 0; i < 70; i++) { const d = document.createElement('div'); document.body.append(d);"
+                   " run.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
+    env.env().frame(16);
+    env.env().frame(16);
+    checkEval(env, "[css[99], run[0], run[63], run[64]].map(d => getComputedStyle(d).opacity).join()", "0.75,0.5,0.5,1");
+    int noted = 0;
+    for (const auto& [kind, detail] : env.env().host().diagnostics) {
+        noted += kind == "animation-limit" && detail == "more than 64 live script animations; further ones are not rendered";
+    }
+    CHECK_EQ(noted, 1);
 }
 
 WR_TEST(testOverrideSize) {
@@ -229,28 +256,6 @@ WR_TEST(testALayoutFrameStillLaysOut) {
         checkEval(env, "$('p2').getBoundingClientRect().width", std::to_string(20 + std::stoi(at) / 10));
         expectMatchesRebuild(env, "width at " + at);
     }
-}
-
-/// One frame of a running transform animation on a 200-element page is cheap (Review Focus 3).
-WR_TEST(testAFrameIsCheap) {
-    std::string page = "<!doctype html><html><head><style>body { margin: 0 } .row { height: 10px; color: #333 }"
-                       " #mover { width: 20px; height: 20px; background: #3a3 }</style></head><body><div id=mover></div>";
-    for (int i = 0; i < 200; i++) {
-        page += "<div class=row>row " + std::to_string(i) + "</div>";
-    }
-    page += "</body></html>";
-    RenderEnv env(page);
-    env.env().eval("document.getElementById('mover').animate({transform: ['translateX(0px)', 'translateX(100px)']}, 100000); 1");
-    env.env().frame(16);
-    env.env().frame(16);
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().frame(16);
-    const uint64_t cost = JS_GetWorkUnits(rt) - before;
-    if (cost >= 250000) {
-        std::printf("  a frame cost %llu units\n", (unsigned long long)cost);
-    }
-    CHECK(cost < 250000);
 }
 
 /// A frame's changed rects are in the document's coordinates, wherever the animated element sits: the host redraws

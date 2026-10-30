@@ -66,6 +66,30 @@ public struct MessageWidgetState: Equatable {
     }
 }
 
+/// What the client draws over the widget (sdk-v1 §2.17, §5.12), in points (CSS px): with no caption below the widget, the
+/// band of the message time at its bottom (`bottom`) and the corner the time takes in it, on its physical side
+/// (`cornerRight` in a left-to-right interface, `cornerLeft` in a right-to-left one); the rest 0. `none` with a caption
+/// below. The runtime keeps an inset of 0–64 and a corner of 0–200, anything else 0, as upstream checks it.
+public struct MessageWidgetContentSafeArea: Equatable {
+    public var top: CGFloat
+    public var right: CGFloat
+    public var bottom: CGFloat
+    public var left: CGFloat
+    public var cornerLeft: CGFloat
+    public var cornerRight: CGFloat
+
+    public static let none = MessageWidgetContentSafeArea()
+
+    public init(top: CGFloat = 0.0, right: CGFloat = 0.0, bottom: CGFloat = 0.0, left: CGFloat = 0.0, cornerLeft: CGFloat = 0.0, cornerRight: CGFloat = 0.0) {
+        self.top = top
+        self.right = right
+        self.bottom = bottom
+        self.left = left
+        self.cornerLeft = cornerLeft
+        self.cornerRight = cornerRight
+    }
+}
+
 /// The client's outcome for a widget's request (sdk-v1 §2.14): the bot's answer (its `result` bytes, nil for none), or a
 /// failure the widget sees as TIMEOUT, RATE_LIMITED or FAILED.
 public enum MessageWidgetRequestOutcome: Equatable {

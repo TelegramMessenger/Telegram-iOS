@@ -4,7 +4,6 @@
 
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -43,7 +42,6 @@ std::optional<std::vector<Value>> sequenceValues(JSContext* ctx, JSValueConst ob
             }
             return values;
         }
-        charge(ctx, work::kNodeVisit);
         Value result = Value::adopt(ctx, JS_Call(ctx, next.get(), iterator.get(), 0, nullptr));
         if (JS_IsException(result.get())) {
             throw Thrown{};

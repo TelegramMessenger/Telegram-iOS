@@ -97,6 +97,9 @@ std::shared_ptr<const wr::HostFont> FakeRenderHost::createFont(const litehtml::f
 
 double FakeRenderHost::textWidth(const wr::HostFont&, std::string_view utf8) {
     textWidthCalls++;
+    if (onTextWidth) {
+        onTextWidth();
+    }
     return 8.0 * double(utf8.size());
 }
 

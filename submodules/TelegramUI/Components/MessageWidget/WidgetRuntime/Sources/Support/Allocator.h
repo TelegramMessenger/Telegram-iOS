@@ -1,5 +1,4 @@
-// Containers inside DOM payloads allocate through QuickJS, so they count toward the widget's memory limit and charge
-// work (quickjs-ng change 2 charges allocated bytes).
+// Containers inside DOM payloads allocate through QuickJS, so they count toward the widget's memory limit.
 #pragma once
 
 #include <cstddef>

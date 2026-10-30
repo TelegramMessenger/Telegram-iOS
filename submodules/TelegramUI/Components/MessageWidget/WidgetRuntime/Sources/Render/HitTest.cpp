@@ -138,16 +138,13 @@ bool elementBorderBox(const litehtml::element& element, RenderBox& out) {
     return unionOfRects(elementClientRects(element), out);
 }
 
-bool visualTransform(const litehtml::element& element, Affine& out, uint64_t* visited) {
+bool visualTransform(const litehtml::element& element, Affine& out) {
     // The element's own transform and every ancestor's, composed innermost first and applied once (review minors,
     // Task 4): a bounding box taken at every level inflated a rect whose rotation a child undoes. In double, as each
     // level used to map: nested large scales pass a float's range.
     Affine total;
     bool transformed = false;
     for (const litehtml::element* el = &element; el; el = el->parent().get()) {
-        if (visited) {
-            (*visited)++;
-        }
         std::shared_ptr<litehtml::render_item> item;
         el->for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
             if (!item) {

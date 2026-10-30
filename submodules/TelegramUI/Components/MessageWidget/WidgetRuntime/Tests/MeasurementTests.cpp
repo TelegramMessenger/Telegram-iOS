@@ -5,7 +5,7 @@
 // optimized:
 //   ./build-input/bazel-9.2.0-darwin-arm64 test -c opt
 //   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeMeasurementTests --test_output=all
-// Units and KB are deterministic and are the measurements of record; wall times depend on the machine and its load
+// KB are deterministic and are the measurements of record; times depend on the machine, and wall times on its load too
 // (the thread asks for user-interactive QoS, so it is not left on an efficiency core).
 #include <pthread.h>
 
@@ -65,28 +65,30 @@ WR_TEST(testMeasurements) {
     // 1. A context with the DOM installed and an empty document parsed, nothing materialized but what the document's
     // wrappers need; and, for comparison, a bare runtime: the interface table's classes and global entries, no DOM.
     {
-        std::vector<double> ms, bytes, units;
+        std::vector<double> ms, bytes, cpu;
         for (int run = 0; run < 300; run++) {
             auto t0 = Clock::now();
+            const double c0 = wr_test::threadCpuMs();
             wr_test::DOMEnv env("");
+            cpu.push_back(wr_test::threadCpuMs() - c0);
             ms.push_back(std::chrono::duration<double, std::milli>(Clock::now() - t0).count());
             bytes.push_back(double(mallocSize(env.runtime().jsRuntime())));
-            units.push_back(double(JS_GetWorkUnits(env.runtime().jsRuntime())));
         }
-        std::printf("context + DOM: %.3f ms, %.0f KB, %.0f units (median of 300)\n", median(ms), median(bytes) / 1024, median(units));
+        std::printf("context + DOM: %.3f ms, %.3f CPU ms, %.0f KB (median of 300)\n", median(ms), median(cpu), median(bytes) / 1024);
         CHECK(median(bytes) <= 256 * 1024);
         ms.clear();
         bytes.clear();
-        units.clear();
+        cpu.clear();
         for (int run = 0; run < 300; run++) {
             auto t0 = Clock::now();
+            const double c0 = wr_test::threadCpuMs();
             wr_test::JSEnv env(wr::idl::kTable);
+            cpu.push_back(wr_test::threadCpuMs() - c0);
             ms.push_back(std::chrono::duration<double, std::milli>(Clock::now() - t0).count());
             bytes.push_back(double(mallocSize(env.runtime().jsRuntime())));
-            units.push_back(double(JS_GetWorkUnits(env.runtime().jsRuntime())));
         }
-        std::printf("bare runtime (interface entries, no DOM): %.3f ms, %.0f KB, %.0f units (median of 300)\n", median(ms), median(bytes) / 1024,
-                    median(units));
+        std::printf("bare runtime (interface entries, no DOM): %.3f ms, %.3f CPU ms, %.0f KB (median of 300)\n", median(ms), median(cpu),
+                    median(bytes) / 1024);
     }
 
     // 2. Each exposed interface materialized alone (its object and prototype, and so its parents'), and 3. all of them.
@@ -96,19 +98,19 @@ WR_TEST(testMeasurements) {
     {
         const wr::InterfaceTable& table = wr::idl::kTable;
         struct Cost {
-            double ms, kb, units;
+            double ms, kb, cpu;
         };
         auto measureTouch = [](bool withDOM, const std::string& touch) {
-            std::vector<double> ms, bytes, units;
+            std::vector<double> ms, bytes, cpu;
             auto once = [&](wr_test::JSEnv& env) {
                 JSRuntime* rt = env.runtime().jsRuntime();
                 int64_t b0 = mallocSize(rt);
-                uint64_t u0 = JS_GetWorkUnits(rt);
                 auto t0 = Clock::now();
+                const double c0 = wr_test::threadCpuMs();
                 env.eval(touch);
+                cpu.push_back(wr_test::threadCpuMs() - c0);
                 ms.push_back(std::chrono::duration<double, std::milli>(Clock::now() - t0).count());
                 bytes.push_back(double(mallocSize(rt) - b0));
-                units.push_back(double(JS_GetWorkUnits(rt) - u0));
             };
             for (int run = 0; run < 50; run++) {
                 if (withDOM) {
@@ -119,10 +121,10 @@ WR_TEST(testMeasurements) {
                     once(env);
                 }
             }
-            return Cost{median(ms), median(bytes) / 1024, median(units)};
+            return Cost{median(ms), median(bytes) / 1024, median(cpu)};
         };
         std::printf("\n%-32s %30s   %30s\n", "", "in the DOM context", "in a bare runtime");
-        std::printf("%-32s %10s %10s %10s   %10s %10s %10s\n", "interface", "ms", "KB", "units", "ms", "KB", "units");
+        std::printf("%-32s %10s %10s %10s   %10s %10s %10s\n", "interface", "ms", "KB", "CPU ms", "ms", "KB", "CPU ms");
         std::string all;
         int exposed = 0;
         for (uint16_t i = 0; i < table.count; i++) {
@@ -134,15 +136,15 @@ WR_TEST(testMeasurements) {
             std::string touch = std::string("void ") + info.name + ".prototype;";
             all += touch;
             Cost dom = measureTouch(true, touch), bare = measureTouch(false, touch);
-            std::printf("%-32s %10.4f %10.1f %10.0f   %10.4f %10.1f %10.0f\n", info.name, dom.ms, dom.kb, dom.units, bare.ms, bare.kb, bare.units);
+            std::printf("%-32s %10.4f %10.1f %10.4f   %10.4f %10.1f %10.4f\n", info.name, dom.ms, dom.kb, dom.cpu, bare.ms, bare.kb, bare.cpu);
         }
         Cost dom = measureTouch(true, all), bare = measureTouch(false, all);
-        std::printf("%-32s %10.4f %10.1f %10.0f   %10.4f %10.1f %10.0f\n", "(all exposed interfaces)", dom.ms, dom.kb, dom.units, bare.ms, bare.kb,
-                    bare.units);
+        std::printf("%-32s %10.4f %10.1f %10.4f   %10.4f %10.1f %10.4f\n", "(all exposed interfaces)", dom.ms, dom.kb, dom.cpu, bare.ms, bare.kb,
+                    bare.cpu);
         // The touch script's own cost, against which the rows above read: an interface already made.
         Cost script = measureTouch(true, "void Node.prototype;");
-        std::printf("exposed interfaces: %d; the touch alone (Node in the DOM context): %.4f ms, %.1f KB, %.0f units\n", exposed, script.ms, script.kb,
-                    script.units);
+        std::printf("exposed interfaces: %d; the touch alone (Node in the DOM context): %.4f ms, %.1f KB, %.4f CPU ms\n", exposed, script.ms,
+                    script.kb, script.cpu);
     }
 
     // 4. Every corpus document parsed natively into a fresh document (gumbo and the DOM build together).

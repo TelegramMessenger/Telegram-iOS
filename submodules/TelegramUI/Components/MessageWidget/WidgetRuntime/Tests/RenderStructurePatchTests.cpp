@@ -108,26 +108,6 @@ void rendersNothing(RenderEnv& env, const std::string& script) {
     expectMatchesRebuild(env, script);
 }
 
-// Ruling E22: what `tree` holds back for rebuilding its document, without the steps (RenderTree::buildCharge).
-uint64_t estimateWithoutSteps(const wr::RenderTree& tree) {
-    return tree.buildCharge() - tree.buildChargeParts().steps;
-}
-
-// What `fresh`'s build of the DOM was charged without its steps, measured from `before`.
-uint64_t chargedWithoutSteps(JSRuntime* rt, uint64_t before, const wr::RenderTree& fresh) {
-    const int64_t steps = std::min(fresh.selectorSteps(), litehtml::document::default_selector_steps);
-    return JS_GetWorkUnits(rt) - before - uint64_t(steps) * wr::work::kSimpleSelectorTest;
-}
-
-// A second tree's rebuild of the DOM as it now is (the published one untouched), without its steps.
-uint64_t rebuildChargeWithoutSteps(RenderEnv& env) {
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    wr::RenderTree fresh(env.ctx(), env.host(), env.options());
-    const uint64_t before = JS_GetWorkUnits(rt);
-    fresh.rebuild(env.ctx());
-    return chargedWithoutSteps(rt, before, fresh);
-}
-
 size_t countOf(const std::string& haystack, const std::string& needle) {
     size_t n = 0;
     for (size_t at = haystack.find(needle); at != std::string::npos; at = haystack.find(needle, at + 1)) {
@@ -225,6 +205,8 @@ WR_TEST(testStructurePatchMatchesRebuild) {
 
 // Review Focus 1 for all three paths: random edits, flushed every 1-5, each flush equal to a rebuild.
 WR_TEST(testRandomEditsMatchARebuild) {
+    // The drops at the old caps, which compat keeps (widget-sandbox v0.3.0): under strict these fillers stop the widget.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     struct Group {
         const char* name;
         int firstSeed;
@@ -299,7 +281,7 @@ WR_TEST(testRandomEditsMatchARebuild) {
     std::string text;
     {
         RenderEnv probe(pageOf(base, "<div id=filler></div>"));
-        size_t room = wr::kTextBudgetUnits - probe.render().renderedTextUnits().units - 40;
+        size_t room = wr::Limits::compat().textBudgetUnits - probe.render().renderedTextUnits().units - 40;
         text = "<div id=filler>";
         while (room > 0) {
             const size_t paragraph = std::min<size_t>(room, 60000);
@@ -565,17 +547,7 @@ globalThis.__edit = (() => {
                 // The oracle (rebuildDump's fresh tree, kept here for the limits a build hits, which a patch must cut
                 // at as a rebuild does).
                 wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
-                JSRuntime* rt = env.env().runtime().jsRuntime();
-                const uint64_t freshStart = JS_GetWorkUnits(rt);
                 fresh.rebuild(env.ctx());
-                // Ruling E22: what the published state holds back for a rebuild covers what this one was charged.
-                const uint64_t freshCharge = chargedWithoutSteps(rt, freshStart, fresh);
-                if (estimateWithoutSteps(env.render()) < freshCharge && !reported) {
-                    std::printf("  the estimate %llu is under a rebuild's %llu after: %s\n",
-                                (unsigned long long)estimateWithoutSteps(env.render()), (unsigned long long)freshCharge,
-                                what.c_str());
-                }
-                CHECK(estimateWithoutSteps(env.render()) >= freshCharge);
                 const Dumps rebuilt{fresh.layoutDump(), fresh.renderInput(), fresh.layerTree() ? fresh.layerTree()->dump() : std::string()};
                 bool same = matchesDumps(env, rebuilt, what, !reported);
                 {
@@ -750,6 +722,8 @@ WR_TEST(testStructureRebuildsUnderCountersAndPseudoContent) {
 // The render limits decide what a build leaves out, so a change that would cross one rebuilds (and the rebuild posts
 // it), and a build that hit one is never patched.
 WR_TEST(testStructurePatchRespectsLimits) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     {
         // The byte budget: 1,048,000 bytes of a class (profile 1's text budgets do not count it: V4 plan, Task 7), then
         // 1,000 more of text.
@@ -808,85 +782,6 @@ WR_TEST(testStructurePatchRespectsLimits) {
     }
 }
 
-// Review Focus 2: a stop anywhere in the structure path's planning leaves the published document, render input,
-// layout and tree as they were; a flush that gets through patches and equals a rebuild.
-WR_TEST(testStructurePatchPrechargesBeforeTouchingLitehtml) {
-    const std::string script =
-        "const d = document.createElement('div'); d.innerHTML = '<p>' + 'a '.repeat(2000) + '</p><b>b</b>';"
-        " document.getElementById('box').append(d); document.getElementById('three').remove();"
-        " document.getElementById('list').append(document.getElementById('one')); 'ok'";
-    uint64_t charged = 0;
-    uint64_t reserve = 0;
-    {
-        RenderEnv env(kPage);
-        CHECK_EQ(env.env().eval(script), std::string("ok"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.flush();
-        charged = JS_GetWorkUnits(rt) - before;
-        reserve = env.render().buildCharge() + uint64_t(litehtml::document::default_selector_steps) + 1000;
-        CHECK_EQ(env.render().patchCount(), uint64_t(1));
-        // 4,000 pieces: the layout pre-charge alone is 32,000 units.
-        CHECK(charged > 32000);
-    }
-    int stopped = 0;
-    int patched = 0;
-    // Steps up to the whole flush's work, and then past it.
-    std::vector<uint64_t> limits;
-    for (uint64_t allowed = 1; allowed < charged; allowed += allowed < 200 ? 7 : allowed / 6) {
-        limits.push_back(allowed);
-    }
-    // Ruling E20: a patch runs only when the budget also holds its fallback rebuild; short of that it rebuilds or stops.
-    limits.push_back(charged + reserve);
-    for (uint64_t allowed : limits) {
-        RenderEnv env(kPage);
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string input = env.render().renderInput();
-        const std::string dump = env.render().layoutDump();
-        const std::string layer = tree->dump();
-        const uint64_t builds = env.render().buildCount();
-        CHECK_EQ(env.env().eval(script), std::string("ok"));
-        litehtml::document* document = env.render().document();
-        const int pieces = document->text_elements();
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + allowed);
-        bool aborted = false;
-        try {
-            env.flush();
-        } catch (const wr::Aborted&) {
-            aborted = true;
-        }
-        if (aborted) {
-            stopped++;
-            CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-            CHECK(env.render().document() == document);
-            CHECK(env.render().layerTree() == tree);
-            CHECK_EQ(env.render().renderInput(), input);
-            CHECK_EQ(env.render().layoutDump(), dump);
-            CHECK_EQ(tree->dump(), layer);
-            CHECK_EQ(env.render().buildCount(), builds);
-            CHECK_EQ(env.render().patchCount(), uint64_t(0));
-            // The subtrees made while planning went with it.
-            CHECK_EQ(document->text_elements(), pieces);
-        } else {
-            env.env().runtime().setWorkLimit(~uint64_t(0));
-            // Patched, or (short of the fallback's reserve) rebuilt: either equals a rebuild.
-            if (env.render().patchCount() == 1) {
-                patched++;
-                CHECK_EQ(env.render().buildCount(), builds);
-            } else {
-                CHECK_EQ(env.render().buildCount(), builds + 1);
-            }
-            expectMatchesRebuild(env, "swept");
-        }
-    }
-    if (stopped < 10 || patched < 1) {
-        std::printf("  charged %llu: %d stopped, %d patched\n", (unsigned long long)charged, stopped, patched);
-    }
-    CHECK(stopped >= 10);
-    CHECK(patched >= 1);
-}
-
 // The flush publishes a new tree with changedRects against the previous one, and keeps the fonts (Ruling 19).
 WR_TEST(testStructurePatchPublishesChangedRects) {
     RenderEnv env("<!doctype html><body style='height:200px;margin:0'><p id=p>one</p></body>");
@@ -927,6 +822,8 @@ std::string stepPage(int rules, int divs, const std::string& tail = "") {
 // Ruling E19: the reviewer's parity probe. litehtml's 4,000,000 selector steps are one budget for the whole build; a
 // patch whose matching could take the document past them rebuilds, so a patch and a rebuild never cut at different places.
 WR_TEST(testSelectorStepParityNearTheCap) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // Past the cap: the build was cut, and any patch that matches rebuilds (and agrees: the appended div uncoloured).
     {
         RenderEnv env(stepPage(1000, 4099));
@@ -956,6 +853,8 @@ WR_TEST(testSelectorStepParityNearTheCap) {
 // Ruling E19, Task 8's path: re-matching an element whose steps could pass the cap rebuilds. The page is the largest that
 // stays under the cap, so one div's re-match does not fit.
 WR_TEST(testAttributePatchRespectsTheSelectorBudget) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     int low = 3000;
     int high = 4100;
     while (high - low > 1) {
@@ -972,9 +871,11 @@ WR_TEST(testAttributePatchRespectsTheSelectorBudget) {
     CHECK(small.render().lastPatchSteps() > 0 && small.render().lastPatchSteps() <= small.render().lastPatchStepBound());
 }
 
-// Ruling E19: the reviewer's work probes. A patch's matching was a fresh 4,000,000 steps per inserted root and sheet,
-// uncharged (7.24 s and 5.83 s); now the flush takes at most the one budget a build takes, and is charged for its steps.
-WR_TEST(testSelectorStepWorkIsBounded) {
+// Ruling E19: the reviewer's work probes. A patch's matching was a fresh 4,000,000 steps per inserted root and sheet
+// (7.24 s and 5.83 s); now the flush takes at most the one budget a build takes.
+WR_TEST(testSelectorStepsAreBounded) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     struct Probe {
         std::string page;
         std::string script;
@@ -1005,76 +906,24 @@ WR_TEST(testSelectorStepWorkIsBounded) {
     };
     for (const Probe& probe : probes) {
         RenderEnv env(probe.page);
-        JSRuntime* rt = env.env().runtime().jsRuntime();
         CHECK_EQ(env.env().eval("(() => { " + probe.script + "; })(); 'ok'"), std::string("ok"));
-        const uint64_t units = JS_GetWorkUnits(rt);
         const uint64_t builds = env.render().buildCount();
         env.flush();
-        const uint64_t charged = JS_GetWorkUnits(rt) - units;
         CHECK_EQ(std::string(env.render().lastPatchRefusal()), std::string("the selector-step budget"));
         CHECK_EQ(env.render().buildCount(), builds + 1);
-        // One build's budget: the steps performed stop at it (past it a test is refused, and still counted, which is how
-        // the cut shows), and every step performed is charged.
-        const int64_t performed = std::min(env.render().selectorSteps(), litehtml::document::default_selector_steps);
+        // litehtml's budget: the steps performed stop at it (past it a test is refused, and still counted, which is how
+        // the cut shows).
         CHECK(env.render().selectorSteps() > litehtml::document::default_selector_steps);
-        CHECK(charged >= uint64_t(performed) * wr::work::kSimpleSelectorTest);
         expectMatchesRebuild(env, probe.script);
     }
-}
-
-// Ruling E19 and Review Focus 2: a build whose matching runs out of the widget's work budget stops the widget (Budget) and
-// leaves the published document, render input, layout and tree as they were. (Before the ruling matching was not
-// charged, and this build succeeded.)
-WR_TEST(testBuildStopsWhenMatchingExhaustsTheBudget) {
-    std::string sheet;
-    for (int i = 0; i < 15999; i++) {
-        sheet += "div,";
-    }
-    sheet += "div{color:#ff0000}";
-    std::string page = "<!doctype html><style>" + sheet + "</style><body>";
-    for (int i = 0; i < 200; i++) {
-        page += "<div>x</div>";
-    }
-    page += "</body>";
-    // What a rebuild charges, and how much of it is matching.
-    uint64_t total = 0;
-    int64_t steps = 0;
-    {
-        RenderEnv env(page);
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t units = JS_GetWorkUnits(rt);
-        env.rebuild();
-        total = JS_GetWorkUnits(rt) - units;
-        steps = env.render().selectorSteps();
-        CHECK(steps >= 200 * 16000);
-        CHECK(total >= uint64_t(steps));
-    }
-    RenderEnv env(page);
-    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-    const std::string input = env.render().renderInput();
-    const std::string dump = env.render().layoutDump();
-    litehtml::document* document = env.render().document();
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    // Enough for everything but half the matching.
-    env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + (total - uint64_t(steps)) + uint64_t(steps) / 2);
-    bool aborted = false;
-    try {
-        env.rebuild();
-    } catch (const wr::Aborted&) {
-        aborted = true;
-    }
-    CHECK(aborted);
-    CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-    CHECK(env.render().document() == document);
-    CHECK(env.render().layerTree() == tree);
-    CHECK_EQ(env.render().renderInput(), input);
-    CHECK_EQ(env.render().layoutDump(), dump);
 }
 
 // I2: a build counts every element it creates against litehtml's 20,000, the ones a parent's own appendChild then refuses
 // included, and asks the piece cap for every piece a <table> then refuses. A patch counts them as a build does, or
 // rebuilds. (The reviewer's probe: 16,000 table-refused divs, then a table of 5,000 directly appended rows.)
 WR_TEST(testRefusedElementsCountAsABuildCounts) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     {
         RenderEnv env("<!doctype html><body><table id=t></table><div id=d></div><p id=after>after</p></body>");
         edit(env, "const t = document.getElementById('t'); for (let i = 0; i < 16000; i++) t.appendChild(document.createElement('div'))");
@@ -1157,6 +1006,8 @@ std::string appendSpans(int k) {
 // Ruling E20.4, the reviewer's wbound: the bound sees the siblings an ancestor's compound walks (the <p>'s, the body's
 // 9,001 children), so it holds the patch's steps; and whatever the flush does, it equals a rebuild.
 WR_TEST(testSelectorStepBoundSeesAncestorSiblings) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     for (int k : {100, 400}) {
         RenderEnv env(siblingAncestorPage(9000));
         const uint64_t patched = env.render().patchCount();
@@ -1171,6 +1022,8 @@ WR_TEST(testSelectorStepBoundSeesAncestorSiblings) {
 // Ruling E20, the reviewer's wparity: 470 spans take the document past 4,000,000 steps, where a fresh build is cut and
 // leaves spans uncoloured; the flush agrees with it (the bound refuses the patch, or a cut session is abandoned).
 WR_TEST(testSelectorStepParityWithAncestorSiblings) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(siblingAncestorPage(9000, " span{color:#0000ff}"));
     edit(env, appendSpans(470));
     expectMatchesRebuild(env, "470 spans past the step budget");
@@ -1199,97 +1052,6 @@ WR_TEST(testCutPatchIsReplacedByARebuild) {
     patches(env, appendSpans(5));
 }
 
-// Ruling E20.2, the reviewer's wabort: work limits between the patch's bound and the real steps it once took stop the
-// widget, rebuild, or patch, and never end in std::abort; a stopped one leaves the published state as it was, and one
-// that finished equals a rebuild.
-WR_TEST(testTightBudgetNeverAbortsAPatch) {
-    for (uint64_t extra : {150000ull, 250000ull, 400000ull, 600000ull, 800000ull, 1200000ull, 8000000ull}) {
-        RenderEnv env(siblingAncestorPage(9000));
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string dump = env.render().layoutDump();
-        litehtml::document* document = env.render().document();
-        CHECK_EQ(env.env().eval("(() => { " + appendSpans(100) + "; })(); 'ok'"), std::string("ok"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + extra);
-        bool aborted = false;
-        try {
-            env.flush();
-        } catch (const wr::Aborted&) {
-            aborted = true;
-        }
-        if (aborted) {
-            CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-            CHECK(env.render().document() == document);
-            CHECK(env.render().layerTree() == tree);
-            CHECK_EQ(env.render().layoutDump(), dump);
-        } else {
-            env.env().runtime().setWorkLimit(~uint64_t(0));
-            expectMatchesRebuild(env, "under a work limit of +" + std::to_string(extra));
-        }
-    }
-}
-
-// Ruling E21, the reviewer's wfilter2: apply_selector's filter loop (every rule against every element, counted by no
-// step) is charged, at work::kScanEightUnits per eight (element, rule) pairs, by builds and by patches; and a build that
-// cannot afford it stops before matching, where the same build of a sheet with no rules does not.
-WR_TEST(testFilterLoopIsCharged) {
-    std::string rules;
-    for (int n = 0; rules.size() < 65536 - 16; n++) {
-        rules += ".c" + std::to_string(n) + "{}";
-    }
-    auto page = [](const std::string& sheet, int divs) {
-        std::string out = "<!doctype html><style>" + sheet + "</style><body><div id=c></div>";
-        for (int i = 0; i < divs; i++) {
-            out += "<div class=q></div>";
-        }
-        return out + "</body>";
-    };
-    auto rebuildCharge = [](RenderEnv& env) {
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.rebuild();
-        return JS_GetWorkUnits(rt) - before;
-    };
-    RenderEnv empty(page("", 5000));
-    RenderEnv ruled(page(rules, 5000));
-    const uint64_t plain = rebuildCharge(empty);
-    const uint64_t filtered = rebuildCharge(ruled);
-    const size_t count = ruled.render().document()->selector_count() - empty.render().document()->selector_count();
-    CHECK(count > 8000);
-    CHECK(filtered >= plain + wr::renderFilterUnits(5000, count));
-    // Twice the divs, twice the loop.
-    RenderEnv ruled2(page(rules, 10000));
-    CHECK(rebuildCharge(ruled2) >= filtered + wr::renderFilterUnits(5000, count));
-    // A patch pays for its new elements' loop.
-    {
-        JSRuntime* rt = ruled.env().runtime().jsRuntime();
-        CHECK_EQ(ruled.env().eval("document.getElementById('c').innerHTML = '<div class=q></div>'.repeat(4000); 'ok'"), std::string("ok"));
-        const uint64_t before = JS_GetWorkUnits(rt);
-        ruled.flush();
-        CHECK_EQ(ruled.render().patchCount(), uint64_t(1));
-        CHECK(JS_GetWorkUnits(rt) - before >= wr::renderFilterUnits(4000, ruled.render().document()->selector_count()));
-    }
-    // A limit a sheet with no rules builds within, and the ruled one cannot: it stops (Budget) before matching, the
-    // published state as it was.
-    {
-        RenderEnv env(page(rules, 5000));
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        litehtml::document* document = env.render().document();
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + plain + 64 * 1024 + wr::renderFilterUnits(5000, count) / 2);
-        bool aborted = false;
-        try {
-            env.rebuild();
-        } catch (const wr::Aborted&) {
-            aborted = true;
-        }
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-    }
-}
-
 namespace {
 
 // The reviewer's pfilter page: a 64 KiB sheet of class rules no element matches, then `extra`, over `divs` divs.
@@ -1305,287 +1067,30 @@ std::string filterPage(const std::string& extra, int divs) {
     return out + "</body>";
 }
 
-uint64_t chargeOf(RenderEnv& env, void (RenderEnv::*what)()) {
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    (env.*what)();
-    return JS_GetWorkUnits(rt) - before;
-}
-
 } // namespace
-
-// Ruling E22.1, the reviewer's pfilter: a ::before/::after rule that can create pseudo-elements for an element makes
-// apply_stylesheet match two more elements for it against every rule, so the filter loop's charge counts them: three
-// times the divs' pairs, in a build and in a patch; and a limit the loop without them fits stops the build before it
-// matches.
-WR_TEST(testFilterChargeCountsPseudoElements) {
-    const std::string pseudo = "div::before{color:#f00}div::after{color:#f00}";
-    RenderEnv plain(filterPage("", 5000));
-    RenderEnv created(filterPage(pseudo, 5000));
-    const size_t rules = created.render().document()->selector_count();
-    CHECK(rules > 8000);
-    const uint64_t plainBuild = chargeOf(plain, &RenderEnv::rebuild);
-    const uint64_t createdBuild = chargeOf(created, &RenderEnv::rebuild);
-    // The 5,001 divs' two pseudo-elements each, against the author sheet's rules (the master sheet's pass creates none
-    // for a div: it is asked with the master sheet's creators).
-    RenderEnv bare("<!doctype html><body></body>");
-    const size_t authorRules = rules - bare.render().document()->selector_count();
-    CHECK(createdBuild >= plainBuild + wr::renderFilterUnits(10002, authorRules));
-    CHECK(created.render().buildChargeParts().filter >= plain.render().buildChargeParts().filter + wr::renderFilterUnits(10002, rules));
-    // A `*` with only the pseudo-element creates nothing (html_tag::apply_selector), and neither does content: none.
-    {
-        RenderEnv none(filterPage("*::before{color:#f00} div::after{content:none}", 5000));
-        CHECK(chargeOf(none, &RenderEnv::rebuild) < plainBuild + wr::renderFilterUnits(1000, rules));
-    }
-    // A patch pays for its new divs' pseudo-elements too. (1,000 new divs: with the 5,000 and their pseudo-elements
-    // that stays under the element cap, which pseudo-elements count against since twidget edit 19; past it a patch
-    // and a rebuild differ in which divs get theirs.)
-    for (RenderEnv* env : {&plain, &created}) {
-        CHECK_EQ(env->env().eval("document.getElementById('c').innerHTML = '<div class=q></div>'.repeat(1000); 'ok'"),
-                 std::string("ok"));
-    }
-    const uint64_t plainPatch = chargeOf(plain, &RenderEnv::flush);
-    const uint64_t createdPatch = chargeOf(created, &RenderEnv::flush);
-    CHECK_EQ(plain.render().patchCount(), uint64_t(1));
-    CHECK_EQ(created.render().patchCount(), uint64_t(1));
-    CHECK(createdPatch >= plainPatch + wr::renderFilterUnits(2000, rules));
-    expectMatchesRebuild(created, "1,000 divs with pseudo-elements");
-    // Enough for the build without the pseudo-elements' share of the loop and half of it: the build stops (Budget)
-    // before matching, the published state as it was.
-    {
-        RenderEnv env(filterPage(pseudo, 5000));
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        litehtml::document* document = env.render().document();
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + plainBuild + 64 * 1024 + wr::renderFilterUnits(10002, rules) / 2);
-        bool aborted = false;
-        try {
-            env.rebuild();
-        } catch (const wr::Aborted&) {
-            aborted = true;
-        }
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-    }
-}
 
 // Ruling E28: pseudo-elements count against the element cap, and a rebuild hands the budget out in document order, so a
 // patch that crosses the cap must not commit what a rebuild would not make. The 4,000 new divs of #c come before the
 // 5,000 old ones.
 WR_TEST(testPatchPastThePseudoCapMatchesRebuild) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(filterPage("div::before{color:#f00}div::after{color:#f00}", 5000));
     CHECK_EQ(env.env().eval("document.getElementById('c').innerHTML = '<div class=q></div>'.repeat(4000); 'ok'"),
              std::string("ok"));
-    (void)chargeOf(env, &RenderEnv::flush);
+    env.flush();
     expectMatchesRebuild(env, "4,000 divs patched past the pseudo-element cap");
 }
 
 // Ruling E28, attributes: near the cap, class changes that make `.x::after` match, last div first, must match a rebuild.
 WR_TEST(testAttributePatchPastThePseudoCapMatchesRebuild) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(filterPage("div::before{color:#f00}.x::after{color:#f00}", 9900));
     CHECK_EQ(env.env().eval("const d = document.querySelectorAll('div.q'); for (let i = d.length - 1; i >= d.length - 300; i--) d[i].setAttribute('class', 'q x'); 'ok'"),
              std::string("ok"));
-    (void)chargeOf(env, &RenderEnv::flush);
+    env.flush();
     expectMatchesRebuild(env, "class changes past the pseudo-element cap");
-}
-
-// Ruling E22.2: a build's matching gets the steps the filter loop leaves of the budget. A sheet of class rules (a large
-// loop, no steps) and 1,000 div rules (two million steps): with half the steps' share taken off the limit, the loop
-// still fits and the steps no longer do, so the build is cut there and stops (Budget) without running past the budget,
-// where it once ran all its steps and then charged them beyond it.
-WR_TEST(testBuildStepsGetWhatTheFilterLoopLeaves) {
-    std::string sheet;
-    for (int n = 0; sheet.size() < 65536 - 4300; n++) {
-        sheet += ".c" + std::to_string(n) + "{}";
-    }
-    for (int i = 0; i < 999; i++) {
-        sheet += "div,";
-    }
-    sheet += "div{color:#ff0000}";
-    std::string page = "<!doctype html><style>" + sheet + "</style><body>";
-    for (int i = 0; i < 2000; i++) {
-        page += "<div>x</div>";
-    }
-    page += "</body>";
-    uint64_t total = 0;
-    int64_t steps = 0;
-    {
-        RenderEnv env(page);
-        total = chargeOf(env, &RenderEnv::rebuild);
-        steps = env.render().selectorSteps();
-        CHECK(steps >= 2000 * 1000);
-        CHECK(steps < litehtml::document::default_selector_steps);
-        CHECK(env.render().buildChargeParts().filter >= uint64_t(steps) / 2);
-    }
-    RenderEnv env(page);
-    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-    litehtml::document* document = env.render().document();
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t limit = JS_GetWorkUnits(rt) + total - uint64_t(steps) / 2 * wr::work::kSimpleSelectorTest;
-    env.env().runtime().setWorkLimit(limit);
-    bool aborted = false;
-    try {
-        env.rebuild();
-    } catch (const wr::Aborted&) {
-        aborted = true;
-    }
-    CHECK(aborted);
-    CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-    if (JS_GetWorkUnits(rt) > limit + 256) {
-        std::printf("  the stopped build ran %llu units past the budget\n", (unsigned long long)(JS_GetWorkUnits(rt) - limit));
-    }
-    CHECK(JS_GetWorkUnits(rt) <= limit + 256);
-    CHECK(env.render().document() == document);
-    CHECK(env.render().layerTree() == tree);
-}
-
-// Ruling E22.3: what a patch's map nodes and pieces cost is what the estimate says (RenderTree.h), and growing a map from
-// empty allocates at most 8 units per entry for its bucket arrays (the estimate holds 10).
-WR_TEST(testMapNodeUnitsArePinned) {
-    RenderEnv env("<!doctype html><body></body>");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    std::vector<char> keys(20000);
-    for (size_t n : {size_t(1), size_t(7), size_t(1000), size_t(20000)}) {
-        wr::RenderElementMap elements(0, std::hash<const litehtml::element*>(), std::equal_to<const litehtml::element*>(),
-                                      wr::JSAllocator<std::pair<const litehtml::element* const, wr::Node*>>(rt));
-        elements.reserve(n);
-        uint64_t before = JS_GetWorkUnits(rt);
-        for (size_t i = 0; i < n; i++) {
-            elements.emplace(reinterpret_cast<const litehtml::element*>(&keys[i]), nullptr);
-        }
-        CHECK_EQ(JS_GetWorkUnits(rt) - before, n * wr::kRenderElementMapNodeUnits);
-        wr::RenderNodeMap nodes(0, std::hash<wr::Node*>(), std::equal_to<wr::Node*>(),
-                                wr::JSAllocator<std::pair<wr::Node* const, wr::RenderEntry>>(rt));
-        nodes.reserve(n);
-        before = JS_GetWorkUnits(rt);
-        for (size_t i = 0; i < n; i++) {
-            nodes.try_emplace(reinterpret_cast<wr::Node*>(&keys[i]), wr::Ref<wr::Node>(), nullptr, rt);
-        }
-        CHECK_EQ(JS_GetWorkUnits(rt) - before, n * wr::kRenderNodeMapNodeUnits);
-        wr::Vector<litehtml::element::ptr> pieces{wr::JSAllocator<litehtml::element::ptr>(rt)};
-        before = JS_GetWorkUnits(rt);
-        pieces.reserve(n);
-        CHECK_EQ(JS_GetWorkUnits(rt) - before, n * (wr::kRenderPieceUnits - wr::kRenderElementMapNodeUnits));
-    }
-    wr::RenderElementMap grown(0, std::hash<const litehtml::element*>(), std::equal_to<const litehtml::element*>(),
-                               wr::JSAllocator<std::pair<const litehtml::element* const, wr::Node*>>(rt));
-    const uint64_t start = JS_GetWorkUnits(rt);
-    bool held = true;
-    for (size_t n = 1; n <= keys.size(); n++) {
-        grown.emplace(reinterpret_cast<const litehtml::element*>(&keys[n - 1]), nullptr);
-        held = held && JS_GetWorkUnits(rt) - start <= n * (wr::kRenderElementMapNodeUnits + 8);
-    }
-    CHECK(held);
-}
-
-// Ruling E22.3, the reviewer's preserve: after each patch the estimate the reserve is built on covers what rebuilding the
-// DOM as it now is is charged, without the steps on either side (the reserve holds 4,000,000 of them): a text grown to
-// 8,000 pieces, 4,000 subtrees, 200 inputs, big inline styles, half of it removed; and across the maps' rehash points.
-WR_TEST(testReserveCoversARebuild) {
-    struct Step {
-        const char* what;
-        std::string script;
-    };
-    auto run = [](const std::string& page, const std::vector<Step>& steps) {
-        RenderEnv env(page);
-        for (const Step& step : steps) {
-            edit(env, step.script);
-            JSRuntime* rt = env.env().runtime().jsRuntime();
-            wr::RenderTree fresh(env.ctx(), env.host(), env.options());
-            const uint64_t before = JS_GetWorkUnits(rt);
-            fresh.rebuild(env.ctx());
-            const uint64_t rebuilt = chargedWithoutSteps(rt, before, fresh);
-            const uint64_t estimate = estimateWithoutSteps(env.render());
-            if (estimate < rebuilt) {
-                std::printf("  %s: the estimate %llu is under a rebuild's %llu\n", step.what, (unsigned long long)estimate,
-                            (unsigned long long)rebuilt);
-            }
-            CHECK(estimate >= rebuilt);
-            // The filter loop's bound is a tag count, kept exactly: what a rebuild's gate is asked with.
-            CHECK_EQ(env.render().buildChargeParts().filter, fresh.buildChargeParts().filter);
-        }
-        return env.render().patchCount();
-    };
-    CHECK(run("<!doctype html><body><p id=t>x</p></body>",
-              {{"text grows to 8,000 pieces", "document.getElementById('t').firstChild.data = 'a '.repeat(4000)"},
-               {"again, 9,000", "document.getElementById('t').firstChild.data = 'b '.repeat(4500)"}}) == 2);
-    CHECK(run("<!doctype html><style>div{color:red} .q span{color:blue} input{margin:1px}</style><body><div id=c></div></body>",
-              {{"4,000 divs with spans", "document.getElementById('c').innerHTML = '<div class=q><span>s</span></div>'.repeat(4000)"},
-               {"200 inputs", "document.getElementById('c').insertAdjacentHTML('beforeend', '<input value=abc>'.repeat(200))"},
-               {"big inline styles",
-                "for (const d of document.querySelectorAll('.q')) d.setAttribute('style', 'color:#123456;margin:1px 2px 3px 4px;padding:1px')"},
-               {"remove half", "const c = document.getElementById('c'); for (let i = 0; i < 2000; i++) c.firstChild.remove()"}}) == 4);
-    // One element more at every size up to 300: each map crosses its rehash points there.
-    bool held = true;
-    for (int n = 1; n <= 300; n++) {
-        std::string page = "<!doctype html><body id=b>";
-        for (int i = 0; i < n; i++) {
-            page += "<p>x</p>";
-        }
-        RenderEnv env(page + "</body>");
-        edit(env, "const p = document.createElement('p'); p.textContent = 'y'; document.body.append(p)");
-        const uint64_t estimate = estimateWithoutSteps(env.render());
-        const uint64_t rebuilt = rebuildChargeWithoutSteps(env);
-        if (estimate < rebuilt || env.render().patchCount() != 1) {
-            std::printf("  %d <p>s and one more: patched %llu, the estimate %llu, a rebuild %llu\n", n,
-                        (unsigned long long)env.render().patchCount(), (unsigned long long)estimate,
-                        (unsigned long long)rebuilt);
-            held = false;
-        }
-    }
-    CHECK(held);
-}
-
-// Ruling E22.3: the estimate is the current document's, not a running total of the patches' plans: five consecutive
-// patches of one kind keep it within twice what a rebuild is charged (it was 8 times after five patches: the reviewer's
-// preserve), and above it.
-WR_TEST(testReserveIsStableAcrossPatches) {
-    auto five = [](const char* what, const std::string& page, const std::function<std::string(int)>& script) {
-        RenderEnv env(page);
-        for (int i = 0; i < 5; i++) {
-            patches(env, script(i));
-            const uint64_t estimate = estimateWithoutSteps(env.render());
-            const uint64_t rebuilt = rebuildChargeWithoutSteps(env);
-            if (estimate < rebuilt || estimate > 2 * rebuilt) {
-                std::printf("  %s, patch %d: the estimate %llu against a rebuild's %llu\n", what, i + 1,
-                            (unsigned long long)estimate, (unsigned long long)rebuilt);
-            }
-            CHECK(estimate >= rebuilt);
-            CHECK(estimate <= 2 * rebuilt);
-        }
-    };
-    std::string divs = "<!doctype html><body>";
-    for (int i = 0; i < 2000; i++) {
-        divs += "<div class=q>d</div>";
-    }
-    divs += "</body>";
-    std::string subtrees = "<!doctype html><body><div id=c>";
-    for (int i = 0; i < 2000; i++) {
-        subtrees += "<div class=q><span>s</span></div>";
-    }
-    subtrees += "</div></body>";
-    std::string siblings = "<!doctype html><style>p + p{color:red}</style><body><div id=c>";
-    for (int i = 0; i < 2000; i++) {
-        siblings += "<p>x</p>";
-    }
-    siblings += "</div></body>";
-    five("a text replaced", "<!doctype html><body><p id=t>x</p><p>" + std::string(4000, 'w') + "</p></body>", [](int i) {
-        return "document.getElementById('t').firstChild.data = '" + std::string(1, char('a' + i)) + " '.repeat(" +
-               std::to_string(2000 + 400 * i) + ")";
-    });
-    five("2,000 styles", divs, [](int i) {
-        return "for (const d of document.querySelectorAll('.q')) d.setAttribute('style', 'color:#12345" + std::to_string(i) +
-               ";margin:1px 2px 3px 4px;padding:1px')";
-    });
-    five("1,000 subtrees removed and added", subtrees, [](int i) {
-        return i % 2 == 0
-                   ? std::string("const c = document.getElementById('c'); for (let i = 0; i < 1000; i++) c.firstChild.remove()")
-                   : std::string("document.getElementById('c').insertAdjacentHTML('beforeend', '<div class=q><span>s</span></div>'.repeat(1000))");
-    });
-    five("2,000 siblings rebuilt (p + p)", siblings,
-         [](int) { return std::string("document.getElementById('c').append(document.createElement('p'))"); });
 }
 
 // Ruling E25, the reviewer's refused: an element a parent's appendChild refuses (a <div> appended to a <table>) is in no
@@ -1594,6 +1099,8 @@ WR_TEST(testReserveIsStableAcrossPatches) {
 // and input differed from a rebuild's. An own change on a node the structure path finds unmapped now rebuilds, unless the
 // node is outside the main document or under (or is) an element Ruling 4 leaves out, which no build reads.
 WR_TEST(testAnUnmappedNodesOwnChangeRebuilds) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     for (int title : {1000, 200000, 1100000}) {
         RenderEnv env("<!doctype html><body><table id=t><tbody><tr><td>c</td></tr></tbody></table><div id=c></div><p>tail</p>"
                       "</body>");
@@ -1644,71 +1151,3 @@ WR_TEST(testCutAttributePatchIsReplacedByARebuild) {
     patches(env, byId("t") + ".firstChild.data = 'again'");
 }
 
-// Ruling E22.4: an abandoned patch is charged the steps its session performed before the flush rebuilds: two cuts of the
-// same patch, at two session limits, differ by exactly the steps between them.
-WR_TEST(testAbandonedPatchChargesItsSteps) {
-    int64_t used = 0;
-    {
-        RenderEnv env(siblingAncestorPage(500));
-        patches(env, appendSpans(50));
-        used = env.render().lastPatchSteps();
-    }
-    CHECK(used > 4000);
-    auto cutAt = [](int64_t cap) {
-        RenderEnv env(siblingAncestorPage(500));
-        env.render().setPatchStepCapForTesting(cap);
-        CHECK_EQ(env.env().eval("(() => { " + appendSpans(50) + "; })(); 'ok'"), std::string("ok"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.flush();
-        CHECK_EQ(std::string(env.render().lastPatchRefusal()), std::string("abandoned: the selector-step budget"));
-        return JS_GetWorkUnits(rt) - before;
-    };
-    const uint64_t low = cutAt(used / 4);
-    const uint64_t high = cutAt(used / 2);
-    CHECK_EQ(high - low, uint64_t(used / 2 - used / 4) * wr::work::kSimpleSelectorTest);
-}
-
-// Ruling E22.4 with E20: a patch's session gets only what the reserve for its fallback leaves, so a cut one, charged its
-// steps, still leaves the rebuild paid for. Below that reserve plus the patch's bound the patch is not attempted (before
-// the cap it was, and cut); above it, an abandoned patch never stops the widget; every flush that finished equals a
-// rebuild.
-WR_TEST(testAbandonedPatchLeavesTheRebuildPaidFor) {
-    int64_t used = 0;
-    int64_t bound = 0;
-    uint64_t reserve = 0;
-    {
-        RenderEnv env(siblingAncestorPage(500));
-        patches(env, appendSpans(50));
-        used = env.render().lastPatchSteps();
-        bound = env.render().lastPatchStepBound();
-        reserve = estimateWithoutSteps(env.render()) +
-                  uint64_t(litehtml::document::default_selector_steps) * wr::work::kSimpleSelectorTest;
-    }
-    int abandonedCount = 0;
-    for (int i = 0; i <= 60; i++) {
-        RenderEnv env(siblingAncestorPage(500));
-        env.render().setPatchStepCapForTesting(used / 2);
-        CHECK_EQ(env.env().eval("(() => { " + appendSpans(50) + "; })(); 'ok'"), std::string("ok"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + reserve + uint64_t(bound) * uint64_t(i) / 20);
-        bool aborted = false;
-        try {
-            env.flush();
-        } catch (const wr::Aborted&) {
-            aborted = true;
-        }
-        const bool abandoned = std::string(env.render().lastPatchRefusal()).rfind("abandoned", 0) == 0;
-        abandonedCount += abandoned ? 1 : 0;
-        if ((abandoned && aborted) || (abandoned && i < 20)) {
-            std::printf("  abandoned (%s) at the reserve + %d/20 of the bound\n", aborted ? "then stopped" : "rebuilt", i);
-        }
-        CHECK(!(abandoned && aborted));
-        CHECK(!(abandoned && i < 20));
-        if (!aborted) {
-            env.env().runtime().setWorkLimit(~uint64_t(0));
-            expectMatchesRebuild(env, "a cut patch under a work limit");
-        }
-    }
-    CHECK(abandonedCount > 0);
-}

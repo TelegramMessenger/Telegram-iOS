@@ -39,7 +39,6 @@ ListenedTypes::~ListenedTypes() {
 }
 
 void ListenedTypes::note(JSContext* ctx, JSAtom type) {
-    charge(ctx, work::kNodeVisit);
     if (m_set.count(type)) {
         return;
     }

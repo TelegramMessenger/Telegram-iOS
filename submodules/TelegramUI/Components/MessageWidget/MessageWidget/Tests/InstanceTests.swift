@@ -157,7 +157,7 @@ class InstanceTests: MessageWidgetTestCase {
     /// an area the widget reached is kept, even though the task's presentation is dropped (spec D5).
     func testTheCommitOfTheTaskRunningAtDestroyStillReachesTheHost() throws {
         // A capped wait: the gated timer task is waited for while the widget is visible.
-        var instance: MessageWidgetInstance? = self.make("<!doctype html><p>d</p>", policy: MessageWidgetWaitPolicy(cap: 0.05, allowance: nil))
+        var instance: MessageWidgetInstance? = self.make("<!doctype html><p>d</p>", policy: MessageWidgetWaitPolicy(cap: 0.05))
         _ = instance?.layout(width: 360.0)
         var commits: [MessageWidgetInstance.StorageCommit] = []
         instance?.onStorageCommit = { commits.append($0) }
@@ -214,7 +214,9 @@ class InstanceTests: MessageWidgetTestCase {
         _ = instance.layout(width: 360.0)
         self.tap(instance, "#hang")
         XCTAssertNotNil(instance.deadReason)
-        XCTAssertTrue(instance.deadReason?.contains("Work limit") ?? false)
+        // widget-sandbox's words: the tap's event task ran past its slice (what the quota left it, at least 50 ms).
+        XCTAssertTrue(instance.deadReason?.hasPrefix("CPU limit exceeded: more than ") ?? false, instance.deadReason ?? "nil")
+        XCTAssertTrue(instance.deadReason?.contains("of continuous execution (event") ?? false, instance.deadReason ?? "nil")
         // The badge is drawn over the last frame now, not built into the document.
         XCTAssertEqual(instance.onCoreForTesting { $0.renderer?.frozenLabel } ?? nil, "Widget stopped")
     }
@@ -283,7 +285,7 @@ class InstanceTests: MessageWidgetTestCase {
         }
         RecordingURLProtocol.reset()
         let pages = WidgetCorpus.files(in: "attacks")
-        XCTAssertEqual(pages.count, 105)
+        XCTAssertEqual(pages.count, 110)
         var rafBurnFrames: String?
         var rafBurnReason: String?
         var layoutLoopReason: String?
@@ -308,13 +310,13 @@ class InstanceTests: MessageWidgetTestCase {
             }
             instance.destroy()
         }
-        // A frame spinning 30 ms on performance.now() costs more than a frame's budget at WidgetRuntime's host-call rate
-        // (~0.4 ns a unit, measured): stopped at its first frame rather than throttled, as the old runtime's JS shim was.
-        XCTAssertNil(rafBurnFrames)
-        XCTAssertTrue(rafBurnReason?.contains("Work limit exceeded: frame did more than") ?? false, rafBurnReason ?? "live")
-        // A boot script forcing a layout per iteration (a style write, then offsetHeight) is stopped by the per-task
-        // layout-query budget (sdk-v1 §2: "Layout query limit exceeded"), before the boot's own budget.
-        XCTAssertEqual(layoutLoopReason, "Layout query limit exceeded")
+        // A frame spinning 30 ms on performance.now() is well inside its slice (500 ms) and, three of them, the JS quota
+        // (300 ms a second): it runs, as upstream's does, and would be throttled past the quota rather than stopped.
+        XCTAssertEqual(rafBurnFrames, "3")
+        XCTAssertNil(rafBurnReason)
+        // A boot script forcing a layout per iteration (a style write, then offsetHeight) is stopped by the layout
+        // queries' 100 ms per task, before its slice: upstream's words, naming the boot task and the script.
+        XCTAssertEqual(layoutLoopReason, "Layout query limit exceeded: host queries blocked the renderer for more than 100 ms in one boot task (script)")
         XCTAssertEqual(RecordingURLProtocol.requests, [], "a widget's URL was requested")
     }
 }

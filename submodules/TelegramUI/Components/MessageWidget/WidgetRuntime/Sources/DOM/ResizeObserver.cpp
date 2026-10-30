@@ -10,7 +10,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -100,7 +99,6 @@ void ResizeObserver::observe(JSContext* ctx, Element* target, idl::ResizeObserve
     const Box box = options.box.equalsASCII("border-box")                 ? Box::Border
                     : options.box.equalsASCII("device-pixel-content-box") ? Box::DevicePixel
                                                                          : Box::Content;
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size() + 1));
     // Observing a target again replaces its observation (its box option, a fresh last size).
     this->unobserve(ctx, target);
     const bool wasEmpty = m_observations.empty();
@@ -114,7 +112,6 @@ void ResizeObserver::observe(JSContext* ctx, Element* target, idl::ResizeObserve
 }
 
 void ResizeObserver::unobserve(JSContext* ctx, Element* target) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size() + 1));
     JSRuntime* rt = JS_GetRuntime(ctx);
     for (size_t i = 0; i < m_observations.size(); i++) {
         if (payloadOfKnown(m_observations[i].target.value) == target) {
@@ -132,7 +129,6 @@ void ResizeObserver::disconnect(JSContext* ctx) {
     if (m_observations.empty()) {
         return;
     }
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size()));
     JSRuntime* rt = JS_GetRuntime(ctx);
     for (Observation& observation : m_observations) {
         observation.target.clear(rt);
@@ -144,7 +140,6 @@ void ResizeObserver::disconnect(JSContext* ctx) {
 bool ResizeObserver::gather(JSContext* ctx, const RenderTree& render) {
     bool any = false;
     for (Observation& observation : m_observations) {
-        charge(ctx, work::kLayoutBox);
         const Sizes sizes = sizesOf(render, *static_cast<Element*>(payloadOfKnown(observation.target.value)));
         const auto [inlineSize, blockSize] = observed(sizes, observation.box == Box::Border);
         observation.active = inlineSize != observation.lastInline || blockSize != observation.lastBlock;

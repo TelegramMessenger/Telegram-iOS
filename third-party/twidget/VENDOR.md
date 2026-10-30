@@ -1613,6 +1613,47 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     their gradients, where CoreGraphics' blur is shaped slightly differently at 24 px than at its full radius); its
     slice-parity and cache tests hold unchanged. **macOS effect:** LHDocument draws such shadows the same way, within 8
     levels of before.
+66. **`grid-template`** (`style.cpp`, `string_id.h`'s `_grid_template_`, the `shorthands` table). `none` and `<rows> /
+    <columns>` set `grid-template-rows` and `grid-template-columns`; the areas form (strings) drops the declaration, as
+    an invalid one. It was unknown, so `grid-template: repeat(3,1fr)/repeat(3,1fr)` left a single column
+    (widget-sandbox v0.3.0's `auto/29`, a tic-tac-toe board). Pinned by `FidelityRenderTests`'
+    `testGridTemplateSetsRowsThenColumns`. **macOS effect:** LHDocument lays such grids out too.
+67. **An aspect ratio follows the width min-width and max-width leave** (`render_block.cpp` `_render`). The ratio's
+    height was taken from the available width, before `max-width` clamped it: `max-width: 264px; aspect-ratio: 1` in a
+    374 px column was 264 × 374. `testAspectRatioFollowsTheMaxWidth`. **macOS effect:** the same in LHDocument.
+68. **A replaced element sized by a percentage is compressible** (`render_image.cpp`; CSS Sizing 3 §5.2.2). Its
+    min-content contribution resolves a percentage `width` or `max-width` against zero (its padding and border remain),
+    so an `<svg>` at 58 % of a grid cell no longer widens the cell's track to 58 % of the whole grid. **macOS effect:**
+    visible in LHDocument: an `img { max-width: 100% }` in an auto-width table cell no longer keeps the cell at the
+    image's width (common in HTML mail), as in browsers.
+69. **A replaced element's percentage height against an indefinite height is auto** (`render_image.cpp`; CSS 2.1
+    §10.5). `calc_cb_length` resolves a percentage against whatever value the containing block carries, definite or
+    not; an image now treats such a height as auto (its width and natural ratio decide), so a grid measuring its rows
+    lays an auto-height cell out at its content's height, not 58 % of the grid's. Blocks keep litehtml's resolution.
+    **macOS effect:** an `<img height="50%">` in an auto-height block takes its natural ratio in LHDocument too.
+70. **A definite height's flexible rows take the size of an fr** (`render_grid.cpp` `expand_flexible_tracks`, shared
+    with the columns; Grid §12.7.1). The free space was added on top of each row's content height, so a row holding a
+    51 px mark in `repeat(3,1fr)` over 264 px came out 122 px and the others 71 (**macOS effect:** the same in
+    LHDocument). Edits 66–70 together pin
+    `testABoardsMarksSitInTheirCells` (the board as `corpus/bot-demos/04-tic-tac-toe` builds it, marks placed).
+71. **A percentage width counts as auto for a block's min-content contribution** (`render_block.cpp` `_render`'s
+    return; a calc() with a percentage included; CSS Sizing 3 §5.2.1, cyclic percentages). A block with a percentage
+    width reported that width, resolved against the measuring width, as its minimum: a poll's fill at `width: 60%` gave
+    its bar 60 % of the row as its min-content, and the bar, spanning `1fr auto`, widened the auto column
+    (`auto/28`, `testAPollRowsAutoColumnFitsItsCount`). Not done: Grid §12.5's rule that an item spanning a flexible
+    track is left out of the intrinsic tracks' sizing; the fork still spreads its min-content over them. **macOS
+    effect:** in LHDocument a percentage-width block in a table cell or float now gives its content's min-content.
+72. **`transform-box: fill-box` on SVG shapes, and the transform the painter applies** (`style.cpp`, `css_effects.h`'s
+    `transform_box`, `css_properties`' `m_transform_box`, `el_svg.cpp` `svg_css_transform`, `element_transform`,
+    `svg_path_bounds`, `svg_element_transform`). `fill-box` (and `content-box`, `stroke-box`, `border-box`, mapped to it:
+    the stroke is not added) makes a shape's geometry box its reference box, with that box's top left as the initial
+    origin, so `transform-origin: center` scales a chart's pulse dot about the dot (`auto/30`) where it scaled about the
+    view box; an element with no geometry of its own (a group, text) keeps the view box. `svg_path_bounds` is the tight
+    box (curve extrema) WidgetRuntime's getBBox used, moved here so the painter and the queries share it, and
+    `svg_element_transform` exports the painter's per-element transform: WidgetRuntime maps a shape's box through it
+    and its ancestors' up to the `<svg>` for `getBoundingClientRect`, which ignored SVG transforms.
+    `testFillBoxScalesAShapeAboutItself` (a moved shape takes its box along, as a rebuild does). **macOS effect:**
+    LHDocument's SVG shapes honour `transform-box: fill-box` too.
 
 ## The iOS font resolver
 

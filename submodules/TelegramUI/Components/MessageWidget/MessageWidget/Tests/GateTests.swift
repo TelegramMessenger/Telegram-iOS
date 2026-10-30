@@ -5,7 +5,7 @@ import XCTest
 /// widget, for the tests of Tasks 6–8.
 class GateTests: MessageWidgetTestCase {
     func testAGatedTaskHoldsTheWidgetsQueueUntilReleased() {
-        let instance = self.make("<!doctype html><p>x</p>", policy: MessageWidgetWaitPolicy(cap: 0.05, allowance: nil))
+        let instance = self.make("<!doctype html><p>x</p>", policy: MessageWidgetWaitPolicy(cap: 0.05))
         let gate = instance.gateNextTaskForTesting()
         _ = instance.layout(width: 300.0)
         XCTAssertEqual(gate.started.wait(timeout: .now() + 5.0), .success)

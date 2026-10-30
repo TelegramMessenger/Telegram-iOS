@@ -412,8 +412,19 @@ const WidgetContainer::CachedImage& WidgetContainer::decide(std::string_view src
         if (src == kPlaceholderURL) {
             const std::string_view svg = placeholderSVG();
             data = DataUrl{"image/svg+xml", std::vector<uint8_t>(svg.begin(), svg.end())};
-        } else if (css::policy::imageSourceKept(src)) {
-            data = parseDataUrl(src);
+        } else {
+            switch (css::policy::imageSource(src)) {
+            case css::policy::ImageSource::Kept:
+                data = parseDataUrl(src);
+                break;
+            case css::policy::ImageSource::Broken:
+                // Bytes of none of the profile's formats (widget-sandbox v0.3.0): no decoder takes them, whatever
+                // ImageIO would sniff.
+                entry.load = Load::Undecodable;
+                break;
+            case css::policy::ImageSource::Refused:
+                break;
+            }
         }
         if (data) {
             std::optional<DecodedImage> decoded = m_host.decodeImage(data->mimeType, data->bytes);
@@ -553,8 +564,8 @@ void WidgetContainer::get_media_features(litehtml::media_features& media) const 
     media.reduced_motion = m_options.reducedMotion ? 1 : 0;
 }
 
-// Profile 1 (V4 plan, Task 3b): litehtml asks while it parses, never charging; the policy is pure and its walks are
-// bounded by the text the builder charged before litehtml was handed it.
+// Profile 1 (V4 plan, Task 3b): litehtml asks while it parses; the policy is pure and its walks are bounded by the text
+// the builder handed litehtml.
 
 bool WidgetContainer::sanitize_at_rule(const std::string& name) {
     return m_trusted || css::policy::atRuleKept(name);

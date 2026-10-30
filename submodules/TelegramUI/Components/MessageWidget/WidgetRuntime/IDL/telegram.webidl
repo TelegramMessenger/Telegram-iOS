@@ -30,6 +30,9 @@ interface TelegramWidget {
   readonly attribute DOMString? chatType;
   readonly attribute any viewer;
   readonly attribute boolean isPreview;
+  // SDK v1 §2.17 (widget-sandbox v0.4.0): what the client draws over the widget, a frozen { top, right, bottom, left,
+  // cornerLeft, cornerRight } in CSS px, the same object until a change.
+  readonly attribute any contentSafeAreaInset;
   // SDK v1 §2.13–§2.15 (widget-sandbox v0.2): `data` and `text` are `any` so that anything but a string within its
   // limits is a TypeError. request returns a promise.
   any request(optional any data);

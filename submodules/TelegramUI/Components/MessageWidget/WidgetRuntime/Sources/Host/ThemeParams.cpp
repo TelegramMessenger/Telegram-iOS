@@ -291,6 +291,41 @@ ThemeParams completeThemeParams(const ThemePalette& palette, Theme theme) {
     return params;
 }
 
+ContentSafeArea checkContentSafeArea(const ContentSafeArea& area) {
+    const auto checked = [](double value, double max) {
+        return std::isfinite(value) && value >= 0 && value <= max ? std::round(value * 100) / 100 : 0.0;
+    };
+    constexpr double kMaxInset = 64;
+    constexpr double kMaxCorner = 200;
+    ContentSafeArea out;
+    out.top = checked(area.top, kMaxInset);
+    out.right = checked(area.right, kMaxInset);
+    out.bottom = checked(area.bottom, kMaxInset);
+    out.left = checked(area.left, kMaxInset);
+    out.cornerLeft = checked(area.cornerLeft, kMaxCorner);
+    out.cornerRight = checked(area.cornerRight, kMaxCorner);
+    return out;
+}
+
+std::string contentSafeAreaRootDeclarations(const ContentSafeArea& area) {
+    const std::pair<const char*, double> variables[] = {
+        {"inset-top", area.top},     {"inset-right", area.right},       {"inset-bottom", area.bottom},
+        {"inset-left", area.left},   {"corner-left", area.cornerLeft}, {"corner-right", area.cornerRight},
+    };
+    std::string out;
+    for (const auto& [name, value] : variables) {
+        if (!out.empty()) {
+            out += ';';
+        }
+        out += "--tg-content-safe-area-";
+        out += name;
+        out += ':';
+        out += formatRounded(value, 2);
+        out += "px !important";
+    }
+    return out;
+}
+
 std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens, const ThemeTextTokens& text) {
     std::string out;
     for (size_t i = 0; i < kThemeKeyCount; i++) {

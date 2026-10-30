@@ -58,11 +58,11 @@ Ref<Animation> Element::animate(JSContext* ctx, std::optional<Object> keyframes,
 namespace {
 
 /// getAnimations sees the CSS animations and transitions of the styles as they are now (CSS Animations 2): the
-/// render tree is flushed first, as a layout query flushes it.
+/// render tree is flushed first, as a layout query flushes it: its time is the query's, and past the 100 ms per task the
+/// widget stops at that flush (the fix waves' review: a plain flush's time moved the slice's deadline on, so a loop of
+/// them ran unchecked).
 void flushStyle(JSContext* ctx) {
-    if (HostState* host = HostState::find(ctx); host && host->render()) {
-        host->render()->flush(ctx);
-    }
+    layoutForQuery(ctx);
 }
 
 } // namespace

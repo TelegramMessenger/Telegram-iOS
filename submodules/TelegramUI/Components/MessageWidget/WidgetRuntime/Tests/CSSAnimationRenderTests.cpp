@@ -6,7 +6,6 @@
 #include <string>
 
 #include "Sources/Animation/AnimationState.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -227,24 +226,17 @@ WR_TEST(testAPausedCSSAnimationCostsNoRelayout) {
     checkEval(env, "w('p')", "40");
 }
 
-/// One frame of a running CSS transform animation on a 200-element page is cheap, and the style-change step does not
-/// run for it (Review Focus 3).
-WR_TEST(testARunningCSSAnimationFrameIsCheap) {
+/// The style-change step does not run for a frame of a running CSS transform animation on a 200-element page (Review
+/// Focus 3).
+WR_TEST(testARunningCSSAnimationFrameRunsNoStyleChangeStep) {
     int steps = 0;
     RenderEnv env(rowsPage(200, "animation:slide 100s linear;width:20px;height:20px"), {}, true, [&](wr_test::HostEnv& host) {
         wr::animation::AnimationState::of(host.ctx()).setStyleObserverForTesting([&](const wr::animation::StyleChange&) { steps++; });
     });
     env.env().frame(16);
     env.env().frame(16);
-    JSRuntime* rt = env.env().runtime().jsRuntime();
     const int stepsBefore = steps;
-    const uint64_t before = JS_GetWorkUnits(rt);
     env.env().frame(16);
-    const uint64_t cost = JS_GetWorkUnits(rt) - before;
-    if (cost >= 250000) {
-        std::printf("  a frame cost %llu units\n", (unsigned long long)cost);
-    }
-    CHECK(cost < 250000);
     CHECK_EQ(steps, stepsBefore);
     CHECK(std::stod(env.env().eval("tx('mover')")) > 0);
 }
@@ -263,38 +255,6 @@ WR_TEST(testTheSecondPassIsBounded) {
     // #a's animation, #b's, and #b's opacity transition (declared and changed in the same change, as browsers start it).
     checkEval(env, "document.getAnimations().length", "3");
     checkEval(env, "w('a')", "10");
-}
-
-/// 10,000 elements with `transition: all 1s` whose ancestor's class flips at once: starting their transitions is
-/// charged (the flip costs more than the same flip without the declarations), so a widget either runs them to the end
-/// or stops on its budget. The render build keeps 10,000 elements (Builder's kMaxElements): the page's first five are
-/// html, head, its two style elements and body, so the last five `.t` are not rendered, have no style, and start none.
-WR_TEST(testManyTransitionsAreCharged) {
-    std::string body;
-    for (int i = 0; i < 10000; i++) {
-        body += "<i class=t></i>";
-    }
-    // The cost of the flip on a fresh page; `env` keeps the page.
-    const auto flipCost = [&](const std::string& transition, std::unique_ptr<RenderEnv>& env) {
-        env = std::make_unique<RenderEnv>(
-            page(body, ".t{display:block;width:1px;height:1px;opacity:1;" + transition + "} body.go .t{opacity:.5}"));
-        env->env().frame(16);
-        JSRuntime* rt = env->env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env->env().eval("document.body.className = 'go'; 1");
-        env->flush();
-        return JS_GetWorkUnits(rt) - before;
-    };
-    std::unique_ptr<RenderEnv> env;
-    const uint64_t plain = flipCost("", env);
-    const uint64_t transitioning = flipCost("transition:all 1s linear", env);
-    std::printf("  flip %llu units, %llu with the transitions\n", (unsigned long long)plain, (unsigned long long)transitioning);
-    CHECK(transitioning >= plain + 9995 * wr::work::kNodeVisit);
-    checkEval(*env, "document.getAnimations().length", "9995");
-    for (int i = 0; i < 70; i++) {
-        env->env().frame(16);
-    }
-    checkEval(*env, "[document.getAnimations().length, getComputedStyle(document.querySelector('.t')).opacity].join()", "0,0.5");
 }
 
 /// A class change on an element restyles its descendants: their transitions start as the element's own would (the patch

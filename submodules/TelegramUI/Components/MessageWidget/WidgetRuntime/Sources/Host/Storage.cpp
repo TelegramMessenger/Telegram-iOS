@@ -7,7 +7,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -29,7 +28,6 @@ void Storage::load(JSContext* ctx) {
     // storage-rejected, and the widget starts empty (§3.1).
     size_t bytes = 0;
     for (const auto& [key, value] : stored) {
-        charge(ctx, work::kNodeVisit + work::kCssByte * uint64_t(key.size() + value.size()));
         bytes += key.size() + value.size();
     }
     if (bytes > kStorageQuotaBytes) {
@@ -43,7 +41,6 @@ void Storage::load(JSContext* ctx) {
 }
 
 int Storage::find(JSContext* ctx, const std::string& key) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_entries.size() + 1));
     for (size_t i = 0; i < m_entries.size(); i++) {
         if (m_entries[i].key.size() == key.size() && std::equal(key.begin(), key.end(), m_entries[i].key.begin())) {
             return int(i);
@@ -68,10 +65,9 @@ std::optional<String> Storage::key(JSContext* ctx, uint32_t index) {
 
 namespace {
 
-/// A key converted only as far as an area could hold one, its scan charged first (the final review's I3); nullopt for a
-/// longer key, which no area holds.
+/// A key converted only as far as an area could hold one (the final review's I3); nullopt for a longer key, which no
+/// area holds.
 std::optional<std::string> storableKey(JSContext* ctx, const String& key) {
-    chargeScan(ctx, std::min<uint64_t>(key.length(), kStorageQuotaBytes + 1));
     bool cut = false;
     std::string utf8 = key.utf8Prefix(kStorageQuotaBytes, &cut);
     if (cut) {
@@ -99,11 +95,10 @@ void Storage::setItem(JSContext* ctx, String keyString, String valueString) {
     bool keyCut = false, valueCut = false;
     const std::string key = keyString.utf8Prefix(kStorageQuotaBytes, &keyCut);
     const std::string value = valueString.utf8Prefix(kStorageQuotaBytes, &valueCut);
-    charge(ctx, work::kCssByte * uint64_t(key.size() + value.size()));
     const int i = this->find(ctx, key);
     const size_t old = i < 0 ? 0 : m_entries[size_t(i)].key.size() + m_entries[size_t(i)].value.size();
     if (keyCut || valueCut || m_bytes - old + key.size() + value.size() > kStorageQuotaBytes) {
-        throw DOMError{"QuotaExceededError", "The widget's storage is full (16 KB per area)."};
+        throw DOMError{"QuotaExceededError", "The widget's storage is full (" + std::to_string(kStorageQuotaBytes / 1024) + " KB per area)."};
     }
     JSRuntime* rt = JS_GetRuntime(ctx);
     if (i < 0) {
@@ -139,7 +134,6 @@ void Storage::clear(JSContext* ctx) {
 
 std::vector<String> Storage::supportedNames(JSContext* ctx) {
     this->load(ctx);
-    charge(ctx, work::kNodeVisit * uint64_t(m_entries.size() + 1));
     std::vector<String> names;
     for (const Entry& entry : m_entries) {
         names.push_back(String::fromUTF8(ctx, std::string_view(entry.key.data(), entry.key.size())));
@@ -182,7 +176,6 @@ void Storage::commitIfChanged(JSContext* ctx) {
     if (const HostState* state = HostState::find(ctx); state && state->isPreview()) {
         return;
     }
-    charge(ctx, work::kNodeVisit * uint64_t(m_entries.size() + 1) + work::kCssByte * uint64_t(m_bytes));
     std::vector<std::pair<std::string, std::string>> entries;
     entries.reserve(m_entries.size());
     for (const Entry& entry : m_entries) {

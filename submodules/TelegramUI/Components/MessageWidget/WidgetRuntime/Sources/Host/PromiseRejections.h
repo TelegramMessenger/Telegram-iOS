@@ -1,8 +1,7 @@
 // HTML's promise rejection tracking (https://html.spec.whatwg.org/#the-hostpromiserejectiontracker-implementation):
 // the about-to-be-notified rejected promises list, the outstanding rejected promises set, and the unhandledrejection
-// and rejectionhandled events. QuickJS calls the tracker from C with no way to charge work, so the tracker charges
-// nothing, queues nothing, and every list it searches is bounded (M1b plan, Ruling 13). The charged work, queuing the
-// events' tasks, happens at the microtask checkpoint (notify).
+// and rejectionhandled events. QuickJS calls the tracker from C: the tracker queues nothing, and every list it
+// searches is bounded (M1b plan, Ruling 13). The events' tasks are queued at the microtask checkpoint (notify).
 #pragma once
 
 #include <cstdint>
@@ -29,15 +28,15 @@ public:
     PromiseRejections(const PromiseRejections&) = delete;
     PromiseRejections& operator=(const PromiseRejections&) = delete;
 
-    /// HostPromiseRejectionTracker: "reject" when `isHandled` is false, "handle" when true. Never throws, never runs
-    /// script and charges nothing; a failed allocation stops the widget (StopReason::Memory). A rejection past
-    /// kMaxPending is dropped, with one unhandled-rejection-dropped diagnostic per runtime. "Handle" of an outstanding
-    /// rejection only records it: its rejectionhandled task is queued by the next notify().
+    /// HostPromiseRejectionTracker: "reject" when `isHandled` is false, "handle" when true. Never throws and never runs
+    /// script; a failed allocation stops the widget (StopReason::Memory). A rejection past kMaxPending is dropped, with
+    /// one unhandled-rejection-dropped diagnostic per runtime. "Handle" of an outstanding rejection only records it:
+    /// its rejectionhandled task is queued by the next notify().
     void track(JSContext* ctx, JSValueConst promise, JSValueConst reason, bool isHandled) noexcept;
     /// HTML "notify about rejected promises" (the end of a microtask checkpoint), with the rejectionhandled tasks the
     /// tracker deferred: queues one rejectionhandled task per outstanding rejection handled since the last call, then
-    /// the task that fires unhandledrejection for the promises still unhandled when it runs. Linear, charged per
-    /// rejection before its work. Throws Thrown at the limit, std::bad_alloc, or what Host::diagnostic throws.
+    /// the task that fires unhandledrejection for the promises still unhandled when it runs. Linear in the rejections.
+    /// Throws Thrown or std::bad_alloc at the memory limit, or what Host::diagnostic throws.
     void notify(JSContext* ctx);
 
 private:
@@ -54,7 +53,7 @@ private:
     using Deque = std::deque<T, JSAllocator<T>>;
 
     /// The notification task of `batch`: one pass from the front of m_notifying over the records notify() copied there
-    /// (`batch` and any older one left behind). Charged per record before its work.
+    /// (`batch` and any older one left behind).
     void fireUnhandled(JSContext* ctx, uint64_t batch);
     /// The one unhandled-rejection-dropped diagnostic.
     void noteDropped(JSContext* ctx);

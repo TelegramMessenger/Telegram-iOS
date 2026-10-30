@@ -2,20 +2,17 @@
 // element by element (twidget edit 12), with no HTML string and no validator (Ruling 2).
 //
 // The walk is iterative, in tree order (Global Constraints, "Stack"), from the document element (Ruling 11):
-// - Every node it visits is charged work::kRenderNode first, and every name it converts chargeScan before converting.
 // - An element named in Ruling 4's list (in any namespace, by its local name compared ASCII case-insensitively, since
 //   litehtml lowercases tag names) is skipped with its subtree. So is the 10,001st rendered element and every later one
 //   (Ruling E9, `elements`, asked before litehtml's own 20,000), and one litehtml's caps refuse
 //   (external_element_allowed: depth 256). Template contents are never walked: they are not children.
 //   Comments, doctypes and processing instructions are skipped.
-// - Any other element is created with its local name and its attributes by qualified name, as the DOM holds them. Each
-//   attribute is charged work::kRenderAttribute plus chargeScan of its value; one whose name equals an earlier one's
-//   ASCII case-insensitively is left out (litehtml keeps one value per lowercased name: the first, as an HTML parser
-//   would); a `style` attribute over 16 KiB of UTF-8 is left out and posts `style-attribute`, and a kept one is
-//   charged work::kCssByte per byte.
-// - A `<style>`'s sheet is its Text children's data (Ruling 10), charged work::kCssByte per UTF-8 byte and appended as
-//   one piece. A sheet that would take the document past 64 KiB of `<style>` text is not applied and posts `css`. A
-//   `<style>`'s own children are not walked.
+// - Any other element is created with its local name and its attributes by qualified name, as the DOM holds them. An
+//   attribute whose name equals an earlier one's ASCII case-insensitively is left out (litehtml keeps one value per
+//   lowercased name: the first, as an HTML parser would); a `style` attribute over 16 KiB of UTF-8 is left out and
+//   posts `style-attribute`.
+// - A `<style>`'s sheet is its Text children's data (Ruling 10), appended as one piece. A sheet that would take the
+//   document past 64 KiB of `<style>` text is not applied and posts `css`. A `<style>`'s own children are not walked.
 // - Any other Text node is appended as litehtml's pieces (split_text's words and spaces) and mapped to them.
 // - The render byte budget (Ruling 7): 1 MiB of UTF-8, in tree order, counting attribute names and values and text.
 //   (Ruling 7 says values; counting the names as well is a superset, and it also bounds the attribute count, whose
@@ -28,14 +25,10 @@
 //   control's parts outside its element and text caps. A later one is skipped with its subtree, the rest of the
 //   document still renders, and `form-controls` is posted.
 // - With no document element, or none rendered, the root is an empty `html`.
-// - Matching (Ruling E19): finalize runs in one selector-step session limited to min(4,000,000, what the work budget
-//   allows), and its steps are charged after it; cut by the work budget, the build stops the widget (Budget). Its filter
-//   loop (Ruling E21: every rule against every element) is asked for before each pass through finalize's matching gate
-//   and charged after it, so a build that cannot afford it stops before matching. It counts
-//   the elements and pieces a parent's appendChild refuses (RenderBuild::refusedElements, refusedPieces), which litehtml
-//   counts and the maps do not.
-// Nothing charges inside a litehtml call: the charges come before the calls they pay for (matching's after: it is
-// counted, and limited, inside).
+// - Matching (Ruling E19): finalize runs in one selector-step session of litehtml's 4,000,000 (default_selector_steps);
+//   a matching cut there is the document's, and RenderBuild::selectorSteps records the steps it took.
+// - The build counts the elements and pieces a parent's appendChild refuses (RenderBuild::refusedElements,
+//   refusedPieces), which litehtml counts and the maps do not.
 //
 // The same walk builds one subtree for the in-place structure patch (Task 9, buildRenderSubtree): detached, with the
 // published document, its text made with make_text_pieces (twidget edit 18 counts the pieces), within the limits the rest
@@ -55,6 +48,7 @@
 #include <litehtml/element.h>
 
 #include "Sources/Host/MarkupPolicy.h"
+#include "Sources/Runtime/Limits.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/PlatformObject.h"
 #include "Sources/Support/Values.h"
@@ -71,10 +65,10 @@ inline constexpr size_t kMaxRenderBytes = 1024 * 1024;
 inline constexpr size_t kNoRenderInput = ~size_t(0);
 
 /// Profile 1's strict text limits (V4 plan, Task 7; RB §7.1), in UTF-16 units: one text value (a Text's data, a text
-/// attribute, the strings of a `style` attribute or a sheet), the document's text, and its complex-script text. And the
-/// node cap: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside.
-inline constexpr size_t kMaxTextValueUnits = 65536;
-inline constexpr size_t kTextBudgetUnits = 262144;
+/// attribute, the strings of a `style` attribute or a sheet) and the document's text are the runtime's Limits
+/// (widget-sandbox v0.3.0: 32,768 and 49,152 under strict, past which the widget stops); its complex-script text is
+/// 8,192 under both policies, past which the text is dropped. And the node cap: the document node, every element, Text
+/// and Comment, rendered or not, a `<script>`'s children aside.
 inline constexpr size_t kComplexTextBudgetUnits = 8192;
 inline constexpr size_t kMaxRenderNodes = 50000;
 
@@ -94,14 +88,19 @@ struct TextUnits {
     friend TextUnits operator-(TextUnits a, TextUnits b) { return {a.units - b.units, a.complex - b.complex}; }
 };
 
-/// `s`'s units. O(length): the caller has charged the scan.
+/// `s`'s units. O(length).
 TextUnits renderTextUnits(const String& s);
 /// RB §7.2's cssStringText over raw CSS text (UTF-8): the contents of its quoted strings, a backslash inside one taking
 /// the next character and one outside skipping two; counted as UTF-16 units.
 TextUnits renderCssStringUnits(std::string_view css);
-/// Whether a value fits beside `others`: at most kMaxTextValueUnits, and both sums within their budgets (reaching one
-/// exactly is allowed).
-bool renderTextFits(TextUnits value, TextUnits others);
+/// Where a value stands beside `others`, checked in this order: at most Limits::textValueUnits, the document's units
+/// within Limits::textBudgetUnits, its complex units within kComplexTextBudgetUnits (reaching a budget exactly is
+/// allowed). Under strict the first two stop the widget (stopForTextValue, stopForTextBudget); the last drops the text.
+enum class TextFit { Fits, ValueTooLong, OverBudget, OverComplexBudget };
+TextFit renderTextFit(const Limits& limits, TextUnits value, TextUnits others);
+inline bool renderTextFits(const Limits& limits, TextUnits value, TextUnits others) {
+    return renderTextFit(limits, value, others) == TextFit::Fits;
+}
 
 /// An element's attributes as the build gives them to litehtml (Builder.cpp's scanAttributes), the one reading the build
 /// and the in-place attribute patch (Task 8) share.
@@ -119,6 +118,9 @@ struct RenderAttributes {
     /// for not fitting beside what the rest of the document counts (the build posts `text-budget`).
     TextUnits units;
     bool textLeftOut = false;
+    /// The one left out passed the document's text budget (not only the complex-script one): under strict a build
+    /// stops the widget (stopForTextBudget).
+    bool overTextBudget = false;
     /// The budget ran out at an attribute (the build posts `bytes` and stops); the other fields are then partial.
     bool overBudget = false;
 };
@@ -165,16 +167,6 @@ using RenderElementMap = std::unordered_map<const litehtml::element*, Node*, std
                                             JSAllocator<std::pair<const litehtml::element* const, Node*>>>;
 using RenderString = std::basic_string<char, std::char_traits<char>, JSAllocator<char>>;
 
-/// Ruling E22: what the maps' entries cost a build in work units (QuickJS counts every allocated byte at
-/// JS_WORK_ALLOC_SHIFT): libc++'s hash node is the next pointer, the cached hash and the value. A piece costs its
-/// shared_ptr in its entry's pieces (reserved exactly) and its element-map node. RenderStructurePatchTests pins them.
-inline constexpr uint64_t kRenderElementMapNodeUnits =
-    (2 * sizeof(void*) + sizeof(std::pair<const litehtml::element* const, Node*>)) >> JS_WORK_ALLOC_SHIFT;
-inline constexpr uint64_t kRenderNodeMapNodeUnits =
-    (2 * sizeof(void*) + sizeof(std::pair<Node* const, RenderEntry>)) >> JS_WORK_ALLOC_SHIFT;
-inline constexpr uint64_t kRenderPieceUnits =
-    (sizeof(litehtml::element::ptr) >> JS_WORK_ALLOC_SHIFT) + kRenderElementMapNodeUnits;
-
 /// One build's output. RenderTree keeps the published one; a build in progress is another, swapped in only when it
 /// has succeeded. The maps and the render input go through QuickJS's allocator (Global Constraints, "Memory").
 struct RenderBuild {
@@ -194,9 +186,8 @@ struct RenderBuild {
     /// The render-limit kinds this build hit, each once, in the order first hit: Ruling 7's `elements`, `depth`,
     /// `text-pieces`, `table-cells`, `css`, `style-attribute` and `bytes`, and Ruling E6's `form-controls`.
     std::vector<std::string> limits;
-    /// What the layout pre-charge pays for (Ruling 9): every element and piece built, and the text's UTF-8 bytes.
+    /// Every element and piece built (RenderTree::boxCount).
     uint64_t boxes = 0;
-    uint64_t textBytes = 0;
     /// What the last layout of this document returned (litehtml::document::render): the content's own width, which
     /// the host's width fits to (RenderTree::contentSize, M1d plan Task 1). A patch's relayout updates it.
     double naturalWidth = 0;
@@ -228,31 +219,7 @@ struct RenderBuild {
     /// The selector steps the matching took (Ruling E19): the build's, plus every committed patch's. Past
     /// litehtml::document::default_selector_steps the build's matching was cut, and no patch that matches is made.
     int64_t selectorSteps = 0;
-    /// Rulings E20 and E22, an estimate of what rebuilding the document now would cost, in parts (RenderTree::rebuildEstimate
-    /// adds them, with an estimate of the maps' and the render input's growth from empty). Not a proven bound: RenderTree.h
-    /// has the parts and the recorded gap when a fallback rebuild is stopped by the budget.
-    /// - walkCharge: the walk's work (the nodes, attributes, names, text, CSS and the allocations of all of it): the
-    ///   build's total, measured, less its layout pre-charge, filter loop and steps (filterUnits, stepUnits) and less its
-    ///   maps' final bucket arrays; then each committed patch adds the work it measured making what it adds (its subtrees'
-    ///   builds, its texts' conversion and pieces, its attributes' scan) and takes off a lower bound of what a build
-    ///   charged for what it replaces or releases (RenderTree.cpp, entryLowerUnits), never below 0;
-    /// - the filter loop's (element, rule) pairs: `matched` is litehtml's matching_bound of the tree, as the build's gate
-    ///   was last asked with it (each element, the two pseudo-elements the sheets can create for it, a form control's
-    ///   three parts with theirs: a tag decides it, so attributes never change it), less what each committed patch removed and plus
-    ///   what it inserted, by the same measure; against all the document's rules, an upper bound of both passes;
-    /// - the layout pre-charge, from `boxes` and `textBytes` as they are; and the steps, from selectorSteps.
-    uint64_t walkCharge = 0;
-    uint64_t filterUnits = 0;
-    uint64_t stepUnits = 0;
-    uint64_t matched = 0;
 };
-
-/// Ruling E19: the selector steps the widget's remaining work budget allows, at work::kSimpleSelectorTest each, keeping
-/// one unit back so that charging them never reaches the limit.
-int64_t renderSelectorAllowance(JSContext* ctx);
-/// Ruling E21: what apply_selector's filter loop over `elements` elements and `rules` rules is charged (every pair is
-/// tested, and no step counts it): work::kScanEightUnits per eight pairs.
-uint64_t renderFilterUnits(uint64_t elements, uint64_t rules);
 
 /// Where a subtree built for an in-place insertion (Task 9) goes in the published document.
 struct RenderSubtreePlace {
@@ -283,17 +250,20 @@ struct RenderSubtreeTotals {
 /// The build's steps up to layout: set_document_mode from the DOM's mode, beginBuild, the walk, then
 /// finalize_from_external_root with litehtml::telegram_master_css() and the options' host CSS. The caller runs
 /// endBuild after layout and recording (Ruling E10), so what they ask for counts for this build. Fills `build`, which
-/// must be empty. Throws Thrown (a charge), std::bad_alloc, or Aborted; `build` is then to be dropped.
+/// must be empty. Throws Thrown (a name's conversion at the memory limit), std::bad_alloc, or Aborted (a strict cap);
+/// `build` is then to be dropped.
 void buildDocument(JSContext* ctx, WidgetContainer& container, RenderBuild& build);
 
-/// `node`'s subtree as the build makes it (Task 9), for document::insert_subtree: the same walk, charges, names, attributes,
-/// text pieces (made with make_text_pieces, which asks the cap nothing: the fork's predicate counts them) and render input.
+/// `node`'s subtree as the build makes it (Task 9), for document::insert_subtree: the same walk, names, attributes,
+/// text pieces (made with make_text_pieces, which asks the cap nothing: the fork's predicate counts them) and render
+/// input.
 /// Its entries and element-map entries go into `staging`'s maps, its serialization is appended to `staging.input` (the
-/// entries' offsets are into it), and boxes, textBytes and bytes are added to `staging`'s; `roots` gets what goes under
+/// entries' offsets are into it), and boxes and bytes are added to `staging`'s; `roots` gets what goes under
 /// the parent: the element, or a Text's pieces (none for an element Ruling 4 leaves out, or an empty Text, which is
 /// still mapped). False, with what was made to be dropped, where a fresh build of the document would post a render
 /// limit inside the subtree (the elements, form controls, depth, byte budget or a `style` attribute) or meet a
-/// `<style>`: the patch rebuilds instead. Throws Thrown (a charge) or std::bad_alloc.
+/// `<style>`: the patch rebuilds instead. Throws Thrown (a name's conversion at the memory limit), std::bad_alloc or
+/// Aborted (a strict cap).
 bool buildRenderSubtree(JSContext* ctx, WidgetContainer& container, const RenderSubtreePlace& place, Node& node,
                         RenderBuild& staging, RenderSubtreeTotals& totals, std::vector<litehtml::element::ptr>& roots);
 /// Whether litehtml makes a form control (Ruling E6) of an element named `tag` (litehtml's lowercased tag name).
@@ -308,15 +278,15 @@ std::string renderEscapedText(std::string_view utf8);
 
 /// `element`'s attributes as the build reads them, and, when `startTag` is given and the input is kept, its start tag as
 /// the render input carries it. `usedBefore` and `unitsBefore` are the byte budget and the text units the rest of the
-/// document uses. Charges as the build does.
-/// Throws Thrown (a charge) or std::bad_alloc.
+/// document uses. Throws Thrown (a name's conversion at the memory limit), std::bad_alloc or Aborted (the strict
+/// attribute cap).
 RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, TextUnits unitsBefore,
                                          bool keepInput, std::string* startTag);
 /// What the renderer's copy of `element` is (V4 plan, Task 4): profile 1's one decision (MarkupPolicy.h), read by the
-/// build, both patches and the render input. Charges the name.
+/// build, both patches and the render input. Converts the name.
 markup::RenderTag renderTagOf(JSContext* ctx, const Element& element);
 /// Whether the profile leaves `element` out of the rendered tree: such an element, and its subtree, are never in the
-/// build, so a change to them is never rendered. Charges the name.
+/// build, so a change to them is never rendered. Converts the name.
 bool renderElementIsUnrendered(JSContext* ctx, const Element& element);
 
 /// Adds the kinds `container` reported since its beginBuild that `limits` does not have yet, by Ruling 7's names

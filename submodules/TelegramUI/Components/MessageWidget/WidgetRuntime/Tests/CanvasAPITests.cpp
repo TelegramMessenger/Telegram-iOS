@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <string>
 
-#include "Sources/Support/Work.h"
 #include "Tests/FakeRenderHost.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
@@ -218,6 +217,8 @@ WR_TEST(testDOMMatrix) {
 
 /// Review Focus 2: unbounded state growth.
 WR_TEST(testUnboundedGrowth) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kPage);
     CHECK_EQ(env.env().eval("var c = stage.getContext('2d'); for (let i = 0; i < 100000; i++) c.save(); c.translate(5, 0);"
                             " for (let i = 0; i < 100000; i++) c.restore(); c.getTransform().e"),
@@ -245,23 +246,11 @@ WR_TEST(testTheOtherMembers) {
              std::string("4,3,2,0,5,4,3"));
 }
 
-/// Review Focus 3, the work side: a draw is charged by the area it may touch.
-WR_TEST(testDrawsAreChargedByArea) {
-    RenderEnv env(kPage);
-    env.env().eval("var c = stage.getContext('2d'); c.fillRect(0, 0, 1, 1); 1");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.env().eval("c.fillRect(0, 0, 1, 1); 1");
-    const uint64_t small = JS_GetWorkUnits(rt) - before;
-    before = JS_GetWorkUnits(rt);
-    env.env().eval("c.fillRect(0, 0, 160, 120); 1");
-    const uint64_t large = JS_GetWorkUnits(rt) - before;
-    CHECK(large >= small + 160 * 120 / 64 - 1);
-}
-
 /// V5d final review, C1: canvas text is measured without the layout's cached measure (the iOS host keeps every text it
 /// measures in a process-wide cache), and measureText reads at most 65,536 bytes.
 WR_TEST(testCanvasTextIsMeasuredUncachedAndCapped) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kPage);
     CHECK_EQ(env.env().eval("var c = stage.getContext('2d'); c.measureText('x'.repeat(100000)).width"), std::string("524288"));
     const size_t before = env.host().textWidthCalls;
@@ -270,60 +259,10 @@ WR_TEST(testCanvasTextIsMeasuredUncachedAndCapped) {
     CHECK_EQ(env.env().eval("c.measureText('abc').width"), std::string("24"));
 }
 
-/// V5d final review, I1: work that scales with a call's data is charged for it before it runs, so the work budget bounds
-/// time: path copies and hit tests per point, a clip chain per op, drawImage per source pixel, reset per pixel.
-WR_TEST(testWorkScalesWithTheData) {
-    RenderEnv env(kPage);
-    env.env().eval("var c = stage.getContext('2d'); var p = new Path2D(); p.moveTo(0, 0);"
-                   " for (let i = 0; i < 100000; i++) p.lineTo(i % 7, 1); c.fillRect(0, 0, 1, 1);"
-                   " var big = document.createElement('canvas'); big.width = 1024; big.height = 1024; big.getContext('2d').fillRect(0, 0, 1, 1); 1");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    auto raw = [&](const std::string& code) {
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.env().eval(code + "; 1");
-        return JS_GetWorkUnits(rt) - before;
-    };
-    // Less what evaluating a script of the same length costs, so the checks see the operation alone.
-    auto cost = [&](const std::string& code) {
-        const uint64_t base = raw("0/*" + std::string(code.size() > 5 ? code.size() - 5 : 0, ' ') + "*/");
-        const uint64_t spent = raw(code);
-        return spent > base ? spent - base : 0;
-    };
-    CHECK(cost("c.isPointInPath(p, 0, 0)") >= 100000 / 8);
-    CHECK(cost("c.isPointInStroke(p, 0, 0)") >= 100000 / 8);
-    CHECK(cost("c.fill(p)") >= 100000 / 8);
-    CHECK(cost("c.drawImage(big, 0, 0, 1024, 1024, 0, 0, 1, 1)") >= 1024 * 1024 / 64);
-    CHECK(cost("c.reset()") >= 160 * 120 / 64);
-    // Each op under a clip is charged the clip's points (fix-wave review, M-C: measured apart from clip()'s own cost).
-    const std::string twoRects = "c.fillRect(0, 0, 1, 1); c.fillRect(0, 0, 1, 1)";
-    const uint64_t plain = cost(twoRects);
-    env.env().eval("c.save(); c.clip(p); 1");
-    const uint64_t clipped = cost(twoRects);
-    env.env().eval("c.restore(); 1");
-    CHECK(clipped >= plain + 2 * 100000 / 8);
-}
-
-/// V5d fix-wave review, M-D: a rect is built for the op alone, outside the JS heap, so it costs no allocation units: a
-/// clearRect costs what a call that allocates nothing costs.
-WR_TEST(testARectAllocatesNothing) {
-    RenderEnv env(kPage);
-    env.env().eval("var c = stage.getContext('2d'); c.fillRect(0, 0, 1, 1); 1");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    auto cost = [&](const std::string& code) {
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.env().eval(code);
-        return JS_GetWorkUnits(rt) - before;
-    };
-    const uint64_t rects = cost("for (let i = 0; i < 1000; i++) c.clearRect(0, 0, 1, 1); 1");
-    const uint64_t calls = cost("for (let i = 0; i < 1000; i++) c.setTransform(1, 0, 0, 1, 0, 0); 1");
-    CHECK(rects <= calls + 1000);
-    if (rects > calls + 1000) {
-        std::printf("  clearRect %llu, setTransform %llu\n", (unsigned long long)rects, (unsigned long long)calls);
-    }
-}
-
 /// V5d final review, I2: Path2D data is read only up to the reference's 64 K; a longer string makes an empty path.
 WR_TEST(testPathDataIsCapped) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kPage);
     CHECK_EQ(env.env().eval("var c = stage.getContext('2d'); var q = new Path2D('M0 0 L100 0 L100 100 L0 100 Z' + ' '.repeat(70000));"
                             " [c.isPointInPath(q, 50, 50), c.isPointInPath(new Path2D('M0 0 L100 0 L100 100 L0 100 Z'), 50, 50)].join()"),
@@ -331,8 +270,8 @@ WR_TEST(testPathDataIsCapped) {
 }
 
 /// V5d fix-wave review, C-B: a dash pattern multiplies a stroke into its dashes, which CoreGraphics builds as one outline
-/// each: they are charged per dash, and a stroke of more than kMaxDashSegments is drawn solid with a render-limit.
-WR_TEST(testDashesAreChargedAndCapped) {
+/// each: a stroke of more than kMaxDashSegments is drawn solid with a render-limit.
+WR_TEST(testDashesAreCapped) {
     RenderEnv env(kPage);
     env.env().eval("var c = stage.getContext('2d'); c.setLineDash([1e-6, 1e-6]); c.beginPath(); c.moveTo(0, 60); c.lineTo(160, 60); c.stroke(); 1");
     CHECK(!FakeCanvas::live().empty() && FakeCanvas::live().back()->log.back() == "stroke 0,60 160x0 #000000ff w=1");
@@ -341,12 +280,8 @@ WR_TEST(testDashesAreChargedAndCapped) {
         limited = limited || (kind == "render-limit" && detail == "canvas-dashes");
     }
     CHECK(limited);
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    env.env().eval("c.setLineDash([0.01, 0.01]); 1");
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().eval("c.stroke(); 1");
-    // 160 px of dashes 0.01 px long and 0.01 px apart: 16,000 dashes and gaps.
-    CHECK(JS_GetWorkUnits(rt) - before >= 16000);
+    // 160 px of dashes 0.01 px long and 0.01 px apart: 16,000 dashes and gaps, under the cap.
+    env.env().eval("c.setLineDash([0.01, 0.01]); c.stroke(); 1");
     CHECK(FakeCanvas::live().back()->log.back() == "stroke 0,60 160x0 #000000ff w=1 dash=2");
     // A pattern of zeros strokes solid.
     env.env().eval("c.setLineDash([0, 0]); c.stroke(); 1");
@@ -363,8 +298,8 @@ WR_TEST(testTheDashCountCannotBeWalkedAround) {
         // Singular in double, invertible once rounded to float.
         "c.beginPath(); c.moveTo(0, 75); c.lineTo(150, 75); c.setTransform(1 + 2**-25, 1 + 2**-24 + 2**-50, 1, 1 + 2**-25, 0, 0);"
         " c.setLineDash([1, 1]); c.stroke();",
-        // 288,000 short subpaths, each reaching all 64 entries before the long gap.
-        "const p = new Path2D('M0 0h7 '.repeat(9000)); for (let i = 0; i < 5; i++) p.addPath(p);"
+        // 288,000 short subpaths, each reaching all 64 entries before the long gap (data under the strict text cap).
+        "const p = new Path2D('M0 0h7 '.repeat(4500)); for (let i = 0; i < 6; i++) p.addPath(p);"
         " c.setLineDash(Array(63).fill(0.1).concat([1e9])); c.stroke(p);",
         // A point past float's range: the length is not a number.
         "c.beginPath(); c.moveTo(1e39, 0); c.lineTo(1e39, 1); c.moveTo(0, 60); c.lineTo(100, 60); c.setLineDash([1, 1]); c.stroke();",
@@ -385,14 +320,3 @@ WR_TEST(testTheDashCountCannotBeWalkedAround) {
     }
 }
 
-/// V5d fix-wave review, I-D: drawing a canvas onto itself copies its whole bitmap (the snapshot is copy-on-write and the
-/// draw writes to the bitmap it shares), so it is charged for the whole bitmap, whatever its source rect.
-WR_TEST(testDrawingACanvasOntoItselfIsChargedForTheBitmap) {
-    RenderEnv env(kPage);
-    env.env().eval("var s = document.createElement('canvas'); s.width = 1024; s.height = 1024; var c = s.getContext('2d');"
-                   " c.fillRect(0, 0, 1, 1); 1");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().eval("c.drawImage(s, 0, 0, 1, 1, 0, 0, 1, 1); 1");
-    CHECK(JS_GetWorkUnits(rt) - before >= 1024 * 1024 / 64);
-}

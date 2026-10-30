@@ -34,11 +34,8 @@ WR_TEST(testEscape) {
     CHECK_EQ(env.eval("CSS.escape(12)"), std::string("\\31 2"));
 }
 
-WR_TEST(testEscapeIsChargedAndLong) {
+WR_TEST(testEscapeTakesALongString) {
     HostEnv env;
     env.eval("window.long = 'a'.repeat(1000000); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("CSS.escape(long).length"), std::string("1000000"));
-    CHECK(JS_GetWorkUnits(rt) - before >= 1000000 / 8);
 }

@@ -40,8 +40,8 @@ struct Easing {
     std::string text() const { return std::string(canonical); }
 };
 
-/// `text` as an easing function, or null when it is not one. Charged a scan of the text; the result is made in the JS
-/// heap (a bad_alloc at the memory limit propagates).
+/// `text` as an easing function, or null when it is not one. The result is made in the JS heap (a bad_alloc at the
+/// memory limit propagates).
 std::shared_ptr<const Easing> parseEasing(JSContext* ctx, std::string_view text);
 /// `linear`.
 std::shared_ptr<const Easing> linearEasing(JSContext* ctx);

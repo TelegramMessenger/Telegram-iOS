@@ -40,11 +40,10 @@ struct ParseOutcome {
     bool stoppedAtAttributeLimit = false;
 };
 
-/// Parses `html` as a whole document into `document`, which must be empty. Not charged to the widget: the boot
-/// accounts for it.
+/// Parses `html` as a whole document into `document`, which must be empty.
 ParseOutcome parseDocumentInto(JSContext* ctx, Document& document, std::string_view html, const ParseLimits& limits = {});
-/// The HTML fragment parsing algorithm with `context` as the context element, for a script. Charged
-/// work::kParseByte per byte, less `prechargedBytes` the caller charged already. Scripts in the result are inert.
-Ref<DocumentFragment> parseFragment(JSContext* ctx, Element& context, std::string_view html, const ParseLimits& limits = {}, uint64_t prechargedBytes = 0);
+/// The HTML fragment parsing algorithm with `context` as the context element, for a script. Scripts in the result are
+/// inert.
+Ref<DocumentFragment> parseFragment(JSContext* ctx, Element& context, std::string_view html, const ParseLimits& limits = {});
 
 } // namespace wr

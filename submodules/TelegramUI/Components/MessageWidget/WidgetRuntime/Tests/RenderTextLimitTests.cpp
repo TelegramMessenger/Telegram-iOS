@@ -1,7 +1,8 @@
-// Profile 1's strict text and node limits in the renderer's copy (V4 plan, Task 7; RB §7): a Text value of at most
-// 65,536 UTF-16 units, 262,144 units of text in the document and 8,192 of complex-script text, and 50,000 nodes. A build
-// hands the budgets out in tree order; what does not fit is not rendered, the walk going on (past the node cap it stops),
-// and a patch that would cross a limit rebuilds, so a flush always equals a rebuild.
+// Profile 1's text and node limits in the renderer's copy (V4 plan, Task 7; RB §7) as they drop: the compat policy's
+// Text value of at most 65,536 UTF-16 units and 262,144 units of text in the document (widget-sandbox v0.3.0's strict
+// caps stop the widget instead: StrictLimitsTests), 8,192 of complex-script text, and 50,000 nodes. A build hands the
+// budgets out in tree order; what does not fit is not rendered, the walk going on (past the node cap it stops), and a
+// patch that would cross a limit rebuilds, so a flush always equals a rebuild.
 #include <cstdio>
 #include <string>
 #include <tuple>
@@ -60,15 +61,21 @@ WR_TEST(testTheUnits) {
     CHECK_EQ(units(wr::renderCssStringUnits("content:\"ab\" '\\x'")), std::string("3,0"));
     CHECK_EQ(units(wr::renderCssStringUnits("a\\\"b:\"\xE5\xAD\x97\"")), std::string("1,1"));
     // Reaching a budget exactly is allowed.
-    CHECK(wr::renderTextFits({65536, 0}, {196608, 0}));
-    CHECK(!wr::renderTextFits({65537, 0}, {0, 0}));
-    CHECK(!wr::renderTextFits({1, 0}, {262144, 0}));
-    CHECK(wr::renderTextFits({10, 10}, {100, 8182}));
-    CHECK(!wr::renderTextFits({10, 10}, {100, 8183}));
+    const wr::Limits compat = wr::Limits::compat(), strict = wr::Limits::strict();
+    CHECK(wr::renderTextFits(compat, {65536, 0}, {196608, 0}));
+    CHECK(wr::renderTextFit(compat, {65537, 0}, {0, 0}) == wr::TextFit::ValueTooLong);
+    CHECK(wr::renderTextFit(compat, {1, 0}, {262144, 0}) == wr::TextFit::OverBudget);
+    CHECK(wr::renderTextFits(compat, {10, 10}, {100, 8182}));
+    CHECK(wr::renderTextFit(compat, {10, 10}, {100, 8183}) == wr::TextFit::OverComplexBudget);
+    CHECK(wr::renderTextFits(strict, {32768, 0}, {16384, 0}));
+    CHECK(wr::renderTextFit(strict, {32769, 0}, {0, 0}) == wr::TextFit::ValueTooLong);
+    CHECK(wr::renderTextFit(strict, {1, 0}, {49152, 0}) == wr::TextFit::OverBudget);
+    CHECK(wr::renderTextFit(strict, {10, 10}, {100, 8183}) == wr::TextFit::OverComplexBudget);
 }
 
 /// Review Focus 5: 65,536 units render, 65,537 do not, through a patch and through a build.
 WR_TEST(testATextNodeAtTheCapRendersAndOnePastItDoesNot) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(page("<div id=a style=\"white-space:nowrap;overflow:hidden;width:200px\">x</div>"));
     const uint64_t builds = env.render().buildCount();
     const uint64_t patches = env.render().patchCount();
@@ -90,6 +97,7 @@ WR_TEST(testATextNodeAtTheCapRendersAndOnePastItDoesNot) {
 
 /// RB §7.3: four 65,536-unit texts fill the document's 262,144 exactly; a fifth of one unit does not fit.
 WR_TEST(testTheDocumentBudget) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(page(""));
     env.env().eval("for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.id = 'd' + i;"
                    " d.textContent = i < 4 ? 'a'.repeat(65536) : 'x'; document.body.append(d); } 1");
@@ -116,6 +124,7 @@ WR_TEST(testTheComplexScriptBudget) {
 
 /// RB §9 behaviour.policy-strict: a text attribute over 65,536 units is left out of the renderer's copy; the DOM keeps it.
 WR_TEST(testATextAttributeOverTheCapIsLeftOut) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env("<!doctype html><html><head><style>[data-big]{color:rgb(9,9,9)}</style></head><body><p id=p>t</p>"
                   "<script>window.$ = id => document.getElementById(id);"
                   "window.cs = id => getComputedStyle($(id)).color;</script></body></html>");
@@ -131,6 +140,7 @@ WR_TEST(testATextAttributeOverTheCapIsLeftOut) {
 
 /// RB §7.1 MAX_NODES: the document node, every element, Text and Comment, rendered or not (a <script>'s children aside).
 WR_TEST(testTheNodeCap) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // document, html, head, body, div#d: five nodes before the comments; then span#last, its Text, the script.
     for (const auto& [comments, rendered] : {std::pair<int, bool>{49995, false}, std::pair<int, bool>{40000, true}}) {
         RenderEnv env("<!doctype html><html><head></head><body><div id=d></div><script>"
@@ -146,6 +156,7 @@ WR_TEST(testTheNodeCap) {
 }
 
 WR_TEST(testAStructurePatchPastABudgetMatchesARebuild) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(page("<div id=d>x</div>"));
     const uint64_t builds = env.render().buildCount();
     env.env().eval("$('d').appendChild(document.createTextNode('a'.repeat(70000))); 1");
@@ -178,6 +189,7 @@ void appendTheLastSpan(RenderEnv& env) {
 /// The final review's C2: nodes a patch inserts without building them (comments) count toward the node cap, so a later
 /// patch past it rebuilds, as a fresh build would cut.
 WR_TEST(testCommentsAPatchInsertsCountTowardTheNodeCap) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(nearTheNodeCap());
     CHECK(env.render().renderLimits().empty());
     env.env().eval("for (let i = 0; i < 150; i++) document.body.appendChild(document.createComment('c')); 1");
@@ -191,6 +203,7 @@ WR_TEST(testCommentsAPatchInsertsCountTowardTheNodeCap) {
 
 /// The final review's C2: an insertion the journal does not hear (inside an element the profile drops) still counts.
 WR_TEST(testAnUnheardInsertionCountsTowardTheNodeCap) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(nearTheNodeCap());
     env.env().eval("const v = document.getElementById('v'); for (let i = 0; i < 150; i++) v.appendChild(document.createElement('i')); 1");
     env.flush();

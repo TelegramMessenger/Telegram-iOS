@@ -66,10 +66,9 @@ public:
     Journal(const Journal&) = delete;
     Journal& operator=(const Journal&) = delete;
 
-    /// Adds `kind` to `node`'s entry, making one (and retaining the node) the first time `node` is recorded. Charges
-    /// work::kJournalEntry first. Past kMaxNodes distinct nodes, collapses instead (rebuildAll). Records nothing while
-    /// a rebuild is pending. Throws Thrown (the budget refused the charge) or std::bad_alloc (the memory limit); the
-    /// journal is then unchanged.
+    /// Adds `kind` to `node`'s entry, making one (and retaining the node) the first time `node` is recorded. Past
+    /// kMaxNodes distinct nodes, collapses instead (rebuildAll). Records nothing while a rebuild is pending. Throws
+    /// std::bad_alloc (the memory limit); the journal is then unchanged.
     void record(JSContext* ctx, Node& node, JournalKind kind);
 
     /// "Rebuild everything": drops every entry, releasing its node, and keeps the journal dirty until clear().

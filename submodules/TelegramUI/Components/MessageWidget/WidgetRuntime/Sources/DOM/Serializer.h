@@ -1,6 +1,5 @@
 // HTML's fragment serialization algorithm (https://html.spec.whatwg.org/multipage/parsing.html#serialising-html-fragments),
-// without shadow roots. Iterative: a tree of any depth serializes in constant native stack. Charged work::kNodeVisit
-// per node and per attribute, and work::kSerializeFourBytes per four UTF-16 units written.
+// without shadow roots. Iterative: a tree of any depth serializes in constant native stack.
 #pragma once
 
 #include "Sources/DOM/Node.h"

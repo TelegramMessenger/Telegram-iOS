@@ -87,7 +87,9 @@ WR_TEST(testTheDeclarationRules) {
                  {"color", "oklch(1 0 0)", "Drop|"},
                  {"color", "hwb(0 0% 0%)", "Drop|"},
                  {"background-image", "url(https://x/a.png)", "Drop|"},
-                 {"background", "url(data:image/png;base64,AA)", "Keep|url(data:image/png;base64,AA)"},
+                 {"background", "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==)", "Keep|url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==)"},
+                 // widget-sandbox v0.3.0: bytes of no image format behind an image type are no image.
+                 {"background", "url(data:image/png;base64,AA)", "Drop|"},
                  {"background", "url(data:image/svg+xml,x)", "Drop|"},
                  {"background-image", "URL( http://x )", "Drop|"},
                  {"background-image", "url(\\68 ttp://x)", "Drop|"},
@@ -130,7 +132,15 @@ WR_TEST(testTheDeclarationRules) {
                  {"height", "100vh", "Drop|"},
                  {"height", "0vh", "Drop|"},
                  {"width", "50cqw", "Drop|"},
-                 {"width", "env(safe-area-inset-left)", "Drop|"},
+                 {"width", "env(safe-area-inset-left)", "Augment|var(--tg-content-safe-area-inset-left)"},
+                 // widget-sandbox v0.4.0 (sdk-v1 §2.17): a safe-area inset is the root variable, its fallback kept; another
+                 // name is its fallback, or the declaration is dropped.
+                 {"width", "env(safe-area-inset-bottom, 77px)", "Augment|var(--tg-content-safe-area-inset-bottom, 77px)"},
+                 {"width", "calc(1px + env(safe-area-inset-top))", "Augment|calc(1px + var(--tg-content-safe-area-inset-top))"},
+                 {"width", "env(keyboard-inset-height, 13px)", "Rewrite|13px"},
+                 {"width", "env(keyboard-inset-height)", "Drop|"},
+                 {"width", "env(SAFE-AREA-INSET-TOP)", "Drop|"},
+                 {"--s", "env(safe-area-inset-bottom)", "Augment|var(--tg-content-safe-area-inset-bottom)"},
                  {"width", "round(10px, 3px)", "Drop|"},
                  {"margin-inline-start", "20px", "Drop|"},
                  {"content", "attr(class)", "Drop|"},
@@ -281,8 +291,14 @@ WR_TEST(testTheSupportsConditions) {
 }
 
 WR_TEST(testTheURLRules) {
+    // The type rules: these are image types of the profile, whatever their bytes (widget-sandbox v0.3.0 then reads the
+    // bytes: none of the profile's formats is Broken, not Refused).
     for (const char* src : {"data:image/png;base64,AAAA", "data:IMAGE/PNG;BASE64,x", "data: image/png ,x",
                             "data:image/webp;base64,AA", "\t\ndata:image/png;base64,AA"}) {
+        CHECK(policy::imageSource(src) == policy::ImageSource::Broken);
+    }
+    for (const std::string& src : {std::string("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="), std::string("\t\ndata:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="),
+                                   std::string("data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==")}) {
         CHECK(policy::imageSourceKept(src));
     }
     for (const char* src : {"data:image/svg+xml,<svg/>", "data:image/avif;base64,x", "data:image/bmp;base64,x",
@@ -341,9 +357,9 @@ bool linear(const char* what, size_t n, const std::function<void(size_t)>& f) {
 
 } // namespace
 
-/// The final review's C1: the core's rewrites are linear in their input, which callers charge linearly. css_token has
-/// no move, so a rewrite that erased or inserted in the middle of a vector copied the rest of it each time, and a
-/// family list rescanned every group it kept.
+/// The final review's C1: the core's rewrites are linear in their input. css_token has no move, so a rewrite that
+/// erased or inserted in the middle of a vector copied the rest of it each time, and a family list rescanned every
+/// group it kept.
 WR_TEST(testTheRewritesAreLinear) {
     CHECK(linear("selector :disabled rewrites", 1000, [](size_t n) {
         std::string text = "a";

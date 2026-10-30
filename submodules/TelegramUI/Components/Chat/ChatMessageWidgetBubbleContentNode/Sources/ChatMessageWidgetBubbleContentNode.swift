@@ -59,7 +59,6 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private let clipMask: CAShapeLayer
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     /// The network marker (sdk-v1 §5.11) while the message has can_query.
-    private var networkMarker: MessageWidgetNetworkMarkerView?
     /// Shown instead of the widget when it cannot run.
     private let pillView: UnsupportedContentPillView
     /// Under the widget where the bubble's tail joins its bottom corner: the tail's shape (`chatBubbleMediaCorner`, the
@@ -69,6 +68,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private let tailMask = CALayer()
     /// The tail's side while the widget's bottom corner joins one (true: the left, an incoming bubble's); nil without.
     private var tailOnLeft: Bool?
+    /// The corner box the widget is told the date covers (its content safe area: the pill with its margins), in this
+    /// node's coordinates; nil without a date over the widget.
+    private var timeCorner: CGRect?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
     /// What the last applied layout showed, for the resize anchor of the next height change (`resizeAnchor`), and the
@@ -188,11 +190,16 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             case .watchPublicData:
                 // The polling follows `onPublicDataPollingChange`, which the same change has reported.
                 break
-            case let .openLink(url), let .openTelegramLink(url):
+            case let .openTelegramLink(url):
+                // widget-sandbox v0.3.0 (SDK v1 §5.2, "Telegram links open without a confirmation"): as a tapped t.me
+                // link in a message, with no "Open link?" of the widget's own; the chat's own t.me handling keeps the
+                // confirmations it has (joining a chat, a proxy, a login). The runtime lets only Telegram's hosts here,
+                // one call per tap.
+                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, message: item.message))
+            case let .openLink(url):
                 // A widget's URL is never shown to the user, and opening it reveals the user's IP address to that
-                // host (a t.me link is resolved over the network as well), so the "Open link?" confirmation must
-                // always appear: no `message:` (with one, ChatController skips it when the message's author or its
-                // forward source is verified) and `forceConcealed`. A confirmed t.me link opens in the app. SDK v1
+                // host, so the "Open link?" confirmation must always appear: no `message:` (with one, ChatController
+                // skips it when the message's author or its forward source is verified) and `forceConcealed`. SDK v1
                 // §5.2: the confirmation shows the whole URL, and only one is shown at a time; a link that comes
                 // while one is up is dropped.
                 MessageWidgetLinkDialog.shared.request { displayUpdated in
@@ -297,93 +304,10 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 let maximumWidgetWidth = max(1.0, constrainedSize.width - bubbleInsets.left - bubbleInsets.right)
                 let widgetWidth = MessageWidgetBubbleSize.width(anchors: anchors, maximumWidth: maximumWidgetWidth)
 
-                // A widget's instance and the height cache are main-thread only, so the widget runs only from a pass on
-                // main (the chat history's CoreList backend lays out there). Off main the bubble takes its placeholder
-                // or fixed height and shows no widget until a main-thread pass.
-                let isMainThreadPass = Thread.isMainThread
-                var reported: CGFloat?
-                var reportedAnchor: MessageWidgetResizeAnchor = .top
-                var cached: CGFloat?
-                var failedToStart = false
-                if isMainThreadPass {
-                    var bubbleIsVisible = false
-                    if let self, case .visible = self.visibility {
-                        bubbleIsVisible = true
-                    }
-                    registry.setVisible(bubbleIsVisible)
-                    feedMessageWidgetApplicationState(context: item.context)
-                    registry.stoppedLabel = item.presentationData.strings.Message_WidgetStopped
-                    registry.maxMessageLength = Int(item.context.userLimits.maxMessageLength)
-                    // SDK v1 §2.9: the app's UI language (a code the runtime cannot read as BCP 47 becomes en-US).
-                    registry.locale = item.presentationData.strings.baseLanguageCode
-                    // SDK v1 §2.8 and §5.4: the widget's storage is this message's, kept by the store and written into the
-                    // message's derived data; where the id is not the message's own (the admin log, a preview) it stays
-                    // in memory, apart from the message's. One sink per message (stable id), following its id from
-                    // pending to sent; set on every pass, for widgets made in it.
-                    let persists = messageWidgetStoragePersists(associatedData: item.associatedData, isPreview: item.presentationData.isPreview)
-                    let storageKey = MessageWidgetStorageStore.Key(accountPeerId: item.context.account.peerId, message: item.message.id, persists: persists)
-                    let storageWriter: MessageWidgetStorageWriter? = persists ? MessageWidgetEngineStorageWriter(engine: item.context.engine) : nil
-                    let storageSink: MessageWidgetStorageSink
-                    if let current = self?.storageSink, current.owner == heightKey {
-                        current.update(key: storageKey, writer: storageWriter)
-                        storageSink = current
-                    } else {
-                        storageSink = MessageWidgetStorageSink(owner: heightKey, key: storageKey, writer: storageWriter)
-                        self?.storageSink = storageSink
-                    }
-                    registry.storage = MessageWidgetStorageStore.shared.preload(storageKey, storedAttributes: item.message.attributes)
-                    registry.onStorageCommit = { commit in
-                        storageSink.commit(commit)
-                    }
-                    // Another message's stable id (the node was recycled) destroys the runtime, and the requests its
-                    // widget has in flight with it. SDK v1 §2.3, §2.4, §5.1: the chat's palette and its message text.
-                    if let self, self.requestOwner != heightKey {
-                        self.requestOwner = heightKey
-                        self.requests.cancelAll()
-                    }
-                    registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, incoming: incoming, fontSize: item.presentationData.fontSize, textInsets: layoutConstants.text.bubbleInsets))
-                    // widget-sandbox v0.2 (sdk-v1 §2.13, §2.14): the message's context is part of the widget's key (another
-                    // context, another widget: a forward's echo replaced by the server's message); its state is handed to the
-                    // running widget as a change.
-                    if let widget {
-                        registry.context = messageWidgetContext(widget: widget, chatPeer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init), accountPeer: item.associatedData.accountPeer, accountPeerId: item.context.account.peerId)
-                        registry.state = MessageWidgetState(chatData: widget.chatData, publicData: widget.publicData)
-                    }
-                    // Not asked when it may not run: the pass then ends with no widget, which destroys a running one
-                    // (the flag was just turned off).
-                    if renderable {
-                        // A fixed height is the most the widget's document may be, so a stopped widget's badge, at the
-                        // document's bottom, stays inside the clip. Handed over on every pass, so an edit of the anchors reaches it.
-                        registry.maximumHeight = anchors.height > 0 ? MessageWidgetBubbleSize.height(anchors: anchors, reported: nil, cached: nil) : MessageWidgetBubbleSize.maximumHeight
-                        if registry.size(path: ChatMessageWidgetBubbleContentNode.path, source: source, width: widgetWidth) != nil {
-                            reported = registry.reportedHeight(path: ChatMessageWidgetBubbleContentNode.path, source: source)
-                            reportedAnchor = registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: source) ?? .top
-                        } else {
-                            failedToStart = true
-                        }
-                    }
-                    registry.endPass()
-                    if anchors.height <= 0, let reported {
-                        MessageWidgetHeightCache.shared.set(reported, anchor: reportedAnchor, for: heightKey)
-                    }
-                    cached = MessageWidgetHeightCache.shared.height(for: heightKey)
-                }
-                let showsPill = !renderable || failedToStart
-                let presentationData = item.presentationData
-                let pillStrings = UnsupportedContentPillStrings(strings: presentationData.strings)
-                let pillColors = UnsupportedContentPillColors(
-                    fill: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper),
-                    primaryText: serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper).primaryText,
-                    isDark: presentationData.theme.theme.overallDarkAppearance
-                )
-                let pillLayout = UnsupportedContentPill.layout(strings: pillStrings, colors: pillColors, constrainedWidth: maximumWidgetWidth)
-                let widgetHeight = showsPill ? pillLayout.size.height : MessageWidgetBubbleSize.height(anchors: anchors, reported: reported, cached: cached)
-                let showsPlaceholder = !showsPill && anchors.height <= 0 && reported == nil && cached == nil
-
                 let statusType: ChatMessageDateAndStatusType?
                 if case .customChatContents = item.associatedData.subject {
                     statusType = nil
-                } else if showsPill {
+                } else if !renderable {
                     // The pill has its own button at the bottom; the unsupported bubble it stands for shows no date.
                     statusType = nil
                 } else {
@@ -404,6 +328,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     }
                 }
 
+                // Laid out before the widget's pass: what the date covers is the widget's from its boot (sdk-v1 §5.12).
                 var statusSize = CGSize()
                 var statusApply: ((ListViewItemUpdateAnimation) -> Void)?
                 if let statusType {
@@ -466,6 +391,113 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     statusApply = dateAndStatusApply
                 }
 
+                // The date sits where it sits on a photo: the photo's inset plus the status inset from the bubble's edge.
+                let statusRight = layoutConstants.image.bubbleInsets.right + layoutConstants.image.statusInsets.right
+                let statusBottom = layoutConstants.image.bubbleInsets.bottom + layoutConstants.image.statusInsets.bottom
+                // widget-sandbox v0.4.0 (sdk-v1 §2.17, §5.12): with no caption below the widget (none, or one above it) the
+                // date is over its bottom right corner (this client's date is on the right in every interface direction),
+                // and the widget is told the band and corner it takes: the pill in the middle of its box, its margins to
+                // the widget's edges on both sides, as upstream's reference draws the time (reference.ts timeCornerStyle).
+                // The corner assumes the widget fills the bubble; centred in a wider one its true corner is narrower.
+                // Clamped to what the runtime keeps (an inset 64, a corner 200), so an unusually wide date still counts.
+                let contentSafeArea: MessageWidgetContentSafeArea
+                if statusType != nil {
+                    let marginBottom = max(0.0, statusBottom - bubbleInsets.bottom)
+                    let marginRight = max(0.0, statusRight - bubbleInsets.right)
+                    contentSafeArea = MessageWidgetContentSafeArea(bottom: min(64.0, statusSize.height + 2.0 * marginBottom), cornerRight: min(200.0, statusSize.width + 2.0 * marginRight))
+                } else {
+                    contentSafeArea = .none
+                }
+
+                // A widget's instance and the height cache are main-thread only, so the widget runs only from a pass on
+                // main (the chat history's CoreList backend lays out there). Off main the bubble takes its placeholder
+                // or fixed height and shows no widget until a main-thread pass.
+                let isMainThreadPass = Thread.isMainThread
+                var reported: CGFloat?
+                var reportedAnchor: MessageWidgetResizeAnchor = .top
+                var cached: CGFloat?
+                var failedToStart = false
+                if isMainThreadPass {
+                    var bubbleIsVisible = false
+                    if let self, case .visible = self.visibility {
+                        bubbleIsVisible = true
+                    }
+                    registry.setVisible(bubbleIsVisible)
+                    feedMessageWidgetApplicationState(context: item.context)
+                    registry.stoppedLabel = item.presentationData.strings.Message_WidgetStopped
+                    registry.maxMessageLength = Int(item.context.userLimits.maxMessageLength)
+                    // SDK v1 §2.9: the app's UI language (a code the runtime cannot read as BCP 47 becomes en-US).
+                    registry.locale = item.presentationData.strings.baseLanguageCode
+                    // SDK v1 §2.8 and §5.4: the widget's storage is this message's, kept by the store and written into the
+                    // message's derived data; where the id is not the message's own (the admin log, a preview) it stays
+                    // in memory, apart from the message's. One sink per message (stable id), following its id from
+                    // pending to sent; set on every pass, for widgets made in it.
+                    let persists = messageWidgetStoragePersists(associatedData: item.associatedData, isPreview: item.presentationData.isPreview)
+                    let storageKey = MessageWidgetStorageStore.Key(accountPeerId: item.context.account.peerId, message: item.message.id, persists: persists)
+                    let storageWriter: MessageWidgetStorageWriter? = persists ? MessageWidgetEngineStorageWriter(engine: item.context.engine) : nil
+                    let storageSink: MessageWidgetStorageSink
+                    if let current = self?.storageSink, current.owner == heightKey {
+                        current.update(key: storageKey, writer: storageWriter)
+                        storageSink = current
+                    } else {
+                        storageSink = MessageWidgetStorageSink(owner: heightKey, key: storageKey, writer: storageWriter)
+                        self?.storageSink = storageSink
+                    }
+                    registry.storage = MessageWidgetStorageStore.shared.preload(storageKey, storedAttributes: item.message.attributes)
+                    registry.onStorageCommit = { commit in
+                        storageSink.commit(commit)
+                    }
+                    // Another message's stable id (the node was recycled) destroys the runtime, and the requests its
+                    // widget has in flight with it. SDK v1 §2.3, §2.4, §5.1: the chat's palette and its message text.
+                    if let self, self.requestOwner != heightKey {
+                        self.requestOwner = heightKey
+                        self.requests.cancelAll()
+                    }
+                    registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, incoming: incoming, fontSize: item.presentationData.fontSize, textInsets: layoutConstants.text.bubbleInsets))
+                    // widget-sandbox v0.2 (sdk-v1 §2.13, §2.14): the message's context is part of the widget's key (another
+                    // context, another widget: a forward's echo replaced by the server's message); its state is handed to the
+                    // running widget as a change.
+                    if let widget {
+                        registry.context = messageWidgetContext(widget: widget, chatPeer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init), accountPeer: item.associatedData.accountPeer, accountPeerId: item.context.account.peerId)
+                        registry.state = MessageWidgetState(chatData: widget.chatData, publicData: widget.publicData)
+                    }
+                    // Not asked when it may not run: the pass then ends with no widget, which destroys a running one
+                    // (the flag was just turned off).
+                    if renderable {
+                        // A fixed height is the most the widget's document may be, so a stopped widget's badge, at the
+                        // document's bottom, stays inside the clip. Handed over on every pass, so an edit of the anchors reaches it.
+                        registry.maximumHeight = anchors.height > 0 ? MessageWidgetBubbleSize.height(anchors: anchors, reported: nil, cached: nil) : MessageWidgetBubbleSize.maximumHeight
+                        registry.contentSafeArea = contentSafeArea
+                        if registry.size(path: ChatMessageWidgetBubbleContentNode.path, source: source, width: widgetWidth) != nil {
+                            reported = registry.reportedHeight(path: ChatMessageWidgetBubbleContentNode.path, source: source)
+                            reportedAnchor = registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: source) ?? .top
+                        } else {
+                            failedToStart = true
+                        }
+                    }
+                    registry.endPass()
+                    if anchors.height <= 0, let reported {
+                        MessageWidgetHeightCache.shared.set(reported, anchor: reportedAnchor, for: heightKey)
+                    }
+                    cached = MessageWidgetHeightCache.shared.height(for: heightKey)
+                }
+                let showsPill = !renderable || failedToStart
+                if failedToStart {
+                    // The pill has its own button at the bottom; the unsupported bubble it stands for shows no date.
+                    statusSize = CGSize()
+                    statusApply = nil
+                }
+                let presentationData = item.presentationData
+                let pillStrings = UnsupportedContentPillStrings(strings: presentationData.strings)
+                let pillColors = UnsupportedContentPillColors(
+                    fill: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper),
+                    primaryText: serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper).primaryText,
+                    isDark: presentationData.theme.theme.overallDarkAppearance
+                )
+                let pillLayout = UnsupportedContentPill.layout(strings: pillStrings, colors: pillColors, constrainedWidth: maximumWidgetWidth)
+                let widgetHeight = showsPill ? pillLayout.size.height : MessageWidgetBubbleSize.height(anchors: anchors, reported: reported, cached: cached)
+                let showsPlaceholder = !showsPill && anchors.height <= 0 && reported == nil && cached == nil
+
                 let contentWidth = (showsPill ? pillLayout.size.width : widgetWidth) + bubbleInsets.left + bubbleInsets.right
                 return (contentWidth, { boundingWidth in
                     let layoutSize = CGSize(width: boundingWidth, height: widgetHeight + bubbleInsets.top + bubbleInsets.bottom)
@@ -488,9 +520,6 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         }
                     }
                     let tailImage = tailOnLeft.flatMap { PresentationResourcesChat.chatBubbleMediaCorner(item.presentationData.theme.theme, incoming: $0, mainRadius: bubbleCorners.mainRadius, inset: 0.0) }
-                    // The date sits where it sits on a photo: the photo's inset plus the status inset from the bubble's edge.
-                    let statusRight = layoutConstants.image.bubbleInsets.right + layoutConstants.image.statusInsets.right
-                    let statusBottom = layoutConstants.image.bubbleInsets.bottom + layoutConstants.image.statusInsets.bottom
                     let statusFrame = CGRect(origin: CGPoint(x: layoutSize.width - statusRight - statusSize.width, y: layoutSize.height - statusBottom - statusSize.height), size: statusSize)
 
                     return (layoutSize, { [weak self] animation, _, _ in
@@ -500,6 +529,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         self.item = item
                         self.updatePublicDataPolling()
                         self.laidOutEnabled = enabled
+                        self.timeCorner = contentSafeArea == .none ? nil : CGRect(x: widgetFrame.maxX - contentSafeArea.cornerRight, y: widgetFrame.maxY - contentSafeArea.bottom, width: contentSafeArea.cornerRight, height: contentSafeArea.bottom).intersection(widgetFrame)
                         self.laidOutResize = (MessageWidgetLaidOutHeight(autoHeight: anchors.height <= 0, placeholder: showsPlaceholder, pill: showsPill, widgetsEnabled: enabled, height: widgetHeight), source, heightKey)
 
                         // The clip follows the bubble's own height animation, so the widget never shows past the bubble's
@@ -592,36 +622,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                             self.dateAndStatusNode.removeFromSupernode()
                         }
 
-                        // widget-sandbox v0.2 (sdk-v1 §5.11): the network marker, exactly where the message has can_query:
-                        // the widget area's bottom-right corner, left of the date pill when the bubble draws one there.
-                        if widget?.canQuery == true && !showsPill {
-                            let marker: MessageWidgetNetworkMarkerView
-                            if let current = self.networkMarker {
-                                marker = current
-                            } else {
-                                marker = MessageWidgetNetworkMarkerView(frame: CGRect(origin: CGPoint(), size: MessageWidgetNetworkMarkerView.size))
-                                self.networkMarker = marker
-                                self.view.addSubview(marker)
-                            }
-                            marker.update(fill: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
-                            marker.accessibilityLabel = item.presentationData.strings.Message_WidgetNetworkMarkerInfo
-                            let size = MessageWidgetNetworkMarkerView.size
-                            var origin = CGPoint(x: widgetFrame.maxX - 8.0 - size.width, y: widgetFrame.maxY - 8.0 - size.height)
-                            if statusApply != nil, statusFrame.maxY <= widgetFrame.maxY + 0.5 {
-                                origin = CGPoint(x: statusFrame.minX - 4.0 - size.width, y: statusFrame.midY - size.height / 2.0)
-                            }
-                            marker.frame = CGRect(origin: origin, size: size)
-                            marker.onTap = { [weak self, weak marker] in
-                                guard let self, let marker, let item = self.item else {
-                                    return
-                                }
-                                // The chat shows a message tooltip only with a node, at `rect` inside it.
-                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Message_WidgetNetworkMarkerInfo, false, self, marker.convert(marker.bounds, to: self.view))
-                            }
-                        } else if let marker = self.networkMarker {
-                            marker.removeFromSuperview()
-                            self.networkMarker = nil
-                        }
+                        // No network marker on any widget, whatever the message's can_query (the user, 2026-10-29; a
+                        // divergence from sdk-v1 §5.11).
                     })
                 })
             })
@@ -876,22 +878,44 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         }
     }
 
+    /// Whether `point` is on the date drawn over the widget or in the corner box the widget is told it covers (widget-sandbox
+    /// v0.4.0, sdk-v1 §5.12: a view over the widget, whose touches are the client's). The box, the pill with its margins,
+    /// also takes the questions asked after a touch's down, which convert its point through the press's shrink, several
+    /// points toward the corner (the fix-wave review's F-1).
+    private func dateContains(_ point: CGPoint) -> Bool {
+        guard self.dateAndStatusNode.supernode != nil, !self.dateAndStatusNode.isHidden else {
+            return false
+        }
+        return self.dateAndStatusNode.frame.contains(point) || (self.timeCorner?.contains(point) ?? false)
+    }
+
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // The date over the widget takes its touches (a reaction button of its own, or the date itself), so the widget's
+        // view behind it never gets one.
+        if self.dateContains(point) {
+            return self.dateAndStatusNode.view.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) ?? self.view
+        }
+        return super.hitTest(point, with: event)
+    }
+
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        // sdk-v1 §5.12: a tap on the date over the widget is the bubble's, as on a photo's date; a reaction button of the
+        // date is a control, which takes its own tap only past the bubble's recognizer (`.ignore`).
+        if self.dateContains(point) {
+            if self.dateAndStatusNode.view.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) != nil {
+                return ChatMessageBubbleContentTapAction(content: .ignore)
+            }
+            return ChatMessageBubbleContentTapAction(content: .none)
+        }
         if !self.pillView.isHidden {
             if self.pillView.actionContains(self.view.convert(point, to: self.pillView)) {
                 return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             return ChatMessageBubbleContentTapAction(content: .none)
         }
-        // The network marker is a button of its own above the widget's corner: its tap is the button's (the bubble's
-        // recognizer fails), never a press in the widget under it, which the estimate at the touch's down would start.
-        // Holding it opens the message's menu, as elsewhere on the bubble.
-        if self.networkMarkerContains(point) {
-            return ChatMessageBubbleContentTapAction(content: .ignore, hasLongTapAction: false)
-        }
         // A live widget takes its own touches (MessageWidgetView): every tap and double tap over it is the widget's
         // (widget-sandbox v0.1.2), so the bubble's tap recognizer fails there (`.ignore`) and the double-tap reaction stays
-        // outside the widget (the caption, the time). A hold is by the press's touch-action: one that claims it (none) is
+        // outside the widget (the caption, the time, which is over the widget with no caption below it: above). A hold is by the press's touch-action: one that claims it (none) is
         // the widget's (`hasLongTapAction` stops the bubble's context gesture), any other opens the message's menu, which
         // ends the widget's touch. A secondary click's menu is asked after its press ended (`onSecondaryClick`). A
         // stopped widget leaves everything to the bubble.
@@ -924,17 +948,11 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     }
 
     override public func claimsHorizontalDrag(at point: CGPoint) -> Bool {
-        guard self.pillView.isHidden, !self.networkMarkerContains(point), self.clipView.frame.contains(point), self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path), let widgetView = self.clipView.subviews.first as? MessageWidgetView else {
+        // The date over the widget is the bubble's (sdk-v1 §5.12): asking the widget would press it early, at the time.
+        guard self.pillView.isHidden, !self.dateContains(point), self.clipView.frame.contains(point), self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path), let widgetView = self.clipView.subviews.first as? MessageWidgetView else {
             return false
         }
         return widgetView.claimsHorizontalDrag(at: self.view.convert(point, to: widgetView))
-    }
-
-    private func networkMarkerContains(_ point: CGPoint) -> Bool {
-        guard let networkMarker = self.networkMarker, !networkMarker.isHidden else {
-            return false
-        }
-        return networkMarker.frame.contains(point)
     }
 
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {

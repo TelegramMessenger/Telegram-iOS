@@ -15,7 +15,6 @@
 #include <litehtml/web_color.h>
 
 #include "Sources/Animation/CSSAnimationRules.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -309,20 +308,7 @@ struct Source {
     bool inlineNonReplaced = false;
     PseudoElement pseudo = PseudoElement::None;
     bool pseudoMissing = false;
-    /// What the read walked and scanned beyond the value it returns, in work units, for the caller to charge (final
-    /// review I4: per element, like the other queries' walks).
-    uint64_t* work = nullptr;
 };
-
-void spend(const Source& s, uint64_t units) {
-    if (s.work) {
-        *s.work += units;
-    }
-}
-
-void spendScan(const Source& s, size_t bytes) {
-    spend(s, (uint64_t(bytes) / 8 + 1) * work::kScanEightUnits);
-}
 
 /// A render box's border box, document px: get_placement is its content box (render_item.h), and litehtml transforms
 /// and positions the border box (final review I1).
@@ -658,7 +644,7 @@ std::string trimmedText(std::string_view text) {
 }
 
 /// A comma-separated list's items, trimmed, commas inside parentheses kept (`cubic-bezier(…)`): at most
-/// animation::kMaxCSSListEntries, as many as the runtime runs (final review C1). The bytes read are spent.
+/// animation::kMaxCSSListEntries, as many as the runtime runs (final review C1).
 std::vector<std::string> commaItems(const Source& s, std::string_view list) {
     std::vector<std::string> items;
     size_t start = 0, end = 0;
@@ -677,7 +663,6 @@ std::vector<std::string> commaItems(const Source& s, std::string_view list) {
     if (items.size() < animation::kMaxCSSListEntries) {
         items.push_back(trimmedText(list.substr(start, end - start)));
     }
-    spendScan(s, end);
     return items;
 }
 
@@ -838,7 +823,6 @@ std::string declaredOrInitial(const Source& s, std::string_view name) {
     }
     const bool inherited = inheritedProperty(name);
     for (const litehtml::element* el = s.element; el; el = el->parent().get()) {
-        spend(s, work::kNodeVisit);
         const auto* tag = dynamic_cast<const litehtml::html_tag*>(el);
         std::string declared = tag ? tag->raw_declaration(std::string(name)) : std::string();
         if (unresolvedVar(declared)) {
@@ -907,15 +891,11 @@ bool isGridItem(const Source& s) {
     return parent && isGridContainer(parent->css());
 }
 
-/// The element's own raw declaration of `name` ("" without one), charged as a scan of its length: a raw copy is kept
-/// before litehtml validates the value, so its length is whatever the author wrote (final review I2).
+/// The element's own raw declaration of `name` ("" without one): a raw copy is kept before litehtml validates the
+/// value, so its length is whatever the author wrote (final review I2).
 std::string ownDeclaration(const Source& s, const char* name) {
     const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
-    std::string declared = tag ? tag->raw_declaration(name) : std::string();
-    if (!declared.empty()) {
-        spendScan(s, declared.size());
-    }
-    return declared;
+    return tag ? tag->raw_declaration(name) : std::string();
 }
 
 /// An `animation-*` or `transition-*` longhand as the runtime runs it (animationSpecs, transitionSpecs; final review
@@ -987,13 +967,12 @@ std::optional<std::pair<std::string, std::string>> declaredGridLines(const Sourc
         return std::nullopt;
     }
     // Only what litehtml lays out (its parse_grid_placement takes it): an unresolved var() or a line name is as absent
-    // (final review M5). The parse walks the tokens: charged as a scan of their text, which is built for the read anyway.
+    // (final review M5).
     const auto valid = [&](litehtml::string_id name) -> const litehtml::css_token_vector* {
         const litehtml::css_token_vector* tokens = tag->get_token_property(name);
         if (!tokens) {
             return nullptr;
         }
-        spend(s, tokens->size());
         litehtml::grid_placement placement;
         return litehtml::parse_grid_placement(*tokens, placement) ? tokens : nullptr;
     };
@@ -1039,7 +1018,7 @@ bool flexOmitsBasis(const std::string& declared) {
 }
 
 /// The element's raw declaration (edit 51) of `name` as written and its place in the element's declaration order
-/// (edit 54's `m_order`), charged as a scan of its length: nothing without one.
+/// (edit 54's `m_order`): nothing without one.
 std::optional<std::pair<std::string, int>> rawWithOrder(const Source& s, litehtml::string_id name) {
     const auto* tag = dynamic_cast<const litehtml::html_tag*>(s.element);
     const litehtml::property_value* value = tag ? &tag->own_property(litehtml::raw_declaration_id(name)) : nullptr;
@@ -1047,7 +1026,6 @@ std::optional<std::pair<std::string, int>> rawWithOrder(const Source& s, litehtm
         return std::nullopt;
     }
     std::string text = litehtml::get_repr(value->get<litehtml::css_token_vector>(), 0, -1, true);
-    spendScan(s, text.size());
     return std::pair{std::move(text), value->m_order};
 }
 
@@ -1101,18 +1079,16 @@ std::string parsedLonghand(const Source& s, std::string_view name, const char* i
     const litehtml::string_id id = litehtml::_id(std::string(name));
     const litehtml::property_value& parsed = tag->own_property(id);
     if (parsed.is<litehtml::inherit>()) {
-        // The nearest ancestor that does not inherit it too answers: walked, a node visit each, never recursed (final
-        // review I3).
+        // The nearest ancestor that does not inherit it too answers: walked, never recursed (final review I3).
         litehtml::element* ancestor = s.element->parent().get();
         while (ancestor) {
-            spend(s, work::kNodeVisit);
             const auto* up = dynamic_cast<const litehtml::html_tag*>(ancestor);
             if (!up || !up->own_property(id).is<litehtml::inherit>()) {
                 break;
             }
             ancestor = ancestor->parent().get();
         }
-        const std::string inherited = ancestor ? computedValue(*ancestor, name, PseudoElement::None, s.work) : std::string();
+        const std::string inherited = ancestor ? computedValue(*ancestor, name, PseudoElement::None) : std::string();
         return inherited.empty() ? std::string(initial) : inherited;
     }
     if (parsed.is<float>()) {
@@ -1220,7 +1196,6 @@ std::string offset(const Source& s, char side) {
     // The containing block: the nearest positioned ancestor (any, for fixed: the root's box stands for the viewport).
     litehtml::element* block = nullptr;
     for (auto el = s.element->parent(); el; el = el->parent()) {
-        spend(s, work::kNodeVisit);
         if (el->get_render_item() && (position == litehtml::element_position_fixed ? !el->parent()
                                                                                        : el->css().get_position() != litehtml::element_position_static)) {
             block = el.get();
@@ -1862,7 +1837,7 @@ PseudoElement pseudoElementNamed(std::string_view name) {
     return PseudoElement::None;
 }
 
-std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo, uint64_t* work) {
+std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo) {
     litehtml::element* styled = &element;
     bool pseudoMissing = false;
     if (pseudo != PseudoElement::None) {
@@ -1894,7 +1869,6 @@ std::string computedValue(litehtml::element& element, std::string_view name, Pse
     source.inlineNonReplaced = (display == litehtml::display_inline || display == litehtml::display_inline_text) && !styled->is_replaced();
     source.pseudo = pseudo;
     source.pseudoMissing = pseudoMissing;
-    source.work = work;
     return value(source, name);
 }
 
@@ -1914,11 +1888,8 @@ UserSelect ownUserSelect(const litehtml::element& element) {
     return UserSelect::Auto;
 }
 
-bool selectsText(const litehtml::element& element, uint64_t* visited) {
+bool selectsText(const litehtml::element& element) {
     for (const litehtml::element* el = &element; el; el = el->parent().get()) {
-        if (visited) {
-            (*visited)++;
-        }
         switch (ownUserSelect(*el)) {
         case UserSelect::Text:
             return true;

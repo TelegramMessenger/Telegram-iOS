@@ -80,7 +80,6 @@ const Vector<Element*>& NameNodeList::elements(JSContext* ctx) {
     String name = String::adopt(ctx, JS_DupValue(ctx, m_name.value));
     JSAtom nameAtom = DOMState::of(ctx).name(Name::name);
     for (Node* n = m_root->nextInTreeOrder(m_root); n; n = n->nextInTreeOrder(m_root)) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement()) {
             auto* e = static_cast<Element*>(n);
             if (e->isHTMLElement()) {
@@ -144,8 +143,8 @@ static char16_t unitOf(const JSStringView& v, uint32_t i) {
 }
 
 void HTMLCollection::setClassNames(JSContext* ctx, const String& classNames) {
-    // DOM's ordered set parser (orderedSetTokens: worst-case O(n log n), charged before it runs), then a counted
-    // substring for each class kept only: a value repeating one class keeps it once, with no copy per repeat.
+    // DOM's ordered set parser (orderedSetTokens: worst-case O(n log n)), then a counted substring for each class kept
+    // only: a value repeating one class keeps it once, with no copy per repeat.
     Vector<TokenRange> classes = orderedSetTokens(ctx, classNames);
     m_classes.reserve(classes.size());
     for (const TokenRange& t : classes) {
@@ -157,13 +156,11 @@ static char16_t asciiLower(char16_t c) {
     return c >= 'A' && c <= 'Z' ? char16_t(c + ('a' - 'A')) : c;
 }
 
-/// Whether `token` is `v`'s code units [start, end), ASCII case-insensitively when `fold`. A comparison of equal lengths
-/// is charged by its length.
+/// Whether `token` is `v`'s code units [start, end), ASCII case-insensitively when `fold`.
 static bool tokenIs(JSContext* ctx, const JSStringView& token, const JSStringView& v, uint32_t start, uint32_t end, bool fold) {
     if (token.length != end - start) {
         return false;
     }
-    chargeScan(ctx, token.length);
     for (uint32_t i = 0; i < token.length; i++) {
         char16_t a = unitOf(token, i);
         char16_t b = unitOf(v, start + i);
@@ -195,12 +192,9 @@ bool elementHasClasses(JSContext* ctx, Element& element, ClassNameList classes, 
                 i++;
             }
             if (i > start) {
-                charge(ctx, work::kNodeVisit);
                 found = tokenIs(ctx, w, v, start, i, quirks);
             }
         }
-        // The scan, charged once it stops by the units it read: at most the value, once per class wanted.
-        chargeScan(ctx, i);
         if (!found) {
             return false;
         }
@@ -243,20 +237,14 @@ const Vector<Element*>& HTMLCollection::elements(JSContext* ctx) {
     Vector<Element*>& found = m_cache.restart();
     if (m_kind == Kind::Children) {
         for (size_t i = 0; i < m_root->childCount(); i++) {
-            charge(ctx, work::kNodeVisit);
             if (m_root->childAt(i)->isElement()) {
                 found.push_back(static_cast<Element*>(m_root->childAt(i)));
             }
         }
     } else if (m_kind != Kind::ClassName || !m_classes.empty()) {
         // No class names match nothing (DOM: "If classes is the empty set, return an empty HTMLCollection"). The class
-        // list is read in place (no per-recompute copy); reading it costs kNodeVisit per class, charged before the walk
-        // since the matcher reads every class per element tested.
-        if (m_kind == Kind::ClassName) {
-            charge(ctx, work::kNodeVisit * m_classes.size());
-        }
+        // list is read in place (no per-recompute copy).
         for (Node* n = m_root->nextInTreeOrder(m_root); n; n = n->nextInTreeOrder(m_root)) {
-            charge(ctx, work::kNodeVisit);
             if (n->isElement() && this->matches(ctx, *static_cast<Element*>(n))) {
                 found.push_back(static_cast<Element*>(n));
             }
@@ -277,8 +265,6 @@ Element* HTMLCollection::namedItem(JSContext* ctx, String name) {
     }
     DOMState& state = DOMState::of(ctx);
     for (Element* e : this->elements(ctx)) {
-        // A walk the cache hides: charged per element, which may have no attributes to charge for.
-        charge(ctx, work::kNodeVisit);
         std::optional<String> id = e->attributeValue(ctx, state.name(Name::id));
         if (id && id->equals(ctx, name)) {
             return e;

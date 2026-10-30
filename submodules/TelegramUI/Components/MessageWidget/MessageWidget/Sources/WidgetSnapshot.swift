@@ -24,7 +24,8 @@ struct WidgetSnapshot {
 
     enum State: Equatable {
         case live
-        /// Stopped (its budget, its memory, a renderer error): it keeps its last frame, with the stopped label.
+        /// Stopped (its CPU limits, its memory, a count cap, a renderer error): it keeps its last frame, with the stopped
+        /// label.
         case frozen(String)
         /// The runtime could not be created or the widget did not start: the host draws the block as code.
         case failedToStart
@@ -52,9 +53,13 @@ struct WidgetSnapshot {
     let lastError: String?
     /// The diagnostics the task added.
     let diagnostics: [(kind: String, detail: String)]
-    /// The units the task spent over every budget it ran on (its meter): demotion reads them (spec D6).
-    let units: UInt64
-    /// A `.selection` task's export: nil when nothing is selectable, past its budget, or once the widget has stopped.
+    /// Of `cpuMilliseconds`, the boot lifecycle's own steps (its scripts and its load) within their first
+    /// `MessageWidgetCore.bootDemotionExemptionSlices` slices of CPU in all: the boot task stops once it has spent a slice
+    /// and wakes run the rest, which is the boot's work, never a demotion.
+    let bootCpuMilliseconds: Double
+    /// The CPU milliseconds of the task's runtime steps, on the widget's thread: demotion reads them (spec D6).
+    let cpuMilliseconds: Double
+    /// A `.selection` task's export: nil when nothing is selectable or once the widget has stopped.
     let selectableText: MessageWidgetSelectableText?
     let exportsSelection: Bool
 }

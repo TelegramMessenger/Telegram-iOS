@@ -13,13 +13,13 @@ class CoreTests: MessageWidgetTestCase {
 
     private func task(_ core: MessageWidgetCore, _ kind: WidgetSnapshot.Kind, _ body: @escaping () -> Void) -> WidgetSnapshot {
         return self.onWorker {
-            core.run(kind, meter: WorkMeter(threshold: .max), body)
+            core.run(kind, body)
         }
     }
 
     private func boot(_ core: MessageWidgetCore) -> WidgetSnapshot {
         return self.task(core, .boot) {
-            core.boot(width: 300.0, theme: .light, visible: true, budgets: nil)
+            core.boot(width: 300.0, theme: .light, visible: true)
         }
     }
 
@@ -52,7 +52,6 @@ class CoreTests: MessageWidgetTestCase {
         // The tiles are a draw task's (the size is critical, the drawing is not).
         XCTAssertNil(boot.frame)
         XCTAssertTrue(boot.needsDraw)
-        XCTAssertGreaterThan(boot.units, 0)
         let draw = self.task(core, .draw) {
             core.draw(request: 1)
         }
@@ -193,20 +192,116 @@ class CoreTests: MessageWidgetTestCase {
         guard case let .frozen(reason) = boot.state else {
             return XCTFail("\(boot.state)")
         }
-        XCTAssertTrue(reason.contains("Work limit"), reason)
-        XCTAssertGreaterThan(boot.units, MessageWidgetCore.bootWorkUnits)
+        // widget-sandbox's words: the script's own slice of the widget thread's CPU.
+        XCTAssertEqual(reason, "CPU limit exceeded: more than 500 ms of continuous execution (script)")
     }
 
-    /// Spec D7 ruling: the parse is not charged to the widget, but main waits on it, so the task's meter counts it.
-    func testTheTasksUnitsCountTheUnchargedParse() throws {
-        let core = self.makeCore(LimitsTests.heavyMarkup)
+    // MARK: the CPU-clock limits (Task 5)
+
+    /// A quota of 10 ms per second: one timer that spins 30 ms spends it, so the timer it sets is deferred to the retry
+    /// time, when the core's wake runs it by itself.
+    private static let throttled = MessageWidgetCpuLimits(cpuLimitMs: 500.0, cpuQuotaMs: 10.0, cpuQuotaWindowMs: 1000.0, cpuKillAfterMs: 0.0, mainThreadQuotaMs: 100.0)
+    private static let throttledPage = "<!doctype html><p>x</p><script>window.log = []; setTimeout(() => { \(MessageWidgetTestCase.spin(30)) log.push('heavy'); setTimeout(() => log.push('next'), 0); }, 0);</script>"
+
+    func testAThrottledWidgetWakesAtTheRetry() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(CoreTests.throttledPage, cpuLimits: CoreTests.throttled)
+        defer { instance.destroy() }
+        _ = instance.layout(width: 360.0)
+        XCTAssertTrue(self.pump(until: { instance.throttledStepsForTesting > 0 }, timeout: 5.0), "the second timer was never deferred")
+        XCTAssertEqual(instance.evaluateForTesting("log.join()"), "heavy")
+        XCTAssertTrue(self.pump(until: { instance.evaluateForTesting("log.join()") == "heavy,next" }, timeout: 5.0), "the retry never ran it")
+        XCTAssertNil(instance.deadReason)
+    }
+
+    /// Hidden, a widget's wakes come at most once a second; a deferred task still runs at the first one after its retry.
+    func testAHiddenThrottledWidgetStillWakes() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(CoreTests.throttledPage, cpuLimits: CoreTests.throttled)
+        defer { instance.destroy() }
+        _ = instance.layout(width: 360.0)
+        XCTAssertTrue(self.pump(until: { instance.throttledStepsForTesting > 0 }, timeout: 5.0), "the second timer was never deferred")
+        instance.setVisible(false)
+        XCTAssertTrue(self.pump(until: { instance.evaluateForTesting("log.join()") == "heavy,next" }, timeout: 6.0), "the retry never ran it")
+        XCTAssertNil(instance.deadReason)
+    }
+
+    /// Review Focus 4: every step's CPU is taken on the thread that ran it. Thread A has spent 300 ms of its own CPU
+    /// outside any step; a step on thread B, then one on A, each spinning 20 ms, record about that, never A's 300 ms nor a
+    /// negative difference between two threads' clocks (clamped to 0).
+    func testStepsMeasureTheirOwnThread() {
+        let core = self.makeCore("<!doctype html><p>x</p><script>window.spin = ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) {} };</script>")
+        let a = PinnedThread(), b = PinnedThread()
         defer {
-            self.onWorker { core.teardown() }
+            a.run { core.teardown() }
+            a.stop()
+            b.stop()
         }
-        let boot = self.boot(core)
-        XCTAssertEqual(boot.state, .live)
-        let parse = self.onWorker { core.parseWork }
-        XCTAssertGreaterThan(parse, 100_000)
-        XCTAssertGreaterThanOrEqual(boot.units, parse)
+        _ = a.run { core.run(.boot) { core.boot(width: 300.0, theme: .light, visible: true) } }
+        a.run {
+            let start = CACurrentMediaTime()
+            var x: UInt64 = 1
+            while CACurrentMediaTime() - start < 0.3 {
+                x = x &* 6364136223846793005 &+ 1442695040888963407
+            }
+            _ = x
+        }
+        for thread in [b, a] {
+            let snapshot = thread.run { core.run(.event) { _ = core.evaluate("spin(20); 1") } }
+            XCTAssertGreaterThan(snapshot.cpuMilliseconds, 0.0)
+            XCTAssertLessThan(snapshot.cpuMilliseconds, 200.0)
+        }
+    }
+}
+
+/// One thread of its own, running each body it is given in turn (a step pinned to a thread, for
+/// `testStepsMeasureTheirOwnThread`).
+private final class PinnedThread {
+    private let lock = NSCondition()
+    private var bodies: [() -> Void] = []
+    private var stopped = false
+    private var thread: Thread?
+
+    init() {
+        let thread = Thread { [self] in
+            while true {
+                self.lock.lock()
+                while self.bodies.isEmpty && !self.stopped {
+                    self.lock.wait()
+                }
+                if self.bodies.isEmpty {
+                    self.lock.unlock()
+                    return
+                }
+                let body = self.bodies.removeFirst()
+                self.lock.unlock()
+                body()
+            }
+        }
+        thread.stackSize = 8 << 20
+        self.thread = thread
+        thread.start()
+    }
+
+    /// Runs `body` on the thread and waits for it.
+    func run<T>(_ body: @escaping () -> T) -> T {
+        var result: T?
+        let done = DispatchSemaphore(value: 0)
+        self.lock.lock()
+        self.bodies.append {
+            result = body()
+            done.signal()
+        }
+        self.lock.signal()
+        self.lock.unlock()
+        done.wait()
+        return result!
+    }
+
+    func stop() {
+        self.lock.lock()
+        self.stopped = true
+        self.lock.signal()
+        self.lock.unlock()
     }
 }

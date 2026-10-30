@@ -20,7 +20,7 @@ namespace wr_test {
 /// A FakeRenderHost, then a HostEnv booted from `html` (HostEnv::booted) with a RenderTree over the host installed
 /// first in its beforeBoot hook (wr::installRender, Task 6), so the boot's flush builds the parsed markup. The HostState
 /// owns the tree and the RenderEnv the host, declared first so it outlives the runtime. `beforeBoot`, when given, runs
-/// after the install (a work limit, natives). The constructor drains the loop unless `drain` is false.
+/// after the install (natives, host settings). The constructor drains the loop unless `drain` is false.
 /// Markup without a doctype boots a quirks-mode document, which the render build follows (Document::mode()). The
 /// options always keep the render input (RenderOptions::keepRenderInput), whatever `options` says.
 class RenderEnv {

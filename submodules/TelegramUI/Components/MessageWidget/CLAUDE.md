@@ -9,9 +9,10 @@ TL `string`s since the 2026-10-27 schema), `ph` (`public_data_hash`) and `wi` (`
 compressed as the server does, zlib at level 9, through the SDK's `zlib`, never Compression's `COMPRESSION_ZLIB`, which
 is raw deflate);
 `ChatMessageWidgetBubbleContentNode` draws it as a live widget in a bubble of its own, the message's text as its
-caption below. The authority is widget-sandbox, vendored at tag v0.2.3 in `third-party/widget-sandbox` (`corpus/`,
-`conformance/`); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`
-(milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions), and v0.2's (the bot's
+caption below. The authority is widget-sandbox, vendored at tag v0.4.0 in `third-party/widget-sandbox` (`corpus/`,
+`conformance/`, `stress/`; v0.3.0 brought strict limits, the finger rule, held requests, `openTelegramLink` and the
+stress kit, v0.4.0 the time over the widget, the content safe area); the client's spec is
+`docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md` (milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions), and v0.2's (the bot's
 state, the message context, requests) is `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. The runtime, `WidgetRuntime`, has its own record:
 [`docs/message-widgets-native-runtime.md`](../../../../docs/message-widgets-native-runtime.md). Code:
 `submodules/TelegramUI/Components/MessageWidget/{MessageWidget,MessageWidgetRendering,WidgetRuntimeIOS,WidgetRuntime}`
@@ -91,6 +92,24 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   transparent corner leaves the bubble's own. The date sits where a photo's does, 8 pt from the edges. Check in the
   widget harness with `-widget-caption off` and `-harness-side incoming`: the harness draws no outgoing gradient
   bubble (it has no wallpaper backdrop).
+- **The time over the widget is its content safe area** (widget-sandbox v0.4.0, sdk-v1 §2.17, §5.12). With no caption
+  below the widget (none, or one shown above it, `invert_media`) the bubble draws the date over its bottom right corner,
+  as on a photo, and tells the widget what it covers (`MessageWidgetContentSafeArea`, through the registry each pass):
+  `bottom`, the pill's height plus its 8 pt margin on both sides, and `cornerRight`, its width likewise (34 and 67 pt for
+  a plain date), the pill in the middle of its box as upstream's reference draws the time; clamped to 64 and 200, the
+  most the runtime keeps. The date is on the right in every interface direction here, so `cornerLeft` stays 0; the corner
+  assumes the widget fills the bubble (centred in a wider one, its true corner is narrower). With a caption below, all
+  0. The date's layout comes before the widget's pass, so the boot has it and the first height has the band
+  (`MessageWidgetInstance.contentSafeArea`, read by `layout`; a change is a waited `.layout` task, an equal value
+  nothing, so it changes only with the bubble's layout: a caption edited, "edited", a wider views count). The widget sees
+  it as `env(safe-area-inset-*)`, the `--tg-content-safe-area-*` root variables, the UA layer's body padding (an
+  unstyled widget is that much taller; a full-bleed one sets `body { padding: 0 }`) and `TelegramWidget.contentSafeAreaInset`
+  with `contentSafeAreaChanged` (runtime record, "The content safe area"). The date, and the whole corner box the widget
+  is told it covers (the pill with its margins), are the bubble's, never the widget's: the content node takes touches
+  there (`hitTest`), its tap action is `.none` (a reaction button of the date keeps `.ignore`) and it claims no drag, so
+  swipe-to-reply asks the widget nothing (asking presses it early). The box, not just the pill: a long press's
+  activation and a tap's up convert the down point through the press's shrink, several points toward the corner. The
+  harness: `WidgetHarnessSafeAreaTests`, posts with `captionAbove`.
 - **Widgets exist only where the bubble lays out on main.** A widget's instance and the height cache are main-thread
   only, so the node boots and queries a widget only in a main-thread pass. The chat history's CoreList backend lays
   out on main; `ListViewImpl` (other lists, and the chat under `ios_killswitch_disable_corelist_chat_backend`) lays
@@ -101,8 +120,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   `WidgetTileDrawer`) runs only inside the widget's tasks on `MessageWidgetPool` (two 8 MB threads, a serial queue per
   widget, no thread pinning: QuickJS re-reads its stack top on every entry); `MessageWidgetInstance` (main) applies
   the `WidgetSnapshot` each task ends with, in task order. Main never calls into a core. It queues a task and waits
-  within one allowance per run-loop turn: 1,000,000 units of the waited tasks' own work (the uncharged parse counted)
-  and a 20 ms cap that is never a verdict (`MessageWidgetWaitPolicy`, `MessageWidgetTurn`, reset at `beforeWaiting`).
+  within one cap per run-loop turn: 20 ms of wall time over every waited task, never a verdict
+  (`MessageWidgetWaitPolicy`, `MessageWidgetTurn`, reset at `beforeWaiting`).
   A task not done goes on, and its snapshot is applied later from the handshake's mailbox, before anything newer. The
   handshake's `drain()` is not re-entered: a task run while it applies (a snapshot asking for its draw) mailboxes its
   result behind the ones still to apply.
@@ -111,54 +130,97 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   parallel (`WidgetTileDrawer`), so a size change can show the old tiles for a frame. A boot not done is the offered
   width × 160 pt (`MessageWidgetInstance.placeholderHeight`); its late snapshot moves `layoutVersion` so the bubble
   lays out again (a late start failure too, which then shows the pill). Taps always wait and carry their permission;
-  timer ticks and frames wait unless the widget is hidden or demoted (a timer, wake or frame task past 1,000,000 units,
-  its whole drain, which is what main waits for, demotes it for good; boots and taps never do). Keyed tasks (`timer-<id>`, `wake`, `frame`, `visibility`, `width`,
-  `draw`) replace one still queued, and one frame task is in flight at a time. Tests run each widget on a pool of its
+  timer ticks and frames wait unless the widget is hidden or demoted (a timer, wake or frame task whose steps spend more
+  than 10 ms of the widget thread's CPU, `MessageWidgetInstance.demotionCpuMilliseconds`, demotes it for good; boots
+  and taps never do, and the boot lifecycle's own steps, its scripts and its load, do not count for their first two
+  slices of CPU in all wherever they run, the boot task's own included, the core's wakes once the boot task has spent
+  its slice:
+  `WidgetSnapshot.bootCpuMilliseconds`, `MessageWidgetCore.bootDemotionExemptionSlices`). Keyed tasks (`timer-<id>`, `wake`, `frame`, `visibility`, `width`, `draw`) replace one still
+  queued, and one frame task is in flight at a time. Tests run each widget on a pool of its
   own with `.unbounded` (each wait ends with its task); background-path tests pass a capped policy and hold a task
   with `gateNextTaskForTesting()` (never with `.unbounded`: main would wait for a task that waits for main).
-- **A hostile message must not crash, freeze or exhaust the app, and every limit on its JS is a budget of work, never
-  of time** (user decisions: fully deterministic, per-task limits only, **no rate limits**). Whether a widget is
-  stopped depends on what it does, never on device speed, thread or machine load (`DeterminismTests`). The unit is
-  QuickJS's work counter (`third-party/quickjs-ng` VENDOR.md change 2): 1 per interrupt poll (calls, branches, loop
-  back-edges), 1 per 4 bytes allocated, and charges inside every native builtin whose work grows with its input (list
-  in VENDOR.md). `WidgetRuntime` charges its own native work in the same units, before doing it
-  (`wr::charge`/`chargeScan`; the per-binding-call, per-node, per-selector, per-byte and per-box rates are in
-  `WidgetRuntime/Sources/Support/Work.h`). **Budgets** (`MessageWidgetCore`; tests replace them via
-  `budgetsForTesting`; a million units is ~10 ms at the cost suite's reference rate), each set so the corpus's largest
-  honest task of its kind stays under a quarter of it:
-  - **parse** of the markup, `parseWorkUnits` 400,000,000: ours, not charged to the widget (by user decision), a
-    ceiling no honest widget nears; past it nothing is published and the widget does not start (`.failedToStart`, the
-    pill). The client adds no source-size check of its own, so this also bounds a source's size;
-  - **boot** (its scripts, then `load`, on one budget; what the layout pass waits for), `bootWorkUnits` 48,000,000;
-  - every later **step** (an event, timer, frame, or a width or theme rebuild), `taskWorkUnits` 28,000,000. One core
-    task's drain runs at most 256 steps (`maximumStepsPerTask`) and stops once it has spent one task budget, so a
-    widget that keeps a task runnable cannot hold its queue.
+- **A hostile message must not crash, freeze or exhaust the app, and its limits are widget-sandbox's, on the widget
+  thread's CPU clock** (the user, 2026-10-30: "move closer to the upstream", exact parity; the spec is
+  `docs/superpowers/specs/2026-10-29-message-widgets-cpu-clock-limits-design.md`). The values are upstream's
+  `LIMIT_DEFAULTS` (`wr::CpuLimits`, `MessageWidgetCpuLimits.product`), in every build and under both limit policies:
+  - **a task's slice, up to 500 ms of CPU.** Every runtime step (an event, a timer, a frame, each boot script and the
+    load, a width or theme rebuild's task) runs in one: 500 ms for a boot task, otherwise min(500 ms, what the JS quota
+    has left, at least 50 ms) (`CpuBudget::decide`). Past it the widget stops, uncatchably, with upstream's "CPU limit
+    exceeded: more than <slice> ms of continuous execution (<where>)" (`StopReason::Cpu`). A wall-clock backstop,
+    max(10 × slice, 5 s), stops a step whose thread is starved;
+  - **the JS quota, 300 ms per 1000 ms window, and the main-thread window, 100 ms per window** (the host's work for
+    the widget: its layout queries' time and upstream's modelled cost of its operations, 0.025 ms an op and 0.002 ms a
+    canvas command). Past either, deferrable tasks (timers, frames, viewport, resize, theme, bridge) wait apart until
+    the retry time, which `nextTimerDeadline` includes; events and taps still run, and the `cpu-throttled` diagnostic
+    says so in upstream's words. Our renderer's other flushes are measured but charged to no window: upstream's
+    renderer is the browser's (the plan's Task 6 ruling; `EventLoop::endStep` is the one line to revert);
+  - **layout queries, 100 ms per task**: past it the widget stops ("Layout query limit exceeded: …").
 
-  A session's memory limit is 64 MiB (`WRSession`); a memory stop is fatal. The budget is read at QuickJS's interrupt
-  poll (every 100 polls: `JS_INTERRUPT_COUNTER_INIT=100`, change 1) and at every native charge; once it stops the
-  widget nothing is catchable by script (change 10), so no `try`/`catch` keeps a loop going. **With no clock behind
-  it, an uncharged native path is an unbounded freeze** (a one-line `trim` on 4 MB, BigInt division or `join` on
-  `{length: 2**40}` runs for hours without its charge). A new native path, in `WidgetRuntime` or QuickJS, needs its
-  charge and a row in a cost suite; a QuickJS change or upgrade also needs a run of the native-path sweep
-  (`//third-party/quickjs-ng:QuickJSNativeSweep`, manual, `-c opt`, quiet machine), which calls every builtin with
-  large inputs and reports any call slow per unit or never ending.
-  **Calibration:** each rate holds its attack to at most 2× the reference loop's wall time per unit:
-  `QuickJSWorkCostTests` (host, `-c opt`, an alarm per attack so a hang fails) for QuickJS's rates,
-  `:WidgetRuntimeWorkCostTests` (manual, `-c opt`) for `WidgetRuntime`'s, and `LimitsTests`'
-  `testAHostCallLoopCostsNoMorePerUnitThanJS`/`testAWordDenseRebuildLoopCostsNoMorePerUnitThanJS`
-  (`MessageWidgetTests`) through the app. They are wall-time ratios (best of three): under machine load, suspect noise
-  before a regression.
+  The parse is ours: it runs outside any slice, bounded by gumbo's count limits (`wr::ParseLimits`), and the client
+  adds no source-size check of its own (the server bounds the payload, widget-sandbox integration.md). The slice is
+  read in QuickJS's interrupt handler, at the stock 10,000 polls, never inside our renderer's scopes (a flush's time is
+  not the slice's). **Native code is not interruptible** (the user's call: exact parity): a builtin that does not poll
+  (a `trim` of 4 MB, BigInt division, a generic `join` of `{length: 2**40}`) runs to its end, and the stop lands at the
+  next poll, so one hostile message can hold one of the pool's two threads for as long as that call takes. Once a stop
+  latches nothing is catchable by script (quickjs-ng change 10), so no `try`/`catch` keeps a loop going. A session's
+  memory limit is 8 MiB under the strict policy, 64 MiB under compat (`WRSession`, from `wr::Limits`); a memory stop is
+  fatal. One core task's drain runs at most 256 steps (`maximumStepsPerTask`) and stops once its steps have spent a
+  slice of CPU (`cpuLimitMs`; the step that crosses it runs to its own end), and so does the boot's own loop in
+  `WRSession` (the rest of the lifecycle runs on wakes), so a widget that keeps a task runnable leaves the pool thread to
+  the others between drains: a chain of follow-ups inherits its root's kind, and a boot's, an event's or a visibility
+  change's is never deferred by the JS quota (the final review's I1, the fix wave's I-A); a chain of timers or frames
+  is, too. A down whose task the touch's drains do not reach is `.unanswered` (`WRSession.pressDownPending`), as
+  when main's wait ends first, never the claim of the press before it (the fix waves' I-B); a widget the drains stopped
+  answers none, the bubble's. `getAnimations()` flushes
+  as a layout query does (`layoutForQuery`): its time is the query's, and past the 100 ms it stops at that flush
+  (upstream's is a host query too, `query({q: 'anims'}, false)`, and ends the operations batch as ours does). The CPU
+  windows read the host's clock at a step's admission and record the step at its end, as upstream does
+  (`EventLoop::quotaNow`). **Script our renderer runs is the widget's**: the
+  style-change step settles CSS animations' promises, which reads a `then` a widget may define, so it runs in a
+  `Runtime::ScriptScope` (checked against the slice, counted as JS), a width, theme or reduced-motion change's flush
+  is a step of its kind that no window defers (`EventLoop::flushForHostChange`: its own slice and operations batch,
+  follow-ups of its kind, recorded as a step), and script reaching a poll anywhere else inside a render scope still meets the wall backstop
+  (the final review's C1). Where a runaway stops depends on the device and its
+  load, as upstream's does: tests use the harness's fake clock (1 ms per interrupt check, the product's slice by
+  default; `wr_test::ScopedProductSlices`, `stopAfter`) or, in Swift, a wall-clock-as-CPU fake (`useWallTimeAsCpu`),
+  and compare costs on the thread's CPU clock (`wr_test::threadCpuMs`), never by a count. `CpuSliceTests`,
+  `CpuQuotaTests`, `StopGuardTests` (the memory limit, the uncatchable stop and the count caps still stop),
+  `//third-party/widget-sandbox:CpuBudgetTests` (the vendored `CpuBudget`), `LimitsTests` through the app (runaways
+  stopped with upstream's message, on the real clock) and `:WidgetRuntimeNoWorkUnitsScanTests` (the deleted work-unit
+  API does not come back) pin it.
   **Corpus check:** `//submodules/TelegramUI/Components/MessageWidget/MessageWidget:MessageWidgetCorpusTests` (size
-  large, ~6 min) boots every widget-sandbox corpus file except `attacks` (`out-of-profile` included: the runtime must
-  boot what the profile leaves out without stopping), taps a 4×6 grid and runs 1.2 s of timers and frames on lifted
-  budgets; it fails when an honest widget passes a quarter of a budget. `MessageWidgetTests` runs the `attacks`. Two
-  files are not honest widgets, per widget-sandbox's README: the Hang button (`11-live-scripts/15-pixel-bare`, a
-  runaway, stopped) and the Buggy button (`17-pixel-bare`, throws on purpose). `knownGaps` lists, by message, the
-  uncaught errors that are APIs not built yet; `testWhatTheParseCostsPerByte` prints the uncharged parse per folder.
-  **Determinism:** the runtime reads no clock; the host hands each step its `now`. Counts can still shift with the
-  system allocator across OS versions (QuickJS reads usable sizes for its GC threshold and in-place string appends).
+  large, ~7 min) boots every widget-sandbox corpus file except `attacks` (`out-of-profile` included: the runtime must
+  boot what the profile leaves out without stopping), taps a 4×6 grid and runs 1.2 s of timers and frames on the
+  product's limits; it fails when an honest widget's largest step passes 125 ms (a quarter of the slice), its JS passes
+  75 ms a second while it runs on, or it is throttled. `MessageWidgetTests` runs the `attacks`. Four files are
+  exempt: the Hang button (`11-live-scripts/15-pixel-bare`, a runaway, stopped) and the Buggy button (`17-pixel-bare`,
+  throws on purpose), per widget-sandbox's README; upstream's throttling demo (`16-pixel-bare`) and
+  `12-motion-lab/09-mo-bare` (the grid's 24 taps a second of layout queries pass the main-thread window, as upstream
+  charges them), from the throttle checks only. `knownGaps` lists, by message, the uncaught errors that are APIs not
+  built yet.
   **Bounds:** the render limits (elements, form controls, `<style>` and text bytes, …) are `WidgetRuntime`'s, in the
   runtime record's "Limits". A message has one widget (registry path `[]`).
+- **widget-sandbox v0.3.0's limits are counts, and the strict policy stops a widget past one** (`wr::Limits`,
+  `Runtime/Limits.h`; the table with each cap's site is the runtime record's "Limits"). Under `strict`, the default
+  (`MessageWidgetLimitPolicy`, passed to `MessageWidgetInstance` and `WRSession`): a text value of 32,768 UTF-16 units,
+  48K of document text, an attribute or inline style of 8,192, 10,000 operations per batch (upstream's shim sends a
+  flush's difference, so: a node's first insertion 2, a later insertion or removal 1, a move in one batch 1 in all, an
+  attribute or a text changed in a batch 1 however often, a property of an inline style that predates the batch 1 each
+  (a new style 1 in all), nothing for a node inserted in the same batch or removed from a tree outside the document (a
+  fragment's), a sole text replaced by `textContent` 1, a canvas drawn on 1; a batch is a task, a frame, or what a layout query flushes), 400 CSS
+  rules and 32 `@keyframes`, and canvases of 2048² pixels
+  together stop the widget (`StopReason::Limit`), its reason upstream's text ("Ops limit exceeded: …"), which
+  `WRSession.stopDetail` carries to the badge's dead reason; a stop before the first publish freezes with the badge
+  alone, never the pill. 10,000 commands to one canvas in a task throw a `RangeError`; 64 timers, 64 live script
+  animations (CSS animations are not counted), 4 KB of storage and an 8 MiB heap are the other strict counts, and a
+  `data:` image claiming more than 1024² pixels (its header read, `Host/DataImageSize.cpp`) is the placeholder under
+  either policy. `compat` keeps the old values and never stops; the stress kit's measure pass and tests of the
+  renderer's worst case run under it (`wr_test::ScopedLimits`). The time limits are upstream's too (above).
+- **The stress kit** (`MessageWidgetStress`, widget-sandbox `stress/`, CLIENTS.md): the widget harness's `-widget-stress
+  measure|production` and DEBUG builds' Debug Settings ▸ "Run widget stress kit (measure)" and "(production)" run its
+  127 widgets in a stand-in bubble and write a run file (`run.schema.json`) into the app's Documents (the Debug Settings
+  entry shares it). The run files the maintainers ask for come from devices: no debugger, low power mode off, the device
+  cool.
 - **The master sheet ends in the renderer's UA layer** (widget-sandbox `profile.json` `tables.uaStylesheet`, generated
   into `ProfileTables.inc` with each `:where(X)` written as X and its `@layer tw-ua{…}` kept): root font and colour
   from the theme and text tokens, the body margin as the padding token, defaults for headings, lists, tables, quotes,
@@ -208,7 +270,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request's unicode extension keeps only the keywords its constructor
   reads, with values from conservative tables** (`intl::resolveLocale`, ECMA-402 ResolveLocale). Upstream's shim sends
   the tag whole. In its glue, though, an unknown numbering system (`en-u-nu-bogus`) makes Foundation's relative
-  formatter trap, crashing the app, and an extension breaks the plural rules (widget-sandbox VENDOR.md). v0.2.3's glue
+  formatter trap, crashing the app, and an extension breaks the plural rules (widget-sandbox VENDOR.md). The glue
   applies what is kept on iOS 16 and later. **A glue change or a new table value must keep `WRIntlExtensionTests`
   green**: it runs every call a widget can make with every CLDR numbering system, calendar, hour cycle and collation on
   iOS, and a trap there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
@@ -239,14 +301,17 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     vendored policy's `RequestGate`, `HostState::decideRequest`) admits it only in these cases:
     - on a tap, where the message's server flags say `can_query`;
     - without a tap, in the bot's private chat when the server sets `background_query`: one when the widget appears on
-      screen, then at most one per 5 s while it stays visible.
+      screen, then at most one per 5 s while it stays visible. **One made while the widget is off screen waits for it to
+      appear** (widget-sandbox v0.3.0, the gate's `Held`): it keeps its data and the in-flight slot and is sent from the
+      task that shows the widget (`HostState`'s `setVisible(true)` → `RequestGate::show` →
+      `TelegramWidget::sendHeldRequest`); a widget destroyed first sends nothing.
 
     One request is in flight at a time.
   - **`messages.getWidgetPublicData`** is polled for a widget on screen that has a `widget_id` and has called
     `watchPublicData()`: one message per `widget_id`, at the period the server returns.
   - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
     The only way out is the bridge (`MessageWidgetCore.bridge`):
-    - `openLink` / `openTelegramLink` behind its prompt, one per tap;
+    - `openLink` behind its prompt, `openTelegramLink` as a link in the message's text opens (below), one per tap;
     - `request`;
     - `copyText`, on a tap;
     - `watchPublicData`;
@@ -281,7 +346,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     (`ChatRecentActionsControllerNode`, which otherwise never asks) honour the flag, and `ChatController`'s
     link-options preview (`performOpenURL`, which fetches a preview of the URL) ignores such a link; the other
     `ChatControllerInteraction`s open nothing or show list items, not bubbles. A new opener of `OpenUrl` must honour
-    it too.
+    it too. **`openTelegramLink` has no prompt of its own** (widget-sandbox v0.3.0): the bubble opens it as the message's
+    own t.me link (`controllerInteraction.openUrl(OpenUrl(url:, concealed: false, message: item.message))`), so the
+    chat's handling of t.me links decides, as for a link in the message's text; the runtime admits only t.me,
+    telegram.me and telegram.dog URLs there (`Links.cpp`). `WidgetHarnessLinkTests` (`Fixtures/open-telegram-link.html`).
 - **The message's context and state** (widget-sandbox v0.2). The bubble hands the registry the message's context
   (`messageWidgetContext`, `MessageWidgetMessageContextBuilder.swift`: the media's `isCopy` / `canQuery` /
   `backgroundQuery` as the server set them, the chat's type, the account as `viewer`) and its state (the media's
@@ -296,23 +364,17 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     gets an id-only viewer (`item.context.account.peerId`), which the policy accepts. The viewer is part of the
     context, hence of the key, so a change to the account's own name, username or Premium restarts every widget on
     screen once.
-  - **The network marker is exactly `can_query`** (sdk-v1 §5.11): `MessageWidgetNetworkMarkerView`
-    (`widget.networkMarker`), a 20 pt badge the date pill's colour at the widget area's bottom-right, left of the date
-    pill when the bubble draws one there, never over the pill; a tap shows `Message.WidgetNetworkMarkerInfo` as the
-    message's tooltip, which the chat shows only with a source node (the content node). A message without the flag
-    gets none, however its widget behaves.
-  - **A touch on the marker is never the widget's.** The marker sits inside the widget area, and the bubble's
-    estimate at a touch's down (`tapActionAtPoint`, `isEstimating`) would otherwise start a press in the widget under
-    it: `pointerdown` and `pointercancel` at its corner, and the haptic window. `tapActionAtPoint` answers `.ignore`
-    without a long-tap action there (the button takes the tap; a hold opens the message's menu), and
-    `claimsHorizontalDrag` answers false. `testATouchOnTheMarkerIsNeverAPressInTheWidget` (Tier 1) and
-    `testATapOnTheNetworkMarkerExplainsItAndPressesNothing` (Tier 2, a real tap) pin it.
+  - **No network marker** (the user, 2026-10-29: "remove the network access icon/pill next to the date from all widgets
+    even if they access network"; a recorded divergence from sdk-v1 §5.11). No widget shows one, `can_query` or not,
+    and nothing in the widget area is the bubble's but the date and the corner box around it (the time over the widget,
+    above; `testNoNetworkMarkerEvenWithCanQuery`).
   - **`copyText` copies only where the widget's text selection may** (the same `copyAllowed`: the chat's
     `isCopyProtectionEnabled`, the message's `isCopyProtected()`, verification codes excepted), and always says what
     it copied (`displayUndo(.copy(text:))`), so a widget cannot show one text and copy another unnoticed. Where copying
     is forbidden nothing reaches the pasteboard and the chat's own copy-protection notice shows instead.
 
-  `WidgetHarnessStateTests` (Tier 1, `Fixtures/widget-state.html`) covers the state, an edit, the marker and the copy.
+  `WidgetHarnessStateTests` (Tier 1, `Fixtures/widget-state.html`) covers the state, an edit, the absent marker and the
+  copy.
 - **A request reaches the bot from the bubble** (W2). The bubble sends each admitted `request` through
   `MessageWidgetNetwork.requestAnswer`, whose default is `engine.messages.requestBotWidgetQueryAnswer`.
   `MessageWidgetRequests` holds each on a disposable of its own until its outcome reaches the widget. The rules:
@@ -421,7 +483,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   is in the client spec's milestones. Its sharpest facts:
   - **gumbo's reconstruction re-clones attribute values**, so parse memory is bounded by attribute *bytes* (8 MiB);
     counting attributes alone lets a 256 KB document peak at 486 MB.
-  - **A stop is final.** A budget trip, out-of-memory or an internal failure latches the runtime; an allocation
+  - **A stop is final.** A CPU or layout-query stop, a count cap, out-of-memory or an internal failure latches the
+    runtime; an allocation
     refused at the memory limit latches it inside QuickJS's allocator (fork change 9). From then on nothing is
     catchable by script, every poll site throws (fork change 10), and no step calls into JS, because QuickJS cannot
     drop queued jobs.
@@ -436,8 +499,9 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     on the container's `sanitizer_key`. **Hooks are pure functions of their text and post no diagnostics** (litehtml
     caches their answers by text). There is no focus (`focus()` is a no-op). Record and divergences: the runtime doc's
     "Profile enforcement (V4)".
-  - **The flush is atomic and runs no JS**, and the first one is in `boot`, after the parse and before any script, so
-    a first script that never ends still leaves the parsed markup laid out.
+  - **The flush is atomic**, and the first one is in `boot`, after the parse and before any script, so a first script
+    that never ends still leaves the parsed markup laid out. Its only script is the style-change step's (a `then` a
+    widget defined, read as animations' promises settle), run in the step's slice (above).
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +
   source + the message context, never its state; a new message stable id destroys it; a widget that failed to start
   is remembered, not re-booted). Height changes ride the layout (`reportedHeight`, then the height cache) and
@@ -464,7 +528,12 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   through `MessageWidgetTouchRecognizer`, never `touchesEnded`:** a recognizer above the bubble recognizes every tap
   and cancels the touched view's touches, so a view-level widget sees began → cancelled and never clicks. The
   recognizer cannot be prevented by a tap, can be by a pan, and recognizes on the touch's end. A tap makes no `click`
-  on or inside a disabled form control, as in browsers.
+  on or inside a disabled form control, as in browsers. **A finger's `pointerdown` is no gesture** (widget-sandbox
+  v0.3.0's finger rule): a touch's or a pen's down carries no activation, so a link, request, copy or haptic from its
+  handlers is refused; the gesture counts from the release (`pointerup`, `click`). A mouse's `pointerdown` still carries
+  it (`Taps.cpp`, its `PressScope`). **A `contextmenu` carries none**, a finger's claimed hold or a mouse's secondary
+  click (upstream numbers gestures for clicks, presses and releases only, and a call carries its own event's), so no
+  link, copy or request comes from a hold before the finger lifts (`ActivationTests.testAContextMenuIsNoGesture`).
 - **iPad pointers** (a trackpad or mouse: the user, "we should include it if possible for iPads with a trackpad"). A
   `UITouch` of type `.indirectPointer` presses as the policy's mouse (`MessageWidgetPointerKind`: `pointerType:
   'mouse'`, `mousedown`/`mouseup`, its button from `UIEvent.buttonMask`): there is no hold menu and no swipe, so its
@@ -520,9 +589,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   `MessageWidgetView.setExtracted(true)`: the widget keeps running and drawing but takes no input (a cancel still ends
   the press the lift interrupted), main waits for none of its tasks, and after every publish a `.selection` task
   exports what it lets the reader select (`RenderTree::selectableText` → `WRSession.selectableText` →
-  `MessageWidgetSelectableText`). The export is the host's work: never waited for, on a budget of its own
-  (`MessageWidgetCore.selectionWorkUnits`, 6,000,000) that never reaches the widget's meter, stops it or demotes it;
-  past it, that layout selects nothing. The bubble puts a `TextSelectionNode` over a `TextNodeProtocol` adapter of the
+  `MessageWidgetSelectableText`). The export is the host's work: never waited for, outside the widget's slices, and it
+  never stops or demotes the widget; it is linear in the text (`testTheSelectableExportIsLinear`). The bubble puts a `TextSelectionNode` over a `TextNodeProtocol` adapter of the
   export (`MessageWidgetTextSelectionAdapter`, swapped in place, since the node keeps its text node for good), as the
   rich bubble does its page. A selection follows the Text nodes its ends are in across exports, widened to whole
   characters, and is dropped when either goes; its menu stays where it appeared and Copy reads the live selection; the
@@ -593,7 +661,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   //third-party/widget-sandbox:WidgetSandboxIntlTests`); the harness: `./build-input/bazel-9.2.0-darwin-arm64 test //Tests/WidgetHarness:WidgetHarnessTests
   //Tests/WidgetHarness:WidgetHarnessUITests`; host: `./build-input/bazel-9.2.0-darwin-arm64 test
   //third-party/twidget:TwidgetForkTests //third-party/twidget:TwidgetLitehtmlSmokeTests
-  //third-party/quickjs-ng:QuickJSWorkTests //third-party/quickjs-ng:QuickJSSmokeTests`, and the cost suite optimized,
-  `… test -c opt //third-party/quickjs-ng:QuickJSWorkCostTests --test_output=all` (not `//third-party/twidget:all`: it
-  includes the iOS test). `WidgetRuntime`'s own host suites (`:WidgetRuntimeTests`, the WPT runner, the render gates,
-  the gumbo and twidget fork tests) are in the runtime record's "Tests".
+  //third-party/quickjs-ng:QuickJSSmokeTests //third-party/quickjs-ng:QuickJSHostTests
+  //third-party/widget-sandbox:CpuBudgetTests` (not `//third-party/twidget:all`: it includes the iOS test).
+  `WidgetRuntime`'s own host suites (`:WidgetRuntimeTests`, the WPT runner, the render gates, the gumbo and twidget
+  fork tests) are in the runtime record's "Tests".

@@ -115,7 +115,9 @@ public:
     // Rendering (Task 6).
     /// At most this many bytes of declarations reach an element (the builder's cap on a style attribute).
     static constexpr size_t kMaxAnimatedStyleBytes = 16384;
-    /// At most this many live animations are rendered, the first ones tracked (the reference's MAX_ANIMATIONS).
+    // At most Limits::renderedAnimations live script animations are rendered, the first ones tracked (the reference's
+    // MAX_LIVE_ANIMS: 64 under strict since widget-sandbox v0.3.0, 1,024 under compat); CSS animations and transitions
+    // are not counted there. Every live animation together, CSS ones included: at most this many.
     static constexpr size_t kMaxRenderedAnimations = 1024;
     /// At most this many keyframes of an effect, and properties of a keyframe, are rendered.
     static constexpr size_t kMaxRenderedKeyframes = 64;
@@ -144,7 +146,7 @@ private:
     /// with a target, one whose every property a later one (composite order) on the same target also animates is
     /// removed.
     void removeReplaced(JSContext* ctx);
-    /// The rendered animations of each element in `targets`, in composite order (the first kMaxRenderedAnimations
+    /// The rendered animations of each element in `targets`, in composite order (the first Limits::renderedAnimations
     /// tracked animations with a target only; the first time one is left out posts the `animation-limit` diag).
     std::unordered_map<const Element*, std::vector<Animation*>> renderedAnimations(JSContext* ctx, const std::unordered_set<const Element*>& targets);
     /// The values `animations` (composite order) give `element`, by property in the order they first appear.

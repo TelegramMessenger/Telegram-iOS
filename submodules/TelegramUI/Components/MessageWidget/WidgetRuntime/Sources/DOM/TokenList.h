@@ -9,7 +9,7 @@ namespace wr {
 /// DOMTokenList over one of an element's null-namespace attributes (`class` for classList). The token set is parsed
 /// from the attribute's value and kept while the attribute holds that same value: the list keeps a reference to the
 /// value it parsed, so a later value cannot reuse its address. The list's own writes keep the set they wrote rather
-/// than parse it back. Every comparison of two tokens is charged work::kNodeVisit.
+/// than parse it back.
 class DOMTokenList : public PlatformObject {
 public:
     /// `attribute` is borrowed.

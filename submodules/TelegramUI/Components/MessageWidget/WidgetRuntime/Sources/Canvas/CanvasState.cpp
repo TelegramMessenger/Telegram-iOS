@@ -9,7 +9,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::canvas {
 
@@ -80,8 +79,7 @@ std::optional<CanvasHost::Font> CanvasState::font(const FontValue& value) {
     return font;
 }
 
-std::optional<DecodedImage> CanvasState::sharedImage(std::string_view src, bool& decoded) {
-    decoded = false;
+std::optional<DecodedImage> CanvasState::sharedImage(std::string_view src) {
     const std::pair<size_t, size_t> key{std::hash<std::string_view>()(src), src.size()};
     auto found = m_images.find(key);
     if (found != m_images.end()) {
@@ -101,11 +99,9 @@ std::optional<DecodedImage> CanvasState::sharedImage(std::string_view src, bool&
         if (!image) {
             return std::nullopt;
         }
-        decoded = true;
     }
     if (m_images.size() >= m_sweepAt) {
         // The sweep visits every entry (V5d fix-wave 2 review, I-1).
-        chargeScan(m_ctx, m_images.size());
         std::erase_if(m_images, [](const auto& entry) { return entry.second.image.expired(); });
         m_sweepAt = std::max<size_t>(256, 2 * m_images.size());
     }

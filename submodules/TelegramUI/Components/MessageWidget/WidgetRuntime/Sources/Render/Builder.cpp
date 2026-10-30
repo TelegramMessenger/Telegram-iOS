@@ -15,11 +15,12 @@
 #include "Sources/Host/ICU.h"
 #include "Sources/Host/MarkupPolicy.h"
 #include "Sources/Host/Profile.h"
+#include "Sources/Render/CSSRuleCount.h"
 #include "Sources/Render/WidgetContainer.h"
+#include "Sources/Runtime/LimitStops.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Callbacks.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -181,11 +182,7 @@ void noteLimit(std::vector<std::string>& limits, std::string_view kind) {
     }
 }
 
-/// An atom as UTF-8, converted once per user (the DOM holds every atom it is asked for while the build runs), and
-/// charged at every use. The DOM bounds no name's length, so a name is charged before it is converted: by its UTF-16
-/// length, a lower bound of its UTF-8 one; then up to its UTF-8 length, so the first use costs at least what a later
-/// one does (Ruling E22: a patch's AtomNames is fresh where a rebuild's has the name already, and the patch's measured
-/// work must cover the rebuild's).
+/// An atom as UTF-8, converted once per user (the DOM holds every atom it is asked for while the build runs).
 class AtomNames {
 public:
     explicit AtomNames(JSContext* ctx) : m_ctx(ctx) {}
@@ -194,15 +191,7 @@ public:
         auto found = m_names.find(atom);
         if (found == m_names.end()) {
             String s = String::fromAtom(m_ctx, atom);
-            chargeScan(m_ctx, s.length());
             found = m_names.emplace(atom, s.utf8ForParse()).first;
-            const uint64_t scanned = uint64_t(s.length()) / 8;
-            const uint64_t full = uint64_t(found->second.size()) / 8;
-            if (full > scanned) {
-                charge(m_ctx, (full - scanned) * work::kScanEightUnits);
-            }
-        } else {
-            chargeScan(m_ctx, found->second.size());
         }
         return found->second;
     }
@@ -214,8 +203,7 @@ private:
 
 /// HTML's dir=auto (fidelity plan, Task 11): the direction of the first character of bidi class L, R or AL among the
 /// element's descendant text, in tree order, skipping bdi, script, style and textarea elements and every element with a
-/// dir of its own (ltr, rtl or auto, in any case); ltr when there is none. A node visit per node and a scan of the text
-/// read are charged.
+/// dir of its own (ltr, rtl or auto, in any case); ltr when there is none.
 std::string_view autoDirection(JSContext* ctx, AtomNames& names, DOMState& state, Element& element) {
     // Compared, never copied: a value of any length costs what a short one does (final review C1).
     const auto ownDirection = [&](Element& e) {
@@ -225,7 +213,6 @@ std::string_view autoDirection(JSContext* ctx, AtomNames& names, DOMState& state
     };
     Node* node = element.firstChildNode();
     while (node) {
-        charge(ctx, work::kNodeVisit);
         bool descend = true;
         if (node->type() == NodeType::Element) {
             auto& child = static_cast<Element&>(*node);
@@ -243,11 +230,9 @@ std::string_view autoDirection(JSContext* ctx, AtomNames& names, DOMState& state
                 }
                 const UCharDirection direction = u_charDirection(c);
                 if (direction == U_LEFT_TO_RIGHT || direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC) {
-                    chargeScan(ctx, i + 1);
                     return direction == U_LEFT_TO_RIGHT ? "ltr" : "rtl";
                 }
             }
-            chargeScan(ctx, view.length);
             descend = false;
         } else {
             descend = false;
@@ -304,22 +289,20 @@ bool isTextAttribute(std::string_view name) {
 }
 
 /// The one reading of an element's attributes for litehtml, the build's and the in-place patch's (Ruling 8: a patch
-/// must agree with a rebuild). Each attribute is charged work::kRenderAttribute plus chargeScan of its value; profile 1
-/// decides what the renderer gets of it (markup::renderAttribute, V4 plan, Task 5): one it drops by name is skipped
-/// before its value is read, and one whose output name repeats an earlier one is left out; a `style` over 16 KiB is
-/// left out (styleTooLong); the budget is kMaxRenderBytes counting the names and values read from `usedBefore` on, and
-/// the attribute that would pass it ends the scan (overBudget). A text attribute's value and a `style`'s strings are
-/// counted against profile 1's text budgets from `unitsBefore` on (V4 plan, Task 7): one that does not fit is left out
-/// (textLeftOut).
+/// must agree with a rebuild). Profile 1 decides what the renderer gets of each attribute (markup::renderAttribute, V4
+/// plan, Task 5): one it drops by name is skipped before its value is read, and one whose output name repeats an
+/// earlier one is left out; a `style` over 16 KiB is left out (styleTooLong); the budget is kMaxRenderBytes counting
+/// the names and values read from `usedBefore` on, and the attribute that would pass it ends the scan (overBudget). A
+/// text attribute's value and a `style`'s strings are counted against profile 1's text budgets from `unitsBefore` on
+/// (V4 plan, Task 7): one that does not fit is left out (textLeftOut).
 RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& state, Element& element,
                                 const markup::RenderTag& rendered, size_t usedBefore, TextUnits unitsBefore,
                                 bool keepInput) {
     RenderAttributes out;
     std::unordered_set<std::string> keys;
     // A host marker (data-tg-tag, data-tg-link) goes to litehtml and the render input; the widget cannot write one
-    // (data-tg-* is dropped). Charged as an attribute is, it costs the widget's byte budget nothing.
+    // (data-tg-* is dropped). It costs the widget's byte budget nothing.
     const auto addHostMarker = [&](const char* name, const std::string& value) {
-        charge(ctx, work::kRenderAttribute);
         keys.insert(name);
         if (keepInput) {
             out.text += ' ';
@@ -341,14 +324,18 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
     const auto* canvas = element.isHTMLElement() && element.localNameAtom() == state.name(Name::canvas)
                              ? dynamic_cast<const HTMLCanvasElement*>(&element)
                              : nullptr;
+    const Limits& limits = Runtime::from(ctx).limits();
     for (size_t i = 0; i < element.attributeCount(); i++) {
         const Attribute& attribute = element.attributeAt(i);
-        charge(ctx, work::kRenderAttribute);
         const std::string qualified = qualifiedAttributeName(names, attribute);
         String value = String::adopt(ctx, JS_DupValue(ctx, attribute.value.value));
-        chargeScan(ctx, value.length());
         if (!markup::attributeMayRender(ns, rendered.tag, qualified)) {
             continue;
+        }
+        // limit.attribute (widget-sandbox v0.3.0): any value the renderer's copy may hold, an inline style and a src
+        // included; past it the widget stops. Compat has no such cap (the byte budget below bounds it).
+        if (limits.stops && limits.attributeUnits && value.length() > limits.attributeUnits) {
+            stopForAttribute(ctx, value.length());
         }
         // The budget used with this attribute's name.
         const size_t used = usedBefore + out.bytes + qualified.size();
@@ -364,7 +351,6 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
                 out.overBudget = true;
                 return out;
             }
-            charge(ctx, uint64_t(utf8.size()) * work::kCssByte);
         } else if (used > kMaxRenderBytes || !utf8AtMost(value, kMaxRenderBytes - used, utf8)) {
             out.overBudget = true;
             return out;
@@ -389,8 +375,9 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         }
         // An <img src> profile 1 refuses, the empty one included, renders the 48 px placeholder (V4 plan, Task 6; RB
         // §2.4, §3.5); the DOM's HTMLImageElement::state decides alike.
+        // widget-sandbox v0.3.0: one claiming more than 1024² pixels too; bytes of no format stay, to be broken.
         const bool placeholder = ns == markup::ElementNamespace::HTML && rendered.tag == "img" && decided.name == "src" &&
-                                 !css::policy::imageSourceKept(decided.value);
+                                 css::policy::imageSource(decided.value) == css::policy::ImageSource::Refused;
         if (placeholder) {
             decided.value = std::string(WidgetContainer::kPlaceholderURL);
         }
@@ -402,8 +389,11 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         } else if (isTextAttribute(decided.name)) {
             units = renderTextUnits(value);
         }
-        if (!renderTextFits(units, unitsBefore + out.units)) {
+        const TextFit fit = renderTextFit(limits, units, unitsBefore + out.units);
+        if (fit != TextFit::Fits) {
+            // A text attribute past the value cap passed the attribute cap first, under strict.
             out.textLeftOut = true;
+            out.overTextBudget = out.overTextBudget || fit == TextFit::OverBudget;
             continue;
         }
         out.units += units;
@@ -441,14 +431,13 @@ RenderAttributes scanAttributes(JSContext* ctx, AtomNames& names, DOMState& stat
         }
     }
     // An animated element's sampled declarations (V5e plan, Task 6), folded in by litehtml after `style` as the
-    // animations origin (VENDOR.md edit 27). Counted and charged as a style attribute is; past the budget the scan ends.
+    // animations origin (VENDOR.md edit 27). Counted as a style attribute is; past the budget the scan ends.
     if (const JSText* animated = animation::AnimationState::animatedStyleOf(ctx, element)) {
         const size_t name = std::char_traits<char>::length(litehtml::animated_style_attribute);
         if (usedBefore + out.bytes + name + animated->size() > kMaxRenderBytes) {
             out.overBudget = true;
             return out;
         }
-        charge(ctx, uint64_t(animated->size()) * work::kCssByte);
         out.bytes += name + animated->size();
         out.map[litehtml::animated_style_attribute] = std::string(*animated);
     }
@@ -497,10 +486,9 @@ public:
         m_doc = m_build.document.get();
         // The mode decides how attributes are read (html_tag::set_attr) and the quirks rules: before any element.
         m_doc->set_document_mode(modeOf(document.mode()));
-        // SDK v1 §2.3: the theme's variables, on the root after its own style (twidget edit 26).
-        const std::string& rootDeclarations = m_container.options().rootDeclarations;
-        charge(m_ctx, uint64_t(rootDeclarations.size()) * work::kCssByte);
-        m_doc->set_root_declarations(rootDeclarations);
+        // SDK v1 §2.3: the theme's variables, on the root after its own style (twidget edit 26); §2.17: the content safe
+        // area's after them.
+        m_doc->set_root_declarations(rootDeclarationsOf(m_container.options()));
         m_container.beginBuild();
         this->append("<!doctype html>");
         if (Element* root = document.documentElementNode()) {
@@ -508,7 +496,6 @@ public:
         }
         if (!m_root) {
             // No document element, or none rendered: an empty html (Ruling 11). Nothing of the DOM maps to it.
-            charge(m_ctx, work::kRenderNode);
             if (m_doc->external_element_allowed(0)) {
                 m_root = m_doc->create_element("html", litehtml::string_map());
                 m_build.boxes++;
@@ -516,60 +503,19 @@ public:
             this->append("<html></html>");
         }
         const std::string& hostCSS = m_container.options().hostCSS;
-        charge(m_ctx, uint64_t(hostCSS.size()) * work::kCssByte);
-        // Ruling E19: matching gets one selector-step budget for the whole build, litehtml's 4,000,000 or what the
-        // widget's work budget allows, whichever is less, and is charged for the steps it took. Cut by the work budget, the
-        // build stops the widget (Budget) and is dropped; cut by litehtml's own budget, it is the document's.
-        const int64_t limit = std::min(litehtml::document::default_selector_steps, renderSelectorAllowance(m_ctx));
-        // Ruling E21: apply_selector's filter loop tests every rule against every element, counted by no step: it is
-        // paid for at work::kScanEightUnits per eight (element, rule) pairs. The sheets' rule counts are known only inside
-        // finalize, so its gate asks before each pass whether the budget holds the loop so far (it charges nothing there:
-        // nothing charges inside litehtml); declined, finalize matches nothing and the build stops the widget (Budget).
-        // The elements are litehtml's bound (Ruling E22: matching_bound): each one built, the two pseudo-elements a
-        // ::before/::after rule can create for it, the parts a form control makes. And the steps get what the loop leaves
-        // of the budget.
-        uint64_t filterUnits = 0;
-        uint64_t matchedBound = 0;
-        JSContext* ctx = m_ctx;
-        litehtml::document* doc = m_doc;
-        m_doc->set_matching_gate([ctx, doc, &filterUnits, &matchedBound](size_t rules, size_t matched) {
-            filterUnits += renderFilterUnits(matched, rules);
-            matchedBound = matched;
-            const int64_t allowance = renderSelectorAllowance(ctx) * int64_t(work::kSimpleSelectorTest);
-            if (int64_t(filterUnits) > allowance) {
-                return false;
-            }
-            const int64_t steps = (allowance - int64_t(filterUnits)) / int64_t(work::kSimpleSelectorTest);
-            doc->set_selector_step_limit(std::min(doc->selector_step_limit(), steps));
-            return true;
-        });
+        // Ruling E19: matching gets one selector-step budget for the whole build, litehtml's 4,000,000; cut there, it
+        // is the document's.
         int64_t used = 0;
         {
             struct Session {
                 litehtml::document& document;
                 int64_t& used;
-                ~Session() {
-                    used = document.end_selector_steps();
-                    document.set_matching_gate(nullptr);
-                }
+                ~Session() { used = document.end_selector_steps(); }
             } session{*m_doc, used};
-            m_doc->begin_selector_steps(limit);
+            m_doc->begin_selector_steps(litehtml::document::default_selector_steps);
             m_doc->finalize_from_external_root(m_root, masterWithHostCSS(hostCSS), "");
         }
-        // The limit as the gate left it; cut below litehtml's own, the budget ran out.
-        const int64_t cut = m_doc->selector_step_limit();
-        if (m_doc->matching_gated() || (used > cut && cut < litehtml::document::default_selector_steps)) {
-            Runtime::from(m_ctx).stop(StopReason::Budget);
-            throw Aborted{};
-        }
-        charge(m_ctx, filterUnits);
-        charge(m_ctx, uint64_t(std::min(used, cut)) * work::kSimpleSelectorTest);
         m_build.selectorSteps = used;
-        m_build.filterUnits = filterUnits;
-        m_build.stepUnits = uint64_t(std::min(used, cut)) * work::kSimpleSelectorTest;
-        // The bound the last pass was asked with (all three sheets' creators): a rebuild's filter loop is at most that many
-        // elements against every rule (renderFilterUnits(matched, selector_count()) covers both passes).
-        m_build.matched = matchedBound;
         collectContainerLimits(m_container, m_build.limits);
         m_build.bytes = m_bytes;
         m_build.textUnits = m_units;
@@ -623,7 +569,7 @@ private:
         return node.isElement() && static_cast<Element&>(node).hasHTMLName(m_state.name(Name::script));
     }
 
-    /// The nodes under `root`, whose children the walk does not build, counted at work::kNodeVisit each; a `<script>`'s
+    /// The nodes under `root`, whose children the walk does not build, counted toward the node cap; a `<script>`'s
     /// children are not counted (the reference's sandbox never sends them). False once past the cap.
     bool countUnbuilt(Node& root) {
         if (this->isScript(root)) {
@@ -631,7 +577,6 @@ private:
         }
         Node* node = root.firstChildNode();
         while (node) {
-            charge(m_ctx, work::kNodeVisit);
             if (!this->countNodes(1)) {
                 return false;
             }
@@ -644,7 +589,6 @@ private:
     void walk(Node& root) {
         Node* node = &root;
         while (node) {
-            charge(m_ctx, work::kRenderNode);
             // Close the elements `node` is not inside: its parent is the innermost open one (every visited node's
             // parent was rendered: a subtree that is not is skipped whole).
             while (m_stack.size() > this->baseFrames() && m_stack.back().node != node->parent()) {
@@ -754,6 +698,9 @@ private:
         if (m_roots && (scanned.styleTooLong || scanned.overBudget || scanned.textLeftOut)) {
             return this->refuse();
         }
+        if (scanned.overTextBudget && m_limits.stops) {
+            stopForTextBudget(m_ctx);
+        }
         if (scanned.styleTooLong) {
             noteLimit(m_build.limits, "style-attribute");
         }
@@ -766,6 +713,20 @@ private:
         }
         m_bytes += scanned.bytes;
         m_units += scanned.units;
+        // limit.canvas-pixels (widget-sandbox v0.3.0): the canvases a build sees, width × height together; past
+        // Limits::canvasPixels the widget stops. A subtree with a canvas rebuilds, so a full build judges.
+        if (element.isHTMLElement() && element.localNameAtom() == m_state.name(Name::canvas)) {
+            if (m_roots) {
+                return this->refuse();
+            }
+            if (const auto* canvas = dynamic_cast<const HTMLCanvasElement*>(&element)) {
+                m_canvasPixels += uint64_t(canvas->width(m_ctx)) * canvas->height(m_ctx);
+                if (m_limits.stops && m_limits.canvasPixels && m_canvasPixels > m_limits.canvasPixels) {
+                    stopForLimit(m_ctx, "Canvas limit exceeded: canvases of " + std::to_string(m_canvasPixels) +
+                                            " pixels together (max " + std::to_string(m_limits.canvasPixels) + ")");
+                }
+            }
+        }
         litehtml::string_map& attributes = scanned.map;
         const std::string startTag = m_keepInput ? "<" + tagName + scanned.text + ">" : std::string();
 
@@ -838,15 +799,15 @@ private:
         // Its Text children's length first, so a sheet too long to apply is never copied or converted.
         size_t units = 0;
         for (size_t i = 0; i < style.childCount(); i++) {
-            charge(m_ctx, work::kRenderNode);
             Node* child = style.childAt(i);
             if (child->type() == NodeType::Text) {
                 units += static_cast<CharacterData*>(child)->dataString(m_ctx).length();
             }
         }
-        // work::kCssByte per byte, whether the sheet is applied or not: its length (a lower bound of its UTF-8 length)
-        // now, and the rest of its UTF-8 once converted.
-        charge(m_ctx, uint64_t(units) * work::kCssByte);
+        // limit.text-node (widget-sandbox v0.3.0): the sheet's text is one text value; past the cap the widget stops.
+        if (m_limits.stops && units > m_limits.textValueUnits) {
+            stopForTextValue(m_ctx, units);
+        }
         const size_t room = kMaxStyleText - m_cssBytes;
         std::string utf8;
         if (units > room) {
@@ -854,9 +815,7 @@ private:
             return;
         }
         String sheet = childTextContent(m_ctx, style);
-        chargeScan(m_ctx, sheet.length());
         const bool fits = utf8AtMost(sheet, room, utf8);
-        charge(m_ctx, uint64_t(utf8.size() - std::min(utf8.size(), units)) * work::kCssByte);
         if (!fits) {
             noteLimit(m_build.limits, "css");
             return;
@@ -865,13 +824,34 @@ private:
         // that does not fit is not applied, and counts nothing.
         const TextUnits text = renderTextUnits(sheet);
         const TextUnits strings = renderCssStringUnits(utf8);
-        if (!renderTextFits(text, m_units) || !renderTextFits(strings, m_units + text)) {
+        const TextFit textFit = renderTextFit(m_limits, text, m_units);
+        const TextFit fit = textFit != TextFit::Fits ? textFit : renderTextFit(m_limits, strings, m_units + text);
+        if (fit != TextFit::Fits) {
+            if (fit == TextFit::OverBudget && m_limits.stops) {
+                stopForTextBudget(m_ctx);
+            }
             noteLimit(m_build.limits, "text-budget");
             return;
         }
         m_units += text + strings;
         if (utf8.empty()) {
             return;
+        }
+        // limit.css-rules (widget-sandbox v0.3.0): the document's sheets hold at most Limits::cssRules style rules and
+        // Limits::cssKeyframes @keyframes, counted as upstream's validator counts them, over each sheet as written; past
+        // either the widget stops before the sheet is parsed. The scan is over the UTF-8 converted above.
+        if (m_limits.stops && (m_limits.cssRules || m_limits.cssKeyframes)) {
+            const CSSRuleCount count = countCssRules(utf8);
+            m_cssRules += count.rules;
+            m_cssKeyframes += count.keyframes;
+            if (m_limits.cssRules && m_cssRules > m_limits.cssRules) {
+                stopForLimit(m_ctx, "CSS limit exceeded: " + std::to_string(m_cssRules) + " rules in the document's stylesheets (max " +
+                                        std::to_string(m_limits.cssRules) + ")");
+            }
+            if (m_limits.cssKeyframes && m_cssKeyframes > m_limits.cssKeyframes) {
+                stopForLimit(m_ctx, "CSS limit exceeded: " + std::to_string(m_cssKeyframes) +
+                                        " @keyframes in the document's stylesheets (max " + std::to_string(m_limits.cssKeyframes) + ")");
+            }
         }
         std::vector<litehtml::element::ptr> pieces;
         m_doc->append_text(created, utf8.c_str(), pieces);
@@ -894,15 +874,23 @@ private:
     Step text(CharacterData& text) {
         Frame& parent = m_stack.back();
         String data = text.dataString(m_ctx);
-        chargeScan(m_ctx, data.length());
-        // Profile 1's text limits (V4 plan, Task 7; RB §7.1): a Text over kMaxTextValueUnits, or one the document's text
+        // Profile 1's text limits (V4 plan, Task 7; RB §7.1): a Text over Limits::textValueUnits, or one the document's text
         // budgets have no room left for, is mapped and renders nothing; the walk goes on.
         const TextUnits units = renderTextUnits(data);
-        if (!renderTextFits(units, m_units)) {
+        const TextFit fit = renderTextFit(m_limits, units, m_units);
+        if (fit != TextFit::Fits) {
+            // widget-sandbox v0.3.0: under strict a value past its cap stops the widget, and so does the document's text
+            // past its budget once a full build counts it (a patch's count is its own part's).
+            if (fit == TextFit::ValueTooLong && m_limits.stops) {
+                stopForTextValue(m_ctx, units.units);
+            }
             if (m_roots) {
                 return this->refuse();
             }
-            noteLimit(m_build.limits, units.units > kMaxTextValueUnits ? "text-node" : "text-budget");
+            if (fit == TextFit::OverBudget && m_limits.stops) {
+                stopForTextBudget(m_ctx);
+            }
+            noteLimit(m_build.limits, fit == TextFit::ValueTooLong ? "text-node" : "text-budget");
             RenderEntry& entry = this->map(text, nullptr);
             entry.seq = m_textSeq++;
             return Step::SkipChildren;
@@ -958,7 +946,6 @@ private:
             m_build.elements.emplace(piece.get(), &text);
         }
         m_build.boxes += pieces.size();
-        m_build.textBytes += utf8.size();
         if (all) {
             this->appendText(utf8, parent.rawText);
         } else if (m_keepInput) {
@@ -987,6 +974,8 @@ private:
     }
 
     JSContext* m_ctx;
+    /// The runtime's counted caps (widget-sandbox v0.3.0): strict or compat.
+    const Limits& m_limits = Runtime::from(m_ctx).limits();
     JSRuntime* m_rt;
     DOMState& m_state;
     WidgetContainer& m_container;
@@ -999,6 +988,11 @@ private:
     /// The render byte budget used, and the `<style>` text applied (Ruling 7).
     size_t m_bytes = 0;
     size_t m_cssBytes = 0;
+    /// The pixels of the canvases built so far (limit.canvas-pixels).
+    uint64_t m_canvasPixels = 0;
+    /// The style rules and @keyframes of the sheets applied so far (limit.css-rules).
+    size_t m_cssRules = 0;
+    size_t m_cssKeyframes = 0;
     /// Profile 1's text units counted, and the nodes counted from the document node on (V4 plan, Task 7).
     TextUnits m_units;
     size_t m_nodes = 1;
@@ -1028,7 +1022,6 @@ void RenderBuild::swap(RenderBuild& other) noexcept {
     input.swap(other.input);
     limits.swap(other.limits);
     std::swap(boxes, other.boxes);
-    std::swap(textBytes, other.textBytes);
     std::swap(naturalWidth, other.naturalWidth);
     std::swap(usesUserActionPseudo, other.usesUserActionPseudo);
     styleSheets.swap(other.styleSheets);
@@ -1041,14 +1034,6 @@ void RenderBuild::swap(RenderBuild& other) noexcept {
     std::swap(refusedElements, other.refusedElements);
     std::swap(refusedPieces, other.refusedPieces);
     std::swap(selectorSteps, other.selectorSteps);
-    std::swap(walkCharge, other.walkCharge);
-    std::swap(filterUnits, other.filterUnits);
-    std::swap(stepUnits, other.stepUnits);
-    std::swap(matched, other.matched);
-}
-
-uint64_t renderFilterUnits(uint64_t elements, uint64_t rules) {
-    return elements * rules / 8 * work::kScanEightUnits;
 }
 
 TextUnits renderTextUnits(const String& s) {
@@ -1110,19 +1095,17 @@ TextUnits renderCssStringUnits(std::string_view css) {
     return out;
 }
 
-bool renderTextFits(TextUnits value, TextUnits others) {
-    return value.units <= kMaxTextValueUnits && others.units + value.units <= kTextBudgetUnits &&
-           others.complex + value.complex <= kComplexTextBudgetUnits;
-}
-
-int64_t renderSelectorAllowance(JSContext* ctx) {
-    const uint64_t limit = Runtime::from(ctx).workLimit();
-    const uint64_t units = JS_GetWorkUnits(JS_GetRuntime(ctx));
-    if (limit <= units + 1) {
-        return 0;
+TextFit renderTextFit(const Limits& limits, TextUnits value, TextUnits others) {
+    if (value.units > limits.textValueUnits) {
+        return TextFit::ValueTooLong;
     }
-    const uint64_t steps = (limit - units - 1) / work::kSimpleSelectorTest;
-    return steps > uint64_t(INT64_MAX / 2) ? INT64_MAX / 2 : int64_t(steps);
+    if (others.units + value.units > limits.textBudgetUnits) {
+        return TextFit::OverBudget;
+    }
+    if (others.complex + value.complex > kComplexTextBudgetUnits) {
+        return TextFit::OverComplexBudget;
+    }
+    return TextFit::Fits;
 }
 
 RenderAttributes renderElementAttributes(JSContext* ctx, Element& element, size_t usedBefore, TextUnits unitsBefore,

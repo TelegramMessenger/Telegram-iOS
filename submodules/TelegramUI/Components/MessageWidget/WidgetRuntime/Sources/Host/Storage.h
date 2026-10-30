@@ -9,11 +9,12 @@
 
 #include "Generated/Bindings.h"
 #include "Sources/Support/Allocator.h"
+#include "twidget/sdk_policy.h"
 
 namespace wr {
 
-/// SDK v1 §2.8 (sdk-policy.ts STORAGE_QUOTA_BYTES).
-inline constexpr size_t kStorageQuotaBytes = 16384;
+/// SDK v1 §2.8: the vendored policy's STORAGE_QUOTA_BYTES (4 KB since widget-sandbox v0.3.0, 16 KB before).
+inline constexpr size_t kStorageQuotaBytes = size_t(twidget::sdk::STORAGE_QUOTA_BYTES);
 
 class Storage final : public PlatformObject {
 public:
@@ -45,7 +46,7 @@ private:
         Text value;
     };
     void load(JSContext* ctx);
-    /// The index of `key`, or -1. Charged per entry walked.
+    /// The index of `key`, or -1.
     int find(JSContext* ctx, const std::string& key);
 
     std::string m_area;

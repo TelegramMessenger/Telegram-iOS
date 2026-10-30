@@ -184,17 +184,17 @@ final class WidgetHarnessPreviewTests: XCTestCase {
     }
 
     /// The fix wave's review: a widget that failed to start is remembered, not booted again each time its row is shown
-    /// (a parse past its ceiling costs seconds of a pool thread), as the bubble's registry remembers it.
+    /// (a parse that fails costs a pool thread its time), as the bubble's registry remembers it.
     func testAFailedPreviewIsNotBootedAgainWhenShownAgain() throws {
         let node = try self.node()
-        MessageWidgetCore.budgetsForTesting = (parse: 10, boot: MessageWidgetCore.bootWorkUnits, task: MessageWidgetCore.taskWorkUnits)
+        MessageWidgetCore.startFailureForTesting = { _ in true }
         defer {
-            MessageWidgetCore.budgetsForTesting = nil
+            MessageWidgetCore.startFailureForTesting = nil
         }
         self.update(node, try self.widget("box-240.html"))
         self.drain(1.0)
-        XCTAssertNil(node.widgetView, "the widget started past a 10-unit parse ceiling")
-        MessageWidgetCore.budgetsForTesting = nil
+        XCTAssertNil(node.widgetView, "the widget started though its start fails")
+        MessageWidgetCore.startFailureForTesting = nil
         node.setVisible(false)
         node.setVisible(true)
         self.drain(1.0)

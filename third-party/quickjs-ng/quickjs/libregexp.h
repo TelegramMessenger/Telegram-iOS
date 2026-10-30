@@ -69,14 +69,6 @@ int lre_parse_escape(const uint8_t **pp, int allow_utf16);
 bool lre_check_stack_overflow(void *opaque, size_t alloca_size);
 /* must be provided by the user, return non zero if time out */
 int lre_check_timeout(void *opaque);
-/* Telegram (quickjs-ng VENDOR.md local edit 2): must be provided by the user. An exec returning charges the steps it
-   made since its last lre_check_timeout (which comes every LRE_STEP_PERIOD steps): a short exec never reaches it. */
-#define LRE_STEP_PERIOD 10000
-void lre_charge_steps(void *opaque, int steps);
-/* Telegram (quickjs-ng VENDOR.md local edit 2): must be provided by the user. Compilation work, in the user's units:
-   non zero means stop, and lre_compile fails with LRE_INTERRUPTED_MESSAGE. */
-#define LRE_INTERRUPTED_MESSAGE "interrupted"
-int lre_charge_work(void *opaque, unsigned units);
 void *lre_realloc(void *opaque, void *ptr, size_t size);
 
 /* JS identifier test */

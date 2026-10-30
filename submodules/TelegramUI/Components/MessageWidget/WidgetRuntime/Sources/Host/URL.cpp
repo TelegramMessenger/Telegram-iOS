@@ -6,7 +6,6 @@
 #include "Sources/Host/Sequences.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -68,7 +67,6 @@ URLSearchParams::URLSearchParams(JSContext* ctx) : m_list(JSAllocator<Entry>(JS_
 
 Text16 URLSearchParams::text(JSContext* ctx, const String& s) const {
     const uint32_t n = s.length();
-    chargeScan(ctx, n);
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     out.reserve(n);
     for (uint32_t i = 0; i < n; i++) {
@@ -111,7 +109,6 @@ Ref<URLSearchParams> URLSearchParams::construct(JSContext* ctx, std::optional<Va
             uint32_t count;
             ~Names() { JS_FreePropertyEnum(ctx, names, count); }
         } owned{ctx, names, count};
-        charge(ctx, work::kNodeVisit * uint64_t(count));
         for (uint32_t i = 0; i < count; i++) {
             Value key = Value::adopt(ctx, JS_AtomToString(ctx, names[i].atom));
             Value item = Value::adopt(ctx, JS_GetProperty(ctx, value, names[i].atom));
@@ -131,7 +128,6 @@ Ref<URLSearchParams> URLSearchParams::construct(JSContext* ctx, std::optional<Va
 }
 
 void URLSearchParams::parse(JSContext* ctx, const String& input) {
-    chargeScan(ctx, input.length());
     m_list.clear();
     Vector<uint8_t> bytes{JSAllocator<uint8_t>(JS_GetRuntime(ctx))};
     encodeUTF8(input, bytes);
@@ -168,8 +164,6 @@ void URLSearchParams::parse(JSContext* ctx, const String& input) {
 std::string URLSearchParams::serialize(JSContext* ctx) const {
     std::string out;
     for (const Entry& entry : m_list) {
-        charge(ctx, work::kNodeVisit);
-        chargeScan(ctx, entry.first.size() + entry.second.size());
         if (!out.empty()) {
             out += '&';
         }
@@ -192,7 +186,6 @@ void URLSearchParams::append(JSContext* ctx, USVString name, USVString value) {
 void URLSearchParams::delete_(JSContext* ctx, USVString name, std::optional<USVString> value) {
     const Text16 n = this->text(ctx, name);
     const std::optional<Text16> v = value ? std::optional<Text16>(this->text(ctx, *value)) : std::nullopt;
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1));
     m_list.erase(std::remove_if(m_list.begin(), m_list.end(), [&](const Entry& e) { return e.first == n && (!v || e.second == *v); }),
                  m_list.end());
     this->update(ctx);
@@ -200,7 +193,6 @@ void URLSearchParams::delete_(JSContext* ctx, USVString name, std::optional<USVS
 
 std::optional<USVString> URLSearchParams::get(JSContext* ctx, USVString name) {
     const Text16 n = this->text(ctx, name);
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1));
     for (const Entry& e : m_list) {
         if (e.first == n) {
             return toUSV(ctx, e.second);
@@ -211,7 +203,6 @@ std::optional<USVString> URLSearchParams::get(JSContext* ctx, USVString name) {
 
 std::vector<USVString> URLSearchParams::getAll(JSContext* ctx, USVString name) {
     const Text16 n = this->text(ctx, name);
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1));
     std::vector<USVString> out;
     for (const Entry& e : m_list) {
         if (e.first == n) {
@@ -224,14 +215,12 @@ std::vector<USVString> URLSearchParams::getAll(JSContext* ctx, USVString name) {
 bool URLSearchParams::has(JSContext* ctx, USVString name, std::optional<USVString> value) {
     const Text16 n = this->text(ctx, name);
     const std::optional<Text16> v = value ? std::optional<Text16>(this->text(ctx, *value)) : std::nullopt;
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1));
     return std::any_of(m_list.begin(), m_list.end(), [&](const Entry& e) { return e.first == n && (!v || e.second == *v); });
 }
 
 void URLSearchParams::set(JSContext* ctx, USVString name, USVString value) {
     const Text16 n = this->text(ctx, name);
     Text16 v = this->text(ctx, value);
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1));
     auto first = std::find_if(m_list.begin(), m_list.end(), [&](const Entry& e) { return e.first == n; });
     if (first == m_list.end()) {
         m_list.emplace_back(n, std::move(v));
@@ -243,7 +232,6 @@ void URLSearchParams::set(JSContext* ctx, USVString name, USVString value) {
 }
 
 void URLSearchParams::sort(JSContext* ctx) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_list.size() + 1) * 8);
     std::stable_sort(m_list.begin(), m_list.end(), [](const Entry& a, const Entry& b) { return a.first < b.first; });
     this->update(ctx);
 }
@@ -258,12 +246,11 @@ std::pair<USVString, USVString> URLSearchParams::iterationPair(JSContext* ctx, u
 
 namespace {
 
-/// The code units of `s`, scanned and charged; nullopt past url::kMaxURLLength, which no URL can have.
+/// The code units of `s`; nullopt past url::kMaxURLLength, which no URL can have.
 std::optional<std::u16string> urlUnits(JSContext* ctx, const String& s) {
     if (s.length() > url::kMaxURLLength) {
         return std::nullopt;
     }
-    chargeScan(ctx, s.length());
     std::u16string out;
     out.reserve(s.length());
     for (uint32_t i = 0; i < s.length(); i++) {
@@ -287,7 +274,6 @@ std::optional<url::Record> parseWith(JSContext* ctx, const String& input, const 
         // A URL's href (ASCII) is at most kMaxURLLength, so it always parses back to its record (URL::record): an
         // input under the limit can serialize to nine times it.
         const std::string href = record->serialize();
-        charge(ctx, work::kCssByte * uint64_t(href.size()));
         if (href.size() > url::kMaxURLLength) {
             return std::nullopt;
         }
@@ -371,7 +357,6 @@ url::Record URL::record(JSContext* ctx) const {
 
 void URL::store(JSContext* ctx, const url::Record& record) {
     const std::string href = record.serialize();
-    charge(ctx, work::kCssByte * uint64_t(href.size()));
     // A setter whose result would be longer than the limit leaves the URL as it was, as a setter's failure does
     // (parseWith refuses such a URL to the constructor, parse, canParse and the href setter).
     if (href.size() > url::kMaxURLLength) {

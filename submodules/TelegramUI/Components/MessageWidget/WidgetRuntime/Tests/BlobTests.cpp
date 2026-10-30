@@ -32,18 +32,16 @@ WR_TEST(testCreateObjectURL) {
     CHECK_EQ(env.eval("URL.createObjectURL(new Blob(['x'])) === ''"), std::string("true"));
 }
 
-/// The final review's I1: a Blob's type is scanned at a charge and kept in the JS heap, under the memory limit (it was a
-/// C++-heap copy per Blob, which the limit never saw).
-WR_TEST(testABlobTypeIsChargedAndInTheJSHeap) {
+/// The final review's I1: a Blob's type is kept in the JS heap, under the memory limit (it was a C++-heap copy per Blob,
+/// which the limit never saw).
+WR_TEST(testABlobTypeIsInTheJSHeap) {
     HostEnv env;
     env.eval("window.t = 'A'.repeat(1 << 20); window.keep = []; 1");
     JSRuntime* rt = env.runtime().jsRuntime();
     JSMemoryUsage before, after;
     JS_ComputeMemoryUsage(rt, &before);
-    const uint64_t work = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("for (let i = 0; i < 16; i++) keep.push(new Blob([], { type: t })); [keep[15].type.length, keep[15].type[0]].join()"),
              std::string("1048576,a"));
     JS_ComputeMemoryUsage(rt, &after);
-    CHECK(JS_GetWorkUnits(rt) - work >= 16 * (1 << 20) / 8);
     CHECK(after.malloc_size - before.malloc_size >= 16 * (1 << 20));
 }

@@ -17,16 +17,10 @@ namespace wr {
 namespace {
 
 /// ToString(value), or nullopt when ToString threw (a Symbol, a throwing toString): that exception is dropped, not
-/// reported, so a report cannot recurse through it (R5). Converting a thrown rope flattens it, a copy of all of it that
-/// QuickJS would notice only at its next poll, so it is charged first (Runtime::logUncaughtException's rule). The
-/// conversion counts as script (Runtime::ConversionScope): no checkpoint runs inside it. A stop (the budget, out of
-/// memory) throws Aborted.
+/// reported, so a report cannot recurse through it (R5). The conversion counts as script (Runtime::ConversionScope): no
+/// checkpoint runs inside it. A stop (the CPU slice, out of memory) throws Aborted.
 std::optional<String> stringOf(JSContext* ctx, JSValueConst value) {
     try {
-        JSStringView view{nullptr, nullptr, 0};
-        if (JS_IsString(value) && !JS_GetStringView(value, &view)) {
-            chargeScan(ctx, JS_GetStringLength(value));
-        }
         Runtime::ConversionScope conversion(Runtime::from(ctx));
         return String::adopt(ctx, checked(ctx, JS_ToString(ctx, value)));
     } catch (const Thrown&) {
@@ -71,7 +65,7 @@ uint32_t lastOf(const Units& s, uint32_t begin, uint32_t end, uint32_t c) {
 
 /// One line [begin, end) of a QuickJS backtrace: "    at f (file:12:7)", or "    at file:12:7" for a syntax error.
 /// The filename's range [*fileBegin, *fileEnd) and the numbers, or false. Each unit is visited a bounded number of
-/// times, so the caller's one scan charge covers it.
+/// times.
 bool parseFrame(const Units& s, uint32_t begin, uint32_t end, uint32_t* fileBegin, uint32_t* fileEnd, uint32_t* lineno, uint32_t* colno) {
     static constexpr char kAt[] = "    at ";
     constexpr uint32_t kAtLength = sizeof(kAt) - 1;
@@ -138,7 +132,6 @@ ErrorLocation errorLocation(JSContext* ctx, JSValueConst exception) {
         if (!text) {
             return location;
         }
-        chargeScan(ctx, text->length());
         Units s{text->view()};
         uint32_t length = s.view.length;
         for (uint32_t start = 0; start < length;) {
@@ -192,11 +185,6 @@ void reportTheException(JSContext* ctx, JSValue owned) {
             } reset{loop};
             idl::ErrorEventInit init;
             init.cancelable = true;
-            // The concatenation copies all of the exception's text (into a flat string, or a rope String::adopt
-            // flattens), which QuickJS would notice only at its next poll: charged first, so the budget refuses it.
-            if (text) {
-                chargeScan(ctx, text->length());
-            }
             init.message = String::fromUTF8(ctx, "Uncaught ").concat(ctx, text ? *text : String::fromUTF8(ctx, "exception"));
             init.filename = location.filename;
             init.lineno = location.lineno;
@@ -205,7 +193,8 @@ void reportTheException(JSContext* ctx, JSValue owned) {
             Ref<ErrorEvent> event = ErrorEvent::construct(ctx, String::fromUTF8(ctx, "error"), std::move(init));
             event->setIsTrusted(true);
             // A listener's exception is reported inside dispatch (here, to the host only); a stop in one throws Aborted,
-            // and dispatch's own charges Thrown (C3): the catch below makes both Aborted.
+            // and dispatch's own failure (the memory limit) Thrown or std::bad_alloc (C3): the catch below makes each
+            // Aborted.
             notHandled = dispatch(ctx, *event, HostState::of(ctx).window());
         }
         if (notHandled) {

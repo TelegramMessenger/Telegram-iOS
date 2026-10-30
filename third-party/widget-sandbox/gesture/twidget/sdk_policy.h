@@ -91,7 +91,7 @@ struct WidgetContext {
     /// `can_query`: requests are allowed, on a tap.
     bool canQuery = false;
     /// `background_query`: requests without a tap too (the original in the private chat with the bot): one when the
-    /// widget appears on screen, then one per 5 s, while visible.
+    /// widget appears on screen, then one per 5 s while visible; one made off screen waits for it to appear.
     bool backgroundQuery = false;
     /// "private" | "group" | "supergroup" | "channel" (`Chat.type` of the Bot API); "" or anything else is none. A copy
     /// (with `canQuery` or not) and a preview get none: the bot learns nothing about where its widget was forwarded.
@@ -130,8 +130,9 @@ struct WidgetRequestOutcome {
 namespace sdk {
 
 inline constexpr int MAX_LINK_LENGTH = 256;
-/// Bytes of keys and values (UTF-8) per storage area and message.
-inline constexpr int STORAGE_QUOTA_BYTES = 16384;
+/// Bytes of keys and values (UTF-8) per storage area and message (4 KB: a 50-item to-do list; docs/decisions.md,
+/// "Strict limits from the start").
+inline constexpr int STORAGE_QUOTA_BYTES = 4096;
 inline constexpr int MAX_LOCALE_LENGTH = 35;
 inline constexpr std::string_view DEFAULT_LOCALE = "en-US";
 inline constexpr int HAPTIC_BURST = 5;
@@ -346,24 +347,26 @@ std::string_view requestFailureCode(WidgetRequestFailure failure);
 
 /**
  * The verdict on a request (docs/sdk-v1.md §2.14): `Foreground` (it consumes the task's press) and `Background` go to
- * the client; the rest are refused: `Disabled` (the message has no `canQuery`), `Busy` (one request in flight per
- * widget), `NoActivation` (no press and no `backgroundQuery`), `Hidden` (a background request from a widget off
- * screen), `RateLimited` (a background request sooner than 5 s after the last one, unless the widget appeared on
- * screen since).
+ * the client; `Held` (a background request from a widget off screen) waits in the glue and goes to the client when the
+ * widget appears on screen (`RequestGate::show`); the rest are refused: `Disabled` (the message has no `canQuery`),
+ * `Busy` (one request in flight per widget, a held one included), `NoActivation` (no press and no `backgroundQuery`),
+ * `RateLimited` (a background request sooner than 5 s after the last one, unless the widget appeared on screen since).
  */
-enum class RequestVerdict { Foreground, Background, Disabled, Busy, NoActivation, Hidden, RateLimited };
-/// The TS verdict: "foreground", "background", "disabled", "busy", "no-activation", "hidden", "rate-limited".
+enum class RequestVerdict { Foreground, Background, Held, Disabled, Busy, NoActivation, RateLimited };
+/// The TS verdict: "foreground", "background", "held", "disabled", "busy", "no-activation", "rate-limited".
 std::string_view requestVerdictName(RequestVerdict verdict);
 /// What the widget's promise rejects with for a refused request ("BUSY", "RATE_LIMITED", "NOT_ALLOWED"); nullopt for
-/// the two that go to the client.
+/// the three that go to the client.
 std::optional<std::string_view> requestRefusal(RequestVerdict verdict);
 
 /**
- * Only where the message allows requests (`canQuery`); one in flight per widget; a press unlocks one; without a press
- * only with `backgroundQuery` (the original in the private chat with the bot), only while visible: one when the widget
- * appears on screen (`show`, and at creation), then at most one per 5 s counted from the start of the last background
- * request. `gesture`: the task has a press no privileged call consumed yet (the glue consumes it on `Foreground`).
- * `finish` when the answer or the failure has gone into the widget. Same order of checks as the TS class.
+ * Only where the message allows requests (`canQuery`); one in flight per widget, a held one included; a press unlocks
+ * one; without a press only with `backgroundQuery` (the original in the private chat with the bot): one when the
+ * widget appears on screen (`show`, and at creation), then at most one per 5 s counted from the start of the last
+ * background request, while it stays visible; one made while it is off screen is held (`Held`) and is the one of its
+ * next appearance (`show` returns true: the glue sends it then). `gesture`: the task has a press no privileged call
+ * consumed yet (the glue consumes it on `Foreground`). `finish` when the answer or the failure has gone into the
+ * widget, or when the glue drops a held request (the widget stopped). Same order of checks as the TS class.
  */
 class RequestGate {
 public:
@@ -374,13 +377,15 @@ public:
         bool backgroundQuery = false;
     };
     RequestVerdict decide(double nowMs, const Conditions& s);
-    void finish() { inFlight_ = false; }
-    /// The widget appeared on screen (it was hidden): its next background request may go out at once.
-    void show() { lastBackground_.reset(); }
+    void finish() { inFlight_ = held_ = false; }
+    /// The widget appeared on screen (it was hidden): its next background request may go out at once. True when a held
+    /// request goes out now, as this appearance's background request (the glue sends it; it stays in flight).
+    bool show(double nowMs);
     bool busy() const { return inFlight_; }
 
 private:
     bool inFlight_ = false;
+    bool held_ = false;
     std::optional<double> lastBackground_;
 };
 

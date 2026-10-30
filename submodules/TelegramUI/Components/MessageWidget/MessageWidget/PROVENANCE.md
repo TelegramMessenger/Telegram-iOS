@@ -5,11 +5,11 @@ This module is ours: edit it here. It hosts a message widget in a chat bubble on
 of the runtime, the app's contract with it included, is `docs/message-widgets-native-runtime.md`.
 
 What it holds:
-- `MessageWidgetPool` (two 8 MB threads, a serial queue per widget), `WidgetHandshake` (main's waits within a turn's
-  allowance and cap; results applied in task order, its drain never re-entered) and `WorkMeter`.
+- `MessageWidgetPool` (two 8 MB threads, a serial queue per widget) and `WidgetHandshake` (main's waits within a turn's
+  cap; results applied in task order, its drain never re-entered).
 - `MessageWidgetCore`: the widget's `WRSession`, its `WidgetTreeRenderer` (`../MessageWidgetRendering`) and its
-  `WidgetTileDrawer`, used only inside the widget's tasks. It holds the budgets (parse, boot, task), the tap's bridge
-  permission and the freeze, and ends every task with a `WidgetSnapshot`.
+  `WidgetTileDrawer`, used only inside the widget's tasks. It holds the CPU limits, the tap's bridge permission and the
+  freeze, and ends every task with a `WidgetSnapshot`.
 - `MessageWidgetInstance` (main): applies snapshots, answers the bubble's layout, queues the `.draw` task a snapshot
   asks for, and runs timers, frames and visibility; `MessageWidgetTimers`, `MessageWidgetView`, `MessageWidgetRegistry`,
   `MessageWidgetApplicationState`, `MessageWidgetKillSwitch` and `MessageWidgetCorpusListing`.

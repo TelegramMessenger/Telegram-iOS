@@ -179,9 +179,6 @@ public:
     void drawImage(std::shared_ptr<const HostImage> source, double sourceWidth, double sourceHeight, double sx, double sy,
                    double sw, double sh, double dx, double dy, double dw, double dh, std::vector<CanvasOp>& out);
 
-    /// The canvas px an op may touch: its bounds clipped to the bitmap (what a draw is charged by).
-    double deviceArea(const CanvasOp& op) const;
-
 private:
     struct Style {
         bool gradient = false;

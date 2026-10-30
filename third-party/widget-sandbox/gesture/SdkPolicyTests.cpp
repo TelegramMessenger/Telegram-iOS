@@ -207,8 +207,11 @@ void sdkPolicySharedFixture(const char* fixturePath) {
         int i = 0;
         for (const auto& s : c["steps"].arr()) {
             if (s["op"].asString() == "finish") gate.finish();
-            else if (s["op"].asString() == "show") gate.show();
-            else {
+            else if (s["op"].asString() == "show") {
+                bool busy = gate.busy();
+                CHECK_MSG(gate.show(s["at"].asNumber()) == s["expect"].asBool(), c["name"].asString() + ", step " + std::to_string(i));
+                CHECK_MSG(gate.busy() == busy, c["name"].asString() + ", step " + std::to_string(i) + ": show changes nothing in flight");
+            } else {
                 sdk::RequestGate::Conditions at{s["gesture"].asBool(), s["visible"].asBool(), s["canQuery"].asBool(), s["backgroundQuery"].asBool()};
                 std::string got(sdk::requestVerdictName(gate.decide(s["at"].asNumber(), at)));
                 CHECK_MSG(got == s["expect"].asString(), c["name"].asString() + ", step " + std::to_string(i) + ": " + got);
@@ -220,8 +223,8 @@ void sdkPolicySharedFixture(const char* fixturePath) {
     std::vector<std::string> verdicts;
     for (const auto& c : (*root)["requestRefusals"].arr()) {
         cases++;
-        sdk::RequestVerdict all[] = {sdk::RequestVerdict::Foreground, sdk::RequestVerdict::Background, sdk::RequestVerdict::Disabled, sdk::RequestVerdict::Busy,
-                                     sdk::RequestVerdict::NoActivation, sdk::RequestVerdict::Hidden, sdk::RequestVerdict::RateLimited};
+        sdk::RequestVerdict all[] = {sdk::RequestVerdict::Foreground, sdk::RequestVerdict::Background, sdk::RequestVerdict::Held, sdk::RequestVerdict::Disabled,
+                                     sdk::RequestVerdict::Busy, sdk::RequestVerdict::NoActivation, sdk::RequestVerdict::RateLimited};
         const sdk::RequestVerdict* v = std::find_if(std::begin(all), std::end(all), [&](sdk::RequestVerdict x) { return sdk::requestVerdictName(x) == c["verdict"].asString(); });
         CHECK_MSG(v != std::end(all), c["verdict"].asString());
         if (v == std::end(all)) continue;

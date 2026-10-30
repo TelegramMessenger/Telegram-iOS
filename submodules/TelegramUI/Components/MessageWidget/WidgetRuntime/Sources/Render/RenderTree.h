@@ -15,8 +15,8 @@
 //   parent is dropped first (Ruling 13): that is all of the parse's and cloning's. A Comment's data never renders.
 // That keeps out everything script builds before it attaches it (a detached subtree, a fragment, a clone; a template's
 // contents live in another document and are never heard), and a subtree inserted into the rendered tree is one entry
-// for its root, which the flush reads whole. A failure in a callback (the budget, the memory limit) latches the stop
-// and throws Aborted, as ScriptElements does.
+// for its root, which the flush reads whole. A failure in a callback (the memory limit) latches the stop and throws
+// Aborted, as ScriptElements does.
 // The flush runs at the end of every task and animation frame and in boot after the parse (Sources/Host), and when the
 // host asks (HostState::flushRender). Any dirty state is a full rebuild, except as the in-place paths below say.
 //
@@ -28,23 +28,23 @@
 // render limit (a limit decides what
 // a fresh build leaves out, and a smaller text could let more in), the text keeps the document within the byte budget
 // (Ruling 7) and within the text-piece cap. Anything else rebuilds, which is the oracle.
-// It plans before it touches litehtml (Review Focus 2): every charge (the entries, their conversions, the layout
-// pre-charge) and every allocation the patch needs (the new render input, the spare nodes of the element map, the
-// reserved vectors) come first, and the only thing left after the first litehtml call is work that cannot fail, so a
-// stop leaves the last published document, input and tree exactly as they were. Then it makes the replacements
-// (document::replace_text), commits them (commit_patch), lays out and publishes the mirror's operations (Task 10b); the
-// fonts the container holds are not reset (no beginBuild/endBuild: a patch asks only for the fonts of its new text).
+// It plans before it touches litehtml (Review Focus 2): the entries' conversions and every allocation the patch needs
+// (the new render input, the spare nodes of the element map, the reserved vectors) come first, and the only thing left
+// after the first litehtml call is work that cannot fail, so a stop leaves the last published document, input and tree
+// exactly as they were. Then it makes the replacements (document::replace_text), commits them (commit_patch), lays out
+// and publishes the mirror's operations (Task 10b); the fonts the container holds are not reset (no
+// beginBuild/endBuild: a patch asks only for the fonts of its new text).
 //
 // Task 8, attributes and inline style (Ruling 8; twidget edit 17). The same flush (flushPatch) also takes Attribute
 // entries: the journal's kinds may be Text and Attribute and nothing else. The journal keeps the kind of change, not the
 // attribute's name, so the plan finds what changed itself: it reads the element's attributes as the build does
 // (renderElementAttributes, the one reading the build uses: qualified names, the first of a repeated name, the 16 KiB
-// `style` cap, the byte budget, all charged) and compares them, by lowercased name, with what the litehtml element
-// holds (everything but list_index, which layout writes on list items). The changed element is one document::
-// set_element_attributes, asked first with can_set_element_attributes, so a refusal anywhere rebuilds before litehtml is
-// touched. These rebuild: a `style` over 16 KiB (the build would leave it out and post `style-attribute`), a change
-// that would pass the byte budget, a mapped element the fork does not patch, a selector the change could reach, and
-// any flush after a build that hit a render limit. An element Ruling 4 leaves out (a <script>, a <template>, ...) is
+// `style` cap, the byte budget) and compares them, by lowercased name, with what the litehtml element holds (everything
+// but list_index, which layout writes on list items). The changed element is one document::set_element_attributes,
+// asked first with can_set_element_attributes, so a refusal anywhere rebuilds before litehtml is touched. These
+// rebuild: a `style` over 16 KiB (the build would leave it out and post `style-attribute`), a change that would pass
+// the byte budget, a mapped element the fork does not patch, a selector the change could reach, and any flush after a
+// build that hit a render limit. An element Ruling 4 leaves out (a <script>, a <template>, ...) is
 // in no build, so a change to its attributes renders nothing and is ignored; any other unmapped element (cut by a limit,
 // or a <style>'s child) rebuilds. An element's entry keeps the budget its attributes use and the place of its start tag
 // in the render input, which the patch replaces as it does a text's. A tag, a form control's count and the element count
@@ -55,10 +55,10 @@
 // that reached a cap is abandoned after its commit and the flush rebuilds, and the fork refuses once a build has reached
 // one, or always for content a form control's parts could take (document::part_content_possible). The table-cell cap
 // needs no refusal for agreement (restyle_after_patch recounts the cells from the root, as a build does); the fork's
-// predicate refuses a rise past it all the same, as defence in depth. Each
-// changed element is applied in one call with all its attributes (document::set_element_attributes), one re-match, and
-// charged for them all. litehtml's `commit_patch` ends the session
-// (text and attributes together), and the plan is exact: a refusal after the first mutation is a bug and aborts.
+// predicate refuses a rise past it all the same, as defence in depth. Each changed element is applied in one call with
+// all its attributes (document::set_element_attributes), one re-match for them all. litehtml's `commit_patch` ends the
+// session (text and attributes together), and the plan is exact: a refusal after the first mutation is a bug and
+// aborts.
 //
 // Task 9, structure (Ruling 8; twidget edit 18). A journal with a structural entry (Inserted, Removed, Children) goes to
 // flushStructure, any other to flushPatch: that is the selection rule across the three paths, with one exception. A Text
@@ -93,9 +93,9 @@
 // subtree a fresh build would cut (Ruling 7's byte budget and `style` cap, E6's form controls, E9's elements, the depth)
 // or that holds a `<style>`, a mixed journal, and any flush after a build that hit a limit. The plan builds the new
 // subtrees detached with the published document, asks every predicate in the order the patch makes the changes (threading
-// what each adds to the caps), pre-charges and allocates, and composes the render input; the patch makes the changes,
-// moves what went to graveyards freed after the publish, moves the kept entries' places with the input's patches and the
-// new ones in, and commits. An element's entry keeps where its serialization ends (inputEnd, endTagLength), and an empty
+// what each adds to the caps), allocates, and composes the render input; the patch makes the changes, moves what went
+// to graveyards freed after the publish, moves the kept entries' places with the input's patches and the new ones in,
+// and commits. An element's entry keeps where its serialization ends (inputEnd, endTagLength), and an empty
 // Text has no place, so no two entries start at one offset. An insertion has two anchors: its place in litehtml (the next
 // kept sibling with an element or pieces) and its place in the render input (the next kept sibling with a place there),
 // which differ at a Text that made no pieces.
@@ -108,50 +108,18 @@
 //
 // Matching (Ruling E19). litehtml counts a step for each selector it tests against an element and gives up at
 // 4,000,000; that budget is one per build or patch session (twidget edit 18), not one per outermost pass. A build runs
-// with min(4,000,000, the widget's remaining work in work::kSimpleSelectorTest steps), charges the steps performed, and,
-// cut by the widget's budget rather than litehtml's, stops the widget (Budget) and is dropped; the published build
-// records the steps it used (selectorSteps, U). A patch that matches (an attribute re-match, an inserted or replaced
-// subtree; a text matches nothing) bounds its steps first (document::selector_step_bound, B) and rebuilds when U + B
-// would reach 4,000,000 (so a patch and a rebuild never cut at different places) or B is more than the widget's budget
-// allows; otherwise it runs its session limited to that allowance, which it cannot reach, charges the steps used (only
-// when there are any: the plan's own charges may have passed the budget unnoticed, QuickJS polling it every 100 units,
-// and a charge would then stop the widget with the document patched), and adds them to U. U only grows between builds,
-// so patches refuse sooner than they must, never later.
+// its session with all 4,000,000 (Builder.cpp), and the published build records the steps it used (selectorSteps, U).
+// A patch that matches (an attribute re-match, an inserted or replaced subtree; a text matches nothing) bounds its
+// steps first (document::selector_step_bound, B) and rebuilds when U + B would reach 4,000,000 (selectorStepsFit), so a
+// patch and a rebuild never cut at different places; otherwise it runs its session limited to what U leaves of
+// 4,000,000, which it cannot reach, and adds the steps used to U. U only grows between builds, so patches refuse sooner
+// than they must, never later.
 // Correctness does not rest on B (Ruling E20): exact bounds of litehtml's matching kept failing (a compound left of a
-// combinator walks an ancestor's siblings, which B now counts). A patch's session is limited to what U leaves of
-// 4,000,000 (and to the work budget's steps); a session that is cut there is abandoned, and so is any can't-happen after
-// the document was changed (a fork refusal the predicates did not foresee, an anchor not found): the patched document is
-// dropped and the same flush rebuilds, so a cut patch is always replaced by a fresh build. No patch ends in std::abort.
-// That rebuild should not be stoppable by the budget, so a patch is attempted only when the remaining work covers it
-// (fallbackRoom): rebuildEstimate of the document as the patch leaves it, with all of litehtml's 4,000,000 steps. The
-// patch's own session gets only what that reserve leaves (its step limit is capped there), and an abandoned patch is
-// charged the steps it performed before the flush rebuilds, out of the reserve.
-// The estimate (Ruling E22) is an ESTIMATE of what rebuilding the CURRENT DOM is charged, not a proven bound: it is kept
-// from the build's measured work and adjusted by each patch, part by part, and review found shapes it under-counted
-// (fix round 4). If a fallback rebuild is ever stopped by the budget, the widget stops (Budget) with the old published
-// tree, while document() holds the abandoned patch: a recorded gap (the dry-run bound of Ruling E24 was set aside, the
-// user, 2026-10-18). Its parts:
-// - the walk (RenderBuild::walkCharge): the build's measured work less its other parts and less the final bucket arrays of
-//   its maps (part of the maps' growth, below); each committed patch adds the work it measured making what it adds,
-//   which covers what a rebuild charges for the same nodes (the same functions, AtomNames' first use costing at least
-//   a later one), and takes off what a rebuild certainly charged for what it replaces or releases (a lower bound per
-//   entry: the node, its attributes' kRenderAttribute and a style's kCssByte, a text's scan at one byte in three, its
-//   pieces, its map nodes), so it leaves out no addition, and repeated patches of one node grow it only by what each
-//   measured past that lower bound (five patches of a kind keep the estimate within twice a rebuild's charge);
-// - the maps' and the render input's growth from empty, which a rebuild repeats: at most 8 units per entry for each
-//   map's bucket arrays (libc++ about doubles them) and one unit per byte for the input's reallocations (measured:
-//   7.999 and 1.000 at worst), held to 10 and 1.25, from the counts as they are. A structure patch's staging maps start
-//   with room for what it releases, and what they grow past it, less their final bucket arrays, stays in its measure;
-// - the layout pre-charge, from boxes and textBytes as they are; the filter loop, renderFilterUnits(matched, every rule),
-//   which covers both of finalize's passes (RenderBuild::matched); the steps (4,000,000 in the reserve; buildCharge
-//   shows the published U). Out of memory is not covered either: a stop by the memory limit inside that rebuild leaves
-// document() the patched one beside the old published tree (M1d makes out-of-memory fatal at the facade).
-// Matching's filter loop (Ruling E21): apply_selector tests every rule against every element, and no step counts that, so
-// it is charged at work::kScanEightUnits per eight (element, rule) pairs: by a patch's plan for the elements it matches,
-// and by a build through finalize's matching gate (twidget edit 18), which asks before each pass whether the budget holds
-// it; declined, the build stops (Budget) before that pass matches anything. The elements (Ruling E22) are litehtml's
-// matching_weight of each: itself, the two pseudo-elements a ::before/::after rule can create for its tag, a form
-// control's three parts with theirs. The gate also lowers the build's step limit to what the loop leaves of the budget.
+// combinator walks an ancestor's siblings, which B now counts). A session that is cut at its limit is abandoned, and so
+// is any can't-happen after the document was changed (a fork refusal the predicates did not foresee, an anchor not
+// found): the patched document is dropped and the same flush rebuilds, so a cut patch is always replaced by a fresh
+// build. No patch ends in std::abort. A stop by the memory limit inside that rebuild leaves document() the patched one
+// beside the old published tree (M1d makes out-of-memory fatal at the facade).
 //
 // Task 10b, the layer mirror (twidget edit 20; LayerMirror.h). The published tree mirrors litehtml's painting (Context,
 // Box and Inline nodes with stable LayerIds, keyed by their DOM node's NodeKey from the element → node map, which ends
@@ -164,14 +132,13 @@
 // carried; a Reset's changedRects come from LayerDiff's mirror diff of the two trees, an operation's from the nodes it
 // names.
 //
-// Atomic (Review Focus 2): a build, its charges, its layout and its mirror happen on a new document with new maps.
-// Only when all of it has succeeded are they swapped in, the tree published and changedRects set from the previous
-// tree; any exception leaves the old document, maps, render input and tree in place.
+// Atomic (Review Focus 2): a build, its layout and its mirror happen on a new document with new maps. Only when all of
+// it has succeeded are they swapped in, the tree published and changedRects set from the previous tree; any exception
+// leaves the old document, maps, render input and tree in place.
 //
-// Charging (Ruling 9): the build charges as it walks (Builder.h). Layout, painting and shaping are pre-charged before
-// render(): work::kLayoutBox per element and piece built, plus chargeScan of the text's UTF-8 bytes. Matching is charged
-// per selector step after it (Ruling E19, above), from inside a session whose limit is what the budget allows. Nothing
-// charges inside a litehtml call, so no exception unwinds through litehtml.
+// Time (the CPU-clock limits plan, Task 2): a flush and a rebuild run inside a Runtime::RenderScope, which measures
+// their CPU time as the renderer's and keeps it out of the widget's slice; a layout query's flush (flushForQuery) is
+// the task's layout-query time too, which the 100 ms limit reads (Runtime::queryBudgetSpent).
 //
 // The maps (Ruling 14), the journal and the render input (kept only for tests: RenderOptions::keepRenderInput, Ruling
 // E11) go through QuickJS's allocator. Each mapped or journaled node is held by an untraced, counted root (a Ref<Node>),
@@ -180,8 +147,8 @@
 // extension before the DOM's).
 //
 // The memory bound. litehtml, the container and the layer tree use the system heap, outside the widget's memory limit;
-// the render limits (Rulings 7, E6 and E9) bound them. RenderBuildTests' testHostileSizesAreBoundedAndCharged holds the
-// heap growth of each hostile single build under 160 MB and prints them.
+// the render limits (Rulings 7, E6 and E9) bound them. RenderBuildTests' testHostileSizesAreBounded holds the heap
+// growth of each hostile single build under 160 MB and prints them.
 // - Headline, the styled-element case: 10,000 styled elements (Ruling E9) at ~10.4 KB each, litehtml and their tree
 //   items (20,000 divs with a border, a background, a shadow, a radius and a clip measured 153 MB of litehtml and 55 MB
 //   of tree), ≈ 104 MB published and ≈ 210 MB at a rebuild's peak, when the old and new documents and trees are alive
@@ -256,10 +223,10 @@ public:
     /// The whole document from the DOM, laid out at the options' width and mirrored (Reset); then published, with
     /// changedRects from the previous tree, and the render-limit kinds the build hit posted to the host (Ruling 7:
     /// each once per build, as `render-limit` diagnostics, after the publish). The container's build window closes
-    /// after the mirror's walk (Ruling E10). Atomic. Throws Aborted when the build
-    /// stops the widget (the budget, the memory limit, a C++ failure; abortForCaughtException latched it), and at once,
-    /// building nothing, when the runtime has already stopped. A clean journal on success. A rebuild entered from
-    /// inside a build (a host that calls back, against RenderHost's contract) returns at once.
+    /// after the mirror's walk (Ruling E10). Atomic. Throws Aborted when the build stops the widget (a strict cap, the
+    /// memory limit, a C++ failure; abortForCaughtException latched it), and at once, building nothing, when the
+    /// runtime has already stopped. A clean journal on success. A rebuild entered from inside a build (a host that
+    /// calls back, against RenderHost's contract) returns at once.
     void rebuild(JSContext* ctx);
 
     /// Applies the journal, lays out, updates the mirror and publishes: in Task 6, whenever anything is dirty (the journal has an
@@ -278,6 +245,8 @@ public:
     void setWidth(JSContext* ctx, double width);
     /// The scheme, with the root's theme declarations (RenderOptions::rootDeclarations): either changed marks a rebuild.
     void setTheme(JSContext* ctx, Theme theme, std::string rootDeclarations);
+    /// The root's content safe area declarations (RenderOptions::contentSafeAreaDeclarations): a change marks a rebuild.
+    void setContentSafeArea(JSContext* ctx, std::string declarations);
     /// prefers-reduced-motion (RenderOptions::reducedMotion): a change rebuilds at the next flush. Never throws.
     void setReducedMotion(JSContext* ctx, bool reduced);
     /// The options a build uses now: the construction's, with the width and theme set since.
@@ -285,9 +254,8 @@ public:
 
     /// A canvas's bitmap changed (V5d plan, Task 4): when the canvas is rendered, the next flush republishes its box
     /// alone, which the mirror captures again (Content) with the bitmap's current snapshot, beside the patch that flush
-    /// publishes or with none; nothing is laid out or rebuilt for it. An unrendered canvas changes nothing. Charges
-    /// work::kJournalEntry the first time a canvas is painted between two flushes; throws Aborted when that stops the
-    /// widget.
+    /// publishes or with none; nothing is laid out or rebuilt for it. An unrendered canvas changes nothing. Throws
+    /// Aborted when recording the canvas fails (out of memory).
     void canvasPainted(const Element& canvas);
     /// An <img>'s source decoded, kept nowhere (WidgetContainer::decodeImageUncached).
     std::optional<DecodedImage> decodeImageUncached(std::string_view src) { return m_container.decodeImageUncached(src); }
@@ -342,15 +310,14 @@ public:
     std::optional<BoxMetrics> boxMetrics(const Node& node) const;
     /// HTML's "being rendered": `node` is laid out and neither it nor an ancestor is display: none (litehtml keeps an
     /// empty render item for a display: none element). What img's width and height ask (widget-sandbox v0.2.3).
-    /// `visited` gains the elements walked, for the caller's charge.
-    bool beingRendered(const Node& node, uint64_t& visited) const;
+    bool beingRendered(const Node& node) const;
     /// The padding box of an element that clips its contents (overflow other than visible), which Intersection Observer
     /// clips a target by; nullopt for any other node.
     std::optional<RenderBox> overflowClip(const Node& node) const;
     /// SVG geometry (V3b plan, Task 4), in the element's user units (litehtml::svg_geometry; no transforms applied): a
-    /// shape's box from its path's points and curve extrema, or the union of the shapes a container holds; `visited`
-    /// gains the elements walked. nullopt when nothing is rendered there.
-    std::optional<RenderBox> svgBBox(const Node& node, uint64_t& visited) const;
+    /// shape's box from its path's points and curve extrema, or the union of the shapes a container holds. nullopt when
+    /// nothing is rendered there.
+    std::optional<RenderBox> svgBBox(const Node& node) const;
     std::optional<double> svgPathLength(const Node& node) const;
     /// The point at `distance` along the shape's path, clamped to its ends.
     std::optional<std::pair<double, double>> svgPointAtLength(const Node& node, double distance) const;
@@ -363,8 +330,7 @@ public:
     double documentHeight() const;
     /// CSSOM View's media query evaluation (V3b plan, Task 1): `query` through litehtml's media query parser, checked
     /// against the container's media features exactly as @media is, so the two agree; with `atLastReport`, against the
-    /// features the last noteMediaReported() kept. Charged work::kCssByte per byte. False before the first build (a
-    /// length needs the document).
+    /// features the last noteMediaReported() kept. False before the first build (a length needs the document).
     bool matchesMedia(JSContext* ctx, const std::string& query, bool atLastReport = false) const;
     /// Keeps the current media features as the last report's, and counts the report.
     void noteMediaReported();
@@ -372,9 +338,8 @@ public:
     /// The boxes the published layout laid out (RenderBuild::boxes): what a hit test over the whole tree walks.
     uint64_t boxCount() const { return m_current.boxes; }
     /// getComputedStyle's value of `name` (V3 plan, Task 4; ComputedStyle.h) for a rendered node or its pseudo-element;
-    /// nullopt when the node is not rendered. `work` gains what the read walked, for the caller to charge.
-    std::optional<std::string> computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo,
-                                                  uint64_t* work = nullptr) const;
+    /// nullopt when the node is not rendered.
+    std::optional<std::string> computedStyleValue(const Node& node, std::string_view name, PseudoElement pseudo) const;
     /// The cascaded declaration of `property` on a rendered element, as written (V5f plan, Task 2): litehtml's raw
     /// declarations, which the fork keeps for the animation and transition properties and the properties they animate
     /// (style.cpp's raw_declaration_names). Empty when nothing declares it or the node is not rendered. Animated values
@@ -386,10 +351,10 @@ public:
     /// to its parent element; a pseudo-element to its host), honouring `pointer-events: none` and descending into an
     /// `<svg>`. The document element when nothing is hit; nullptr with no document.
     Node* nodeAt(double x, double y) const;
-    /// The selectable text of the published layout (sdk-v1 §5.10; SelectableText.h), on a budget of its own: nullopt
-    /// when it would pass `budget`. Text whose box lies wholly at or below `visibleHeight` is left out. Runs no script,
-    /// flushes nothing and charges nothing to the widget; it may give Text nodes their NodeKeys, as a mirror does.
-    std::optional<SelectableText> selectableText(uint64_t budget, double visibleHeight);
+    /// The selectable text of the published layout (sdk-v1 §5.10; SelectableText.h). Text whose box lies wholly at or
+    /// below `visibleHeight` is left out. Runs no script and flushes nothing; it may give Text nodes their NodeKeys, as
+    /// a mirror does.
+    SelectableText selectableText(double visibleHeight);
     /// dumpLayout(*document()), "" before the first build.
     std::string layoutDump() const;
     /// `<!doctype html>` and then the rendered tree in HTML's serialization, as Serializer.cpp writes it: the rendered
@@ -417,20 +382,6 @@ public:
     /// Ruling E20, for tests: caps the selector steps a patch's matching may take, so a test can cut one where the bound
     /// said it would fit and see the patch abandoned and the flush rebuild. INT64_MAX (the default): no cap.
     void setPatchStepCapForTesting(int64_t cap) { m_patchStepCap = cap; }
-    /// Rulings E20 and E22, for tests: rebuildEstimate of the document as it now is, with the steps the published
-    /// matching used (at most litehtml's 4,000,000) where the fallback's reserve holds all 4,000,000. Without its steps it
-    /// estimates what rebuilding the current DOM is charged without its steps (not a proven bound: the file comment).
-    uint64_t buildCharge() const;
-    /// buildCharge's parts, for tests: the walk, the maps' and input's growth, the layout pre-charge, the filter loop and
-    /// the steps.
-    struct ChargeParts {
-        uint64_t walk = 0;
-        uint64_t growth = 0;
-        uint64_t layout = 0;
-        uint64_t filter = 0;
-        uint64_t steps = 0;
-    };
-    ChargeParts buildChargeParts() const;
     /// The render byte budget the published build uses (Ruling 7), for tests.
     uint64_t renderBytes() const { return m_current.bytes; }
     /// Profile 1's text units the published build counts (V4 plan, Task 7), for tests.
@@ -470,7 +421,7 @@ private:
     /// A change of the text inside `from` (a text edit, an insertion, a removal) can change the direction a dir=auto
     /// ancestor resolves to (fidelity plan, Task 11; Builder's autoDirection): the nearest ancestor with a dir of its
     /// own, from `from` up, is recorded for its attributes to be scanned again when that dir is auto. The walk stops
-    /// there, or at a bdi, script, style or textarea, which auto skips. A node visit per element, charged.
+    /// there, or at a bdi, script, style or textarea, which auto skips.
     void noteAutoDirection(Node* from);
     /// What an in-place path did: patched and published; refused, having changed nothing; or abandoned after changing the
     /// published document (Ruling E20: a can't-happen, or a matching cut), which the caller replaces by a rebuild.
@@ -480,7 +431,7 @@ private:
     PatchResult flushPatch(JSContext* ctx, const std::unordered_map<Node*, Node*>& swaps);
     /// Whether every structural entry of the journal belongs to a Text swap, the `textContent = …` idiom: a mapped
     /// element whose only child is a Text inserted since the last flush, and the one mapped Text with pieces under it that
-    /// went. Fills `swaps` (the new Text → the old one) when it answers true. Charges work::kNodeVisit per entry.
+    /// went. Fills `swaps` (the new Text → the old one) when it answers true.
     bool textSwaps(JSContext* ctx, std::unordered_map<Node*, Node*>& swaps);
     /// The journal applied: patched in place, else rebuilt (the body flush ran before V5f); with no journal, the painted
     /// canvases alone (publishRepaints).
@@ -492,33 +443,13 @@ private:
     void reportRepaints() noexcept;
     /// What applying the journal resolves styles for again (V5f plan, Task 2): everything when a rebuild is pending; else
     /// the elements whose DOM attributes changed and every element of each inserted subtree. Read before the journal
-    /// is applied; charged a node visit per entry and per subtree node.
+    /// is applied.
     animation::StyleChange pendingStyleChange(JSContext* ctx);
     /// The structure fast path (Task 9; twidget edit 18), for a journal with a structural entry other than Text swaps.
     /// Throws Aborted as flushPatch does.
     PatchResult flushStructure(JSContext* ctx);
-    /// Ruling E22: what rebuildEstimate reads of a document: the walk (RenderBuild::walkCharge), the maps' entries and
-    /// the render input's length, the boxes and text bytes, the filter loop's elements (RenderBuild::matched).
-    struct RebuildCounts {
-        uint64_t walk = 0;
-        uint64_t nodes = 0;
-        uint64_t elements = 0;
-        uint64_t input = 0;
-        uint64_t boxes = 0;
-        uint64_t textBytes = 0;
-        uint64_t matched = 0;
-    };
-    /// The published document's.
-    RebuildCounts currentCounts() const;
-    /// Rulings E20 and E22: an upper bound of what rebuilding a document of these counts is charged, its steps at
-    /// `stepUnits` (the file comment has each part).
-    uint64_t rebuildEstimate(const RebuildCounts& counts, uint64_t stepUnits) const;
-    /// Ruling E20: the work the widget's budget has left past the rebuild that would replace an abandoned patch, in full:
-    /// rebuildEstimate of the document as the patch leaves it with all of litehtml's 4,000,000 steps, the most a build
-    /// can take; negative when it cannot pay for it. A patch's session is limited to it.
-    int64_t fallbackRoom(JSContext* ctx, const RebuildCounts& after) const;
     /// Ruling E25: whether a build of the main document reads `node`, as far as the DOM tells: it is in the main document
-    /// and neither it nor an ancestor is an element Ruling 4 leaves out. Charges work::kNodeVisit per node it walks up.
+    /// and neither it nor an ancestor is an element Ruling 4 leaves out.
     bool readByABuild(JSContext* ctx, Node& node) const;
     /// Task 10b: an element's NodeKey in the build the mirror is being built for (m_keyBuild, else the published one),
     /// given when first asked, the key a rebuild's previous entry for the node had when there is one.

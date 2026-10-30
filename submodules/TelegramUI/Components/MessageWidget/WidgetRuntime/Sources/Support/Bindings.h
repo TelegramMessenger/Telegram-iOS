@@ -13,7 +13,6 @@
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/PlatformObject.h"
 #include "Sources/Support/Values.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -110,10 +109,6 @@ T convert(JSContext* ctx, JSValueConst v, const ArgInfo& info) {
 template <class T>
 std::vector<T> convertRest(JSContext* ctx, int argc, JSValueConst* argv, int start, const ArgInfo& info) {
     std::vector<T> out;
-    if (argc > start) {
-        // One conversion per argument: charged before any of them.
-        charge(ctx, work::kNodeVisit * uint64_t(argc - start));
-    }
     for (int i = start; i < argc; i++) {
         out.push_back(Converter<T>::from(ctx, argv[i], ArgInfo{info.interface, info.member, i}));
     }
@@ -251,7 +246,7 @@ JSValue applyNewTarget(JSContext* ctx, JSValue object, JSValueConst newTarget, u
 
 /// The exotic methods of an interface with an indexed property getter (WebIDL 3.9). Impl provides
 /// `uint32_t length(JSContext*)` and `JSValue indexedValue(JSContext*, uint32_t)` (a new reference). A read of an index
-/// and a listing of the indices are binding calls: each is charged and maps exceptions as `glue` does.
+/// and a listing of the indices are binding calls: each maps exceptions as `glue` does.
 template <class Impl>
 struct IndexedExotic {
     /// Whether `prop` is an array index (WebIDL: a canonical decimal below 2^32 - 1): 1 with *out set, 0, or -1 with an
@@ -293,7 +288,6 @@ struct IndexedExotic {
             return isIndex;
         }
         try {
-            charge(ctx, work::kBindingCall);
             Impl* self = static_cast<Impl*>(payloadOfKnown(obj));
             if (i >= self->length(ctx)) {
                 return 0;
@@ -313,7 +307,6 @@ struct IndexedExotic {
     static int getOwnPropertyNames(JSContext* ctx, JSPropertyEnum** tab, uint32_t* len, JSValueConst obj) {
         uint32_t n;
         try {
-            charge(ctx, work::kBindingCall);
             n = static_cast<Impl*>(payloadOfKnown(obj))->length(ctx);
         } catch (...) {
             rethrowAsJS(ctx);
@@ -343,7 +336,7 @@ struct IndexedExotic {
 /// - `std::optional<String> namedValue(JSContext*, const String&)`, nullopt for a name that is not supported;
 /// - `void setNamed(JSContext*, const String&, const String&)`;
 /// - `bool deleteNamed(JSContext*, const String&)`, which deletes a supported name only.
-/// Each hook a string name reaches is a binding call: charged, and mapping exceptions as `glue` does. QuickJS consults
+/// Each hook a string name reaches is a binding call, mapping exceptions as `glue` does. QuickJS consults
 /// get_own_property before the prototype chain, which is [LegacyOverrideBuiltIns]: a named property shadows an
 /// inherited one. Symbols are not names: reads fall through to the ordinary object, and a write of a symbol key is a
 /// TypeError (WebIDL defines an ordinary property; nothing in the profile writes one).
@@ -366,7 +359,6 @@ struct NamedExotic {
             if (!nameOf(ctx, prop, &name)) {
                 return 0;
             }
-            charge(ctx, work::kBindingCall);
             std::optional<String> value = self(obj)->namedValue(ctx, name);
             if (!value) {
                 return 0;
@@ -387,7 +379,6 @@ struct NamedExotic {
     static int getOwnPropertyNames(JSContext* ctx, JSPropertyEnum** tab, uint32_t* len, JSValueConst obj) {
         std::vector<String> names;
         try {
-            charge(ctx, work::kBindingCall);
             names = self(obj)->supportedNames(ctx);
         } catch (...) {
             rethrowAsJS(ctx);
@@ -414,7 +405,6 @@ struct NamedExotic {
         try {
             String name;
             if (nameOf(ctx, prop, &name)) {
-                charge(ctx, work::kBindingCall);
                 self(obj)->deleteNamed(ctx, name);
             }
             // Deleted, or an ordinary delete of a property the object does not have (QuickJS looked at its own ones).
@@ -430,7 +420,6 @@ struct NamedExotic {
             if (!nameOf(ctx, prop, &name)) {
                 throw TypeError{"A symbol cannot be defined here."};
             }
-            charge(ctx, work::kBindingCall);
             // WebIDL 3.9.3: only a data descriptor invokes the setter; anything else is refused.
             if ((flags & (JS_PROP_HAS_GET | JS_PROP_HAS_SET)) || !(flags & (JS_PROP_HAS_VALUE | JS_PROP_HAS_WRITABLE))) {
                 if (flags & (JS_PROP_THROW | JS_PROP_THROW_STRICT)) {
@@ -462,7 +451,6 @@ struct NamedExotic {
             if (!nameOf(ctx, prop, &name)) {
                 throw TypeError{"A symbol cannot be set here."};
             }
-            charge(ctx, work::kBindingCall);
             self(obj)->setNamed(ctx, name, String::fromJS(ctx, value));
             return 1;
         } catch (...) {

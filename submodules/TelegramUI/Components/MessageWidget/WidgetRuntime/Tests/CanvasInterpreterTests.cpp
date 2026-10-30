@@ -104,7 +104,6 @@ WR_TEST(testRectsBecomeOps) {
     c.setGlobalAlpha(2);
     c.fillRect(0, 0, 1, 1, out);
     CHECK(near(out.back().alpha, 0.5));
-    CHECK(c.deviceArea(out[0]) > 4799 && c.deviceArea(out[0]) < 4801);
 }
 
 WR_TEST(testPathsAndArcs) {

@@ -26,6 +26,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidgetStress",
         "//submodules/AppBundle:AppBundle",
         "//submodules/GZip:GZip",
         "//third-party/ZipArchive:ZipArchive",

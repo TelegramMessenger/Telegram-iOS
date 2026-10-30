@@ -30,7 +30,6 @@ class SnapshotTests: MessageWidgetTestCase {
             func session(_ session: WRSession, diagnostic kind: String, detail: String) {}
             func session(_ session: WRSession, log level: Int, text: String) {}
             func session(_ session: WRSession, bridge method: String, args argsJson: String) {}
-            func session(_ session: WRSession, didWork totalUnits: UInt64) {}
         }
         let delegate = Delegate()
         guard let session = WRSession(width: width, dark: false, scale: 2.0, delegate: delegate), session.boot(withSource: source), let tree = session.tree() else {

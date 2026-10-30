@@ -16,12 +16,11 @@ static constexpr char16_t kDataPrefix[] = u"data-";
 static constexpr size_t kDataPrefixLength = 5;
 
 /// HTML's name of the pair a qualified attribute name gives ("data-foo-bar" -> "fooBar"), into `out`: false when the
-/// name does not start with "data-" or has an ASCII upper alpha after it. Two passes over the name, both charged.
+/// name does not start with "data-" or has an ASCII upper alpha after it. Two passes over the name.
 static bool pairName(JSContext* ctx, const Vector<char16_t>& qualified, Vector<char16_t>& out) {
     if (qualified.size() < kDataPrefixLength) {
         return false;
     }
-    chargeScan(ctx, 2 * qualified.size());
     for (size_t i = 0; i < kDataPrefixLength; i++) {
         if (qualified[i] != kDataPrefix[i]) {
             return false;
@@ -49,7 +48,6 @@ static bool pairName(JSContext* ctx, const Vector<char16_t>& qualified, Vector<c
 static String attributeNameFor(JSContext* ctx, const String& name) {
     Vector<char16_t> out(kDataPrefix, kDataPrefix + kDataPrefixLength, JSAllocator<char16_t>(JS_GetRuntime(ctx)));
     JSStringView v = name.view();
-    chargeScan(ctx, v.length);
     for (uint32_t i = 0; i < v.length; i++) {
         char16_t c = v.latin1 ? v.latin1[i] : v.utf16[i];
         if (isASCIIUpper(c)) {
@@ -65,7 +63,6 @@ static String attributeNameFor(JSContext* ctx, const String& name) {
 /// Whether `name` has a '-' followed by an ASCII lower alpha: no pair has such a name, and the setter refuses it.
 static bool hasHyphenBeforeLower(JSContext* ctx, const String& name) {
     JSStringView v = name.view();
-    chargeScan(ctx, v.length);
     for (uint32_t i = 0; i + 1 < v.length; i++) {
         char16_t c = v.latin1 ? v.latin1[i] : v.utf16[i];
         char16_t next = v.latin1 ? v.latin1[i + 1] : v.utf16[i + 1];
@@ -82,16 +79,14 @@ std::vector<String> DOMStringMap::supportedNames(JSContext* ctx) {
     Vector<char16_t> qualified{JSAllocator<char16_t>(rt)};
     Vector<char16_t> name{JSAllocator<char16_t>(rt)};
     for (size_t i = 0; i < m_element->attributeCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         const Attribute& a = m_element->attributeAt(i);
-        // The buffers are reused, so after the first name the copies allocate nothing: the copy is charged as a scan.
+        // The buffers are reused, so after the first name the copies allocate nothing.
         qualified.clear();
         if (a.prefix.atom != JS_ATOM_NULL) {
             appendCodeUnits(qualified, String::fromAtom(ctx, a.prefix.atom));
             qualified.push_back(u':');
         }
         appendCodeUnits(qualified, String::fromAtom(ctx, a.localName.atom));
-        chargeScan(ctx, qualified.size());
         if (!pairName(ctx, qualified, name)) {
             continue;
         }
@@ -99,7 +94,6 @@ std::vector<String> DOMStringMap::supportedNames(JSContext* ctx) {
         // Two attributes can give one name (the same qualified name in two namespaces): it is listed once.
         bool listed = false;
         for (const String& n : names) {
-            charge(ctx, work::kNodeVisit);
             if (n.equals(ctx, s)) {
                 listed = true;
                 break;
