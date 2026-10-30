@@ -30,6 +30,8 @@ public func chatMediaEditorCanResumePlayback(isSending: Bool, isInvalidated: Boo
 }
 
 private let chatMediaEditorScrubberMinDuration: Double = 1.0
+private let chatMediaEditorScrubberPositionTrackingSource = "scrubberPosition"
+private let chatMediaEditorScrubberTrimTrackingSource = "scrubberTrim"
 
 extension ChatMediaEditorScreen.Node {
     var canResumePlayback: Bool {
@@ -54,6 +56,7 @@ extension ChatMediaEditorScreen.Node {
                 if let layout = self.validLayout {
                     self.updateScrubber(layout: layout, safeInsets: self.editorSafeInsets(layout: layout), transition: .immediate)
                     self.updateCoverScrubber(layout: layout, safeInsets: self.editorSafeInsets(layout: layout), transition: .immediate)
+                    self.updateMuteButton(layout: layout, safeInsets: self.editorSafeInsets(layout: layout), transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
                 self.updatePlayButton(transition: .animated(duration: 0.2, curve: .easeInOut))
             }
@@ -72,10 +75,14 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let toolbarMinY = chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY
-        let headerFrame = chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0)
-        let availableWidth = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: 0.0).width
-        if self.playerStateDisposable == nil && !self.isInvalidated {
-            self.startPlayerStateUpdates(framesCount: chatMediaEditorScrubberFramesCount(trackWidth: availableWidth, mediaSize: self.subject.dimensions.cgSize))
+        let toolbarSide = self.toolbarSide(layout: layout)
+        let headerFrame = chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0, safeInsets: safeInsets, toolbarSide: toolbarSide, reservedCorners: layout.reservedCorners)
+        let availableWidth = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: 0.0, toolbarSide: toolbarSide).width
+        let framesCount = chatMediaEditorScrubberFramesCount(trackWidth: availableWidth, mediaSize: self.subject.dimensions.cgSize)
+        if !self.isInvalidated && (self.playerStateDisposable == nil || self.playerStateFramesCount != framesCount) {
+            self.playerStateDisposable?.dispose()
+            self.playerStateFramesCount = framesCount
+            self.startPlayerStateUpdates(framesCount: framesCount)
         }
         guard let playerState = self.playerState, let mainTrack = playerState.tracks.first(where: { $0.id == 0 }) else {
             return
@@ -95,17 +102,23 @@ extension ChatMediaEditorScreen.Node {
                 tracks: [MediaScrubberComponent.Track(mainTrack)],
                 isCollage: false,
                 allowsTrimming: !self.isFilePreview,
-                positionUpdated: { [weak mediaEditor] position, apply in
+                positionUpdated: { [weak self, weak mediaEditor] position, apply in
+                    self?.setScrubberTracking(!apply, source: chatMediaEditorScrubberPositionTrackingSource)
                     mediaEditor?.seek(position, andPlay: apply)
                 },
                 trackTrimUpdated: { [weak self, weak mediaEditor] _, start, end, updatedEnd, apply in
+                    self?.setScrubberTracking(!apply, source: chatMediaEditorScrubberTrimTrackingSource)
                     guard let mediaEditor else {
                         return
                     }
                     mediaEditor.setVideoTrimRange(start ..< end, apply: apply)
                     if apply {
                         mediaEditor.seek(start, completion: { [weak self, weak mediaEditor] in
-                            guard let self, self.canResumePlayback else {
+                            guard let self else {
+                                return
+                            }
+                            guard self.canResumePlayback else {
+                                self.updatePlayButton(transition: .animated(duration: 0.2, curve: .easeInOut))
                                 return
                             }
                             mediaEditor?.play()
@@ -125,7 +138,7 @@ extension ChatMediaEditorScreen.Node {
         guard let scrubberView = self.scrubber.view else {
             return
         }
-        let scrubberFrame = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: scrubberSize.height)
+        let scrubberFrame = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: scrubberSize.height, toolbarSide: toolbarSide)
         let isToolActive = self.activeTool != nil || self.isInterfaceHiddenBySwipe || self.isEditingCaption || (layout.inputHeight ?? 0.0) > 0.0
         if scrubberView.superview == nil {
             self.view.insertSubview(scrubberView, aboveSubview: self.pagerView)
@@ -135,6 +148,24 @@ extension ChatMediaEditorScreen.Node {
         }
         transition.setAlpha(view: scrubberView, alpha: isToolActive ? 0.0 : 1.0)
         scrubberView.isUserInteractionEnabled = !isToolActive
+    }
+
+    var isScrubberTracking: Bool {
+        let sources = self.interactionTracking.sources
+        return sources.contains(chatMediaEditorScrubberPositionTrackingSource) || sources.contains(chatMediaEditorScrubberTrimTrackingSource)
+    }
+
+    private func setScrubberTracking(_ tracking: Bool, source: String) {
+        self.setInteractionTracking(tracking, source: source)
+        if tracking {
+            self.updatePlayButton(transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
+
+    func releaseScrubberTracking() {
+        self.setInteractionTracking(false, source: chatMediaEditorScrubberPositionTrackingSource)
+        self.setInteractionTracking(false, source: chatMediaEditorScrubberTrimTrackingSource)
+        self.updatePlayButton(transition: .immediate)
     }
 
     func sendVideo(path: String, duration: Double, values: MediaEditorValues, caption: NSAttributedString, stickers: [TelegramMediaFile], completion: @escaping (ChatMediaEditorResult) -> Void) {

@@ -68,7 +68,10 @@ export function buildReport(file, fileDir, manifest, catalogue, diffDir) {
   for (const r of file.runs) {
     const test = tests.get(r.id);
     if (!test) { console.warn(`${r.id}: not in the manifest, ignored`); continue; }
-    const failed = !r.loaded || !!r.dead;
+    // A test with `stops` must be stopped by the host with a reason that starts with it (a counted limit under strict):
+    // it passes on that stop and fails on any other end, alive or dead.
+    const stopped = !!test.stops && typeof r.dead === 'string' && r.dead.startsWith(test.stops);
+    const failed = test.stops ? !stopped : !r.loaded || !!r.dead;
     // Input the runner could not deliver: the checks and stages it feeds are not judged.
     const skippedIds = new Set();
     for (const s of r.skippedActions ?? []) {
@@ -94,12 +97,13 @@ export function buildReport(file, fileDir, manifest, catalogue, diffDir) {
     }
     const host = r.host ?? hostChecks(test, r.observed ?? {});
     if (test.set === 'auto') {
-      for (const [id, name, st, detail] of checks) if (id !== 'harness') add(id, { test: r.id, kind: 'check', name, status: failed ? 'fail' : st, detail, theme: r.theme, width: r.width });
+      if (test.stops) for (const id of test.covers) add(id, { test: r.id, kind: 'stop', name: `stopped with "${test.stops}…"`, status: failed ? 'fail' : 'pass', detail: r.dead ?? 'not stopped', theme: r.theme, width: r.width });
+      else for (const [id, name, st, detail] of checks) if (id !== 'harness') add(id, { test: r.id, kind: 'check', name, status: failed ? 'fail' : st, detail, theme: r.theme, width: r.width });
       for (const s of stages) for (const id of s.covers) add(id, { test: r.id, kind: 'stage', name: s.name, status: failed ? 'fail' : s.status, detail: s.diff === null ? s.detail ?? '' : `diff ${(s.diff * 100).toFixed(1)} % of ink (max ${((s.maxDiff ?? 0.05) * 100).toFixed(0)} %)${s.detail ? '; ' + s.detail : ''}`, theme: r.theme, width: r.width });
       for (const h of host) add(h.id, { test: r.id, kind: 'host', name: h.name, status: norm(h.status), detail: h.detail, theme: r.theme, width: r.width });
     }
     out.push({
-      id: r.id, set: test.set, theme: r.theme, width: r.width, loaded: !!r.loaded, dead: r.dead ?? null, status: r.status,
+      id: r.id, set: test.set, theme: r.theme, width: r.width, loaded: !!r.loaded, dead: r.dead ?? null, status: r.status, ...(test.stops ? { stops: test.stops, stopped } : {}),
       errors: r.errors ?? [], harnessErrors: checks.filter((c) => c[0] === 'harness').map((c) => c[1] + ': ' + c[3]), skippedActions: r.skippedActions ?? [],
       counts: checks.reduce((m, c) => ({ ...m, [c[2]]: (m[c[2]] ?? 0) + 1 }), {}),
       stages: stages.map((s) => ({ name: s.name, diff: s.diff, status: s.status })), host,
@@ -156,7 +160,7 @@ export function summaryMarkdown(reports, manifest, catalogue) {
   ];
   for (const r of reports) {
     const s = r.summary, auto = r.tests.filter((t) => t.set === 'auto');
-    md.push(`| ${r.client.platform} ${r.client.renderer} | ${s.in.pass} / ${s.in.partial} / ${s.in.fail} / ${s.in.xfail} |${hasCandidates ? ` ${s.candidate.pass} / ${s.candidate.partial} / ${s.candidate.fail} |` : ''} ${s.out.pass} / ${s.out.xfail + s.out.partial} / ${s.out.fail} | ${auto.filter((t) => t.loaded && !t.dead).length} / ${auto.length} | ${r.tests.reduce((n, t) => n + t.errors.length + t.harnessErrors.length, 0)} |`);
+    md.push(`| ${r.client.platform} ${r.client.renderer} | ${s.in.pass} / ${s.in.partial} / ${s.in.fail} / ${s.in.xfail} |${hasCandidates ? ` ${s.candidate.pass} / ${s.candidate.partial} / ${s.candidate.fail} |` : ''} ${s.out.pass} / ${s.out.xfail + s.out.partial} / ${s.out.fail} | ${auto.filter((t) => (t.stops ? t.stopped : t.loaded && !t.dead)).length} / ${auto.length} | ${r.tests.reduce((n, t) => n + t.errors.length + t.harnessErrors.length, 0)} |`);
   }
   md.push('');
   if (hasCandidates) {

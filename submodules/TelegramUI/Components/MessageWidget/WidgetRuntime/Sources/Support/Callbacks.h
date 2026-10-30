@@ -91,9 +91,9 @@ struct CallResult {
     Value value;
 };
 
-/// Calls `fn` with `thisArg` and the arguments, charging work::kBindingCall first. Counts as a call into JS
-/// (Runtime::scriptDepth); when it is the outermost one the host's cleanup hook (the microtask checkpoint) runs before
-/// it returns. Throws Aborted when the runtime is stopped or the call stops it.
+/// Calls `fn` with `thisArg` and the arguments. Counts as a call into JS (Runtime::scriptDepth); when it is the
+/// outermost one the host's cleanup hook (the microtask checkpoint) runs before it returns. Throws Aborted when the
+/// runtime is stopped or the call stops it.
 /// `fn`, `thisArg` and the arguments are borrowed, and QuickJS does not take a reference to them for the call: pass
 /// values the caller owns for the whole call. A HeldCallback's get() is not one (script the call runs can clear the
 /// callback and free the running function): duplicate it into a Value first.
@@ -101,8 +101,8 @@ CallResult callFunction(JSContext* ctx, JSValueConst fn, JSValueConst thisArg, i
 
 /// WebIDL "call a user object's operation": a callable `object` is called with `thisArg`; otherwise its `name`
 /// property is read (a JS-visible Get, the one WebIDL mandates, inside the same call) and called with the object as
-/// `this`, a TypeError result when it is not callable. Charged, counted and aborting as callFunction, and borrowing
-/// its values as callFunction does: the caller owns `object` for the whole call.
+/// `this`, a TypeError result when it is not callable. Counted and aborting as callFunction, and borrowing its values
+/// as callFunction does: the caller owns `object` for the whole call.
 CallResult callInterface(JSContext* ctx, JSValueConst object, const char* name, JSValueConst thisArg, int argc, JSValueConst* argv);
 
 /// For an exception that reached C++ other than through callFunction/callInterface (a job's failure, a failed JS_Eval,

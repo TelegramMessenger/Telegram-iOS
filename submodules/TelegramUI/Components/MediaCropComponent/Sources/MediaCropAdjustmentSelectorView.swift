@@ -176,6 +176,13 @@ public final class MediaCropAdjustmentSelectorView: UIView {
     public private(set) var selected: MediaCropAdjustment = .straighten
     public var selectionChanged: ((MediaCropAdjustment) -> Void)?
     public var selectedTapped: ((MediaCropAdjustment) -> Void)?
+    public var layoutAxis: MediaCropDialAxis = .horizontal {
+        didSet {
+            if self.layoutAxis != oldValue {
+                self.setNeedsLayout()
+            }
+        }
+    }
 
     private let buttons: [MediaCropAdjustmentButton]
 
@@ -228,8 +235,13 @@ public final class MediaCropAdjustmentSelectorView: UIView {
     private func layoutButtons() {
         let selectedIndex = MediaCropAdjustment.allCases.firstIndex(of: self.selected) ?? 0
         for (index, button) in self.buttons.enumerated() {
-            let centerX = self.bounds.midX + CGFloat(index - selectedIndex) * mediaCropAdjustmentButtonSpacing
-            button.center = CGPoint(x: centerX, y: self.bounds.midY)
+            let offset = CGFloat(index - selectedIndex) * mediaCropAdjustmentButtonSpacing
+            switch self.layoutAxis {
+            case .horizontal:
+                button.center = CGPoint(x: self.bounds.midX + offset, y: self.bounds.midY)
+            case let .vertical(clockwise):
+                button.center = CGPoint(x: self.bounds.midX, y: self.bounds.midY + (clockwise ? offset : -offset))
+            }
         }
     }
 

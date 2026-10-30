@@ -45,6 +45,8 @@ WR_TEST(testPathCopiesCountTowardTheLimit) {
 
 /// C3: the current path is JS heap too.
 WR_TEST(testTheCurrentPathCountsTowardTheLimit) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kPage);
     limitTo(env, 4 << 20);
     CHECK_EQ(env.env().eval("ctx.moveTo(0, 0); for (let i = 0; i < 900000; i++) ctx.lineTo(i % 7, 1); 1"), std::string("ABORTED"));

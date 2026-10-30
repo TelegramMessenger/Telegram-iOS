@@ -1,6 +1,6 @@
 // Value interpolation and the keyframe-effect sampler (V5e plan, Task 1), ported from twidget's `interpolate`,
 // `web_add`, `web_scaled` and `web_value` (PROVENANCE.md). Values are CSS text; what these make is dropped within the
-// call that asked, so it lives on the system heap. Each charges a scan of its inputs before the work.
+// call that asked, so it lives on the system heap.
 #pragma once
 
 #include <cstdint>

@@ -28,10 +28,6 @@ class ViewTests: MessageWidgetTestCase {
     /// A stopped widget is a picture, clipped rather than laid out again at a new width: at a wider one, the strip right
     /// of its document shows the canvas colour, as the view does below a short document, not the bubble through a gap.
     func testTheCanvasCoversTheStripRightOfAStoppedWidget() throws {
-        MessageWidgetCore.budgetsForTesting = (parse: MessageWidgetCore.parseWorkUnits, boot: 100_000, task: MessageWidgetCore.taskWorkUnits)
-        defer {
-            MessageWidgetCore.budgetsForTesting = nil
-        }
         let (instance, view) = self.booted("<!doctype html><body style='margin:0;background:#f00'><div style='height:60px'></div><script>for (;;) {}</script></body>", width: 300.0)
         self.settle(instance)
         XCTAssertNotNil(instance.deadReason, "the widget did not stop")

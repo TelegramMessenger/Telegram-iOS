@@ -253,111 +253,12 @@ WR_TEST(testClassNamesInQuirksMode) {
     CHECK(wr::elementHasClasses(ctx, *e, list({}), false));
 }
 
-namespace {
-
-/// The work of one evaluation of `code`, after a first one (which makes the interfaces and atoms it uses).
-uint64_t workOf(DOMEnv& env, const std::string& code) {
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval(code);
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval(code);
-    return JS_GetWorkUnits(rt) - before;
-}
-
-} // namespace
-
-// Every walk a collection or getElementById hides is charged per node visited (Global Constraints, "Work"), and so is a
-// live collection's recompute after a change; an unchanged tree is answered from the cache.
-WR_TEST(testCollectionWalksAreCharged) {
-    DOMEnv env;
-    env.eval("var p = document.createElement('p'); for (let i = 0; i < 10000; i++) p.append(document.createElement('i')); document.documentElement.lastChild.append(p);"
-             "var f = new DocumentFragment(); for (let i = 0; i < 10000; i++) f.append(document.createElement('i'));");
-    // 9,000 visits, under the 10,000 walked: the margin is for nothing else (an uncharged walk costs ~100 units).
-    uint64_t floor = 9000 * wr::work::kNodeVisit;
-    for (const char* code : {"document.getElementById('nope')", "f.getElementById('nope')", "p.getElementsByTagName('i').length", "p.getElementsByTagName('I').length",
-                             "p.getElementsByTagNameNS('*', 'b').length", "p.getElementsByClassName('x').length", "document.getElementsByName('x').length",
-                             "p.children.namedItem('x')", "(p.lastChild.toggleAttribute('t'), p.children.length)"}) {
-        uint64_t units = workOf(env, code);
-        if (units < floor) {
-            std::printf("  %s: %llu units\n", code, (unsigned long long)units);
-        }
-        CHECK(units >= floor);
-    }
-    // A live collection recomputes after any change, and answers from its cache while nothing changed.
-    env.eval("var live = p.getElementsByTagName('i'); live.length");
-    CHECK(workOf(env, "p.lastChild.toggleAttribute('t'); live.length") >= floor);
-    CHECK(workOf(env, "live.length + live[9999].localName.length") < floor / 10);
-    // Class comparisons are charged per token, as DOMTokenList's: 5,000 classes on one element, looked up by the last,
-    // and 100 distinct classes looked up last first on an element with those 100 (5,050 comparisons, whether or not the
-    // wanted set is deduplicated). The recompute is measured (a cheap attribute change, then a read): building the
-    // strings and the collection is the script's own work.
-    env.eval("var q = document.createElement('q'); var c = document.createElement('div'); c.className = Array.from({length: 5000}, (_, i) => 'c' + i).join(' '); q.append(c);"
-             "var q2 = document.createElement('q'); var c2 = document.createElement('div'); c2.className = Array.from({length: 100}, (_, i) => 'c' + i).join(' '); q2.append(c2);"
-             "var last = q.getElementsByClassName('c4999'), many = q2.getElementsByClassName(Array.from({length: 100}, (_, i) => 'c' + (99 - i)).join(' ')); last.length + many.length");
-    uint64_t perToken = 4500 * wr::work::kNodeVisit;
-    CHECK(workOf(env, "c.toggleAttribute('t'); last.length") >= perToken);
-    CHECK(workOf(env, "c2.toggleAttribute('t'); many.length") >= perToken);
-    CHECK_JS(env, "last.length === 1 && many.length === 1");
-}
-
-// String work is charged at QuickJS's own rate, work::kScanEightUnits per eight UTF-16 units compared or scanned, as its
-// `===` and string search are: a comparison or scan of a long value costs its length, not a visit. 200 elements share
-// one 200,000-unit value (one string: the memory is paid once) as class, id and name; each search uses a value of the
-// same length that differs only in its last unit, so every comparison reads all of it.
-WR_TEST(testCollectionStringWorkIsCharged) {
-    DOMEnv env;
-    env.eval("var n = 200000; var v = 'a'.repeat(n), w = 'b'.padStart(n, 'a'); var p = document.createElement('p'); document.documentElement.lastChild.append(p);"
-             "for (let i = 0; i < 200; i++) { const e = document.createElement('i'); e.className = v; e.id = v; e.setAttribute('name', v); p.append(e); }"
-             "var byClass = p.getElementsByClassName(w), byName = document.getElementsByName(w); byClass.length + byName.length");
-    // A full read of the value per element: 200 x 25,000 units.
-    uint64_t floor = 200 * (200000 / 8) * wr::work::kScanEightUnits;
-    for (const char* code : {"p.toggleAttribute('t'); byClass.length", "p.toggleAttribute('t'); byName.length", "document.getElementById(w)", "p.children.namedItem(w)"}) {
-        uint64_t units = workOf(env, code);
-        if (units < floor) {
-            std::printf("  %s: %llu units, under %llu\n", code, (unsigned long long)units, (unsigned long long)floor);
-        }
-        CHECK(units >= floor);
-    }
-    CHECK_JS(env, "byClass.length === 0 && byName.length === 0 && document.getElementById(v) === p.firstChild && p.children.namedItem(v) === p.firstChild");
-}
-
-// A class collection's recompute reads its class list in place (no per-recompute copy) and charges kNodeVisit per
-// class before the walk, so a collection over many classes cannot freeze a recompute uncharged. Measured on an empty
-// root (no descendants) so the recompute's only work is reading the classes: 500,000 classes charges ~1,000,000 units
-// more than one class. And getElementsByClassName deduplicates (the ordered set parser), so a value repeating one
-// class is one class.
-WR_TEST(testClassCollectionRecomputeChargesPerClass) {
-    DOMEnv env;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval("var empty = document.body.appendChild(document.createElement('div'));"
-             "var many = empty.getElementsByClassName(Array.from({length: 500000}, (_, i) => 'c' + i).join(' '));"
-             "var one = empty.getElementsByClassName('c0');"
-             "var dup = empty.getElementsByClassName('a '.repeat(500000));"
-             "many.length; one.length; dup.length;"); // warm each cache
-    auto recompute = [&](const char* name) -> uint64_t {
-        env.eval("empty.id = empty.id === 'a' ? 'b' : 'a';"); // bump the document version so the collection recomputes
-        uint64_t before = JS_GetWorkUnits(rt);
-        env.eval(std::string(name) + ".length;");
-        return JS_GetWorkUnits(rt) - before;
-    };
-    uint64_t manyUnits = recompute("many");
-    uint64_t oneUnits = recompute("one");
-    uint64_t dupUnits = recompute("dup");
-    CHECK(manyUnits - oneUnits >= 499000 * wr::work::kNodeVisit);
-    // The deduplicated repeat is one class, so its recompute costs the same as the single-class one (both tiny: a
-    // fixed overhead, no per-class term), far under the many-class recompute.
-    CHECK(oneUnits < 1000 && dupUnits < oneUnits + 100 && oneUnits * 1000 < manyUnits);
-    CHECK_JS(env, "many.length === 0 && one.length === 0 && dup.length === 0");
-}
-
 // getElementsByClassName's ordered set parser (orderedSetTokens) is worst-case O(n log n) and order-preserving: a
-// stable merge sort of the tokens with a charged compare, then each later duplicate dropped. A hash set with libc++'s
-// unseeded string hash was quadratic under crafted collisions, and uncharged. Its worst case (n log2 n comparisons,
-// each reading up to the shorter token) is charged before it runs.
-WR_TEST(testClassOrderedSetIsSortedAndCharged) {
+// stable merge sort of the tokens, then each later duplicate dropped. A hash set with libc++'s unseeded string hash
+// was quadratic under crafted collisions.
+WR_TEST(testClassOrderedSetIsSorted) {
     DOMEnv env;
     JSContext* ctx = env.ctx();
-    JSRuntime* rt = env.runtime().jsRuntime();
     auto joined = [&](const wr::String& s) {
         std::string out;
         for (const wr::TokenRange& t : wr::orderedSetTokens(ctx, s)) {
@@ -378,19 +279,11 @@ WR_TEST(testClassOrderedSetIsSortedAndCharged) {
     JSValue global = JS_GetGlobalObject(ctx);
     wr::String value = wr::String::adopt(ctx, JS_GetPropertyStr(ctx, global, "value"));
     JS_FreeValue(ctx, global);
-    uint64_t before = JS_GetWorkUnits(rt);
     wr::Vector<wr::TokenRange> kept = wr::orderedSetTokens(ctx, value);
-    uint64_t units = JS_GetWorkUnits(rt) - before;
     CHECK(kept.size() == 100000);
     CHECK_JS(env, "names[0] === 'p'.repeat(32) + '0' && names[1] === 'p'.repeat(32) + '7919'");
     CHECK(kept.size() == 100000 && value.substring(ctx, kept[1].start, kept[1].end).utf8() == std::string(32, 'p') + "7919" &&
           value.substring(ctx, kept[99999].start, kept[99999].end).utf8() == std::string(32, 'p') + std::to_string((99999u * 7919u) % 100000u));
-    // At least the sort's comparisons (17 full levels of 200,000) and the 33 units each reads at least.
-    uint64_t floor = 200000ull * 17 * (wr::work::kNodeVisit + 33 / 8 * wr::work::kScanEightUnits);
-    if (units < floor) {
-        std::printf("  orderedSetTokens: %llu units, under %llu\n", (unsigned long long)units, (unsigned long long)floor);
-    }
-    CHECK(units >= floor);
     // The collection over them works and keeps them deduplicated.
     env.eval("var c = document.body.appendChild(document.createElement('div')); c.className = names[5] + ' ' + names[77] + ' zz'; var many = document.body.getElementsByClassName(value);");
     CHECK_JS(env, "many.length === 0 && document.body.getElementsByClassName(names[77] + ' ' + names[5] + ' ' + names[77]).length === 1");

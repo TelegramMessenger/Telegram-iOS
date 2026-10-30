@@ -73,7 +73,7 @@ typedef enum {
 #define GROUP_NAME_SCOPE_MAX 255
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
-#define INTERRUPT_COUNTER_INIT LRE_STEP_PERIOD /* Telegram (quickjs-ng VENDOR.md local edit 2): named in libregexp.h */
+#define INTERRUPT_COUNTER_INIT 10000
 
 /* unicode code points */
 #define CP_LS   0x2028
@@ -1449,12 +1449,6 @@ static int re_parse_nested_class(REParseState *s, REStringList *cr, const uint8_
     for(;;) {
         if (*p == ']')
             break;
-        /* Telegram (quickjs-ng VENDOR.md local edit 2): each atom is merged into every range built so far, quadratic
-           in the class: charged as it goes, so a huge class stops partway. */
-        if (lre_charge_work(s->opaque, (unsigned)cr->cr.len >> 3)) {
-            re_parse_error(s, LRE_INTERRUPTED_MESSAGE);
-            goto fail;
-        }
         if (*p == '[' && s->unicode_sets) {
             if (re_parse_nested_class(s, cr1, &p))
                 goto fail;
@@ -3423,7 +3417,6 @@ int lre_exec(uint8_t **capture,
     }
 
     ret = lre_exec_backtrack(s, capture, bc_buf + RE_HEADER_LEN, cptr);
-    lre_charge_steps(s->opaque, INTERRUPT_COUNTER_INIT - s->interrupt_counter); /* Telegram (VENDOR.md local edit 2) */
 
     if (s->stack_buf != s->static_stack_buf)
         lre_realloc(s->opaque, s->stack_buf, 0);

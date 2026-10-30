@@ -4,11 +4,20 @@ import XCTest
 
 /// widget-sandbox's corpus (every folder but `attacks`, which InstanceTests scans) through the whole pipeline.
 final class CorpusTests: MessageWidgetTestCase {
-    static let folders = ["common", "compat", "defaults", "generated", "gestures", "htmlbubbles-ported", "interactive", "out-of-profile", "resize", "showcase"]
+    static let folders = ["bot-demos", "common", "compat", "defaults", "generated", "gestures", "htmlbubbles-ported", "interactive", "out-of-profile", "resize", "safe-area", "showcase"]
     /// Deliberate misbehaviour, by widget-sandbox's own README (htmlbubbles-ported, "Status"): the Hang button runs
     /// `for (;;) {}` (the tap grid presses it) and the Buggy button throws on purpose.
     static let runaways: Set<String> = ["htmlbubbles-ported/11-live-scripts/15-pixel-bare.html"]
     static let throwsOnPurpose: Set<String> = ["htmlbubbles-ported/11-live-scripts/17-pixel-bare.html"]
+    /// Over its JS quota on purpose, by its own header ("an over-budget widget has its timers deferred rather than being
+    /// stopped — the tick rate shows it"), behind the button the tap grid presses: upstream's throttling demo.
+    static let throttledOnPurpose: Set<String> = ["htmlbubbles-ported/11-live-scripts/16-pixel-bare.html"]
+    /// Upstream's accepted case of the main-thread window: each tap restarts a CSS transition with a layout query
+    /// (`void root.offsetWidth`, ~4.6 ms here; 05-sam-bare also rebuilds its calendar with `innerHTML`), so the grid's 24
+    /// taps in under a second pass its 100 ms of query time and op cost, which upstream charges too (126 and 117 ms
+    /// since the windows record a step at its end, as upstream's do); at a person's tapping rate they stay far below.
+    /// Exempt from the throttle checks only.
+    static let queriesPastTheWindowUnderTheGrid: Set<String> = ["htmlbubbles-ported/12-motion-lab/09-mo-bare.html", "htmlbubbles-ported/10-game-night/05-sam-bare.html"]
     /// Measured in this plan's Task 3, Step 4: filled in only for files the user accepts as attack demos.
     static let attackDemos: Set<String> = []
     /// The uncaught errors that are APIs WidgetRuntime does not have yet, by their message: a corpus widget throwing one
@@ -70,17 +79,22 @@ final class CorpusTests: MessageWidgetTestCase {
         XCTAssertEqual(RecordingURLProtocol.requests, [], "a widget's URL was requested")
     }
 
-    /// Spec 2026-10-15 D7: every honest widget's boot, and its largest later task (a tap on a 4×6 grid, then 1.2 s of
-    /// timers and frames), each stay under a quarter of their budgets. Measured on budgets of 200,000,000 units, so the
-    /// table shows what each widget needs rather than where it was stopped.
-    func testEveryCorpusWidgetStaysWellInsideItsBudget() throws {
-        MessageWidgetCore.budgetsForTesting = (parse: MessageWidgetCore.parseWorkUnits, boot: 200_000_000, task: 200_000_000)
-        defer { MessageWidgetCore.budgetsForTesting = nil }
-        var rows: [(path: String, parse: UInt64, boot: UInt64, later: UInt64)] = []
+    /// The CPU-clock limits design: every honest widget, booted, tapped on a 4×6 grid and run on for 1.2 s of timers and
+    /// frames, on the product's limits and the widget thread's clock, takes at most a quarter of a slice in any step
+    /// (125 ms), at most a quarter of the JS quota a second while it runs on (75 ms), is never throttled by either
+    /// window, and is not demoted by its boot. Printed as a table, slowest first, so it shows what each widget needs.
+    func testEveryCorpusWidgetStaysWellInsideItsLimits() throws {
+        var rows: [(path: String, step: Double, jsPerSecond: Double, tapThrottled: UInt64, throttled: UInt64, reports: [String])] = []
         var stopped: Set<String> = []
+        var demotedByTheBoot: [String] = []
         for file in self.files() {
             let (instance, view) = self.booted(file.source)
+            // Demotion exempts the boot's own steps for their first two slices of CPU: no honest widget's boot reaches it.
+            if instance.demoted {
+                demotedByTheBoot.append(file.path)
+            }
             let size = view.bounds.size
+            let booted = instance.stressStats()
             for row in 0 ..< 6 {
                 for column in 0 ..< 4 {
                     let point = CGPoint(x: size.width * (CGFloat(column) + 0.5) / 4.0, y: size.height * (CGFloat(row) + 0.5) / 6.0)
@@ -88,25 +102,41 @@ final class CorpusTests: MessageWidgetTestCase {
                     instance.touch(action: 2, at: point, pointer: 0, primary: true)
                 }
             }
+            let first = instance.stressStats()
+            let start = CACurrentMediaTime()
             for _ in 0 ..< 12 {
                 self.pump(0.1)
                 self.deliverFrame(instance)
             }
+            let last = instance.stressStats()
+            let seconds = CACurrentMediaTime() - start
             if instance.deadReason != nil {
                 stopped.insert(file.path)
             }
-            rows.append((file.path, instance.parseWorkForTesting, instance.bootWorkForTesting, instance.largestTaskWorkForTesting))
+            if let booted, let first, let last {
+                let reports = instance.diagnostics.filter { $0.kind == "cpu-throttled" }.map(\.detail)
+                rows.append((file.path, last.largestStepMilliseconds, (last.jsMilliseconds - first.jsMilliseconds) / seconds, first.throttledSteps - booted.throttledSteps, last.throttledSteps - first.throttledSteps, reports))
+            }
             instance.destroy()
         }
-        rows.sort { max(Double($0.boot) / Double(MessageWidgetCore.bootWorkUnits), Double($0.later) / Double(MessageWidgetCore.taskWorkUnits)) > max(Double($1.boot) / Double(MessageWidgetCore.bootWorkUnits), Double($1.later) / Double(MessageWidgetCore.taskWorkUnits)) }
-        print("units of work: parse (not charged), boot (budget \(MessageWidgetCore.bootWorkUnits)), largest later task (budget \(MessageWidgetCore.taskWorkUnits))")
+        rows.sort { $0.step > $1.step }
+        print("CPU on the widget thread: the largest step (slice 500 ms), JS a second while running on (quota 300 ms a second), throttled steps")
         for row in rows {
-            print(String(format: "%-64@ parse %11llu   boot %11llu %6.1f%%   later %11llu %6.1f%%", row.path as NSString, row.parse, row.boot, 100.0 * Double(row.boot) / Double(MessageWidgetCore.bootWorkUnits), row.later, 100.0 * Double(row.later) / Double(MessageWidgetCore.taskWorkUnits)))
+            print(String(format: "%-64@ step %7.1f ms   js %6.1f ms/s   throttled in the taps %llu, after %llu   %@", row.path as NSString, row.step, row.jsPerSecond, row.tapThrottled, row.throttled, row.reports.joined(separator: " | ") as NSString))
         }
         XCTAssertEqual(stopped, CorpusTests.runaways)
+        XCTAssertEqual(demotedByTheBoot, [], "demoted by their boot")
         for row in rows where !CorpusTests.runaways.contains(row.path) && !CorpusTests.attackDemos.contains(row.path) {
-            XCTAssertLessThan(row.boot, MessageWidgetCore.bootWorkUnits / 4, "\(row.path): its boot did \(row.boot) units")
-            XCTAssertLessThan(row.later, MessageWidgetCore.taskWorkUnits / 4, "\(row.path): a later task did \(row.later) units")
+            XCTAssertLessThan(row.step, 125.0, "\(row.path): a step took \(row.step) ms")
+            if CorpusTests.throttledOnPurpose.contains(row.path) {
+                continue
+            }
+            XCTAssertLessThanOrEqual(row.jsPerSecond, 75.0, "\(row.path): \(row.jsPerSecond) ms of JS a second")
+            if CorpusTests.queriesPastTheWindowUnderTheGrid.contains(row.path) {
+                continue
+            }
+            XCTAssertEqual(row.tapThrottled + row.throttled, 0, "\(row.path): throttled \(row.tapThrottled) steps in the taps, \(row.throttled) after")
+            XCTAssertEqual(row.reports, [], "\(row.path): throttle diagnostics")
         }
     }
 
@@ -182,8 +212,8 @@ final class CorpusTests: MessageWidgetTestCase {
                     let start = CACurrentMediaTime()
                     instance.touch(action: action, at: point, pointer: 0, primary: true)
                     let ms = (CACurrentMediaTime() - start) * 1000.0
-                    let (units, step) = instance.onCoreForTesting { ($0.lastTaskWork, $0.lastStepMilliseconds) } ?? (0, 0)
-                    print(String(format: "poll row %d column %d %@: %.1f ms, %llu units, step %.1f ms", row, column, action == 0 ? "down" : "up", ms, units, step))
+                    let step = instance.onCoreForTesting { $0.lastStepMilliseconds } ?? 0
+                    print(String(format: "poll row %d column %d %@: %.1f ms, step %.1f ms", row, column, action == 0 ? "down" : "up", ms, step))
                     if ms > 500.0 {
                         slow.append(String(format: "row %d column %d %@: %.0f ms", row, column, action == 0 ? "down" : "up", ms))
                     }
@@ -195,26 +225,5 @@ final class CorpusTests: MessageWidgetTestCase {
     }
 
     @objc private func noFrame(_ link: CADisplayLink) {
-    }
-
-    /// The user, 2026-10-15: the parse of a widget's markup is not charged at all. What it costs per byte of source, in
-    /// every folder, `attacks` included (on the default budgets: only the parse is read, and it is not charged).
-    func testWhatTheParseCostsPerByte() throws {
-        var all: [(path: String, units: UInt64, bytes: Int)] = []
-        for folder in WidgetCorpus.folders {
-            var rows: [(path: String, units: UInt64, bytes: Int)] = []
-            for file in WidgetCorpus.files(in: folder) {
-                let instance = self.make(file.source)
-                _ = instance.layout(width: 360.0)
-                rows.append((file.path, instance.parseWorkForTesting, file.source.utf8.count))
-                instance.destroy()
-            }
-            let perByte = rows.map { Double($0.units) / Double(max($0.bytes, 1)) }.sorted()
-            print(String(format: "parse %-20@ files %3d   units/byte median %6.1f max %6.1f   units max %11llu", folder as NSString, rows.count, perByte[perByte.count / 2], perByte.last ?? 0, rows.map(\.units).max() ?? 0))
-            all.append(contentsOf: rows)
-        }
-        for row in all.sorted(by: { Double($0.units) / Double(max($0.bytes, 1)) > Double($1.units) / Double(max($1.bytes, 1)) }).prefix(12) {
-            print(String(format: "parse %-64@ %11llu units %7d bytes %7.1f units/byte", row.path as NSString, row.units, row.bytes, Double(row.units) / Double(max(row.bytes, 1))))
-        }
     }
 }

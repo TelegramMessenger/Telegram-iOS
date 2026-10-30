@@ -11,6 +11,25 @@ public protocol ChatInputPanelViewForOverlayContent: UIView {
     func maybeDismissContent(point: CGPoint)
 }
 
+/// The bubble-free mode's "next channel" island, which the history hands to the input panel while a channel or topic is
+/// pulled up past its end: the next channel (nil when there is none), what to call it, its unread count, and how far
+/// the pull has gone (0 to 1, 1 being far enough to switch).
+public struct ChatInputPanelOverscrollIsland {
+    public let context: AccountContext
+    public let peer: EnginePeer?
+    public let title: String
+    public let unreadCount: Int
+    public let progress: CGFloat
+
+    public init(context: AccountContext, peer: EnginePeer?, title: String, unreadCount: Int, progress: CGFloat) {
+        self.context = context
+        self.peer = peer
+        self.title = title
+        self.unreadCount = unreadCount
+        self.progress = progress
+    }
+}
+
 open class ChatInputPanelNode: ASDisplayNode {
     open var context: AccountContext?
     open var chatControllerInteraction: ChatControllerInteraction?
@@ -48,5 +67,19 @@ open class ChatInputPanelNode: ASDisplayNode {
     
     open func canHandleTransition(from prevInputPanelNode: ChatInputPanelNode?) -> Bool {
         return false
+    }
+    
+    /// Shows, moves or (nil) sinks the "next channel" island, which grows out of the panel's own glass. Returns false
+    /// when this panel has no glass to grow it from: the history then shows its own control instead.
+    open func updateOverscrollIsland(_ island: ChatInputPanelOverscrollIsland?, animated: Bool) -> Bool {
+        return false
+    }
+    
+    /// A chat switch is about to fade a snapshot of this panel (with the panel's bounds) out with the outgoing chat. A
+    /// snapshot does not show the island's glass, so a showing island stays on the panel, which stays on screen until
+    /// the next chat is ready, and the returned closure, called once the snapshot is on screen, moves it beside the
+    /// snapshot to sink there. Nil without an island.
+    open func overscrollIslandHandOver() -> ((UIView) -> Void)? {
+        return nil
     }
 }

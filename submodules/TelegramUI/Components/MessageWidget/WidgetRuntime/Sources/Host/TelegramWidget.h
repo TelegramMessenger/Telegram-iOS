@@ -47,8 +47,8 @@ public:
     String theme(JSContext* ctx) { return this->colorScheme(ctx); }
     /// !document.hidden.
     bool isActive(JSContext* ctx);
-    /// themeChanged, activated, deactivated; anything else, a non-function, a handler already added or one past the
-    /// 16th is ignored.
+    /// themeChanged, activated, deactivated, chatDataChanged, publicDataChanged, contentSafeAreaChanged; anything else, a
+    /// non-function, a handler already added or one past the 16th is ignored.
     void onEvent(JSContext* ctx, std::optional<Value> type, std::optional<Value> handler);
     /// Removes the first handler of `type` that is `handler`.
     void offEvent(JSContext* ctx, std::optional<Value> type, std::optional<Value> handler);
@@ -74,6 +74,9 @@ public:
     /// Mini Apps' WebAppUser for the account looking at the widget (the SDK policy's viewerJson), frozen and the same
     /// object for the runtime's life; null where the widget may not send requests and in a preview.
     Value viewer(JSContext* ctx);
+    /// SDK v1 §2.17: what the client draws over the widget (HostState::sdkContentSafeArea), frozen and the same object
+    /// until a change.
+    Value contentSafeAreaInset(JSContext* ctx);
     /// An inline result shown before it is sent (sdk-v1 §2.16).
     bool isPreview(JSContext* ctx);
     /// SDK v1 §2.14: a request to the bot. `data` is 1–64 bytes of well-formed UTF-8 (the SDK policy's
@@ -81,6 +84,9 @@ public:
     /// when the client answers (HostState::completeRequest), else a WidgetRequestError with its code: a refusal of the
     /// request gate, a preview's NOT_ALLOWED, the client's failure, INVALID_ANSWER.
     Value request(JSContext* ctx, std::optional<Value> data);
+    /// The widget appeared and the request gate let the held background request go (RequestGate::show): its bridge call,
+    /// as that appearance's request.
+    void sendHeldRequest(JSContext* ctx);
     /// SDK v1 §2.15: `text` (1–256 UTF-16 code units, well-formed, else a TypeError) to the host, on a tap only: one
     /// privileged call per tap, shared with the links and request; outside one it is dropped with activation-blocked.
     void copyText(JSContext* ctx, std::optional<Value> text);
@@ -90,7 +96,7 @@ public:
     void unwatchPublicData(JSContext* ctx);
 
     // Native, inside the tasks HostState queues.
-    enum class Event { ThemeChanged, Activated, Deactivated, ChatDataChanged, PublicDataChanged };
+    enum class Event { ThemeChanged, Activated, Deactivated, ChatDataChanged, PublicDataChanged, ContentSafeAreaChanged };
     /// The client's outcome for request `id`, sent to it: frees the request gate and settles the promise; nothing for
     /// an id that is not an outgoing request still pending.
     void settleRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome);
@@ -109,6 +115,9 @@ private:
         int64_t id = 0;
         bool outgoing = false;
         PromiseSlot slot;
+        /// A background request made off screen (widget-sandbox v0.3.0): held, with its data, until the widget appears.
+        bool held = false;
+        std::string data;
     };
     Vector<HeldCallback>& handlersOf(Event event);
     void setWatching(JSContext* ctx, bool on);
@@ -121,6 +130,7 @@ private:
     Vector<HeldCallback> m_deactivated;
     Vector<HeldCallback> m_chatDataChanged;
     Vector<HeldCallback> m_publicDataChanged;
+    Vector<HeldCallback> m_contentSafeAreaChanged;
     Vector<HeldCallback> m_onTheme;
     Held m_hapticFeedback;
     /// themeParams' object, made for HostState::themeGeneration m_themeParamsGeneration.
@@ -129,6 +139,9 @@ private:
     /// viewer's object, made for HostState::contextGeneration m_viewerGeneration.
     Held m_viewer;
     uint64_t m_viewerGeneration = 0;
+    /// contentSafeAreaInset's object, made for HostState::contentSafeAreaGeneration m_contentSafeAreaGeneration.
+    Held m_contentSafeAreaInset;
+    uint64_t m_contentSafeAreaGeneration = 0;
 };
 
 class Clipboard : public PlatformObject {

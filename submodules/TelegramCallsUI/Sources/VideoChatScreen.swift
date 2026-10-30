@@ -3778,6 +3778,7 @@ final class VideoChatScreenComponent: Component {
                         animationCache: call.accountContext.animationCache,
                         presentationData: call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
                         style: .glass(isTinted: true),
+                        glassHasTail: false,
                         items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                         selectedItems: Set(),
                         title: nil,

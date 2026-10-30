@@ -306,7 +306,7 @@ public final class AccountStateManager {
             return self.eventHub.walletStateUpdates
         }
 
-        var agentSettingsUpdates: Signal<Api.agent.Settings, NoError> {
+        var agentSettingsUpdates: Signal<EngineAgentSettings, NoError> {
             return self.eventHub.agentSettingsUpdates
         }
         
@@ -1335,7 +1335,7 @@ public final class AccountStateManager {
         }
     }
 
-    func agentSettingsUpdates() -> Signal<Api.agent.Settings, NoError> {
+    func agentSettingsUpdates() -> Signal<EngineAgentSettings, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.agentSettingsUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }

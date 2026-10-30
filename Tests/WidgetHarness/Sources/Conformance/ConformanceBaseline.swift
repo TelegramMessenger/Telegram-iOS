@@ -26,6 +26,16 @@ public struct ConformanceBaseline: Codable, Equatable {
         if test.loadOnly {
             return ["load · loads": failed ? "fail" : "pass"]
         }
+        // widget-sandbox v0.3.0: a test the host must stop passes each of its covers only on a stop whose reason starts
+        // with `stops`, and fails on any other end, alive or dead; what it published is not judged (report.mjs).
+        if let stops = test.stops {
+            let stopped = run.dead?.hasPrefix(stops) ?? false
+            var statuses: [String: String] = [:]
+            for id in test.covers {
+                statuses["\(id) · stopped with \"\(stops)…\""] = stopped ? "pass" : "fail"
+            }
+            return statuses
+        }
         var skipped = Set<String>()
         for index in run.skippedActions where index < test.actions.count {
             for id in (test.actions[index]["ids"] as? [String]) ?? [] {

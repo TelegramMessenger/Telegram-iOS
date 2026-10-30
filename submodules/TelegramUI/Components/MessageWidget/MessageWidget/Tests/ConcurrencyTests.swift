@@ -9,7 +9,7 @@ class ConcurrencyTests: MessageWidgetTestCase {
     /// Pin. Break: make the test pool one thread (`MessageWidgetPool(threadCount: 1)` in `TestSupport.setUp`) and this
     /// fails at "the other thread served it".
     func testAStuckWidgetHoldsOneThreadAndTheOtherServes() {
-        let stuck = self.make("<!doctype html><p>stuck</p>", policy: MessageWidgetWaitPolicy(cap: 0.05, allowance: nil))
+        let stuck = self.make("<!doctype html><p>stuck</p>", policy: MessageWidgetWaitPolicy(cap: 0.05))
         let gate = stuck.gateNextTaskForTesting()
         defer {
             gate.release.signal()
@@ -18,7 +18,7 @@ class ConcurrencyTests: MessageWidgetTestCase {
         XCTAssertEqual(stuck.layout(width: 300.0), CGSize(width: 300.0, height: MessageWidgetInstance.placeholderHeight))
         XCTAssertLessThan(CACurrentMediaTime() - start, 1.0, "main's wait ended at the cap")
         XCTAssertEqual(gate.started.wait(timeout: .now() + 5.0), .success)
-        let other = self.make(self.fixture("02-split-bill"), policy: MessageWidgetWaitPolicy(cap: 5.0, allowance: nil))
+        let other = self.make(self.fixture("02-split-bill"), policy: MessageWidgetWaitPolicy(cap: 5.0))
         let size = other.layout(width: 360.0)
         guard other.appliedForTesting[.boot] == 1 else {
             return XCTFail("the other thread served it: the second widget's boot did not finish within 5 s")
@@ -41,7 +41,7 @@ class ConcurrencyTests: MessageWidgetTestCase {
             let rows = String(repeating: "<div style='height:4px;background:\(color)'></div>", count: 200)
             return "<!doctype html><body style='margin:0;padding:0'>\(rows)<script>for (var i = 0; i < 50; i++) { var d = document.createElement('div'); d.setAttribute('style', 'height:2px;background:\(color)'); document.body.appendChild(d); }</script></body>"
         }
-        let noWait = MessageWidgetWaitPolicy(cap: nil, allowance: 0)
+        let noWait = MessageWidgetWaitPolicy(cap: 0.0)
         let red = self.make(page("rgb(255,0,0)"), policy: noWait)
         let blue = self.make(page("rgb(0,0,255)"), policy: noWait)
         let redGate = red.gateNextTaskForTesting()

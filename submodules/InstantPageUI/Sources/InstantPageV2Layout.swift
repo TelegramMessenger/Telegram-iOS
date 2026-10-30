@@ -193,6 +193,11 @@ public struct InstantPageV2CodeBlockItem {
     public let languageItem: InstantPageTextItem?
     public let textItem: InstantPageTextItem
     public let inset: UIEdgeInsets
+    /// Zero for a band whose corners a container clips (`InstantPageV2ContainerStyle.codeBlockCornerRadius`).
+    public var cornerRadius: CGFloat = 0.0
+    /// How much further than the paragraph inset the text sits from each side of a band that pads itself, so that a
+    /// page shrunk to its content keeps that room after the code too.
+    public var standalonePadding: CGFloat = 0.0
 }
 
 public struct InstantPageV2ThinkingItem {
@@ -343,6 +348,9 @@ public enum InstantPageV2MediaPlaceholderKind {
 public struct InstantPageV2MediaImageItem {
     public var frame: CGRect
     public let cornerRadius: CGFloat
+    /// The corners `cornerRadius` rounds: a collage cell without a container around it rounds only those on the
+    /// collage's outline.
+    public let roundedCorners: CACornerMask
     public let media: InstantPageMedia
     public let webPage: TelegramMediaWebpage
     public let attributes: [InstantPageImageAttribute]   // always empty for image; kept for symmetry
@@ -351,9 +359,10 @@ public struct InstantPageV2MediaImageItem {
     /// aspect-FILL crop (collage cells). See `InstantPageImageNode.fit`. Default false = crop.
     public let fit: Bool
 
-    public init(frame: CGRect, cornerRadius: CGFloat, media: InstantPageMedia, webPage: TelegramMediaWebpage, attributes: [InstantPageImageAttribute], spoiler: Bool = false, fit: Bool = false) {
+    public init(frame: CGRect, cornerRadius: CGFloat, roundedCorners: CACornerMask = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner], media: InstantPageMedia, webPage: TelegramMediaWebpage, attributes: [InstantPageImageAttribute], spoiler: Bool = false, fit: Bool = false) {
         self.frame = frame
         self.cornerRadius = cornerRadius
+        self.roundedCorners = roundedCorners
         self.media = media
         self.webPage = webPage
         self.attributes = attributes
@@ -377,6 +386,9 @@ public struct InstantPageV2MediaAudioItem {
 public struct InstantPageV2MediaVideoItem {
     public var frame: CGRect
     public let cornerRadius: CGFloat
+    /// The corners `cornerRadius` rounds: a collage cell without a container around it rounds only those on the
+    /// collage's outline.
+    public let roundedCorners: CACornerMask
     public let media: InstantPageMedia
     public let webPage: TelegramMediaWebpage
     public let attributes: [InstantPageImageAttribute]   // always empty
@@ -385,9 +397,10 @@ public struct InstantPageV2MediaVideoItem {
     /// aspect-FILL crop (collage cells). See `InstantPageImageNode.fit`. Default false = crop.
     public let fit: Bool
 
-    public init(frame: CGRect, cornerRadius: CGFloat, media: InstantPageMedia, webPage: TelegramMediaWebpage, attributes: [InstantPageImageAttribute], spoiler: Bool = false, fit: Bool = false) {
+    public init(frame: CGRect, cornerRadius: CGFloat, roundedCorners: CACornerMask = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner], media: InstantPageMedia, webPage: TelegramMediaWebpage, attributes: [InstantPageImageAttribute], spoiler: Bool = false, fit: Bool = false) {
         self.frame = frame
         self.cornerRadius = cornerRadius
+        self.roundedCorners = roundedCorners
         self.media = media
         self.webPage = webPage
         self.attributes = attributes
@@ -438,11 +451,14 @@ public struct InstantPageV2SlideshowItem {
     public var frame: CGRect
     public let medias: [InstantPageMedia]
     public let webPage: TelegramMediaWebpage
+    /// Zero inside a container that clips the page (`InstantPageV2ContainerStyle.minimumMediaCornerRadius`).
+    public let cornerRadius: CGFloat
 
-    public init(frame: CGRect, medias: [InstantPageMedia], webPage: TelegramMediaWebpage) {
+    public init(frame: CGRect, medias: [InstantPageMedia], webPage: TelegramMediaWebpage, cornerRadius: CGFloat = 0.0) {
         self.frame = frame
         self.medias = medias
         self.webPage = webPage
+        self.cornerRadius = cornerRadius
     }
 }
 
@@ -520,7 +536,10 @@ public func layoutInstantPageV2(
     /// `baseDisplaySize / 17` so a rich message follows Settings ▸ Appearance ▸ Text Size like a plain
     /// one. Applied ONCE, to fonts and geometry alike, in `InstantPageV2ScaledLayoutInputs`; `theme`
     /// must therefore be the UNSCALED theme. Default 1.0: every other V2 surface is unchanged.
-    contentScale: CGFloat = 1.0
+    contentScale: CGFloat = 1.0,
+    /// What surrounds the page. A chat message without a bubble has no rounded container to clip full-width media,
+    /// code bands and quotes, so it passes `.bubbleless(…)`. Default `.bubble`: every other V2 surface is unchanged.
+    containerStyle: InstantPageV2ContainerStyle = .bubble
 ) -> InstantPageV2Layout {
     guard case let .Loaded(loadedContent) = webpage.content else {
         return InstantPageV2Layout(contentSize: .zero, items: [], detailsIndices: [])
@@ -573,7 +592,8 @@ public func layoutInstantPageV2(
         mediaIndexCounter: 0,
         detailsIndexCounter: 0,
         expandedDetails: expandedDetails,
-        expandedQuotePaths: expandedQuotePaths
+        expandedQuotePaths: expandedQuotePaths,
+        containerStyle: containerStyle
     )
 
     var result = layoutBlockSequence(
@@ -769,6 +789,8 @@ private struct LayoutContext {
     /// Quotes the reader has expanded, keyed by structural block path. Mirrors `expandedDetails`, which
     /// is the same idea keyed by the details block's ordinal index.
     let expandedQuotePaths: Set<[Int]>
+    /// See `layoutInstantPageV2(containerStyle:)`.
+    let containerStyle: InstantPageV2ContainerStyle
 
     /// The path of the block being laid out when the rich-quote spec lists it as a quote source
     /// (`InstantPageBlock.isRichQuoteSource`), else nil: its text then carries no quote stamps.
@@ -826,6 +848,9 @@ private func layoutBlockSequence(
             continue
         }
         var spacing = spacingBetweenBlocks(upper: previousBlock, lower: block, kind: kind, metrics: context.metrics)
+        if context.containerStyle.minimumMediaCornerRadius > 0.0 {
+            spacing = instantPageV2BlockGap(spacing, upper: previousBlock, lower: block, style: context.containerStyle)
+        }
         // Leading page edge: give back the inset the host applied around the whole page. Clamped at
         // 0 — a flush first block (cover, anchor) has no padding here to give.
         if previousBlock == nil && kind == .topLevel {
@@ -2440,7 +2465,8 @@ private func instantPageV2MediaFrame(
     cornerRadius: CGFloat,
     boundingWidth: CGFloat,
     horizontalInset: CGFloat,
-    capHeight: Bool = false
+    capHeight: Bool = false,
+    bleeds: Bool = true
 ) -> (frame: CGRect, scaledSize: CGSize, cornerRadius: CGFloat) {
     let availableWidth = flush ? boundingWidth : (boundingWidth - horizontalInset * 2.0)
     var scaledSize: CGSize
@@ -2469,7 +2495,7 @@ private func instantPageV2MediaFrame(
         // always trips this; a genuinely smaller image does not. (availableWidth == boundingWidth
         // in the flush branch, so the bleed below extends past the full bounding width.)
         let fillsWidth = scaledSize.width >= availableWidth - 1.0
-        let frameWidth = fillsWidth ? boundingWidth + instantPageV2MediaEdgeBleed : scaledSize.width
+        let frameWidth = fillsWidth ? boundingWidth + (bleeds ? instantPageV2MediaEdgeBleed : 0.0) : scaledSize.width
         let frame = CGRect(x: 0.0, y: 0.0, width: frameWidth, height: scaledSize.height)
         return (frame, scaledSize, 0.0)
     } else {
@@ -2499,9 +2525,10 @@ private func layoutTypedMediaWithCaption(
         cornerRadius: cornerRadius,
         boundingWidth: boundingWidth,
         horizontalInset: horizontalInset,
-        capHeight: capHeight
+        capHeight: capHeight,
+        bleeds: context.containerStyle.mediaBleeds
     )
-    var result: [InstantPageV2LaidOutItem] = [produceItem(mediaFrame, effectiveCornerRadius)]
+    var result: [InstantPageV2LaidOutItem] = [produceItem(mediaFrame, instantPageV2MediaCornerRadius(effectiveCornerRadius, style: context.containerStyle))]
 
     let (captionItems, captionHeight) = layoutCaptionAndCredit(
         caption,
@@ -2573,9 +2600,12 @@ private func layoutCollage(
     for (i, block) in innerBlocks.enumerated() {
         guard i < mosaic.count else { break }
         let (cellFrame, position) = mosaic[i]
+        // With no rounded container around the page, the collage is rounded like an album in the chat: its outline as
+        // much as any other media block, the corners between its cells square, nothing bleeding past the right edge.
+        let cellRoundedCorners = instantPageV2CollageCellRoundedCorners(top: position.contains(.top), bottom: position.contains(.bottom), left: position.contains(.left), right: position.contains(.right))
         // Right-edge cells bleed 4pt so the bubble's rounded clip leaves no trailing sliver.
         var frame = cellFrame
-        if position.contains(.right) {
+        if position.contains(.right) && context.containerStyle.mediaBleeds {
             frame.size.width += instantPageV2MediaEdgeBleed
         }
         switch block {
@@ -2585,13 +2615,13 @@ private func layoutCollage(
             context.mediaIndexCounter += 1
             let mediaUrl: InstantPageUrlItem? = url.flatMap { InstantPageUrlItem(url: $0, webpageId: webpageId) }
             let media = InstantPageMedia(index: mediaIndex, media: .image(image), url: mediaUrl, caption: blockCaption.text, credit: blockCaption.credit)
-            result.append(.mediaImage(InstantPageV2MediaImageItem(frame: frame, cornerRadius: 0.0, media: media, webPage: webpage, attributes: [], spoiler: spoiler)))
+            result.append(.mediaImage(InstantPageV2MediaImageItem(frame: frame, cornerRadius: context.containerStyle.minimumMediaCornerRadius, roundedCorners: cellRoundedCorners, media: media, webPage: webpage, attributes: [], spoiler: spoiler)))
         case let .video(id, blockCaption, _, _, spoiler):
             guard case let .file(file) = context.media[id] else { continue }
             let mediaIndex = context.mediaIndexCounter
             context.mediaIndexCounter += 1
             let media = InstantPageMedia(index: mediaIndex, media: .file(file), url: nil, caption: blockCaption.text, credit: blockCaption.credit)
-            result.append(.mediaVideo(InstantPageV2MediaVideoItem(frame: frame, cornerRadius: 0.0, media: media, webPage: webpage, attributes: [], spoiler: spoiler)))
+            result.append(.mediaVideo(InstantPageV2MediaVideoItem(frame: frame, cornerRadius: context.containerStyle.minimumMediaCornerRadius, roundedCorners: cellRoundedCorners, media: media, webPage: webpage, attributes: [], spoiler: spoiler)))
         default:
             continue
         }
@@ -2664,7 +2694,8 @@ private func layoutSlideshow(
     result.append(.slideshow(InstantPageV2SlideshowItem(
         frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height),
         medias: medias,
-        webPage: context.webpage
+        webPage: context.webpage,
+        cornerRadius: context.containerStyle.minimumMediaCornerRadius
     )))
 
     let (captionItems, _) = layoutCaptionAndCredit(caption, offset: height, boundingWidth: boundingWidth, horizontalInset: horizontalInset, context: &context)
@@ -2688,12 +2719,13 @@ private func layoutMediaWithCaption(
         flush: flush,
         cornerRadius: cornerRadius,
         boundingWidth: boundingWidth,
-        horizontalInset: horizontalInset
+        horizontalInset: horizontalInset,
+        bleeds: context.containerStyle.mediaBleeds
     )
     let placeholderItem = InstantPageV2MediaPlaceholderItem(
         frame: placeholderFrame,
         kind: kind,
-        cornerRadius: effectiveCornerRadius
+        cornerRadius: instantPageV2MediaCornerRadius(effectiveCornerRadius, style: context.containerStyle)
     )
 
     var result: [InstantPageV2LaidOutItem] = [.mediaPlaceholder(placeholderItem)]
@@ -2940,9 +2972,18 @@ private func layoutCodeBlock(
                                     cache: context.cachedMessageSyntaxHighlight)
     let attributedString: NSAttributedString = highlightedString
 
+    // The code text's x is the PARAGRAPH inset measured from the band's leading edge, which the
+    // bleed moved outward.
+    let bandFrame = instantPageV2CodeBandFrame(boundingWidth: boundingWidth, horizontalInset: horizontalInset,
+                                               bleed: bleed, height: 0.0)
+    // A band that bleeds into no container and has no paragraph inset to give its text pads it itself, on both
+    // sides, and is rounded, since nothing clips it (`InstantPageV2ContainerStyle`).
+    let standalonePadding = instantPageV2CodeBandStandalonePadding(bleed: bleed, horizontalInset: horizontalInset, bandMinX: bandFrame.minX, style: context.containerStyle)
+    let localTextX = horizontalInset - bandFrame.minX + standalonePadding
+
     // The text measure is the paragraph measure at this level — the same width a sibling paragraph
     // gets, which is what makes the two align on BOTH edges.
-    let innerWidth = boundingWidth - horizontalInset * 2.0
+    let innerWidth = boundingWidth - horizontalInset * 2.0 - standalonePadding * 2.0
 
     // The bold language line, when present. It mirrors the QUOTE AUTHOR's derivation — the caption
     // category's family and colour, pushed to bold at the paragraph size — rather than carrying a
@@ -2989,12 +3030,7 @@ private func layoutCodeBlock(
     let topPad = max(0.0, verticalInset - (hasLanguageLine ? languageOverheadTop : codeOverheads.top))
     let bottomPad = max(0.0, verticalInset - codeOverheads.bottom)
 
-    // The code text's x is the PARAGRAPH inset measured from the band's leading edge, which the
-    // bleed moved outward. Both text items are in block-local coordinates.
-    let bandFrame = instantPageV2CodeBandFrame(boundingWidth: boundingWidth, horizontalInset: horizontalInset,
-                                               bleed: bleed, height: 0.0)
-    let localTextX = horizontalInset - bandFrame.minX
-
+    // Both text items are in block-local coordinates.
     var y = topPad
     if let item = languageItem {
         item.frame = CGRect(x: localTextX, y: y, width: item.frame.width, height: item.frame.height)
@@ -3012,7 +3048,9 @@ private func layoutCodeBlock(
         language: language,
         languageItem: languageItem,
         textItem: textItem,
-        inset: UIEdgeInsets(top: topPad, left: localTextX, bottom: bottomPad, right: localTextX)
+        inset: UIEdgeInsets(top: topPad, left: localTextX, bottom: bottomPad, right: localTextX),
+        cornerRadius: standalonePadding > 0.0 ? context.containerStyle.codeBlockCornerRadius : 0.0,
+        standalonePadding: standalonePadding
     ))]
 }
 
@@ -3329,7 +3367,7 @@ private func layoutBlockQuote(
     // Accent bar + accent-tinted rounded fill spanning the whole quote band (behind child content).
     let frameItem = InstantPageV2QuoteFrameItem(
         frame: CGRect(x: horizontalInset, y: 0.0, width: boundingWidth - horizontalInset * 2.0, height: contentHeight),
-        accentColor: context.theme.quoteAccentColor, barWidth: instantPageV2QuoteBarWidth, cornerRadius: 6.0, fillAlpha: 0.10, barOnTrailing: context.rtl,
+        accentColor: context.theme.quoteAccentColor, barWidth: instantPageV2QuoteBarWidth, cornerRadius: context.containerStyle.quoteCornerRadius, fillAlpha: 0.10, barOnTrailing: context.rtl,
         collapseState: collapseState,
         path: pathPrefix)
     result.insert(.quoteFrame(frameItem), at: 0)
@@ -3471,7 +3509,7 @@ private func layoutQuoteText(
         let pillX = (boundingWidth - pillWidth) / 2.0
         let pill = InstantPageV2ShapeItem(
             frame: CGRect(x: pillX, y: 0.0, width: pillWidth, height: contentHeight),
-            kind: .roundedRect(cornerRadius: 6.0),
+            kind: .roundedRect(cornerRadius: context.containerStyle.quoteCornerRadius),
             color: accent.withAlphaComponent(0.10))
         result.insert(.shape(pill), at: 0)
         result.append(.imageOrnament(InstantPageV2ImageOrnamentItem(
@@ -3488,7 +3526,7 @@ private func layoutQuoteText(
         // `layoutBlockQuote`, which is where the collapse budget lives.
         let frameItem = InstantPageV2QuoteFrameItem(
             frame: CGRect(x: horizontalInset, y: 0.0, width: boundingWidth - horizontalInset * 2.0, height: contentHeight),
-            accentColor: accent, barWidth: instantPageV2QuoteBarWidth, cornerRadius: 6.0, fillAlpha: 0.10, barOnTrailing: context.rtl,
+            accentColor: accent, barWidth: instantPageV2QuoteBarWidth, cornerRadius: context.containerStyle.quoteCornerRadius, fillAlpha: 0.10, barOnTrailing: context.rtl,
             collapseState: .notCollapsible, path: [])
         result.insert(.quoteFrame(frameItem), at: 0)
         result.append(instantPageV2BlockQuoteIcon(boundingWidth: boundingWidth, horizontalInset: horizontalInset, color: accent, rtl: context.rtl))

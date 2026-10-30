@@ -6,6 +6,7 @@ internal import TelegramApi
 /// `feed.likePost` / `feed.dislikePost` for a stored post. A failure is logged and dropped: there is nothing to
 /// retry it against, and the next vote on the post replaces it on the server.
 func _internal_voteFeedPost(account: Account, id: MessageId, like: Bool) -> Signal<Never, NoError> {
+#if TELEGRAM_NEWS_FEED_API
     let method = like ? "likePost" : "dislikePost"
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(id.peerId).flatMap(apiInputPeer)
@@ -26,4 +27,8 @@ func _internal_voteFeedPost(account: Account, id: MessageId, like: Bool) -> Sign
             return .complete()
         }
     }
+#else
+    // The feed API is parked (layer 233 has none): nothing is sent.
+    return .complete()
+#endif
 }

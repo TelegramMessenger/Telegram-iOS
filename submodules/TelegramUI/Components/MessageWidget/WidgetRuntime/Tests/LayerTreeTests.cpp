@@ -1001,7 +1001,8 @@ WR_TEST(testChangedRectsBoundBackdrops) {
 WR_TEST(testMarkersKeepNoUrl) {
     FakeRenderHost host;
     wr::WidgetContainer container(host, options());
-    const std::string url = "data:image/png;base64," + std::string(60000, 'A');
+    // A PNG's header (widget-sandbox v0.3.0 reads an image's size from its bytes), then zeros.
+    const std::string url = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB" + std::string(60000, 'A');
     // list-style-image is out of profile 1, so the marker's image comes through the trusted sheet.
     litehtml::document::ptr document =
         layOut(container, "<ul><li>a</li><li>b</li><li>c</li></ul>", 300, "li { list-style-image: url(" + url + ") }");
@@ -1012,11 +1013,11 @@ WR_TEST(testMarkersKeepNoUrl) {
             markers++;
             CHECK(m->marker.image.empty());
             CHECK_EQ(m->marker.image.capacity(), std::string().capacity());
-            CHECK(!m->image && m->marker.baseurl == nullptr && m->marker.font == 0);
+            CHECK(m->marker.baseurl == nullptr && m->marker.font == 0);
         }
     }
     CHECK_EQ(markers, size_t(3));
-    // The URL did reach the container: an image/png data: URL the fake host cannot decode.
+    // The URL did reach the container and the host, which decoded the header's 1 × 1.
     CHECK(host.decodedMimeTypes == std::vector<std::string>{"image/png"});
 }
 

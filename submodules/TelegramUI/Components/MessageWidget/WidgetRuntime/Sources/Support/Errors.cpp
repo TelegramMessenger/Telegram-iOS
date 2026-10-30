@@ -47,10 +47,4 @@ JSValue rethrowAsJS(JSContext* ctx) noexcept {
     }
 }
 
-void charge(JSContext* ctx, uint64_t units) {
-    if (JS_ChargeWork(ctx, units) < 0) {
-        throw Thrown{};
-    }
-}
-
 } // namespace wr

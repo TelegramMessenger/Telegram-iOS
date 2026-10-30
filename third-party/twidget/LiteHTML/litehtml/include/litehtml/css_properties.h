@@ -147,6 +147,7 @@ namespace litehtml
         css_length        m_transform_origin_x = css_length(50, css_units_percentage);
         css_length        m_transform_origin_y = css_length(50, css_units_percentage);
         int               m_backface_hidden    = 0;
+        int               m_transform_box      = transform_box_view_box; // Telegram (VENDOR.md edit 72)
         int               m_contain            = 0;
         css_border        m_outline;
         css_length        m_outline_offset;
@@ -370,6 +371,7 @@ namespace litehtml
         const css_length&        get_transform_origin_x() const { return m_transform_origin_x; }
         const css_length&        get_transform_origin_y() const { return m_transform_origin_y; }
         bool                     get_backface_hidden() const { return m_backface_hidden != 0; }
+        int                      get_transform_box() const { return m_transform_box; }
         int                      get_contain() const { return m_contain; }
         bool                     contains(int flags) const { return (m_contain & flags) != 0; }
         bool                     clips_contents() const { return m_overflow > overflow_visible || (m_contain & contain_paint) != 0; }

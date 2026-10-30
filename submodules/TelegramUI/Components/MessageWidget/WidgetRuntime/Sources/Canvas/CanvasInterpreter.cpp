@@ -1087,7 +1087,6 @@ void CanvasInterpreter::strokeGeometry(Geometry path, std::vector<CanvasOp>& out
             o.dashDropped = true;
         } else {
             o.dashes.assign(d.begin(), d.end());
-            o.dashSegments = uint64_t(segments);
         }
     }
     out.push_back(std::move(o));
@@ -1230,9 +1229,6 @@ void CanvasInterpreter::text(std::string_view full, double x, double y, std::opt
     }
     o.font = std::move(font->font);
     o.text = std::move(s);
-    o.textWidth = float(width);
-    o.textAscent = float(font->ascent);
-    o.textDescent = float(font->descent);
     o.strokeText = stroke;
     o.lineWidth = m_state.lineWidth;
     o.lineJoin = m_state.lineJoin;
@@ -1286,64 +1282,6 @@ void CanvasInterpreter::drawImage(std::shared_ptr<const HostImage> source, doubl
     o.dw = float((x1 - x0) * scaleX);
     o.dh = float((y1 - y0) * scaleY);
     out.push_back(std::move(o));
-}
-
-double CanvasInterpreter::deviceArea(const CanvasOp& op) const {
-    double minX = 1e300, minY = 1e300, maxX = -1e300, maxY = -1e300;
-    auto add = [&](double x, double y) {
-        minX = std::min(minX, x);
-        maxX = std::max(maxX, x);
-        minY = std::min(minY, y);
-        maxY = std::max(maxY, y);
-    };
-    const Matrix m{op.matrix[0], op.matrix[1], op.matrix[2], op.matrix[3], op.matrix[4], op.matrix[5]};
-    auto addUser = [&](double x, double y) {
-        double ox, oy;
-        m.apply(x, y, ox, oy);
-        add(ox, oy);
-    };
-    switch (op.kind) {
-    case CanvasOp::Kind::Reset:
-        return double(m_width) * double(m_height);
-    case CanvasOp::Kind::Fill:
-    case CanvasOp::Kind::Clear:
-    case CanvasOp::Kind::Stroke:
-        for (size_t i = 0; i + 1 < op.path.points.size(); i += 2) {
-            add(op.path.points[i], op.path.points[i + 1]);
-        }
-        if (op.kind == CanvasOp::Kind::Stroke) {
-            const double scale = std::sqrt(std::fabs(m.a * m.d - m.b * m.c));
-            const double grow = op.lineWidth * scale * std::max(1.0, double(op.miterLimit)) / 2;
-            minX -= grow;
-            minY -= grow;
-            maxX += grow;
-            maxY += grow;
-        }
-        break;
-    case CanvasOp::Kind::Text: {
-        // textDx is applied before scaleX, as the text is.
-        const double left = op.x + op.textDx * op.scaleX, right = left + op.textWidth * op.scaleX;
-        addUser(left, op.y - op.textAscent);
-        addUser(right, op.y - op.textAscent);
-        addUser(left, op.y + op.textDescent);
-        addUser(right, op.y + op.textDescent);
-        break;
-    }
-    case CanvasOp::Kind::Image:
-        addUser(op.dx, op.dy);
-        addUser(op.dx + op.dw, op.dy);
-        addUser(op.dx, op.dy + op.dh);
-        addUser(op.dx + op.dw, op.dy + op.dh);
-        break;
-    }
-    minX = std::max(minX, 0.0);
-    minY = std::max(minY, 0.0);
-    maxX = std::min(maxX, double(m_width));
-    maxY = std::min(maxY, double(m_height));
-    if (!(maxX > minX) || !(maxY > minY)) {
-        return 0;
-    }
-    return (maxX - minX) * (maxY - minY);
 }
 
 } // namespace wr::canvas

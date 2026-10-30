@@ -1,6 +1,8 @@
 #ifndef LITEHTML_HTML_TAG_H
 #define LITEHTML_HTML_TAG_H
 
+#include <algorithm>
+#include <unordered_map>
 #include "element.h"
 #include "background.h"
 #include "css_selector.h"
@@ -44,6 +46,19 @@ namespace litehtml
         mutable size_t         m_inherited_charged = 0;
         mutable uint32_t       m_inherited_epoch   = 0;
         bool m_anonymous_style = false;
+        mutable bool m_reads_var = false; // Telegram (VENDOR.md edit 17)
+        void note_reads_var(bool reads) const;
+        // Telegram (VENDOR.md edit 21): what each property's last var() splices charged (begin_splice).
+        struct splice_charge
+        {
+            size_t   bytes = 0;
+            uint64_t round = 0;
+        };
+        mutable std::unordered_map<string_id, splice_charge> m_splice_charges;
+        mutable string_id                                     m_splice_property = empty_id;
+        mutable uint64_t                                      m_splice_round    = 0;
+        // Gives back every splice charge this element holds.
+        void refund_splices() const;
         string_map             m_attrs;
         std::vector<string_id> m_pseudo_classes;
         const elements_list*   m_children_for_matching = nullptr; // Telegram (VENDOR.md edit 31.5)
@@ -88,6 +103,8 @@ namespace litehtml
         explicit html_tag(const std::shared_ptr<element>& parent, const std::string& style = "display: block");
 
         bool                          appendChild(const element::ptr& el) override;
+        bool                          accepts_child(string_id /*tag*/) const override { return true; } // Telegram (VENDOR.md edit 83)
+        bool                          accepts_text() const override { return true; }
         bool                          removeChild(const element::ptr& el) override;
         void                          clearRecursive() override;
         string_id                     tag() const override;
@@ -108,6 +125,21 @@ namespace litehtml
         const char* get_attr(const char* name, const char* def = nullptr) const override;
         void        apply_stylesheet(const litehtml::css& stylesheet) override;
         void        apply_matching(const litehtml::css* sheets[3], uint64_t epoch);
+        // Telegram (VENDOR.md edit 78): one of apply_matching's three passes (`sheet` 0 master, 1 author with the
+        // attributes parsed first, 2 user), charged as it charges them, with no match memo.
+        void        apply_matching_pass(const litehtml::css& stylesheet, int sheet, bool parse = true);
+        // Telegram (VENDOR.md edit 84): parse_attributes on this element alone, its children set aside and what it makes
+        // (a form control's parts) added to them; the attributes pass a build runs between the master and author passes.
+        void        parse_own_attributes();
+        // Takes `other`'s match: its style, its matched rules and what they charged, giving it this element's. For an
+        // element whose generated content a replay made again equal: the old one stays in the tree with the new match.
+        void        adopt_matched(html_tag& other);
+        // The rules matched, by selector, with whether each applied: sorted.
+        std::vector<std::pair<const css_selector*, bool>> used_rules() const;
+        // Telegram (VENDOR.md edit 78): the pass's rules applied to this element's generated children, where a build's
+        // apply_stylesheet reaches them: its ::before and a form control's lh-* parts right after its own rules
+        // (`after` false), its ::after once its descendants are matched (`after` true).
+        void        apply_matching_pass_generated(const litehtml::css& stylesheet, bool after);
         bool        flip_class(const std::string& from, const std::string& to, uint64_t epoch, int* region);
         void        note_flip(const std::string& from, const std::string& to, int region);
         void        forget_flips() { m_flips.clear(); }
@@ -125,6 +157,18 @@ namespace litehtml
         // Drops everything stylesheets and attributes contributed, including ::before and ::after, so the
         // element can be matched again exactly like a freshly built one.
         void forget_matched_styles();
+        // Telegram (VENDOR.md edit 17): whether this element's style read var() when it was last computed from its
+        // matched rules (a restyle substitutes nothing again: subst_vars replaces the var()s in the style).
+        bool reads_var() const { return m_reads_var; }
+        // Telegram (VENDOR.md edit 79): the environment its style's parses read (style::environment).
+        int style_environment() const { return m_style.environment(); }
+        // Telegram (VENDOR.md edit 17): whether its style, or its inline or animated style, declares a custom property.
+        bool declares_custom_properties() const;
+        // Telegram (VENDOR.md edit 21): gives back what this element holds of the style budget, as it leaves the tree.
+        void release_style_charges() const;
+        // Telegram (VENDOR.md edit 78): whether its match takes part in counting: its style declares counter-reset or
+        // counter-increment, it holds counter values, or a ::before or ::after of it reads a counter.
+        bool counted() const;
         // Telegram (VENDOR.md edit 31.5): the children :empty reads while document::apply_retag matches this element
         // again with them set aside (null: its own).
         void set_children_for_matching(const elements_list* children) { m_children_for_matching = children; }
@@ -139,6 +183,10 @@ namespace litehtml
         bool on_lbutton_up(bool is_click) override;
         void on_click() override;
         bool set_pseudo_class(string_id cls, bool add) override;
+        bool has_pseudo_class(string_id cls) const override
+        {
+            return std::find(m_pseudo_classes.begin(), m_pseudo_classes.end(), cls) != m_pseudo_classes.end();
+        }
         bool set_class(const char* pclass, bool add) override;
         bool is_replaced() const override;
         void compute_styles(bool recursive = true) override;
@@ -146,6 +194,8 @@ namespace litehtml
         void compute_background_style();
         // Telegram (VENDOR.md edit 26): document::root_declarations, on the root element only.
         void add_root_declarations();
+        // Telegram (VENDOR.md edit 80): an SVG paint attribute naming light-dark() marks the style as reading the scheme.
+        void note_paint_attributes();
         // Telegram (VENDOR.md edit 27): the animated_style_attribute's declarations, after the style attribute's.
         void add_animated_style();
         void draw(uint_ptr hdc, pixel_t x, pixel_t y, const position* clip,
@@ -162,6 +212,11 @@ namespace litehtml
         const css_token_vector* find_custom_property(string_id name) const;
         // Charges a var() splice of `bytes` to the style-byte budget (and to this element, for refresh); false if refused.
         bool        charge_splice(size_t bytes) const;
+        // Telegram (VENDOR.md edit 21): the property the splices that follow are for (empty_id: none), until end_splice.
+        // A property spliced again (a restyle adds the inline, animated or base style's var()s again) gives back what its
+        // last splice charged before it is charged again.
+        void        begin_splice(string_id property) const;
+        void        end_splice() const { m_splice_property = empty_id; }
         // Telegram (VENDOR.md edit 60): charges the inherited bullet URL this list item holds (false if refused), and gives
         // back what it charged, before the element is computed again.
         bool        charge_inherited(size_t bytes) const;

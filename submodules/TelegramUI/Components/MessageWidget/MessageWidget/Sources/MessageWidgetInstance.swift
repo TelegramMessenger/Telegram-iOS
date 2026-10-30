@@ -7,7 +7,7 @@ import UIKit
 /// core last reported. Main never calls into the core: every change is one task of the core's (`MessageWidgetCore`),
 /// which ends in a `WidgetSnapshot` that main applies in task order. Bridge calls and layout changes reach the host on
 /// the main queue after their snapshot is applied, so a host reacting to them never re-enters a widget mid-apply.
-/// Every task runs on the widget's queue in `MessageWidgetPool`; main waits for it within the turn's allowance and cap
+/// Every task runs on the widget's queue in `MessageWidgetPool`; main waits for it within the turn's cap
 /// (spec D3), and a snapshot that arrives later is applied, in order, from the handshake's mailbox.
 /// SDK v1 §2.8 (V2b plan, Task 4): a widget's stored areas as the client keeps them, [key, value] in insertion order.
 public struct MessageWidgetStorage: Equatable {
@@ -162,9 +162,10 @@ public final class MessageWidgetInstance {
     /// A widget whose boot has not finished is the offered width × this (spec D5): a fixed default, so the relayout
     /// when the boot lands moves the chat by the difference only.
     public static let placeholderHeight: CGFloat = 160.0
-    /// A timer, wake or frame task that spends more than this demotes its widget: from then on its timer and frame
-    /// tasks are not waited for (spec D6). The allowance's size, and fixed: measured in the widget's own units.
-    static let demotionUnits: UInt64 = 1_000_000
+    /// A timer, wake or frame task whose steps spend more than this of the widget thread's CPU, less the boot's own steps
+    /// within their exemption (`WidgetSnapshot.bootCpuMilliseconds`), demotes its widget: from then on its timer and
+    /// frame tasks are not waited for (spec D6; the CPU-clock limits design).
+    static let demotionCpuMilliseconds: Double = 10.0
 
     public private(set) var layoutVersion: Int = 0
     public private(set) var deadReason: String?
@@ -206,7 +207,7 @@ public final class MessageWidgetInstance {
     public let startedStopped: Bool
 
     private let core: MessageWidgetCore
-    /// Queues the core's tasks on the widget's queue in the pool, waits within the turn's allowance and cap, and hands
+    /// Queues the core's tasks on the widget's queue in the pool, waits within the turn's cap, and hands
     /// their snapshots to `apply` in task order (spec D3).
     private let handshake: WidgetHandshake<WidgetSnapshot>
     private(set) var theme: Theme
@@ -233,6 +234,7 @@ public final class MessageWidgetInstance {
     private var inLayoutCall = false
     /// The maximum height the core has: the boot's, then the last change `layout` handed over.
     private var requestedMaximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight
+    private var requestedContentSafeArea: MessageWidgetContentSafeArea = .none
     private var appliedSequence = 0
     /// The tile draws main asked for, and the newest one applied: a draw is pending while they differ.
     private var drawRequested = 0
@@ -291,13 +293,15 @@ public final class MessageWidgetInstance {
     /// restart policy's (§5.7): the widget's code never runs, and it shows the stopped badge.
     /// `context` and `state` (widget-sandbox v0.2): where the widget is and what it may do, fixed for its life; and the
     /// bot's state it starts with, which `setState` changes.
-    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty, startsStopped: Bool = false, pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale) {
+    /// `limits`: widget-sandbox v0.3.0's counted caps, strict for every widget the app shows (compat: the stress kit's
+    /// measuring runs). `cpuLimits`: its runtime limits, the product's for every widget the app shows.
+    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty, startsStopped: Bool = false, pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale, limits: MessageWidgetLimitPolicy = .strict, cpuLimits: MessageWidgetCpuLimits = .product) {
         let timers = MessageWidgetTimers()
         self.startedStopped = startsStopped
         let storageCommitSink = StorageCommitSink()
         self.storageCommitSink = storageCommitSink
         self.state = state
-        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, storage: storage, context: context, startsStopped: startsStopped, commitSink: storageCommitSink, timers: timers, scale: scale)
+        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, storage: storage, context: context, startsStopped: startsStopped, commitSink: storageCommitSink, timers: timers, scale: scale, limits: limits, cpuLimits: cpuLimits)
         self.handshake = WidgetHandshake(queue: pool.makeQueue(), policy: waitPolicy, turn: turn)
         self.theme = theme
         self.tileScale = scale
@@ -338,9 +342,13 @@ public final class MessageWidgetInstance {
     /// next `layout`: the first boots with it, a later one hands a change to the running widget (an edit of the anchors
     /// keeps the runtime), waited for like a width.
     public var maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight
+    /// widget-sandbox v0.4.0 (sdk-v1 §2.17, §5.12): what the bubble draws over the widget, its time over the bottom corner
+    /// when no caption is below it. Read by the next `layout`: the first boots with it, so the first height has the band;
+    /// a later one hands a change to the running widget, waited for like a width. An equal value is nothing.
+    public var contentSafeArea: MessageWidgetContentSafeArea = .none
 
     /// The widget's size at most `width` wide (spec D5). The first call boots the widget, a new width relays it out;
-    /// either is waited for within the turn's allowance and cap. Until it finishes the answer is the placeholder (no
+    /// either is waited for within the turn's cap. Until it finishes the answer is the placeholder (no
     /// boot yet) or the previous size, and the bubble lays out again when it does (`onLayoutChange`).
     public func layout(width: CGFloat) -> CGSize {
         dispatchPrecondition(condition: .onQueue(.main))
@@ -356,6 +364,15 @@ public final class MessageWidgetInstance {
             let maximumHeight = self.maximumHeight
             self.perform(.layout, wait: true, key: "maximumHeight") { core in
                 core.setMaximumHeight(maximumHeight)
+            }
+        }
+        if self.bootQueued, self.contentSafeArea != self.requestedContentSafeArea {
+            // sdk-v1 §5.12: only with the bubble's layout (a caption edited, "edited"), never per frame: an equal value is
+            // nothing.
+            self.requestedContentSafeArea = self.contentSafeArea
+            let area = self.contentSafeArea
+            self.perform(.layout, wait: true, key: "contentSafeArea") { core in
+                core.setContentSafeArea(area)
             }
         }
         if !self.bootQueued {
@@ -638,6 +655,12 @@ public final class MessageWidgetInstance {
 
     /// Tests only: `body` on the core, as a task of its own after every task queued before it (no snapshot); nil once the
     /// widget is destroyed.
+    /// The stress kit's statistics (widget-sandbox v0.3.0, packages/stress), read on the widget's queue after what it
+    /// runs now; nil once the widget has no session (stopped, destroyed). Development tooling: it waits for the queue.
+    public func stressStats() -> MessageWidgetStressStats? {
+        return self.onCore { $0.stressStats() } ?? nil
+    }
+
     func onCoreForTesting<T>(_ body: @escaping (MessageWidgetCore) -> T) -> T? {
         return self.onCore(body)
     }
@@ -683,29 +706,14 @@ public final class MessageWidgetInstance {
         return self.handshake.queue.isIdle
     }
 
-    /// Tests only: the units of work the core's last task did.
-    var lastTaskWorkForTesting: UInt64 {
-        return self.onCoreForTesting { $0.lastTaskWork } ?? 0
+    /// Tests only: the most CPU milliseconds a core task of `kind` spent in its runtime steps.
+    func largestTaskCpuMillisecondsForTesting(_ kind: WidgetSnapshot.Kind) -> Double {
+        return self.onCoreForTesting { $0.largestTaskCpuMilliseconds[kind] ?? 0.0 } ?? 0.0
     }
 
-    /// Tests only: the most work a bundled library's first install has done; none until M3 brings the libraries back.
-    var largestInstallWorkForTesting: UInt64 {
-        return 0
-    }
-
-    /// Tests only: the units of work the boot did (its scripts and lifecycle share one budget).
-    var bootWorkForTesting: UInt64 {
-        return self.onCoreForTesting { $0.bootWork } ?? 0
-    }
-
-    /// Tests only: the units of work the parse of the widget's markup did (not charged to the widget).
-    var parseWorkForTesting: UInt64 {
-        return self.onCoreForTesting { $0.parseWork } ?? 0
-    }
-
-    /// Tests only: the units of work the core's largest task after the boot did.
-    var largestTaskWorkForTesting: UInt64 {
-        return self.onCoreForTesting { $0.largestTaskWork } ?? 0
+    /// Tests only: the steps the CPU windows deferred so far.
+    var throttledStepsForTesting: UInt64 {
+        return self.onCoreForTesting { $0.session?.stats()?.throttledSteps ?? 0 } ?? 0
     }
 
     // MARK: tasks and snapshots
@@ -714,13 +722,15 @@ public final class MessageWidgetInstance {
         self.bootQueued = true
         self.requestedWidth = width
         // Read here, on main: a test clears it in a `defer` that may run before a boot it did not wait for.
-        let theme = self.theme, visible = self.visible, budgets = MessageWidgetCore.budgetsForTesting, maximumHeight = self.maximumHeight
+        let theme = self.theme, visible = self.visible, maximumHeight = self.maximumHeight
         let reducedMotion = self.reducedMotion
         let state = self.state
+        let contentSafeArea = self.contentSafeArea
         self.requestedMaximumHeight = maximumHeight
+        self.requestedContentSafeArea = contentSafeArea
         self.perform(.boot, wait: true) { core in
             core.setState(state)
-            core.boot(width: width, maximumHeight: maximumHeight, theme: theme, visible: visible, reducedMotion: reducedMotion, budgets: budgets)
+            core.boot(width: width, maximumHeight: maximumHeight, theme: theme, visible: visible, reducedMotion: reducedMotion, contentSafeArea: contentSafeArea)
         }
     }
 
@@ -739,9 +749,9 @@ public final class MessageWidgetInstance {
         let core = self.core
         let gate = self.pendingGate
         self.pendingGate = nil
-        return self.handshake.run(wait: wait, key: key, policy: policy) { meter in
+        return self.handshake.run(wait: wait, key: key, policy: policy) {
             gate?.pass()
-            return core.run(kind, meter: meter) {
+            return core.run(kind) {
                 work(core)
             }
         }
@@ -763,7 +773,8 @@ public final class MessageWidgetInstance {
             self.diagnostics.append(diagnostic)
         }
         self.lastError = snapshot.lastError
-        if !self.demoted, [.timer, .wake, .frame].contains(snapshot.kind), snapshot.units > MessageWidgetInstance.demotionUnits {
+        if !self.demoted, [.timer, .wake, .frame].contains(snapshot.kind),
+           snapshot.cpuMilliseconds - snapshot.bootCpuMilliseconds > MessageWidgetInstance.demotionCpuMilliseconds {
             self.demoted = true
         }
         if let frame = snapshot.frame {

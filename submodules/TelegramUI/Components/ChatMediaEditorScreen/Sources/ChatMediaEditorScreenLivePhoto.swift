@@ -58,7 +58,13 @@ extension ChatMediaEditorScreen.Node {
             self.livePhotoButtonMode = mode
             button.setLivePhotoMode(mode.legacyMode)
         }
-        let buttonFrame = chatMediaEditorLivePhotoButtonFrame(size: layout.size, safeInsets: safeInsets, keyboardHeight: layout.inputHeight ?? 0.0, buttonSize: chatMediaEditorLivePhotoButtonSize)
+        // iPhone Duo: the badge sits under the chat name, wherever its row is (see the frame function).
+        var titleRowMaxY: CGFloat?
+        if layout.reservedCorners != .none {
+            let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout))
+            titleRowMaxY = max(recipientLayout.arrowFrame.maxY, recipientLayout.labelFrame.maxY)
+        }
+        let buttonFrame = chatMediaEditorLivePhotoButtonFrame(size: layout.size, safeInsets: safeInsets, keyboardHeight: layout.inputHeight ?? 0.0, buttonSize: chatMediaEditorLivePhotoButtonSize, titleRowMaxY: titleRowMaxY, toolbarSide: self.toolbarSide(layout: layout))
         if isNew {
             button.frame = buttonFrame
         } else {

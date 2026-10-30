@@ -26,6 +26,10 @@
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Render/WidgetContainer.h"
 #include "Tests/FakeRenderHost.h"
+#include "Sources/Host/HostState.h"
+#include "Sources/Support/Errors.h"
+#include "Tests/IncrementalEdits.h"
+#include "Tests/LayerChurn.h"
 #include "Tests/RenderHarness.h"
 
 using wr::Layer;
@@ -114,13 +118,8 @@ std::set<wr::LayerId> idsWithKey(const LayerTree& tree, wr::NodeKey key) {
     return out;
 }
 
-bool isReset(const std::vector<LayerOp>& ops) {
-    return ops.size() == 1 && ops[0].kind == LayerOp::Reset;
-}
-
 const char* opName(LayerOp::Kind kind) {
     switch (kind) {
-    case LayerOp::Reset: return "reset";
     case LayerOp::Insert: return "insert";
     case LayerOp::Remove: return "remove";
     case LayerOp::Move: return "move";
@@ -143,12 +142,13 @@ std::string describe(const std::vector<LayerOp>& ops) {
     return out;
 }
 
-// Every node of `after` that no op names and that is not an ancestor of a named one is `before`'s node with its id.
+// Every node of `after` that no op names and that is not an ancestor of a named one, in `after` or in `before` (a Remove
+// or a Move changes the parent it leaves), is `before`'s node with its id.
 bool unnamedAreShared(const LayerTree& before, const LayerTree& after, const std::vector<LayerOp>& ops, std::string& why) {
     std::map<wr::LayerId, const MirrorNode*> was, now;
-    std::map<wr::LayerId, wr::LayerId> parents;
+    std::map<wr::LayerId, wr::LayerId> parents, formerParents;
     if (before.mirror()) {
-        collect(*before.mirror(), was);
+        collect(*before.mirror(), was, &formerParents);
     }
     if (after.mirror()) {
         collect(*after.mirror(), now, &parents);
@@ -156,9 +156,9 @@ bool unnamedAreShared(const LayerTree& before, const LayerTree& after, const std
     std::set<wr::LayerId> touched;
     for (const LayerOp& op : ops) {
         for (wr::LayerId id : {op.node, op.parent}) {
-            for (wr::LayerId at = id; at != 0; at = parents.count(at) ? parents[at] : 0) {
-                if (!touched.insert(at).second) {
-                    break;
+            for (const auto* chain : {&parents, &formerParents}) {
+                for (wr::LayerId at = id; at != 0; at = chain->count(at) ? chain->at(at) : 0) {
+                    touched.insert(at);
                 }
             }
         }
@@ -265,8 +265,6 @@ struct IdTree {
         case LayerOp::Clip:
         case LayerOp::Group:
             return children.count(op.node) != 0;
-        case LayerOp::Reset:
-            return false;
         }
         return false;
     }
@@ -372,12 +370,9 @@ bool sameButForFloatNoise(const std::string& a, const std::string& b) {
 
 // The published mirror equals a freshly built one: kinds, keys, order, origins, passes, clip chains and content (numbers
 // up to float noise).
-bool equalsAFreshMirror(RenderEnv& env, const std::string& what, std::shared_ptr<const LayerTree>* fresh = nullptr) {
+bool equalsAFreshMirror(RenderEnv& env, const std::string& what) {
     std::shared_ptr<const LayerTree> tree = env.render().layerTree();
     std::shared_ptr<const LayerTree> rebuilt = env.render().freshMirrorForTesting();
-    if (fresh) {
-        *fresh = rebuilt;
-    }
     if (!tree || !tree->mirror() || !rebuilt || !rebuilt->mirror()) {
         return false;
     }
@@ -510,18 +505,9 @@ WR_TEST(testOpsMatchAFreshMirror) {
                              " [hidden]{display:none} li{margin:1px} td{padding:2px} p{margin:2px}";
     const std::string sibling =
         base + " li:nth-child(2n){color:#00f} p:nth-child(2n){background:#eee} .x + .y{color:#0a0} .x ~ span{text-decoration:underline}"
-               " li:last-child{border-bottom:2px solid #00f} p:first-child{padding-left:3px}";
-    auto pageOf = [](const std::string& sheet, const std::string& prefix) {
-        return "<!doctype html><style>" + sheet + "</style><body style='margin:0'>" + prefix +
-               "<div id=a class=box><p class=x>alpha <b>bold</b> text</p><p>beta</p><span class=y>gamma</span></div>"
-               "<ul id=l><li>one</li><li class=x>two</li><li>three</li></ul>"
-               "<table id=t>\n<caption>cap</caption>\n<thead><tr><td>h1</td></tr></thead>\n"
-               "<tbody><tr><td>c1</td><td class=y>c2</td></tr>\n<tr><td>c3</td><td>c4</td></tr></tbody>\n</table>"
-               "<pre id=pre>pre  text\n line</pre>"
-               "<div id=f><input value=ab><input type=checkbox checked><button>go</button></div>"
-               "<svg width=30 height=30 viewBox='0 0 30 30'><circle cx=15 cy=15 r=10 fill=red></circle></svg>"
-               "<template id=tpl><i class=x>tpl one</i><b>tpl two</b></template>"
-               "<div id=c class=y>tail</div></body>";
+               " li:last-child{border-bottom:2px solid #00f} p:first-child{padding-left:3px} li:last-child b{color:#c60}";
+    const auto pageOf = [](const std::string& sheet, const std::string& prefix) {
+        return wr_test::editPage(sheet, "", prefix);
     };
     std::string many = "<section id=many>";
     for (int n = 0; n < 40; n++) {
@@ -536,6 +522,12 @@ WR_TEST(testOpsMatchAFreshMirror) {
         std::string prefix;
         /// Text and class edits only: flushes the fork's render tree survives, which publish operations.
         bool keepTree = false;
+        /// The kinds the group draws from (kEditHelpersJS's), when not the general mix.
+        std::vector<uint32_t> kinds = {};
+        /// Between batches, with a chance of 1 in 6 each: a new width, the other theme, reduced motion toggled, a tap.
+        bool environment = false;
+        /// Between batches, one animation frame of 16 ms, whose flush is the batch's.
+        bool animated = false;
     };
     // Beyond Task 9's twenty seeds: a sheet whose class rules are paint-only (no attribute or positional selector, so
     // class changes are patched with the render tree kept), `z` adding opacity, so the operations themselves are
@@ -549,87 +541,39 @@ WR_TEST(testOpsMatchAFreshMirror) {
         {"plain, many paragraphs", 16, 20, base, many},
         {"paint-only classes", 21, 30, neutral, many},
         {"paint-only classes, text and class edits only", 31, 40, neutral, many, true},
+        // Every kind of change (the incremental render plan, Task 8), as the render oracle has them.
+        {"attributes", 50, 52, base, "", false, {21, 21, 21, 0, 1, 2, 3, 4}},
+        {"box types", 53, 55, base, "", false, {22, 22, 22, 0, 1, 2, 3, 4}},
+        {"sheets", 56, 58, base, "", false, {23, 23, 25, 25, 0, 1, 2, 3, 4}},
+        {"document element", 59, 61, base, "", false, {24, 24, 6, 7}},
+        {"environment", 62, 64, base + wr_test::kEnvironmentSheet, "", false, {}, true},
+        {"animated with structure", 65, 67,
+         base + " @keyframes turn{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}"
+                " .x{animation:turn 1s linear infinite} .y{animation:turn 2s linear infinite}",
+         "", false, {0, 1, 2, 3, 4}, false, true},
+        // The incremental render plan, Step 5: the document's own head and body, and a <br>'s attributes.
+        {"document level", 101, 103, base, "", false, {29, 29, 29, 0, 6, 9}},
+        {"br attributes", 104, 106, base + " br.x{display:block;height:4px} br.box{border:1px solid #000}", "", false,
+         {30, 30, 30, 0, 2}},
+        // Twidget edit 88: :empty beside sibling combinators whose rules change boxes and content.
+        {":empty beside sibling combinators", 110, 112,
+         base + " :empty + *{display:none} div:not(:empty) + p::before{content:'e'} p:empty ~ span{float:left;width:9px}"
+                " li:empty ~ li b{display:block}",
+         "", false, {0, 1, 2, 3, 4}},
     };
-    const std::string helpers = R"JS(
-globalThis.__edit = (() => {
-  const tpl = document.getElementById('tpl');
-  const excluded = n => n.localName === 'template';
-  function walk(root, out) {
-    for (let n = root.firstChild; n; n = n.nextSibling) {
-      if (n.nodeType === 1 && excluded(n)) continue;
-      if (n.nodeType !== 1 && n.nodeType !== 3) continue;
-      out.push(n);
-      if (n.nodeType === 1) walk(n, out);
-    }
-    return out;
-  }
-  const nodes = () => walk(document.body, []);
-  const elements = () => nodes().filter(n => n.nodeType === 1);
-  const containers = () => [document.body].concat(elements());
-  const texts = () => nodes().filter(n => n.nodeType === 3);
-  const pick = (list, i) => list.length ? list[i % list.length] : null;
-  function el(tag, attrs, kids) {
-    const e = document.createElement(tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    for (const c of kids) e.append(c);
-    return e;
-  }
-  function make(k) {
-    switch (k % 12) {
-      case 0: return document.createTextNode('new text');
-      case 1: return el('p', {class: 'x'}, ['para ', el('b', {}, ['in'])]);
-      case 2: return el('span', {class: 'y'}, ['sp']);
-      case 3: return el('li', {}, ['item']);
-      case 4: return el('div', {class: 'box'}, [el('p', {}, ['inner']), el('span', {}, ['s'])]);
-      case 5: return el('input', {value: 'zz'}, []);
-      case 6: return el('b', {}, ['b']);
-      case 7: return el('tr', {}, [el('td', {}, ['r1']), el('td', {class: 'y'}, ['r2'])]);
-      case 8: return el('q', {}, ['quote']);
-      case 10: return el('pre', {}, ['p  re\n x']);
-      default: return document.createTextNode(' ');
-    }
-  }
-  const words = ['', 'a', 'two words', 'three little words', 'x & <y>', '  spaced  out  ', 'longer text that wraps around the line',
-                 'a much longer text that certainly wraps across more than one line at this width'];
-  const htmls = ['', '<b>b</b> text', '<p class=x>p</p><span class=y>s</span>', '<li>l1</li><li class=x>l2</li>', 'plain'];
-  const classes = ['', 'x', 'y', 'x y', 'box', 'z'];
-  const styles = ['', 'color:#090', 'padding:3px', 'display:none', 'font-size:20px', 'background:#ccc;margin:2px'];
-  return (kind, a, b, c) => {
-    try {
-      switch (kind) {
-        case 0: { const p = pick(containers(), a); p.append(make(b)); return 'append'; }
-        case 1: { const p = pick(containers(), a); p.insertBefore(make(b), p.childNodes[c % (p.childNodes.length + 1)] || null); return 'insertBefore'; }
-        case 2: { const n = pick(nodes(), a); if (n) n.remove(); return 'remove'; }
-        case 3: {
-          const n = pick(nodes(), a), p = pick(containers(), b);
-          if (n) p.insertBefore(n, p.childNodes[c % (p.childNodes.length + 1)] || null);
-          return 'move';
-        }
-        case 4: { const e = pick(elements(), a); if (e) e.textContent = words[b % words.length]; return 'textContent'; }
-        case 5: { const e = pick(elements(), a); if (e) e.innerHTML = htmls[b % htmls.length]; return 'innerHTML'; }
-        case 6: { const e = pick(elements(), a); if (e) e.setAttribute('class', classes[b % classes.length]); return 'class'; }
-        case 7: { const e = pick(elements(), a); if (e) e.setAttribute('style', styles[b % styles.length]); return 'style'; }
-        case 8: {
-          const e = pick(elements(), a);
-          if (e) { if (e.hasAttribute('hidden')) e.removeAttribute('hidden'); else e.setAttribute('hidden', ''); }
-          return 'hidden';
-        }
-        case 9: case 10: case 11: { const t = pick(texts(), a); if (t) t.data = words[b % words.length]; return 'data'; }
-        default: tpl.content.append(make(b)); return 'template append';
-      }
-    } catch (e) {
-      return 'threw ' + e.name;
-    }
-  };
-})(); 'ok'
-)JS";
-    uint64_t flushes = 0, kept = 0, rebuilds = 0, unplaceable = 0, builds = 0, frames = 0, contents = 0, inserts = 0,
-             moves = 0, removes = 0;
+    const std::string helpers = wr_test::kEditHelpersJS;
+    uint64_t flushes = 0, kept = 0, builds = 0, frames = 0, contents = 0, inserts = 0,
+             moves = 0, removes = 0, multiple = 0;
+    // The layers each flush re-creates though their element did not change (the churn metric, Tests/LayerChurn.h).
+    wr_test::ChurnTally churn;
     for (const Group& group : groups) {
+        // Taps that changed what :hover or :active match: an environment group must have some.
+        uint64_t actionChanges = 0;
         for (int seed = group.firstSeed; seed <= group.lastSeed; seed++) {
             RenderEnv env(pageOf(group.sheet, group.prefix));
+            wr_test::ScopedChurnProbe churnProbe(env.render(), churn);
             CHECK_EQ(env.env().eval(helpers), std::string("ok"));
-            std::shared_ptr<const LayerTree> freshBefore = env.render().freshMirrorForTesting();
+            env.render().takeChangedRects();
             std::mt19937 rng{uint32_t(seed)};
             int edits = 0;
             bool reported = false;
@@ -637,39 +581,95 @@ globalThis.__edit = (() => {
                 const int batch = 1 + int(rng() % 5);
                 std::string done;
                 for (int k = 0; k < batch && edits < 200; k++, edits++) {
-                    static const uint32_t kKeepTreeKinds[] = {6, 9, 10, 11};
+                    // Class and text edits only (kEditHelpersJS's kinds 6 and 9).
+                    static const uint32_t kKeepTreeKinds[] = {6, 9, 9, 9};
                     const uint32_t drawn = uint32_t(rng() % 13);
-                    const uint32_t kind = group.keepTree ? kKeepTreeKinds[drawn % 4] : drawn, a = uint32_t(rng() % 1000),
+                    const uint32_t kind = group.keepTree        ? kKeepTreeKinds[drawn % 4]
+                                          : !group.kinds.empty() ? group.kinds[rng() % group.kinds.size()]
+                                                                 : drawn,
+                                   a = uint32_t(rng() % 1000),
                                    b = uint32_t(rng() % 1000), c = uint32_t(rng() % 1000);
                     const std::string call = "__edit(" + std::to_string(kind) + ", " + std::to_string(a) + ", " +
                                              std::to_string(b) + ", " + std::to_string(c) + ")";
                     done += (done.empty() ? "" : "; ") + env.env().eval(call) + " " + call;
                 }
+                if (group.environment) {
+                    switch (rng() % 6) {
+                    case 0: {
+                        static const double kWidths[] = {360, 300, 250};
+                        const double width = kWidths[rng() % 3];
+                        env.render().setWidth(env.ctx(), width);
+                        done += "; width " + std::to_string(int(width));
+                        break;
+                    }
+                    case 1: {
+                        const wr::Theme theme = env.render().options().theme == wr::Theme::Light ? wr::Theme::Dark : wr::Theme::Light;
+                        env.render().setTheme(env.ctx(), theme, wr_test::themeDeclarations(theme));
+                        done += theme == wr::Theme::Dark ? "; dark" : "; light";
+                        break;
+                    }
+                    case 2:
+                        env.render().setReducedMotion(env.ctx(), !env.render().options().reducedMotion);
+                        done += "; reduced motion toggled";
+                        break;
+                    case 3: {
+                        const double x = double(rng() % 300), y = double(rng() % 400);
+                        const auto actionState = [&] {
+                            return env.env().eval("[...document.querySelectorAll(':hover, :active')].length + ''");
+                        };
+                        const std::string was = actionState();
+                        // Each pointer event is a task, run when the loop drains.
+                        try {
+                            wr::HostState::of(env.ctx()).pointer(env.ctx(), wr::PointerPhase::Down, x, y, 7, true);
+                            env.env().drain();
+                            wr::HostState::of(env.ctx()).pointer(env.ctx(), wr::PointerPhase::Up, x, y, 7, true);
+                            env.env().drain();
+                        } catch (const wr::Aborted&) {
+                        }
+                        actionChanges += actionState() != was;
+                        done += "; tap " + std::to_string(int(x)) + "," + std::to_string(int(y));
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
                 std::shared_ptr<const LayerTree> before = env.render().layerTree();
                 const uint64_t walks = env.render().mirrorWalks();
                 const uint64_t patches = env.render().patchCount();
                 const uint64_t built = env.render().buildCount();
-                const uint64_t treeResets = env.render().treeRebuildResets();
-                const uint64_t lostResets = env.render().unplaceableResets();
+                if (group.animated) {
+                    // The frame's flush is this batch's.
+                    env.env().frame(16.0);
+                }
                 env.flush();
+                // Nothing after the boot builds, and nothing stops the widget.
+                if ((env.render().buildCount() != built || env.env().runtime().stopReason() != wr::StopReason::None) &&
+                    !reported) {
+                    std::printf("  built or stopped, %s seed %d: %s\n", group.name, seed, done.c_str());
+                }
+                CHECK_EQ(env.render().buildCount(), built);
+                CHECK(env.env().runtime().stopReason() == wr::StopReason::None);
                 if (env.render().patchCount() == patches && env.render().buildCount() == built) {
                     continue;   // clean: nothing was published
                 }
                 flushes++;
                 std::shared_ptr<const LayerTree> after = env.render().layerTree();
                 const std::vector<LayerOp> ops = env.render().layerOps();
-                const bool reset = isReset(ops);
                 const bool patched = env.render().patchCount() != patches;
                 const std::string what = "seed " + std::to_string(seed) + ", edit " + std::to_string(edits) + " (" +
-                                         (patched ? (reset ? "patched, reset" : "patched, ops") : "rebuilt") + "): " + done;
-                rebuilds += env.render().treeRebuildResets() - treeResets;
-                unplaceable += env.render().unplaceableResets() - lostResets;
+                                         (patched ? "patched" : "built") + "): " + done;
                 builds += !patched;
                 bool same = flattensAsRecorded(env, what);
-                std::shared_ptr<const LayerTree> freshAfter;
-                same = equalsAFreshMirror(env, what, &freshAfter) && same;
+                same = equalsAFreshMirror(env, what) && same;
                 std::string why;
-                if (!reset) {
+                // A batch that published more than once (an animation frame's second pass publishes what its
+                // style-change step started) is held to its end state alone: the fresh mirror, the recorded tree and
+                // the union of its rects. The operations and walks below are one publish's.
+                const uint64_t publishes = (env.render().patchCount() - patches) + (env.render().buildCount() - built);
+                if (publishes > 1) {
+                    multiple++;
+                } else {
                     kept++;
                     // Surviving nodes keep their ids: every node of `before` that no Remove took is still there.
                     std::map<wr::LayerId, const MirrorNode*> was = nodesOf(*before), now = nodesOf(*after);
@@ -707,11 +707,15 @@ globalThis.__edit = (() => {
                     } else if (!unnamedAreShared(*before, *after, ops, why)) {
                         same = false;
                     }
-                } else if (patched && env.render().mirrorWalks() != walks + 1) {
-                    why = "a reset that did not walk once";
-                    same = false;
                 }
-                if (!covers(env.render().changedRects(), wr::changedRects(freshBefore.get(), *freshAfter), why)) {
+                // The union of the batch's publishes (an animation frame can publish twice), as the app draws from it,
+                // against the diff of the published trees: they are held equal to fresh ones above, and share every node
+                // no operation names, which the diff matches by identity before it matches the rest by key. A batch that
+                // built shares nothing with the tree before it (the diff then matches anonymous nodes by their order
+                // alone, which an insertion after the build shifts), and a build's rects are that diff's: it is held to
+                // its end state alone.
+                const std::optional<std::vector<litehtml::position>> changed = env.render().takeChangedRects();
+                if (env.render().buildCount() == built && !covers(changed, wr::changedRects(before.get(), *after), why)) {
                     same = false;
                 }
                 if (!same && !reported) {
@@ -719,20 +723,82 @@ globalThis.__edit = (() => {
                 }
                 reported = reported || !same;
                 CHECK(same);
-                freshBefore = freshAfter;
             }
         }
+        if (group.environment) {
+            std::printf("  %s: %llu taps changed :hover or :active\n", group.name, (unsigned long long)actionChanges);
+        }
+        CHECK(!group.environment || actionChanges > 0);
     }
     std::printf("  %llu flushes: %llu published operations (%llu frames, %llu contents, %llu inserts, %llu moves, %llu"
-                " removes), %llu reset after the fork rebuilt its render tree, %llu reset for a change the mirror could not"
-                " place, %llu full builds\n",
+                " removes), %llu full builds, %llu batches that published more than once\n",
                 (unsigned long long)flushes, (unsigned long long)kept, (unsigned long long)frames,
                 (unsigned long long)contents, (unsigned long long)inserts, (unsigned long long)moves,
-                (unsigned long long)removes, (unsigned long long)rebuilds, (unsigned long long)unplaceable,
-                (unsigned long long)builds);
-    // The fixture reaches both kinds of flush.
+                (unsigned long long)removes, (unsigned long long)builds, (unsigned long long)multiple);
+    std::printf("churn (ops oracle): %s", churn.describe().c_str());
+    // The fixture reaches every kind of operation, and a replaced render subtree, the root's included, is placed.
     CHECK(kept > 0);
-    CHECK(rebuilds > 0);
+    CHECK(inserts > 0 && removes > 0);
+}
+
+// The boot's first publish is Inserts into an empty structure, so the stream a layer backend reads has one shape from the
+// start: every op an Insert, the root's first under parent 0, and replayed they give the published tree, a group, a
+// clipper, a positioned child and a table with a caption included; a fresh tree's build publishes the same.
+WR_TEST(testTheBootPublishesInserts) {
+    RenderEnv env("<!doctype html><style>body{margin:0} .g{opacity:.5} .c{overflow:hidden;height:20px}"
+                  " .r{position:relative} .a{position:absolute;left:3px}</style><body><div class=g><p>group</p></div>"
+                  "<div class=c><p>clipped</p><p>more</p></div><div class=r><span class=a>abs</span>rel</div>"
+                  "<table><caption>cap</caption><tr><td>cell</td></tr></table></body>");
+    wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
+    fresh.build(env.ctx());
+    for (wr::RenderTree* tree : {&env.render(), &fresh}) {
+        const std::vector<LayerOp>& ops = tree->layerOps();
+        const std::string why = wr_test::insertsMismatch(*tree->layerTree(), ops);
+        if (!why.empty()) {
+            std::printf("  %s: %s\n", tree == &fresh ? "a fresh tree's build" : "the boot", why.c_str());
+        }
+        CHECK(why.empty());
+        CHECK(ops.size() > 4 && ops[0].parent == 0 && ops[0].node == tree->layerTree()->mirror()->id);
+    }
+}
+
+// The mirror diff matches the nodes two trees share first (a mirror's publishes share every node no operation names):
+// a node removed and one inserted elsewhere with its key give their own rects, not a reorder of everything shared.
+WR_TEST(testTheMirrorDiffMatchesSharedNodesFirst) {
+    RenderEnv env("<!doctype html><style>p{margin:0}</style><body style='margin:0;height:200px'><p>a</p><p>b</p><p>c</p></body>");
+    const std::shared_ptr<const LayerTree> tree = env.render().layerTree();
+    const MirrorNode& root = *tree->mirror();
+    CHECK_EQ(root.children.size(), size_t(3));
+    if (root.children.size() != 3) {
+        return;
+    }
+    const auto& children = root.children;
+    auto elsewhere = [&](wr::LayerId id, float y, wr::NodeKey key = 99) {
+        auto node = std::make_shared<MirrorNode>(*children[0]);
+        node->id = id;
+        node->key = key;
+        node->origin.y = y;
+        return std::shared_ptr<const MirrorNode>(node);
+    };
+    auto treeOf = [&](std::vector<std::shared_ptr<const MirrorNode>> nodes) {
+        auto copy = std::make_shared<MirrorNode>(root);
+        copy->children = std::move(nodes);
+        return std::make_shared<const LayerTree>(tree->width(), tree->height(), std::shared_ptr<const MirrorNode>(copy));
+    };
+    auto onlyBelow = [](const std::optional<std::vector<litehtml::position>>& rects) {
+        CHECK(rects && !rects->empty());
+        if (rects) {
+            for (const auto& rect : *rects) {
+                CHECK(rect.y.value() >= 140);
+            }
+        }
+    };
+    onlyBelow(wr::changedRects(treeOf({children[0], elsewhere(1001, 150), children[1], children[2]}).get(),
+                               *treeOf({children[0], children[1], children[2], elsewhere(1002, 170)})));
+    // Two matched by key that swap places between the same shared ones, painting the same: their order changed.
+    onlyBelow(wr::changedRects(
+        treeOf({children[0], elsewhere(1003, 150, 98), elsewhere(1004, 150, 99), children[1], children[2]}).get(),
+        *treeOf({children[0], elsewhere(1005, 150, 99), elsewhere(1006, 150, 98), children[1], children[2]})));
 }
 
 // The app's contract: the ops, applied in order to the previous tree's id structure, give the new tree's.
@@ -760,9 +826,7 @@ WR_TEST(testOpsReplayOnThePreviousTree) {
         }
         CHECK(!ops.empty());
         IdTree structure = IdTree::of(*before->mirror());
-        if (isReset(ops)) {
-            structure = IdTree::of(*after->mirror());
-        } else {
+        {
             opFlushes++;
             bool applies = true;
             for (const LayerOp& op : ops) {
@@ -808,7 +872,6 @@ WR_TEST(testAMovedParagraphIsAFrameNotACapture) {
     CHECK_EQ(env.render().mirrorWalks(), walks);
     std::shared_ptr<const LayerTree> after = env.render().layerTree();
     const std::vector<LayerOp>& ops = env.render().layerOps();
-    CHECK(!isReset(ops));
     std::map<wr::LayerId, std::set<LayerOp::Kind>> named;
     for (const LayerOp& op : ops) {
         named[op.node].insert(op.kind);
@@ -856,7 +919,6 @@ WR_TEST(testAFractionalMovePaintsAgain) {
     const uint64_t builds = env.render().buildCount();
     edit(env, "document.getElementById('p1').firstChild.data = 'a first paragraph long enough to take two lines'");
     CHECK_EQ(env.render().buildCount(), builds);
-    CHECK(!isReset(env.render().layerOps()));
     std::map<wr::LayerId, std::set<LayerOp::Kind>> named;
     for (const LayerOp& op : env.render().layerOps()) {
         named[op.node].insert(op.kind);
@@ -867,8 +929,8 @@ WR_TEST(testAFractionalMovePaintsAgain) {
     CHECK(equalsAFreshMirror(env, "a fractional move"));
 }
 
-// A paint-order property changed by a class: position and float rebuild the fork's render tree (Reset); opacity keeps
-// it, and the element's node becomes a Context (a remove and an insert) with its contents moved into it.
+// A paint-order property changed by a class: position and float replace the element's render subtree (placed again);
+// opacity keeps it, and the element's node becomes a Context (a remove and an insert) with its contents moved into it.
 WR_TEST(testPaintOrderChangeIsAMove) {
     RenderEnv env("<!doctype html><style>p{margin:0} .pos{position:relative;z-index:1} .fl{float:left} .op{opacity:.5}"
                   "</style><body style='margin:0'><p id=a>alpha</p><div id=t style='background:#0f0'><p>target text</p>"
@@ -881,16 +943,9 @@ WR_TEST(testPaintOrderChangeIsAMove) {
             const uint64_t walks = env.render().mirrorWalks();
             edit(env, std::string("document.getElementById('t').className = '") + (on ? cls : "") + "'");
             const std::vector<LayerOp>& ops = env.render().layerOps();
-            const bool reset = isReset(ops);
-            std::printf("  %s %s: %s\n", on ? "adding" : "removing", cls,
-                        reset ? "Reset (the fork rebuilt its render tree)" : "operations");
             const std::string what = std::string(on ? "add " : "remove ") + cls;
             CHECK(flattensAsRecorded(env, what));
             CHECK(equalsAFreshMirror(env, what));
-            if (reset) {
-                CHECK_EQ(env.render().mirrorWalks(), walks + 1);
-                continue;
-            }
             CHECK_EQ(env.render().mirrorWalks(), walks);
             bool reordered = false, removed = false, inserted = false;
             for (const LayerOp& op : ops) {
@@ -939,7 +994,6 @@ WR_TEST(testIdentitySurvivesATreeKeepingPatch) {
         CHECK_EQ(env.render().patchCount(), patches + 1);
         CHECK_EQ(env.render().buildCount(), builds);
         CHECK_EQ(env.render().mirrorWalks(), walks);
-        CHECK(!isReset(env.render().layerOps()));
         std::shared_ptr<const LayerTree> after = env.render().layerTree();
         const auto was = nodesOf(*before);
         const auto now = nodesOf(*after);
@@ -958,27 +1012,222 @@ WR_TEST(testIdentitySurvivesATreeKeepingPatch) {
     }
 }
 
-// A structural edit: the fork rebuilds its render tree, so the flush publishes Reset and a mirror built afresh.
-WR_TEST(testStructuralEditPublishesReset) {
-    RenderEnv env("<!doctype html><style>p{margin:0}</style><body style='margin:0;height:200px'><p id=p1>one</p><p>two</p>"
-                  "</body>");
+// A flush that re-placed what changed (Step 3): published as operations and no build walk, replayed on the
+// previous tree into the new one, every node no operation names the same object, and equal to a fresh mirror.
+bool placedWithOperations(RenderEnv& env, const std::string& script, const std::string& what) {
     std::shared_ptr<const LayerTree> before = env.render().layerTree();
     const uint64_t patches = env.render().patchCount();
     const uint64_t walks = env.render().mirrorWalks();
-    const uint64_t resets = env.render().treeRebuildResets();
-    edit(env, "const p = document.createElement('p'); p.textContent = 'three'; document.body.append(p)");
-    CHECK_EQ(env.render().patchCount(), patches + 1);
-    CHECK(isReset(env.render().layerOps()));
-    CHECK_EQ(env.render().mirrorWalks(), walks + 1);
-    CHECK_EQ(env.render().treeRebuildResets(), resets + 1);
-    CHECK(flattensAsRecorded(env, "append a paragraph"));
-    CHECK(equalsAFreshMirror(env, "append a paragraph"));
-    // A Reset publishes new nodes: none of the old ids survives.
-    const auto was = nodesOf(*before);
-    for (const auto& [id, node] : nodesOf(*env.render().layerTree())) {
-        CHECK(!was.count(id));
+    edit(env, script);
+    const std::vector<LayerOp>& ops = env.render().layerOps();
+    std::shared_ptr<const LayerTree> after = env.render().layerTree();
+    std::string why;
+    if (env.render().patchCount() != patches + 1) {
+        why = "not one patch";
+    } else if (env.render().mirrorWalks() != walks) {
+        why = "walked as a build";
+    } else {
+        IdTree structure = IdTree::of(*before->mirror());
+        bool applies = true;
+        for (const LayerOp& op : ops) {
+            applies = structure.apply(op) && applies;
+        }
+        if (!applies || !(structure == IdTree::of(*after->mirror()))) {
+            why = "the ops do not replay into the new tree";
+        } else {
+            unnamedAreShared(*before, *after, ops, why);
+        }
     }
-    CHECK(env.render().changedRects().has_value() && !env.render().changedRects()->empty());
+    if (!why.empty()) {
+        std::printf("  %s: %s\n  ops: %s\n", what.c_str(), why.c_str(), describe(ops).c_str());
+    }
+    const bool flattens = flattensAsRecorded(env, what);
+    const bool fresh = equalsAFreshMirror(env, what);
+    return why.empty() && flattens && fresh;
+}
+
+size_t countOps(const std::vector<LayerOp>& ops, LayerOp::Kind kind) {
+    return size_t(std::count_if(ops.begin(), ops.end(), [kind](const LayerOp& op) { return op.kind == kind; }));
+}
+
+// A structural edit the fork does not link (inline content beside a block, twidget edit 89) replaces #b's render subtree
+// (edit 74), and the mirror removes its old nodes and inserts the new ones where a fresh walk has them; #a's nodes are
+// the same objects, the paragraph after moves.
+WR_TEST(testAReplacedSubtreeIsPlacedWithOperations) {
+    RenderEnv env("<!doctype html><style>p{margin:0} div{border:1px solid #000;margin:2px}</style><body style='margin:0;height:200px'>"
+                  "<div id=a><p>a</p></div><div id=b><p>b</p></div><p>after</p></body>");
+    CHECK(placedWithOperations(env, "const s = document.createElement('span'); s.textContent = 'new'; document.getElementById('b').append(s)",
+                               "a span appended to #b"));
+    const std::vector<LayerOp>& ops = env.render().layerOps();
+    CHECK(countOps(ops, LayerOp::Remove) > 0);
+    CHECK(countOps(ops, LayerOp::Insert) > 0);
+    CHECK(countOps(ops, LayerOp::Frame) > 0);
+}
+
+// A block appended to #b is linked (twidget edit 89): the mirror inserts its nodes where a fresh walk has them and removes
+// none; #b's border is re-captured and the paragraph after moves.
+WR_TEST(testALinkedSubtreeIsPlacedWithOperations) {
+    RenderEnv env("<!doctype html><style>p{margin:0} div{border:1px solid #000;margin:2px}</style><body style='margin:0;height:200px'>"
+                  "<div id=a><p>a</p></div><div id=b><p>b</p></div><p>after</p></body>");
+    CHECK(placedWithOperations(env, "const p = document.createElement('p'); p.textContent = 'new'; document.getElementById('b').append(p)",
+                               "a paragraph appended to #b"));
+    const std::vector<LayerOp>& ops = env.render().layerOps();
+    CHECK_EQ(countOps(ops, LayerOp::Remove), size_t(0));
+    CHECK(countOps(ops, LayerOp::Insert) > 0);
+    CHECK(countOps(ops, LayerOp::Frame) > 0);
+}
+
+// A run whose text was replaced is placed by its new first piece: a later re-placement before it renumbers it by that.
+WR_TEST(testARunWhoseTextWasReplacedKeepsItsPlace) {
+    RenderEnv env("<!doctype html><style>p{margin:0}</style><body style='margin:0;height:200px'>"
+                  "<p>one</p><div id=b><p>b</p></div><p id=c>three</p></body>");
+    CHECK(placedWithOperations(env, "document.getElementById('c').firstChild.data = 'three, changed'", "#c's text"));
+    CHECK(placedWithOperations(env, "const p = document.createElement('p'); p.textContent = 'new'; document.getElementById('b').append(p)",
+                               "a paragraph appended to #b before #c"));
+}
+
+// A text replaced in the publish that replaces a subtree before it: its run is placed by its new pieces, not its old.
+WR_TEST(testATextReplacedBesideAReplacementKeepsItsPlace) {
+    RenderEnv env("<!doctype html><style>p{margin:0} .k::before{content:'one two three four five six seven'}</style>"
+                  "<body style='margin:0;height:300px'><div id=b><p>b</p></div><p id=c>three</p></body>");
+    CHECK(placedWithOperations(env, "document.getElementById('b').className = 'k'; document.getElementById('c').firstChild.data = 'changed'",
+                               "::before content into #b, and #c's text"));
+}
+
+// The root paints the body's background when it has none of its own: a replaced body repaints the canvas.
+WR_TEST(testAReplacedBodyRepaintsTheCanvas) {
+    RenderEnv env("<!doctype html><style>p{margin:0} .y{background:#ff0;font-size:20px}</style><body style='margin:0;height:200px'>"
+                  "<p>a</p></body>");
+    CHECK(placedWithOperations(env, "document.body.className = 'y'", "a background and a font size on the body"));
+}
+
+// Review Focus 1: a positioned descendant of the replaced subtree paints in a stacking context outside it.
+WR_TEST(testAReplacedSubtreesPositionedChildPaintsOutside) {
+    RenderEnv env("<!doctype html><style>p{margin:0}</style><body style='margin:0;height:200px'><div style='position:relative'>"
+                  "<div id=b><span style='position:absolute;left:5px;top:7px;z-index:2;background:#ff0'>abs</span></div></div></body>");
+    CHECK(placedWithOperations(env, "const s = document.createElement('span'); s.textContent = 'new'; document.getElementById('b').append(s)",
+                               "a span beside a positioned span"));
+}
+
+// Review Focus 2: an inline-block replaced in a line goes back between the line's runs.
+WR_TEST(testAnInlineBoxReplacedInALineKeepsItsPlace) {
+    RenderEnv env("<!doctype html><style>.big{font-size:24px} #k{background:#eee}</style><body style='margin:0;height:200px'>"
+                  "<p>text <span id=k style='display:inline-block'>k</span> more text</p></body>");
+    CHECK(placedWithOperations(env, "document.getElementById('k').setAttribute('class', 'big')", "an inline-block's font size"));
+}
+
+// Review Focus 3: two replacements in one publish, and a text replacement inside a subtree the same publish replaces
+// (an attribute change beside a text change is one patch), whose report the re-placement makes stale.
+WR_TEST(testReplacementsInOnePublish) {
+    {
+        RenderEnv env("<!doctype html><style>p{margin:0} div{border:1px solid #000}</style><body style='margin:0;height:200px'>"
+                      "<div id=x><p>x</p></div><div id=y><p>y</p></div></body>");
+        CHECK(placedWithOperations(env,
+                                   "for (const id of ['x', 'y']) { const p = document.createElement('p'); p.textContent = id + id;"
+                                   " document.getElementById(id).append(p); }",
+                                   "an append into each of two siblings"));
+    }
+    {
+        RenderEnv env("<!doctype html><style>p{margin:0} .big{font-size:24px}</style><body style='margin:0;height:200px'>"
+                      "<div id=b><p id=q>q</p></div><p>after</p></body>");
+        CHECK(placedWithOperations(env, "document.getElementById('b').className = 'big';"
+                                        " document.getElementById('q').firstChild.data = 'changed'",
+                                   "a text change inside a subtree the fork replaces"));
+    }
+}
+
+// A line whose runs a re-placement builds again moves an inline paint group in it, which nothing reports: its inline
+// context is built again whole.
+WR_TEST(testALineHoldingAGroupIsBuiltWhole) {
+    const char* const page = "<!doctype html><style>p{margin:0} .big{font-size:24px}</style><body style='margin:0;height:200px'>"
+                             "<p id=p>text <span id=k style='display:inline-block'>k</span> then <span style='opacity:.5'>faded"
+                             "</span> end</p><p>q <span id=s>s</span></p></body>";
+    {
+        RenderEnv env(page);
+        CHECK(placedWithOperations(env, "document.getElementById('k').className = 'big'", "an inline-block before the group grows"));
+    }
+    {
+        RenderEnv env(page);
+        CHECK(placedWithOperations(env, "document.getElementById('p').firstChild.data = 'a much longer text ';"
+                                        " document.getElementById('s').style.opacity = '.5'",
+                                   "the text before the group, beside a span placed again"));
+    }
+}
+
+// Review Focus 4: a change of paint order or visibility anywhere but a plain in-flow block is re-placed (its subtree's
+// nodes removed and built again by the placement rule), not reset.
+WR_TEST(testPaintOrderChangesArePlaced) {
+    struct Case {
+        const char* body;
+        std::vector<const char*> scripts;
+        const char* what;
+    };
+    const Case cases[] = {
+        {"<p>text <span id=t>span</span> more text</p>", {"document.getElementById('t').style.opacity = '.5'"},
+         "opacity on an inline span in a line"},
+        {"<div id=t style='float:left;width:40px;height:20px;background:#ccc'>f</div><p>text beside the float</p>",
+         {"document.getElementById('t').style.opacity = '.5'"}, "opacity on a float"},
+        {"<div id=t style='background:#eee'>text<span style='position:absolute;left:5px;top:30px;background:#ff0'>abs</span></div>",
+         {"document.getElementById('t').style.visibility = 'hidden'", "document.getElementById('t').style.visibility = 'visible'"},
+         "visibility on a div holding a positioned child"},
+        {"<div id=t style='position:relative;z-index:1;height:20px;background:#eee'>a</div>"
+         "<div style='position:relative;z-index:2;margin-top:-10px;height:20px;background:#ccc'>b</div>",
+         {"document.getElementById('t').style.zIndex = '3'"}, "z-index on a positioned box"},
+        {"<div style='margin-top:20px'><div id=t>x<span style='position:absolute;left:5px;top:5px;background:#ff0'>abs</span>"
+         "</div></div>",
+         {"document.getElementById('t').style.position = 'relative'"}, "position:relative over a positioned descendant"},
+        {"<div id=t style='background:#eee'><p>text <span id=s>span</span> more</p></div>",
+         {"document.getElementById('t').style.opacity = '.5'; document.getElementById('s').style.opacity = '.5'",
+          "document.getElementById('t').style.opacity = ''; document.getElementById('s').style.opacity = ''"},
+         "a block's group in place around a span placed again"},
+        {"<div id=t style='background:#eee'><div id=b><p>b</p></div><p>after</p></div>",
+         {"document.getElementById('t').style.opacity = '.5'; document.getElementById('b').className = 'big'",
+          "document.getElementById('t').style.opacity = ''; document.getElementById('b').className = ''"},
+         "a block's group in place around a subtree the fork replaced"},
+        {"<div id=t style='opacity:.5;background:#eee'><div id=b style='background:#ccc;height:10px'></div><p>after</p></div>",
+         {"document.getElementById('t').style.opacity = ''; document.getElementById('b').className = 'h'"},
+         "a group left around a subtree the fork replaced with nothing visible"},
+    };
+    for (const Case& c : cases) {
+        RenderEnv env(std::string("<!doctype html><style>p{margin:0} .big{font-size:24px} .h{visibility:hidden;font-size:24px}"
+                                  "</style>"
+                                  "<body style='margin:0;height:200px'>") + c.body +
+                      "</body>");
+        for (const char* script : c.scripts) {
+            CHECK(placedWithOperations(env, script, std::string(c.what) + ": " + script));
+        }
+    }
+}
+
+// A line holding an inline paint group changes in place: a change of its text or its style, or of the group's own text,
+// re-places the line's inline context whole (the group moves with the text before it, which nothing reports).
+WR_TEST(testALineHoldingAGroupChangesInPlace) {
+    const char* const scripts[][2] = {
+        {"document.getElementById('p').firstChild.data = 'a much longer start '", "the text before the group"},
+        {"document.getElementById('p').className = 'red'", "a color class on the line's paragraph"},
+        {"document.getElementById('s').firstChild.data = 'changed'", "the group's own text"},
+    };
+    for (const auto& [script, what] : scripts) {
+        RenderEnv env("<!doctype html><style>p{margin:0} .red{color:#c00}</style><body style='margin:0;height:200px'>"
+                      "<p id=p>start <span id=s style='opacity:.5'>faded</span> end</p><p>after</p></body>");
+        CHECK(placedWithOperations(env, script, what));
+    }
+}
+
+// The root's replacement (a change of the document element the fork does not keep the tree for) is placed with
+// operations: the root Context keeps its id, its children go, and the new tree's top nodes are inserted under it.
+WR_TEST(testTheRootsReplacementIsPlaced) {
+    const char* const scripts[][2] = {
+        {"document.documentElement.className = 'flex'", "a class that makes the root a flex container"},
+        {"document.documentElement.dir = 'rtl'", "dir"},
+        {"document.documentElement.style.fontSize = '20px'", "an inline font size"},
+    };
+    for (const auto& [script, what] : scripts) {
+        RenderEnv env("<!doctype html><style>p{margin:0} .flex{display:flex}</style><body style='margin:0;height:200px'>"
+                      "<p>one <span>two</span></p><div style='position:relative'><span style='position:absolute;left:5px'>"
+                      "abs</span></div></body>");
+        CHECK(placedWithOperations(env, script, what));
+    }
 }
 
 // A clipper that moves takes its clip with it: what it clips gets a Frame and a Clip, its own Box a Frame alone (its
@@ -1008,7 +1257,6 @@ WR_TEST(testAMovedClipperClipsWhatItHolds) {
     CHECK_EQ(env.render().patchCount(), patches + 1);
     CHECK_EQ(env.render().mirrorWalks(), walks);
     const std::vector<LayerOp>& ops = env.render().layerOps();
-    CHECK(!isReset(ops));
     std::map<wr::LayerId, std::set<LayerOp::Kind>> named;
     for (const LayerOp& op : ops) {
         named[op.node].insert(op.kind);
@@ -1041,12 +1289,40 @@ WR_TEST(testARowRepaintsWhenItsCellsMove) {
     CHECK(equalsAFreshMirror(env, "a column widened"));
 }
 
-// A table paints every caption before any row (render_item_table::draw_children), so in its context a caption that
-// follows the rows in the tree paints before them: there the context's children are not in tree order, and the
-// placement rule cannot place a new node (Ruling E39). A neutral class change that gives a cell, a row or the caption its
-// first decoration keeps the render tree; the mirror declines it, and the Reset's tree is a fresh mirror's. A caption
-// before the rows paints in tree order, so there the same change is an Insert.
-WR_TEST(testANewBoxBesideACaptionAfterTheRowsIsAReset) {
+// A line whose runs an inline table splits (ItemInfo::runsSplit) is placed again whole when its text changes, as a line
+// holding an inline paint group is; the mirror publishes operations.
+WR_TEST(testAnInlineTableLineIsPlacedAgain) {
+    {
+        RenderEnv env("<!doctype html><body style='margin:0'><p id=q>p <span style='display:inline-table'>"
+                      "<span style='display:table-cell'>c</span></span> x</p></body>");
+        edit(env, "document.getElementById('q').firstChild.data = 'pp '");
+        CHECK(equalsAFreshMirror(env, "an inline table's line, its text changed"));
+        CHECK(flattensAsRecorded(env, "an inline table's line, its text changed"));
+        edit(env, "document.getElementById('q').lastChild.data = ' x and more words after the table'");
+        CHECK(equalsAFreshMirror(env, "an inline table's line, its last text changed"));
+    }
+    {
+        RenderEnv env("<!doctype html><style>.x{color:#c00}</style><body style='margin:0'><p id=p>text</p></body>");
+        edit(env, "document.getElementById('p').setAttribute('class', 'x')");
+    }
+}
+
+// Twidget edit 86: an inline-flex's flex items (blockified, block-level) are painted once, in its own context, so a
+// structural patch that moves the line holding it moves its nodes, as a fresh mirror places them (the fitness rings'
+// badge).
+WR_TEST(testAMovedInlineFlexPublishesOperations) {
+    RenderEnv env("<!doctype html><style>.badge{display:inline-flex;padding:2px;background:rgba(255,120,0,.2)}"
+                  " .badge i{box-shadow:0 0 0 1px rgba(0,0,0,.1)}</style><body style='margin:0'><div id=top></div>"
+                  "<p>streak <span class=badge><i>\xF0\x9F\x94\xA5</i> 12</span></p></body>");
+    edit(env, "const d = document.createElement('div'); d.textContent = 'moved down'; document.getElementById('top').append(d)");
+    CHECK(equalsAFreshMirror(env, "the line holding an inline-flex moved"));
+    CHECK(flattensAsRecorded(env, "the line holding an inline-flex moved"));
+}
+
+// A table paints every caption before any row (render_item_table::draw_children), and the mirror numbers tree order as
+// it paints (a table's captions before its other children), so a neutral class change that gives a cell, a row or the
+// caption its first decoration is one Insert, placed where a fresh walk has it, wherever the caption is in the tree.
+WR_TEST(testANewBoxBesideACaptionIsPlaced) {
     // The caption has a Box of its own unless it is the target: in the table's block pass it then paints before the
     // cells' Boxes, which it follows in the tree.
     const char* const targets[] = {"td2", "tr2", "cap"};
@@ -1061,24 +1337,21 @@ WR_TEST(testANewBoxBesideACaptionAfterTheRowsIsAReset) {
                           (after ? rows + caption : caption + rows) + "</table></body>");
             CHECK(env.render().renderInput().find(after ? "</tbody><caption" : "</caption><tbody") != std::string::npos);
             const uint64_t patches = env.render().patchCount();
-            const uint64_t lost = env.render().unplaceableResets();
             const std::shared_ptr<const LayerTree> before = env.render().layerTree();
             const std::string what =
                 "the first decoration of #" + target + (after ? ", the caption after the rows" : ", the caption first");
             edit(env, "document.getElementById('" + target + "').setAttribute('class', 'd')");
             CHECK_EQ(env.render().patchCount(), patches + 1);
             const std::vector<LayerOp>& ops = env.render().layerOps();
-            bool expected = isReset(ops) == after && env.render().unplaceableResets() == lost + (after ? 1 : 0);
-            if (!after) {
-                // One Insert, placed where a fresh walk has it.
-                IdTree structure = IdTree::of(*before->mirror());
-                size_t inserts = 0;
-                for (const LayerOp& op : ops) {
-                    expected = structure.apply(op) && expected;
-                    inserts += op.kind == LayerOp::Insert;
-                }
-                expected = expected && inserts == 1 && structure == IdTree::of(*env.render().layerTree()->mirror());
+            bool expected = true;
+            // One Insert, placed where a fresh walk has it.
+            IdTree structure = IdTree::of(*before->mirror());
+            size_t inserts = 0;
+            for (const LayerOp& op : ops) {
+                expected = structure.apply(op) && expected;
+                inserts += op.kind == LayerOp::Insert;
             }
+            expected = expected && inserts == 1 && structure == IdTree::of(*env.render().layerTree()->mirror());
             if (!expected) {
                 std::printf("  unexpected ops: %s\n  ops: %s\n", what.c_str(), describe(ops).c_str());
             }
@@ -1087,4 +1360,47 @@ WR_TEST(testANewBoxBesideACaptionAfterTheRowsIsAReset) {
             CHECK(equalsAFreshMirror(env, what));
         }
     }
+}
+
+
+// Nothing declines: a report the placement rule cannot place (an item added outside a text replacement or a
+// replacement) makes publish() throw LayerMirror::Inconsistent, publishing nothing.
+WR_TEST(testAnUnplaceableReportIsInconsistent) {
+    wr_test::RenderEnv env("<!doctype html><body><p>a</p><p>b</p></body>");
+    litehtml::document& document = *env.render().document();
+    wr::LayerId next = wr::LayerId(1) << 40;
+    wr::LayerMirror mirror([](const litehtml::element&) { return wr::NodeKey(0); }, next);
+    const std::shared_ptr<const LayerTree> built = mirror.build(document, env.render().container(), false);
+    mirror.item_added(document.root_render()->children().front());
+    bool inconsistent = false;
+    try {
+        mirror.publish();
+    } catch (const wr::LayerMirror::Inconsistent&) {
+        inconsistent = true;
+    }
+    CHECK(inconsistent);
+    CHECK(mirror.tree() == built);
+}
+
+// An inconsistency stops the widget (RenderTree::stopInternally): the `render-internal` diagnostic,
+// StopReason::Internal, and the tree published before the flush kept.
+WR_TEST(testAnInconsistencyStopsTheWidget) {
+    wr_test::RenderEnv env("<!doctype html><body><p id=a>a</p><p>b</p></body>");
+    const std::shared_ptr<const LayerTree> before = env.render().layerTree();
+    litehtml::document& document = *env.render().document();
+    // A report the placement rule cannot place, into the tree's own mirror (the document's render observer).
+    document.get_render_observer()->item_added(document.root_render()->children().front());
+    CHECK_EQ(env.env().eval("document.getElementById('a').firstChild.data = 'changed'; 'ok'"), std::string("ok"));
+    const size_t posted = env.env().host().diagnostics.size();
+    try {
+        env.flush();
+    } catch (const wr::Aborted&) {
+    }
+    CHECK(env.env().runtime().stopReason() == wr::StopReason::Internal);
+    bool diagnosed = false;
+    for (size_t d = posted; d < env.env().host().diagnostics.size(); d++) {
+        diagnosed = diagnosed || env.env().host().diagnostics[d].first == "render-internal";
+    }
+    CHECK(diagnosed);
+    CHECK(env.render().layerTree() == before);
 }

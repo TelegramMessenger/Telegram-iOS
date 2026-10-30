@@ -1,6 +1,7 @@
 // The session facade (M1d plan, Task 7): boot, steps, taps, the bridge, the stops, the source cap, the failure latch
 // and teardown, through the Objective-C surface Swift calls.
 #import <XCTest/XCTest.h>
+#import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
 #import <WidgetRuntimeIOS/WRSession.h>
 
@@ -8,6 +9,7 @@
 #include <atomic>
 #include <string>
 #include <thread>
+#include <time.h>
 #include <vector>
 
 @interface WRRecordingDelegate : NSObject <WRSessionDelegate>
@@ -15,10 +17,8 @@
 @property (nonatomic) NSMutableArray<NSString *> *bridgeCalls;
 /// Each storage commit as "area key=value key=value", in order.
 @property (nonatomic) NSMutableArray<NSString *> *storageCommits;
-@property (nonatomic) uint64_t lastWork;
-@property (nonatomic) NSUInteger workReports;
-/// Called from each work report, inside the step that reports it.
-@property (nonatomic, copy) void (^onWork)(WRSession *session);
+/// Called from each console line, inside the step that logs it.
+@property (nonatomic, copy) void (^onLog)(WRSession *session);
 @end
 
 @implementation WRRecordingDelegate
@@ -34,6 +34,9 @@
     [self.diagnostics addObject:[NSString stringWithFormat:@"%@:%@", kind, detail]];
 }
 - (void)session:(WRSession *)session log:(NSInteger)level text:(NSString *)text {
+    if (self.onLog) {
+        self.onLog(session);
+    }
 }
 - (void)session:(WRSession *)session bridge:(NSString *)method args:(NSString *)argsJson {
     [self.bridgeCalls addObject:[NSString stringWithFormat:@"%@ %@", method, argsJson]];
@@ -45,19 +48,19 @@
     }
     [self.storageCommits addObject:line];
 }
-- (void)session:(WRSession *)session didWork:(uint64_t)totalUnits {
-    self.lastWork = totalUnits;
-    self.workReports++;
-    if (self.onWork) {
-        self.onWork(session);
-    }
-}
 @end
 
 namespace {
 
 double now() {
     return CACurrentMediaTime() * 1000;
+}
+
+// The calling thread's CPU time, in milliseconds.
+double threadCpuMilliseconds() {
+    timespec ts{};
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return double(ts.tv_sec) * 1000.0 + double(ts.tv_nsec) / 1e6;
 }
 
 // The colour (RGBA) at a CSS px point of a tree painted at 2×.
@@ -76,9 +79,27 @@ std::vector<uint8_t> colourAt(WRTree* tree, CGFloat x, CGFloat y) {
     return pixel;
 }
 
+// A data: PNG URL of a `size` × `size` image filled with the colour (red, 0x40, 0x80).
+NSString* solidPngURL(size_t size, uint8_t red) {
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(nullptr, size, size, 8, 4 * size, space, kCGImageAlphaPremultipliedLast);
+    CGContextSetRGBFillColor(ctx, red / 255.0, 0x40 / 255.0, 0x80 / 255.0, 1);
+    CGContextFillRect(ctx, CGRectMake(0, 0, size, size));
+    CGImageRef image = CGBitmapContextCreateImage(ctx);
+    NSMutableData* data = [NSMutableData data];
+    CGImageDestinationRef destination =
+        CGImageDestinationCreateWithData((__bridge CFMutableDataRef)data, CFSTR("public.png"), 1, nullptr);
+    CGImageDestinationAddImage(destination, image, nullptr);
+    CGImageDestinationFinalize(destination);
+    CFRelease(destination);
+    CGImageRelease(image);
+    CGContextRelease(ctx);
+    CGColorSpaceRelease(space);
+    return [@"data:image/png;base64," stringByAppendingString:[data base64EncodedStringWithOptions:0]];
+}
+
 void drain(WRSession* session) {
     for (int i = 0; i < 1000 && [session hasRunnableTaskAt:now()]; i++) {
-        [session setWorkLimitAfter:28000000];
         [session runNextTaskAt:now()];
     }
 }
@@ -90,6 +111,8 @@ void drain(WRSession* session) {
 - (void)throwForTesting;
 /// Latches `reason` on the runtime outside any step, as a refused allocation in an entry that queues a task does.
 - (void)stopForTesting:(WRStopReason)reason;
+/// Latches a Limit stop with `detail` outside any step.
+- (void)stopForTestingWithLimit:(NSString*)detail;
 @end
 
 @interface WRSessionTests : XCTestCase
@@ -130,13 +153,8 @@ void drain(WRSession* session) {
                                             "'{\"status\":\"done\"}'), 10);</script></body></html>"]);
     XCTAssertEqualObjects([session documentElementAttribute:@"data-test"], @"fixture");
     XCTAssertNil([session documentElementAttribute:@"data-conformance"]);
-    // No script runs: only the name's string is allocated in the widget's heap (a few units).
-    uint64_t before = session.workUnits;
-    XCTAssertEqualObjects([session documentElementAttribute:@"data-test"], @"fixture");
-    XCTAssertLessThan(session.workUnits - before, uint64_t(1000));
     NSNumber* deadline = [session nextTimerDeadline];
     XCTAssertNotNil(deadline);
-    [session setWorkLimitAfter:28000000];
     [session runNextTaskAt:deadline.doubleValue + 1];
     XCTAssertEqualObjects([session documentElementAttribute:@"data-conformance"], @"{\"status\":\"done\"}");
     [session teardown];
@@ -157,7 +175,6 @@ void drain(WRSession* session) {
     XCTAssertNil([session changedRects]);
     NSNumber* deadline = [session nextTimerDeadline];
     XCTAssertNotNil(deadline);
-    [session setWorkLimitAfter:28000000];
     [session runNextTaskAt:deadline.doubleValue + 1];
     NSArray<NSValue*>* rects = [session changedRects];
     XCTAssertNotNil(rects);
@@ -174,10 +191,20 @@ void drain(WRSession* session) {
 - (void)testHangingBootShowsTheParsedMarkupFrozen {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
+    // A fake CPU clock, a millisecond a read: the script's own slice (the CPU-clock limits plan, Tasks 4 and 5) ends after
+    // 500 of them, whatever the machine.
+    __block double cpu = 0;
+    [session setCpuClockForTesting:^{
+        return cpu += 1;
+    }
+                              wall:^{
+                                  return 0.0;
+                              }];
     XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head><style>body{margin:0}</style></head><body>"
                                             "<p style=\"margin:0;background:#00ff00\">"
                                             "hi</p><script>for(;;);</script></body></html>"]);
-    XCTAssertEqual(session.stopReason, WRStopReasonBudget);
+    XCTAssertEqual(session.stopReason, WRStopReasonCpu);
+    XCTAssertEqualObjects(session.stopDetail, @"CPU limit exceeded: more than 500 ms of continuous execution (script)");
     WRTree* tree = [session tree];
     XCTAssertNotNil(tree);
     XCTAssertGreaterThan(tree.size.height, 0);
@@ -195,11 +222,9 @@ void drain(WRSession* session) {
     NSNumber* deadline = [session nextTimerDeadline];
     XCTAssertNotNil(deadline);
     XCTAssertTrue([session wantsAnimationFrame]);
-    [session setWorkLimitAfter:28000000];
     [session runAnimationFrameAt:now()];
     // The frame's call (a link would need a press: SDK v1 §2.5).
     XCTAssertEqualObjects(delegate.bridgeCalls, (@[ @"ready []" ]));
-    [session setWorkLimitAfter:28000000];
     XCTAssertEqual([session runNextTaskAt:deadline.doubleValue + 1], WRStepResultRan);
     XCTAssertEqualObjects(delegate.bridgeCalls, (@[ @"ready []", @"ready []" ]));
 }
@@ -236,6 +261,28 @@ void drain(WRSession* session) {
     drain(session);
     XCTAssertEqual(delegate.bridgeCalls.count, calls);
     XCTAssertEqual(session.stopReason, WRStopReasonInternal);
+}
+
+/// widget-sandbox v0.3.0: a counted cap stops the widget with upstream's reason, which the session reports as the
+/// Limit stop's detail, also once the runtime is gone; the first stop wins, and any other stop has no detail.
+- (void)testALimitStopKeepsItsReason {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* session = [self sessionWith:delegate];
+    XCTAssertTrue([session bootWithSource:@"<p>hi</p>"]);
+    XCTAssertNil(session.stopDetail);
+    [session stopForTestingWithLimit:@"Text limit exceeded: a text value of 40000 characters (max 32768)"];
+    [session stopForTestingWithLimit:@"Ops limit exceeded: 10001 operations in one batch (max 10000)"];
+    [session stopForTesting:WRStopReasonMemory];
+    XCTAssertEqual(session.stopReason, WRStopReasonLimit);
+    XCTAssertEqualObjects(session.stopDetail, @"Text limit exceeded: a text value of 40000 characters (max 32768)");
+    [session teardown];
+    XCTAssertEqual(session.stopReason, WRStopReasonLimit);
+    XCTAssertEqualObjects(session.stopDetail, @"Text limit exceeded: a text value of 40000 characters (max 32768)");
+
+    WRSession* other = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertTrue([other bootWithSource:@"<p>hi</p>"]);
+    [other stopForTesting:WRStopReasonMemory];
+    XCTAssertNil(other.stopDetail);
 }
 
 /// sdk-v1 §5.5: a press reports the drag axes and the hold the widget takes (touch-action: none claims the hold too,
@@ -298,7 +345,7 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     if (![session bootWithSource:source]) {
         return nil;
     }
-    return [session selectableTextWithBudget:UINT64_MAX visibleHeight:600];
+    return [session selectableTextWithVisibleHeight:600];
 }
 
 /// Text selection (sdk-v1 §5.10): the session exports what the widget marked user-select: text (visual/16-selection).
@@ -372,75 +419,56 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     }
 }
 
-/// The export is the host's: no work counted to the widget, no stop, nothing a script can see.
+/// The export is the host's: no stop, nothing a script can see.
 - (void)testTheExportDoesNotTouchTheWidget {
     WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
     XCTAssertNotNil(selectable(session, @"<p style='user-select:text'>some words to select</p>"));
-    [session setWorkLimitAfter:1000000];
     NSString* before = [session evaluateForTesting:@"String(getSelection())"];
-    const uint64_t units = session.workUnits;
-    XCTAssertNil([session selectableTextWithBudget:10 visibleHeight:600]);
-    XCTAssertNotNil([session selectableTextWithBudget:UINT64_MAX visibleHeight:600]);
-    XCTAssertEqual(session.workUnits, units);
+    XCTAssertNotNil([session selectableTextWithVisibleHeight:600]);
     XCTAssertEqual(session.stopReason, WRStopReasonNone);
     XCTAssertFalse(session.failed);
     XCTAssertEqualObjects([session evaluateForTesting:@"String(getSelection())"], before);
 }
 
-/// The cost suite's reference loop (third-party/quickjs-ng tests/quickjs_work_cost_test.c): wall time per unit of work,
-/// best of three, in this process.
-- (double)referenceNanosecondsPerUnit {
-    double best = INFINITY;
-    for (int i = 0; i < 3; i++) {
-        WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
-        XCTAssertTrue([session bootWithSource:@"<!doctype html><p>x</p>"]);
-        [session setWorkLimitAfter:20000000];
-        const uint64_t before = session.workUnits;
-        const CFTimeInterval t0 = CACurrentMediaTime();
-        [session evaluateForTesting:@"let s = 0; for (;;) s = (s + 1) | 0;"];
-        const double seconds = CACurrentMediaTime() - t0;
-        best = MIN(best, seconds * 1e9 / (double)MAX(session.workUnits - before, (uint64_t)1));
-    }
-    return best;
-}
-
-/// Wall time per charged unit of the selectable text export of `body`, best of three.
-- (double)exportNanosecondsPerUnit:(NSString*)body {
+/// The least thread CPU time of three exports of `body`'s selectable text, in milliseconds.
+- (double)exportCpuMilliseconds:(NSString*)body {
     double best = INFINITY;
     for (int i = 0; i < 3; i++) {
         WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
         XCTAssertNotNil(selectable(session, body));
-        const CFTimeInterval t0 = CACurrentMediaTime();
-        WRSelectableText* text = [session selectableTextWithBudget:UINT64_MAX visibleHeight:1e9];
-        const double seconds = CACurrentMediaTime() - t0;
-        // It measured an export: text was selected, and in quantity.
+        const double t0 = threadCpuMilliseconds();
+        WRSelectableText* text = [session selectableTextWithVisibleHeight:1e9];
+        best = MIN(best, threadCpuMilliseconds() - t0);
+        // It measured an export: text was selected.
         XCTAssertGreaterThan(text.runs.length / sizeof(WRSelectableRun), 0u);
-        XCTAssertGreaterThan(text.text.length, 4000u);
-        best = MIN(best, seconds * 1e9 / (double)MAX(text.units, (uint64_t)1));
     }
     return best;
 }
 
-/// Final review C1: the export is charged in proportion to its work on CoreText, so a hostile page cannot make it run
-/// long for little charge: at most twice the reference's wall time per unit. One long run on the CTLine path (no
-/// wrapping, so one run: a caret query per character made it quadratic, ~2 minutes at the text cap for ~0.1M units),
-/// and many words past the simple shaper's 64 bytes.
-- (void)testTheSelectableExportCostsNoMorePerUnitThanJS {
-    const double js = [self referenceNanosecondsPerUnit];
-    NSString* longRun = [NSString stringWithFormat:@"<p style='user-select:text;white-space:nowrap'>%@</p>",
-                                                   [@"" stringByPaddingToLength:32768 withString:@"a" startingAtIndex:0]];
+/// Final review C1: the export is linear in its text, so a hostile page cannot make it run long: eight times the text
+/// takes at most 24 times the CPU time. One long run on the CTLine path (no wrapping, so one run: a caret query per
+/// character made it quadratic, ~2 minutes at the text cap), and many words past the simple shaper's 64 bytes.
+- (void)testTheSelectableExportIsLinear {
+    NSString* (^longRun)(NSUInteger) = ^(NSUInteger length) {
+        return [NSString stringWithFormat:@"<p style='user-select:text;white-space:nowrap'>%@</p>",
+                                          [@"" stringByPaddingToLength:length withString:@"a" startingAtIndex:0]];
+    };
     NSString* word = [@"" stringByPaddingToLength:100 withString:@"bcdefghij" startingAtIndex:0];
-    NSMutableString* words = [NSMutableString stringWithString:@"<p style='user-select:text'>"];
-    // A Text node each: one value is capped at 65,536 units, and a page past it exports nothing (and measures nothing).
-    for (int i = 0; i < 1000; i++) {
-        [words appendFormat:@"<span>%@%d</span> ", word, i];
-    }
-    [words appendString:@"</p>"];
-    const double run = [self exportNanosecondsPerUnit:longRun];
-    const double many = [self exportNanosecondsPerUnit:words];
-    NSLog(@"ns per unit: js %.2f, one long run %.2f (%.2fx), long words %.2f (%.2fx)", js, run, run / js, many, many / js);
-    XCTAssertLessThan(run, 2.0 * js);
-    XCTAssertLessThan(many, 2.0 * js);
+    // A Text node each: a value is capped at 32,768 units and the document at 49,152, and a page past either stops
+    // before it exports anything (widget-sandbox v0.3.0).
+    NSString* (^words)(int) = ^(int count) {
+        NSMutableString* html = [NSMutableString stringWithString:@"<p style='user-select:text'>"];
+        for (int i = 0; i < count; i++) {
+            [html appendFormat:@"<span>%@%d</span> ", word, i];
+        }
+        [html appendString:@"</p>"];
+        return (NSString*)html;
+    };
+    const double runSmall = [self exportCpuMilliseconds:longRun(4096)], runLarge = [self exportCpuMilliseconds:longRun(32768)];
+    const double wordsSmall = [self exportCpuMilliseconds:words(50)], wordsLarge = [self exportCpuMilliseconds:words(400)];
+    NSLog(@"export CPU ms: one long run %.2f → %.2f, long words %.2f → %.2f", runSmall, runLarge, wordsSmall, wordsLarge);
+    XCTAssertLessThan(runLarge, 24.0 * MAX(runSmall, 0.1));
+    XCTAssertLessThan(wordsLarge, 24.0 * MAX(wordsSmall, 0.1));
 }
 
 - (void)testMemoryStopIsFatal {
@@ -460,11 +488,14 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
 }
 
 /// The client adds no size check of its own (widget-sandbox integration.md, "The widget payload"): the server bounds
-/// the HTML, and the memory limit and the parse ceiling guard the runtime.
+/// the HTML, and the memory limit and the parse's count limits guard the runtime. The 256 KiB are a comment's, which the
+/// render's text caps do not read (a text value past 32,768 units would stop the widget, widget-sandbox v0.3.0).
 - (void)testALargeSourceIsNotRefused {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
-    XCTAssertTrue([session bootWithSource:[@"" stringByPaddingToLength:256 * 1024 + 1 withString:@"a" startingAtIndex:0]]);
+    NSString* comment = [NSString stringWithFormat:@"<!--%@--><p>x</p>", [@"" stringByPaddingToLength:256 * 1024 + 1 withString:@"a" startingAtIndex:0]];
+    XCTAssertTrue([session bootWithSource:comment]);
+    XCTAssertEqual(session.stopReason, WRStopReasonNone);
 }
 
 /// SDK v1 §2.9: the locale set before the boot is navigator.language; a malformed one is en-US.
@@ -563,7 +594,6 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     std::atomic<bool> running{false};
     std::thread worker([&] {
         running = true;
-        [session setWorkLimitAfter:28000000];
         [session runNextTaskAt:now() + 10];
     });
     while (!running) {
@@ -579,15 +609,6 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     XCTAssertEqual([session runNextTaskAt:now()], WRStepResultStopped);
 }
 
-- (void)testWorkReachesTheDelegate {
-    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
-    WRSession* session = [self sessionWith:delegate];
-    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><script>"
-                                            "let s = 0; for (let i = 0; i < 300000; i++) s += i;</script></body></html>"]);
-    XCTAssertGreaterThan(delegate.workReports, NSUInteger(10));
-    XCTAssertEqual(delegate.lastWork <= session.workUnits, true);
-}
-
 - (void)testChangedRectsFollowPatches {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
@@ -598,7 +619,6 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     XCTAssertNil([session changedRects]);
     NSNumber* deadline = [session nextTimerDeadline];
     XCTAssertNotNil(deadline);
-    [session setWorkLimitAfter:28000000];
     XCTAssertEqual([session runNextTaskAt:deadline.doubleValue + 1], WRStepResultRan);
     NSArray<NSValue*>* rects = [session changedRects];
     XCTAssertNotNil(rects);
@@ -659,14 +679,16 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     }
 }
 
-// Review I2: a boot stopped before anything was published has nothing to show: it did not start.
+// Review I2: a boot stopped before anything was published has nothing to show: it did not start. Its parsed markup
+// passes the strict text limit, which stops the first flush.
 - (void)testABootStoppedBeforeAnyPublishDidNotStart {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
-    XCTAssertFalse([session bootWithSource:@"<!doctype html><html><head></head><body><p>x</p></body></html>"
-                                parseUnits:1
-                                 bootUnits:48000000]);
+    NSString* text = [@"" stringByPaddingToLength:40000 withString:@"b" startingAtIndex:0];
+    NSString* source = [NSString stringWithFormat:@"<!doctype html><html><head></head><body><div>%@</div></body></html>", text];
+    XCTAssertFalse([session bootWithSource:source]);
     XCTAssertNil([session tree]);
+    XCTAssertEqual(session.stopReason, WRStopReasonLimit);
 }
 
 // Review I3: the content's own width is part of the size: a change of it alone repaints everything.
@@ -679,7 +701,6 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
                                             "'width:150px;height:20px;background:red'), 100);</script></body></html>"]);
     const CGFloat before = session.contentSize.width;
     XCTAssertNil([session changedRects]);
-    [session setWorkLimitAfter:28000000];
     XCTAssertEqual([session runNextTaskAt:[session nextTimerDeadline].doubleValue + 1], WRStepResultRan);
     XCTAssertEqualWithAccuracy(session.contentSize.width, before + 50, 0.5);
     XCTAssertNil([session changedRects]);
@@ -696,7 +717,6 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
                                             "'height:40px;background:#00f'), 100);</script></body></html>"]);
     XCTAssertLessThan(session.contentSize.width, 100);
     XCTAssertNil([session changedRects]);
-    [session setWorkLimitAfter:28000000];
     XCTAssertEqual([session runNextTaskAt:[session nextTimerDeadline].doubleValue + 1], WRStepResultRan);
     CGFloat right = 0;
     for (NSValue* value : [session changedRects]) {
@@ -744,18 +764,40 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
 // Review M3: a delegate that calls back into the session (against the contract) gets nothing done, and breaks nothing.
 - (void)testADelegateCallingBackIsANoOp {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
-    delegate.onWork = ^(WRSession* session) {
+    __block NSUInteger calls = 0;
+    delegate.onLog = ^(WRSession* session) {
+        calls++;
         [session teardown];
         [session runNextTaskAt:now()];
         [session setWidth:100];
     };
     WRSession* session = [self sessionWith:delegate];
     XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head></head><body><p>x</p><script>"
-                                            "let s = 0; for (let i = 0; i < 300000; i++) s += i;</script></body></html>"]);
-    XCTAssertGreaterThan(delegate.workReports, NSUInteger(0));
+                                            "console.log('x'); let s = 0; for (let i = 0; i < 300000; i++) s += i;"
+                                            "</script></body></html>"]);
+    XCTAssertGreaterThan(calls, NSUInteger(0));
     XCTAssertFalse(session.failed);
     XCTAssertEqual(session.stopReason, WRStopReasonNone);
     XCTAssertEqualObjects([session evaluateForTesting:@"String(s)"], @"44999850000");
+}
+
+/// The container's caches follow the document at every flush (Step 4d of the incremental render): an <img> whose source
+/// takes 200 different 512×512 PNGs, a flush each, keeps alive no more decoded pixels than it shows, so the last still
+/// decodes within the session's 24 MiB: it is drawn, and no load is refused.
+- (void)testCyclingImagesStayWithinTheDecodedBudget {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><body style=\"margin:0\">"
+                                            "<img id=i style=\"display:block;width:100px;height:100px\"></body></html>"]);
+    for (int n = 0; n < 200; n++) {
+        NSString* code =
+            [NSString stringWithFormat:@"document.getElementById('i').src = '%@'; 'ok'", solidPngURL(512, uint8_t(n))];
+        XCTAssertEqualObjects([session evaluateForTesting:code], @"ok");
+    }
+    XCTAssertEqual(session.refusedLoads, 0u);
+    std::vector<uint8_t> pixel = colourAt([session tree], 50, 50);
+    XCTAssertEqualWithAccuracy(pixel[0], 199, 2);
+    XCTAssertEqualWithAccuracy(pixel[1], 0x40, 2);
+    XCTAssertEqual(pixel[3], 255);
 }
 
 @end

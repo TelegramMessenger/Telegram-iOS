@@ -35,6 +35,10 @@ public func generateDeletedAccountAvatarImage(size: CGSize) -> UIImage? {
     return generateAvatarImage(size: size, icon: deletedIcon, iconScale: size.width / 60.0, color: .blue, customColors: AvatarNode.grayscaleColors)
 }
 
+public func generateSavedMessagesAvatarImage(size: CGSize) -> UIImage? {
+    return generateAvatarImage(size: size, icon: savedMessagesIcon, iconScale: size.width / 60.0, color: .blue, customColors: AvatarNode.savedMessagesColors)
+}
+
 public enum AvatarNodeClipStyle {
     case none
     case round

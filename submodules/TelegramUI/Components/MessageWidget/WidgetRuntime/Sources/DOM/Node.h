@@ -59,13 +59,12 @@ public:
     Node* nextSiblingNode() const { return m_parent && m_index + 1 < m_parent->childCount() ? m_parent->childAt(m_index + 1) : nullptr; }
     size_t indexInParent() const { return m_index; }
     Document& nodeDocument() const;
-    /// The three ancestor walks charge work::kNodeVisit per ancestor (Global Constraints, "Work").
     Node& rootNode(JSContext* ctx) const;
     bool connected(JSContext* ctx) const;
     /// A node without children is an inclusive ancestor of itself only, so inserting a new leaf walks nothing.
     bool isInclusiveAncestorOf(JSContext* ctx, const Node& other) const;
     /// DOM "host-including inclusive ancestor": the same walk, going on from a fragment with a host (a template's
-    /// contents) to the host. Charged as that walk; a leaf that hosts no contents walks nothing.
+    /// contents) to the host. A leaf that hosts no contents walks nothing.
     bool isHostIncludingInclusiveAncestorOf(JSContext* ctx, const Node& other) const;
     /// Whether this node hosts a fragment (a template whose contents exist).
     virtual bool hostsContents() const { return false; }
@@ -77,11 +76,31 @@ public:
 
     // Raw edits, no checks (the DOM's algorithms in Mutation.cpp call these). These three are the only writers of a
     // child list, which is what keeps Document's element and doctype slots right, and each bumps the node document's
-    // version itself, so no caller can edit a tree a live collection then misses (Collections.h). Each charges its work
-    // before it edits, so a widget the budget stops there is left with no half-made edit and none its listeners were not
-    // told of.
+    // version itself, so no caller can edit a tree a live collection then misses (Collections.h). Each counts its
+    // operations (Runtime::addOps) before it edits, so a widget the ops cap stops there is left with no half-made edit
+    // and none its listeners were not told of.
     /// Inserts `child`, which has no parent, at `index`.
     void insertChildAt(JSContext* ctx, size_t index, Node& child);
+    /// Whether this node was ever inserted (m_announcedBatch): upstream's shim would have sent it.
+    bool announced() const { return m_announcedBatch != 0; }
+    /// Whether a change to something of this node's that `stamp` stamps (an attribute's entry, a text's data) is an
+    /// operation of batch `batch`, which it then stamps: once per batch each, as a flush's difference names a change
+    /// once, and never in the batch of the node's first insertion, whose state travels whole with it (or before it).
+    bool countsChange(uint64_t batch, uint64_t& stamp) const {
+        if (m_announcedBatch == 0 || m_announcedBatch == batch || stamp == batch) {
+            return false;
+        }
+        stamp = batch;
+        return true;
+    }
+    /// Takes `other`'s place in the count (replaceAllChildren's sole text: upstream's new node takes the old one's id).
+    void takeCountOf(const Node& other) { m_announcedBatch = other.m_announcedBatch; }
+    /// Counts as never inserted (the sole text another took the place of: upstream deletes its id, so inserting it again
+    /// makes it a new node).
+    void forgetCount() {
+        m_announcedBatch = 0;
+        m_removedBatch = 0;
+    }
     /// Removes the child at `index`. The caller holds a Ref to it if it still needs it.
     void removeChildAt(JSContext* ctx, size_t index);
     /// Removes every child, in tree order, as removeChildAt(0) would one by one, in time linear in their number: the
@@ -175,6 +194,13 @@ private:
     Held m_documentRef;
     Vector<JSValue> m_children;
     size_t m_index = 0;
+    /// The batch (Runtime::batchSerial) of this node's first insertion, 0 before it: upstream's shim would have sent the
+    /// node then (Runtime::addOps). That insertion counts its making too; its attribute and text changes count from the
+    /// next batch on (countsChange).
+    uint64_t m_announcedBatch = 0;
+    /// The batch this node last left the document in: an insertion in the same batch is a move, one `ins` upstream, which
+    /// the removal counted.
+    uint64_t m_removedBatch = 0;
     // The [SameObject] lists, made on first request: counted references, traced. (`m_children` is the child list.)
     Held m_childNodes;
     Held m_childElements;

@@ -99,14 +99,12 @@ const EventHandlerAttributes::HandlerName* EventHandlerAttributes::lookup(JSAtom
 }
 
 bool EventHandlerAttributes::isWindowReflecting(JSContext* ctx, JSAtom type) const {
-    charge(ctx, work::kNodeVisit);
     return std::binary_search(m_windowReflecting.begin(), m_windowReflecting.end(), type);
 }
 
 void EventHandlerAttributes::attributeChanged(Element& element, JSAtom localName, Namespace ns) {
     JSContext* ctx = m_ctx;
     try {
-        charge(ctx, work::kNodeVisit);
         // "If namespace is not null, or localName is not the name of an event handler content attribute on element,
         // then return."
         if (ns != Namespace::None) {
@@ -135,8 +133,7 @@ void EventHandlerAttributes::attributeChanged(Element& element, JSAtom localName
             setEventHandlerBody(ctx, *owner, name->type, *value, element);
         }
     } catch (...) {
-        // Thrown (a charge the budget refused; QuickJS out of memory), std::bad_alloc or anything else: latched, then
-        // Aborted unwinds the mutation.
+        // Thrown (QuickJS out of memory), std::bad_alloc or anything else: latched, then Aborted unwinds the mutation.
         abortForCaughtException(ctx);
     }
 }
@@ -145,8 +142,7 @@ bool isWindowReflectingEventHandler(JSContext* ctx, JSAtom type) {
     if (HostState* host = HostState::find(ctx)) {
         return host->eventHandlerAttributes().isWindowReflecting(ctx, type);
     }
-    // No host state, so no table of atoms: the type's name against the table's (ten short names: one visit).
-    charge(ctx, work::kNodeVisit);
+    // No host state, so no table of atoms: the type's name against the table's (ten short names).
     String name = String::fromAtom(ctx, type);
     for (const char* t : kBodyReflectedGlobalTypes) {
         if (name.equalsASCII(t)) {

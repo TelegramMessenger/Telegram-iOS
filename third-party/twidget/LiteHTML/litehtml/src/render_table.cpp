@@ -477,6 +477,7 @@ std::shared_ptr<litehtml::render_item> litehtml::render_item_table::init()
     }
 
     m_grid->finish();
+    m_cells_taken += m_grid->cells_taken(); // Telegram (VENDOR.md edit 74)
 
     if(src_el()->css().get_border_collapse() == border_collapse_separate)
     {

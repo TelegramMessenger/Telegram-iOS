@@ -167,7 +167,7 @@ class RegistryTests: MessageWidgetTestCase {
     }
 
     func testFailedToStartWidgetIsNotRecreatedEveryPass() throws {
-        self.lowerTheParseCeiling()
+        self.failUnstartableSources()
         let pool = self.pool!, turn = self.turn!
         var calls = 0
         let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _, _, _ in
@@ -209,7 +209,7 @@ class RegistryTests: MessageWidgetTestCase {
     }
 
     func testAFailedStartIsInTheRunState() {
-        self.lowerTheParseCeiling()
+        self.failUnstartableSources()
         let registry = self.makeRegistry()
         let source = self.unstartableSource("<!doctype html><p>one</p>")
         registry.beginPass(ownerId: 1, theme: .light)

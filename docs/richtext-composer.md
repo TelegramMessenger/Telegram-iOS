@@ -572,22 +572,18 @@ plain paste; CommonMark's paired-delimiter rules mean a stray `*`/`-` never trig
 `lineBreaks: .keep` (`MarkdownSourceLineBreaks`): a single newline stays a line break (CommonMark's soft break
 joined a ChatGPT reply's "**Key:** value" lines into one), and a blank line between two top-level blocks comes back
 as an empty paragraph (source positions, iOS 16+; a `---` between sections becomes that paragraph, since the composer
-has no divider). `pastedMarkdownContentResolvingBlankLines` keeps those only in the chat composer
-(`keepsBlankLines: true`) and only when the pasted content is sent as text + entities; content that needs a rich
+has no divider). `pastedMarkdownContentResolvingBlankLines` keeps those only in the chat composer, inline and
+expanded (`keepsBlankLines: true`), and only when the pasted content is sent as text + entities; content that needs a rich
 message (heading, list, table, …) drops them and the renderer spaces its blocks, as do the article editor's pastes
 (decided for #70; keeping them in rich messages too was the alternative). The decision looks at the pasted fragment,
 not the message it lands in: pasted into a native field that already holds rich content, the blank lines stay and add
 to the renderer's spacing. The send path and `.md` documents keep CommonMark (`.commonMark`). Tests:
 `TextFormat/Tests/PastedMarkdownSourceLinesTests.swift`, `Tests/ComposerHarness/Tests/HarnessChatGPTPasteTests.swift`.
 
-**RTF paste keeps paragraph gaps.** A copied web page (a ChatGPT reply in Safari) separates its paragraphs with
-margins only, `\saN`/`\sbN` in the RTF. Both legacy-field RTF routes turn a gap of ≥ 8pt between two paragraphs
-with text (never between two list items, never beside a whitespace-only spacer such as `<p>&nbsp;</p>`) into a
-blank line: `legacyChatInputAttributedString(fromRTF:)` through
-`RTFImport.document(fromRTF:paragraphSpacingAsBlankLines: true)`, `chatInputStateStringFromRTF(_:type:paragraphSpacingAsBlankLines: true)` through
-`attributedStringWithParagraphSpacingAsBlankLines` (`TextFormat/PastedRichTextParagraphGaps.swift`). Only the chat
-composer asks for it: media captions and `TextFieldComponent` fields keep pasted paragraphs one line apart, so a
-Word document (8pt after each paragraph) does not gain blank lines there.
+**RTF paste: paragraph spacing is not a blank line.** A copied web page (a ChatGPT reply in Safari) separates its
+paragraphs with margins only (`\saN`/`\sbN` in the RTF). Every editor pastes them one line apart: the legacy field as
+the native editors do, so the same paste reads the same whichever editor takes it. (#70 had the legacy field alone turn
+gaps of 8pt or more into blank lines; removed 2026-10-30.)
 
 **Self-referential links are stripped BEFORE that gate (load-bearing — a pasted URL must stay plain).** Apple's
 `NSAttributedString(markdown:)` applies the **GFM autolink extension**, so a bare `https://…` — and also a bare

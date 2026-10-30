@@ -16,6 +16,9 @@ public struct WidgetHarnessPost {
     public var height: Int32
     public var caption: String
     public var photos: [Photo]
+    /// The caption shown above the widget (widget-sandbox v0.4.0's `captionAbove`: layer 233's `invert_media`), so the
+    /// bubble draws its time over the widget as with no caption.
+    public var captionAbove: Bool = false
 }
 
 enum WidgetHarnessPosts {
@@ -51,7 +54,10 @@ enum WidgetHarnessPosts {
                     }
                     return WidgetHarnessPost.Photo(png: png, width: Int32(image.width), height: Int32(image.height))
                 }
-                posts.append(WidgetHarnessPost(path: post.widget, html: html, width: post.width, height: post.height, caption: post.caption, photos: photos))
+                // widget-sandbox v0.4.0: a widget the client draws its time over, posted without a caption, then with it above.
+                var harnessPost = WidgetHarnessPost(path: post.widget, html: html, width: post.width, height: post.height, caption: post.captionPlacement == .none ? "" : post.caption, photos: photos)
+                harnessPost.captionAbove = post.captionPlacement == .above
+                posts.append(harnessPost)
             }
         case .corpus:
             for item in MessageWidgetCorpusListing.items(in: root) {

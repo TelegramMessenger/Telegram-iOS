@@ -1,6 +1,15 @@
-# widget-sandbox v0.2.3 (vendored)
+# widget-sandbox v0.4.0 (vendored)
 
-Taken from `~/build/widget-sandbox` at the tag **`v0.2.3`** (`88285a3b`, 2026-10-27).
+Taken from `~/build/widget-sandbox` at the tag **`v0.4.0`** (`9a27e70`, 2026-10-30).
+- **v0.4.0:** the client's time over a widget with no caption below it, the content safe area: `env(safe-area-inset-*)`
+  in profile 1 (`P1-safe-area`), the six `--tg-content-safe-area-*` root variables, the UA layer's body padding,
+  `TelegramWidget.contentSafeAreaInset` and `contentSafeAreaChanged`; the conformance cases `auto/36-safe-area` and
+  `visual/17-time-corner` (posted twice: `withoutCaption`, `captionAbove`), `auto/04`'s `env()` check, and
+  `corpus/safe-area`. How this client follows it is in the message widgets guide and the runtime record.
+- **v0.3.0:** strict limits from the start (a counted cap stops the widget), the renderer stress kit for the client
+  teams (`stress/`, below), the tweb audit's fixes (the finger rule, pointer capture, bitmap caps, `light-dark()`,
+  timer ids), held background requests, `openTelegramLink` without a confirmation of its own, and the conformance cases
+  `auto/28`–`35`. How this client follows each is in the message widgets guide and the runtime record.
 - **v0.2.3:** fixes from the Android beta, with no API change.
   - Canvas arguments convert as a browser's context converts them. Our context is bound from WebIDL and already did;
     `CanvasArgumentTests` pins it.
@@ -27,28 +36,33 @@ linger in the bundles: v0.1.1 split `visual/03, 05, 08, 09` into `-a` and `-b`; 
 replaced `visual/sdk/16-bot-edit` with `16-state-edit`.
 
 ```sh
-V=v0.2.3
+V=v0.4.0
 W=third-party/widget-sandbox
 X=$(mktemp -d)
 D=packages/desktop/sandbox
-git -C ~/build/widget-sandbox archive "$V" corpus packages/conformance packages/core/profile.json \
+git -C ~/build/widget-sandbox archive "$V" corpus packages/conformance packages/stress packages/core/profile.json \
   packages/core/tests/fixtures/intl-cases.json packages/core/tests/fixtures/gesture-policy.json \
-  packages/core/tests/fixtures/sdk-policy.json $D/include/twidget/gesture_policy.h $D/include/twidget/json.h \
-  $D/include/twidget/sdk_policy.h $D/src/gesture_policy.cpp $D/src/sdk_policy.cpp | tar -x -C "$X"
-rm -rf "$W/corpus" "$W/conformance"
+  packages/core/tests/fixtures/sdk-policy.json packages/core/tests/fixtures/cpu-budget.json \
+  $D/include/twidget/gesture_policy.h $D/include/twidget/json.h $D/include/twidget/sdk_policy.h \
+  $D/include/twidget/cpu_budget.h $D/src/gesture_policy.cpp $D/src/sdk_policy.cpp $D/src/cpu_budget.cpp | tar -x -C "$X"
+rm -rf "$W/corpus" "$W/conformance" "$W/stress"
 cp -R "$X/corpus" "$W/corpus"
 C=$W/conformance; mkdir -p "$C/tools"
 for f in auto visual refs channel.json manifest.json catalogue.json run.schema.json CLIENTS.md README.md; do
   cp -R "$X/packages/conformance/$f" "$C/"
 done
 cp "$X/packages/conformance/tools/"{report,diff,png}.mjs "$C/tools/"
+S=$W/stress; mkdir -p "$S/tools"
+for f in widgets manifest.json run.schema.json CLIENTS.md README.md; do cp -R "$X/packages/stress/$f" "$S/"; done
+cp "$X/packages/stress/tools/report.mjs" "$S/tools/"
 cp "$X/packages/core/profile.json" "$W/profile/profile.json"
 cp "$X/packages/core/tests/fixtures/intl-cases.json" "$W/fixtures/intl-cases.json"
 cp "$X/packages/core/tests/fixtures/gesture-policy.json" "$W/fixtures/gesture-policy.json"
 cp "$X/packages/core/tests/fixtures/sdk-policy.json" "$W/fixtures/sdk-policy.json"
+cp "$X/packages/core/tests/fixtures/cpu-budget.json" "$W/fixtures/cpu-budget.json"
 mkdir -p "$W/gesture/twidget"
-cp "$X/$D/include/twidget/"{gesture_policy.h,json.h,sdk_policy.h} "$W/gesture/twidget/"
-cp "$X/$D/src/"{gesture_policy.cpp,sdk_policy.cpp} "$W/gesture/"
+cp "$X/$D/include/twidget/"{gesture_policy.h,json.h,sdk_policy.h,cpu_budget.h} "$W/gesture/twidget/"
+cp "$X/$D/src/"{gesture_policy.cpp,sdk_policy.cpp,cpu_budget.cpp} "$W/gesture/"
 rm -rf "$X"
 (cd submodules/TelegramUI/Components/MessageWidget/WidgetRuntime && python3 IDL/generate-profile-tables.py)
 ```
@@ -59,8 +73,11 @@ ratchet: `conformance_report.sh --record` retires checks a tag renamed (`Conform
 
 Taken:
 - `corpus/` (all of it):
-  - `attacks/`: 105 pages and `mem-cap-probe.js`. v0.2.0 added the five `request-*` pages and v0.2.2
-    `haptic-timer-buzz`. TEST FIXTURES ONLY, never in an app bundle.
+  - `attacks/`: 110 pages and `mem-cap-probe.js`. v0.2.0 added the five `request-*` pages, v0.2.2
+    `haptic-timer-buzz`, and v0.3.0 five from the tweb audit (`activation-pointer-capture`, `activation-touch-swipe`,
+    `css-light-dark-url`, `mem-huge-bitmaps`, `timer-id-reuse`). TEST FIXTURES ONLY, never in an app bundle.
+  - `bot-demos/` (v0.3.0): an order, a poll, an RSVP, tic-tac-toe, a ticker and a reaction, built as bots build them;
+    `auto/28`–`30` reproduce their renderer patterns.
   - `common/` and `compat/`.
   - `defaults/` (v0.1.1): six widgets with little or no CSS, the examples a widget that should look native starts from.
   - `generated/`.
@@ -71,19 +88,38 @@ Taken:
     `<meta name="tw-bot">`.
   - `out-of-profile/`: widgets using what profile 1 leaves out.
   - `resize/` (v0.1.3): one widget per resize anchor.
-  - `showcase/` and `README.md`.
+  - `safe-area/` (v0.4.0): seven widgets that show what the client passed as its content safe area (a diagnostic,
+    full-bleed cards, one right-to-left, an unstyled note, CSS as models write it, a canvas chart, a widget posted
+    without a caption, with one below and with one above) and their README.
+  - `showcase/` (`3d/` since v0.3.0: six CSS 3D scenes) and `README.md`.
 
   Tests read it through `:WidgetCorpus` and `:CorpusFiles`, the DEBUG app's corpus insertion through
   `:WidgetCorpusBundle` (attacks excluded).
 - `conformance/` from `packages/conformance/`:
-  - the 51 `auto/` widgets, the 20 `visual/` widgets and the 26 `visual/sdk/` ones, with their README;
+  - the 60 `auto/` widgets (v0.3.0 added `28`–`35`: three renderer patterns and five stop tests, which name the stop's
+    reason in the manifest's `stops`; v0.4.0 `36-safe-area`, whose manifest entry carries the `safeArea` its runner
+    passes), the 21 `visual/` widgets (v0.4.0: `17-time-corner`, with its `safeArea`) and the 26 `visual/sdk/` ones,
+    with their README;
   - `refs/`: stage crops and the reference pictures posted beside the visual widgets, drawn on the bubble's colour
     since v0.1.1;
-  - `channel.json`: the 102 posts in order, each with its `message` spec, plus the `bot` table (v0.2.1);
+  - `channel.json`: the 114 posts in order, each with its `message` spec, plus the `bot` table (v0.2.1); since v0.4.0
+    a widget the client draws its time over is posted twice, `withoutCaption` and `captionAbove`;
   - `manifest.json` (tests carry `message` and `bot` since v0.2.1), `catalogue.json`,
   `run.schema.json`, `CLIENTS.md`, `README.md` and `tools/{report,diff,png}.mjs` (the report; Node ≥ 18, no
   dependencies; it reads `manifest.json`, `catalogue.json` and `refs/` relative to `tools/..`). Tests read it through
   `:WidgetConformance`; the DEBUG app's conformance insertion through `:WidgetConformanceBundle`.
+
+- `stress/` from `packages/stress/` (v0.3.0): the renderer stress kit, 127 widgets in 19 loads, each a ladder of levels
+  (`widgets/<load>/<value>.html`), with `manifest.json` (run order, warm-up and measuring window, width),
+  `run.schema.json`, `CLIENTS.md` (how a client runs it and what it reports), `README.md` and `tools/report.mjs`. The
+  client's runner is `MessageWidgetStress` (the message widgets guide); the harness and DEBUG app bundle it through
+  `:WidgetStressBundle`.
+
+- `gesture/twidget/cpu_budget.h`, `gesture/cpu_budget.cpp` from `packages/desktop/sandbox` and
+  `fixtures/cpu-budget.json` from `packages/core/tests/fixtures`: the CPU quota policy (a sliding window of ten
+  buckets, the slice, the floor, the layout-query budget, the modelled op cost), one of four line-for-line copies
+  checked against the shared fixture. WidgetRuntime's event loop decides every step with it, for the JS quota and the
+  main-thread window; `CpuBudgetTests` runs the fixture.
 
 - `profile/profile.json` from `packages/core/profile.json`: profile 1's definition, the data its tables come from. Data,
   as the conformance widgets are: WidgetRuntime's `IDL/generate-profile-tables.py` writes the tables its `CSS.supports`
@@ -153,8 +189,12 @@ The previous vendoring (the corpus at side-branch commit 1144002 and the old run
 differed from v0.1.0 in 216 of the files both share, and the bundles (`WidgetJS/`, Chart.js and D3) were used by
 nothing once the old runtime was deleted. Profile 1 bundles no libraries (`P1-libs`).
 
-**Divergence: the host limits by work, not time.** widget-sandbox limits a widget by milliseconds (`cpuLimitMs` 500 per
-slice, `cpuQuotaMs` 300 per `cpuQuotaWindowMs` 1000). Our runtime budgets deterministic work units instead (parse
-400,000,000, boot 48,000,000, each later task 28,000,000; `MessageWidgetCore`), with no rate limit (the user, 2026-10-15,
-and again 2026-10-19: "Keep work-unit limits"). A widget the reference throttles may run here, and the reverse. The
-observable contract the catalogue's `limit.cpu` covers holds: a looping widget is stopped and keeps its last frame.
+**The host's limits are upstream's** (since 2026-10-30; the user: "move closer to the upstream", exact parity).
+`WidgetRuntime` runs `LIMIT_DEFAULTS` on the widget thread's CPU clock: a 500 ms slice per task, the JS quota of 300 ms
+per 1000 ms window and the 100 ms main-thread window through the vendored `CpuBudget`, 100 ms of layout queries per
+task, and the wall backstop max(10 × slice, 5 s) (`wr::CpuLimits`, `wr::Runtime`, `wr::EventLoop`). The work units it
+ran on from 2026-10-15 are gone. What still differs: our renderer's flushes are measured but charged to no window
+(upstream's renderer is the browser's; only the layout queries' time and the modelled op cost reach it); a follow-up
+task gets a slice of its own rather than its delivery's, so a chain rooted in a boot, event or visibility step is not
+deferred by the quota (a core drain and the boot's loop stop once a slice is spent); and native builtins are not interruptible, as
+in every QuickJS client of upstream's.

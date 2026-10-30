@@ -29,12 +29,6 @@
 
 namespace {
 
-// The work budgets (MessageWidgetCore's, the old runtime's values): the parse is ours, under its ceiling; the boot's
-// scripts and lifecycle share one budget.
-constexpr uint64_t kParseUnits = 400000000;
-constexpr uint64_t kBootUnits = 48000000;
-constexpr uint64_t kWorkReportUnits = 10000;
-
 NSString* text(std::string_view s) {
     return [[NSString alloc] initWithBytes:s.data() length:s.size() encoding:NSUTF8StringEncoding] ?: @"";
 }
@@ -141,17 +135,16 @@ public:
 @end
 
 @interface WRSelectableText ()
-- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets units:(uint64_t)units;
+- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets;
 @end
 
 @implementation WRSelectableText
 
-- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets units:(uint64_t)units {
+- (instancetype)initWithText:(NSString*)text runs:(NSData*)runs carets:(NSData*)carets {
     if ((self = [super init])) {
         _text = [text copy];
         _runs = [runs copy];
         _carets = [carets copy];
-        _units = units;
     }
     return self;
 }
@@ -222,6 +215,51 @@ public:
 
 @end
 
+@implementation WRCpuLimits
+
+- (instancetype)initWithCpuLimitMs:(double)cpuLimitMs
+                        cpuQuotaMs:(double)cpuQuotaMs
+                  cpuQuotaWindowMs:(double)cpuQuotaWindowMs
+                    cpuKillAfterMs:(double)cpuKillAfterMs
+                 mainThreadQuotaMs:(double)mainThreadQuotaMs {
+    if (!(self = [super init])) {
+        return nil;
+    }
+    _cpuLimitMs = cpuLimitMs;
+    _cpuQuotaMs = cpuQuotaMs;
+    _cpuQuotaWindowMs = cpuQuotaWindowMs;
+    _cpuKillAfterMs = cpuKillAfterMs;
+    _mainThreadQuotaMs = mainThreadQuotaMs;
+    return self;
+}
+
++ (instancetype)productLimits {
+    const wr::CpuLimits product;
+    return [[WRCpuLimits alloc] initWithCpuLimitMs:product.cpuLimitMs
+                                        cpuQuotaMs:product.cpuQuotaMs
+                                  cpuQuotaWindowMs:product.cpuQuotaWindowMs
+                                    cpuKillAfterMs:product.cpuKillAfterMs
+                                 mainThreadQuotaMs:product.mainThreadQuotaMs];
+}
+
+@end
+
+@interface WRSessionStats ()
+@property (nonatomic, readwrite) uint64_t totalOps;
+@property (nonatomic, readwrite) uint64_t maxBatchOps;
+@property (nonatomic, readwrite) uint64_t layoutQueries;
+@property (nonatomic, readwrite) double flushMilliseconds;
+@property (nonatomic, readwrite) uint64_t heapBytes;
+@property (nonatomic, readwrite) uint64_t nodes;
+@property (nonatomic, readwrite) uint64_t throttledSteps;
+@property (nonatomic, readwrite) double queryMilliseconds;
+@property (nonatomic, readwrite) double jsMilliseconds;
+@property (nonatomic, readwrite) double largestStepMilliseconds;
+@end
+
+@implementation WRSessionStats
+@end
+
 @implementation WRSession {
     std::recursive_mutex _lock;
     std::unique_ptr<WRProductionHost> _host;
@@ -232,8 +270,8 @@ public:
     /// Guarded calls running: a delegate calling back from inside one (against the contract) gets the empty default.
     int _depth;
     WRStopReason _latchedStop;
-    uint64_t _latchedUnits;
-    uint64_t _parseUnits;
+    NSString* _latchedDetail;
+    NSUInteger _memoryLimitBytes;
     uint64_t _refusedLoads;
     /// The last tree published, kept after the runtime goes, and the object that hands it out.
     std::shared_ptr<const wr::LayerTree> _lastTree;
@@ -287,6 +325,32 @@ struct Depth {
                    textTokens:(NSDictionary<NSString*, id>*)text
                         scale:(CGFloat)scale
                      delegate:(id<WRSessionDelegate>)delegate {
+    return [self initWithWidth:width dark:dark themeParams:themeParams buttonTokens:tokens textTokens:text scale:scale delegate:delegate
+                        policy:WRLimitPolicyStrict];
+}
+
+- (instancetype)initWithWidth:(CGFloat)width
+                         dark:(BOOL)dark
+                  themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
+                 buttonTokens:(NSDictionary<NSString*, id>*)tokens
+                   textTokens:(NSDictionary<NSString*, id>*)text
+                        scale:(CGFloat)scale
+                     delegate:(id<WRSessionDelegate>)delegate
+                       policy:(WRLimitPolicy)policy {
+    return [self initWithWidth:width dark:dark themeParams:themeParams buttonTokens:tokens textTokens:text scale:scale delegate:delegate
+                        policy:policy
+                     cpuLimits:[WRCpuLimits productLimits]];
+}
+
+- (instancetype)initWithWidth:(CGFloat)width
+                         dark:(BOOL)dark
+                  themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
+                 buttonTokens:(NSDictionary<NSString*, id>*)tokens
+                   textTokens:(NSDictionary<NSString*, id>*)text
+                        scale:(CGFloat)scale
+                     delegate:(id<WRSessionDelegate>)delegate
+                       policy:(WRLimitPolicy)policy
+                    cpuLimits:(WRCpuLimits*)cpuLimits {
     if (!(self = [super init])) {
         return nil;
     }
@@ -297,8 +361,15 @@ struct Depth {
         wr::Runtime::Options options;
         options.interfaces = &wr::idl::kTable;
         options.host = _host.get();
-        options.memoryLimitBytes = size_t(64) << 20;
+        options.limits = policy == WRLimitPolicyCompat ? wr::Limits::compat() : wr::Limits::strict();
+        options.memoryLimitBytes = options.limits.memoryBytes;
+        _memoryLimitBytes = options.memoryLimitBytes;
         options.maxStackBytes = size_t(1) << 20;
+        options.cpu.cpuLimitMs = cpuLimits.cpuLimitMs;
+        options.cpu.cpuQuotaMs = cpuLimits.cpuQuotaMs;
+        options.cpu.cpuQuotaWindowMs = cpuLimits.cpuQuotaWindowMs;
+        options.cpu.cpuKillAfterMs = cpuLimits.cpuKillAfterMs;
+        options.cpu.mainThreadQuotaMs = cpuLimits.mainThreadQuotaMs;
         uint64_t seed = 1;
         if (SecRandomCopyBytes(kSecRandomDefault, sizeof(seed), &seed) != errSecSuccess) {
             seed = uint64_t(CACurrentMediaTime() * 1e6);
@@ -315,15 +386,6 @@ struct Depth {
         renderOptions.theme = dark ? wr::Theme::Dark : wr::Theme::Light;
         renderOptions.pixelSnapScale = scale;
         wr::installRender(ctx, *_render, renderOptions);
-        __weak WRSession* weakSelf = self;
-        _runtime->setWorkObserver(
-            [weakSelf](uint64_t total) {
-                WRSession* session = weakSelf;
-                WRProductionHost* host = session ? session->_host.get() : nullptr;
-                id<WRSessionDelegate> d = host ? host->delegate : nil;
-                [d session:session didWork:total];
-            },
-            kWorkReportUnits);
     } catch (...) {
         _runtime.reset();
         return nil;
@@ -349,23 +411,33 @@ struct Depth {
         _pending.reset();
     }
     if (_runtime) {
-        _latchedUnits = JS_GetWorkUnits(_runtime->jsRuntime());
+        _latchedDetail = detailOf(*_runtime);
         _runtime.reset();
     }
+}
+
+static NSString* _Nullable detailOf(const wr::Runtime& runtime) {
+    // The stops in upstream's words (Limit, Cpu, LayoutQuery) carry their reason; the others none.
+    if (runtime.stopReason() == wr::StopReason::None || runtime.stopDetail().empty()) {
+        return nil;
+    }
+    return [[NSString alloc] initWithBytes:runtime.stopDetail().data() length:runtime.stopDetail().size() encoding:NSUTF8StringEncoding];
 }
 
 static WRStopReason stopOf(wr::StopReason reason) {
     switch (reason) {
     case wr::StopReason::None:
         return WRStopReasonNone;
-    case wr::StopReason::Budget:
-        return WRStopReasonBudget;
     case wr::StopReason::Memory:
         return WRStopReasonMemory;
     case wr::StopReason::Internal:
         return WRStopReasonInternal;
     case wr::StopReason::LayoutQuery:
         return WRStopReasonLayoutQuery;
+    case wr::StopReason::Limit:
+        return WRStopReasonLimit;
+    case wr::StopReason::Cpu:
+        return WRStopReasonCpu;
     }
     return WRStopReasonInternal;
 }
@@ -378,6 +450,8 @@ static WRStepResult stepOf(wr::StepResult result) {
         return WRStepResultIdle;
     case wr::StepResult::Stopped:
         return WRStepResultStopped;
+    case wr::StepResult::Deferred:
+        return WRStepResultDeferred;
     }
     return WRStepResultStopped;
 }
@@ -420,17 +494,12 @@ static WRStepResult stepOf(wr::StepResult result) {
     _refusedLoads = render->refusedLoads();
     if (_runtime->stopReason() == wr::StopReason::Memory && !_failed) {
         _latchedStop = WRStopReasonMemory;
-        _latchedUnits = JS_GetWorkUnits(_runtime->jsRuntime());
         // Not dropRuntime: that calls back here.
         _runtime.reset();
     }
 }
 
 - (BOOL)bootWithSource:(NSString*)source {
-    return [self bootWithSource:source parseUnits:kParseUnits bootUnits:kBootUnits];
-}
-
-- (BOOL)bootWithSource:(NSString*)source parseUnits:(uint64_t)parseUnits bootUnits:(uint64_t)bootUnits {
     WR_GUARD(NO, {
         if (!_runtime || _booted) {
             return NO;
@@ -441,18 +510,17 @@ static WRStepResult stepOf(wr::StepResult result) {
             return NO;
         }
         JSContext* ctx = _runtime->context();
-        JSRuntime* rt = _runtime->jsRuntime();
-        const uint64_t start = JS_GetWorkUnits(rt);
-        _runtime->setWorkLimit(start + parseUnits);
         wr::boot(ctx, wr::BootOptions{std::string_view(static_cast<const char*>(utf8.bytes), utf8.length)});
-        _parseUnits = JS_GetWorkUnits(rt) - start;
-        // The boot's scripts and lifecycle, on one budget, up to the task that makes the document complete (its load
-        // and pageshow run in it).
-        _runtime->setWorkLimit(JS_GetWorkUnits(rt) + bootUnits);
+        // The boot's scripts and lifecycle, each task on a slice of its own, up to the task that makes the document
+        // complete (its load and pageshow run in it), and one slice of CPU in all, as a core drain: a chain of
+        // follow-ups that doubles at every script runs before the next one (the fix wave's review I-A). What is left
+        // runs on the core's wakes; the boot has started once its parsed markup is published.
         wr::EventLoop& loop = wr::EventLoop::of(ctx);
         const wr::Document& document = wr::DOMState::of(ctx).document();
+        const double cpuStart = loop.cpuMsTotal();
         while (_runtime && _runtime->stopReason() == wr::StopReason::None &&
-               document.readiness() != wr::DocumentReadiness::Complete) {
+               document.readiness() != wr::DocumentReadiness::Complete &&
+               loop.cpuMsTotal() - cpuStart < _runtime->cpuLimits().cpuLimitMs) {
             if (loop.runNextTask(_host->monotonicNow()) != wr::StepResult::Ran) {
                 break;
             }
@@ -503,10 +571,28 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
-- (void)setWorkLimitAfter:(uint64_t)units {
+- (double)bootCpuMilliseconds {
+    WR_GUARD(0, {
+        if (!_runtime) {
+            return 0;
+        }
+        return wr::EventLoop::of(_runtime->context()).bootLinkCpuMsTotal();
+    });
+}
+
+- (double)stepCpuMilliseconds {
+    WR_GUARD(0, {
+        if (!_runtime) {
+            return 0;
+        }
+        return wr::EventLoop::of(_runtime->context()).cpuMsTotal();
+    });
+}
+
+- (void)setCpuClockForTesting:(double (^)(void))cpu wall:(double (^)(void))wall {
     WR_GUARD(, {
         if (_runtime) {
-            _runtime->setWorkLimit(JS_GetWorkUnits(_runtime->jsRuntime()) + units);
+            _runtime->setCpuClock(wr::CpuClock{[cpu] { return cpu(); }, [wall] { return wall(); }, {}});
         }
     });
 }
@@ -638,6 +724,28 @@ static std::optional<std::string> bytesOf(NSData* data) {
     });
 }
 
+- (void)setContentSafeAreaTop:(double)top right:(double)right bottom:(double)bottom left:(double)left cornerLeft:(double)cornerLeft cornerRight:(double)cornerRight {
+    WR_GUARD(, {
+        if (_runtime) {
+            wr::ContentSafeArea area;
+            area.top = top;
+            area.right = right;
+            area.bottom = bottom;
+            area.left = left;
+            area.cornerLeft = cornerLeft;
+            area.cornerRight = cornerRight;
+            JSContext* ctx = _runtime->context();
+            if (_booted) {
+                wr::HostState::of(ctx).setContentSafeArea(ctx, area);
+                // The layout changed at the call, and queuing the task can latch a memory stop.
+                [self noteTree];
+            } else {
+                wr::HostState::of(ctx).setInitialContentSafeArea(ctx, area);
+            }
+        }
+    });
+}
+
 - (void)completeRequest:(int64_t)requestId result:(NSData*)result failure:(WRRequestFailure)failure {
     WR_GUARD(, {
         if (_runtime) {
@@ -702,6 +810,14 @@ static std::optional<std::string> bytesOf(NSData* data) {
     return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0) | (claim.hold ? WRGestureAxesHold : 0);
 }
 
+- (BOOL)pressDownPending {
+    std::lock_guard<std::recursive_mutex> guard(_lock);
+    if (_failed || !_runtime) {
+        return NO;
+    }
+    return wr::HostState::of(_runtime->context()).pressDownPending();
+}
+
 - (BOOL)pressTakesTaps {
     std::lock_guard<std::recursive_mutex> guard(_lock);
     if (_failed || !_runtime) {
@@ -726,9 +842,45 @@ static std::optional<std::string> bytesOf(NSData* data) {
     return stopOf(_runtime->stopReason());
 }
 
-- (uint64_t)workUnits {
+- (NSUInteger)memoryLimitBytes {
+    return _memoryLimitBytes;
+}
+
+- (WRSessionStats*)stats {
+    WR_GUARD(nil, {
+        if (!_runtime) {
+            return nil;
+        }
+        WRSessionStats* stats = [WRSessionStats new];
+        stats.totalOps = _runtime->totalOps();
+        stats.maxBatchOps = _runtime->maxBatchOps();
+        stats.layoutQueries = _runtime->layoutQueries();
+        stats.flushMilliseconds = _runtime->flushMilliseconds();
+        JSMemoryUsage usage;
+        JS_ComputeMemoryUsage(_runtime->jsRuntime(), &usage);
+        stats.heapBytes = uint64_t(std::max<int64_t>(0, usage.malloc_size));
+        // Statistics only: a walk the widget is never charged for.
+        wr::Document& document = wr::DOMState::of(_runtime->context()).document();
+        uint64_t nodes = 1;
+        for (wr::Node* n = document.firstChildNode(); n; n = n->nextInTreeOrder(&document)) {
+            nodes++;
+        }
+        stats.nodes = nodes;
+        wr::EventLoop& loop = wr::EventLoop::of(_runtime->context());
+        stats.throttledSteps = loop.throttledSteps();
+        stats.queryMilliseconds = loop.queryMsTotal();
+        stats.jsMilliseconds = loop.jsMsTotal();
+        stats.largestStepMilliseconds = loop.largestStepMs();
+        return stats;
+    });
+}
+
+- (NSString*)stopDetail {
     std::lock_guard<std::recursive_mutex> guard(_lock);
-    return _runtime ? JS_GetWorkUnits(_runtime->jsRuntime()) : _latchedUnits;
+    if (_failed || !_runtime) {
+        return _failed ? nil : _latchedDetail;
+    }
+    return detailOf(*_runtime);
 }
 
 - (CGSize)contentSize {
@@ -739,11 +891,6 @@ static std::optional<std::string> bytesOf(NSData* data) {
 - (BOOL)failed {
     std::lock_guard<std::recursive_mutex> guard(_lock);
     return _failed;
-}
-
-- (uint64_t)parseUnits {
-    std::lock_guard<std::recursive_mutex> guard(_lock);
-    return _parseUnits;
 }
 
 - (uint64_t)refusedLoads {
@@ -801,19 +948,23 @@ static std::optional<std::string> bytesOf(NSData* data) {
         JSContext* ctx = _runtime->context();
         JS_UpdateStackTop(_runtime->jsRuntime());
         std::optional<std::string> result;
-        try {
-            bool threw = false;
-            // A stop inside the script throws Aborted: the stop is latched, and is the widget's, not a failure here.
-            result = _runtime->evaluateToString(code.UTF8String ?: "", "evaluateForTesting", &threw);
-        } catch (const wr::Aborted&) {
-        }
-        wr::HostState::of(ctx).flushRender(ctx);
+        std::string source = code.UTF8String ?: "";
+        // One event-kind step: the script runs on its CPU slice, as the widget's own events do.
+        wr::EventLoop::of(ctx).runNow(wr::TaskKind::Event, _host->monotonicNow(), [&] {
+            try {
+                bool threw = false;
+                // A stop inside the script throws Aborted: the stop is latched, and is the widget's, not a failure here.
+                result = _runtime->evaluateToString(source, "evaluateForTesting", &threw);
+            } catch (const wr::Aborted&) {
+            }
+            wr::HostState::of(ctx).flushRender(ctx);
+        });
         [self noteTree];
         return result ? text(*result) : nil;
     });
 }
 
-- (WRSelectableText*)selectableTextWithBudget:(uint64_t)units visibleHeight:(CGFloat)visibleHeight {
+- (WRSelectableText*)selectableTextWithVisibleHeight:(CGFloat)visibleHeight {
     WR_GUARD(nil, {
         wr::RenderTree* render = [self renderTree];
         if (!render) {
@@ -822,11 +973,8 @@ static std::optional<std::string> bytesOf(NSData* data) {
         std::optional<wr::SelectableText> exported;
         try {
             // A read of the published layout: a failure here is the export's, never the widget's (no latch).
-            exported = render->selectableText(units, double(visibleHeight));
+            exported = render->selectableText(double(visibleHeight));
         } catch (...) {
-            return nil;
-        }
-        if (!exported) {
             return nil;
         }
         NSMutableData* runs = [NSMutableData dataWithLength:exported->runs.size() * sizeof(WRSelectableRun)];
@@ -843,7 +991,7 @@ static std::optional<std::string> bytesOf(NSData* data) {
         }
         NSString* text = [[NSString alloc] initWithCharacters:reinterpret_cast<const unichar*>(exported->text.data())
                                                        length:exported->text.size()];
-        return [[WRSelectableText alloc] initWithText:text runs:runs carets:carets units:exported->units];
+        return [[WRSelectableText alloc] initWithText:text runs:runs carets:carets];
     });
 }
 
@@ -893,12 +1041,18 @@ static std::optional<std::string> bytesOf(NSData* data) {
     });
 }
 
+- (void)stopForTestingWithLimit:(NSString*)detail {
+    WR_GUARD(, {
+        if (_runtime) {
+            _runtime->stopForLimit(std::string(detail.UTF8String ?: ""));
+        }
+    });
+}
+
 - (void)stopForTesting:(WRStopReason)reason {
     WR_GUARD(, {
         if (_runtime) {
-            _runtime->stop(reason == WRStopReasonMemory ? wr::StopReason::Memory
-                                                        : reason == WRStopReasonBudget ? wr::StopReason::Budget
-                                                                                       : wr::StopReason::Internal);
+            _runtime->stop(reason == WRStopReasonMemory ? wr::StopReason::Memory : wr::StopReason::Internal);
         }
     });
 }

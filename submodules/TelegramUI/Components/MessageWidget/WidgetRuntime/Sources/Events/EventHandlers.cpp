@@ -16,7 +16,6 @@ namespace wr {
 
 EventHandlerEntry* EventHandlerMap::find(JSContext* ctx, JSAtom type) {
     for (EventHandlerEntry& entry : m_entries) {
-        charge(ctx, work::kNodeVisit);
         if (entry.type.atom == type) {
             return &entry;
         }
@@ -123,9 +122,7 @@ Value compile(JSContext* ctx, EventTarget& owner, JSAtom type, const EventHandle
     Value documentObject = Value::dup(ctx, document.object());
     String body = String::adopt(ctx, bodyValue.newRef());
     String url = document.URL(ctx);
-    // Both are converted and copied into the source: charged before.
-    chargeScan(ctx, body.length());
-    chargeScan(ctx, url.length());
+    // Both are converted and copied into the source.
     const char* parameters = windowHandler && type == errorAtom(ctx) ? "event, source, lineno, colno, error" : "event";
     std::string name = "on" + String::fromAtom(ctx, type).utf8();
     std::string source = std::string("(function () { ") + (windowHandler ? "" : "with (arguments[0]) with (arguments[1]) ") + "return { " +
@@ -234,8 +231,8 @@ JSValue processEventHandler(JSContext* ctx, JSValueConst thisVal, int argc, JSVa
 }
 
 /// HTML "activate an event handler": once, the processing function becomes a listener. It is added before the entry
-/// records it, so a failure on the way (the budget, out of memory) leaves the handler not activated, for the next value
-/// to activate: never a listener in the list the entry does not know, nor a recorded one that is not there. Adding a
+/// records it, so a failure on the way (out of memory) leaves the handler not activated, for the next value to
+/// activate: never a listener in the list the entry does not know, nor a recorded one that is not there. Adding a
 /// listener runs no script, so `entry` stays valid.
 void activate(JSContext* ctx, EventTarget& owner, EventHandlerEntry& entry) {
     if (!entry.listener.isUndefined()) {
@@ -316,8 +313,8 @@ void clearEventHandler(JSContext* ctx, EventTarget& owner, JSAtom type) {
     if (entry->listener.isUndefined()) {
         return;
     }
-    // Out of the list before the entry forgets it, as activate's order: a failure on the way (the budget) leaves the
-    // handler activated with a null value. Removing a listener runs no script, so `entry` stays valid.
+    // Out of the list before the entry forgets it, as activate's order. Removing a listener runs no script, so `entry`
+    // stays valid.
     Value listener = Value::dup(ctx, entry->listener.value);
     owner.removeListener(ctx, type, listener.get(), false);
     entry->listener.clear(rt);

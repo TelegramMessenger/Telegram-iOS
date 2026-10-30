@@ -5,23 +5,23 @@
   "platform": "ios",
   "renderer": "telegram-native",
   "engine": "iOS 26.5, iPhone18,3 simulator",
-  "framework": "v0.2.3",
+  "framework": "v0.4.0",
   "policy": "strict",
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-27T10:10:24Z",
-  "commit": "88285a3b"
+  "date": "2026-10-30T10:10:47Z",
+  "commit": "9a27e70"
  },
  "summary": {
   "in": {
-   "pass": 171,
+   "pass": 179,
    "partial": 2,
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
    "skip": 1,
-   "untested": 14
+   "untested": 17
   },
   "candidate": {
    "pass": 0,
@@ -33,7 +33,7 @@
    "untested": 0
   },
   "out": {
-   "pass": 75,
+   "pass": 74,
    "partial": 0,
    "fail": 0,
    "xfail": 0,
@@ -1406,7 +1406,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 3
+    "pass": 4
    },
    "evidence": [
     {
@@ -1435,6 +1435,15 @@
      "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "after cx/cy move: the dot sits at its cx/cy",
+     "status": "pass",
+     "detail": "centre 324,70, want 324,70",
+     "theme": "light",
+     "width": 390
     }
    ]
   },
@@ -1442,7 +1451,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
@@ -1460,6 +1469,15 @@
      "name": "structure",
      "status": "pass",
      "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "the dot sits at its cx/cy (a viewBox the element's width, preserveAspectRatio none)",
+     "status": "pass",
+     "detail": "centre 374,20, want 374,20",
      "theme": "light",
      "width": 390
     }
@@ -1793,7 +1811,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 12
    },
    "evidence": [
     {
@@ -1838,6 +1856,69 @@
      "name": "grid",
      "status": "pass",
      "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "at load: each count ends at the row's end (the auto column fits the count)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "at 100 %: each count ends at the row's end (the auto column fits the count)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "the bar spans columns 2–3, from 52 px to the row's end (grid-column: 2/4)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "nine buttons take equal thirds of the board (grid-template: repeat(3,1fr)/repeat(3,1fr))",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "after a mark in cell 4: the cells keep equal thirds",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "after marks in cells 4 and 5: the cells keep equal thirds",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "each mark is centred in its own cell (place-items: center)",
+     "status": "pass",
+     "detail": "",
      "theme": "light",
      "width": 390
     }
@@ -1892,7 +1973,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 4
+    "pass": 8
    },
    "evidence": [
     {
@@ -1928,6 +2009,42 @@
      "name": "width: fit-content shrinks to the text",
      "status": "pass",
      "detail": "w 6.7412109375",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "at load: every row is as wide as its container (width: 100%)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "at 100 %: every row is as wide as its container (width: 100%)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "no fill runs past its bar's right edge",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "each mark is 58 % of its cell (width/height: 58% of the button)",
+     "status": "pass",
+     "detail": "",
      "theme": "light",
      "width": 390
     }
@@ -2054,7 +2171,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 1
+    "pass": 2
    },
    "evidence": [
     {
@@ -2063,6 +2180,15 @@
      "name": "aspect-ratio: 2 makes a 60px wide box 30px high",
      "status": "pass",
      "detail": "got 30, want 30 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/29-grid-svg-marks",
+     "kind": "check",
+     "name": "the board is square at its max-width (aspect-ratio: 1, max-width: 264px)",
+     "status": "pass",
+     "detail": "264x264, want 264",
      "theme": "light",
      "width": 390
     }
@@ -3414,7 +3540,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 7
+    "pass": 14
    },
    "evidence": [
     {
@@ -3477,6 +3603,69 @@
      "name": "transform-2d",
      "status": "pass",
      "detail": "diff 0.1 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size",
+     "status": "pass",
+     "detail": "off by 0,0, 3× the dot",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "the running pulse (scale 1 → 3) stays centred on the dot",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "after cx/cy move: scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size",
+     "status": "pass",
+     "detail": "off by 0,0, 3× the dot",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "check",
+     "name": "after cx/cy move: the running pulse (scale 1 → 3) stays centred on the dot",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "stage",
+     "name": "scale",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "stage",
+     "name": "animated",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "stage",
+     "name": "moved",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
     }
@@ -4077,18 +4266,99 @@
    ]
   },
   "css.value.env": {
-   "status": "out",
+   "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 1
+    "pass": 10
    },
    "evidence": [
     {
      "test": "auto/04-values-units",
      "kind": "check",
-     "name": "env() resolves to its fallback or is dropped",
+     "name": "env(safe-area-inset-left, 31px) is the client's",
      "status": "pass",
-     "detail": "w 200",
+     "detail": "got 0, want 0 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "env(safe-area-inset-bottom) is the band",
+     "status": "pass",
+     "detail": "got 24, want 24 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "env(safe-area-inset-bottom, 77px) is the band, not the fallback",
+     "status": "pass",
+     "detail": "got 24, want 24 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "env(safe-area-inset-top, 77px) is 0",
+     "status": "pass",
+     "detail": "got 0, want 0 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "calc(10px + env(safe-area-inset-bottom, 0px))",
+     "status": "pass",
+     "detail": "got 34, want 34 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "another name: env(keyboard-inset-height, 13px) is its fallback",
+     "status": "pass",
+     "detail": "got 13, want 13 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "another name without a fallback: the declaration is dropped (the one before it stands)",
+     "status": "pass",
+     "detail": "got 40, want 40 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "var(--tg-content-safe-area-inset-bottom) is the band",
+     "status": "pass",
+     "detail": "got 24, want 24 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "the corner's side: left: var(--…-corner-left); right: var(--…-corner-right) leaves it free",
+     "status": "pass",
+     "detail": "got \"64,0\", want \"64,0\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "CSS.supports: true for env(safe-area-inset-bottom), false for another name",
+     "status": "pass",
+     "detail": "",
      "theme": "light",
      "width": 390
     }
@@ -5125,7 +5395,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 2
+    "pass": 3
    },
    "evidence": [
     {
@@ -5145,6 +5415,15 @@
      "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
      "width": 390
+    },
+    {
+     "test": "auto/28-grid-percent-fill",
+     "kind": "check",
+     "name": "after the width transition each fill is its percentage of the bar",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
     }
    ]
   },
@@ -5152,7 +5431,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 7
    },
    "evidence": [
     {
@@ -5195,6 +5474,24 @@
      "test": "auto/10-css-animations",
      "kind": "stage",
      "name": "fill-forwards",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "stage",
+     "name": "animated",
+     "status": "pass",
+     "detail": "diff 0.0 % of ink (max 5 %)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/30-svg-fill-box",
+     "kind": "stage",
+     "name": "moved",
      "status": "pass",
      "detail": "diff 0.0 % of ink (max 5 %)",
      "theme": "light",
@@ -5412,7 +5709,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "96.6682916879654",
+     "detail": "96.00700008869171",
      "theme": "light",
      "width": 390
     },
@@ -6456,7 +6753,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "5,22,38",
+     "detail": "8,24,41",
      "theme": "light",
      "width": 390
     }
@@ -6526,7 +6823,7 @@
     {
      "test": "auto/15-js-runtime-a",
      "kind": "check",
-     "name": "10 KB fits",
+     "name": "3 KB fits",
      "status": "pass",
      "detail": "",
      "theme": "light",
@@ -7276,6 +7573,60 @@
      "name": "with 'top' it shrinks back to 0 px",
      "status": "pass",
      "detail": "0 px",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.content-safe-area": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 5
+   },
+   "evidence": [
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "contentSafeAreaInset: a frozen object of six numbers, the same object on every read",
+     "status": "pass",
+     "detail": "{\"top\":0,\"right\":0,\"bottom\":24,\"left\":0,\"cornerLeft\":64,\"cornerRight\":0}",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "only the bottom band: top, left and right are 0; the band 0–64, a corner 0–200",
+     "status": "pass",
+     "detail": "{\"top\":0,\"right\":0,\"bottom\":24,\"left\":0,\"cornerLeft\":64,\"cornerRight\":0}",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "one corner at most, on one side, and only with a band",
+     "status": "pass",
+     "detail": "{\"top\":0,\"right\":0,\"bottom\":24,\"left\":0,\"cornerLeft\":64,\"cornerRight\":0}",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "the root variables are its values",
+     "status": "pass",
+     "detail": "got \"0px,0px,24px,0px,64px,0px\", want \"0px,0px,24px,0px,64px,0px\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/36-safe-area",
+     "kind": "check",
+     "name": "body: the band as bottom padding (the UA layer)",
+     "status": "pass",
+     "detail": "got 24, want 24 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -8237,18 +8588,18 @@
     {
      "test": "auto/19-limits",
      "kind": "check",
-     "name": "a 60 KB text node renders",
+     "name": "a 30 K text node renders",
      "status": "pass",
      "detail": "16",
      "theme": "light",
      "width": 390
     },
     {
-     "test": "auto/19-limits",
-     "kind": "check",
-     "name": "a text node over 64 KB is refused",
+     "test": "auto/31-stop-text",
+     "kind": "stop",
+     "name": "stopped with \"Text limit exceeded…\"",
      "status": "pass",
-     "detail": "0",
+     "detail": "Text limit exceeded: a text value of 40000 characters (max 32768)",
      "theme": "light",
      "width": 390
     }
@@ -8297,9 +8648,9 @@
     {
      "test": "auto/19-limits",
      "kind": "check",
-     "name": "the 257th live timer throws RangeError",
+     "name": "the 65th live timer throws RangeError",
      "status": "pass",
-     "detail": "253 made, RangeError",
+     "detail": "61 made, RangeError",
      "theme": "light",
      "width": 390
     }
@@ -8327,7 +8678,7 @@
     {
      "test": "auto/15-js-runtime-a",
      "kind": "check",
-     "name": "over 16 KB per message: setItem throws QuotaExceededError",
+     "name": "over 4 KB per message: setItem throws QuotaExceededError",
      "status": "pass",
      "detail": "got \"QuotaExceededError\", want \"QuotaExceededError\"",
      "theme": "light",
@@ -8345,9 +8696,147 @@
     {
      "test": "auto/15-js-runtime-a",
      "kind": "check",
-     "name": "sessionStorage has the same 16 KB quota",
+     "name": "sessionStorage has the same 4 KB quota",
      "status": "pass",
      "detail": "got \"QuotaExceededError\", want \"QuotaExceededError\"",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.attribute": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 2
+   },
+   "evidence": [
+    {
+     "test": "auto/19-limits",
+     "kind": "check",
+     "name": "a 6 K data-* attribute reaches the renderer",
+     "status": "pass",
+     "detail": "9,9,9,1",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/32-stop-attribute",
+     "kind": "stop",
+     "name": "stopped with \"Attribute limit exceeded…\"",
+     "status": "pass",
+     "detail": "Attribute limit exceeded: a value of 9000 characters (max 8192)",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.batch": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/33-stop-batch",
+     "kind": "stop",
+     "name": "stopped with \"Ops limit exceeded…\"",
+     "status": "pass",
+     "detail": "Ops limit exceeded: 10002 operations in one batch (max 10000)",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.css-rules": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/34-stop-css-rules",
+     "kind": "stop",
+     "name": "stopped with \"CSS limit exceeded…\"",
+     "status": "pass",
+     "detail": "CSS limit exceeded: 409 rules in the document's stylesheets (max 400)",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.canvas-commands": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/19-limits",
+     "kind": "check",
+     "name": "the 10 001st command for one canvas in one task throws RangeError",
+     "status": "pass",
+     "detail": "10000 drawn, RangeError",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.animations": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "limit.main-thread": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "limit.canvas-pixels": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/35-stop-canvas-pixels",
+     "kind": "stop",
+     "name": "stopped with \"Canvas limit exceeded: canvases of…\"",
+     "status": "pass",
+     "detail": "Canvas limit exceeded: canvases of 5242880 pixels together (max 4194304)",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "limit.image-pixels": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 2
+   },
+   "evidence": [
+    {
+     "test": "auto/19-limits",
+     "kind": "check",
+     "name": "a 1024 × 1024 data: image decodes",
+     "status": "pass",
+     "detail": "load, naturalWidth 1024",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/19-limits",
+     "kind": "check",
+     "name": "a 1025 × 1024 data: image is the 48 px placeholder",
+     "status": "pass",
+     "detail": "load, naturalWidth 48",
      "theme": "light",
      "width": 390
     }
@@ -8624,6 +9113,12 @@
    "counts": {},
    "evidence": []
   },
+  "behaviour.time-corner": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
   "behaviour.data-edit": {
    "status": "in",
    "verdict": "untested",
@@ -8658,18 +9153,9 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 3
+    "pass": 2
    },
    "evidence": [
-    {
-     "test": "auto/19-limits",
-     "kind": "check",
-     "name": "a 300 KB data-* attribute does not reach the renderer",
-     "status": "pass",
-     "detail": "17,17,17,1",
-     "theme": "light",
-     "width": 390
-    },
     {
      "test": "auto/19-limits",
      "kind": "check",
@@ -9743,7 +10229,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 8
+    "pass": 10
    },
    "stages": [],
    "host": []
@@ -10037,6 +10523,185 @@
      "detail": "haptic ×5 (want 5)"
     }
    ]
+  },
+  {
+   "id": "auto/28-grid-percent-fill",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 7
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/29-grid-svg-marks",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/30-svg-fill-box",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [
+    {
+     "name": "scale",
+     "diff": 0,
+     "status": "pass"
+    },
+    {
+     "name": "animated",
+     "diff": 0,
+     "status": "pass"
+    },
+    {
+     "name": "moved",
+     "diff": 0,
+     "status": "pass"
+    }
+   ],
+   "host": []
+  },
+  {
+   "id": "auto/31-stop-text",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": "Text limit exceeded: a text value of 40000 characters (max 32768)",
+   "status": "running",
+   "stops": "Text limit exceeded",
+   "stopped": true,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/32-stop-attribute",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": "Attribute limit exceeded: a value of 9000 characters (max 8192)",
+   "status": "running",
+   "stops": "Attribute limit exceeded",
+   "stopped": true,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/33-stop-batch",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": "Ops limit exceeded: 10002 operations in one batch (max 10000)",
+   "status": "running",
+   "stops": "Ops limit exceeded",
+   "stopped": true,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/34-stop-css-rules",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": "CSS limit exceeded: 409 rules in the document's stylesheets (max 400)",
+   "status": "running",
+   "stops": "CSS limit exceeded",
+   "stopped": true,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/35-stop-canvas-pixels",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": "Canvas limit exceeded: canvases of 5242880 pixels together (max 4194304)",
+   "status": "running",
+   "stops": "Canvas limit exceeded: canvases of",
+   "stopped": true,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/36-safe-area",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 14
+   },
+   "stages": [],
+   "host": []
   },
   {
    "id": "visual/01-boxes",
@@ -10370,6 +11035,21 @@
   },
   {
    "id": "visual/16-selection",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/17-time-corner",
    "set": "visual",
    "theme": "light",
    "width": 390,

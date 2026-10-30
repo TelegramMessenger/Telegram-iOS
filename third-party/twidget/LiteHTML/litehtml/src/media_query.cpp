@@ -242,6 +242,21 @@ namespace litehtml
         return ret;
     }
 
+    // Telegram (VENDOR.md edit 79).
+    bool media_query_list_list::would_flip(const media_features& features) const
+    {
+        bool apply = true;
+        for(const auto& mq_list : m_media_query_lists)
+        {
+            if(!mq_list.check(features))
+            {
+                apply = false;
+                break;
+            }
+        }
+        return apply != m_is_used;
+    }
+
     bool parse_media_query(const css_token_vector& tokens, media_query& mquery, const std::shared_ptr<document>& doc);
 
     // https://drafts.csswg.org/mediaqueries-5/#typedef-media-query-list

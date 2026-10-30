@@ -23,7 +23,6 @@ Document& Node::nodeDocument() const {
 Node& Node::rootNode(JSContext* ctx) const {
     const Node* n = this;
     while (n->m_parent) {
-        charge(ctx, work::kNodeVisit);
         n = n->m_parent;
     }
     return const_cast<Node&>(*n);
@@ -38,7 +37,6 @@ bool Node::isInclusiveAncestorOf(JSContext* ctx, const Node& other) const {
         return this == &other;
     }
     for (const Node* n = &other; n; n = n->m_parent) {
-        charge(ctx, work::kNodeVisit);
         if (n == this) {
             return true;
         }
@@ -53,7 +51,6 @@ bool Node::isHostIncludingInclusiveAncestorOf(JSContext* ctx, const Node& other)
     }
     const Node* n = &other;
     while (n) {
-        charge(ctx, work::kNodeVisit);
         if (n == this) {
             return true;
         }
@@ -90,7 +87,16 @@ Node* Node::nextSkippingChildren(const Node* stayWithin) const {
 
 void Node::insertChildAt(JSContext* ctx, size_t index, Node& child) {
     JSRuntime* rt = JS_GetRuntime(ctx);
-    charge(ctx, work::kNodeVisit * (m_children.size() + 1 - index));
+    // limit.batch (widget-sandbox v0.3.0): an insertion is one operation, a node's first two (it is made and inserted),
+    // and none more for a node whose two this batch paid (put in a fragment first) or that left the document in this
+    // batch (a move: its removal counted upstream's one `ins`); counted before anything changes, as a stop past the cap
+    // throws here. The removal's stamp stays: a stale one never equals a later batch.
+    Runtime& runtime = Runtime::from(ctx);
+    const uint64_t batch = runtime.batchSerial();
+    runtime.addOps(child.m_announcedBatch == 0 ? 2 : child.m_announcedBatch == batch || child.m_removedBatch == batch ? 0 : 1);
+    if (child.m_announcedBatch == 0) {
+        child.m_announcedBatch = batch;
+    }
     // The insert can fail at the memory limit (JSAllocator throws bad_alloc): the reference is taken once it is in.
     m_children.insert(m_children.begin() + ptrdiff_t(index), child.object());
     JS_DupValue(ctx, child.object());
@@ -107,8 +113,15 @@ void Node::insertChildAt(JSContext* ctx, size_t index, Node& child) {
 
 void Node::removeChildAt(JSContext* ctx, size_t index) {
     JSRuntime* rt = JS_GetRuntime(ctx);
-    charge(ctx, work::kNodeVisit * (m_children.size() - index));
+    // limit.batch: a removal from the document is one operation, and an insertion in the same batch is then a move; from
+    // a tree outside it (a fragment, a detached element) none, as upstream's shim never sees such trees.
+    Runtime& runtime = Runtime::from(ctx);
+    const bool fromDocument = this->connected(ctx);
+    runtime.addOps(fromDocument ? 1 : 0);
     Node* child = this->childAt(index);
+    if (fromDocument) {
+        child->m_removedBatch = runtime.batchSerial();
+    }
     JSValue childValue = m_children[index];
     m_children.erase(m_children.begin() + ptrdiff_t(index));
     for (size_t i = index; i < m_children.size(); i++) {
@@ -126,7 +139,12 @@ void Node::removeChildAt(JSContext* ctx, size_t index) {
 
 void Node::removeAllChildren(JSContext* ctx) {
     JSRuntime* rt = JS_GetRuntime(ctx);
-    charge(ctx, work::kNodeVisit * m_children.size());
+    Runtime& runtime = Runtime::from(ctx);
+    const bool fromDocument = !m_children.empty() && this->connected(ctx);
+    runtime.addOps(fromDocument ? m_children.size() : 0);
+    for (size_t i = 0; fromDocument && i < m_children.size(); i++) {
+        this->childAt(i)->m_removedBatch = runtime.batchSerial();
+    }
     // The children's references to this node may be all that holds it: keep it alive until the end.
     JSValue self = JS_DupValue(ctx, this->object());
     // Each child's own fields first, in tree order, as removeChildAt does them. Nothing else runs meanwhile: nothing is
@@ -228,7 +246,6 @@ Element* Node::getElementById(JSContext* ctx, String elementId) {
     }
     JSAtom id = DOMState::of(ctx).name(Name::id);
     for (Node* n = this->nextInTreeOrder(this); n; n = n->nextInTreeOrder(this)) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement()) {
             std::optional<String> value = static_cast<Element*>(n)->attributeValue(ctx, id);
             if (value && value->equals(ctx, elementId)) {
@@ -328,7 +345,6 @@ void Node::normalize(JSContext* ctx) {
     JSRuntime* rt = JS_GetRuntime(ctx);
     Vector<Ref<Node>> texts{JSAllocator<Ref<Node>>(rt)};
     for (Node* n = this->nextInTreeOrder(this); n; n = n->nextInTreeOrder(this)) {
-        charge(ctx, work::kNodeVisit);
         if (n->type() == NodeType::Text) {
             texts.push_back(Ref<Node>::retain(ctx, n));
         }
@@ -346,7 +362,6 @@ void Node::normalize(JSContext* ctx) {
         String data = text.dataString(ctx);
         Vector<Ref<Node>> following{JSAllocator<Ref<Node>>(rt)};
         for (Node* next = node.nextSiblingNode(); isExclusiveText(next); next = next->nextSiblingNode()) {
-            charge(ctx, work::kNodeVisit);
             following.push_back(Ref<Node>::retain(ctx, next));
             data = data.concat(ctx, static_cast<CharacterData*>(next)->dataString(ctx));
         }
@@ -372,7 +387,6 @@ bool Node::isEqualNode(JSContext* ctx, OrNull<Node> other) {
     Node* a = this;
     Node* b = other.ptr;
     for (;;) {
-        charge(ctx, work::kNodeVisit);
         if (a->m_type != b->m_type || a->childCount() != b->childCount() || !a->equalsShallow(ctx, *b)) {
             return false;
         }
@@ -423,7 +437,6 @@ uint16_t Node::compareDocumentPosition(JSContext* ctx, Node* other) {
         if (attr1 && node1 && node2 == node1) {
             auto* element = static_cast<Element*>(node2);
             for (size_t i = 0; i < element->attributeCount(); i++) {
-                charge(ctx, work::kNodeVisit);
                 const Attribute& a = element->attributeAt(i);
                 PlatformObject* p = a.node.isUndefined() ? nullptr : payloadOfKnown(a.node.value);
                 if (p == attr1) {
@@ -448,7 +461,6 @@ uint16_t Node::compareDocumentPosition(JSContext* ctx, Node* other) {
         return kContainedBy | kFollowing;
     }
     Vector<const Node*> a = ancestorChain(ctx, node1), b = ancestorChain(ctx, node2);
-    charge(ctx, work::kNodeVisit * (a.size() + b.size()));
     size_t i = 0;
     while (i < a.size() && i < b.size() && a[i] == b[i]) {
         i++;
@@ -467,7 +479,6 @@ uint16_t Node::compareDocumentPosition(JSContext* ctx, Node* other) {
 
 Element* Node::firstElementChild(JSContext* ctx) {
     for (size_t i = 0; i < this->childCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         if (this->childAt(i)->isElement()) {
             return static_cast<Element*>(this->childAt(i));
         }
@@ -477,7 +488,6 @@ Element* Node::firstElementChild(JSContext* ctx) {
 
 Element* Node::lastElementChild(JSContext* ctx) {
     for (size_t i = this->childCount(); i > 0; i--) {
-        charge(ctx, work::kNodeVisit);
         if (this->childAt(i - 1)->isElement()) {
             return static_cast<Element*>(this->childAt(i - 1));
         }
@@ -486,7 +496,6 @@ Element* Node::lastElementChild(JSContext* ctx) {
 }
 
 uint32_t Node::childElementCount(JSContext* ctx) {
-    charge(ctx, work::kNodeVisit * this->childCount());
     uint32_t count = 0;
     for (size_t i = 0; i < this->childCount(); i++) {
         count += this->childAt(i)->isElement() ? 1 : 0;
@@ -512,7 +521,6 @@ void Node::replaceChildren(JSContext* ctx, std::vector<std::variant<Node*, Strin
 
 Element* Node::previousElementSibling(JSContext* ctx) {
     for (Node* n = this->previousSiblingNode(); n; n = n->previousSiblingNode()) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement()) {
             return static_cast<Element*>(n);
         }
@@ -522,7 +530,6 @@ Element* Node::previousElementSibling(JSContext* ctx) {
 
 Element* Node::nextElementSibling(JSContext* ctx) {
     for (Node* n = this->nextSiblingNode(); n; n = n->nextSiblingNode()) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement()) {
             return static_cast<Element*>(n);
         }
@@ -555,7 +562,6 @@ static Node* viableSibling(JSContext* ctx, Node& self, Node& parent, const std::
     }
     size_t distance = 1;
     while (distance <= span && listed[distance - 1]) {
-        charge(ctx, work::kNodeVisit);
         distance++;
     }
     // Past `span` with siblings left, the next one is not listed: the `span` ones before it used every argument.

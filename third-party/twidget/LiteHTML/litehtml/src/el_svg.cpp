@@ -430,14 +430,31 @@ namespace litehtml
             }
         };
 
-        static litehtml::transform_matrix svg_css_transform(const element::ptr& el, const litehtml::position& border_box)
+        static litehtml::transform_matrix svg_css_transform(const element::ptr& el, const litehtml::position& view)
         {
             using namespace litehtml;
             const auto& el_css = el->css();
             const auto tag = std::dynamic_pointer_cast<html_tag>(el);
             const bool has_origin = tag && tag->has_own_property(_transform_origin_);
-            pixel_t ox = has_origin ? border_box.x + el_css.get_transform_origin_x().calc_percent(border_box.width) : 0_px;
-            pixel_t oy = has_origin ? border_box.y + el_css.get_transform_origin_y().calc_percent(border_box.height) : 0_px;
+            // Telegram (VENDOR.md edit 72): the reference box is the view box, or with transform-box: fill-box a shape's
+            // geometry box, whose top left is the initial origin (`0 0`); an element with no geometry of its own (a
+            // group, text) keeps the view box.
+            position border_box = view;
+            bool     fill_box   = false;
+            if(el_css.get_transform_box() == transform_box_fill_box)
+            {
+                vector_path path;
+                float       box[4];
+                if(svg_geometry(el, path) && svg_path_bounds(path, box))
+                {
+                    border_box = position(pixel_t(box[0]), pixel_t(box[1]), pixel_t(box[2]), pixel_t(box[3]));
+                    fill_box   = true;
+                }
+            }
+            pixel_t ox = has_origin ? border_box.x + el_css.get_transform_origin_x().calc_percent(border_box.width)
+                                    : (fill_box ? border_box.x : 0_px);
+            pixel_t oy = has_origin ? border_box.y + el_css.get_transform_origin_y().calc_percent(border_box.height)
+                                    : (fill_box ? border_box.y : 0_px);
             transform_matrix m{1, 0, 0, 1, -ox.value(), -oy.value()};
             const auto&      functions = el_css.get_transform();
             for(auto it = functions.rbegin(); it != functions.rend(); ++it)
@@ -549,6 +566,16 @@ namespace litehtml
                 m = m.then(*it);
             }
             return m;
+        }
+
+        // Telegram (VENDOR.md edit 72): an element's transform in its parent's user space, for the painter and
+        // svg_element_transform alike: its CSS transform about its reference box in the view `view`, else its attribute.
+        transform_matrix element_transform(const element::ptr& el, const float view[4])
+        {
+            const auto tag = std::dynamic_pointer_cast<html_tag>(el);
+            return tag && tag->has_own_property(_transform_)
+                       ? svg_css_transform(el, position(pixel_t(view[0]), pixel_t(view[1]), pixel_t(view[2]), pixel_t(view[3])))
+                       : parse_svg_transform(el->get_attr("transform"));
         }
 
         // Telegram (VENDOR.md edit 58): the <use> instances being drawn on this thread, innermost last, each its target
@@ -1357,9 +1384,7 @@ namespace litehtml
                     }
                     paint_group group;
                     const auto tag = std::dynamic_pointer_cast<html_tag>(child);
-                    group.matrix = tag && tag->has_own_property(_transform_)
-                        ? svg_css_transform(child, position(pixel_t(m_view[0]), pixel_t(m_view[1]), pixel_t(m_view[2]), pixel_t(m_view[3])))
-                        : parse_svg_transform(child->get_attr("transform"));
+                    group.matrix = element_transform(child, m_view);
                     group.opacity = opacity;
                     group.bounds  = position(-100000, -100000, 200000, 200000);
                     bool grouped  = opacity < 1 || !group.matrix.is_identity();
@@ -1550,6 +1575,140 @@ namespace litehtml
             return false;
         }
         return !path.ops.empty();
+    }
+
+    // Telegram (VENDOR.md edit 72): moved here from WidgetRuntime's RenderTree (its getBBox), so the painter's fill box and
+    // the queries share one box.
+    bool svg_path_bounds(const vector_path& path, float box[4])
+    {
+        double minX = INFINITY, minY = INFINITY, maxX = -INFINITY, maxY = -INFINITY;
+        auto   add = [&](double x, double y) {
+            minX = std::min(minX, x);
+            minY = std::min(minY, y);
+            maxX = std::max(maxX, x);
+            maxY = std::max(maxY, y);
+        };
+        // The roots in (0, 1) of a t^2 + b t + c.
+        auto roots = [](double a, double b, double c, double out[2]) {
+            int n = 0;
+            if(std::fabs(a) < 1e-12)
+            {
+                if(std::fabs(b) > 1e-12)
+                {
+                    out[n++] = -c / b;
+                }
+            } else
+            {
+                const double d = b * b - 4 * a * c;
+                if(d >= 0)
+                {
+                    out[n++] = (-b + std::sqrt(d)) / (2 * a);
+                    out[n++] = (-b - std::sqrt(d)) / (2 * a);
+                }
+            }
+            int kept = 0;
+            for(int i = 0; i < n; i++)
+            {
+                if(out[i] > 0 && out[i] < 1)
+                {
+                    out[kept++] = out[i];
+                }
+            }
+            return kept;
+        };
+        double                    cx = 0, cy = 0;
+        size_t                    k  = 0;
+        const std::vector<float>& p  = path.points;
+        for(vector_path::op_t op : path.ops)
+        {
+            switch(op)
+            {
+            case vector_path::move:
+            case vector_path::line:
+                cx = p[k];
+                cy = p[k + 1];
+                add(cx, cy);
+                k += 2;
+                break;
+            case vector_path::quad:
+            {
+                const double x1 = p[k], y1 = p[k + 1], x2 = p[k + 2], y2 = p[k + 3];
+                add(x2, y2);
+                for(int axis = 0; axis < 2; axis++)
+                {
+                    const double a0 = axis ? cy : cx, a1 = axis ? y1 : x1, a2 = axis ? y2 : x2;
+                    const double denominator = a0 - 2 * a1 + a2;
+                    if(std::fabs(denominator) > 1e-12)
+                    {
+                        const double t = (a0 - a1) / denominator;
+                        if(t > 0 && t < 1)
+                        {
+                            const double u = 1 - t;
+                            add(u * u * cx + 2 * u * t * x1 + t * t * x2, u * u * cy + 2 * u * t * y1 + t * t * y2);
+                        }
+                    }
+                }
+                cx = x2;
+                cy = y2;
+                k += 4;
+                break;
+            }
+            case vector_path::cubic:
+            {
+                const double x1 = p[k], y1 = p[k + 1], x2 = p[k + 2], y2 = p[k + 3], x3 = p[k + 4], y3 = p[k + 5];
+                add(x3, y3);
+                for(int axis = 0; axis < 2; axis++)
+                {
+                    const double a0 = axis ? cy : cx, a1 = axis ? y1 : x1, a2 = axis ? y2 : x2, a3 = axis ? y3 : x3;
+                    double       ts[2];
+                    const int    n = roots(-a0 + 3 * a1 - 3 * a2 + a3, 2 * (a0 - 2 * a1 + a2), a1 - a0, ts);
+                    for(int i = 0; i < n; i++)
+                    {
+                        const double t = ts[i], u = 1 - t;
+                        add(u * u * u * cx + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+                            u * u * u * cy + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3);
+                    }
+                }
+                cx = x3;
+                cy = y3;
+                k += 6;
+                break;
+            }
+            case vector_path::close:
+                break;
+            }
+        }
+        if(!std::isfinite(minX))
+        {
+            return false;
+        }
+        box[0] = float(minX);
+        box[1] = float(minY);
+        box[2] = float(maxX - minX);
+        box[3] = float(maxY - minY);
+        return true;
+    }
+
+    transform_matrix svg_element_transform(const element::ptr& el)
+    {
+        for(element::ptr p = el ? el->parent() : nullptr; p; p = p->parent())
+        {
+            if(const auto* svg = dynamic_cast<const el_svg*>(p.get()))
+            {
+                // The view the painter draws the svg's children in: its viewBox, else its width and height (as
+                // svg_geometry reads them).
+                float view[4] = {0, 0, 0, 0};
+                if(!svg->view_box(view))
+                {
+                    std::vector<float> w = numbers(svg->get_attr("width"));
+                    std::vector<float> h = numbers(svg->get_attr("height"));
+                    view[2]              = w.empty() ? 0 : w[0];
+                    view[3]              = h.empty() ? 0 : h[0];
+                }
+                return element_transform(el, view);
+            }
+        }
+        return transform_matrix();
     }
 
     float svg_path_length(const vector_path& path, float at, float* outx, float* outy)

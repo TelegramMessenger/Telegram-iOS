@@ -8,7 +8,6 @@
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -45,7 +44,6 @@ public:
         if (!JS_IsObject(value)) {
             return Value::dup(m_ctx, value);
         }
-        charge(m_ctx, work::kNodeVisit);
         void* key = JS_VALUE_GET_PTR(value);
         if (auto found = m_memory.find(key); found != m_memory.end()) {
             return Value::dup(m_ctx, found->second.get());
@@ -85,7 +83,6 @@ public:
                 this->dropException();
                 dataCloneError("A detached ArrayBuffer cannot be cloned.");
             }
-            charge(m_ctx, work::kCssByte * uint64_t(size));
             Value copy = Value::adopt(m_ctx, checked(JS_NewArrayBufferCopy(m_ctx, bytes, size)));
             this->remember(key, copy);
             return copy;
@@ -142,7 +139,6 @@ private:
         JSValueConst next = runtime.intrinsic(isMap ? I::MapIteratorNext : I::SetIteratorNext);
         Vector<Value> entries{JSAllocator<Value>(JS_GetRuntime(m_ctx))};
         for (;;) {
-            charge(m_ctx, work::kNodeVisit);
             Value result = Value::adopt(m_ctx, checked(JS_Call(m_ctx, next, iterator.get(), 0, nullptr)));
             Value done = Value::adopt(m_ctx, checked(JS_GetPropertyStr(m_ctx, result.get(), "done")));
             if (JS_ToBool(m_ctx, done.get())) {
@@ -183,7 +179,6 @@ private:
             uint32_t count;
             ~Names() { JS_FreePropertyEnum(ctx, names, count); }
         } owned{m_ctx, names, count};
-        charge(m_ctx, work::kNodeVisit * uint64_t(count));
         for (uint32_t i = 0; i < count; i++) {
             Value value = Value::adopt(m_ctx, checked(JS_GetProperty(m_ctx, source, names[i].atom)));
             Value cloned = this->clone(value.get());
@@ -260,7 +255,6 @@ private:
             uint8_t* bytes;
             ~Bytes() { js_free(ctx, bytes); }
         } owned{m_ctx, bytes};
-        charge(m_ctx, work::kCssByte * uint64_t(size));
         return Value::adopt(m_ctx, checked(JS_ReadObject(m_ctx, bytes, size, JS_READ_OBJ_REFERENCE)));
     }
 

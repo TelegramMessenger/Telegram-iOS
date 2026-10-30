@@ -813,6 +813,8 @@ public enum PeerInfoControllerMode {
     case storyAlbum(id: Int64)
     case giftCollection(id: Int64)
     case media(kind: PeerInfoMediaKind, messageIndex: EngineMessage.Index)
+    /// Saved Messages' profile where the chat side list shows its chats (the list's header, the chat's header): no Chats tab.
+    case chatSideList
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -1857,6 +1859,21 @@ public enum ChatSendMessageActionSheetControllerSendMode {
 
 public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisplayNode {
     func makeCustomContents() -> UIView?
+    /// The tint of a send button drawn as glass (bubble mode off), so the send menu's copy of it is the same glass; nil
+    /// for a flat one.
+    var sendButtonGlassTintColor: UIColor? { get }
+    /// Where that glass is, in the node's own coordinates, so the copy keeps its size and place.
+    var sendButtonGlassFrame: CGRect? { get }
+}
+
+public extension ChatSendMessageActionSheetControllerSourceSendButtonNode {
+    var sendButtonGlassTintColor: UIColor? {
+        return nil
+    }
+    
+    var sendButtonGlassFrame: CGRect? {
+        return nil
+    }
 }
 
 public protocol ChatSendMessageActionSheetController: ViewController {

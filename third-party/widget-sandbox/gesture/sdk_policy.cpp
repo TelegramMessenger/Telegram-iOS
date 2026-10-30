@@ -385,10 +385,10 @@ std::string_view requestVerdictName(RequestVerdict verdict) {
     switch (verdict) {
     case RequestVerdict::Foreground: return "foreground";
     case RequestVerdict::Background: return "background";
+    case RequestVerdict::Held: return "held";
     case RequestVerdict::Disabled: return "disabled";
     case RequestVerdict::Busy: return "busy";
     case RequestVerdict::NoActivation: return "no-activation";
-    case RequestVerdict::Hidden: return "hidden";
     case RequestVerdict::RateLimited: return "rate-limited";
     }
     return "no-activation";
@@ -396,7 +396,7 @@ std::string_view requestVerdictName(RequestVerdict verdict) {
 
 std::optional<std::string_view> requestRefusal(RequestVerdict verdict) {
     switch (verdict) {
-    case RequestVerdict::Foreground: case RequestVerdict::Background: return std::nullopt;
+    case RequestVerdict::Foreground: case RequestVerdict::Background: case RequestVerdict::Held: return std::nullopt;
     case RequestVerdict::Busy: return "BUSY";
     case RequestVerdict::RateLimited: return "RATE_LIMITED";
     default: return "NOT_ALLOWED";
@@ -411,11 +411,22 @@ RequestVerdict RequestGate::decide(double now, const Conditions& s) {
         return RequestVerdict::Foreground;
     }
     if (!s.backgroundQuery) return RequestVerdict::NoActivation;
-    if (!s.visible) return RequestVerdict::Hidden;
+    if (!s.visible) {
+        inFlight_ = held_ = true;
+        return RequestVerdict::Held;
+    }
     if (lastBackground_ && now - *lastBackground_ < BACKGROUND_REQUEST_INTERVAL_MS) return RequestVerdict::RateLimited;
     lastBackground_ = now;
     inFlight_ = true;
     return RequestVerdict::Background;
+}
+
+bool RequestGate::show(double now) {
+    lastBackground_.reset();
+    if (!held_) return false;
+    held_ = false;
+    lastBackground_ = now;
+    return true;
 }
 
 HapticGate::Decision HapticGate::decide(double now, bool visible) {

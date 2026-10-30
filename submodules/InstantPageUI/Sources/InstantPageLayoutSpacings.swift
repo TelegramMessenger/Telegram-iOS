@@ -172,6 +172,30 @@ func spacingBetweenBlocksV1(upper: InstantPageBlock?, lower: InstantPageBlock?) 
     }
 }
 
+private func instantPageBlockHasCredit(_ block: InstantPageBlock) -> Bool {
+    switch block {
+    case let .image(_, caption, _, _, _), let .video(_, caption, _, _, _), let .document(_, caption), let .audio(_, caption), let .slideshow(_, caption), let .collage(_, caption), let .map(_, _, _, _, caption):
+        return caption.credit != .empty && caption.credit != .plain("")
+    default:
+        return false
+    }
+}
+
+private func instantPageBlockIsRawMedia(_ block: InstantPageBlock) -> Bool {
+    switch block {
+    case .image, .video, .slideshow, .collage, .map:
+        return !instantPageBlockHasCredit(block)
+    default:
+        return false
+    }
+}
+
+/// Whether two adjacent blocks are media without a credit, which **V2** stacks 1pt apart like the cells of an album
+/// (the same rule `spacingBetweenBlocks` applies).
+func instantPageBlocksStackAsMedia(upper: InstantPageBlock, lower: InstantPageBlock) -> Bool {
+    return instantPageBlockIsRawMedia(upper) && instantPageBlockIsRawMedia(lower)
+}
+
 /// The **V2** vertical gap between two adjacent blocks, or at a sequence edge when one side is nil.
 ///
 /// Three rules, in order: a flush side wins and yields 0; two `.paragraph` (body) blocks have no gap

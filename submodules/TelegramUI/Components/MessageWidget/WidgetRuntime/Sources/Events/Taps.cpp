@@ -24,7 +24,6 @@
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -71,8 +70,7 @@ bool insideDisabledControl(JSContext* ctx, EventTarget& target) {
 }
 
 // The computed touch-action of `target` and each element ancestor up to the widget's <html>, target first, on the
-// layout the press was hit-tested on: what the gesture policy's claimOf reads. Charged per element visited and per byte
-// of each value read (claimOf's own scan is that many bytes again).
+// layout the press was hit-tested on: what the gesture policy's claimOf reads.
 std::vector<std::string> touchActions(JSContext* ctx, EventTarget& target) {
     std::vector<std::string> values;
     RenderTree* render = HostState::of(ctx).render();
@@ -80,9 +78,7 @@ std::vector<std::string> touchActions(JSContext* ctx, EventTarget& target) {
         return values;
     }
     for (Node* n = dynamic_cast<Node*>(&target); n && n->isElement(); n = n->parentNode(ctx)) {
-        charge(ctx, work::kNodeVisit);
         if (std::optional<std::string> value = render->computedStyleValue(*n, "touch-action", PseudoElement::None)) {
-            chargeScan(ctx, 2 * value->size());
             values.push_back(std::move(*value));
         }
     }
@@ -94,7 +90,7 @@ GestureClaim gestureClaim(const twidget::WidgetGestureClaim& claim) {
 }
 
 // Whether a press at `target` lands on something the widget handles (TapState::takesTaps), before its events
-// dispatch. Charged per target visited and per listener list walked.
+// dispatch.
 bool handlesPress(JSContext* ctx, EventTarget& target) {
     static constexpr std::string_view kTypes[] = {"click", "pointerdown", "pointerup", "touchstart", "touchend",
                                                   "mousedown", "mouseup"};
@@ -112,7 +108,6 @@ bool handlesPress(JSContext* ctx, EventTarget& target) {
     };
     const bool disabled = insideDisabledControl(ctx, target);
     for (Node* n = dynamic_cast<Node*>(&target); n; n = n->parentNode(ctx)) {
-        charge(ctx, work::kNodeVisit);
         if (listens(*n) || (!disabled && n->isElement() && n->hasActivationBehavior(ctx))) {
             return true;
         }
@@ -229,10 +224,12 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
         break;
     }
     try {
+        const uint64_t downSerial = phase == PointerPhase::Down ? m_downsQueued + 1 : 0;
         HostState::of(ctx).loop().queueTask(
-            TaskSource::UserInteraction, makeTask(ctx, [this, phase, x, y, pointerId, primary, moved, kind, button, deliver](JSContext* ctx) {
+            TaskSource::UserInteraction, makeTask(ctx, [this, phase, x, y, pointerId, primary, moved, kind, button, deliver, downSerial](JSContext* ctx) {
                 switch (phase) {
                 case PointerPhase::Down:
+                    m_downsRun = std::max(m_downsRun, downSerial);
                     this->runDown(ctx, x, y, pointerId, primary, kind, button);
                     break;
                 case PointerPhase::Move:
@@ -248,7 +245,10 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
                     this->runCancel(ctx, x, y, pointerId, primary, true);
                     break;
                 }
-            }));
+            }), TaskKind::Event);
+        if (phase == PointerPhase::Down) {
+            m_downsQueued = downSerial;
+        }
     } catch (...) {
         try {
             abortForCaughtException(ctx);
@@ -356,7 +356,13 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
     }
     actions.addActive(ctx, element, press.number);
     {
-        HostState::PressScope scope(state, press.number);
+        // widget-sandbox v0.3.0, the finger rule: a finger's or a pen's pointerdown is no gesture, as its press may still
+        // become the chat's scroll (and end in pointercancel); its release is. A mouse's pointerdown and mousedown are,
+        // as in browsers.
+        std::optional<HostState::PressScope> scope;
+        if (mouse) {
+            scope.emplace(state, press.number);
+        }
         press.pointerCanceled = !firePointer(ctx, "pointerdown", *target, x, y, pointerId, kind, primary, true, press.button,
                                              buttonsOf(press.button), 0.5);
         // A mouse's own mousedown follows (none after a canceled pointerdown); a touch's compatibility events come after
@@ -389,7 +395,7 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
         }
         if (std::optional<double> deadline = m_arbiter.holdDeadline()) {
             m_holdTask = EventLoop::of(ctx).queueTaskAt(*deadline, TaskSource::UserInteraction,
-                                                        makeTask(ctx, [this](JSContext* ctx) { this->runHold(ctx); }));
+                                                        makeTask(ctx, [this](JSContext* ctx) { this->runHold(ctx); }), TaskKind::Event);
         }
     }
 }
@@ -419,9 +425,11 @@ void TapState::deliver(JSContext* ctx, const std::optional<twidget::GestureVerdi
         press.held = true;
     }
     if (verdict->event == twidget::GestureEvent::ContextMenu) {
-        // At the press's target and last point, as a press's own event (its activation, like its pointerup's).
+        // At the press's target and last point, with no activation, for a finger or a mouse: upstream's host numbers
+        // gestures for click, dblclick, mousedown, mouseup, pointerdown and pointerup only (user-activation.ts), and a
+        // bridge call carries the gesture of the event it is made in (worker.ts), so a hold's or a secondary click's
+        // contextmenu cannot open a link, copy or request. The release that ends the hold still can.
         const bool mouse = press.kind == twidget::PointerKind::Mouse;
-        HostState::PressScope scope(HostState::of(ctx), press.number);
         Ref<EventTarget> target = press.target;
         fireMouse(ctx, "contextmenu", *target, press.lastX, press.lastY, mouse ? buttonsOf(press.button) : 1, 0,
                   mouse ? press.button : 0);

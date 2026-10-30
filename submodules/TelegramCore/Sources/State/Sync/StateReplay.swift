@@ -271,7 +271,7 @@ final class ReplayContext {
     /// Event.
     var updatedWalletState: Api.WalletState?
     /// Event.
-    var updatedAgentSettings: Api.agent.Settings?
+    var updatedAgentSettings: EngineAgentSettings?
     /// Event.
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     /// Persisted by `finalize`.
@@ -481,6 +481,8 @@ final class ReplayContext {
                     self.applyUpdatePinnedTopic(peerId, threadId, isPinned)
                 case let .UpdatePinnedTopicOrder(peerId, threadIds):
                     self.applyUpdatePinnedTopicOrder(peerId, threadIds)
+                case let .EditForumTopic(peerId, threadId, components):
+                    self.applyEditForumTopic(peerId, threadId, components)
                 case let .ReadMessageContents(peerIdAndMessageIds, date):
                     self.applyReadMessageContents(peerIdAndMessageIds, date)
                 case let .UpdateMessageImpressionCount(id, count):

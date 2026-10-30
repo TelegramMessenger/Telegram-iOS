@@ -140,10 +140,12 @@ WR_TEST(testDescendantChainsDoNotBacktrack) {
         selector += " div";
     }
     selector += " span";
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_JS(env, ("document.querySelector('" + selector + "') === null").c_str());
-    CHECK(JS_GetWorkUnits(rt) - before < 100000);
+    // Backtracking would try C(30, 15), about 155 million, placements.
+    const double ms = wr_test::leastCpuMs([&] { CHECK_JS(env, ("document.querySelector('" + selector + "') === null").c_str()); }, 1);
+    if (ms >= 100) {
+        std::printf("  the chain took %.3f ms\n", ms);
+    }
+    CHECK(ms < 100);
 }
 
 WR_TEST(testHostileSelectors) {
@@ -237,26 +239,6 @@ WR_TEST(testFragmentsAreTheirOwnRoot) {
     CHECK_JS(env, "(c => c.querySelector(':scope > section') === null && c.querySelector(':root') === null && c.firstChild.matches(':scope'))(document.querySelector('#t').content)");
 }
 
-static uint64_t workOf(DOMEnv& env, const std::string& code) {
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval(code);
-    return JS_GetWorkUnits(rt) - before;
-}
-
-// An attribute selector walks the element's attributes (a visit each) and an operator charges the units it reads.
-WR_TEST(testAttributeSelectorsAreCharged) {
-    DOMEnv env("<!DOCTYPE html><p id=many></p><p id=none></p>");
-    env.eval("var many = document.querySelector('#many'), none = document.querySelector('#none'); for (let i = 0; i < 1000; i++) many.setAttribute('a' + i, '')");
-    CHECK(workOf(env, "many.matches('[zz]')") >= workOf(env, "none.matches('[zz]')") + 1000 * wr::work::kNodeVisit);
-    env.eval("many.setAttribute('v', 'ab'.repeat(1 << 16)); none.setAttribute('v', '')");
-    const uint64_t scan = (1 << 17) / 8 * wr::work::kScanEightUnits;
-    CHECK(workOf(env, "many.matches('[v*=c]')") >= workOf(env, "none.matches('[v*=c]')") + scan);
-    CHECK(workOf(env, "many.matches('[v~=c]')") >= workOf(env, "none.matches('[v~=c]')") + scan);
-    // Different lengths compare nothing.
-    CHECK(workOf(env, "many.matches('[v=c]')") < workOf(env, "none.matches('[v=c]')") + scan / 2);
-}
-
 /// The best of three runs of 20 queries each (the length cap keeps one parse short).
 static double secondsToQuery(DOMEnv& env, const std::string& selectorExpression) {
     env.eval("var sel = " + selectorExpression);
@@ -317,7 +299,7 @@ WR_TEST(testDeepSelectorsOnASmallStack) {
 }
 
 // Ruling 6's length cap (pre-review ruling): at most 16,384 UTF-16 units, checked on the string's length before it
-// is converted or charged, so a longer one is a SyntaxError in O(1) that no forgiving list drops. It bounds the parse's
+// is converted, so a longer one is a SyntaxError in O(1) that no forgiving list drops. It bounds the parse's
 // transient C++ heap (Selectors.cpp, at the cap).
 WR_TEST(testSelectorLengthCap) {
     DOMEnv env("<!DOCTYPE html><p></p>");
@@ -331,39 +313,8 @@ WR_TEST(testSelectorLengthCap) {
     CHECK_JS(env, "document.querySelector('[w=\"' + '\\u4e00'.repeat(16378) + '\"]') === p");
     // Inside a forgiving list the whole selector is still over: nothing is dropped.
     CHECK_THROWS(env, "document.querySelector(':is(p, ' + 'x'.repeat(16384) + ')')", "SyntaxError");
-    // A 10 MB string throws without the parse's charge (5 units a byte would be 52M units).
+    // A 10 MB string throws on its length.
     env.eval("var huge = 'a'.repeat(10 << 20)");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    uint64_t before = JS_GetWorkUnits(rt);
     CHECK_THROWS(env, "document.querySelector(huge)", "SyntaxError");
-    CHECK(JS_GetWorkUnits(rt) - before < 10000);
 }
 
-// Fix round 1: a compound's simple selectors are each charged (kSimpleSelectorTest), even the ones that always succeed
-// and so never end the loop early. Units, not time: 100 more elements cost at least 100 x k simple tests.
-WR_TEST(testEverySimpleSelectorIsCharged) {
-    DOMEnv env("<!DOCTYPE html><div id=many></div><div id=none></div>");
-    env.eval("var many = document.querySelector('#many'), none = document.querySelector('#none'); for (let i = 0; i < 100; i++) many.append(document.createElement('p'))");
-    const int k = 1000;
-    for (const char* simple : {":defined", ":empty", ":read-only"}) {
-        std::string selector = std::string("'") + simple + "'.repeat(" + std::to_string(k) + ")";
-        CHECK_JS(env, ("many.querySelectorAll(" + selector + ").length === 100").c_str());
-        uint64_t withElements = workOf(env, "many.querySelectorAll(" + selector + ")");
-        uint64_t without = workOf(env, "none.querySelectorAll(" + selector + ")");
-        CHECK(withElements >= without + 100 * uint64_t(k) * wr::work::kSimpleSelectorTest);
-    }
-}
-
-// Fix round 1: litehtml's componentizer copies a token once per block around it, so the parse charges the tokens'
-// summed depth and the blocks, before the componentizer runs, on top of kParseByte. Units, not time: the same 16,384
-// units nested 64 deep cost at least 64 x 16,256 depth units and 64 blocks more than flat.
-WR_TEST(testNestedSelectorsChargeTheComponentizer) {
-    DOMEnv env;
-    env.eval("var nested = '('.repeat(64) + '*'.repeat(16256) + ')'.repeat(64), flat = '*'.repeat(16384), blocks = '()'.repeat(8192)");
-    uint64_t nested = workOf(env, "try { document.querySelector(nested) } catch (e) {}");
-    uint64_t flat = workOf(env, "try { document.querySelector(flat) } catch (e) {}");
-    CHECK(nested >= flat + 64 * 16256 * wr::work::kComponentNesting + 64 * wr::work::kComponentBlock);
-    // 8,192 empty blocks side by side: no depth to speak of, a block charge each.
-    uint64_t flatBlocks = workOf(env, "try { document.querySelector(blocks) } catch (e) {}");
-    CHECK(flatBlocks >= flat + 8192 * wr::work::kComponentBlock);
-}

@@ -217,6 +217,11 @@ public final class InteractiveTextNodeSegment {
         return self.blockQuote != nil
     }
     
+    /// The frame of this segment's quote or code background, in the layout's coordinates (inside its insets).
+    public var blockQuoteFrame: CGRect? {
+        return self.blockQuote?.frame
+    }
+    
     fileprivate init(
         lines: [InteractiveTextNodeLine],
         visibleLineCount: Int,
@@ -1311,6 +1316,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         public let areContentAnimationsEnabled: Bool
         public let spoilerExpandRect: CGRect?
         public var crossfadeContents: ((UIView) -> Void)?
+        /// Rounds quote and code blocks more than they are drawn (`MessageInlineBlockBackgroundView.clipCornerRadius`).
+        public let blockCornerRadius: CGFloat?
         
         public init(
             animation: ListViewItemUpdateAnimation,
@@ -1318,7 +1325,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             spoilerEffectColor: UIColor,
             areContentAnimationsEnabled: Bool,
             spoilerExpandRect: CGRect?,
-            crossfadeContents: ((UIView) -> Void)? = nil
+            crossfadeContents: ((UIView) -> Void)? = nil,
+            blockCornerRadius: CGFloat? = nil
         ) {
             self.animation = animation
             self.spoilerTextColor = spoilerTextColor
@@ -1326,6 +1334,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             self.areContentAnimationsEnabled = areContentAnimationsEnabled
             self.spoilerExpandRect = spoilerExpandRect
             self.crossfadeContents = crossfadeContents
+            self.blockCornerRadius = blockCornerRadius
         }
     }
     
@@ -2184,7 +2193,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                     item: contentItem,
                     spoilerTextColor: arguments.spoilerTextColor,
                     spoilerEffectColor: arguments.spoilerEffectColor,
-                    areContentAnimationsEnabled: arguments.areContentAnimationsEnabled
+                    areContentAnimationsEnabled: arguments.areContentAnimationsEnabled,
+                    blockCornerRadius: arguments.blockCornerRadius
                 ),
                 animation: contentItemAnimation,
                 synchronously: synchronous,
@@ -2404,17 +2414,20 @@ final class TextContentItemLayer: SimpleLayer {
         let spoilerTextColor: UIColor
         let spoilerEffectColor: UIColor
         let areContentAnimationsEnabled: Bool
+        let blockCornerRadius: CGFloat?
         
         init(
             item: TextContentItem,
             spoilerTextColor: UIColor,
             spoilerEffectColor: UIColor,
-            areContentAnimationsEnabled: Bool
+            areContentAnimationsEnabled: Bool,
+            blockCornerRadius: CGFloat?
         ) {
             self.item = item
             self.spoilerTextColor = spoilerTextColor
             self.spoilerEffectColor = spoilerEffectColor
             self.areContentAnimationsEnabled = areContentAnimationsEnabled
+            self.blockCornerRadius = blockCornerRadius
         }
     }
     
@@ -3183,6 +3196,7 @@ final class TextContentItemLayer: SimpleLayer {
             } else {
                 blockBackgroundView.layer.frame = blockBackgroundFrame
             }
+            blockBackgroundView.clipCornerRadius = params.blockCornerRadius
             blockBackgroundView.update(
                 size: blockBackgroundFrame.size,
                 isTransparent: false,

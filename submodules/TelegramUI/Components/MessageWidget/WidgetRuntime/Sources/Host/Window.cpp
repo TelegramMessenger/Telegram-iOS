@@ -11,7 +11,6 @@
 #include "Sources/Host/Links.h"
 #include "Sources/Host/Location.h"
 #include "Sources/Host/Performance.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -194,7 +193,6 @@ void Window::holdObserver(JSContext* ctx, PlatformObject& observer) {
         }
         m_observers = new (memory) Vector<Held>(JSAllocator<Held>(JS_GetRuntime(ctx)));
     }
-    charge(ctx, work::kNodeVisit);
     m_observers->push_back(Held{observer.newRef(ctx)});
 }
 
@@ -202,7 +200,6 @@ void Window::releaseObserver(JSContext* ctx, PlatformObject& observer) {
     if (!m_observers) {
         return;
     }
-    charge(ctx, work::kNodeVisit * uint64_t(m_observers->size()));
     for (size_t i = 0; i < m_observers->size(); i++) {
         if (payloadOfKnown((*m_observers)[i].value) == &observer) {
             Held held = (*m_observers)[i];

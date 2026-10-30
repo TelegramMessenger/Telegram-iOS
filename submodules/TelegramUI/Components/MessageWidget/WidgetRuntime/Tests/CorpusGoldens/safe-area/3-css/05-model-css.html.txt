@@ -1,0 +1,108 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Your order</title>
+<style></style>
+</head><body><div class="wrap">
+  <div class="an"><b>CSS as a model writes it:</b> max() and calc() around env(safe-area-inset-*), @supports. The Pay button ends above your time.</div>
+  <h2>Your order</h2>
+  <div class="li"><span>2 × Flat white</span><span>€7.00</span></div>
+  <div class="li"><span>Almond croissant</span><span>€3.40</span></div>
+  <div class="li"><span>Pickup at 12:40</span><span>Rua Augusta</span></div>
+  <div class="tot"><span>Total</span><span>€10.40</span></div>
+  <div class="ok">@supports (padding: env(safe-area-inset-bottom)): yes</div>
+</div>
+<div class="ft"><button id="p">Pay €10.40</button></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 350.95
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 350.95
+    div 16 12 328 270.15
+      div 26 18 308 67.2
+        b 26 18 0 0
+      h2 16 101.2 328 21.25
+      div 16 135.45 328 18.9
+        span 16 135.45 120 18.9
+        span 288 135.45 56 18.9
+      div 16 165.35 328 18.9
+        span 16 165.35 128 18.9
+        span 288 165.35 56 18.9
+      div 16 195.25 328 18.9
+        span 16 195.25 120 18.9
+        span 256 195.25 88 18.9
+      div 16 228.15 328 21.6
+        span 16 228.15 40 21.6
+        span 280 228.15 64 21.6
+      div 16 249.75 328 32.4
+    div 16 304.15 328 34.8
+      button 16 313.15 328 16.8
+
+== paint
+root 360x350.95 items=53
+  solid-fill bounds=(16,12,328,79) layer=(border=(16,12,328,79),radius=(8,8,8,8,8,8,8,8),clip=(16,12,328,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(16,130,328,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,130,328,30) root=0
+  borders bounds=(16,160,328,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,160,328,30) root=0
+  borders bounds=(16,190,328,30) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(16,190,328,30) root=0
+  solid-fill bounds=(0,294,360,57) layer=(border=(0,294,360,57),radius=(0,0,0,0,0,0,0,0),clip=(0,294,360,57),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(16,304,328,35) layer=(border=(16,304,328,35),radius=(8,8,8,8,8,8,8,8),clip=(16,304,328,35),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(18,10,40,32) pos=(26,18,24,16) color=#000000ff text="CSS" font=f1 glyphs=3 advance=24
+  text bounds=(50,10,32,32) pos=(58,18,16,16) color=#000000ff text="as" font=f1 glyphs=2 advance=16
+  text bounds=(74,10,24,32) pos=(82,18,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(90,10,56,32) pos=(98,18,40,16) color=#000000ff text="model" font=f1 glyphs=5 advance=40
+  text bounds=(138,10,64,32) pos=(146,18,48,16) color=#000000ff text="writes" font=f1 glyphs=6 advance=48
+  text bounds=(194,10,40,32) pos=(202,18,24,16) color=#000000ff text="it:" font=f1 glyphs=3 advance=24
+  text bounds=(226,10,56,32) pos=(234,18,40,16) color=#707579ff text="max()" font=f2 glyphs=5 advance=40
+  text bounds=(274,10,40,32) pos=(282,18,24,16) color=#707579ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(18,27,64,32) pos=(26,35,48,16) color=#707579ff text="calc()" font=f2 glyphs=6 advance=48
+  text bounds=(74,27,64,32) pos=(82,35,48,16) color=#707579ff text="around" font=f2 glyphs=6 advance=48
+  text bounds=(130,27,88,32) pos=(138,35,72,16) color=#707579ff text="env(safe-" font=f2 glyphs=9 advance=72
+  text bounds=(202,27,56,32) pos=(210,35,40,16) color=#707579ff text="area-" font=f2 glyphs=5 advance=40
+  text bounds=(242,27,88,32) pos=(250,35,72,16) color=#707579ff text="inset-*)," font=f2 glyphs=9 advance=72
+  text bounds=(18,44,96,32) pos=(26,52,80,16) color=#707579ff text="@supports." font=f2 glyphs=10 advance=80
+  text bounds=(106,44,40,32) pos=(114,52,24,16) color=#707579ff text="The" font=f2 glyphs=3 advance=24
+  text bounds=(138,44,40,32) pos=(146,52,24,16) color=#707579ff text="Pay" font=f2 glyphs=3 advance=24
+  text bounds=(170,44,64,32) pos=(178,52,48,16) color=#707579ff text="button" font=f2 glyphs=6 advance=48
+  text bounds=(226,44,48,32) pos=(234,52,32,16) color=#707579ff text="ends" font=f2 glyphs=4 advance=32
+  text bounds=(266,44,56,32) pos=(274,52,40,16) color=#707579ff text="above" font=f2 glyphs=5 advance=40
+  text bounds=(18,60,48,32) pos=(26,68,32,16) color=#707579ff text="your" font=f2 glyphs=4 advance=32
+  text bounds=(58,60,56,32) pos=(66,68,40,16) color=#707579ff text="time." font=f2 glyphs=5 advance=40
+  text bounds=(8,95,48,32) pos=(16,103,32,16) color=#000000ff text="Your" font=f3 glyphs=4 advance=32
+  text bounds=(48,95,56,32) pos=(56,103,40,16) color=#000000ff text="order" font=f3 glyphs=5 advance=40
+  text bounds=(8,128,24,32) pos=(16,136,8,16) color=#000000ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(24,128,32,32) pos=(32,136,16,16) color=#000000ff text="×" font=f4 glyphs=2 advance=16
+  text bounds=(48,128,48,32) pos=(56,136,32,16) color=#000000ff text="Flat" font=f4 glyphs=4 advance=32
+  text bounds=(88,128,56,32) pos=(96,136,40,16) color=#000000ff text="white" font=f4 glyphs=5 advance=40
+  text bounds=(280,128,72,32) pos=(288,136,56,16) color=#707579ff text="€7.00" font=f4 glyphs=7 advance=56
+  text bounds=(8,158,64,32) pos=(16,166,48,16) color=#000000ff text="Almond" font=f4 glyphs=6 advance=48
+  text bounds=(64,158,88,32) pos=(72,166,72,16) color=#000000ff text="croissant" font=f4 glyphs=9 advance=72
+  text bounds=(280,158,72,32) pos=(288,166,56,16) color=#707579ff text="€3.40" font=f4 glyphs=7 advance=56
+  text bounds=(8,188,64,32) pos=(16,196,48,16) color=#000000ff text="Pickup" font=f4 glyphs=6 advance=48
+  text bounds=(64,188,32,32) pos=(72,196,16,16) color=#000000ff text="at" font=f4 glyphs=2 advance=16
+  text bounds=(88,188,56,32) pos=(96,196,40,16) color=#000000ff text="12:40" font=f4 glyphs=5 advance=40
+  text bounds=(248,188,40,32) pos=(256,196,24,16) color=#707579ff text="Rua" font=f4 glyphs=3 advance=24
+  text bounds=(280,188,72,32) pos=(288,196,56,16) color=#707579ff text="Augusta" font=f4 glyphs=7 advance=56
+  text bounds=(8,222,56,32) pos=(16,230,40,16) color=#000000ff text="Total" font=f5 glyphs=5 advance=40
+  text bounds=(272,222,80,32) pos=(280,230,64,16) color=#000000ff text="€10.40" font=f5 glyphs=8 advance=64
+  text bounds=(8,242,88,32) pos=(16,250,72,16) color=#707579ff text="@supports" font=f2 glyphs=9 advance=72
+  text bounds=(88,242,88,32) pos=(96,250,72,16) color=#707579ff text="(padding:" font=f2 glyphs=9 advance=72
+  text bounds=(168,242,88,32) pos=(176,250,72,16) color=#707579ff text="env(safe-" font=f2 glyphs=9 advance=72
+  text bounds=(240,242,56,32) pos=(248,250,40,16) color=#707579ff text="area-" font=f2 glyphs=5 advance=40
+  text bounds=(280,242,64,32) pos=(288,250,48,16) color=#707579ff text="inset-" font=f2 glyphs=6 advance=48
+  text bounds=(8,258,88,32) pos=(16,266,72,16) color=#707579ff text="bottom)):" font=f2 glyphs=9 advance=72
+  text bounds=(88,258,40,32) pos=(96,266,24,16) color=#707579ff text="yes" font=f2 glyphs=3 advance=24
+  text bounds=(124,305,40,32) pos=(132,313,24,16) color=#ffffffff text="Pay" font=f6 glyphs=3 advance=24
+  text bounds=(156,305,80,32) pos=(164,313,64,16) color=#ffffffff text="€10.40" font=f6 glyphs=8 advance=64
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

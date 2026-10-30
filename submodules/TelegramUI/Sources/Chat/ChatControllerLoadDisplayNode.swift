@@ -113,6 +113,7 @@ import ChatNavigationButton
 import WebsiteType
 import PeerInfoScreen
 import MediaEditorScreen
+import MediaEditor
 import WallpaperGalleryScreen
 import WallpaperGridScreen
 import VideoMessageCameraScreen
@@ -131,6 +132,45 @@ import UIKitRuntimeUtils
 import ChatHistoryListViewBackend
 
 extension ChatControllerImpl {
+    #if DEBUG
+    func presentDebugVideoSendStatistics(messageIds: [EngineMessage.Id]) {
+        let deliveredTime = CFAbsoluteTimeGetCurrent()
+        let _ = (self.context.engine.data.get(EngineDataList(messageIds.map { TelegramEngine.EngineData.Item.Messages.Message(id: $0) }))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] messages in
+            guard let self else {
+                return
+            }
+            var lines: [String] = []
+            for message in messages {
+                guard let message, message.media.contains(where: { media in
+                    if let file = media as? TelegramMediaFile {
+                        return file.isVideo && !file.isInstantVideo && !file.isAnimated
+                    }
+                    return false
+                }) else {
+                    continue
+                }
+                guard let export = VideoExportDebugTimings.shared.takeLatestChatExport() else {
+                    continue
+                }
+                lines.append(String(
+                    format: "Writer: %@\nSize: %.1f MB\nUploaded during export: %.1f MB\n\nVideo export: %.2f s\nUpload: %.2f s\nExport start to sent: %.2f s",
+                    export.writer,
+                    Double(export.fileSize) / 1_048_576.0,
+                    Double(export.streamedSize) / 1_048_576.0,
+                    export.exportEnd - export.exportStart,
+                    deliveredTime - export.exportEnd,
+                    deliveredTime - export.exportStart
+                ))
+            }
+            if lines.isEmpty {
+                return
+            }
+            self.present(textAlertController(context: self.context, title: "Video Send", text: lines.joined(separator: "\n\n———\n\n"), actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        })
+    }
+    #endif
+    
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {
         self.contentDataReady.set(false)
         
@@ -5159,6 +5199,9 @@ extension ChatControllerImpl {
                     guard let self else {
                         return
                     }
+                    #if DEBUG
+                    self.presentDebugVideoSendStatistics(messageIds: eventGroup.map(\.id))
+                    #endif
                     let inAppNotificationSettings = self.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                     if inAppNotificationSettings.playSounds, let firstEvent = eventGroup.first, !firstEvent.isSilent {
                         serviceSoundManager.playMessageDeliveredSound()
@@ -5553,8 +5596,19 @@ extension ChatControllerImpl {
                     chatLocation = .peer(peer)
                 }
 
+                let previousController = ObjectIdentifier(strongSelf)
+                // Bubble-free mode: the panel holding the "next channel" island (nil without one).
+                let overscrollIslandPanel = snapshotState.inputPanelOverscrollIslandHandOver != nil ? strongSelf.chatDisplayNode.inputPanelNode : nil
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
-                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
+                    let nextController = nextController as! ChatControllerImpl
+                    if let overscrollIslandPanel, nextController.didAppear {
+                        // The next chat is already on screen: this controller switched in place (a forum's next
+                        // topic), or one deeper in the stack was popped to. Its snapshot will not animate until a
+                        // later appearance, so the island does not wait for it: it sinks into this panel, or, off
+                        // screen, goes at once.
+                        let _ = overscrollIslandPanel.updateOverscrollIsland(nil, animated: ObjectIdentifier(nextController) == previousController)
+                    }
+                    nextController.animateFromPreviousController(snapshotState: snapshotState)
                 }, customChatNavigationStack: strongSelf.customChatNavigationStack))
                 // Navigation started: the caller may keep the overscroll control frozen, and the
                 // snapshot taken above now owns it.

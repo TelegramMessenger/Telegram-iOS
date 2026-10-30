@@ -39,7 +39,6 @@ static void fragmentCounts(JSContext* ctx, const Node& fragment, int* elements, 
     *elements = 0;
     *text = false;
     for (size_t i = 0; i < fragment.childCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         const Node* c = fragment.childAt(i);
         if (c->isElement()) {
             (*elements)++;
@@ -176,7 +175,6 @@ void adoptNodeInto(JSContext* ctx, Node& node, Document& document) {
         return;
     }
     for (Node* n = &node; n; n = n->nextInTreeOrder(&node)) {
-        charge(ctx, work::kNodeVisit);
         n->setNodeDocument(ctx, document);
         n->adoptedInto(ctx, document);
     }
@@ -239,6 +237,24 @@ Node& replaceChildNode(JSContext* ctx, Node& child, Node& node, Node& parent) {
 void replaceAllChildren(JSContext* ctx, Node* node, Node& parent) {
     Ref<Node> keep = Ref<Node>::retain(ctx, node);
     Vector<Ref<Node>> removed = childrenOf(ctx, parent);
+    // limit.batch (widget-sandbox v0.3.0): a sole Text child replaced by a new Text (textContent, innerText, replaceChildren
+    // with a string) is one `data` operation upstream, whose shim gives the new node the old one's id (capture.ts
+    // reuseSoleText). It counts as a change of the old node's data, whose place in the count the new node takes; the DOM
+    // still swaps the nodes.
+    if (node && removed.size() == 1 && node->type() == NodeType::Text && removed[0]->type() == NodeType::Text &&
+        !node->announced() && !node->parent()) {
+        CharacterData& old = static_cast<CharacterData&>(*removed[0]);
+        old.countDataChange(ctx);
+        static_cast<CharacterData&>(*node).takeTextCountOf(old);
+        {
+            Runtime::QuietOps quiet(Runtime::from(ctx));
+            removeAllChildNodes(ctx, parent, removed);
+            insertNode(ctx, *node, parent, nullptr, true);
+        }
+        // Its place went to the new node: put back anywhere, it is a new one.
+        old.forgetTextCount();
+        return;
+    }
     removeAllChildNodes(ctx, parent, removed);
     if (node) {
         insertNode(ctx, *node, parent, nullptr, true);
@@ -293,7 +309,6 @@ static void cloneDescendants(JSContext* ctx, Node& root, Node& rootCopy, Documen
             to = to->parent();
         }
         // `to` is now the copy of next's parent.
-        charge(ctx, work::kNodeVisit);
         Ref<Node> child = next->cloneShallow(ctx, childDocument);
         next->cloneSteps(ctx, *child, true, pending);
         to->insertChildAt(ctx, to->childCount(), *child);
@@ -303,7 +318,6 @@ static void cloneDescendants(JSContext* ctx, Node& root, Node& rootCopy, Documen
 }
 
 Ref<Node> cloneNodeInto(JSContext* ctx, Node& node, Document& document, bool subtree) {
-    charge(ctx, work::kNodeVisit);
     Ref<Node> copy = node.cloneShallow(ctx, document);
     CloneQueue pending{JSAllocator<CloneQueue::value_type>(JS_GetRuntime(ctx))};
     node.cloneSteps(ctx, *copy, subtree, pending);
@@ -335,7 +349,6 @@ void appendCodeUnits(Vector<char16_t>& out, const String& data) {
 String descendantTextContent(JSContext* ctx, Node& node) {
     Vector<char16_t> out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     for (Node* n = node.nextInTreeOrder(&node); n; n = n->nextInTreeOrder(&node)) {
-        charge(ctx, work::kNodeVisit);
         if (n->type() == NodeType::Text) {
             appendCodeUnits(out, static_cast<CharacterData*>(n)->dataString(ctx));
         }

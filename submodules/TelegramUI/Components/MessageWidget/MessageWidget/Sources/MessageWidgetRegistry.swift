@@ -29,6 +29,9 @@ public final class MessageWidgetRegistry {
     /// The most a widget asked for in this pass may be tall (`MessageWidgetInstance.maximumHeight`): its bubble's fixed
     /// height, else the 600 pt bound. Handed over on every `size`, so an edit of the anchors reaches a running widget.
     public var maximumHeight: CGFloat = MessageWidgetBubbleSize.maximumHeight
+    /// What the bubble draws over a widget asked for in this pass (`MessageWidgetInstance.contentSafeArea`): its time over
+    /// the bottom corner when no caption is below it (sdk-v1 §2.17, §5.12), `none` otherwise. Handed over on every pass.
+    public var contentSafeArea: MessageWidgetContentSafeArea = .none
     /// The bubble's message's context (sdk-v1 §2.13, §2.14), set on every pass: part of a widget's key.
     public var context = MessageWidgetContext()
     /// The bot's state of the bubble's message (sdk-v1 §2.13), set on every pass: widgets made in it start with it, and
@@ -150,6 +153,7 @@ public final class MessageWidgetRegistry {
             instance = created
         }
         instance.maximumHeight = self.maximumHeight
+        instance.contentSafeArea = self.contentSafeArea
         let size = instance.layout(width: width)
         if instance.failedToStart {
             instance.destroy()

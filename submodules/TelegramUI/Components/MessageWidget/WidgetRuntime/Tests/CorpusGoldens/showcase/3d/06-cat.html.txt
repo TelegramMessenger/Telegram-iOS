@@ -1,0 +1,89 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body><div class="card"><header><div><div class="eyebrow">CAT STUDIO / 3D</div><h2>Pocket cat</h2></div></header><p>A sculpted 3D cat.</p><canvas id="view" role="img" aria-label="Pocket cat. Mouse drag rotates X/Y." width="320" height="240"></canvas><div class="tools"><button id="left" aria-label="Turn left">↶ Left</button><button id="right" aria-label="Turn right">Right ↷</button><button id="up">Raise</button><button id="down">Lower</button><button id="near" aria-label="Zoom in">＋</button><button id="far" aria-label="Zoom out">−</button><button id="reset">Reset</button><button id="special">Move tail</button></div><div class="status" id="status" aria-live="polite">Sitting pretty · 100%</div><p class="hint">Mouse drag rotates X/Y · Vertical touch scrolls the chat</p></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 496
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 496
+    div 20 18 320 464
+      header 20 18 320 51.2
+        div 20 18 120 46.2
+          div 20 18 120 16
+          h2 20 39 120 25.2
+      p 20 74.2 320 16.8
+      canvas 20 96 320 240
+      div 20 347 320 69
+        button 30 353 64 20
+        button 119 353 72 20
+        button 216 353 40 20
+        button 281 353 40 20
+        button 30 390 24 20
+        button 79 390 24 20
+        button 128 390 40 20
+        button 193 390 72 20
+      div 20 424 320 16
+      p 20 449 320 28
+
+== paint
+root 360x496 items=47
+  solid-fill bounds=(0,0,360,496) layer=(border=(0,0,360,496),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,496),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#f3f5f1ff
+  image bounds=(20,96,320,240) layer=(border=(20,96,320,240),radius=(0,0,0,0,0,0,0,0),clip=(20,96,320,240),origin=(20,96,320,240),attachment=0,repeat=3,root=0) size=(320,240)
+  borders bounds=(20,336,320,80) borders=(left=(0,0,#233b43ff),top=(1,4,#d4dfd9ff),right=(0,0,#233b43ff),bottom=(0,0,#233b43ff),radius=(0,0,0,0,0,0,0,0)) pos=(20,336,320,80) root=0
+  borders bounds=(20,347,84,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,347,84,32) root=0
+  borders bounds=(109,347,92,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(109,347,92,32) root=0
+  borders bounds=(206,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(206,347,60,32) root=0
+  borders bounds=(271,347,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(271,347,60,32) root=0
+  borders bounds=(20,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(20,384,44,32) root=0
+  borders bounds=(69,384,44,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(69,384,44,32) root=0
+  borders bounds=(118,384,60,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(118,384,60,32) root=0
+  solid-fill bounds=(183,384,92,32) layer=(border=(183,384,92,32),radius=(8,8,8,8,8,8,8,8),clip=(183,384,92,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#246e61ff
+  borders bounds=(183,384,92,32) borders=(left=(1,4,#d4dfd9ff),top=(1,4,#d4dfd9ff),right=(1,4,#d4dfd9ff),bottom=(1,4,#d4dfd9ff),radius=(8,8,8,8,8,8,8,8)) pos=(183,384,92,32) root=0
+  text bounds=(12,10,40,32) pos=(20,18,24,16) color=#246e61ff text="CAT" font=f1 glyphs=3 advance=24
+  text bounds=(44,10,64,32) pos=(52,18,48,16) color=#246e61ff text="STUDIO" font=f1 glyphs=6 advance=48
+  text bounds=(100,10,24,32) pos=(108,18,8,16) color=#246e61ff text="/" font=f1 glyphs=1 advance=8
+  text bounds=(116,10,32,32) pos=(124,18,16,16) color=#246e61ff text="3D" font=f1 glyphs=2 advance=16
+  text bounds=(12,35,64,32) pos=(20,43,48,16) color=#233b43ff text="Pocket" font=f2 glyphs=6 advance=48
+  text bounds=(68,35,40,32) pos=(76,43,24,16) color=#233b43ff text="cat" font=f2 glyphs=3 advance=24
+  text bounds=(12,66,24,32) pos=(20,74,8,16) color=#536d70ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(28,66,80,32) pos=(36,74,64,16) color=#536d70ff text="sculpted" font=f3 glyphs=8 advance=64
+  text bounds=(100,66,32,32) pos=(108,74,16,16) color=#536d70ff text="3D" font=f3 glyphs=2 advance=16
+  text bounds=(124,66,48,32) pos=(132,74,32,16) color=#536d70ff text="cat." font=f3 glyphs=4 advance=32
+  text bounds=(22,347,40,32) pos=(30,355,24,16) color=#233b43ff text="↶" font=f3 glyphs=3 advance=24
+  text bounds=(54,347,48,32) pos=(62,355,32,16) color=#233b43ff text="Left" font=f3 glyphs=4 advance=32
+  text bounds=(111,347,56,32) pos=(119,355,40,16) color=#233b43ff text="Right" font=f3 glyphs=5 advance=40
+  text bounds=(159,347,40,32) pos=(167,355,24,16) color=#233b43ff text="↷" font=f3 glyphs=3 advance=24
+  text bounds=(208,347,56,32) pos=(216,355,40,16) color=#233b43ff text="Raise" font=f3 glyphs=5 advance=40
+  text bounds=(273,347,56,32) pos=(281,355,40,16) color=#233b43ff text="Lower" font=f3 glyphs=5 advance=40
+  text bounds=(22,384,40,32) pos=(30,392,24,16) color=#233b43ff text="＋" font=f3 glyphs=3 advance=24
+  text bounds=(71,384,40,32) pos=(79,392,24,16) color=#233b43ff text="−" font=f3 glyphs=3 advance=24
+  text bounds=(120,384,56,32) pos=(128,392,40,16) color=#233b43ff text="Reset" font=f3 glyphs=5 advance=40
+  text bounds=(185,384,48,32) pos=(193,392,32,16) color=#f3f5f1ff text="Move" font=f3 glyphs=4 advance=32
+  text bounds=(225,384,48,32) pos=(233,392,32,16) color=#f3f5f1ff text="tail" font=f3 glyphs=4 advance=32
+  text bounds=(12,416,72,32) pos=(20,424,56,16) color=#246e61ff text="Sitting" font=f4 glyphs=7 advance=56
+  text bounds=(76,416,64,32) pos=(84,424,48,16) color=#246e61ff text="pretty" font=f4 glyphs=6 advance=48
+  text bounds=(132,416,32,32) pos=(140,424,16,16) color=#246e61ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(156,416,48,32) pos=(164,424,32,16) color=#246e61ff text="100%" font=f4 glyphs=4 advance=32
+  text bounds=(12,440,56,32) pos=(20,448,40,16) color=#536d70ff text="Mouse" font=f5 glyphs=5 advance=40
+  text bounds=(60,440,48,32) pos=(68,448,32,16) color=#536d70ff text="drag" font=f5 glyphs=4 advance=32
+  text bounds=(100,440,72,32) pos=(108,448,56,16) color=#536d70ff text="rotates" font=f5 glyphs=7 advance=56
+  text bounds=(164,440,40,32) pos=(172,448,24,16) color=#536d70ff text="X/Y" font=f5 glyphs=3 advance=24
+  text bounds=(196,440,32,32) pos=(204,448,16,16) color=#536d70ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(220,440,80,32) pos=(228,448,64,16) color=#536d70ff text="Vertical" font=f5 glyphs=8 advance=64
+  text bounds=(292,440,56,32) pos=(300,448,40,16) color=#536d70ff text="touch" font=f5 glyphs=5 advance=40
+  text bounds=(12,454,72,32) pos=(20,462,56,16) color=#536d70ff text="scrolls" font=f5 glyphs=7 advance=56
+  text bounds=(76,454,40,32) pos=(84,462,24,16) color=#536d70ff text="the" font=f5 glyphs=3 advance=24
+  text bounds=(108,454,48,32) pos=(116,462,32,16) color=#536d70ff text="chat" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=2,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=21,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

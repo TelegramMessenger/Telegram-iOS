@@ -135,7 +135,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             return
         }
         
-        if !params.forceOpenChat, !viewForumAsMessages, params.subject == nil, case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
+        // With the chat side list, Saved Messages opens its own chat and lists its sub-chats in the side list.
+        let opensSavedMessagesAsChat = params.context.usesChatSideList && params.navigationController.traitCollection.horizontalSizeClass != .regular
+        if !params.forceOpenChat, !viewForumAsMessages, !opensSavedMessagesAsChat, params.subject == nil, case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
             if let controller = params.context.sharedContext.makePeerInfoController(context: params.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                 params.navigationController.pushViewController(controller, animated: params.animated, completion: {
                 })

@@ -19,10 +19,10 @@ public:
     EventHandlerAttributes& operator=(const EventHandlerAttributes&) = delete;
 
     /// HTML's "event handler content attribute change steps". Inside a mutation, where it runs no script: a failure in
-    /// it (the budget, out of memory) latches the stop and throws Aborted (Ruling R6), so the half-notified change is
-    /// never observed.
+    /// it (out of memory) latches the stop and throws Aborted (Ruling R6), so the half-notified change is never
+    /// observed.
     void attributeChanged(Element& element, JSAtom localName, Namespace ns) override;
-    /// Whether `type` is in the window-reflecting body element event handler set. Charged.
+    /// Whether `type` is in the window-reflecting body element event handler set.
     bool isWindowReflecting(JSContext* ctx, JSAtom type) const;
     JSAtom errorType() const { return m_error; }
 
@@ -50,7 +50,7 @@ private:
 
 /// Whether `type` is the event type of a handler in HTML's window-reflecting body element event handler set (the
 /// WindowEventHandlers members and six GlobalEventHandlers ones). The host state's table answers; a runtime without
-/// one (DOM-only) compares the type's name with the table's names. Charged.
+/// one (DOM-only) compares the type's name with the table's names.
 bool isWindowReflectingEventHandler(JSContext* ctx, JSAtom type);
 
 } // namespace wr

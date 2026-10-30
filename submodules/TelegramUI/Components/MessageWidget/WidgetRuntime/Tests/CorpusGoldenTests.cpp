@@ -16,7 +16,8 @@
 // to Asia/Tokyo: an offset, so a local-time and UTC mix-up shows, and no daylight saving, so no transition is near.
 // Each document boots at width 360 to idle, then runs one virtual second, then flushes, as the corpus gates do.
 // Animations are kept: on the virtual clock their values at 1 s are results too.
-// Work units and memory are never recorded: they move with every rate and with the system allocator.
+// Each step runs in the harness's slice on its fake clock, which stops only a runaway. CPU times and memory are never
+// recorded: they move with the machine and with the system allocator.
 #include <pthread.h>
 #include <time.h>
 
@@ -41,9 +42,6 @@
 namespace {
 
 constexpr const char* kGoldensInSource = "submodules/TelegramUI/Components/MessageWidget/WidgetRuntime/Tests/CorpusGoldens";
-/// RenderCorpusTests' caps, so that only a runaway stops.
-constexpr uint64_t kBootCap = 448000000;
-constexpr uint64_t kSecondCap = 28000000ull * 60;
 constexpr double kWidth = 360;
 
 std::vector<std::string> corpusFiles() {
@@ -84,10 +82,11 @@ std::string shortName(const std::string& file) {
 const char* stopName(wr::StopReason reason) {
     switch (reason) {
     case wr::StopReason::None: return "-";
-    case wr::StopReason::Budget: return "budget";
     case wr::StopReason::Memory: return "memory";
     case wr::StopReason::Internal: return "internal";
     case wr::StopReason::LayoutQuery: return "layout-query";
+    case wr::StopReason::Limit: return "limit";
+    case wr::StopReason::Cpu: return "cpu";
     }
     return "?";
 }
@@ -171,12 +170,9 @@ std::string golden(const std::string& html) {
     options.width = kWidth;
     wr_test::RenderEnv env(html, options, false, [](wr_test::HostEnv& e) {
         e.host().intlAnswer = wr_test::echoIntl;
-        e.runtime().setWorkLimit(JS_GetWorkUnits(e.runtime().jsRuntime()) + kBootCap);
     });
-    JSRuntime* rt = env.env().runtime().jsRuntime();
     wr_test::DriveEnd end = wr_test::driveVirtualTime(env.env(), 0, {}, 1000000);
     if (end != wr_test::DriveEnd::StepLimit && env.env().runtime().stopReason() == wr::StopReason::None) {
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + kSecondCap);
         end = wr_test::driveVirtualTime(env.env(), 1000, {}, 1000000);
     }
     try {

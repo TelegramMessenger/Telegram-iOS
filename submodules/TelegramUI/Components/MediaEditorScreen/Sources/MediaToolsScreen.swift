@@ -260,6 +260,8 @@ private final class MediaToolsScreenComponent: Component {
         private var chatMediaTransformView: MediaToolsPassthroughView?
         
         private var curvesState: CurvesInternalState?
+        private var isCurvesTracking = false
+        private var sidePanelHiddenOffset: CGPoint?
                 
         private var component: MediaToolsScreenComponent?
         private weak var state: State?
@@ -293,6 +295,10 @@ private final class MediaToolsScreenComponent: Component {
         }
         
         func animateInFromEditor() {
+            if let component = self.component, component.externalControls, let sidePanelHiddenOffset = self.sidePanelHiddenOffset {
+                self.optionsContainerView.layer.animatePosition(from: sidePanelHiddenOffset, to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                return
+            }
             if let component = self.component, component.externalControls {
                 self.optionsContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 self.optionsEdgeEffectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
@@ -329,7 +335,18 @@ private final class MediaToolsScreenComponent: Component {
         private var animatingOut = false
         func animateOutToEditor(completion: @escaping () -> Void) {
             self.animatingOut = true
+            self.releaseCurvesTracking()
 
+            if let component = self.component, component.externalControls, let sidePanelHiddenOffset = self.sidePanelHiddenOffset {
+                if let view = self.toolScreen?.view {
+                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                }
+                self.optionsContainerView.layer.animatePosition(from: .zero, to: sidePanelHiddenOffset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+                    completion()
+                })
+                self.state?.updated()
+                return
+            }
             if let component = self.component, component.externalControls {
                 if let view = self.toolScreen?.view {
                     view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -379,6 +396,13 @@ private final class MediaToolsScreenComponent: Component {
             self.state?.updated()
         }
         
+        private func releaseCurvesTracking() {
+            if self.isCurvesTracking {
+                self.isCurvesTracking = false
+                (self.environment?.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(false)
+            }
+        }
+
         func update(component: MediaToolsScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
@@ -407,6 +431,7 @@ private final class MediaToolsScreenComponent: Component {
             let buttonsContainerFrame: CGRect
             var chatToolScreenFrame: CGRect?
             var chatMediaGeometry: MediaToolsScreen.ChatMediaGeometry?
+            var chatSidePanelFrame: CGRect?
             var storyImageFrame: CGRect?
             switch component.layoutStyle {
             case .story:
@@ -441,9 +466,10 @@ private final class MediaToolsScreenComponent: Component {
                     storyImageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0) - previewContainerFrame.minX, y: -previewContainerFrame.minY), size: previewSize)
                 }
                 buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
-            case let .chat(previewFrame, mediaGeometry):
+            case let .chat(previewFrame, mediaGeometry, sidePanelFrame):
                 previewSize = previewFrame.size
                 chatMediaGeometry = mediaGeometry
+                chatSidePanelFrame = sidePanelFrame
                 if isTablet {
                     buttonSideInset = 30.0
                 } else if availableSize.width > 320.0 {
@@ -453,7 +479,11 @@ private final class MediaToolsScreenComponent: Component {
                 }
                 let buttonsContainerHeight = environment.safeInsets.bottom + (component.externalControls ? 0.0 : buttonBottomInset) + MediaToolsScreen.chatToolbarHeight
                 buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - buttonsContainerHeight), size: CGSize(width: availableSize.width, height: buttonsContainerHeight))
-                previewContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: previewFrame.minY), size: CGSize(width: availableSize.width, height: max(0.0, buttonsContainerFrame.minY - previewFrame.minY)))
+                if sidePanelFrame != nil {
+                    previewContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: previewFrame.minY), size: CGSize(width: availableSize.width, height: previewFrame.height))
+                } else {
+                    previewContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: previewFrame.minY), size: CGSize(width: availableSize.width, height: max(0.0, buttonsContainerFrame.minY - previewFrame.minY)))
+                }
                 chatToolScreenFrame = CGRect(origin: CGPoint(x: previewFrame.minX, y: 0.0), size: previewFrame.size)
             }
                                     
@@ -683,6 +713,7 @@ private final class MediaToolsScreenComponent: Component {
             var sectionChanged = false
             if previousSection != component.section {
                 sectionChanged = true
+                self.releaseCurvesTracking()
                 if let previousView = self.toolOptions.view {
                     previousView.layer.allowsGroupOpacity = true
                     previousView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak previousView] _ in
@@ -710,7 +741,15 @@ private final class MediaToolsScreenComponent: Component {
             case .chat:
                 externalOptionsBottom = previewContainerFrame.maxY - MediaToolsScreen.externalControlsOptionsBottomInset
             }
-            let optionsBottomExtension: CGFloat = component.externalControls ? max(0.0, availableSize.height - externalOptionsBottom) : 0.0
+            let optionsBottomExtension: CGFloat = component.externalControls && chatSidePanelFrame == nil ? max(0.0, availableSize.height - externalOptionsBottom) : 0.0
+            let optionsContainerSize = chatSidePanelFrame?.size ?? previewContainerFrame.size
+            let chatRotatedOptionsAngle: CGFloat? = chatSidePanelFrame.flatMap { panelFrame in
+                guard component.section != .adjustments else {
+                    return nil
+                }
+                return panelFrame.midX > availableSize.width / 2.0 ? -CGFloat.pi / 2.0 : CGFloat.pi / 2.0
+            }
+            let chatRotatedOptionsContainerSize: CGSize? = chatRotatedOptionsAngle != nil ? chatSidePanelFrame.flatMap { CGSize(width: $0.height, height: $0.width) } : nil
             let optionsBottomContentInset: CGFloat?
             if component.externalControls {
                 let lastRowLift: CGFloat
@@ -828,8 +867,9 @@ private final class MediaToolsScreenComponent: Component {
                     transition: optionsTransition,
                     component: AnyComponent(AdjustmentsComponent(
                         tools: tools,
-                        bottomInset: optionsBottomExtension,
-                        bottomContentInset: optionsBottomContentInset,
+                        bottomInset: chatSidePanelFrame.flatMap { max(0.0, $0.height - MediaToolsScreen.adjustmentsPanelBaseHeight) } ?? optionsBottomExtension,
+                        bottomContentInset: chatSidePanelFrame != nil ? 0.0 : optionsBottomContentInset,
+                        ignoresSafeArea: chatSidePanelFrame != nil,
                         valueUpdated: { [weak state] key, value in
                             if let controller = environment.controller() as? MediaToolsScreen {
                                 controller.mediaEditor.setToolValue(key, value: value)
@@ -837,6 +877,7 @@ private final class MediaToolsScreenComponent: Component {
                             }
                         },
                         isTrackingUpdated: { [weak self] isTracking in
+                            (environment.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(isTracking)
                             if let self {
                                 let transition: ComponentTransition
                                 if isTracking {
@@ -849,7 +890,7 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: previewContainerFrame.size
+                    containerSize: chatRotatedOptionsContainerSize ?? optionsContainerSize
                 )
                 
                 let adjustmentsToolScreen: ComponentView<Empty>
@@ -895,6 +936,7 @@ private final class MediaToolsScreenComponent: Component {
                             }
                         },
                         isTrackingUpdated: { [weak self] isTracking in
+                            (environment.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(isTracking)
                             if let self {
                                 let transition: ComponentTransition
                                 if isTracking {
@@ -907,7 +949,7 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: previewContainerFrame.size
+                    containerSize: chatRotatedOptionsContainerSize ?? optionsContainerSize
                 )
                 
                 let tintToolScreen: ComponentView<Empty>
@@ -947,6 +989,7 @@ private final class MediaToolsScreenComponent: Component {
                             }
                         },
                         isTrackingUpdated: { [weak self] isTracking in
+                            (environment.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(isTracking)
                             if let self {
                                 let transition: ComponentTransition
                                 if isTracking {
@@ -959,7 +1002,7 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: previewContainerFrame.size
+                    containerSize: chatRotatedOptionsContainerSize ?? optionsContainerSize
                 )
                 
                 let blurToolScreen: ComponentView<Empty>
@@ -982,6 +1025,7 @@ private final class MediaToolsScreenComponent: Component {
                                 }
                             },
                             isTrackingUpdated: { [weak self] isTracking in
+                                (environment.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(isTracking)
                                 if let self {
                                     let transition: ComponentTransition
                                     if isTracking {
@@ -1020,7 +1064,7 @@ private final class MediaToolsScreenComponent: Component {
                         internalState: internalState
                     )),
                     environment: {},
-                    containerSize: previewContainerFrame.size
+                    containerSize: chatRotatedOptionsContainerSize ?? previewContainerFrame.size
                 )
                 
                 let curvesToolScreen: ComponentView<Empty>
@@ -1042,6 +1086,13 @@ private final class MediaToolsScreenComponent: Component {
                                     controller.mediaEditor.setToolValue(.curves, value: value)
                                     state?.updated()
                                 }
+                            },
+                            isTrackingUpdated: { [weak self] isTracking in
+                                guard let self, self.isCurvesTracking != isTracking else {
+                                    return
+                                }
+                                self.isCurvesTracking = isTracking
+                                (environment.controller() as? MediaToolsScreen)?.externalTrackingUpdated?(isTracking)
                             }
                         )
                     ),
@@ -1057,7 +1108,20 @@ private final class MediaToolsScreenComponent: Component {
                     optionsView.clipsToBounds = true
                     self.optionsContainerView.addSubview(optionsView)
                 }
-                optionsTransition.setFrame(view: optionsView, frame: optionsFrame)
+                if let chatRotatedOptionsAngle, let chatSidePanelFrame {
+                    let centerX: CGFloat
+                    if chatRotatedOptionsAngle < 0.0 {
+                        centerX = chatSidePanelFrame.width - optionsSize.height / 2.0
+                    } else {
+                        centerX = optionsSize.height / 2.0
+                    }
+                    optionsView.transform = CGAffineTransform(rotationAngle: chatRotatedOptionsAngle)
+                    optionsTransition.setBounds(view: optionsView, bounds: CGRect(origin: .zero, size: optionsSize))
+                    optionsTransition.setPosition(view: optionsView, position: CGPoint(x: floorToScreenPixels(centerX), y: floorToScreenPixels(chatSidePanelFrame.height / 2.0)))
+                } else {
+                    optionsView.transform = .identity
+                    optionsTransition.setFrame(view: optionsView, frame: optionsFrame)
+                }
                 
                 if sectionChanged && previousSection != nil {
                     optionsView.layer.allowsGroupOpacity = true
@@ -1083,7 +1147,21 @@ private final class MediaToolsScreenComponent: Component {
                 }
                 (environment.controller() as? MediaToolsScreen)?.scheduleExternalValuesUpdated()
             }
-            if component.externalControls {
+            if component.externalControls, let chatSidePanelFrame {
+                optionsBackgroundFrame = chatSidePanelFrame
+                if self.optionsContainerView.superview !== self {
+                    self.insertSubview(self.optionsContainerView, aboveSubview: self.previewContainerView)
+                    self.insertSubview(self.optionsEdgeEffectView, aboveSubview: self.optionsContainerView)
+                }
+                self.optionsEdgeEffectView.isHidden = true
+                if chatSidePanelFrame.midX < availableSize.width / 2.0 {
+                    self.sidePanelHiddenOffset = CGPoint(x: -chatSidePanelFrame.maxX, y: 0.0)
+                } else {
+                    self.sidePanelHiddenOffset = CGPoint(x: availableSize.width - chatSidePanelFrame.minX, y: 0.0)
+                }
+            } else if component.externalControls {
+                self.optionsEdgeEffectView.isHidden = false
+                self.sidePanelHiddenOffset = nil
                 let barTop = externalOptionsBottom + MediaToolsScreen.externalControlsOptionsBottomInset
                 optionsBackgroundFrame = CGRect(x: previewContainerFrame.minX, y: externalOptionsBottom - optionsSize.height, width: optionsSize.width, height: availableSize.height - (externalOptionsBottom - optionsSize.height))
                 if self.optionsContainerView.superview !== self {
@@ -1341,7 +1419,7 @@ public final class MediaToolsScreen: ViewController {
 
     public enum LayoutStyle: Equatable {
         case story
-        case chat(previewFrame: CGRect, mediaGeometry: ChatMediaGeometry?)
+        case chat(previewFrame: CGRect, mediaGeometry: ChatMediaGeometry?, sidePanelFrame: CGRect?)
     }
     
     static let chatToolbarHeight: CGFloat = 49.0
@@ -1349,6 +1427,7 @@ public final class MediaToolsScreen: ViewController {
     static let externalControlsEdgeEffectOverlap: CGFloat = 24.0
     static let externalControlsLastRowLift: CGFloat = 8.0
     static let externalControlsChatLastRowLift: CGFloat = 40.0
+    static let adjustmentsPanelBaseHeight: CGFloat = 180.0
     
     public enum Section: Equatable {
         case adjustments
@@ -1371,7 +1450,7 @@ public final class MediaToolsScreen: ViewController {
     }
 
     fileprivate let hiddenTools: [EditorToolKey]
-    fileprivate let layoutStyle: LayoutStyle
+    fileprivate private(set) var layoutStyle: LayoutStyle
     fileprivate let externalControls: Bool
     fileprivate let mediaEditor: MediaEditor
     
@@ -1418,6 +1497,7 @@ public final class MediaToolsScreen: ViewController {
     }
     
     public var externalValuesUpdated: (() -> Void)?
+    public var externalTrackingUpdated: ((Bool) -> Void)?
 
     fileprivate func scheduleExternalValuesUpdated() {
         DispatchQueue.main.async { [weak self] in
@@ -1427,6 +1507,10 @@ public final class MediaToolsScreen: ViewController {
 
     public func select(section: Section) {
         self.node.select(section: section.internalSection)
+    }
+
+    public func updateLayoutStyle(_ layoutStyle: LayoutStyle) {
+        self.layoutStyle = layoutStyle
     }
 
     public func requestExternalDismiss(apply: Bool, completion: @escaping () -> Void) {

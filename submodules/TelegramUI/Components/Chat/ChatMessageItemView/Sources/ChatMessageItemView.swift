@@ -653,6 +653,13 @@ public enum InternalBubbleTapAction {
     case openContextMenu(OpenContextMenu)
 }
 
+/// A row whose selection checkmark stays under the chat's visible top without bubbles while a message taller than the
+/// screen scrolls (spec 5.8). The history list passes the visible top from the rows' rendered frames.
+public protocol ChatMessageBubblelessStickySelectionCheck: AnyObject {
+    /// `visibleTop` in the row's own coordinates (its bounds).
+    func updateBubblelessSelectionVisibleTop(_ visibleTop: CGFloat)
+}
+
 open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     public let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
     
@@ -989,6 +996,123 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         }
     }
 
+    /// Bubble mode off: what this row's selection and highlight bands are laid out from, recorded at its last layout.
+    /// Nil with bubbles, where no band exists.
+    public final var bubblelessRowBandInputs: ChatMessageBubblelessRowBandInputs?
+    private var bubblelessSelectionBandNode: ASDisplayNode?
+    private var bubblelessHighlightBandNode: ASDisplayNode?
+    
+    /// Shows, moves or fades out the rounded band behind this row in selection without bubbles (spec 5.8).
+    /// `contentShift` is the selection shift the row's content takes now and `previousContentShift` the one it is
+    /// animating from: the band gives the shift back, so it stays put while the content moves.
+    public final func updateBubblelessSelectionBand(isSelected: Bool, contentShift: CGFloat, previousContentShift: CGFloat, animated: Bool) {
+        guard isSelected, let item = self.item, let inputs = self.bubblelessRowBandInputs, inputs.hasSelectionBand else {
+            if let bandNode = self.bubblelessSelectionBandNode {
+                self.bubblelessSelectionBandNode = nil
+                if animated {
+                    let slideBack = previousContentShift - contentShift
+                    if slideBack != 0.0 {
+                        bandNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: slideBack, y: 0.0), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: true)
+                    }
+                    bandNode.layer.animateAlpha(from: CGFloat(bandNode.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: chatMessageBubblelessSelectionBandFadeOutDuration, removeOnCompletion: false, completion: { [weak bandNode] _ in
+                        bandNode?.removeFromSupernode()
+                    })
+                } else {
+                    bandNode.removeFromSupernode()
+                }
+            }
+            return
+        }
+        let joins = chatMessageBubblelessBandJoins(isSelected: true, aboveSelected: inputs.selectedAbove, belowSelected: inputs.selectedBelow, headerBetweenAbove: false, headerBetweenBelow: false)
+        let color = item.presentationData.theme.theme.list.itemAccentColor.withMultipliedAlpha(chatMessageBubblelessSelectionBandAlpha)
+        let bandNode: ASDisplayNode
+        let isNew: Bool
+        if let current = self.bubblelessSelectionBandNode {
+            bandNode = current
+            isNew = false
+        } else {
+            bandNode = ASDisplayNode()
+            bandNode.isLayerBacked = true
+            self.insertSubnode(bandNode, at: 0)
+            self.bubblelessSelectionBandNode = bandNode
+            isNew = true
+        }
+        self.layoutBubblelessRowBand(bandNode, inputs: inputs, joins: joins, contentShift: contentShift, color: color, mainRadius: item.presentationData.chatBubbleCorners.mainRadius)
+        if isNew && animated {
+            let slideIn = contentShift - previousContentShift
+            if slideIn != 0.0 {
+                bandNode.layer.animatePosition(from: CGPoint(x: slideIn, y: 0.0), to: CGPoint(), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, additive: true)
+            }
+            bandNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: chatMessageBubblelessBandFadeInDuration)
+        }
+    }
+    
+    /// Shows, moves or fades out the band that replaces the bubble's flash when a reply or link leads here without
+    /// bubbles; `color` nil fades it out.
+    public final func updateBubblelessHighlightBand(color: UIColor?, contentShift: CGFloat, animated: Bool) {
+        guard let color, let item = self.item, let inputs = self.bubblelessRowBandInputs, inputs.hasHighlightBand else {
+            if let bandNode = self.bubblelessHighlightBandNode {
+                self.bubblelessHighlightBandNode = nil
+                if animated {
+                    bandNode.layer.animateAlpha(from: CGFloat(bandNode.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: chatMessageBubblelessHighlightBandFadeOutDuration, removeOnCompletion: false, completion: { [weak bandNode] _ in
+                        bandNode?.removeFromSupernode()
+                    })
+                } else {
+                    bandNode.removeFromSupernode()
+                }
+            }
+            return
+        }
+        let bandNode: ASDisplayNode
+        let isNew: Bool
+        if let current = self.bubblelessHighlightBandNode {
+            bandNode = current
+            isNew = false
+        } else {
+            bandNode = ASDisplayNode()
+            bandNode.isLayerBacked = true
+            self.insertSubnode(bandNode, at: 0)
+            self.bubblelessHighlightBandNode = bandNode
+            isNew = true
+        }
+        self.layoutBubblelessRowBand(bandNode, inputs: inputs, joins: ChatMessageBubblelessBandJoins(above: false, below: false), contentShift: contentShift, color: color.withMultipliedAlpha(chatMessageBubblelessHighlightBandAlpha), mainRadius: item.presentationData.chatBubbleCorners.mainRadius)
+        if isNew && animated {
+            bandNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: chatMessageBubblelessBandFadeInDuration)
+        }
+    }
+    
+    /// Removes both bands at once (the mode came back to bubbles, or the row cannot have them).
+    public final func removeBubblelessRowBands() {
+        if let bandNode = self.bubblelessSelectionBandNode {
+            self.bubblelessSelectionBandNode = nil
+            bandNode.removeFromSupernode()
+        }
+        if let bandNode = self.bubblelessHighlightBandNode {
+            self.bubblelessHighlightBandNode = nil
+            bandNode.removeFromSupernode()
+        }
+    }
+    
+    private func layoutBubblelessRowBand(_ bandNode: ASDisplayNode, inputs: ChatMessageBubblelessRowBandInputs, joins: ChatMessageBubblelessBandJoins, contentShift: CGFloat, color: UIColor, mainRadius: CGFloat) {
+        // The row's own coordinates start `insets.top` above its content; the name's top is in content coordinates.
+        let rowBounds = self.bounds
+        let top = chatMessageBubblelessRowBandTop(dateHeaderInset: self.attachedDateHeaderInset, nameTop: inputs.nameTop.map { $0 + self.insets.top }, layoutTopInset: self.insets.top, joinsAbove: joins.above)
+        var frame = chatMessageBubblelessRowBandFrame(rowSize: rowBounds.size, leftSafeInset: self.safeInsets.left, rightSafeInset: self.safeInsets.right, top: top)
+        frame.origin.x += rowBounds.minX - contentShift
+        frame.origin.y += rowBounds.minY
+        bandNode.frame = frame
+        bandNode.backgroundColor = color
+        bandNode.cornerRadius = chatMessageBubblelessRowBandCornerRadius(mainRadius: mainRadius, height: frame.height)
+        var maskedCorners: CACornerMask = []
+        if !joins.above {
+            maskedCorners.insert([.layerMinXMinYCorner, .layerMaxXMinYCorner])
+        }
+        if !joins.below {
+            maskedCorners.insert([.layerMinXMaxYCorner, .layerMaxXMaxYCorner])
+        }
+        bandNode.layer.maskedCorners = maskedCorners
+    }
+    
     open func updateAttachedDateHeader(hasDate: Bool, hasPeer: Bool) {
         self.attachedDateHeader = (hasDate, hasPeer)
         for headerNode in self.attachedHeaderNodes {

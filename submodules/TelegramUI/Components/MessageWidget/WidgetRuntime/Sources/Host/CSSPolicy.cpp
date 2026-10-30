@@ -1,6 +1,8 @@
 #include "Sources/Host/CSSPolicy.h"
 
 #include <algorithm>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include <litehtml/css_parser.h>
@@ -151,9 +153,8 @@ bool attrReadsText(std::span<const css_token> arguments) {
     return false;
 }
 
-void scan(std::span<const css_token> values, Scan& out, size_t& visited) {
+void scan(std::span<const css_token> values, Scan& out) {
     for (const css_token& t : values) {
-        visited++;
         switch (t.type) {
         case litehtml::BAD_STRING:
         case litehtml::BAD_URL:
@@ -198,7 +199,8 @@ void scan(std::span<const css_token> values, Scan& out, size_t& visited) {
                 }
                 break;
             }
-            if (!profile::contains(CSSTable::Functions, name)) {
+            // env() is rewritten before the scan (rewriteEnv): none is left for the renderer.
+            if (name == "env" || !profile::contains(CSSTable::Functions, name)) {
                 out.ok = false;
                 return;
             }
@@ -206,11 +208,11 @@ void scan(std::span<const css_token> values, Scan& out, size_t& visited) {
                 out.ok = false;
                 return;
             }
-            out.hasVar = out.hasVar || name == "var" || name == "env" || name == "attr";
+            out.hasVar = out.hasVar || name == "var" || name == "attr";
             out.has3D = out.has3D || profile::contains(CSSTable::Transform3D, name);
             out.hasLightDark = out.hasLightDark || name == "light-dark";
             // Every argument is checked, both light-dark() branches included (RB §4.5, §11 item 17).
-            scan(t.value, out, visited);
+            scan(t.value, out);
             if (!out.ok) {
                 return;
             }
@@ -218,7 +220,7 @@ void scan(std::span<const css_token> values, Scan& out, size_t& visited) {
         }
         case litehtml::ROUND_BLOCK:
         case litehtml::SQUARE_BLOCK:
-            scan(t.value, out, visited);
+            scan(t.value, out);
             if (!out.ok) {
                 return;
             }
@@ -261,7 +263,7 @@ struct FontReduction {
 };
 
 /// RB §4.7 over the family list in `values[from, to)`.
-FontReduction reduceFamilies(const css_token_vector& values, size_t from, size_t to, size_t& visited) {
+FontReduction reduceFamilies(const css_token_vector& values, size_t from, size_t to) {
     struct Entry {
         std::string text;
         std::string key;  // lowered single name; "" for a group holding a function
@@ -312,7 +314,6 @@ FontReduction reduceFamilies(const css_token_vector& values, size_t from, size_t
         group.clear();
     };
     for (size_t i = from; i < to; i++) {
-        visited++;
         const css_token& t = values[i];
         if (isWhitespace(t)) {
             continue;
@@ -358,6 +359,91 @@ void replaceTail(css_token_vector& values, size_t from, std::string_view text) {
     values.insert(values.end(), replacement.begin(), replacement.end());
 }
 
+// MARK: env()
+
+/// The env() names the validator rewrites to the root variable the renderer sets (sdk-policy.ts
+/// SAFE_AREA_ENV_VARIABLES): exact names, as in CSS.
+std::optional<std::string_view> safeAreaVariable(std::string_view name) {
+    if (name == "safe-area-inset-top") {
+        return "--tg-content-safe-area-inset-top";
+    }
+    if (name == "safe-area-inset-right") {
+        return "--tg-content-safe-area-inset-right";
+    }
+    if (name == "safe-area-inset-bottom") {
+        return "--tg-content-safe-area-inset-bottom";
+    }
+    if (name == "safe-area-inset-left") {
+        return "--tg-content-safe-area-inset-left";
+    }
+    return std::nullopt;
+}
+
+/// widget-sandbox v0.4.0 (sdk-v1 §2.17, css-sanitizer.ts): every env() in `values`, at any depth, as the validator
+/// rewrites it. A safe-area inset becomes var(--tg-content-safe-area-inset-…[, fallback]) (`safeArea`); another name
+/// becomes its fallback (`resolved`). False, which drops the declaration, for another name without a fallback and for
+/// an env() that is not a name with an optional fallback.
+bool rewriteEnv(css_token_vector& values, bool& safeArea, bool& resolved) {
+    for (size_t i = 0; i < values.size(); i++) {
+        if (values[i].type != litehtml::CV_FUNCTION && values[i].type != litehtml::ROUND_BLOCK &&
+            values[i].type != litehtml::SQUARE_BLOCK) {
+            continue;
+        }
+        // Inside first: a fallback may hold an env() of its own.
+        if (!rewriteEnv(values[i].value, safeArea, resolved)) {
+            return false;
+        }
+        if (values[i].type != litehtml::CV_FUNCTION || lowered(values[i].name()) != "env") {
+            continue;
+        }
+        const css_token_vector& args = values[i].value;
+        size_t k = 0;
+        while (k < args.size() && isWhitespace(args[k])) {
+            k++;
+        }
+        if (k == args.size() || args[k].type != litehtml::IDENT) {
+            return false;
+        }
+        const std::string name = args[k].name();
+        k++;
+        while (k < args.size() && isWhitespace(args[k])) {
+            k++;
+        }
+        std::optional<css_token_vector> fallback;
+        if (k < args.size()) {
+            if (args[k].type != litehtml::COMMA) {
+                return false;
+            }
+            size_t from = k + 1;
+            size_t to = args.size();
+            while (from < to && isWhitespace(args[from])) {
+                from++;
+            }
+            while (to > from && isWhitespace(args[to - 1])) {
+                to--;
+            }
+            if (from == to) {
+                return false;
+            }
+            fallback = css_token_vector(args.begin() + std::ptrdiff_t(from), args.begin() + std::ptrdiff_t(to));
+        }
+        css_token_vector replacement;
+        if (const std::optional<std::string_view> variable = safeAreaVariable(name)) {
+            replacement = tokensOf("var(" + std::string(*variable) + (fallback ? ", " + litehtml::get_repr(*fallback) : std::string()) + ")");
+            safeArea = true;
+        } else if (fallback) {
+            replacement = std::move(*fallback);
+            resolved = true;
+        } else {
+            return false;
+        }
+        values.erase(values.begin() + std::ptrdiff_t(i));
+        values.insert(values.begin() + std::ptrdiff_t(i), replacement.begin(), replacement.end());
+        i += replacement.size() - 1;
+    }
+    return true;
+}
+
 Verdict verdictOf(bool changed, bool augmented) {
     return changed ? Verdict::Rewrite : augmented ? Verdict::Augment : Verdict::Keep;
 }
@@ -375,13 +461,12 @@ bool isOverflowProperty(std::string_view name) {
 /// RB §5 over one complex selector's tokens, rewriting :disabled and :enabled; false for a bad one. A rewrite is made
 /// into a fresh vector in one pass (css_token has no move, so an erase or insert in the middle copied the rest of the
 /// group every time: final review C1).
-bool walkSelector(css_token_vector& tokens, bool& augmented, size_t& visited) {
+bool walkSelector(css_token_vector& tokens, bool& augmented) {
     css_token_vector rewritten;
     bool rewriting = false;
     // The tokens [copied, k) not yet in `rewritten`.
     size_t copied = 0;
     for (size_t k = 0; k < tokens.size(); k++) {
-        visited++;
         const css_token& t = tokens[k];
         if (isDelim(t, '&')) {
             return false;
@@ -419,7 +504,7 @@ bool walkSelector(css_token_vector& tokens, bool& augmented, size_t& visited) {
                 k = at;
                 continue;
             }
-        } else if (!walkSelector(tokens[at].value, augmented, visited)) {
+        } else if (!walkSelector(tokens[at].value, augmented)) {
             return false;
         }
         k = at;
@@ -433,10 +518,9 @@ bool walkSelector(css_token_vector& tokens, bool& augmented, size_t& visited) {
 
 /// selector(…) in a condition: well formed (no block, no `;`, no function outside a pseudo-class, a name after every
 /// colon) and kept by the profile.
-bool selectorSupported(std::span<const css_token> tokens, size_t& visited) {
+bool selectorSupported(std::span<const css_token> tokens) {
     bool any = false;
     for (size_t k = 0; k < tokens.size(); k++) {
-        visited++;
         const css_token& t = tokens[k];
         if (isWhitespace(t)) {
             continue;
@@ -458,7 +542,6 @@ bool selectorSupported(std::span<const css_token> tokens, size_t& visited) {
         return false;
     }
     const Judged judged = selector(tokens);
-    visited += judged.visited;
     return supported(judged.verdict);
 }
 
@@ -472,10 +555,10 @@ bool mediaFeature(std::string_view lowered) {
     return profile::contains(CSSTable::MediaFeatures, lowered);
 }
 
-bool mediaBlockInProfile(std::span<const css_token> inner, size_t& visited);
+bool mediaBlockInProfile(std::span<const css_token> inner);
 
 /// A nested condition: logic words and blocks only (each block in profile).
-std::optional<bool> nestedCondition(std::span<const css_token> inner, size_t& visited) {
+std::optional<bool> nestedCondition(std::span<const css_token> inner) {
     bool any = false;
     for (const css_token& t : inner) {
         if (isWhitespace(t)) {
@@ -493,17 +576,16 @@ std::optional<bool> nestedCondition(std::span<const css_token> inner, size_t& vi
         return std::nullopt;
     }
     for (const css_token& t : inner) {
-        if (t.type == litehtml::ROUND_BLOCK && !mediaBlockInProfile(t.value, visited)) {
+        if (t.type == litehtml::ROUND_BLOCK && !mediaBlockInProfile(t.value)) {
             return false;
         }
     }
     return true;
 }
 
-bool mediaBlockInProfile(std::span<const css_token> inner, size_t& visited) {
+bool mediaBlockInProfile(std::span<const css_token> inner) {
     std::vector<const css_token*> items;
     for (const css_token& t : inner) {
-        visited++;
         if (!isWhitespace(t)) {
             items.push_back(&t);
         }
@@ -511,7 +593,7 @@ bool mediaBlockInProfile(std::span<const css_token> inner, size_t& visited) {
     if (items.empty()) {
         return true;
     }
-    if (std::optional<bool> nested = nestedCondition(inner, visited)) {
+    if (std::optional<bool> nested = nestedCondition(inner)) {
         return *nested;
     }
     // `feature: value`: the name before the colon; the value is never checked.
@@ -539,9 +621,8 @@ bool mediaBlockInProfile(std::span<const css_token> inner, size_t& visited) {
     return items.size() == 1 && items[0]->type == litehtml::IDENT && mediaFeature(items[0]->ident());
 }
 
-bool mediaQueryInProfileImpl(std::span<const css_token> prelude, size_t& visited) {
+bool mediaQueryInProfileImpl(std::span<const css_token> prelude) {
     for (const css_token& t : prelude) {
-        visited++;
         if (isWhitespace(t) || t.type == litehtml::COMMA) {
             continue;
         }
@@ -553,7 +634,7 @@ bool mediaQueryInProfileImpl(std::span<const css_token> prelude, size_t& visited
             continue;
         }
         if (t.type == litehtml::ROUND_BLOCK) {
-            if (!mediaBlockInProfile(t.value, visited)) {
+            if (!mediaBlockInProfile(t.value)) {
                 return false;
             }
             continue;
@@ -572,13 +653,13 @@ Result asResult(bool value) {
     return value ? Result::True : Result::False;
 }
 
-Result parenContents(std::span<const css_token> inner, size_t& visited);
+Result parenContents(std::span<const css_token> inner);
 
 /// CSS Conditional 4's <supports-condition> over component values; recursion is bounded by the componentizer's
 /// bracket depth.
 class ConditionParser {
 public:
-    ConditionParser(std::span<const css_token> tokens, size_t& visited) : m_tokens(tokens), m_visited(visited) {}
+    ConditionParser(std::span<const css_token> tokens) : m_tokens(tokens) {}
 
     /// The whole span as one condition.
     Result whole() {
@@ -611,16 +692,15 @@ private:
         if (m_i >= m_tokens.size()) {
             return Result::Invalid;
         }
-        m_visited++;
         const css_token& t = m_tokens[m_i];
         if (t.type == litehtml::ROUND_BLOCK) {
             m_i++;
-            return parenContents(t.value, m_visited);
+            return parenContents(t.value);
         }
         if (t.type == litehtml::CV_FUNCTION) {
             m_i++;
             // selector(…), or general-enclosed (an unknown function: false).
-            return lowered(t.name()) == "selector" ? asResult(selectorSupported(t.value, m_visited)) : Result::False;
+            return lowered(t.name()) == "selector" ? asResult(selectorSupported(t.value)) : Result::False;
         }
         return Result::Invalid;
     }
@@ -654,13 +734,12 @@ private:
     }
 
     std::span<const css_token> m_tokens;
-    size_t& m_visited;
     size_t m_i = 0;
 };
 
 /// A parenthesized block's contents: a condition, else a declaration, else general-enclosed (false).
-Result parenContents(std::span<const css_token> inner, size_t& visited) {
-    const Result nested = ConditionParser(inner, visited).whole();
+Result parenContents(std::span<const css_token> inner) {
+    const Result nested = ConditionParser(inner).whole();
     if (nested != Result::Invalid) {
         return nested;
     }
@@ -680,7 +759,6 @@ Result parenContents(std::span<const css_token> inner, size_t& visited) {
         return Result::False;
     }
     const Judged judged = declaration(name, inner.subspan(j + 1));
-    visited += judged.visited;
     return asResult(supported(judged.verdict));
 }
 
@@ -696,8 +774,15 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
         return out;
     }
     css_token_vector values(input.begin(), input.end());
-    bool changed = false;
-    bool augmented = false;
+    // sdk-v1 §2.17: env() first, as the validator rewrites it. A safe-area inset is kept (CSS.supports says yes); another
+    // name's fallback is a rewrite (it says no).
+    bool safeArea = false;
+    bool resolved = false;
+    if (!rewriteEnv(values, safeArea, resolved)) {
+        return out;
+    }
+    bool changed = resolved;
+    bool augmented = safeArea;
     // RB §4.4: the filter list is pruned before the value is checked.
     if (!custom && isFilterProperty(name)) {
         // In one pass into a fresh list: a removed item goes with the whitespace before it, or, with none before it, the
@@ -705,7 +790,7 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
         auto pruned = [](const css_token& t) {
             const std::string function = t.type == litehtml::CV_FUNCTION ? lowered(t.name()) : std::string();
             return t.type == litehtml::URL ||
-                   (t.type == litehtml::CV_FUNCTION && function != "var" && function != "env" && function != "attr" &&
+                   (t.type == litehtml::CV_FUNCTION && function != "var" && function != "attr" &&
                     !profile::contains(CSSTable::FilterFunctions, function));
         };
         if (std::any_of(values.begin(), values.end(), pruned)) {
@@ -713,7 +798,6 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
             kept.reserve(values.size());
             bool skipWhitespace = false;
             for (const css_token& t : values) {
-                out.visited++;
                 if (skipWhitespace) {
                     skipWhitespace = false;
                     if (isWhitespace(t)) {
@@ -738,7 +822,7 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
         }
     }
     Scan scanned;
-    scan(values, scanned, out.visited);
+    scan(values, scanned);
     if (!scanned.ok) {
         return out;
     }
@@ -823,7 +907,7 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
         }
     }
     if (familyStart < values.size()) {
-        const FontReduction reduced = reduceFamilies(values, familyStart, values.size(), out.visited);
+        const FontReduction reduced = reduceFamilies(values, familyStart, values.size());
         if (reduced.changed || reduced.augmented) {
             replaceTail(values, familyStart, reduced.text);
             changed = changed || reduced.changed;
@@ -837,13 +921,19 @@ Judged declaration(std::string_view name, std::span<const css_token> input) {
 
 Judged value(std::span<const css_token> input) {
     Judged out;
+    css_token_vector values(input.begin(), input.end());
+    bool safeArea = false;
+    bool resolved = false;
+    if (!rewriteEnv(values, safeArea, resolved)) {
+        return out;
+    }
     Scan scanned;
-    scan(input, scanned, out.visited);
+    scan(values, scanned);
     if (!scanned.ok) {
         return out;
     }
-    out.verdict = scanned.hasLightDark ? Verdict::Augment : Verdict::Keep;
-    out.value.assign(input.begin(), input.end());
+    out.verdict = verdictOf(resolved, safeArea || scanned.hasLightDark);
+    out.value = std::move(values);
     return out;
 }
 
@@ -851,7 +941,7 @@ Judged selector(std::span<const css_token> complexSelector) {
     Judged out;
     css_token_vector tokens(complexSelector.begin(), complexSelector.end());
     bool augmented = false;
-    if (!walkSelector(tokens, augmented, out.visited)) {
+    if (!walkSelector(tokens, augmented)) {
         return out;
     }
     out.verdict = augmented ? Verdict::Augment : Verdict::Keep;
@@ -863,31 +953,16 @@ bool atRuleKept(std::string_view loweredName) {
     return profile::contains(CSSTable::AtRules, loweredName);
 }
 
-bool mediaQueryInProfile(std::span<const css_token> prelude, size_t* visited) {
-    size_t count = 0;
-    const bool in = mediaQueryInProfileImpl(prelude, count);
-    if (visited) {
-        *visited += count;
-    }
-    return in;
+bool mediaQueryInProfile(std::span<const css_token> prelude) {
+    return mediaQueryInProfileImpl(prelude);
 }
 
-bool supportsCondition(std::span<const css_token> condition, size_t* visited) {
-    size_t count = 0;
-    const bool result = ConditionParser(condition, count).whole() == Result::True;
-    if (visited) {
-        *visited += count;
-    }
-    return result;
+bool supportsCondition(std::span<const css_token> condition) {
+    return ConditionParser(condition).whole() == Result::True;
 }
 
-bool supportsParenthesized(std::span<const css_token> inner, size_t* visited) {
-    size_t count = 0;
-    const bool result = parenContents(inner, count) == Result::True;
-    if (visited) {
-        *visited += count;
-    }
-    return result;
+bool supportsParenthesized(std::span<const css_token> inner) {
+    return parenContents(inner) == Result::True;
 }
 
 std::string normalizedUrl(std::string_view url) {
@@ -911,12 +986,27 @@ std::string normalizedUrl(std::string_view url) {
 }
 
 bool urlKept(std::string_view url) {
-    return checkedImageURL(url).has_value();
+    // A fragment, or a data: image the bytes of which a decoder takes at a size it may hold (widget-sandbox v0.3.0: a
+    // broken one is dropped with its declaration too, which draws what a failed image draws).
+    const std::optional<std::string> checked = checkedImageURL(url);
+    return checked && ((!checked->empty() && (*checked)[0] == '#') || imageSource(*checked) == ImageSource::Kept);
 }
 
 bool imageSourceKept(std::string_view src) {
+    return imageSource(src) == ImageSource::Kept;
+}
+
+ImageSource imageSource(std::string_view src) {
     const std::optional<std::string> url = checkedImageURL(src);
-    return url && !url->empty() && (*url)[0] != '#';
+    if (!url || url->empty() || (*url)[0] == '#') {
+        return ImageSource::Refused;
+    }
+    // widget-sandbox v0.3.0: the bytes pick the decoder; past kMaxDataImagePixels the placeholder, as a refused URL.
+    const std::optional<std::pair<uint32_t, uint32_t>> size = dataImageSize(*url);
+    if (!size) {
+        return ImageSource::Broken;
+    }
+    return uint64_t(size->first) * size->second <= kMaxDataImagePixels ? ImageSource::Kept : ImageSource::Refused;
 }
 
 std::optional<std::string> fragmentHref(std::string_view href) {
@@ -926,8 +1016,7 @@ std::optional<std::string> fragmentHref(std::string_view href) {
 
 std::string reduceFontFamilyText(std::string_view family) {
     const css_token_vector values = tokensOf(family);
-    size_t visited = 0;
-    const FontReduction reduced = reduceFamilies(values, 0, values.size(), visited);
+    const FontReduction reduced = reduceFamilies(values, 0, values.size());
     return reduced.changed || reduced.augmented ? reduced.text : std::string(family);
 }
 

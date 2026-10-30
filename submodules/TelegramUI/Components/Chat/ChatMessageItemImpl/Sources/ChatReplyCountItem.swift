@@ -10,6 +10,7 @@ import WallpaperBackgroundNode
 import ChatControllerInteraction
 import ChatMessageItem
 import ChatMessageItemCommon
+import StaticGlassBackground
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
@@ -79,6 +80,8 @@ public class ChatReplyCountItemNode: ListViewItemNode {
     private let labelNode: TextNode
     private var backgroundNode: WallpaperBubbleBackgroundNode?
     private let backgroundColorNode: ASDisplayNode
+    // Bubble mode off: the label sits on a glass capsule (an image of it) instead of the wallpaper's plate.
+    private var glassPillView: StaticGlassBackgroundView?
     
     private var theme: ChatPresentationThemeData?
     
@@ -135,7 +138,8 @@ public class ChatReplyCountItemNode: ListViewItemNode {
                 text = item.presentationData.strings.Conversation_DiscussionStarted
             }
             
-            let textColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+            let isBubbleless = !item.presentationData.chatBubbleCorners.bubbleMode
+            let textColor = isBubbleless ? item.presentationData.theme.theme.list.itemPrimaryTextColor : serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
             
             let attributedString = NSAttributedString(string: text, font: Font.regular(13.0), textColor: textColor)
             
@@ -198,6 +202,24 @@ public class ChatReplyCountItemNode: ListViewItemNode {
                     }
 
                     strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: baseBackgroundFrame.size)
+                    
+                    strongSelf.backgroundNode?.isHidden = isBubbleless
+                    if isBubbleless {
+                        let glassPillView: StaticGlassBackgroundView
+                        if let current = strongSelf.glassPillView {
+                            glassPillView = current
+                        } else {
+                            glassPillView = StaticGlassBackgroundView()
+                            glassPillView.isUserInteractionEnabled = false
+                            strongSelf.glassPillView = glassPillView
+                            strongSelf.view.insertSubview(glassPillView, belowSubview: strongSelf.labelNode.view)
+                        }
+                        glassPillView.frame = baseBackgroundFrame
+                        glassPillView.update(size: baseBackgroundFrame.size, cornerRadius: baseBackgroundFrame.height * 0.5, isDark: item.presentationData.theme.theme.overallDarkAppearance, tint: .panel)
+                    } else if let glassPillView = strongSelf.glassPillView {
+                        strongSelf.glassPillView = nil
+                        glassPillView.removeFromSuperview()
+                    }
                 }
             })
         }

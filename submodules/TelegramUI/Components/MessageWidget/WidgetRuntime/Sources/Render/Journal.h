@@ -4,9 +4,9 @@
 //
 // One entry per distinct node, in the order each was first recorded, each holding a Ref<Node>: an untraced, counted
 // root (Global Constraints, "Payload rules"), so a recorded node cannot be freed, or its address reused, before the
-// flush has read it. Past kMaxNodes distinct nodes the journal collapses to "rebuild everything" and releases its
-// entries; so does a change only a rebuild answers (a width, a theme, a tree never built). While a rebuild is pending
-// nothing more is recorded: the rebuild reads everything.
+// flush has read it. Every distinct node keeps its entry, however many a task changes: each is allocated under the
+// session's memory limit, and what a flush does is linear in them (the fork's own session lists are searched
+// linearly, quadratic up to litehtml's caps). Before the boot's build nothing is recorded: the build reads everything.
 //
 // Its entries and index go through QuickJS's allocator (Global Constraints, "Memory"): a failure to grow is
 // std::bad_alloc at the widget's memory limit.
@@ -39,6 +39,8 @@ enum class JournalKind : uint8_t {
     Inserted = 1 << 3,
     /// nodeRemoved: it was removed from its parent, which has a Children entry.
     Removed = 1 << 4,
+    /// RenderTree::userActionStateChanged: its :hover or :active may have changed (it or a descendant is the target).
+    State = 1 << 5,
 };
 
 /// A set of JournalKind bits.
@@ -57,8 +59,6 @@ struct JournalEntry {
 
 class Journal {
 public:
-    /// Ruling 13: a journal of more than 4,096 distinct nodes collapses to "rebuild".
-    static constexpr size_t kMaxNodes = 4096;
 
     explicit Journal(JSContext* ctx);
     /// Releases every entry's node: the context must be alive.
@@ -66,22 +66,29 @@ public:
     Journal(const Journal&) = delete;
     Journal& operator=(const Journal&) = delete;
 
-    /// Adds `kind` to `node`'s entry, making one (and retaining the node) the first time `node` is recorded. Charges
-    /// work::kJournalEntry first. Past kMaxNodes distinct nodes, collapses instead (rebuildAll). Records nothing while
-    /// a rebuild is pending. Throws Thrown (the budget refused the charge) or std::bad_alloc (the memory limit); the
-    /// journal is then unchanged.
+    /// Adds `kind` to `node`'s entry, making one (and retaining the node) the first time `node` is recorded. Records
+    /// nothing before the boot's build (it reads everything). Throws std::bad_alloc (the memory limit); the journal is
+    /// then unchanged.
     void record(JSContext* ctx, Node& node, JournalKind kind);
 
-    /// "Rebuild everything": drops every entry, releasing its node, and keeps the journal dirty until clear().
-    void markRebuild() noexcept;
-    /// Clean: no entries and no rebuild pending. A successful rebuild ends with it.
+    /// The boot's build read the whole document: from here the journal records what changes. Clears it.
+    void markBuilt() noexcept;
+    /// Whether the boot's build has run; until it has, the next flush builds whatever the entries say.
+    bool built() const { return m_built; }
+    /// The render options' media changed (a width, a theme, reduced motion: twidget edits 79 and 80): the next flush
+    /// applies them in its patch. Before the boot's build, the build applies them.
+    void markEnvironment() noexcept { m_environment = true; }
+    bool environmentPending() const { return m_environment && m_built; }
+    /// A change no entry holds moved a cap's cut (a node inserted or removed where no build renders, counted by the node
+    /// cap): the next flush walks the cut (RenderCut.h). Before the boot's build, the build walks everything.
+    void markCut() noexcept { m_cut = true; }
+    bool cutPending() const { return m_cut && m_built; }
+    /// Clean: no entries, nothing pending. A patch ends with it.
     void clear() noexcept;
 
-    /// Whether the next flush must rebuild the whole document whatever the entries say.
-    bool rebuildPending() const { return m_rebuild; }
     /// Whether there is anything to flush.
-    bool dirty() const { return m_rebuild || !m_entries.empty(); }
-    /// Distinct nodes recorded (0 while a rebuild is pending).
+    bool dirty() const { return !m_built || m_environment || m_cut || !m_entries.empty(); }
+    /// Distinct nodes recorded (0 before the boot's build).
     size_t nodes() const { return m_entries.size(); }
 
     // For the flush's planning (Tasks 7–9): the entries in the order their nodes were first recorded, each with every
@@ -106,7 +113,9 @@ private:
     /// Node → its entry's position: safe to key by pointer, since every key's entry holds its node.
     Index m_index;
     JournalKinds m_kinds = 0;
-    bool m_rebuild = false;
+    bool m_built = false;
+    bool m_environment = false;
+    bool m_cut = false;
 };
 
 } // namespace wr

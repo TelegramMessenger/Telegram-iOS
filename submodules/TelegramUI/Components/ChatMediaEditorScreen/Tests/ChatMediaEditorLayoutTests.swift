@@ -74,6 +74,25 @@ final class ChatMediaEditorLayoutTests: XCTestCase {
         XCTAssertEqual(layout.arrowFrame.minY, 36.0)
     }
 
+    // iPhone Duo's unfolded screen in portrait (669x951, the island's 82pt band as the top inset): the recipient row sits
+    // on the island's clock line with the check button, and a long name stops short of the check, moved left of the
+    // island.
+    func testRecipientRowSitsOnTheStatusIslandsClockLine() {
+        let size = CGSize(width: 669.0, height: 951.0)
+        let insets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)
+        let island = ChatMediaEditorStatusIslandRow(clockLineY: 47.0, trailingInset: 134.0)
+        let layout = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0), statusIsland: island)
+        XCTAssertEqual(layout.arrowFrame.midY, 47.0)
+        XCTAssertEqual(layout.labelFrame.midY, 47.0)
+        XCTAssertEqual(layout.arrowFrame.minX, 16.0)
+        let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: insets, statusIsland: island)
+        XCTAssertEqual(layout.arrowFrame.midY, check.midY)
+        let long = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 1000.0, height: 16.0), statusIsland: island)
+        XCTAssertEqual(long.labelFrame.maxX, check.minX - 8.0)
+        // Without an island the row is where it always was.
+        XCTAssertEqual(chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0), statusIsland: nil), chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0)))
+    }
+
     func testLandscapeToolsPreviewKeepsFullWidth() {
         let frame = chatMediaEditorToolPreviewFrame(kind: .tools, size: size, safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
         XCTAssertEqual(frame.width, 393.0, accuracy: 0.5)

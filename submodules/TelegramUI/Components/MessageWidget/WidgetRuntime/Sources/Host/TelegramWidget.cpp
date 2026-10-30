@@ -11,7 +11,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 #include "twidget/sdk_policy.h"
 
 namespace wr {
@@ -27,7 +26,6 @@ void postBridgeCall(JSContext* ctx, std::string_view method, std::initializer_li
     }
     uint32_t index = 0;
     for (const String* arg : args) {
-        chargeScan(ctx, arg->length());
         if (JS_SetPropertyUint32(ctx, array.get(), index++, JS_DupValue(ctx, arg->value())) < 0) {
             throw Thrown{};
         }
@@ -56,7 +54,8 @@ TelegramWidget::TelegramWidget(JSContext* ctx)
       m_activated(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))),
       m_deactivated(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))),
       m_chatDataChanged(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))),
-      m_publicDataChanged(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))), m_onTheme(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))) {}
+      m_publicDataChanged(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))),
+      m_contentSafeAreaChanged(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))), m_onTheme(JSAllocator<HeldCallback>(JS_GetRuntime(ctx))) {}
 
 namespace {
 
@@ -80,6 +79,9 @@ std::optional<TelegramWidget::Event> eventNamed(JSContext* ctx, const std::optio
     if (name.equalsASCII("publicDataChanged")) {
         return TelegramWidget::Event::PublicDataChanged;
     }
+    if (name.equalsASCII("contentSafeAreaChanged")) {
+        return TelegramWidget::Event::ContentSafeAreaChanged;
+    }
     return std::nullopt;
 }
 
@@ -87,7 +89,6 @@ std::optional<String> optionalString(JSContext* ctx, const std::optional<std::st
     if (!text) {
         return std::nullopt;
     }
-    chargeScan(ctx, text->size());
     return String::fromUTF8(ctx, *text);
 }
 
@@ -109,7 +110,6 @@ String TelegramWidget::colorScheme(JSContext* ctx) {
 Value TelegramWidget::themeParams(JSContext* ctx) {
     const HostState& state = HostState::of(ctx);
     if (m_themeParams.isUndefined() || m_themeParamsGeneration != state.themeGeneration()) {
-        charge(ctx, work::kNodeVisit * kThemeKeyCount);
         Value object = Value::adopt(ctx, JS_NewObject(ctx));
         if (JS_IsException(object.get())) {
             throw Thrown{};
@@ -164,7 +164,6 @@ Value TelegramWidget::viewer(JSContext* ctx) {
     if (m_viewer.isUndefined() || m_viewerGeneration != state.contextGeneration()) {
         // The SDK policy's viewerJson in the widget's field names: id, then the names and username present, is_premium
         // only when true.
-        charge(ctx, work::kNodeVisit * 5);
         Value object = Value::adopt(ctx, JS_NewObject(ctx));
         if (JS_IsException(object.get()) || JS_SetPropertyStr(ctx, object.get(), "id", JS_NewFloat64(ctx, double(viewer->id))) < 0) {
             throw Thrown{};
@@ -239,7 +238,7 @@ std::string refusalDetail(twidget::sdk::RequestVerdict verdict) {
         return "a request is already in flight";
     case RequestVerdict::NoActivation:
         return "it needs a tap on the visible widget, one request per tap; this message allows no background requests (no background_query)";
-    case RequestVerdict::Hidden:
+    case RequestVerdict::Held:
         return "a background request from a widget off screen";
     case RequestVerdict::RateLimited:
         return "background requests at most once per 5 s";
@@ -294,7 +293,6 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
         throw TypeError{"TelegramWidget.request: data must be a string of 1–64 bytes (UTF-8)"};
     }
     HostState& host = HostState::of(ctx);
-    charge(ctx, work::kNodeVisit * uint64_t(m_requests.size() + 1));
     PendingRequest pending;
     pending.id = host.nextRequestId();
     makePending(ctx, pending.slot, false);
@@ -307,6 +305,14 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
         return promise;
     }
     const twidget::sdk::RequestVerdict verdict = host.decideRequest(ctx);
+    if (verdict == twidget::sdk::RequestVerdict::Held) {
+        // widget-sandbox v0.3.0: a background request off screen waits for the widget to appear, holding the gate's
+        // one-in-flight slot; its promise stays pending meanwhile (sendHeldRequest).
+        PendingRequest* held = this->pendingRequest(id);
+        held->held = true;
+        held->data = *checked;
+        return promise;
+    }
     if (const std::optional<std::string_view> refusal = twidget::sdk::requestRefusal(verdict)) {
         host.reportCapped(ctx, "request-blocked", "request refused (" + std::string(twidget::sdk::requestVerdictName(verdict)) + "): " + refusalDetail(verdict));
         host.queueRequestRefusal(ctx, id, std::string(*refusal));
@@ -320,6 +326,20 @@ Value TelegramWidget::request(JSContext* ctx, std::optional<Value> data) {
     const String dataText = String::fromUTF8(ctx, *checked);
     postBridgeCall(ctx, "request", {&idText, &dataText});
     return promise;
+}
+
+void TelegramWidget::sendHeldRequest(JSContext* ctx) {
+    for (PendingRequest& request : m_requests) {
+        if (!request.held) {
+            continue;
+        }
+        request.held = false;
+        request.outgoing = true;
+        const String idText = String::fromUTF8(ctx, std::to_string(request.id));
+        const String dataText = String::fromUTF8(ctx, request.data);
+        postBridgeCall(ctx, "request", {&idText, &dataText});
+        return;
+    }
 }
 
 void TelegramWidget::settleRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome) {
@@ -343,7 +363,6 @@ void TelegramWidget::settleRequest(JSContext* ctx, int64_t id, const twidget::Wi
         this->removeRequest(JS_GetRuntime(ctx), id);
         return;
     }
-    charge(ctx, work::kNodeVisit + work::kCssByte * uint64_t(answer->result ? answer->result->size() : 0));
     Value object = Value::adopt(ctx, JS_NewObject(ctx));
     if (JS_IsException(object.get())) {
         throw Thrown{};
@@ -403,6 +422,32 @@ void TelegramWidget::setWatching(JSContext* ctx, bool on) {
     postBridgeCall(ctx, "watchPublicData", {&flag});
 }
 
+Value TelegramWidget::contentSafeAreaInset(JSContext* ctx) {
+    const HostState& state = HostState::of(ctx);
+    if (m_contentSafeAreaInset.isUndefined() || m_contentSafeAreaGeneration != state.contentSafeAreaGeneration()) {
+        // Upstream's ContentSafeArea, its fields in its order.
+        const ContentSafeArea& area = state.sdkContentSafeArea();
+        const std::pair<const char*, double> fields[] = {{"top", area.top},       {"right", area.right},
+                                                         {"bottom", area.bottom}, {"left", area.left},
+                                                         {"cornerLeft", area.cornerLeft}, {"cornerRight", area.cornerRight}};
+        Value object = Value::adopt(ctx, JS_NewObject(ctx));
+        if (JS_IsException(object.get())) {
+            throw Thrown{};
+        }
+        for (const auto& [key, value] : fields) {
+            if (JS_SetPropertyStr(ctx, object.get(), key, JS_NewFloat64(ctx, value)) < 0) {
+                throw Thrown{};
+            }
+        }
+        if (JS_FreezeObject(ctx, object.get()) < 0) {
+            throw Thrown{};
+        }
+        m_contentSafeAreaInset.set(JS_GetRuntime(ctx), JS_DupValue(ctx, object.get()));
+        m_contentSafeAreaGeneration = state.contentSafeAreaGeneration();
+    }
+    return Value::dup(ctx, m_contentSafeAreaInset.value);
+}
+
 void TelegramWidget::watchPublicData(JSContext* ctx) {
     this->setWatching(ctx, true);
 }
@@ -423,6 +468,8 @@ Vector<HeldCallback>& TelegramWidget::handlersOf(Event event) {
         return m_chatDataChanged;
     case Event::PublicDataChanged:
         return m_publicDataChanged;
+    case Event::ContentSafeAreaChanged:
+        return m_contentSafeAreaChanged;
     }
     return m_themeChanged;
 }
@@ -443,7 +490,6 @@ void TelegramWidget::onEvent(JSContext* ctx, std::optional<Value> type, std::opt
         return;
     }
     Vector<HeldCallback>& handlers = this->handlersOf(*event);
-    charge(ctx, work::kNodeVisit * uint64_t(handlers.size() + 1));
     if (handlers.size() >= kMaxHandlersPerEvent) {
         return;
     }
@@ -461,7 +507,6 @@ void TelegramWidget::offEvent(JSContext* ctx, std::optional<Value> type, std::op
         return;
     }
     Vector<HeldCallback>& handlers = this->handlersOf(*event);
-    charge(ctx, work::kNodeVisit * uint64_t(handlers.size() + 1));
     for (size_t i = 0; i < handlers.size(); i++) {
         if (JS_IsStrictEqual(ctx, handlers[i].get(), handler->get())) {
             handlers[i].clear(JS_GetRuntime(ctx));
@@ -511,10 +556,9 @@ void TelegramWidget::onTheme(JSContext* ctx, Callback callback) {
 }
 
 void TelegramWidget::runEvent(JSContext* ctx, Event event) {
-    // A handler may add or remove others: call through copies, made (and charged) first.
+    // A handler may add or remove others: call through copies, made first.
     const Vector<HeldCallback>& handlers = this->handlersOf(event);
     const bool withTheme = event == Event::ThemeChanged;
-    charge(ctx, work::kNodeVisit * uint64_t(handlers.size() + (withTheme ? m_onTheme.size() : 0)));
     Vector<Value> calls{JSAllocator<Value>(JS_GetRuntime(ctx))};
     for (const HeldCallback& held : handlers) {
         calls.push_back(Value::dup(ctx, held.get()));
@@ -601,13 +645,14 @@ HapticFeedback* HapticFeedback::selectionChanged(JSContext* ctx) {
 }
 
 void TelegramWidget::trace(JSRuntime* rt, JS_MarkFunc* mark) const {
-    for (const Vector<HeldCallback>* handlers : {&m_themeChanged, &m_activated, &m_deactivated, &m_chatDataChanged, &m_publicDataChanged, &m_onTheme}) {
+    for (const Vector<HeldCallback>* handlers : {&m_themeChanged, &m_activated, &m_deactivated, &m_chatDataChanged, &m_publicDataChanged, &m_contentSafeAreaChanged, &m_onTheme}) {
         for (const HeldCallback& held : *handlers) {
             held.mark(rt, mark);
         }
     }
     m_themeParams.mark(rt, mark);
     m_viewer.mark(rt, mark);
+    m_contentSafeAreaInset.mark(rt, mark);
     m_hapticFeedback.mark(rt, mark);
     for (const PendingRequest& request : m_requests) {
         request.slot.mark(rt, mark);
@@ -615,7 +660,7 @@ void TelegramWidget::trace(JSRuntime* rt, JS_MarkFunc* mark) const {
 }
 
 void TelegramWidget::dispose(JSRuntime* rt) {
-    for (Vector<HeldCallback>* handlers : {&m_themeChanged, &m_activated, &m_deactivated, &m_chatDataChanged, &m_publicDataChanged, &m_onTheme}) {
+    for (Vector<HeldCallback>* handlers : {&m_themeChanged, &m_activated, &m_deactivated, &m_chatDataChanged, &m_publicDataChanged, &m_contentSafeAreaChanged, &m_onTheme}) {
         for (HeldCallback& held : *handlers) {
             held.clear(rt);
         }
@@ -623,6 +668,7 @@ void TelegramWidget::dispose(JSRuntime* rt) {
     }
     m_themeParams.clear(rt);
     m_viewer.clear(rt);
+    m_contentSafeAreaInset.clear(rt);
     m_hapticFeedback.clear(rt);
     for (PendingRequest& request : m_requests) {
         request.slot.clear(rt);

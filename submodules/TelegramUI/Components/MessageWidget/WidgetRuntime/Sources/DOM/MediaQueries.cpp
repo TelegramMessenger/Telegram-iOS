@@ -7,11 +7,14 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
 namespace {
+
+/// matchMedia: the longest query parsed (UTF-8 bytes). litehtml's tokenizer allocates outside the memory limit, so a
+/// longer query is refused before it is copied: it reads as "not all" (the V3b review's C2; parseSelectors' cap).
+constexpr size_t kMaxMediaQueryBytes = 16384;
 
 /// What `media` gives back: the query with its whitespace runs collapsed and its ends trimmed (IDL/README.md: CSSOM
 /// View serializes the parsed list instead).
@@ -130,7 +133,7 @@ void MediaQueryListEvent::dispose(JSRuntime* rt) {
 Ref<MediaQueryList> Window::matchMedia(JSContext* ctx, String query) {
     // Only a prefix is converted: a query past the cap is refused before it is copied (it can never match).
     bool cut = false;
-    std::string media = query.utf8Prefix(work::kMaxMediaQueryBytes, &cut);
+    std::string media = query.utf8Prefix(kMaxMediaQueryBytes, &cut);
     media = cut ? std::string("not all") : normalizedQuery(media);
     // Profile 1's host answers a query of at most kMaxMatchMediaUnits UTF-16 units as written (RB §8.3): a longer one is
     // false whatever the features say, though its media reads as any other's (V4 plan, Task 8).
@@ -149,7 +152,6 @@ void Window::holdMediaQueryList(JSContext* ctx, MediaQueryList& list) {
         }
         m_heldMediaQueryLists = new (memory) Vector<Held>(JSAllocator<Held>(JS_GetRuntime(ctx)));
     }
-    charge(ctx, work::kNodeVisit);
     m_heldMediaQueryLists->push_back(Held{list.newRef(ctx)});
 }
 
@@ -157,7 +159,6 @@ void Window::releaseMediaQueryList(JSContext* ctx, MediaQueryList& list) {
     if (!m_heldMediaQueryLists) {
         return;
     }
-    charge(ctx, work::kNodeVisit * uint64_t(m_heldMediaQueryLists->size()));
     for (size_t i = 0; i < m_heldMediaQueryLists->size(); i++) {
         if (payloadOfKnown((*m_heldMediaQueryLists)[i].value) == &list) {
             Held held = (*m_heldMediaQueryLists)[i];
@@ -176,7 +177,6 @@ void Window::reportMediaChanges(JSContext* ctx) {
     // The lists this report visits, oldest first, held for it: a listener may add or remove lists.
     std::vector<Ref<MediaQueryList>> lists;
     if (m_heldMediaQueryLists) {
-        charge(ctx, work::kNodeVisit * uint64_t(m_heldMediaQueryLists->size()));
         for (const Held& held : *m_heldMediaQueryLists) {
             lists.push_back(Ref<MediaQueryList>::retain(ctx, static_cast<MediaQueryList*>(payloadOfKnown(held.value))));
         }

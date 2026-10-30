@@ -1,6 +1,5 @@
 // Script elements (M1b Task 13): HTML's "prepare the script element" and "execute the script element", the host's
 // loader, and the triggers for scripts that script inserts, fills or gives a src, at mutation depth 0 (Ruling 6).
-#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -306,12 +305,12 @@ WR_TEST(testImportMapsAreSkippedWithADiagnostic) {
 }
 
 WR_TEST(testAHangingInsertedScriptStopsTheRuntime) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.runtime().setWorkLimit(JS_GetWorkUnits(rt) + 2000000);
+    wr_test::stopAfter(env.runtime());
     std::string result = env.eval("var s = document.createElement('script'); s.textContent = 'for (;;) {}'; document.body.appendChild(s); 'done'");
     CHECK_EQ(result, std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
 }
 
 // Ruling R3: compiling an inline handler is a script entry with its own ScriptBoundary. A body that closes the factory
@@ -400,35 +399,6 @@ void runModuleScripts(wr_test::HostEnv& env, int count) {
     }
 }
 
-/// The global `name` as an int32, read without running script (also on a stopped runtime); -1 when it is not a number.
-int32_t globalInt(JSContext* ctx, const char* name) {
-    wr::Value global = wr::Value::adopt(ctx, JS_GetGlobalObject(ctx));
-    wr::Value v = wr::Value::adopt(ctx, JS_GetPropertyStr(ctx, global.get(), name));
-    int32_t n = -1;
-    if (JS_IsNumber(v.get())) {
-        JS_ToInt32(ctx, &n, v.get());
-    }
-    return n;
-}
-
-/// The iterations an import.meta loop in a module script runs under `units` of work, after `count` module scripts. It
-/// ends on the budget.
-int32_t importMetaIterations(int count, uint64_t units) {
-    wr_test::HostEnv env;
-    runModuleScripts(env, count);
-    env.eval("var n = 0");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + units);
-    bool aborted = false;
-    try {
-        env.runtime().runScript("for (;;) { import.meta; n++; }", "loop.mjs", true);
-    } catch (const wr::Aborted&) {
-        aborted = true;
-    }
-    CHECK(aborted);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    return globalInt(env.ctx(), "n");
-}
-
 } // namespace
 
 // Fix round 2, J2: every import reaches the runtime's module normalize hook, which refuses it before QuickJS looks the
@@ -446,21 +416,6 @@ WR_TEST(testEveryImportIsRefusedBeforeTheLoadedModuleLookup) {
         CHECK(!env.runtime().runScript(source, ("s" + std::to_string(i) + ".mjs").c_str(), true));
     }
     CHECK_EQ(env.runtime().refusedImports() - before, uint64_t(150));
-}
-
-// Fix round 2, J1 (quickjs-ng fork change 11): import.meta finds its module by walking QuickJS's list of loaded
-// modules, which grows by one per module script, and the walk is charged 4 units (the fork's JS_WORK_ELEMENT_UNITS)
-// per module before it starts. Under one budget an iteration of the loop costs 7,936 units more after 2,000 module
-// scripts than after 16 (4 x 1,984), so it runs about a hundredth as many iterations. Before the change the walk was
-// free, and both loops ran the same count.
-WR_TEST(testImportMetaIsChargedPerLoadedModule) {
-    constexpr uint64_t kUnits = 1000000;
-    int32_t few = importMetaIterations(16, kUnits);
-    int32_t many = importMetaIterations(2000, kUnits);
-    CHECK(few > 0 && many > 0);
-    double grew = double(kUnits) / many - double(kUnits) / few;
-    double expected = 4.0 * (2000 - 16);
-    CHECK(std::fabs(grew - expected) < 0.05 * expected);
 }
 
 // Fix round 1, M1: HTML's tree builder sets force async false for every script it makes, the fragment parser's
@@ -521,8 +476,9 @@ WR_TEST(testLoadFiresAfterAnExternalScriptThrows) {
 // A stop unwinding through "execute the script element" puts currentScript back (read natively: no script runs after a
 // stop).
 WR_TEST(testAStopInsideAScriptRestoresCurrentScript) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 2000000);
+    wr_test::stopAfter(env.runtime());
     std::string result = env.eval("var s = document.createElement('script'); s.textContent = 'for (;;) {}'; document.body.appendChild(s); 'done'");
     CHECK_EQ(result, std::string("ABORTED"));
     CHECK(wr::globalDocument(env.ctx()).currentScriptElement() == nullptr);

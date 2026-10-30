@@ -212,3 +212,24 @@ WR_TEST(testAnInlineHandlerFindsTheWidgetsOwnFunctions) {
                       "document.getElementById('b').click(); document.getElementById('d').click(); [window.log1, window.log2].join()"),
              std::string("global,global"));
 }
+
+/// Upstream's inputs wait for its boot (sandbox_engine.cpp: setData's bridge input is posted behind boot(), which runs
+/// the scripts and the load): a change the host makes while the boot's tasks run is put in place after the load, the
+/// scripts reading the state the boot started with.
+WR_TEST(testAStateChangeDuringTheBootWaitsForTheLoad) {
+    std::unique_ptr<HostEnv> env = HostEnv::booted(
+        wr::BootOptions{"<!doctype html><html><body><script>var log = [];"
+                        "TelegramWidget.onEvent('chatDataChanged', () => log.push('changed:' + TelegramWidget.chatData + ':' + document.readyState));"
+                        "</script><script>log.push('script:' + TelegramWidget.chatData)</script></body></html>"},
+        1, [](HostEnv& env) { pass(env, privateContext(), state("c1", "p")); });
+    wr::HostState& host = wr::HostState::of(env->ctx());
+    CHECK(env->step() == wr::StepResult::Ran);
+    host.setData(env->ctx(), state("c2", "p"));
+    host.setData(env->ctx(), state("c3", "p"));
+    env->drain();
+    CHECK_EQ(env->eval("log.join()"), std::string("script:c1,changed:c2:complete,changed:c3:complete"));
+    // After the load a change is a task at once.
+    host.setData(env->ctx(), state("c4", "p"));
+    env->step();
+    CHECK_EQ(env->eval("log.length"), std::string("4"));
+}

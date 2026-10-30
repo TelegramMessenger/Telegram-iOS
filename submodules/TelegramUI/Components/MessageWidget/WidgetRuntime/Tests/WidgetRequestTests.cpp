@@ -154,17 +154,65 @@ WR_TEST(testBackgroundRequestsFollowVisibility) {
     CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
     CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"3\",\"c\"]"}));
     complete(env, 3, answer("ok"));
+    // widget-sandbox v0.3.0: one made off screen is held, and is the request of the widget's next appearance.
     host.setVisible(env.ctx(), false);
     env.env().drain();
     env.env().eval("ask('d'); 1");
     env.env().drain();
-    CHECK_EQ(env.env().eval("log[3]"), std::string("WidgetRequestError:NOT_ALLOWED"));
+    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("3"));
     host.setVisible(env.ctx(), true);
     env.env().drain();
+    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(3));
+    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"4\",\"d\"]"}));
+    complete(env, 4, answer("ok"));
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("4"));
+    // It was this appearance's: the next one waits the 5 s.
     env.env().eval("ask('e'); 1");
     env.env().drain();
-    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(3));
-    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"5\",\"e\"]"}));
+    CHECK_EQ(env.env().eval("log[4]"), std::string("WidgetRequestError:RATE_LIMITED"));
+    env.env().advance(5000);
+    env.env().eval("ask('f'); 1");
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"6\",\"f\"]"}));
+}
+
+/// widget-sandbox v0.3.0, sdk-v1 §2.14: a background request made while the widget is hidden (the clients make the host
+/// off screen, so a widget's first lines run hidden) waits for it to appear, holding the one-in-flight slot: a second is
+/// BUSY, a task later; a tap's request while it waits is BUSY too.
+WR_TEST(testABackgroundRequestOffScreenWaitsForTheWidgetToAppear) {
+    RenderEnv env(page(std::string(kLogRequest) + "t.onclick = () => ask('tap');"));
+    pass(env, context(true, true));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.setVisible(env.ctx(), false);
+    env.env().drain();
+    env.env().eval("ask('boot'); ask('again'); 1");
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("0"));
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("WidgetRequestError:BUSY"));
+    CHECK(env.env().host().bridgeCalls.empty());
+    host.setVisible(env.ctx(), true);
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls == (Calls{{"request", "[\"1\",\"boot\"]"}}));
+    tap(env);
+    CHECK_EQ(env.env().eval("log[1]"), std::string("WidgetRequestError:BUSY"));
+    complete(env, 1, answer("fresh"));
+    CHECK_EQ(env.env().eval("log[2]"), std::string("{\"result\":\"fresh\"}true"));
+}
+
+/// A widget that stops before it appears never sends its held request.
+WR_TEST(testAHeldRequestIsNeverSentAfterAStop) {
+    RenderEnv env(page(kLogRequest));
+    pass(env, context(true, true));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.setVisible(env.ctx(), false);
+    env.env().drain();
+    env.env().eval("ask('boot'); 1");
+    env.env().drain();
+    env.env().runtime().stop(wr::StopReason::Internal);
+    host.setVisible(env.ctx(), true);
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls.empty());
 }
 
 WR_TEST(testFailuresRejectWithTheirCodes) {

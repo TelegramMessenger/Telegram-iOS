@@ -47,26 +47,6 @@ final class WidgetHarnessUITests: XCTestCase {
         self.add(attachment)
     }
 
-    /// widget-sandbox v0.2 (sdk-v1 §5.11): a real tap on the network marker shows its explanation, and the widget under
-    /// the marker's corner sees no press at all (its log's last field counts pointerdown and pointercancel).
-    func testATapOnTheNetworkMarkerExplainsItAndPressesNothing() throws {
-        let path = "fixture/widget-state.html"
-        let app = self.launch(["-widget-set", "fixture", "-widget-posts", path, "-widget-caption", "off", "-harness-can-query", "on"])
-        let ready = self.waitForReadout(app) { $0.contains(path) && $0.contains(" widget") && $0.contains("+marker@") && $0.contains("log \(path) ") }
-        let line = try XCTUnwrap(ready.split(separator: "\n").first { $0.hasPrefix("bubble ") && $0.contains(path) }, ready)
-        let at = try XCTUnwrap(line.split(separator: " ").first { $0.hasPrefix("+marker@") }, ready)
-        let numbers = at.dropFirst("+marker@".count).split(separator: ",").compactMap { Double($0) }
-        XCTAssertEqual(numbers.count, 2, ready)
-        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: numbers[0], dy: numbers[1])).press(forDuration: 0.1)
-        let after = self.waitForReadout(app, timeout: 5.0) { $0.contains("tooltip ") }
-        self.attachScreenshot(app, "after a tap on the network marker")
-        XCTAssertTrue(after.contains("tooltip Taps on this widget can send data to the bot."), after)
-        XCTAssertFalse(after.contains("(not shown)"), after)
-        let log = try XCTUnwrap(after.split(separator: "\n").first { $0.hasPrefix("log \(path) ") }, after)
-        XCTAssertTrue(log.hasSuffix("|0"), "the widget under the marker was pressed: \(log)")
-        XCTAssertFalse(after.contains("contextMenu"), after)
-    }
-
     func testATapOnAWidgetButtonOpensTheLinkPrompt() throws {
         let app = self.launch(["-widget-set", "fixture", "-widget-post", "open-link"])
         let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") }

@@ -52,6 +52,17 @@ public enum EngineAgentError: Error, Equatable {
     case generic
 }
 
+/// Whether this build talks the agent API (`TELEGRAM_AGENT_API`). Layer 233 as the server serves it has no agent.*:
+/// while this is false nothing is sent, every request fails with `.notAvailable`, `updateAgentSettings` is not decoded,
+/// and the app shows no agent bot's provider rows (`peerInfoScreenData`; `submodules/TelegramApi/CLAUDE.md`, "Parked
+/// APIs").
+#if TELEGRAM_AGENT_API
+public let agentApiIsAvailable = true
+#else
+public let agentApiIsAvailable = false
+#endif
+
+#if TELEGRAM_AGENT_API
 extension EngineAgentProvider {
     init(apiProvider: Api.agent.Provider) {
         switch apiProvider {
@@ -89,6 +100,7 @@ private func agentError(_ error: MTRpcError) -> EngineAgentError {
         return .generic
     }
 }
+#endif
 
 private struct CachedAgentProviders: Codable {
     let hash: Int64
@@ -116,8 +128,28 @@ private func storeAgentSettings(postbox: Postbox, settings: EngineAgentSettings)
     |> ignoreValues
 }
 
-private func agentSettingsRequest(account: Account, _ request: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.agent.Settings>)) -> Signal<EngineAgentSettings, EngineAgentError> {
-    return account.network.request(request)
+/// An `agent.*` request that answers with the settings.
+private enum AgentSettingsRequest {
+    case getSettings
+    case connect(provider: String, key: String)
+    case disconnect(provider: String)
+    case setActiveProvider(String)
+}
+
+private func agentSettingsRequest(account: Account, _ request: AgentSettingsRequest) -> Signal<EngineAgentSettings, EngineAgentError> {
+#if TELEGRAM_AGENT_API
+    let function: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.agent.Settings>)
+    switch request {
+    case .getSettings:
+        function = Api.functions.agent.getSettings()
+    case let .connect(provider, key):
+        function = Api.functions.agent.connect(provider: provider, key: key)
+    case let .disconnect(provider):
+        function = Api.functions.agent.disconnect(provider: provider)
+    case let .setActiveProvider(provider):
+        function = Api.functions.agent.setActiveProvider(provider: provider)
+    }
+    return account.network.request(function)
     |> mapError(agentError)
     |> mapToSignal { result -> Signal<EngineAgentSettings, EngineAgentError> in
         let settings = EngineAgentSettings(apiSettings: result)
@@ -129,9 +161,14 @@ private func agentSettingsRequest(account: Account, _ request: (FunctionDescript
         }
         |> castError(EngineAgentError.self)
     }
+#else
+    // The agent API is parked (layer 233 has none): nothing is sent.
+    return .fail(.notAvailable)
+#endif
 }
 
 private func refreshAgentProviders(account: Account) -> Signal<Never, NoError> {
+#if TELEGRAM_AGENT_API
     let postbox = account.postbox
     return postbox.transaction { transaction -> CachedAgentProviders? in
         return transaction.retrieveItemCacheEntry(id: agentProvidersCacheKey())?.get(CachedAgentProviders.self)
@@ -160,6 +197,10 @@ private func refreshAgentProviders(account: Account) -> Signal<Never, NoError> {
             }
         }
     }
+#else
+    // The agent API is parked (layer 233 has none): nothing to refresh.
+    return .complete()
+#endif
 }
 
 /// The agent's provider keys as the profile of an agent bot shows them. The state is read from the cache, so it is
@@ -194,7 +235,7 @@ public final class AgentSettingsContext {
         let postbox = account.postbox
         self.disposables.add((account.stateManager.agentSettingsUpdates()
         |> mapToSignal { settings -> Signal<Never, NoError> in
-            return storeAgentSettings(postbox: postbox, settings: EngineAgentSettings(apiSettings: settings))
+            return storeAgentSettings(postbox: postbox, settings: settings)
         }).startStrict())
 
         self.reload()
@@ -205,7 +246,7 @@ public final class AgentSettingsContext {
     }
 
     public func reload() {
-        self.disposables.add((agentSettingsRequest(account: self.account, Api.functions.agent.getSettings())
+        self.disposables.add((agentSettingsRequest(account: self.account, .getSettings)
         |> ignoreValues
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
@@ -214,15 +255,15 @@ public final class AgentSettingsContext {
     }
 
     public func connect(provider: String, key: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-        return agentSettingsRequest(account: self.account, Api.functions.agent.connect(provider: provider, key: key))
+        return agentSettingsRequest(account: self.account, .connect(provider: provider, key: key))
     }
 
     public func disconnect(provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-        return agentSettingsRequest(account: self.account, Api.functions.agent.disconnect(provider: provider))
+        return agentSettingsRequest(account: self.account, .disconnect(provider: provider))
     }
 
     public func setActiveProvider(_ provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-        return agentSettingsRequest(account: self.account, Api.functions.agent.setActiveProvider(provider: provider))
+        return agentSettingsRequest(account: self.account, .setActiveProvider(provider))
     }
 }
 
@@ -240,6 +281,7 @@ public extension TelegramEngine {
         }
 
         public func providers() -> Signal<[EngineAgentProvider], EngineAgentError> {
+#if TELEGRAM_AGENT_API
             let cache = self.cachedProviders
             let hash = cache.with { $0?.hash } ?? 0
             return self.account.network.request(Api.functions.agent.getProviders(hash: hash))
@@ -254,27 +296,30 @@ public extension TelegramEngine {
                     return cache.with { $0?.providers } ?? []
                 }
             }
+#else
+            // The agent API is parked (layer 233 has none): nothing is sent.
+            return .fail(.notAvailable)
+#endif
         }
 
         public func settings() -> Signal<EngineAgentSettings, EngineAgentError> {
-            return agentSettingsRequest(account: self.account, Api.functions.agent.getSettings())
+            return agentSettingsRequest(account: self.account, .getSettings)
         }
 
         public func connect(provider: String, key: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-            return agentSettingsRequest(account: self.account, Api.functions.agent.connect(provider: provider, key: key))
+            return agentSettingsRequest(account: self.account, .connect(provider: provider, key: key))
         }
 
         public func disconnect(provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-            return agentSettingsRequest(account: self.account, Api.functions.agent.disconnect(provider: provider))
+            return agentSettingsRequest(account: self.account, .disconnect(provider: provider))
         }
 
         public func setActiveProvider(_ provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
-            return agentSettingsRequest(account: self.account, Api.functions.agent.setActiveProvider(provider: provider))
+            return agentSettingsRequest(account: self.account, .setActiveProvider(provider))
         }
 
         public func settingsUpdates() -> Signal<EngineAgentSettings, NoError> {
             return self.account.stateManager.agentSettingsUpdates()
-            |> map(EngineAgentSettings.init(apiSettings:))
         }
     }
 }

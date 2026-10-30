@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import UserNotifications
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
@@ -233,6 +234,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var awaitingCallConnectionDisposable: Disposable?
     private var callPeerDisposable: Disposable?
     private var callIsConferenceDisposable: Disposable?
+    
+    private var callUnlockVideoNotificationState: CallUnlockVideoNotificationState?
+    private var callUnlockVideoNotificationInternalId: CallSessionInternalId?
+    private var callUnlockVideoNotificationDisposable: Disposable?
+    private var callUnlockVideoNotificationTimer: SwiftSignalKit.Timer?
     
     private var groupCallController: VoiceChatController?
     public var currentGroupCallController: ViewController? {
@@ -541,6 +547,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass })
         ManagedAudioSessionImpl.respectsSystemRecordingInput = immediateExperimentalUISettingsValue.with({ $0.respectSystemMicrophone })
+        MediaEditorVideoExport.forceLegacyStoryWriter = immediateExperimentalUISettingsValue.with({ $0.storyLegacyVideoWriter })
+        MediaEditorVideoExport.forceLegacyChatWriter = immediateExperimentalUISettingsValue.with({ $0.chatLegacyVideoWriter })
         
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
@@ -550,6 +558,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
                 ManagedAudioSessionImpl.respectsSystemRecordingInput = settings.respectSystemMicrophone
+                MediaEditorVideoExport.forceLegacyStoryWriter = settings.storyLegacyVideoWriter
+                MediaEditorVideoExport.forceLegacyChatWriter = settings.chatLegacyVideoWriter
             }
         })
         
@@ -1113,6 +1123,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
         }
         
+        if applicationBindings.isMainApp {
+            self.removeStaleCallUnlockVideoNotifications()
+        }
+        
         /*if #available(iOS 13.0, *) {
             let userInterfaceStyle: UIUserInterfaceStyle
             if self.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
@@ -1219,6 +1233,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         self.currentCall = call
+        
+        if case let .call(call) = call {
+            self.updateCallUnlockVideoNotification(call: call)
+        } else {
+            self.updateCallUnlockVideoNotification(call: nil)
+        }
         
         let beginDisplayingCallStatusBar = Promise<Void>()
         
@@ -1520,6 +1540,135 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if let navigationController = self.mainWindow?.viewController as? NavigationController {
             navigationController.setForceInCallStatusBar(resolvedCallStatusBarNode)
         }
+    }
+    
+    private func updateCallUnlockVideoNotification(call: PresentationCall?) {
+        self.callUnlockVideoNotificationDisposable?.dispose()
+        self.callUnlockVideoNotificationDisposable = nil
+        self.callUnlockVideoNotificationTimer?.invalidate()
+        self.callUnlockVideoNotificationTimer = nil
+        if let state = self.callUnlockVideoNotificationState, case .shown = state.phase, let internalId = self.callUnlockVideoNotificationInternalId {
+            self.removeCallUnlockVideoNotification(internalId: internalId)
+        }
+        self.callUnlockVideoNotificationState = nil
+        self.callUnlockVideoNotificationInternalId = nil
+        
+        guard let call else {
+            return
+        }
+        let state = CallUnlockVideoNotificationState(isOutgoing: call.isOutgoing, isIntegratedWithCallKit: call.isIntegratedWithCallKit, isVideo: call.isVideo)
+        if case .finished = state.phase {
+            return
+        }
+        self.callUnlockVideoNotificationState = state
+        self.callUnlockVideoNotificationInternalId = call.internalId
+        
+        self.callUnlockVideoNotificationDisposable = (combineLatest(queue: .mainQueue(),
+            call.state,
+            self.applicationBindings.applicationInForeground
+        )).startStrict(next: { [weak self] callState, applicationInForeground in
+            self?.updateCallUnlockVideoNotificationState { state in
+                state.update(callState: callState.state, applicationInForeground: applicationInForeground)
+            }
+        })
+    }
+    
+    private func updateCallUnlockVideoNotificationState(_ f: (inout CallUnlockVideoNotificationState) -> Void) {
+        guard var state = self.callUnlockVideoNotificationState, let internalId = self.callUnlockVideoNotificationInternalId else {
+            return
+        }
+        let previousPhase = state.phase
+        f(&state)
+        self.callUnlockVideoNotificationState = state
+        if state.phase == previousPhase {
+            return
+        }
+        
+        switch state.phase {
+        case .awaitingAnswer:
+            break
+        case .pending:
+            let timer = SwiftSignalKit.Timer(timeout: CallUnlockVideoNotificationState.postDelay, repeat: false, completion: { [weak self] in
+                self?.updateCallUnlockVideoNotificationState { state in
+                    state.postDelayElapsed()
+                }
+            }, queue: Queue.mainQueue())
+            self.callUnlockVideoNotificationTimer = timer
+            timer.start()
+        case .shown:
+            self.callUnlockVideoNotificationTimer = nil
+            self.postCallUnlockVideoNotification(internalId: internalId)
+        case .finished:
+            self.callUnlockVideoNotificationTimer?.invalidate()
+            self.callUnlockVideoNotificationTimer = nil
+            if case .shown = previousPhase {
+                self.removeCallUnlockVideoNotification(internalId: internalId)
+            }
+        }
+    }
+    
+    private func postCallUnlockVideoNotification(internalId: CallSessionInternalId) {
+        let identifier = CallUnlockVideoNotificationState.identifier(internalId: internalId)
+        let strings = self.currentPresentationData.with({ $0 }).strings
+        let text = UIDevice.current.userInterfaceIdiom == .pad ? strings.Call_UnlockToSeeVideoNotificationPad : strings.Call_UnlockToSeeVideoNotification
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings(completionHandler: { [weak self] settings in
+            Queue.mainQueue().async {
+                guard let self, self.callUnlockVideoNotificationInternalId == internalId, let state = self.callUnlockVideoNotificationState, case .shown = state.phase else {
+                    return
+                }
+                switch settings.authorizationStatus {
+                case .authorized, .provisional:
+                    break
+                default:
+                    return
+                }
+                
+                // No sound: the call is already in progress.
+                let content = UNMutableNotificationContent()
+                content.body = text
+                content.userInfo = [CallUnlockVideoNotificationState.userInfoKey: internalId.uuidString]
+                content.categoryIdentifier = CallUnlockVideoNotificationState.categoryIdentifier
+                
+                Logger.shared.log("SharedAccountContext", "adding call unlock video notification \(internalId)")
+                center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil), withCompletionHandler: { error in
+                    if let error {
+                        Logger.shared.log("SharedAccountContext", "error adding call unlock video notification \(internalId), error: \(String(describing: error))")
+                    }
+                })
+            }
+        })
+    }
+    
+    private func removeCallUnlockVideoNotification(internalId: CallSessionInternalId) {
+        let identifier = CallUnlockVideoNotificationState.identifier(internalId: internalId)
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
+    
+    /// A notification whose call ended while the app was not running (terminated or crashed during the call) stays in
+    /// Notification Center, since nothing that would take it down is alive any more; launching removes it. The current
+    /// call's own is kept, should it already be up.
+    private func removeStaleCallUnlockVideoNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications(completionHandler: { [weak self] notifications in
+            let identifiers = notifications.map(\.request).filter({ $0.content.userInfo[CallUnlockVideoNotificationState.userInfoKey] != nil }).map(\.identifier)
+            if identifiers.isEmpty {
+                return
+            }
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                let currentIdentifier = self.callUnlockVideoNotificationInternalId.flatMap(CallUnlockVideoNotificationState.identifier(internalId:))
+                let staleIdentifiers = identifiers.filter({ $0 != currentIdentifier })
+                if !staleIdentifiers.isEmpty {
+                    Logger.shared.log("SharedAccountContext", "removing \(staleIdentifiers.count) stale call unlock video notifications")
+                    center.removeDeliveredNotifications(withIdentifiers: staleIdentifiers)
+                }
+            }
+        })
     }
     
     private func presentControllerWithCurrentCall() {
@@ -2396,7 +2545,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         // No tails: the text and link preview content nodes draw no status line (views, time) then, and the row
         // shows both in its channel line instead; the bubble's shape does not matter, it draws no background.
         let corners = presentationData.chatBubbleCorners
-        let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false)
+        let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false, serifMessageText: corners.serifMessageText)
         return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: feedCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
     }
 
@@ -5177,6 +5326,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var switchToGiftsTarget: PeerInfoSwitchToGiftsTarget?
         var switchToGroupsInCommon = false
         var switchToStoryFolder: Int64?
+        var hidesSavedMessagesChats = false
         
         switch mode {
         case let .calls(messages):
@@ -5215,10 +5365,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             if peer.id == context.account.peerId {
                 isMyProfile = true
             }
+        case .chatSideList:
+            hidesSavedMessagesChats = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget, hidesSavedMessagesChats: hidesSavedMessagesChats)
     } else if case .secretChat = peer {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: nil, callMessages: [], switchToMediaTarget: switchToMediaTarget)
     }

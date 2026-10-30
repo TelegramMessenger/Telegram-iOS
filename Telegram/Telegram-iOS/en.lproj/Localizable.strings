@@ -2532,6 +2532,8 @@ Unused sets are archived when you add more.";
 "Call.StatusIncoming" = "Telegram Audio...";
 "Call.IncomingVoiceCall" = "Incoming Voice Call";
 "Call.IncomingVideoCall" = "Incoming Video Call";
+"Call.UnlockToSeeVideoNotification" = "Unlock your phone to see and share video";
+"Call.UnlockToSeeVideoNotificationPad" = "Unlock your iPad to see and share video";
 "Call.StatusRequesting" = "Contacting...";
 "Call.StatusWaiting" = "Waiting...";
 "Call.StatusRinging" = "Ringing...";
@@ -5127,6 +5129,8 @@ Sorry for the inconvenience.";
 "Appearance.TextSize.Title" = "Text Size";
 "Appearance.TextSize.UseSystem" = "User System Text Size";
 "Appearance.TextSize.Apply" = "Set";
+"Appearance.TextSize.FontDefault" = "Default";
+"Appearance.TextSize.FontSerif" = "New York";
 
 "Shortcut.SwitchAccount" = "Switch Account";
 
@@ -17282,3 +17286,11 @@ Error: %8$@";
 "Agent.Connected.Title" = "%@ connected!";
 "Agent.Connected.Text" = "You can now use %@.";
 "Agent.Connected.Start" = "Start";
+"Agent.InputPlaceholder" = "Ask Agent anything";
+"Agent.Effort" = "Effort";
+
+"Chat.SideList.Open" = "Show Chat List";
+"Chat.SideList.Close" = "Hide Chat List";
+"Chat.SideList.NewTopic" = "New Topic";
+"Chat.SideList.DirectMessages" = "Direct messages";
+"Chat.SideList.AllMessages" = "All Messages";

@@ -98,10 +98,10 @@ namespace litehtml
         _counter_reset_, _counter_increment_,
 
         _gap_, _row_gap_, _column_gap_, _grid_gap_, _grid_row_gap_, _grid_column_gap_,
-        _grid_template_columns_, _grid_template_rows_, _grid_auto_rows_, _grid_column_, _grid_row_,
+        _grid_template_columns_, _grid_template_rows_, _grid_template_, _grid_auto_rows_, _grid_column_, _grid_row_,
         _grid_column_start_, _grid_column_end_, _grid_row_start_, _grid_row_end_,
         _justify_items_, _justify_self_, _place_items_, _place_self_, _place_content_,
-        _letter_spacing_, _opacity_, _clip_path_, _box_shadow_, _transform_, _transform_origin_, _backface_visibility_, _contain_,
+        _letter_spacing_, _opacity_, _clip_path_, _box_shadow_, _transform_, _transform_origin_, _transform_box_, _backface_visibility_, _contain_,
         // Telegram (VENDOR.md edit 32): word-break, word-spacing, font-feature-settings, quotes
         _word_break_, _word_spacing_, _font_feature_settings_, _quotes_,
         // Telegram (VENDOR.md edit 34): the individual transform properties

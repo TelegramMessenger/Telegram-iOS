@@ -61,22 +61,19 @@ WR_TEST(testCreateElementNS) {
 // documentElement and doctype are slots the raw child edits keep: a read costs the same whatever else the document
 // holds, and they follow the children being removed and inserted.
 WR_TEST(testDocumentElementAndDoctypeFollowTheChildren) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     DOMEnv env;
     JSContext* ctx = env.ctx();
-    JSRuntime* rt = JS_GetRuntime(ctx);
     wr::Document& doc = wr::globalDocument(ctx);
     env.eval("var html = document.documentElement;"
              "function readBoth(n) { let r = 0; for (let i = 0; i < n; i++) { r += document.documentElement === html; r += document.doctype === null; } return r; }");
-    // The work of 1,000 reads of each, after a warm-up run of the same script.
+    // The CPU time of 1,000 reads of each, the least of three runs after a warm-up run of the same script.
     auto cost = [&]() {
-        env.eval("readBoth(1000)");
-        uint64_t before = JS_GetWorkUnits(rt);
-        std::string r = env.eval("readBoth(1000)");
-        uint64_t units = JS_GetWorkUnits(rt) - before;
-        CHECK_EQ(r, std::string("2000"));
-        return units;
+        CHECK_EQ(env.eval("readBoth(1000)"), std::string("2000"));
+        return wr_test::leastCpuMs([&] { env.eval("readBoth(1000)"); });
     };
-    uint64_t bare = cost();
+    const double bare = cost();
 
     // The html element goes last, after 10,000 comments: a scan for the first element child would visit them all.
     wr::Ref<wr::Element> html = wr::Ref<wr::Element>::retain(ctx, doc.documentElementNode());
@@ -89,13 +86,12 @@ WR_TEST(testDocumentElementAndDoctypeFollowTheChildren) {
     CHECK_JS(env, "document.documentElement === null && document.doctype === null");
     doc.insertChildAt(ctx, doc.childCount(), *html);
     CHECK_JS(env, "document.documentElement === html && document.lastChild === html");
-    uint64_t crowded = cost();
-    // The same within 1% (two runs of one script differ by a unit or so of allocation work); a read that visited the
-    // comments, at kNodeVisit each, would add 2,000 x 10,000 x 2.
-    if (crowded > bare + bare / 100) {
-        std::printf("  work of 2,000 reads: %llu bare, %llu among 10,000 comments\n", (unsigned long long)bare, (unsigned long long)crowded);
+    const double crowded = cost();
+    // About the same; a read that visited the comments would visit 2,000 x 10,000 of them.
+    if (crowded > 3 * bare + 2) {
+        std::printf("  CPU time of 2,000 reads: %.3f ms bare, %.3f ms among 10,000 comments\n", bare, crowded);
     }
-    CHECK(crowded <= bare + bare / 100);
+    CHECK(crowded <= 3 * bare + 2);
 
     wr::Ref<wr::DocumentType> doctype = wr::create<wr::DocumentType>(ctx, wr::idl::kDocumentType, ctx, doc, wr::String::fromUTF8(ctx, "html"), wr::String(), wr::String());
     doc.insertChildAt(ctx, 0, *doctype);

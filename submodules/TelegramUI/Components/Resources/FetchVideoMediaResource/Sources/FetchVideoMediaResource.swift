@@ -221,9 +221,53 @@ public func videoMediaResourceEditorValues(adjustments: VideoMediaResourceAdjust
     return (nil, nil)
 }
 
+private let streamingChatVideoUploadMinimumSize: Int64 = 10 * 1024 * 1024
+private let streamingVideoUploadChunkSize: Int64 = 512 * 1024
+
+private func emitStreamingVideoGrowth(path: String, resourceId: String, fileSize: Int64, headerEnd: Int64, minimumSize: Int64, updatedSize: Atomic<Int64>, streamingHeaderEnd: Atomic<Int64>, subscriber: Subscriber<MediaResourceDataFetchResult, MediaResourceDataFetchError>) {
+    if streamingHeaderEnd.swap(headerEnd) != headerEnd {
+        setStreamingVideoHeaderSize(headerEnd, resourceId: resourceId)
+    }
+    guard fileSize > minimumSize else {
+        return
+    }
+    var range: Range<Int64>?
+    let _ = updatedSize.modify { current in
+        if fileSize - current >= streamingVideoUploadChunkSize {
+            range = current ..< fileSize
+            return fileSize
+        }
+        return current
+    }
+    guard let range else {
+        return
+    }
+    guard let handle = FileHandle(forReadingAtPath: path) else {
+        subscriber.putError(.generic)
+        return
+    }
+    defer {
+        try? handle.close()
+    }
+    do {
+        try handle.seek(toOffset: UInt64(range.lowerBound))
+        guard let data = try handle.read(upToCount: Int(range.count)), data.count == Int(range.count) else {
+            subscriber.putError(.generic)
+            return
+        }
+        subscriber.putNext(.dataPart(resourceOffset: range.lowerBound, data: data, range: 0 ..< Int64(data.count), complete: false))
+    } catch {
+        subscriber.putError(.generic)
+    }
+}
+
+private func streamingVideoHeaderLength(dataCount: Int, streamingHeaderEnd: Atomic<Int64>) -> Int64 {
+    return min(Int64(dataCount), max(1024, streamingHeaderEnd.with { $0 }))
+}
+
 private let throttlingContext = FetchVideoLibraryMediaResourceContext()
 
-public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource, alwaysUseModernPipeline: Bool = true) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource, alwaysUseModernPipeline: Bool = true, useStreamingStoryVideoWriter: Bool = false, useStreamingChatVideoWriter: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
@@ -357,12 +401,29 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                     let updatedSize = Atomic<Int64>(value: 0)
                     if let mediaEditorValues {
                         let duration: Double = avAsset.duration.seconds
-                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+                        var configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+                        configuration.useStreamingWriter = isStory ? useStreamingStoryVideoWriter : useStreamingChatVideoWriter
+                        #if DEBUG
+                        let exportStart = CFAbsoluteTimeGetCurrent()
+                        #endif
                         let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .video(asset: avAsset, isStory: isStory), configuration: configuration, outputPath: tempFile.path)
+                        let streamingHeaderEnd = Atomic<Int64>(value: 0)
+                        let streamingMinimumSize = isStory ? 0 : streamingChatVideoUploadMinimumSize
+                        videoExport.streamingFileGrowth = { fileSize, headerEnd in
+                            emitStreamingVideoGrowth(path: tempFile.path, resourceId: resource.id.stringRepresentation, fileSize: fileSize, headerEnd: headerEnd, minimumSize: streamingMinimumSize, updatedSize: updatedSize, streamingHeaderEnd: streamingHeaderEnd, subscriber: subscriber)
+                        }
                         
                         let statusDisposable = videoExport.status.start(next: { status in
                             switch status {
                             case .completed:
+                                #if DEBUG
+                                let debugEntry = VideoExportDebugTimings.Entry(exportStart: exportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: videoExportDebugWriterName(usesStreamingWriter: videoExport.usesStreamingWriter), fileSize: fileSize(tempFile.path) ?? 0, streamedSize: updatedSize.with { $0 })
+                                if isStory {
+                                    VideoExportDebugTimings.shared.recordStoryExport(resourceId: resource.id.stringRepresentation, entry: debugEntry)
+                                } else {
+                                    VideoExportDebugTimings.shared.recordChatExport(entry: debugEntry)
+                                }
+                                #endif
                                 var value = stat()
                                 if stat(tempFile.path, &value) == 0 {
                                     let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -379,7 +440,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                                             }
                                             //print("finish size = \(Int(value.st_size)), range: \(range!)")
                                             subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< streamingVideoHeaderLength(dataCount: data.count, streamingHeaderEnd: streamingHeaderEnd)))
                                             subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
                                         }
                                     }
@@ -412,6 +473,9 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                             }
                         }
                         
+                        #if DEBUG
+                        let legacyExportStart = CFAbsoluteTimeGetCurrent()
+                        #endif
                         let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
                             /*var value = stat()
                              if stat(path, &value) == 0 {
@@ -435,6 +499,9 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         }), entityRenderer: entityRenderer)!
                         let signalDisposable = signal.start(next: { next in
                             if let result = next as? TGMediaVideoConversionResult {
+                                #if DEBUG
+                                VideoExportDebugTimings.shared.recordChatExport(entry: VideoExportDebugTimings.Entry(exportStart: legacyExportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: "legacy converter", fileSize: fileSize(result.fileURL.path) ?? 0))
+                                #endif
                                 var value = stat()
                                 if stat(result.fileURL.path, &value) == 0 {
                                     let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -484,7 +551,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
     return throttlingContext.wrap(priority: .default, signal: signal)
 }
 
-public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource, alwaysUseModernPipeline: Bool = true) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource, alwaysUseModernPipeline: Bool = true, useStreamingStoryVideoWriter: Bool = false, useStreamingChatVideoWriter: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         
@@ -551,12 +618,31 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                 return EmptyDisposable
             }
             
-            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+            var configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+            configuration.useStreamingWriter = isStory ? useStreamingStoryVideoWriter : useStreamingChatVideoWriter
+            #if DEBUG
+            let exportStart = CFAbsoluteTimeGetCurrent()
+            #endif
             let videoExport = MediaEditorVideoExport(postbox: postbox, subject: subject, configuration: configuration, outputPath: tempFile.path)
+            let streamingHeaderEnd = Atomic<Int64>(value: 0)
+            let streamingMinimumSize = isStory ? 0 : streamingChatVideoUploadMinimumSize
+            videoExport.streamingFileGrowth = { fileSize, headerEnd in
+                emitStreamingVideoGrowth(path: tempFile.path, resourceId: resource.id.stringRepresentation, fileSize: fileSize, headerEnd: headerEnd, minimumSize: streamingMinimumSize, updatedSize: updatedSize, streamingHeaderEnd: streamingHeaderEnd, subscriber: subscriber)
+            }
             
             let statusDisposable = videoExport.status.start(next: { status in
                 switch status {
                 case .completed:
+                    #if DEBUG
+                    if case .video = subject {
+                        let debugEntry = VideoExportDebugTimings.Entry(exportStart: exportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: videoExportDebugWriterName(usesStreamingWriter: videoExport.usesStreamingWriter), fileSize: fileSize(tempFile.path) ?? 0, streamedSize: updatedSize.with { $0 })
+                        if isStory {
+                            VideoExportDebugTimings.shared.recordStoryExport(resourceId: resource.id.stringRepresentation, entry: debugEntry)
+                        } else {
+                            VideoExportDebugTimings.shared.recordChatExport(entry: debugEntry)
+                        }
+                    }
+                    #endif
                     var value = stat()
                     if stat(tempFile.path, &value) == 0 {
                         let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -573,7 +659,7 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                                 }
                                 //print("finish size = \(Int(value.st_size)), range: \(range!)")
                                 subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                                subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                subscriber.putNext(.replaceHeader(data: data, range: 0 ..< streamingVideoHeaderLength(dataCount: data.count, streamingHeaderEnd: streamingHeaderEnd)))
                                 subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
                             }
                         }
@@ -610,6 +696,9 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                     return nil
                 }
             }
+            #if DEBUG
+            let legacyExportStart = CFAbsoluteTimeGetCurrent()
+            #endif
             let signal: SSignal
             if isImage, let entityRenderer = entityRenderer {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
@@ -666,6 +755,11 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             
             let signalDisposable = signal.start(next: { next in
                 if let result = next as? TGMediaVideoConversionResult {
+                    #if DEBUG
+                    if !isImage {
+                        VideoExportDebugTimings.shared.recordChatExport(entry: VideoExportDebugTimings.Entry(exportStart: legacyExportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: "legacy converter", fileSize: fileSize(result.fileURL.path) ?? 0))
+                    }
+                    #endif
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
 //                        if config.remuxToFMp4 {

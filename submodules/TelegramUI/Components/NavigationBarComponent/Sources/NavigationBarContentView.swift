@@ -20,6 +20,7 @@ final class NavigationBarContentView: UIView {
     /// Width (at least 44 pt), tint and number of buttons of each pill shown, outermost first.
     private(set) var rightPillWidths: [CGFloat] = []
     private(set) var rightPillTints: [NavigationBarComponent.Button.Tint] = []
+    private(set) var rightPillCornerRadii: [CGFloat?] = []
     private(set) var rightPillButtonCounts: [Int] = []
     private(set) var backButtonView: NavigationBarBackButtonView?
     /// Morph only: whether the last update held the back button steady (`updateMorphTransition`).
@@ -335,6 +336,7 @@ final class NavigationBarContentView: UIView {
         }
         self.rightPillWidths = rightPillWidths
         self.rightPillTints = placement.rowRightSections.map(navigationBarCapsuleTint)
+        self.rightPillCornerRadii = placement.rowRightSections.map(navigationBarCapsuleCornerRadius)
         self.rightPillButtonCounts = placement.rowRightSections.map(\.count)
 
         if let columnLayout {

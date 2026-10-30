@@ -35,6 +35,7 @@ import AnimatedCountLabelNode
 import AudioWaveform
 import DeviceProximity
 import ShimmeringLinkNode
+import StaticGlassBackground
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -65,6 +66,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         public let layoutConstants: ChatMessageItemLayoutConstants
         public let constrainedSize: CGSize
         public let controllerInteraction: ChatControllerInteraction
+        /// The style of the message the file belongs to: without a bubble a file sits on the text column.
+        public let bubbleStyle: ChatMessageBubbleStyle
         
         public init(
             context: AccountContext,
@@ -88,7 +91,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             isAttachedContentBlock: Bool,
             layoutConstants: ChatMessageItemLayoutConstants,
             constrainedSize: CGSize,
-            controllerInteraction: ChatControllerInteraction
+            controllerInteraction: ChatControllerInteraction,
+            bubbleStyle: ChatMessageBubbleStyle = .bubble
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -112,6 +116,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
             self.controllerInteraction = controllerInteraction
+            self.bubbleStyle = bubbleStyle
         }
     }
     
@@ -196,6 +201,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var presentationData: ChatPresentationData?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
+    // Bubble mode off: an incoming file's control is a glass circle (an image of it) tinted with the control's colour,
+    // under its glyph.
+    private var statusGlassView: StaticGlassBackgroundView?
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     private var viewOnceIconImage: UIImage?
@@ -203,6 +211,12 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     public var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     public var forcedAudioTranscriptionText: TranscribedText?
     private var transcribeDisposable: Disposable?
+    /// The size the preview was drawn for without bubbles (a 44pt row icon), so that it is drawn as master draws it again
+    /// once bubbles come back.
+    private var drawnCompactThumbnailSize: CGSize?
+    /// Redraws the preview for a new size off the main queue; made on the first redraw (never with bubbles).
+    private var compactThumbnailRedrawDisposable: MetaDisposable?
+    
     public var hasExpandedAudioTranscription: Bool {
         if case .expanded = audioTranscriptionState {
             return true
@@ -278,6 +292,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchDisposable.dispose()
         self.audioLevelEventsDisposable.dispose()
         self.transcribeDisposable?.dispose()
+        self.compactThumbnailRedrawDisposable?.dispose()
     }
     
     override public func didLoad() {
@@ -603,6 +618,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     hasThumbnail = largestImageRepresentation(file.previewRepresentations) != nil || file.immediateThumbnailData != nil || file.mimeType.hasPrefix("image/")
                     hasThumbnailImage = hasThumbnail
                 }
+                // Without bubbles a file with a preview is a row like any other file, its preview the size of the round
+                // icon, so the names of a run of files line up and every row is as tall.
+                let isCompactThumbnail = hasThumbnail && arguments.bubbleStyle == .bubbleless && !arguments.isAttachedContentBlock
                 
                 if mediaUpdated {
                     if hasThumbnailImage {
@@ -742,13 +760,13 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 var textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)
-                if hasThumbnail {
+                if hasThumbnail && !isCompactThumbnail {
                     textConstrainedSize.width -= 80.0
                 }
                 
                 let streamingProgressDiameter: CGFloat = 20.0
                 
-                let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: hasThumbnail ? 2 : 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: hasThumbnail && !isCompactThumbnail ? 2 : 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let isViewOnceMessage = isVoice && arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout
@@ -863,7 +881,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if hasThumbnail {
                     let currentIconFrame: CGRect
-                    if arguments.isAttachedContentBlock {
+                    if isCompactThumbnail {
+                        currentIconFrame = CGRect(origin: CGPoint(), size: CGSize(width: chatMessageBubblelessFileThumbnailSize, height: chatMessageBubblelessFileThumbnailSize))
+                        controlAreaWidth = currentIconFrame.maxX + 8.0
+                    } else if arguments.isAttachedContentBlock {
                         currentIconFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 59.0, height: 59.0))
                         controlAreaWidth = 71.0
                     } else {
@@ -886,8 +907,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         )
                         controlAreaWidth = progressFrame.maxX + 8.0
                     } else {
+                        // Without bubbles there is no bubble padding around a file: its control starts on the text
+                        // column.
                         progressFrame = CGRect(
-                            origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
+                            origin: CGPoint(x: arguments.bubbleStyle.isBubbleless ? 0.0 : 3.0, y: isVoice ? -3.0 : 0.0),
                             size: CGSize(width: progressDiameter, height: progressDiameter)
                         )
                         controlAreaWidth = progressFrame.maxX + 8.0
@@ -975,7 +998,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var minLayoutWidth: CGFloat
                 if hasThumbnail {
-                    minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 86.0
+                    minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + (isCompactThumbnail ? chatMessageBubblelessFileThumbnailSize + 8.0 : 86.0)
                 } else if isVoice {
                     let descriptionAndStatusWidth = descriptionLayout.size.width
                     
@@ -1014,7 +1037,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     let titleAndDescriptionHeight = titleLayout.size.height - 1.0 + descriptionLayout.size.height
                     
                     let normHeight: CGFloat
-                    if hasThumbnail {
+                    // A compact preview is a row like any other file's: its text centres on the 44pt icon.
+                    if hasThumbnail && !isCompactThumbnail {
                         if arguments.isAttachedContentBlock {
                             normHeight = 58.0
                         } else {
@@ -1033,7 +1057,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     
                     var fittedLayoutSize: CGSize
-                    if hasThumbnail {
+                    if hasThumbnail && !isCompactThumbnail {
                         let textSizes = titleFrame.union(descriptionFrame).size
                         fittedLayoutSize = CGSize(width: textSizes.width + controlAreaWidth, height: 59.0)
                     } else if isVoice {
@@ -1398,15 +1422,48 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             if let iconFrame = iconFrame {
                                 let iconNode: TransformImageNode
+                                var isNewIconNode = false
                                 if let current = strongSelf.iconNode {
                                     iconNode = current
                                 } else {
+                                    isNewIconNode = true
                                     iconNode = TransformImageNode()
                                     strongSelf.iconNode = iconNode
                                     strongSelf.insertSubnode(iconNode, at: 0)
                                     let arguments = TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: CGSize(width: 74.0, height: 74.0), boundingSize: CGSize(width: 74.0, height: 74.0), intrinsicInsets: UIEdgeInsets(), emptyColor: messageTheme.mediaPlaceholderColor)
                                     let apply = iconNode.asyncLayout()(arguments)
                                     apply()
+                                }
+                                // Without bubbles the preview is drawn for its row icon's size; back in bubbles, as above.
+                                let compactThumbnailSize: CGSize? = isCompactThumbnail ? iconFrame.size : nil
+                                if strongSelf.drawnCompactThumbnailSize != compactThumbnailSize {
+                                    strongSelf.drawnCompactThumbnailSize = compactThumbnailSize
+                                    let imageSize = compactThumbnailSize ?? CGSize(width: 74.0, height: 74.0)
+                                    let imageArguments = TransformImageArguments(corners: ImageCorners(radius: compactThumbnailSize != nil ? chatMessageBubblelessFileThumbnailCornerRadius : 8.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: messageTheme.mediaPlaceholderColor)
+                                    let iconLayout = iconNode.asyncLayout()
+                                    if isNewIconNode {
+                                        // Nothing is drawn yet, so this only sets the size the signal below draws for.
+                                        iconLayout(imageArguments)()
+                                    } else {
+                                        // A drawn preview is drawn again for its new size, which runs its transform:
+                                        // off the main queue, as a layout pass would.
+                                        let redrawDisposable: MetaDisposable
+                                        if let current = strongSelf.compactThumbnailRedrawDisposable {
+                                            redrawDisposable = current
+                                        } else {
+                                            redrawDisposable = MetaDisposable()
+                                            strongSelf.compactThumbnailRedrawDisposable = redrawDisposable
+                                        }
+                                        redrawDisposable.set((Signal<() -> Void, NoError> { subscriber in
+                                            subscriber.putNext(iconLayout(imageArguments))
+                                            subscriber.putCompletion()
+                                            return EmptyDisposable
+                                        }
+                                        |> runOn(Queue.concurrentDefaultQueue())
+                                        |> deliverOnMainQueue).startStrict(next: { apply in
+                                            apply()
+                                        }))
+                                    }
                                 }
                                 if let updateImageSignal = updateImageSignal {
                                     iconNode.setSignal(updateImageSignal)
@@ -1781,8 +1838,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        let backgroundNodeColor: UIColor
+        var backgroundNodeColor: UIColor
         let foregroundNodeColor: UIColor
+        var statusGlassTint: UIColor?
         if self.iconNode != nil {
             backgroundNodeColor = presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor
             foregroundNodeColor = .white
@@ -1790,8 +1848,15 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             backgroundNodeColor = arguments.customTintColor ?? messageTheme.mediaActiveControlColor
             if incoming && messageTheme.mediaActiveControlColor.rgb != 0xffffff {
                 foregroundNodeColor = .white
+            } else if arguments.bubbleStyle.isBubbleless {
+                // Without bubbles a cut-out glyph would show no bubble through it: it takes the page's colour.
+                foregroundNodeColor = bubblelessPageColor(presentationData.theme.theme)
             } else {
                 foregroundNodeColor = .clear
+            }
+            if incoming && arguments.bubbleStyle.isBubbleless && arguments.customTintColor == nil {
+                statusGlassTint = backgroundNodeColor
+                backgroundNodeColor = .clear
             }
         }
 
@@ -1828,6 +1893,39 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
         } else if let statusNode = self.statusNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
+            // The glyph's colour follows the bubble mode (above); written only when it changes.
+            if statusNode.foregroundNodeColor != foregroundNodeColor {
+                statusNode.foregroundNodeColor = foregroundNodeColor
+            }
+        }
+        
+        if let statusGlassTint, let statusNode = self.statusNode {
+            let glassView: StaticGlassBackgroundView
+            if let current = self.statusGlassView {
+                glassView = current
+            } else {
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.statusGlassView = glassView
+                if animated {
+                    glassView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
+            }
+            // Under the glyph, also when the control is made anew.
+            self.statusContainerNode.contentNode.view.insertSubview(glassView, belowSubview: statusNode.view)
+            let glassFrame = CGRect(origin: CGPoint(), size: progressFrame.size)
+            glassView.frame = glassFrame
+            glassView.update(size: glassFrame.size, cornerRadius: glassFrame.height * 0.5, isDark: presentationData.theme.theme.overallDarkAppearance, tint: .color(statusGlassTint))
+        } else if let glassView = self.statusGlassView {
+            self.statusGlassView = nil
+            if animated {
+                glassView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                glassView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak glassView] _ in
+                    glassView?.removeFromSuperview()
+                })
+            } else {
+                glassView.removeFromSuperview()
+            }
         }
         
         let effectsEnabled = self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true
@@ -1874,6 +1972,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         } else if let streamingStatusNode = self.streamingStatusNode {
             streamingStatusNode.backgroundNodeColor = backgroundNodeColor
+            if streamingStatusNode.foregroundNodeColor != foregroundNodeColor {
+                streamingStatusNode.foregroundNodeColor = foregroundNodeColor
+            }
         }
         
         if let statusNode = self.statusNode {
@@ -1916,6 +2017,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         var cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: progressFrame.minX - 6.0, dy: progressFrame.minY)
         if file.isVoice {
             cutoutFrame.origin.y += 6.0
+        }
+        if arguments.bubbleStyle.isBubbleless {
+            // In the status node's own coordinates, wherever the control sits (without bubbles, on the text column).
+            cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: -progressFrame.minX, dy: -progressFrame.minY)
         }
         
         if (streamingState == .none && self.selectionNode == nil) || presentationData.isPreview {

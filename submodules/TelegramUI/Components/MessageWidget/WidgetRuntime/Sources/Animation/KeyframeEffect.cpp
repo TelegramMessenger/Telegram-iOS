@@ -12,7 +12,6 @@
 #include "Sources/Host/Sequences.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -268,7 +267,6 @@ SharedText valueText(JSContext* ctx, JSValueConst v) {
     if (s.length() > kMaxKeyframeValueLength) {
         throw TypeError{"keyframe value is too long"};
     }
-    chargeScan(ctx, s.length());
     return makeSharedText(JS_GetRuntime(ctx), s.utf8());
 }
 
@@ -281,7 +279,6 @@ SharedText memberText(JSContext* ctx, JSValueConst v, bool easing) {
     if (!easing && s.length() > 16) {
         throw TypeError{"'" + s.utf8Prefix(100, nullptr) + "' is not a valid composite operation"};
     }
-    chargeScan(ctx, s.length());
     return makeSharedText(JS_GetRuntime(ctx), s.utf8());
 }
 
@@ -313,7 +310,6 @@ std::vector<std::pair<std::string, std::string>> animatableKeys(JSContext* ctx, 
         uint32_t count;
         ~Free() { JS_FreePropertyEnum(ctx, names, count); }
     } release{ctx, names, count};
-    charge(ctx, uint64_t(count) * work::kNodeVisit);
     std::vector<std::pair<std::string, std::string>> keys;
     for (uint32_t i = 0; i < count; i++) {
         JSValue text = JS_AtomToString(ctx, names[i].atom);
@@ -359,7 +355,6 @@ Vector<RawFrame> readListForm(JSContext* ctx, std::vector<Value> items) {
     }
     Vector<RawFrame> frames{JSAllocator<RawFrame>(rt)};
     for (const Value& item : items) {
-        charge(ctx, work::kBindingCall);
         RawFrame frame(rt);
         if (!JS_IsUndefined(item.get()) && !JS_IsNull(item.get())) {
             if (!JS_IsObject(item.get())) {
@@ -423,7 +418,6 @@ Vector<RawFrame> readIndexedForm(JSContext* ctx, JSValueConst object) {
         const SharedText name = makeSharedText(rt, css);
         const size_t n = values.size();
         for (size_t i = 0; i < n; i++) {
-            charge(ctx, work::kNodeVisit);
             entries.push_back(Entry{n == 1 ? 1.0 : double(i) / double(n - 1), order++, name, valueText(ctx, values[i].get())});
         }
     }
@@ -481,7 +475,6 @@ Vector<Keyframe> processKeyframes(JSContext* ctx, JSValueConst input) {
     Vector<Keyframe> frames{JSAllocator<Keyframe>(rt)};
     std::optional<double> previous;
     for (RawFrame& r : raw) {
-        charge(ctx, work::kBindingCall);
         if (r.offset) {
             if (*r.offset < 0 || *r.offset > 1) {
                 throw TypeError{"keyframe offsets must be between 0 and 1"};
@@ -617,7 +610,6 @@ Ref<KeyframeEffect> KeyframeEffect::construct(JSContext* ctx, Value target, std:
     if (!keyframes) {
         if (KeyframeEffect* source = unwrap<KeyframeEffect>(ctx, target.get(), idl::kKeyframeEffect)) {
             Ref<KeyframeEffect> copy = create<KeyframeEffect>(ctx, idl::kKeyframeEffect, rt, source->m_timing);
-            charge(ctx, uint64_t(source->m_keyframes.size()) * work::kNodeVisit);
             copy->m_keyframes = source->m_keyframes;
             copy->m_composite = source->m_composite;
             copy->m_accumulate = source->m_accumulate;
@@ -760,14 +752,12 @@ std::vector<Object> KeyframeEffect::getKeyframes(JSContext* ctx) {
     std::vector<Object> out;
     out.reserve(m_keyframes.size());
     for (const Keyframe& frame : m_keyframes) {
-        charge(ctx, work::kBindingCall);
         Value object = newObject(ctx);
         define(ctx, object.get(), "composite", JS_NewString(ctx, frame.composite ? compositeName(*frame.composite) : "auto"));
         define(ctx, object.get(), "computedOffset", JS_NewFloat64(ctx, frame.computedOffset));
         define(ctx, object.get(), "easing", newText(ctx, frame.easing ? std::string_view(frame.easing->canonical) : "linear"));
         define(ctx, object.get(), "offset", nullable(ctx, frame.offset));
         for (const auto& [css, value] : frame.values) {
-            chargeScan(ctx, value->size());
             const std::string key = keyframePropertyKey(*css);
             define(ctx, object.get(), key.c_str(), newText(ctx, *value));
         }

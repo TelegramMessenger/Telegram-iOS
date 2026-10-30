@@ -10,6 +10,7 @@ import WallpaperBackgroundNode
 import ChatMessageItemCommon
 import ContextUI
 import HierarchyTrackingLayer
+import StaticGlassBackground
 
 public class ChatMessageShareButton: ASDisplayNode {
     private let referenceNode: ContextReferenceContentNode
@@ -17,6 +18,9 @@ public class ChatMessageShareButton: ASDisplayNode {
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var backgroundBlurView: PortalView?
+    // Bubble mode off: a circle (or capsule) captured from glass instead of the wallpaper-tinted one, under the same
+    // glyphs and buttons.
+    private var glassView: StaticGlassBackgroundView?
     
     private let topButton: HighlightTrackingButtonNode
     private let topIconNode: ASImageNode
@@ -107,6 +111,7 @@ public class ChatMessageShareButton: ASDisplayNode {
     }
     
     public func update(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: EngineMessage, accountPeerId: EnginePeer.Id, disableComments: Bool = false, isSummarize: Bool = false) -> CGSize {
+        let isGlass = !presentationData.chatBubbleCorners.bubbleMode
         var isReplies = false
         var isNavigate = false
         var replyCount = 0
@@ -281,7 +286,7 @@ public class ChatMessageShareButton: ASDisplayNode {
             textNode.removeFromSupernode()
         }
         
-        if self.backgroundBlurView == nil {
+        if !isGlass && self.backgroundBlurView == nil {
             if let backgroundBlurView = controllerInteraction.presentationContext.backgroundNode?.makeFreeBackground() {
                 self.backgroundBlurView = backgroundBlurView
                 self.view.insertSubview(backgroundBlurView.view, at: 0)
@@ -297,7 +302,7 @@ public class ChatMessageShareButton: ASDisplayNode {
         if let image = self.topIconNode.image {
             self.topIconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.topIconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.topIconOffset.y), size: image.size)
         }
-        self.topButton.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.width))
+        self.topButton.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: chatMessageShareButtonTopButtonHeight(size: size, hasBottomButton: self.bottomButton != nil, isGlass: isGlass)))
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width))
         self.referenceNode.frame = self.containerNode.bounds
         
@@ -308,7 +313,7 @@ public class ChatMessageShareButton: ASDisplayNode {
         
         self.separatorNode?.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: CGSize(width: size.width, height: 1.0 - UIScreenPixel))
         
-        if controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+        if !isGlass && controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
             if self.backgroundContent == nil, let backgroundContent = controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
                 backgroundContent.clipsToBounds = true
                 self.backgroundContent = backgroundContent
@@ -327,6 +332,25 @@ public class ChatMessageShareButton: ASDisplayNode {
         } else {
             //self.backgroundNode.isHidden = false
             self.backgroundBlurView?.view.isHidden = false
+        }
+        
+        if isGlass {
+            let glassView: StaticGlassBackgroundView
+            if let current = self.glassView {
+                glassView = current
+            } else {
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.glassView = glassView
+                self.view.insertSubview(glassView, at: 0)
+            }
+            glassView.frame = CGRect(origin: CGPoint(), size: size)
+            glassView.update(size: size, cornerRadius: min(size.width, size.height) / 2.0, isDark: presentationData.theme.theme.overallDarkAppearance, tint: .panel)
+            // A wallpaper view made with bubbles, before a switch.
+            self.backgroundBlurView?.view.isHidden = true
+        } else if let glassView = self.glassView {
+            self.glassView = nil
+            glassView.removeFromSuperview()
         }
         
         if isSummarize {

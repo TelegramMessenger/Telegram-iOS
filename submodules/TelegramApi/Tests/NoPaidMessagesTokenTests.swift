@@ -17,17 +17,4 @@ final class NoPaidMessagesTokenTests: XCTestCase {
             XCTAssertEqual(data.expires, expires)
         }
     }
-
-    func testLegacyResponseStillDecodes() throws {
-        for url: String? in [nil, "https://t.me/user?free=AABBCC"] {
-            let value = Api.ExportedNoPaidMessagesToken.exportedNoPaidMessagesTokenLegacy(.init(flags: url == nil ? 2 : 3, token: "AABBCC", url: url, expires: 1800000000))
-            let buffer = Buffer()
-            Api.serializeObject(value, buffer: buffer, boxed: true)
-            XCTAssertEqual(Array(buffer.makeData().prefix(4)), [0xbe, 0x05, 0x51, 0xcf])
-            let result = try XCTUnwrap(Api.parse(buffer) as? Api.ExportedNoPaidMessagesToken)
-            guard case let .exportedNoPaidMessagesTokenLegacy(data) = result else { return XCTFail("Wrong legacy constructor") }
-            XCTAssertEqual(data.url, url)
-            XCTAssertEqual(data.expires, 1800000000)
-        }
-    }
 }

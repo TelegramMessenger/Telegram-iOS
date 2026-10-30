@@ -138,3 +138,71 @@ WR_TEST(testLabelWrappingATextControlDoesNotRecurse) {
     CHECK_EQ(env.env().eval("[clicks.x, clicks.s, clicks.ta].join()"), std::string("1,1,1"));
     CHECK_EQ(env.env().eval("x.click(); s.click(); clicks.x + ':' + clicks.s"), std::string("2:2"));
 }
+
+namespace {
+
+/// The copyText calls that reached the bridge, by their text.
+std::string copies(RenderEnv& env) {
+    std::string out;
+    for (const auto& [method, args] : env.env().host().bridgeCalls) {
+        if (method == "copyText") {
+            out += (out.empty() ? "" : ",") + args;
+        }
+    }
+    return out;
+}
+
+const char* const kCopyBoth = "t.addEventListener('pointerdown', e => TelegramWidget.copyText('down-' + e.pointerType));"
+                              "t.addEventListener('click', () => TelegramWidget.copyText('click'));";
+
+} // namespace
+
+/// widget-sandbox v0.3.0, the finger rule: a finger's or a pen's pointerdown is no gesture (its press may still become
+/// the chat's scroll), so it cannot spend the press; its release can, and the click gets it.
+WR_TEST(testAFingersPointerdownIsNoGesture) {
+    for (const twidget::PointerKind kind : {twidget::PointerKind::Touch, twidget::PointerKind::Pen}) {
+        RenderEnv env(page("<div id=t></div>", kCopyBoth));
+        wr::HostState& host = wr::HostState::of(env.ctx());
+        host.pointer(env.ctx(), PointerPhase::Down, 50, 25, 1, true, kind);
+        host.pointer(env.ctx(), PointerPhase::Up, 50, 25, 1, true, kind);
+        env.env().drain();
+        CHECK_EQ(copies(env), std::string("[\"click\"]"));
+    }
+}
+
+/// A mouse's pointerdown is a gesture, as in browsers: it spends the press, and its click has none left.
+WR_TEST(testAMousesPointerdownIsAGesture) {
+    RenderEnv env(page("<div id=t></div>", kCopyBoth));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 25, 1, true, twidget::PointerKind::Mouse);
+    host.pointer(env.ctx(), PointerPhase::Up, 50, 25, 1, true, twidget::PointerKind::Mouse);
+    env.env().drain();
+    CHECK_EQ(copies(env), std::string("[\"down-mouse\"]"));
+}
+
+/// A contextmenu is no gesture, for a finger's hold the widget claims (touch-action: none) or a mouse's secondary click:
+/// upstream's host numbers gestures only for click, dblclick, mousedown, mouseup, pointerdown and pointerup
+/// (user-activation.ts `TYPES`), and a bridge call carries only the gesture of the event it is made in (worker.ts). The
+/// release that ends the hold is one.
+WR_TEST(testAContextMenuIsNoGesture) {
+    RenderEnv env(page("<div id=t style=\"touch-action:none\"></div>",
+                       "t.addEventListener('contextmenu', e => { log.push('menu'); e.preventDefault(); TelegramWidget.copyText('menu'); });"
+                       "t.addEventListener('pointerup', () => TelegramWidget.copyText('up'));"));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 25, 1, true);
+    env.env().drain();
+    env.env().advance(600);
+    host.pointer(env.ctx(), PointerPhase::Up, 50, 25, 1, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("menu"));
+    CHECK_EQ(copies(env), std::string("[\"up\"]"));
+    RenderEnv mouse(page("<div id=t style=\"touch-action:none\"></div>",
+                         "t.addEventListener('contextmenu', e => { log.push('menu'); e.preventDefault(); TelegramWidget.copyText('menu'); });"));
+    wr::HostState& mouseHost = wr::HostState::of(mouse.ctx());
+    mouseHost.pointer(mouse.ctx(), PointerPhase::Down, 50, 25, 1, true, twidget::PointerKind::Mouse, 2);
+    mouse.env().drain();
+    mouseHost.pointer(mouse.ctx(), PointerPhase::Up, 50, 25, 1, true, twidget::PointerKind::Mouse, 2);
+    mouse.env().drain();
+    CHECK_EQ(mouse.env().eval("log.join()"), std::string("menu"));
+    CHECK_EQ(copies(mouse), std::string(""));
+}

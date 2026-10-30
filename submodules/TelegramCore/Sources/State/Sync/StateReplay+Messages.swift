@@ -20,28 +20,7 @@ extension ReplayContext {
                                 case .topicCreated:
                                     transaction.removeHole(peerId: id.peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... id.id)
                                 case let .topicEdited(components):
-                                    if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
-                                        var data = initialData
-
-                                        for component in components {
-                                            switch component {
-                                            case let .title(title):
-                                                data.info = EngineMessageHistoryThread.Info(title: title, icon: data.info.icon, iconColor: data.info.iconColor)
-                                            case let .iconFileId(fileId):
-                                                data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
-                                            case let .isClosed(isClosed):
-                                                data.isClosed = isClosed
-                                            case let .isHidden(isHidden):
-                                                data.isHidden = isHidden
-                                            }
-                                        }
-
-                                        if data != initialData {
-                                            if let entry = StoredMessageHistoryThreadInfo(data) {
-                                                transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
-                                            }
-                                        }
-                                    }
+                                    self.applyEditForumTopic(id.peerId, threadId, components)
                                 default:
                                     break
                                 }

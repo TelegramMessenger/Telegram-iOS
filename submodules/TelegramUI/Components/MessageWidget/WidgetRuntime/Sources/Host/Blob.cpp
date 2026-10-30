@@ -6,17 +6,15 @@
 #include "Sources/Host/Encoding.h"
 #include "Sources/Host/Sequences.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
 namespace {
 
 /// File API: a type of code units U+0020–U+007E only, ASCII-lowercased; anything else is "". A new string value, in the
-/// JS heap: the input itself when it is lowercase already. The scan is charged first.
+/// JS heap: the input itself when it is lowercase already.
 JSValue checkedType(JSContext* ctx, const String& type) {
     const uint32_t n = type.length();
-    chargeScan(ctx, n);
     bool lowercase = true;
     for (uint32_t i = 0; i < n; i++) {
         const char16_t c = type.at(i);
@@ -28,7 +26,6 @@ JSValue checkedType(JSContext* ctx, const String& type) {
     if (lowercase) {
         return type.toJS(ctx);
     }
-    chargeScan(ctx, n);
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     out.reserve(n);
     for (uint32_t i = 0; i < n; i++) {
@@ -96,17 +93,14 @@ Ref<Blob> Blob::construct(JSContext* ctx, std::optional<Value> blobParts, std::o
     }
     for (const Value& part : *parts) {
         if (Blob* other = unwrap<Blob>(ctx, part.get(), idl::kBlob)) {
-            charge(ctx, work::kCssByte * uint64_t(other->m_bytes.size()));
             blob->m_bytes.insert(blob->m_bytes.end(), other->m_bytes.begin(), other->m_bytes.end());
         } else if (JS_IsArrayBuffer(part.get()) || JS_GetTypedArrayType(part.get()) >= 0 || JS_IsDataView(part.get())) {
             const ByteSpan span = bufferSourceBytes(ctx, part.get(), "Blob");
-            charge(ctx, work::kCssByte * uint64_t(span.size));
             if (span.data) {
                 blob->m_bytes.insert(blob->m_bytes.end(), span.data, span.data + span.size);
             }
         } else {
             const USVString text = convert<USVString>(ctx, part.get(), ArgInfo{"Blob", "constructor", 0});
-            chargeScan(ctx, text.length());
             encodeUTF8(text, blob->m_bytes);
         }
     }
@@ -123,14 +117,12 @@ Ref<Blob> Blob::slice(JSContext* ctx, std::optional<int64_t> start, std::optiona
     }
     Ref<Blob> sliced = create<Blob>(ctx, idl::kBlob, ctx, JS_DupValue(ctx, type.get()));
     if (to > from) {
-        charge(ctx, work::kCssByte * (to - from));
         sliced->m_bytes.assign(m_bytes.begin() + ptrdiff_t(from), m_bytes.begin() + ptrdiff_t(to));
     }
     return sliced;
 }
 
 Value Blob::text(JSContext* ctx) {
-    chargeScan(ctx, m_bytes.size());
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     decodeUTF8WithoutBOM(m_bytes.data(), m_bytes.size(), out);
     // File API reads with "UTF-8 decode", which drops a leading BOM.
@@ -141,7 +133,6 @@ Value Blob::text(JSContext* ctx) {
 }
 
 Value Blob::arrayBuffer(JSContext* ctx) {
-    charge(ctx, work::kCssByte * uint64_t(m_bytes.size()));
     Value buffer = Value::adopt(ctx, JS_NewArrayBufferCopy(ctx, m_bytes.data(), m_bytes.size()));
     if (JS_IsException(buffer.get())) {
         throw Thrown{};

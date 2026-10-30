@@ -127,6 +127,8 @@ extension ChatControllerImpl {
         switch action {
         case .spacer, .toggleInfoPanel:
             break
+        case .toggleSideList:
+            self.toggleSideList()
         case .cancelMessageSelection:
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         case .clearHistory:
@@ -432,7 +434,12 @@ extension ChatControllerImpl {
                         
                         if peer.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) == nil && !self.presentationInterfaceState.isNotAccessible {
                             if peer.id == self.context.account.peerId {
-                                if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                                // With the side list, it lists Saved Messages' chats; the profile has no Chats tab.
+                                var mode: PeerInfoControllerMode = .generic
+                                if case .savedMessages = self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) {
+                                    mode = .chatSideList
+                                }
+                                if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: mode, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
                                     self.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             } else {

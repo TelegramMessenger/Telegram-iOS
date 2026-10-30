@@ -27,13 +27,13 @@ bool firePromiseRejectionEvent(JSContext* ctx, const char* type, JSValueConst pr
     return dispatch(ctx, *event, HostState::of(ctx).window());
 }
 
-/// The tracker's identity test. A promise is an object, so it is its address: no script, no charge.
+/// The tracker's identity test. A promise is an object, so it is its address: no script.
 bool samePromise(JSValueConst a, JSValueConst b) {
     return JS_VALUE_GET_TAG(a) == JS_TAG_OBJECT && JS_VALUE_GET_TAG(b) == JS_TAG_OBJECT && JS_VALUE_GET_PTR(a) == JS_VALUE_GET_PTR(b);
 }
 
-/// The index of `promise`'s record in `list`, searched from the newest, or -1. Uncharged, as the tracker must be: every
-/// list it searches is capped (Ruling 13).
+/// The index of `promise`'s record in `list`, searched from the newest, or -1. Every list the tracker searches is
+/// capped (Ruling 13).
 template <class List>
 long indexOf(const List& list, JSValueConst promise) {
     for (size_t i = list.size(); i-- > 0;) {
@@ -114,7 +114,8 @@ void PromiseRejections::track(JSContext* ctx, JSValueConst promise, JSValueConst
         if (i < 0) {
             return;
         }
-        // HTML queues the rejectionhandled task here; queuing charges, so it waits for the next notify() (R1).
+        // HTML queues the rejectionhandled task here; the tracker queues nothing, so it waits for the next notify()
+        // (R1).
         if (m_handledLater.size() >= kMaxHandledLater) {
             this->release(m_outstanding[size_t(i)]);
         } else {
@@ -122,7 +123,7 @@ void PromiseRejections::track(JSContext* ctx, JSValueConst promise, JSValueConst
         }
         m_outstanding.erase(m_outstanding.begin() + i);
     } catch (const Thrown&) {
-        // Nothing here charges: a pending exception can only be the stop the interrupt already latched.
+        // Nothing here throws it: a pending exception can only be the stop the interrupt already latched.
     } catch (const std::bad_alloc&) {
         Runtime::from(ctx).stop(StopReason::Memory);
     } catch (...) {
@@ -136,7 +137,6 @@ void PromiseRejections::notify(JSContext* ctx) {
     // task is queued; on a throw, the records queued so far hold nothing, the rest still hold theirs, and the runtime is
     // stopped (the checkpoint latches), so the destructor's release is exact either way.
     for (Rejection& r : m_handledLater) {
-        charge(ctx, work::kNodeVisit);
         Value promise = Value::dup(ctx, r.promise.value);
         Value reason = Value::dup(ctx, r.reason.value);
         loop.queueTask(TaskSource::DOMManipulation, makeTask(ctx, [promise = std::move(promise), reason = std::move(reason)](JSContext* ctx) {
@@ -154,7 +154,6 @@ void PromiseRejections::notify(JSContext* ctx) {
     uint64_t batch = m_nextBatch++;
     bool moved = false;
     for (Rejection& r : m_aboutToBeNotified) {
-        charge(ctx, work::kNodeVisit);
         if (m_notifying.size() >= kMaxPending) {
             this->release(r);
             this->noteDropped(ctx);
@@ -180,7 +179,6 @@ void PromiseRejections::fireUnhandled(JSContext* ctx, uint64_t batch) {
     // stays at the front while its listeners run; the checkpoint after each listener can append a later batch behind
     // it (a deque keeps the front's place), which the next notification task takes.
     while (!m_notifying.empty() && m_notifying.front().batch <= batch) {
-        charge(ctx, work::kNodeVisit);
         if (m_notifying.front().handled) {
             this->release(m_notifying.front());
             m_notifying.pop_front();

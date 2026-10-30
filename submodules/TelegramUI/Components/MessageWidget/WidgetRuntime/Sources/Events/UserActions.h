@@ -46,9 +46,9 @@ public:
     void removeActive(JSContext* ctx, uint64_t press);
     /// Drops every reference (the host state's destructor, while the context lives).
     void clear();
-    /// A node left the main document (RenderTree's mutation listener): the hover and press inside it go. The render tree
-    /// rebuilds when its CSS uses the state.
-    void nodeRemoved(JSContext* ctx, Node& node);
+    /// A node left the main document (RenderTree's mutation listener): the hover and press inside it go, which changes
+    /// `oldParent`'s inclusive ancestors' state.
+    void nodeRemoved(JSContext* ctx, Node& node, Node& oldParent);
     /// While a label's activation clicks its control (so a click it made never activates a label again).
     bool labelActivating() const { return m_labelActivating; }
     struct LabelScope {

@@ -41,6 +41,15 @@ namespace litehtml
     };
     using transform_vector = std::vector<transform_function>;
 
+    // Telegram (VENDOR.md edit 72): transform-box, read for SVG elements. fill-box, and content-box, stroke-box and
+    // border-box (which an element without a CSS box maps to its fill and stroke boxes; the stroke is not added) are a
+    // shape's geometry box; view-box, the initial value, is the viewport's.
+    enum transform_box
+    {
+        transform_box_view_box,
+        transform_box_fill_box,
+    };
+
     struct transform_matrix
     {
         float a  = 1;

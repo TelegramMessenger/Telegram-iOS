@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
     ],
     visibility = [
         "//visibility:public",

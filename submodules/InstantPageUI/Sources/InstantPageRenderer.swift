@@ -2516,8 +2516,11 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
 
         // A plain band. No fill image, no bar, no corner radius: a code block reads as a highlighted
         // table row. Corners at a bubble edge are clipped by the rounded container the page sits in,
-        // exactly as they are for full-width media.
+        // exactly as they are for full-width media. A band with nothing around it rounds itself.
         self.backgroundColor = item.backgroundColor
+        if self.layer.cornerRadius != item.cornerRadius {
+            self.layer.cornerRadius = item.cornerRadius
+        }
 
         if let languageItem = item.languageItem {
             let inner = InstantPageV2TextItem(frame: languageItem.frame, textItem: languageItem)

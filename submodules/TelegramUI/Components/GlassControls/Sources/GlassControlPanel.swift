@@ -135,6 +135,11 @@ public final class GlassControlPanelComponent: Component {
         public var rightItemView: GlassControlGroupComponent.View? {
             return self.rightItemComponent?.view as? GlassControlGroupComponent.View
         }
+        
+        /// Glass added here merges with the panel's own while the two touch.
+        public var glassContentView: UIView {
+            return self.glassContainerView.contentView
+        }
 
         override public init(frame: CGRect) {
             self.glassContainerView = GlassBackgroundContainerView()

@@ -28,6 +28,14 @@ objc_library(
     visibility = ["//visibility:public"],
 )
 
+# The sources the work-unit scan reads (WidgetRuntime:WidgetRuntimeNoWorkUnitsScanTests).
+filegroup(
+    name = "ScanSources",
+    testonly = True,
+    srcs = glob(["Sources/*.mm", "Sources/*.h"]),
+    visibility = ["//submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:__pkg__"],
+)
+
 objc_library(
     name = "WidgetRuntimeIOSTestsLib",
     testonly = True,

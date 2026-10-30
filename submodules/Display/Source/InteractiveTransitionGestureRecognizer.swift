@@ -38,6 +38,24 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Horizonta
     }
 }
 
+/// A view whose own tap tolerates some drift (the chat title, a navigation bar's buttons): a navigation swipe that starts
+/// on it validates only past `interactiveTransitionMinimumMovement` points, not after the usual 2pt, so a tap that drifts
+/// a little sideways stays a tap, and a real swipe from it still navigates back.
+public protocol InteractiveTransitionGestureRecognizerTapTarget: AnyObject {
+    var interactiveTransitionMinimumMovement: CGFloat { get }
+}
+
+private func interactiveTransitionMinimumMovement(_ view: UIView) -> CGFloat? {
+    var current: UIView? = view
+    while let view = current {
+        if let target = view as? InteractiveTransitionGestureRecognizerTapTarget {
+            return target.interactiveTransitionMinimumMovement
+        }
+        current = view.superview
+    }
+    return nil
+}
+
 public struct InteractiveTransitionGestureRecognizerDirections: OptionSet {
     public var rawValue: Int
     
@@ -65,6 +83,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     private let allowedDirections: (CGPoint) -> InteractiveTransitionGestureRecognizerDirections
     
     private var validatedGesture = false
+    private var minimumCenterMovement: CGFloat = 2.0
     private var firstLocation: CGPoint = CGPoint()
     public private(set) var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
     /// The view whose restrictions (horizontal gestures, `disablesInteractiveTransitionGestureRecognizer…`) apply at a
@@ -85,6 +104,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         super.reset()
         
         self.validatedGesture = false
+        self.minimumCenterMovement = 2.0
         self.currentAllowedDirections = []
     }
 
@@ -107,6 +127,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         self.firstLocation = point
         
         if let target = self.gestureRestrictionsHitTest?(self.firstLocation, event) ?? self.view?.hitTest(self.firstLocation, with: event) {
+            self.minimumCenterMovement = max(2.0, interactiveTransitionMinimumMovement(target) ?? 2.0)
             let horizontalGestures = hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target))
             switch horizontalGestures {
             case .some, .strict:
@@ -199,7 +220,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                         }
                     } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                         self.state = .failed
-                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                    } else if absTranslationX > self.minimumCenterMovement && absTranslationY * 2.0 < absTranslationX {
                         self.validatedGesture = true
                         fireBegan = true
                     }

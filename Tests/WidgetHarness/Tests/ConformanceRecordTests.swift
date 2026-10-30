@@ -30,7 +30,7 @@ final class ConformanceRecordTests: XCTestCase {
         XCTAssertEqual(Set(file.keys), ["platform", "renderer", "engine", "framework", "commit", "policy", "features", "date", "runs"])
         XCTAssertEqual(file["platform"] as? String, "ios")
         XCTAssertEqual(file["renderer"] as? String, "telegram-native")
-        XCTAssertEqual(file["framework"] as? String, "v0.2.3")
+        XCTAssertEqual(file["framework"] as? String, "v0.4.0")
         XCTAssertEqual(file["policy"] as? String, "strict")
         XCTAssertEqual(file["features"] as? [String], ["webAnimations"])
         let runs = try XCTUnwrap(file["runs"] as? [[String: Any]])
@@ -56,6 +56,20 @@ final class ConformanceRecordTests: XCTestCase {
         return ConformanceTest(id: "auto/x", fileURL: URL(fileURLWithPath: "/x.html"), themes: ["light"], actions: actions, stages: [], host: host, expectedChecks: self.expected)
     }
 
+    /// widget-sandbox v0.3.0 (report.mjs): a test with `stops` passes its covers only when the host stopped it with a
+    /// reason that starts with `stops`; not stopped, or stopped for another reason, it fails them.
+    func testAStopTestPassesOnlyOnItsStop() {
+        let test = ConformanceTest(id: "auto/31-stop-text", fileURL: URL(fileURLWithPath: "/x.html"), themes: ["light"], actions: [], stages: [], host: [], expectedChecks: [ConformanceCheck(id: "limit.text-node", name: "stops")], stops: "Text limit exceeded", covers: ["limit.text-node"])
+        let key = "limit.text-node · stopped with \"Text limit exceeded…\""
+        var run = self.run("auto/31-stop-text", checks: [["limit.text-node", "stops", "pass", ""]])
+        run.dead = "Text limit exceeded: a text value of 40000 characters (max 32768)"
+        XCTAssertEqual(ConformanceBaseline.statuses(of: run, test: test), [key: "pass"])
+        run.dead = "CPU limit exceeded: more than 500 ms of continuous execution (event)"
+        XCTAssertEqual(ConformanceBaseline.statuses(of: run, test: test), [key: "fail"])
+        run.dead = nil
+        XCTAssertEqual(ConformanceBaseline.statuses(of: run, test: test), [key: "fail"])
+    }
+
     func testAnUnpublishedRunReportsEveryExpectedCheck() {
         let statuses = ConformanceBaseline.statuses(of: self.run("auto/x", checks: []), test: self.test())
         XCTAssertEqual(statuses, ["css.a · A": "missing", "css.b · B": "missing"])
@@ -76,7 +90,7 @@ final class ConformanceRecordTests: XCTestCase {
     /// checks it never published stay missing.
     func testADeadRunFailsWhatItPublished() {
         var run = self.run("auto/x", checks: [["css.a", "A", "pass", ""], ["css.c", "C", "pass", ""], ["harness", "step", "pass", ""]])
-        run.dead = "Work limit exceeded"
+        run.dead = "CPU limit exceeded"
         run.skippedActions = [0]
         let host = [ConformanceHostCheck(id: "h.once", name: "once", bridge: .init(method: "openLink", argument: "https://example.org/conformance/tap", count: 1))]
         let statuses = ConformanceBaseline.statuses(of: run, test: self.test(actions: [["hover": "h", "ids": ["css.c"]]], host: host))

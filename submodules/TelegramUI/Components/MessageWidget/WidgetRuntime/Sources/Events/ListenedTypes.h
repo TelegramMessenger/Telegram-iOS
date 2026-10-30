@@ -20,16 +20,16 @@ public:
     ListenedTypes(const ListenedTypes&) = delete;
     ListenedTypes& operator=(const ListenedTypes&) = delete;
 
-    /// Records `type` (charged; throws Thrown when the budget stops the widget). A type not seen before marks the set
-    /// changed.
+    /// Records `type`. A type not seen before marks the set changed. Throws std::bad_alloc at the memory limit, with
+    /// the set as it was.
     void note(JSContext* ctx, JSAtom type);
     bool contains(JSAtom type) const { return m_set.count(type) != 0; }
     /// Whether a type was noted since the last take.
     bool changed() const { return m_taken < m_order.size(); }
     /// The types noted since the previous call (PF8: a delta, not every type so far), in the order first added; empty
     /// when nothing new was noted. The set only grows, so the host accumulates what it is given: its work over a run is
-    /// proportional to the charged note() calls. Called by the host between steps, uncharged. Throws Aborted when a
-    /// type's text cannot be made (out of memory); nothing is taken then.
+    /// proportional to the note() calls. Called by the host between steps. Throws Aborted when a type's text cannot be
+    /// made (out of memory); nothing is taken then.
     std::vector<std::string> takeIfChanged(JSContext* ctx);
 
 private:

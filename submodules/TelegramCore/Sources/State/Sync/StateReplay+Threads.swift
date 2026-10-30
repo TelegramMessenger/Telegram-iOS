@@ -5,8 +5,8 @@ internal import TelegramApi
 import MtProtoKit
 import EncryptionProvider
 
-/// Message threads: thread read states, pinned forum topics, reset forum topics and a monoforum thread's paid-message
-/// exception.
+/// Message threads: thread read states, pinned forum topics, topic edits, reset forum topics and a monoforum thread's
+/// paid-message exception.
 extension ReplayContext {
     func applyUpdateReadThread(_ peerId: PeerId, _ threadId: Int64, _ readMaxId: Int32, _ isIncoming: Bool, _ mainChannelMessage: MessageId?) {
         let peerAndThreadId = PeerAndBoundThreadId(peerId: peerId, threadId: threadId)
@@ -106,6 +106,35 @@ extension ReplayContext {
         transaction.setPeerPinnedThreads(peerId: peerId, threadIds: currentThreadIds)
     }
     
+    /// A topic edit, from `updateEditForumTopic` or a `messageActionTopicEdit` service message, applied to the topic's
+    /// stored info. A topic with no stored info keeps none: an info is kept only while the topic has a stored message,
+    /// and its next fetch carries the edit.
+    func applyEditForumTopic(_ peerId: PeerId, _ threadId: Int64, _ components: [TelegramMediaActionType.ForumTopicEditComponent]) {
+        guard let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) else {
+            return
+        }
+        var data = initialData
+
+        for component in components {
+            switch component {
+            case let .title(title):
+                data.info = EngineMessageHistoryThread.Info(title: title, icon: data.info.icon, iconColor: data.info.iconColor)
+            case let .iconFileId(fileId):
+                data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
+            case let .isClosed(isClosed):
+                data.isClosed = isClosed
+            case let .isHidden(isHidden):
+                data.isHidden = isHidden
+            }
+        }
+
+        if data != initialData {
+            if let entry = StoredMessageHistoryThreadInfo(data) {
+                transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+            }
+        }
+    }
+
     func applyUpdatePinnedTopicOrder(_ peerId: PeerId, _ threadIds: [Int64]) {
         transaction.setPeerPinnedThreads(peerId: peerId, threadIds: threadIds)
     }

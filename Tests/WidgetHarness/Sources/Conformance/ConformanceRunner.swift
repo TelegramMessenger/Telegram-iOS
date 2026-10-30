@@ -206,6 +206,8 @@ public final class ConformanceRunner {
             run.errors.append("the widget runtime could not be created")
             return Active(test: test, run: run, instance: nil, view: nil, deadline: Date(), bot: bot, state: message.state)
         }
+        // widget-sandbox v0.4.0: the band its header gives, before the first layout, as a client passes its own.
+        instance.contentSafeArea = test.safeArea
         let view = instance.view
         // In the window: a widget is visible only there, and every auto widget's harness waits for its frames.
         self.host?.insertSubview(view, at: 0)
@@ -252,14 +254,14 @@ public final class ConformanceRunner {
     }
 
     /// Whether the run is over: it published `done` (or `awaiting` with actions to perform), stopped, failed to load, or
-    /// ran out of time.
+    /// ran out of time. A test that must be stopped (`stops`) waits for the stop, whatever it published (CLIENTS.md step 4).
     private func poll(_ active: Active, width: CGFloat) -> Bool {
         guard let instance = active.instance, let view = active.view, active.run.loaded, !active.test.loadOnly else {
             return true
         }
         active.size = self.layout(instance, view: view, width: width)
         if self.read(instance, into: &active.run) {
-            if active.run.status == "done" {
+            if active.run.status == "done" && active.test.stops == nil {
                 return true
             }
             if active.run.status == "awaiting" && !active.test.actions.isEmpty && !active.performed {

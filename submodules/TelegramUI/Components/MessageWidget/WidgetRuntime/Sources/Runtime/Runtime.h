@@ -1,6 +1,7 @@
 // One widget's QuickJS runtime and context, the classes of its interface table, and its interface objects, made on
-// first use (quickjs-ng changes 3 and 4). It also owns the widget's work limit and its stop latch, and counts the
-// calls into JS and the native frames on the stack (M1b plan, Global Constraints "Stops are final" and Ruling 6).
+// first use (quickjs-ng changes 3 and 4). It also owns the widget's CPU slices, its counted caps and its stop latch,
+// and counts the calls into JS and the native frames on the stack (M1b plan, Global Constraints "Stops are final" and
+// Ruling 6).
 #pragma once
 
 #include <array>
@@ -14,6 +15,8 @@
 
 #include "quickjs.h"
 #include "Sources/Runtime/Host.h"
+#include "Sources/Runtime/Limits.h"
+#include "Sources/Runtime/CpuLimits.h"
 #include "Sources/Support/Bindings.h"
 #include "Sources/Support/Callbacks.h"
 
@@ -23,9 +26,11 @@ namespace wr {
 /// the Window and the event loop). Both are destroyed before the context, the host slot first.
 enum class ExtensionSlot : uint8_t { DOM = 0, Host = 1, Count = 2 };
 
-/// Why a runtime stopped for good. The first reason latched wins. LayoutQuery: the layout queries of one task did more
-/// than their own budget (sdk-v1 §2, "Layout query limit exceeded"; work::kLayoutQueryBudget).
-enum class StopReason : uint8_t { None, Budget, Memory, Internal, LayoutQuery };
+/// Why a runtime stopped for good. The first reason latched wins. LayoutQuery: the layout queries of one task took
+/// more than 100 ms (widget-sandbox's "Layout query limit exceeded"). Limit: a counted cap of the strict policy
+/// (widget-sandbox v0.3.0, "Strict limits from the start"). Cpu: a task ran past its slice on the CPU clock, or past the
+/// wall-clock backstop ("CPU limit exceeded"). Each with its reason (`stopDetail`).
+enum class StopReason : uint8_t { None, Memory, Internal, LayoutQuery, Limit, Cpu };
 
 /// State a layer above the runtime keeps per runtime. Destroyed before the context.
 class RuntimeExtension {
@@ -68,6 +73,12 @@ public:
         /// The embedder's clocks, log and loader. Not owned; it outlives the runtime. nullptr gives a host whose clocks
         /// read zero, that logs nothing and refuses every script source.
         Host* host = nullptr;
+        /// The counted caps (widget-sandbox v0.3.0): strict, or compat for the stress kit's measuring runs.
+        Limits limits = Limits::strict();
+        /// widget-sandbox's runtime limits, measured on `clock`.
+        CpuLimits cpu;
+        /// The widget thread's CPU clock and the backstop's wall clock (tests pass a fake).
+        CpuClock clock = CpuClock::thread();
     };
 
     static std::unique_ptr<Runtime> create(const Options& options);
@@ -114,8 +125,8 @@ public:
     /// Whether iface or an ancestor has [LegacyUnforgeable] members.
     bool hasUnforgeableMembers(uint16_t iface) const { return m_hasUnforgeable[iface]; }
     /// Defines the [LegacyUnforgeable] members of iface and its ancestors as own properties of `object`. One function
-    /// per member serves every instance (WebIDL: the same getter for every object). Runs for every new instance, so
-    /// it charges its work. Throws Thrown.
+    /// per member serves every instance (WebIDL: the same getter for every object). Runs for every new instance.
+    /// Throws Thrown.
     void defineUnforgeableMembers(JSValueConst object, uint16_t iface);
 
     JSAtom reflectedAtom(uint16_t id) const { return m_reflectedAtoms[id]; }
@@ -126,31 +137,17 @@ public:
     void setFixedGlobal(const char* name, JSValue value);
 
     /// Evaluates a global script for a test: its completion value as a string, or "Name: message" with *threw set. It
-    /// counts as a call into JS: the cleanup hook runs after it, and an Aborted the hook throws (a checkpoint whose work
-    /// stopped the widget) propagates. When the call latched the runtime (the budget, out of memory, a native's
-    /// failure), it throws Aborted, as every call into JS does; it latches nothing of its own, so an uncatchable error
-    /// that latched nothing reads back as its message ("InternalError: interrupted"). On a runtime already stopped it
-    /// evaluates nothing and answers that same text with *threw set.
+    /// counts as a call into JS: the cleanup hook runs after it, and an Aborted the hook throws (a checkpoint whose
+    /// work stopped the widget) propagates. When the call latched the runtime (the CPU slice, a counted cap, out of
+    /// memory, a native's failure), it throws Aborted, as every call into JS does; it latches nothing of its own, so an
+    /// uncatchable error that latched nothing reads back as its message ("InternalError: interrupted"). On a runtime
+    /// already stopped it evaluates nothing and answers that same text with *threw set.
     std::string evaluateToString(std::string_view code, const char* filename, bool* threw);
 
     void setExtension(ExtensionSlot slot, std::unique_ptr<RuntimeExtension> extension) { m_extensions[size_t(slot)] = std::move(extension); }
     RuntimeExtension* extension(ExtensionSlot slot) const { return m_extensions[size_t(slot)].get(); }
 
-    // The work limit and the stop latch (Global Constraints, "Stops are final").
-    /// The work counter (JS_GetWorkUnits) value at which the widget stops. UINT64_MAX: none.
-    /// A new limit starts a new step (the host sets one before each), so it starts the layout-query count again too.
-    void setWorkLimit(uint64_t absoluteUnits) {
-        m_workLimit = absoluteUnits;
-        m_layoutQueryUnits = 0;
-    }
-    uint64_t workLimit() const { return m_workLimit; }
-    /// The work this step's layout queries did (Sources/DOM/Geometry.cpp counts it against work::kLayoutQueryBudget).
-    uint64_t layoutQueryUnits() const { return m_layoutQueryUnits; }
-    void addLayoutQueryUnits(uint64_t units) { m_layoutQueryUnits += units; }
-    /// Calls `observer` with the work counter (JS_GetWorkUnits) from the interrupt poll, whenever at least `everyUnits`
-    /// have passed since its last call (M1d plan, Task 1): the host feeds main's wait meter from it while a step runs.
-    /// It never throws: an exception from `observer` is dropped. An empty function removes it.
-    void setWorkObserver(std::function<void(uint64_t total)> observer, uint64_t everyUnits);
+    // The stop latch (Global Constraints, "Stops are final").
     /// Latches `reason` unless a stop is latched already, and with the first one stops QuickJS's runtime (quickjs-ng
     /// change 10): from then on no exception can be caught, whatever was thrown (bare null included). Allocates
     /// nothing: the memory-limit hook calls it inside QuickJS's allocator, and the interrupt handler inside a poll.
@@ -161,18 +158,135 @@ public:
         }
     }
     StopReason stopReason() const { return m_stopReason; }
+    /// The counted caps this runtime was made with (Options::limits).
+    const Limits& limits() const { return m_limits; }
+    /// Latches Limit with the reason the host stops the widget with, upstream's words ("Text limit exceeded: a text value
+    /// of 40000 characters (max 32768)"), unless a stop is latched already. Allocates, so never from QuickJS's allocator;
+    /// the caller throws Aborted.
+    void stopForLimit(std::string detail) {
+        if (m_stopReason == StopReason::None) {
+            m_stopDetail = std::move(detail);
+            this->stop(StopReason::Limit);
+        }
+    }
+    /// The reason of a Limit, Cpu or LayoutQuery stop (upstream's words); empty for any other.
+    const std::string& stopDetail() const { return m_stopDetail; }
+
+    // widget-sandbox's runtime limits on the CPU clock (the CPU-clock limits plan, Task 2).
+    const CpuLimits& cpuLimits() const { return m_cpu; }
+    /// The clocks the slices read (Options::clock).
+    const CpuClock& cpuClock() const { return m_clock; }
+    /// Tests only, between steps: other clocks from now on (WRSession's setCpuClockForTesting).
+    void setCpuClock(CpuClock clock) { m_clock = std::move(clock); }
+    /// A task of `kind` starts with `sliceMs` of CPU (CpuBudget's decision). QuickJS's interrupt handler reads the
+    /// clocks at every call: past the slice, or past the wall-clock backstop max(10 x slice, 5 s), the widget stops (Cpu,
+    /// "CPU limit exceeded: …"); past 100 ms of the task's layout queries, it stops (LayoutQuery). `where` names the
+    /// task in the message (its kind, or `script`).
+    void beginSlice(std::string_view kind, double sliceMs, std::string_view where = {});
+    /// What the JS quota has left now, for a CPU stop's message, which upstream computes at the kill (the event loop's,
+    /// whose budget it is; without one, the whole quota).
+    void setQuotaLeft(std::function<double()> quotaLeft) { m_quotaLeft = std::move(quotaLeft); }
+    struct SliceUsage {
+        /// The task's own CPU time, our renderer's taken out.
+        double jsMs = 0;
+        /// Our renderer's CPU time within the task (every outermost RenderScope).
+        double renderMs = 0;
+        /// The part of renderMs its layout queries took.
+        double queryMs = 0;
+    };
+    /// Ends the slice begun last: no deadline until the next.
+    SliceUsage endSlice();
+    bool inSlice() const { return m_sliceActive; }
+    /// Whether the slice's layout queries passed their 100 ms (twidget::CpuBudget::kQueryBudgetMs).
+    bool queryBudgetSpent() const;
+    /// Latches LayoutQuery with upstream's message (the caller throws Aborted).
+    void stopForLayoutQueries();
+    /// Latches Cpu with upstream's cpuKillAfterMs message: the widget was throttled for `throttledForMs` on end.
+    void stopForThrottling(double throttledForMs);
+    /// Our renderer's work (a flush, a rebuild): measured on the CPU clock and kept out of the slice, both deadlines
+    /// moved on by its time, as upstream moves its deadline by the time a sync query waits ("time spent blocked is not
+    /// widget CPU time"). Only the outermost scope measures; `query` makes its time the slice's query time too.
+    class RenderScope {
+    public:
+        RenderScope(Runtime& runtime, bool query);
+        ~RenderScope();
+        RenderScope(const RenderScope&) = delete;
+        RenderScope& operator=(const RenderScope&) = delete;
+
+    private:
+        Runtime& m_runtime;
+        bool m_outermost;
+    };
+    /// Script our renderer runs inside a render scope (the style-change step settles CSS animations' promises, whose
+    /// `then` a widget may define): while it lives the time is the widget's again, checked against the slice and
+    /// counted as JS, as in a step; the render scope's time so far is booked first and its clock restarts after. A
+    /// no-op outside a render scope. (The final review's C1.) Outside a slice it checks nothing; the render scopes with
+    /// no slice run no widget script: the boot's first flush comes before any script, and HostState::flushRender
+    /// (WRSession's, between steps) finds the journal clean, every step and host change having flushed.
+    class ScriptScope {
+    public:
+        explicit ScriptScope(Runtime& runtime);
+        ~ScriptScope();
+        ScriptScope(const ScriptScope&) = delete;
+        ScriptScope& operator=(const ScriptScope&) = delete;
+
+    private:
+        Runtime& m_runtime;
+        int m_renderDepth;
+        bool m_renderQuery;
+    };
+    /// widget-sandbox v0.3.0's operations of one batch (Limits::opsPerBatch, the plan's R-ops): what upstream's shim
+    /// would send for the DOM's changes (Node::insertChildAt, removeChildAt, removeAllChildren, an attribute or a text
+    /// change of an inserted node). A task, a step and a layout query's flush start a batch, as upstream's shim flushes
+    /// one per task and before a query.
+    uint64_t batchOps() const { return m_batchOps; }
+    void startBatch() {
+        m_batchOps = 0;
+        m_batchSerial++;
+    }
+    /// Which batch is current: a canvas's command count is per batch (Limits::canvasCommands).
+    uint64_t batchSerial() const { return m_batchSerial; }
+    /// Adds `count` operations to the batch. Under strict, past Limits::opsPerBatch it stops the widget ("Ops limit
+    /// exceeded") and throws Aborted; once stopped it only counts. Inside a QuietOps scope it counts nothing.
+    void addOps(uint64_t count);
+    /// While alive, the DOM's changes count no operations: a change the caller counted itself (replaceAllChildren's sole
+    /// text, one `data` operation upstream) is made of removals and insertions that would count again.
+    class QuietOps {
+    public:
+        explicit QuietOps(Runtime& runtime) : m_runtime(runtime) { m_runtime.m_quietOps++; }
+        ~QuietOps() { m_runtime.m_quietOps--; }
+        QuietOps(const QuietOps&) = delete;
+        QuietOps& operator=(const QuietOps&) = delete;
+
+    private:
+        Runtime& m_runtime;
+    };
+
+    // Statistics for the stress kit's runner (widget-sandbox v0.3.0, packages/stress): never read by a decision.
+    /// Operations since the runtime began, and the largest batch.
+    uint64_t totalOps() const { return m_totalOps; }
+    uint64_t maxBatchOps() const { return m_maxBatchOps; }
+    /// Canvas commands since the runtime began (each one CanvasRenderingContext2D counts toward Limits::canvasCommands):
+    /// the main-thread window's model charges them (twidget::CpuBudget::opsCostMs).
+    uint64_t totalCanvasCommands() const { return m_canvasCommands; }
+    void noteCanvasCommand() { m_canvasCommands++; }
+    /// Layout queries answered (each a flush for a query).
+    uint64_t layoutQueries() const { return m_layoutQueries; }
+    void noteLayoutQuery() { m_layoutQueries++; }
+    /// Milliseconds the render flushes took (RenderTree::flush: style, layout, the layer tree), on the host's clock.
+    double flushMilliseconds() const { return m_flushMilliseconds; }
+    void addFlushMilliseconds(double ms) { m_flushMilliseconds += ms; }
     /// The one public fatal-error check, for an exception that reached C++ other than through callFunction (a job's
     /// failure, a failed JS_Eval or JS_ToCString). When the runtime has stopped, or `exception` is QuickJS's out-of-memory
-    /// error, or it is uncatchable, latches the runtime (Memory for out of memory; for an uncatchable error Budget when
-    /// the work limit is spent, else Internal) and throws Aborted. Otherwise returns: the exception is catchable and the
-    /// caller reports it. Borrows `exception`.
+    /// error, or it is uncatchable, latches the runtime (Memory for out of memory, else Internal) and throws Aborted.
+    /// Otherwise returns: the exception is catchable and the caller reports it. Borrows `exception`.
     void throwIfFatal(JSContext* ctx, JSValueConst exception);
     /// Throws Aborted when the runtime stopped. (Task 5 internal, like abortWithPendingException, enterScript and
     /// leaveScript: later tasks use throwIfFatal.)
     void throwIfStopped() const;
     /// Takes the pending exception, latches the runtime as throwIfFatal classifies it (unless already stopped) and
-    /// throws Aborted. For a pending exception that must stop the widget (a failed charge): one that could be caught
-    /// latches Internal.
+    /// throws Aborted. For a pending exception that must stop the widget (abortForCaughtException's Thrown): one that
+    /// could be caught latches Internal.
     [[noreturn]] void abortWithPendingException(JSContext* ctx);
     /// Inside a catch block, at a script boundary or on a path whose contract is "throws only Aborted" (Task 9's report
     /// and microtask checkpoint, through wr::abortForCaughtException): latches what the C++ exception being handled
@@ -298,8 +412,8 @@ private:
     /// QuickJS's module normalize hook, with no loader: there is no module loader (M1b), so every specifier of every
     /// import (static, or import()) is refused here, and counted. QuickJS calls it first
     /// (js_host_resolve_imported_module), before it looks the name up among the modules it keeps loaded. That lookup
-    /// would find an earlier module script by its URL (fork change 11 charges its walk). Throws QuickJS's own message,
-    /// reading at most 200 bytes of the name; allocates only that error, runs no script and opens nothing.
+    /// would find an earlier module script by its URL. Throws QuickJS's own message, reading at most 200 bytes of the
+    /// name; allocates only that error, runs no script and opens nothing.
     static char* refuseModule(JSContext* ctx, const char* baseName, const char* name, void* opaque) noexcept;
     /// QuickJS's wall clock (Date). noexcept: an embedder's throw from Host::wallClockNow terminates instead of
     /// crossing into QuickJS.
@@ -311,8 +425,8 @@ private:
     /// The one classification of an exception that reached C++ (every path that latches on one asks it): None when it
     /// can be caught and the runtime runs; otherwise the reason the runtime stops: the one already latched (an
     /// allocation refused at the memory limit latched Memory, whatever it threw), Memory for QuickJS's out of memory,
-    /// and for an uncatchable error Budget when the work limit is spent, else Internal. Bare null is never Memory by
-    /// itself: a script can throw it. Borrows `exception`.
+    /// and Internal for any other uncatchable error. Bare null is never Memory by itself: a script can throw it.
+    /// Borrows `exception`.
     StopReason classifyFatal(JSContext* ctx, JSValueConst exception) const;
     /// The cleanup hook, when no call into JS is on the stack, none is running and the runtime has not stopped. A C++
     /// failure inside it latches and becomes Aborted (abortForCaughtException).
@@ -351,12 +465,38 @@ private:
     /// Two slots per member (method or getter; setter), JS_UNDEFINED until made.
     std::vector<JSValue> m_memberFunctions;
     std::vector<LazyGlobal> m_lazyGlobals;
-    uint64_t m_workLimit = UINT64_MAX;
-    uint64_t m_layoutQueryUnits = 0;
-    std::function<void(uint64_t)> m_workObserver;
-    uint64_t m_workObserverEvery = 0;
-    uint64_t m_workObserverLast = 0;
+    CpuLimits m_cpu;
+    CpuClock m_clock;
+    bool m_sliceActive = false;
+    std::string m_sliceKind;
+    std::string m_sliceWhere;
+    double m_sliceMs = 0;
+    std::function<double()> m_quotaLeft;
+    double m_sliceCpuStart = 0;
+    double m_cpuDeadline = 0;
+    double m_wallDeadline = 0;
+    double m_renderMs = 0;
+    double m_queryMs = 0;
+    int m_renderDepth = 0;
+    /// The outermost render scope's: whether it is a layout query's, and where its clocks were last read.
+    bool m_renderQuery = false;
+    double m_renderCpuStart = 0;
+    double m_renderWallStart = 0;
+    /// Books the render time since the clocks were last read (deadlines, render and query time) and restarts them.
+    void foldRenderTime();
+    /// Latches Cpu with upstream's "CPU limit exceeded" message.
+    void stopForCpu();
     StopReason m_stopReason = StopReason::None;
+    std::string m_stopDetail;
+    Limits m_limits;
+    uint64_t m_batchOps = 0;
+    uint64_t m_batchSerial = 1;  // 0 is "never" in the stamps compared with it (Node's)
+    uint32_t m_quietOps = 0;
+    uint64_t m_totalOps = 0;
+    uint64_t m_maxBatchOps = 0;
+    uint64_t m_layoutQueries = 0;
+    uint64_t m_canvasCommands = 0;
+    double m_flushMilliseconds = 0;
     int m_scriptDepth = 0;
     bool m_inCleanup = false;
     friend class NativeFrame;

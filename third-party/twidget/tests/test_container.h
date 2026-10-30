@@ -21,6 +21,8 @@ public:
     std::vector<DrawCall> calls;
     std::vector<litehtml::font_description> fonts;
     int width = 300;
+    int scheme = 0;    // media_features::color_scheme
+    int reduced = 0;   // media_features::reduced_motion
 
     litehtml::uint_ptr create_font(const litehtml::font_description& descr, const litehtml::document*, litehtml::font_metrics* fm) override {
         fonts.push_back(descr);
@@ -76,6 +78,8 @@ public:
         m.color_index = 256;
         m.monochrome = 0;
         m.resolution = 96;
+        m.color_scheme = scheme;
+        m.reduced_motion = reduced;
     }
     void get_language(std::string& language, std::string& culture) const override { language = "en"; culture.clear(); }
 };

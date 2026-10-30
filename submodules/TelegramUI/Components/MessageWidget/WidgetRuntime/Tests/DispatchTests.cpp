@@ -1,5 +1,5 @@
 // DOM's dispatch (M1b plan, Task 7): the path, the phases, listener-list changes during dispatch (Review Focus 1),
-// propagation and cancelation, handleEvent objects, reported exceptions, budget stops, trusted events and the
+// propagation and cancelation, handleEvent objects, reported exceptions, CPU stops, trusted events and the
 // listened-types registry.
 #include <string>
 #include <vector>
@@ -154,12 +154,13 @@ WR_TEST(testComposedPathDuringAndAfterDispatch) {
 }
 
 WR_TEST(testBudgetStopEndsDispatch) {
+    wr_test::ScopedProductSlices slices;
     wr_test::TestHost host;
     {
         wr_test::DOMEnv env(host);
         env.eval("var later = false; document.body.addEventListener('k', () => { for (;;) {} }); document.body.addEventListener('k', () => { later = true })");
         wr::Runtime& runtime = env.runtime();
-        runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 200000);
+        wr_test::stopAfter(runtime);
         bool aborted = false;
         try {
             runtime.runScript("try { document.body.dispatchEvent(new Event('k')) } catch (e) { globalThis.caught = true }", "k.js", false);
@@ -167,7 +168,7 @@ WR_TEST(testBudgetStopEndsDispatch) {
             aborted = true;
         }
         CHECK(aborted);
-        CHECK(runtime.stopReason() == wr::StopReason::Budget);
+        CHECK(runtime.stopReason() == wr::StopReason::Cpu);
         CHECK(JS_ToBool(env.ctx(), global(env.ctx(), "later").get()) == 0);
         CHECK(JS_IsUndefined(global(env.ctx(), "caught").get()));
     }
@@ -181,7 +182,7 @@ WR_TEST(testBudgetStopEndsDispatch) {
     event->initialize(ctx, animationEnd.get(), true, true);
     event->setIsTrusted(true);
     wr::Runtime& runtime = env.runtime();
-    runtime.setWorkLimit(JS_GetWorkUnits(runtime.jsRuntime()) + 200000);
+    wr_test::stopAfter(runtime);
     bool aborted = false;
     try {
         wr::dispatch(ctx, *event, *wr::globalDocument(ctx).body(ctx));

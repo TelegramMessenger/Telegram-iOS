@@ -69,17 +69,14 @@ Ref<DocumentFragment> parseMarkup(JSContext* ctx, Element& context, const String
     if (!context.nodeDocument().isHTMLDocument()) {
         throw DOMError{"NotSupportedError", "Markup can be parsed only for an element of an HTML document: there is no XML parser."};
     }
-    // The length cap (the divergence noted at the top), on the String's length in O(1), before the precharge and the
-    // UTF-8 copy, so markup over the cap is refused without converting megabytes of it.
+    // The length cap (the divergence noted at the top), on the String's length in O(1), before the UTF-8 copy, so
+    // markup over the cap is refused without converting megabytes of it.
     if (markup.length() > kMaxScriptMarkupUnits) {
         throw DOMError{"NotSupportedError", "The markup is too long to parse."};
     }
-    // Charged before the UTF-8 copy is made, for the bytes it will have at least (one per unit), as selectors are:
-    // a long string's conversion is otherwise done before its first charge. parseFragment charges the rest.
-    charge(ctx, uint64_t(markup.length()) * work::kParseByte);
     // utf8ForParse, not utf8: a lone surrogate becomes one U+FFFD rather than WTF-8 (which gumbo would reject byte by
-    // byte into three). Same byte count, so the precharge is unaffected.
-    return parseFragment(ctx, context, markup.utf8ForParse(), {}, markup.length());
+    // byte into three).
+    return parseFragment(ctx, context, markup.utf8ForParse());
 }
 
 bool isTemplate(JSContext* ctx, const Element& element) {

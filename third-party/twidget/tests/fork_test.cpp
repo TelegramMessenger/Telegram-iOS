@@ -54,14 +54,6 @@ static int text_pieces(const litehtml::element::ptr& el) {
     return count;
 }
 
-// `html` as LHDocument builds it: patched in place from `previous` where litehtml can, else built afresh.
-static litehtml::document::ptr patched(litehtml_test::TestContainer& c, litehtml::document::ptr previous, const std::string& html) {
-    if (!previous || !previous->update_from_string(html, nullptr))
-        previous = litehtml::document::createUpdatableFromString(html, &c, litehtml::master_css);
-    previous->render(litehtml::pixel_t(300.0f));
-    return previous;
-}
-
 static bool finite(const litehtml::transform_matrix& m) {
     return std::isfinite(m.a) && std::isfinite(m.b) && std::isfinite(m.c) && std::isfinite(m.d) && std::isfinite(m.tx) &&
            std::isfinite(m.ty);
@@ -200,81 +192,6 @@ int main() {
         doc = litehtml_test::layout(c, "<body><p>one two</p><p>three</p></body>");
         CHECK(text_pieces(doc->root()) == 4 && doc->text_elements() == 4);
 
-        // A patch that grows a text run, and one that adds a subtree, stay under the cap (LHDocument builds afresh
-        // when the patch is refused, as `patched` does).
-        auto updatable = patched(c, nullptr, "<body><p id=t>a b</p></body>");
-        updatable = patched(c, updatable, "<body><p id=t>" + words + "</p></body>");
-        pieces = text_pieces(updatable->root());
-        if (pieces > cap) std::printf("  patched text run: %d pieces\n", pieces);
-        CHECK(pieces <= cap);
-        updatable = patched(c, nullptr, "<body><p id=t>a b</p></body>");
-        // A structure patch past the cap is refused (LHDocument then builds afresh, under the cap).
-        CHECK(!updatable->update_from_string("<body><p id=t>a b</p><div>" + words + "</div></body>", nullptr));
-        updatable = patched(c, updatable, "<body><p id=t>a b</p><div>" + words + "</div></body>");
-        pieces = text_pieces(updatable->root());
-        if (pieces > cap) std::printf("  patched subtree: %d pieces\n", pieces);
-        CHECK(pieces <= cap);
-
-        // A structure patch under the cap keeps its whole text: the replacement pieces are made while the ones they
-        // replace are still alive, and a ~6,000-piece paragraph came out with 4,001 pieces.
-        {
-            std::string first = "u", second = "v";
-            for (int i = 1; i < 3000; i++) {
-                first += " u";
-                second += " v";
-            }
-            auto structured = patched(c, nullptr, "<body><p id=t>" + first + "</p></body>");
-            CHECK(text_pieces(structured->root()) == 5999);
-            const bool reused = structured->update_from_string("<body><p id=t>" + second + "</p><div>x</div></body>", nullptr);
-            if (!reused)
-                structured = litehtml::document::createUpdatableFromString("<body><p id=t>" + second + "</p><div>x</div></body>", &c, litehtml::master_css);
-            structured->render(litehtml::pixel_t(300.0f));
-            pieces = text_pieces(structured->root());
-            if (pieces != 6000 || !reused) std::printf("  structure patch (reused %d): %d pieces, want 6000\n", int(reused), pieces);
-            CHECK(reused && pieces == 6000);
-        }
-
-        // Pieces a patch replaces stop counting. A few pieces outlive their tree in litehtml's caches, so the count is
-        // the tree's plus a constant few (1 here, 7 below, measured); a count that only grew would move that difference,
-        // and would refuse the patches (cutting the text) once ~10,000 pieces had been made. 40 patches of a text run
-        // make ~240,000 pieces in all.
-        const auto steady = [&](const litehtml::document::ptr& d, int want, int& slack, const char* what, int round) {
-            const int tree = text_pieces(d->root());
-            const int extra = d->text_elements() - tree;
-            if (tree != want || extra < 0 || extra > 16 || (slack >= 0 && extra != slack)) {
-                std::printf("  %s %d: %d pieces (count %d), want %d\n", what, round, tree, d->text_elements(), want);
-                return false;
-            }
-            slack = extra;
-            return true;
-        };
-        updatable = patched(c, nullptr, "<body><p id=t>a</p></body>");
-        bool whole = true;
-        int slack = -1;
-        for (int round = 0; round < 40 && whole; round++) {
-            const int count = 3000 + round;
-            std::string run = "w";
-            for (int i = 1; i < count; i++) run += " w";
-            updatable = patched(c, updatable, "<body><p id=t>" + run + "</p></body>");
-            whole = steady(updatable, 2 * count - 1, slack, "patch", round);
-        }
-        CHECK(whole);
-
-        // The same for ::before content, which a restyle makes again: 400 elements toggling a class in place (a
-        // 3-piece and a 5-piece content) make ~48,000 pieces over 30 patches.
-        const auto page = [](bool on) {
-            std::string html = "<html><head><style>b::before{content:\"p q\"}b.on::before{content:\"r s t\"}</style></head><body><div>";
-            for (int i = 0; i < 400; i++) html += on ? "<b class=on></b>" : "<b class=off></b>";
-            return html + "</div></body></html>";
-        };
-        updatable = patched(c, nullptr, page(false));
-        slack = -1;
-        whole = steady(updatable, 1200, slack, "restyle", -1);
-        for (int round = 0; round < 30 && whole; round++) {
-            updatable = patched(c, updatable, page(round % 2 == 0));
-            whole = steady(updatable, round % 2 == 0 ? 2000 : 1200, slack, "restyle", round);
-        }
-        CHECK(whole);
     }
 
     // CSS-wide keywords (VENDOR.md edit 33): initial is the property's initial value, unset inherits an inherited
@@ -502,8 +419,7 @@ int main() {
             CHECK(a && std::abs(float(a->get_placement().width) - 90.0f) < 0.5f);
             CHECK(b && std::abs(float(b->get_placement().width) - 60.0f) < 0.5f && std::abs(float(b->get_placement().x) - 60.0f) < 0.5f);
             CHECK(a && a->css().get_width().is_calc() && a->css().get_width().units() == litehtml::css_units_percentage);
-            auto first = patched(c, nullptr, page);
-            auto second = patched(c, first, std::string(page).replace(page.find("50% - 10px"), 10, "25% + 10px"));
+            auto second = litehtml_test::layout(c, std::string(page).replace(page.find("50% - 10px"), 10, "25% + 10px"), 300);
             const auto a2 = by_id(second, "a");
             CHECK(a2 && std::abs(float(a2->get_placement().width) - 60.0f) < 0.5f);
         };

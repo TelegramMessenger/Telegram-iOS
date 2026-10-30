@@ -187,34 +187,57 @@ final class NewsFeedSupportTests: XCTestCase {
         return configuration
     }
 
+    // The app-config rules, as they apply once the feed API is compiled in.
+    private func isEnabled(_ configuration: AppConfiguration) -> Bool {
+        return isNewsFeedEnabled(appConfiguration: configuration, apiIsAvailable: true)
+    }
+
+    private func isServerAvailable(_ configuration: AppConfiguration) -> Bool {
+        return isNewsFeedServerAvailable(appConfiguration: configuration, apiIsAvailable: true)
+    }
+
     func testServerFeedIsForDevOnly() {
-        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: AppConfiguration.defaultValue))
-        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: nil)))
-        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 0.0)))
-        XCTAssertTrue(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0)))
+        XCTAssertFalse(self.isServerAvailable(AppConfiguration.defaultValue))
+        XCTAssertFalse(self.isServerAvailable(self.configuration(nil, dev: nil)))
+        XCTAssertFalse(self.isServerAvailable(self.configuration(nil, dev: 0.0)))
+        XCTAssertTrue(self.isServerAvailable(self.configuration(nil, dev: 1.0)))
         // The kill switch alone does not enable it.
-        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(.bool(true), dev: nil)))
+        XCTAssertFalse(self.isServerAvailable(self.configuration(.bool(true), dev: nil)))
     }
 
     func testNewsIsForDevOrTheSwitch() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: AppConfiguration.defaultValue))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: nil)))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0)))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(false), dev: 1.0)))
+        XCTAssertFalse(self.isEnabled(AppConfiguration.defaultValue))
+        XCTAssertFalse(self.isEnabled(self.configuration(nil, dev: nil)))
+        XCTAssertTrue(self.isEnabled(self.configuration(nil, dev: 1.0)))
+        XCTAssertTrue(self.isEnabled(self.configuration(.bool(false), dev: 1.0)))
     }
 
     func testSwitchFollowsABool() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(false), dev: nil)))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil)))
+        XCTAssertFalse(self.isEnabled(self.configuration(.bool(false), dev: nil)))
+        XCTAssertTrue(self.isEnabled(self.configuration(.bool(true), dev: nil)))
         // For dev accounts it is the server feed's kill switch.
-        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(.bool(false), dev: 1.0)))
+        XCTAssertFalse(self.isServerAvailable(self.configuration(.bool(false), dev: 1.0)))
     }
 
     func testSwitchParsesNumbersAndIgnoresOtherTypes() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.number(0.0), dev: nil)))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.number(1.0), dev: nil)))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.string("true"), dev: nil)))
-        XCTAssertTrue(isNewsFeedServerAvailable(appConfiguration: self.configuration(.string("false"), dev: 1.0)))
+        XCTAssertFalse(self.isEnabled(self.configuration(.number(0.0), dev: nil)))
+        XCTAssertTrue(self.isEnabled(self.configuration(.number(1.0), dev: nil)))
+        XCTAssertFalse(self.isEnabled(self.configuration(.string("true"), dev: nil)))
+        XCTAssertTrue(self.isServerAvailable(self.configuration(.string("false"), dev: 1.0)))
+    }
+
+    // Layer 233 as served has no feed API: News stays off, the device-built Added feed included, whatever the app
+    // config says.
+    func testNewsIsOffWhileTheFeedApiIsParked() {
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0), apiIsAvailable: false))
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil), apiIsAvailable: false))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0), apiIsAvailable: false))
+    }
+
+    // Call sites pass no argument: the gates follow the build's feed API.
+    func testTheGatesFollowTheBuildsFeedApi() {
+        XCTAssertEqual(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: 1.0)), newsFeedApiIsAvailable)
+        XCTAssertEqual(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0)), newsFeedApiIsAvailable)
     }
 
     // MARK: preview text

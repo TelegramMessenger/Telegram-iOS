@@ -88,8 +88,7 @@ private:
     Held m_content;
 };
 
-/// HTML's "child text content": the data of the Text children, in order (not of the descendants). Charged per child
-/// and per unit copied.
+/// HTML's "child text content": the data of the Text children, in order (not of the descendants).
 String childTextContent(JSContext* ctx, Node& node);
 
 /// The script element (https://html.spec.whatwg.org/multipage/scripting.html#the-script-element). Its state is HTML's;
@@ -124,7 +123,7 @@ public:
     void setNullResult(JSRuntime* rt);
     void setResult(JSContext* ctx, const String& source, const String& url);
     String resultSource(JSContext* ctx) const;
-    /// The result's URL, converted to UTF-8: charged per unit before the copy.
+    /// The result's URL, converted to UTF-8.
     std::string resultURL(JSContext* ctx) const;
 
     // HTMLScriptElement

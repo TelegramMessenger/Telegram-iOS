@@ -40,10 +40,6 @@ wr::Task scriptTask(JSContext* ctx, std::string code) {
     return wr::makeTask(ctx, [code = std::move(code)](JSContext* ctx) { wr::Runtime::from(ctx).runScript(code, "task.js", false); });
 }
 
-uint64_t workUnits(wr_test::HostEnv& env) {
-    return JS_GetWorkUnits(env.runtime().jsRuntime());
-}
-
 size_t diagnosticsOfKind(wr_test::HostEnv& env, const char* kind) {
     size_t n = 0;
     for (const auto& [k, detail] : env.host().diagnostics) {
@@ -204,26 +200,6 @@ WR_TEST(testThrowingErrorHandlerDoesNotRecurse) {
     CHECK_JS_EQ(env, "calls", "2");
 }
 
-// Fix round 1, I1: the ErrorEvent's message copies all of the exception's text, so the report charges the copy first. A
-// budget that cannot pay for it stops the widget before the copy, which a tight memory limit would otherwise turn into
-// an out-of-memory stop (Task 8's testConsoleChargesARopeBeforeFlatteningIt, the same shape).
-WR_TEST(testTheReportChargesTheMessageCopyFirst) {
-    wr_test::HostEnv env;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    // A flat string: the conversion before the concatenation copies nothing, so only the message's copy is at stake.
-    env.eval("var big = 'x'.repeat(800000)");
-    // Not enough memory for the 800 KB copy: had the copy come before the charge, the report would fail out of memory
-    // instead of stopping on the budget.
-    JSMemoryUsage usage;
-    JS_ComputeMemoryUsage(rt, &usage);
-    JS_SetMemoryLimit(rt, size_t(usage.malloc_size) + 400000);
-    // Well under the copy's 100,000-unit charge, well over the call's own cost.
-    env.runtime().setWorkLimit(JS_GetWorkUnits(rt) + 5000);
-    CHECK_EQ(env.eval("reportError(big)"), std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    CHECK(env.host().diagnostics.empty());
-}
-
 // Fix round 1, M3: a thrown object whose toString reports itself recurses report -> ToString -> reportError -> report,
 // which HTML's order (extract the error information, then the reporting-mode guard) allows. QuickJS's stack check ends
 // it: the innermost ToString throws a catchable RangeError, which the report drops for the fixed text. Every level
@@ -263,6 +239,7 @@ WR_TEST(testAThrowingExtractionFallsBack) {
 // it drains what the conversion queued. probe() queues M, dispatches an event whose listener logs L, then logs A: called
 // directly in a timer it logs LAM (the control), and so must it inside each conversion (it logged LMA before the fix).
 WR_TEST(testAReportsConversionsRunNoCheckpoint) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
     env.eval("var logs = {}, current = null;"
              "document.body.addEventListener('x', () => current.push('L'));"
@@ -312,9 +289,9 @@ WR_TEST(testAReportsConversionsRunNoCheckpoint) {
     CHECK_JS_EQ(env, "order.join('')", "MS");
     // A stop inside a conversion gives the depth back too.
     env.eval("setTimeout(() => { throw { toString() { for (;;) {} } }; });");
-    env.runtime().setWorkLimit(workUnits(env) + 2000000);
+    wr_test::stopAfter(env.runtime());
     env.advance(10);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK_EQ(env.runtime().scriptDepth(), 0);
 }
 
@@ -384,25 +361,28 @@ WR_TEST(testRejectionListsAreCapped) {
     }
 }
 
-// Review Focus 2: a microtask that queues itself runs until the work limit, then the widget is stopped for good.
+// Review Focus 2: a microtask that queues itself runs until its task's CPU slice ends, then the widget is stopped for
+// good.
 WR_TEST(testSelfRequeueingMicrotasksStopAtTheLimit) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
-    env.runtime().setWorkLimit(workUnits(env) + 2000000);
+    wr_test::stopAfter(env.runtime());
     CHECK_EQ(env.eval("var count = 0; (function f() { count++; queueMicrotask(f); })()"), std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK(globalNumber(env.ctx(), "count") > 100);
     CHECK(env.step() == wr::StepResult::Stopped);
     CHECK_EQ(env.eval("1"), std::string("STOPPED"));
 }
 
-// The budget's interrupt is uncatchable: a promise reaction's own catch does not turn it into a rejection.
+// The CPU stop's interrupt is uncatchable: a promise reaction's own catch does not turn it into a rejection.
 WR_TEST(testUncatchableStopSurvivesAPromiseCatch) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
-    env.runtime().setWorkLimit(workUnits(env) + 2000000);
+    wr_test::stopAfter(env.runtime());
     CHECK_EQ(env.eval("var caught = 0, after = 0;"
                       "Promise.resolve().then(() => { for (;;) {} }).catch(() => { caught++; }).finally(() => { after++; });"),
              std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK_EQ(globalNumber(env.ctx(), "caught"), 0.0);
     CHECK_EQ(globalNumber(env.ctx(), "after"), 0.0);
 }
@@ -413,15 +393,16 @@ WR_TEST(testUncatchableStopSurvivesAPromiseCatch) {
 // rejection, VENDOR.md entry 8); and a job returns normally on a runtime a native latched, with no JS frame that would
 // poll, before a job that must not run.
 WR_TEST(testAStopInTheCheckpointReachesTheScriptsCaller) {
+    wr_test::ScopedProductSlices slices;
     struct Case {
         const char* microtasks;
         wr::StopReason expected;
     };
     const Case cases[] = {
-        {"queueMicrotask(() => { for (;;) {} }); queueMicrotask(() => { globalThis.after = true; });", wr::StopReason::Budget},
+        {"queueMicrotask(() => { for (;;) {} }); queueMicrotask(() => { globalThis.after = true; });", wr::StopReason::Cpu},
         {"Error.stackTraceLimit = 0; queueMicrotask(() => Promise.try(() => { for (;;) {} }));"
          "queueMicrotask(() => { globalThis.after = true; });",
-         wr::StopReason::Budget},
+         wr::StopReason::Cpu},
         // The later job is stopped only by the checkpoint's own latch check after the first (fix round 1, M1).
         {"queueMicrotask(latch); queueMicrotask(() => { globalThis.after = true; });", wr::StopReason::Memory},
     };
@@ -430,7 +411,7 @@ WR_TEST(testAStopInTheCheckpointReachesTheScriptsCaller) {
         JSContext* ctx = env.ctx();
         wr::Runtime& runtime = env.runtime();
         runtime.setGlobal("latch", JS_NewCFunction(ctx, latch, "latch", 0));
-        runtime.setWorkLimit(workUnits(env) + 2000000);
+        wr_test::stopAfter(runtime);
         std::string code = std::string(c.microtasks) + " globalThis.ran = true;";
         bool aborted = false;
         try {
@@ -475,16 +456,17 @@ WR_TEST(testAStopInTheCheckpointReachesTheScriptsCaller) {
 }
 
 WR_TEST(testStoppedLoopRunsNothing) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
     JSContext* ctx = env.ctx();
     bool ran = false;
     wr::EventLoop& loop = wr::EventLoop::of(ctx);
     loop.queueTask(wr::TaskSource::DOMManipulation, wr::makeTask(ctx, [&ran](JSContext*) { ran = true; }));
     loop.queueTaskAt(5, wr::TaskSource::Timer, wr::makeTask(ctx, [&ran](JSContext*) { ran = true; }));
-    env.runtime().setWorkLimit(workUnits(env) + 500000);
+    wr_test::stopAfter(env.runtime());
     CHECK_EQ(env.eval("for (;;) {}"), std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    env.runtime().setWorkLimit(UINT64_MAX);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
+    wr_test::stopAfter(env.runtime(), 1e9);
     CHECK(!loop.hasRunnableTask(100));
     CHECK(!loop.nextTimerDeadline());
     CHECK(loop.runNextTask(100) == wr::StepResult::Stopped);
@@ -492,12 +474,13 @@ WR_TEST(testStoppedLoopRunsNothing) {
 }
 
 WR_TEST(testTaskThatExceedsTheLimitStops) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
     JSContext* ctx = env.ctx();
     wr::EventLoop::of(ctx).queueTask(wr::TaskSource::DOMManipulation, scriptTask(ctx, "for (;;) {}"));
-    env.runtime().setWorkLimit(workUnits(env) + 500000);
+    wr_test::stopAfter(env.runtime());
     CHECK(env.step() == wr::StepResult::Stopped);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
 }
 
 // R3: what a task captured is released when the task has run, and what is still queued, scheduled or awaiting its

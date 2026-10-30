@@ -35,16 +35,7 @@ html 0 0 360 303.3
     div 12 295.3 336 0
 
 == paint
-root 360x303.3 items=24
-  solid-fill bounds=(78,36,64,64) layer=(border=(78,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(148,36,64,64) layer=(border=(148,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(218,36,64,64) layer=(border=(218,36,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,36,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(78,106,64,64) layer=(border=(78,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(148,106,64,64) layer=(border=(148,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(218,106,64,64) layer=(border=(218,106,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,106,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(78,176,64,64) layer=(border=(78,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(78,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(148,176,64,64) layer=(border=(148,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(148,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
-  solid-fill bounds=(218,176,64,64) layer=(border=(218,176,64,64),radius=(8,8,8,8,8,8,8,8),clip=(218,176,64,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+root 360x303.3 items=15
   text bounds=(116,2,48,32) pos=(124,10,32,16) color=#000000ff text="Your" font=f1 glyphs=4 advance=32
   text bounds=(156,2,56,32) pos=(164,10,40,16) color=#000000ff text="move:" font=f1 glyphs=5 advance=40
   text bounds=(204,2,40,32) pos=(212,10,24,16) color=#000000ff text="✕" font=f1 glyphs=3 advance=24

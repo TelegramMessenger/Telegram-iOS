@@ -1470,6 +1470,7 @@ private final class ItemSelectionRecognizer: UIGestureRecognizer {
 public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, ContextControllerActionsStackNode {
     public var usesClearGlass: Bool = false
     public var glassBlurRadius: CGFloat?
+    public var minimumListWidth: CGFloat?
 
     final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let backgroundContainer: GlassBackgroundContainerView
@@ -2050,7 +2051,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
                 }
             } else {
                 itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
-                standardMinWidth = 220.0
+                standardMinWidth = self.minimumListWidth ?? 220.0
                 standardMaxWidth = 240.0
                 additionalBottomInset = 0.0
             }

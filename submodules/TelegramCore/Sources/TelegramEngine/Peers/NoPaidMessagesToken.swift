@@ -38,8 +38,6 @@ func _internal_exportNoPaidMessagesToken(account: Account, revoke: Bool, tempora
         switch result {
         case let .exportedNoPaidMessagesToken(data):
             return ExportedNoPaidMessagesToken(token: data.token, url: data.url, expires: data.expires)
-        case let .exportedNoPaidMessagesTokenLegacy(data):
-            return ExportedNoPaidMessagesToken(token: data.token, url: data.url ?? "", expires: data.expires)
         }
     }
 }

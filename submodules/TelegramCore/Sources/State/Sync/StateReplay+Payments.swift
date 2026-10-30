@@ -25,7 +25,7 @@ extension ReplayContext {
         updatedWalletState = state
     }
 
-    func applyUpdateAgentSettings(_ settings: Api.agent.Settings) {
+    func applyUpdateAgentSettings(_ settings: EngineAgentSettings) {
         updatedAgentSettings = settings
     }
     

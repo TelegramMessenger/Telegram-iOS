@@ -126,6 +126,7 @@ enum AccountStateMutationOperation {
     case UpdatePinnedSavedItemIds(AccountStateUpdatePinnedItemIdsOperation)
     case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
     case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
+    case EditForumTopic(peerId: PeerId, threadId: Int64, components: [TelegramMediaActionType.ForumTopicEditComponent])
     case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?)
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
@@ -164,7 +165,7 @@ enum AccountStateMutationOperation {
     case UpdateWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?)
     case UpdateStarsBalance(peerId: PeerId, currency: CurrencyAmount.Currency, balance: StarsAmount)
     case UpdateWalletState(Api.WalletState)
-    case UpdateAgentSettings(Api.agent.Settings)
+    case UpdateAgentSettings(EngineAgentSettings)
     case UpdateWalletTransfer(Api.Update)
     case UpdateWalletTonConnectEvent(WalletTonConnectEvent)
     case UpdateStarsRevenueStatus(peerId: PeerId, status: StarsRevenueStats.Balances)
@@ -640,6 +641,10 @@ struct AccountMutableState {
     mutating func addUpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64]) {
         self.addOperation(.UpdatePinnedTopicOrder(peerId: peerId, threadIds: threadIds))
     }
+
+    mutating func addEditForumTopic(peerId: PeerId, threadId: Int64, components: [TelegramMediaActionType.ForumTopicEditComponent]) {
+        self.addOperation(.EditForumTopic(peerId: peerId, threadId: threadId, components: components))
+    }
     
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?) {
         self.addOperation(.ReadMessageContents(peerIdsAndMessageIds: peerIdsAndMessageIds, date: date))
@@ -749,7 +754,7 @@ struct AccountMutableState {
         self.addOperation(.UpdateWalletState(state))
     }
 
-    mutating func updateAgentSettings(_ settings: Api.agent.Settings) {
+    mutating func updateAgentSettings(_ settings: EngineAgentSettings) {
         self.addOperation(.UpdateAgentSettings(settings))
     }
     
@@ -787,7 +792,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpsertEphemeralReplacement, .DeleteEphemeralMessages, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .AddPeerLiveTypingDraftStop, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdatePeerChatInclusion, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateMessageWidgetData, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateNewBotConnection, .UpdateWebBrowserSettings, .UpdateWebBrowserException, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateReadFeed, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo, .UpdateWalletState, .UpdateAgentSettings, .UpdateWalletTransfer, .UpdateWalletTonConnectEvent:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpsertEphemeralReplacement, .DeleteEphemeralMessages, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .AddPeerLiveTypingDraftStop, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .EditForumTopic, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdatePeerChatInclusion, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateMessageWidgetData, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateNewBotConnection, .UpdateWebBrowserSettings, .UpdateWebBrowserException, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateReadFeed, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo, .UpdateWalletState, .UpdateAgentSettings, .UpdateWalletTransfer, .UpdateWalletTonConnectEvent:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
@@ -959,7 +964,7 @@ struct AccountReplayedFinalState {
     let walletTransferUpdates: [WalletTransferUpdate]
     let walletTonConnectEvents: [WalletTonConnectEvent]
     let updatedWalletState: Api.WalletState?
-    let updatedAgentSettings: Api.agent.Settings?
+    let updatedAgentSettings: EngineAgentSettings?
     let updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances]
     let sentScheduledMessageIds: Set<MessageId>
     let reportMessageDelivery: Set<MessageId>
@@ -1002,7 +1007,7 @@ struct AccountFinalStateEvents {
     let walletTransferUpdates: [WalletTransferUpdate]
     let walletTonConnectEvents: [WalletTonConnectEvent]
     let updatedWalletState: Api.WalletState?
-    let updatedAgentSettings: Api.agent.Settings?
+    let updatedAgentSettings: EngineAgentSettings?
     let updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances]
     let reportMessageDelivery: Set<MessageId>
     let addedConferenceInvitationMessagesIds: [MessageId]
@@ -1027,7 +1032,7 @@ struct AccountFinalStateEvents {
         self.init(addedIncomingMessageIds: [], addedReactionEvents: [], wasScheduledMessageIds: [], deletedMessageIds: [], updatedTypingActivities: [:], updatedWebpages: [:], updatedCalls: [], addedCallSignalingData: [], updatedGroupCallParticipants: [], groupCallMessageUpdates: [], storyUpdates: [], displayAlerts: [], dismissBotWebViews: [], joinChatWebViewDecisions: [], delayNotificatonsUntil: nil, updatedMaxMessageId: nil, updatedQts: nil, externallyUpdatedPeerId: Set(), authorizationListUpdated: false, updatedIncomingThreadReadStates: [:], updatedOutgoingThreadReadStates: [:], updateConfig: false, isPremiumUpdated: false, updatedStarsBalance: [:], updatedTonBalance: [:], walletTransferUpdates: [], walletTonConnectEvents: [], updatedWalletState: nil, updatedAgentSettings: nil, updatedStarsRevenueStatus: [:], sentScheduledMessageIds: Set(), reportMessageDelivery: Set(), addedConferenceInvitationMessagesIds: [], updatedStarGiftAuctionState: [:], updatedStarGiftAuctionMyState: [:], updatedEmojiGameInfo: nil)
     }
     
-    init(addedIncomingMessageIds: [MessageId], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], wasScheduledMessageIds: [MessageId], deletedMessageIds: [DeletedMessageId], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage?], updatedCalls: [Api.PhoneCall], addedCallSignalingData: [(Int64, Data)], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)], groupCallMessageUpdates: [GroupCallMessageUpdate], storyUpdates: [InternalStoryUpdate], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], joinChatWebViewDecisions: [JoinChatWebViewDecision], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?, externallyUpdatedPeerId: Set<PeerId>, authorizationListUpdated: Bool, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updateConfig: Bool, isPremiumUpdated: Bool, updatedStarsBalance: [PeerId: StarsAmount], updatedTonBalance: [PeerId: StarsAmount], walletTransferUpdates: [WalletTransferUpdate], walletTonConnectEvents: [WalletTonConnectEvent], updatedWalletState: Api.WalletState?, updatedAgentSettings: Api.agent.Settings?, updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances], sentScheduledMessageIds: Set<MessageId>, reportMessageDelivery: Set<MessageId>, addedConferenceInvitationMessagesIds: [MessageId], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState], updatedEmojiGameInfo: EmojiGameInfo?) {
+    init(addedIncomingMessageIds: [MessageId], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], wasScheduledMessageIds: [MessageId], deletedMessageIds: [DeletedMessageId], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage?], updatedCalls: [Api.PhoneCall], addedCallSignalingData: [(Int64, Data)], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)], groupCallMessageUpdates: [GroupCallMessageUpdate], storyUpdates: [InternalStoryUpdate], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], joinChatWebViewDecisions: [JoinChatWebViewDecision], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?, externallyUpdatedPeerId: Set<PeerId>, authorizationListUpdated: Bool, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id], updateConfig: Bool, isPremiumUpdated: Bool, updatedStarsBalance: [PeerId: StarsAmount], updatedTonBalance: [PeerId: StarsAmount], walletTransferUpdates: [WalletTransferUpdate], walletTonConnectEvents: [WalletTonConnectEvent], updatedWalletState: Api.WalletState?, updatedAgentSettings: EngineAgentSettings?, updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances], sentScheduledMessageIds: Set<MessageId>, reportMessageDelivery: Set<MessageId>, addedConferenceInvitationMessagesIds: [MessageId], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState], updatedEmojiGameInfo: EmojiGameInfo?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.addedReactionEvents = addedReactionEvents
         self.wasScheduledMessageIds = wasScheduledMessageIds

@@ -17,33 +17,42 @@ import FetchAudioMediaResource
 import Display
 import UIKit
 
+private func videoPipelineSettings(transaction: Transaction) -> (useModernPipeline: Bool, useStreamingStoryVideoWriter: Bool, useStreamingChatVideoWriter: Bool) {
+    let appConfig = currentAppConfiguration(transaction: transaction)
+    var useModernPipeline = true
+    var useStreamingStoryVideoWriter = true
+    var useStreamingChatVideoWriter = true
+    if let data = appConfig.data {
+        if let _ = data["ios_killswitch_disable_modern_video_pipeline"] {
+            useModernPipeline = false
+        }
+        if let _ = data["ios_killswitch_disable_story_streaming_video_writer"] {
+            useStreamingStoryVideoWriter = false
+        }
+        if let _ = data["ios_killswitch_disable_chat_streaming_video_writer"] {
+            useStreamingChatVideoWriter = false
+        }
+    }
+    return (useModernPipeline, useStreamingStoryVideoWriter, useStreamingChatVideoWriter)
+}
+
 public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, MediaResource) -> Signal<String?, NoError>)?) -> AccountAuxiliaryMethods {
     return AccountAuxiliaryMethods(fetchResource: { postbox, resource, ranges, _ in
         if let resource = resource as? VideoLibraryMediaResource {
-            return postbox.transaction { transaction -> Bool in
-                var useModernPipeline = true
-                let appConfig = currentAppConfiguration(transaction: transaction)
-                if let data = appConfig.data, let _ = data["ios_killswitch_disable_modern_video_pipeline"] {
-                    useModernPipeline = false
-                }
-                return useModernPipeline
+            return postbox.transaction { transaction -> (useModernPipeline: Bool, useStreamingStoryVideoWriter: Bool, useStreamingChatVideoWriter: Bool) in
+                return videoPipelineSettings(transaction: transaction)
             }
             |> castError(MediaResourceDataFetchError.self)
-            |> mapToSignal { useModernPipeline -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-                return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
+            |> mapToSignal { settings -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: settings.useModernPipeline, useStreamingStoryVideoWriter: settings.useStreamingStoryVideoWriter, useStreamingChatVideoWriter: settings.useStreamingChatVideoWriter)
             }
         } else if let resource = resource as? LocalFileVideoMediaResource {
-            return postbox.transaction { transaction -> Bool in
-                var useModernPipeline = true
-                let appConfig = currentAppConfiguration(transaction: transaction)
-                if let data = appConfig.data, let _ = data["ios_killswitch_disable_modern_video_pipeline"] {
-                    useModernPipeline = false
-                }
-                return useModernPipeline
+            return postbox.transaction { transaction -> (useModernPipeline: Bool, useStreamingStoryVideoWriter: Bool, useStreamingChatVideoWriter: Bool) in
+                return videoPipelineSettings(transaction: transaction)
             }
             |> castError(MediaResourceDataFetchError.self)
-            |> mapToSignal { useModernPipeline -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-                return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
+            |> mapToSignal { settings -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: settings.useModernPipeline, useStreamingStoryVideoWriter: settings.useStreamingStoryVideoWriter, useStreamingChatVideoWriter: settings.useStreamingChatVideoWriter)
             }
         } else if let resource = resource as? LocalFileAudioMediaResource {
             return fetchLocalFileAudioMediaResource(resource: resource)

@@ -148,11 +148,9 @@ void HTMLTemplateElement::dispose(JSRuntime* rt) {
 String childTextContent(JSContext* ctx, Node& node) {
     Vector<char16_t> out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     for (size_t i = 0; i < node.childCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         Node* child = node.childAt(i);
         if (child->type() == NodeType::Text) {
             String data = static_cast<CharacterData*>(child)->dataString(ctx);
-            chargeScan(ctx, data.length());
             appendCodeUnits(out, data);
         }
     }
@@ -201,7 +199,6 @@ std::string HTMLScriptElement::resultURL(JSContext* ctx) const {
         return std::string();
     }
     String url = String::adopt(ctx, JS_DupValue(ctx, m_sourceURL.value));
-    chargeScan(ctx, url.length());
     return url.utf8();
 }
 

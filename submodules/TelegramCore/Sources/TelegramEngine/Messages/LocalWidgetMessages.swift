@@ -29,8 +29,11 @@ public struct EngineLocalWidgetPost: Equatable {
     public var backgroundQuery: Bool
     public var chatData: Data?
     public var publicData: Data?
+    /// widget-sandbox v0.4.0: the caption shown above the widget (layer 233's `invert_media`), as the test bot sends a
+    /// post's `captionAbove`.
+    public var captionAbove: Bool
 
-    public init(html: String, width: Int32, height: Int32, caption: String, photos: [Photo], isCopy: Bool = false, canQuery: Bool = false, backgroundQuery: Bool = false, chatData: Data? = nil, publicData: Data? = nil) {
+    public init(html: String, width: Int32, height: Int32, caption: String, photos: [Photo], isCopy: Bool = false, canQuery: Bool = false, backgroundQuery: Bool = false, chatData: Data? = nil, publicData: Data? = nil, captionAbove: Bool = false) {
         self.html = html
         self.width = width
         self.height = height
@@ -41,6 +44,7 @@ public struct EngineLocalWidgetPost: Equatable {
         self.backgroundQuery = backgroundQuery
         self.chatData = chatData
         self.publicData = publicData
+        self.captionAbove = captionAbove
     }
 }
 
@@ -48,18 +52,19 @@ public struct EngineLocalWidgetPost: Equatable {
 /// image over `photoResources[post][photo]`), in order, timestamps one second apart ending at `lastTimestamp`. Local,
 /// outgoing, by the account; in Saved Messages, in the account's own thread (My Notes).
 func _internal_localWidgetStoreMessages(posts: [EngineLocalWidgetPost], photoResources: [[LocalFileMediaResource]], peerId: PeerId, accountPeerId: PeerId, lastTimestamp: Int32) -> [StoreMessage] {
-    var contents: [(text: String, media: Media)] = []
+    var contents: [(text: String, media: Media, attributes: [MessageAttribute])] = []
     for (postIndex, post) in posts.enumerated() {
         guard let compressed = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
             continue
         }
         let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: post.isCopy, canQuery: post.canQuery, backgroundQuery: post.backgroundQuery, chatData: post.chatData, publicData: post.publicData)
-        contents.append((post.caption, widget))
+        // widget-sandbox v0.4.0: a caption above the widget is inverted media, as the test bot sends `captionAbove`.
+        contents.append((post.caption, widget, post.captionAbove ? [InvertMediaMessageAttribute()] : []))
         let resources = postIndex < photoResources.count ? photoResources[postIndex] : []
         for (photo, resource) in zip(post.photos, resources) {
             let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: photo.width, height: photo.height), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: [representation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-            contents.append(("", image))
+            contents.append(("", image, []))
         }
     }
     let threadId: Int64? = peerId == accountPeerId ? accountPeerId.toInt64() : nil
@@ -67,7 +72,7 @@ func _internal_localWidgetStoreMessages(posts: [EngineLocalWidgetPost], photoRes
     return contents.enumerated().map { index, content in
         // Tagged as a sent message is (`EnqueueMessage`), so a picture opens in the gallery and shows in the Media tab.
         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: [], media: [content.media], textEntities: nil, isPinned: false)
-        return StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, customStableId: nil, globallyUniqueId: Int64.random(in: Int64.min ... Int64.max), groupingKey: nil, threadId: threadId, timestamp: firstTimestamp + Int32(index), flags: [], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: accountPeerId, text: content.text, attributes: [], media: [content.media])
+        return StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, customStableId: nil, globallyUniqueId: Int64.random(in: Int64.min ... Int64.max), groupingKey: nil, threadId: threadId, timestamp: firstTimestamp + Int32(index), flags: [], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: accountPeerId, text: content.text, attributes: content.attributes, media: [content.media])
     }
 }
 

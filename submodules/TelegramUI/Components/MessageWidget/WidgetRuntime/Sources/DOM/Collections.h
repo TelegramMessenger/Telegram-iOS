@@ -33,8 +33,8 @@ public:
     explicit LiveElements(JSRuntime* rt) : m_elements(JSAllocator<Element*>(rt)) {}
     /// The elements, if they are still the answer for `document`; else nullptr.
     const Vector<Element*>* current(const Document& document) const;
-    /// Empties the answer for a new walk. Until record(), it is current for no document: a walk the budget stops (or
-    /// the memory limit) is redone on the next read.
+    /// Empties the answer for a new walk. Until record(), it is current for no document: a walk the memory limit stops
+    /// is redone on the next read.
     Vector<Element*>& restart();
     /// The walk is complete: the elements are the answer for `document` at its version now.
     void record(JSContext* ctx, Document& document);
@@ -137,8 +137,7 @@ private:
 
 /// A non-owning list of class-name strings to test, read in place: a parsed selector's std::vector<String> (one class
 /// per Class simple), or an HTMLCollection's Vector<Held> of string values (getElementsByClassName, possibly many).
-/// Reading a class is O(1) and copies nothing, so a recompute over a large class list allocates nothing (the
-/// per-recompute copy was an unbounded, uncharged freeze).
+/// Reading a class is O(1) and copies nothing, so a recompute over a large class list allocates nothing.
 class ClassNameList {
 public:
     ClassNameList(const std::vector<String>& strings) : m_strings(&strings) {}
@@ -158,8 +157,7 @@ private:
 };
 
 /// Whether `element`'s class attribute holds every class (ASCII case-insensitively in quirks mode). The value's tokens
-/// are compared in place: a visit (work::kNodeVisit) per token compared, as DOMTokenList's, and the units scanned and
-/// compared at QuickJS's scan rate (chargeScan). `classes` is read in place from either source (no copy).
+/// are compared in place, and `classes` is read in place from either source (no copy).
 bool elementHasClasses(JSContext* ctx, Element& element, ClassNameList classes, bool quirks);
 
 } // namespace wr

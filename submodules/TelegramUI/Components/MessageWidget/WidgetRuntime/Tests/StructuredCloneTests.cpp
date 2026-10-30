@@ -87,16 +87,6 @@ WR_TEST(testDepthIsCapped) {
              std::string("ok,DOMException:DataCloneError"));
 }
 
-/// Review Focus 1: every cloned value is charged.
-WR_TEST(testAHugeCloneIsCharged) {
-    HostEnv env;
-    env.eval("window.big = new Array(100000).fill(0); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_EQ(env.eval("structuredClone(big).length"), std::string("100000"));
-    CHECK(JS_GetWorkUnits(rt) - before >= 100000 * 2);
-}
-
 /// The final review's C3: a Map or a Set is walked by the cloner, through the functions the runtime took at startup, not
 /// by the engine's serializer, whose walk held no reference to the record it was on (a value's getter that cleared the
 /// map freed that record under it). HTML copies the entries first, so the clone has them as they were.

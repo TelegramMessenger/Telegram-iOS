@@ -99,6 +99,21 @@ final class PresentationThemeSettingsStorageTests: XCTestCase {
         XCTAssertTrue(decoded == settings)
     }
 
+    // New York, picked in Text Size, is stored only when picked, so the bytes above stay master's without it.
+    func testNewYorkSurvivesARoundTrip() {
+        var settings = typicalSettings
+        settings.chatBubbleSettings.serifMessageFont = true
+        let decoded = EnginePreferencesEntry(settings)!.get(PresentationThemeSettings.self)!
+        XCTAssertTrue(decoded.chatBubbleSettings.serifMessageFont)
+        XCTAssertTrue(decoded == settings)
+        XCTAssertNotEqual(storedBytes(settings), masterTypicalBytes)
+    }
+
+    func testMastersBytesDecodeWithoutNewYork() {
+        let decoded = EnginePreferencesEntry(data: Data(base64Encoded: masterTypicalBytes)!).get(PresentationThemeSettings.self)!
+        XCTAssertFalse(decoded.chatBubbleSettings.serifMessageFont)
+    }
+
     func testMastersBytesDecodeWithBubbles() {
         let decoded = EnginePreferencesEntry(data: Data(base64Encoded: masterTypicalBytes)!).get(PresentationThemeSettings.self)!
         XCTAssertTrue(decoded.chatBubbleSettings.bubbleMode)

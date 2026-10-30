@@ -67,6 +67,20 @@ public func mediaEditorBottomControlsLocalLayout(width: CGFloat, spec: MediaEdit
     return MediaEditorBottomControlsLayout(leftFrame: leftFrame, middleFrame: middleFrame, itemFrames: itemFrames, rightFrame: rightFrame)
 }
 
+public struct MediaEditorBottomControlsCustomLayout {
+    public var key: AnyHashable
+    public var layout: (_ size: CGSize, _ middleItemWidths: [CGFloat], _ leftWidth: CGFloat, _ rightWidth: CGFloat) -> MediaEditorBottomControlsLayout
+
+    public init(key: AnyHashable, layout: @escaping (_ size: CGSize, _ middleItemWidths: [CGFloat], _ leftWidth: CGFloat, _ rightWidth: CGFloat) -> MediaEditorBottomControlsLayout) {
+        self.key = key
+        self.layout = layout
+    }
+}
+
+public func mediaEditorBottomControlsCapsuleCornerRadius(_ size: CGSize) -> CGFloat {
+    return min(size.width, size.height) * 0.5
+}
+
 public func mediaEditorBottomControlsScreenStableFrame(_ frame: CGRect, fromCapsuleOrigin: CGPoint, toCapsuleOrigin: CGPoint) -> CGRect {
     return frame.offsetBy(dx: fromCapsuleOrigin.x - toCapsuleOrigin.x, dy: fromCapsuleOrigin.y - toCapsuleOrigin.y)
 }

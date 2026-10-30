@@ -416,17 +416,25 @@ static void test_wall_clock_and_random_seed(void)
 }
 
 /* Fork change 8: a handler that latches, as the native runtime's does (wr::Runtime::interrupt): once it said stop, it
-   says stop for good. */
+   says stop for good. It says stop at its `limit`th call (one every JS_INTERRUPT_COUNTER_INIT polls, 10,000). */
 static struct {
+    uint64_t calls;
     uint64_t limit;
     int latched;
 } stop_latch;
+
+static void arm_stop_latch(uint64_t calls)
+{
+    stop_latch.latched = 0;
+    stop_latch.calls = 0;
+    stop_latch.limit = calls;
+}
 
 static int latching_interrupt(JSRuntime *rt, void *opaque)
 {
     if (stop_latch.latched)
         return 1;
-    if (JS_GetWorkUnits(rt) >= stop_latch.limit) {
+    if (++stop_latch.calls >= stop_latch.limit) {
         stop_latch.latched = 1;
         return 1;
     }
@@ -441,8 +449,7 @@ static void test_uncatchable_executor(void)
     /* The host's stop inside an executor is not the executor's exception to reject with: it propagates, and nothing
        after the constructor runs. stackTraceLimit 0: otherwise the backtrace's allocation re-arms the poll and stops
        the script by accident. */
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 200000;
+    arm_stop_latch(20);
     JS_SetInterruptHandler(rt, latching_interrupt, NULL);
     const char *code = "Error.stackTraceLimit = 0; new Promise(() => { for (;;) {} }); globalThis.after = true";
     JSValue v = JS_Eval(ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
@@ -568,12 +575,12 @@ static int counting_interrupt(JSRuntime *rt, void *opaque)
     return 0;
 }
 
-/* Calls `f` until the interrupt handler is asked: its poll counter then starts over from JS_INTERRUPT_COUNTER_INIT.
-   A call of `f` allocates nothing, so it moves the counter by its own poll only. */
+/* Calls `f` until the interrupt handler is asked: its poll counter then starts over from JS_INTERRUPT_COUNTER_INIT
+   (10,000). A call of `f` allocates nothing, so it moves the counter by its own poll only. */
 static void call_until_polled(JSContext *ctx, JSValueConst f)
 {
     int before = counted_polls;
-    for (int i = 0; i < 1000 && counted_polls == before; i++)
+    for (int i = 0; i < 100000 && counted_polls == before; i++)
         JS_FreeValue(ctx, JS_Call(ctx, f, JS_UNDEFINED, 0, NULL));
     CHECK(counted_polls == before + 1);
 }
@@ -643,11 +650,10 @@ static int run_jobs(JSRuntime *rt)
     return exceptions;
 }
 
-/* The host's interrupt, once the loop inside the try has run 200,000 units: it skips the catch and the finally. */
+/* The host's interrupt, once the loop inside the try has run 200,000 polls: it skips the catch and the finally. */
 static void interrupt_inside_try(JSRuntime *rt, JSContext *ctx)
 {
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 200000;
+    arm_stop_latch(20);
     JS_SetInterruptHandler(rt, latching_interrupt, NULL);
     CHECK(eval_throws(ctx, "try { for (;;) {} } catch (e) { r++ } finally { r++ }"));
     CHECK(stop_latch.latched);
@@ -657,7 +663,7 @@ static void interrupt_inside_try(JSRuntime *rt, JSContext *ctx)
 /* latching_interrupt, and the host's stop with it. */
 static int stopping_interrupt(JSRuntime *rt, void *opaque)
 {
-    if (!stop_latch.latched && JS_GetWorkUnits(rt) >= stop_latch.limit) {
+    if (!stop_latch.latched && ++stop_latch.calls >= stop_latch.limit) {
         stop_latch.latched = 1;
         JS_SetStopped(rt);
     }
@@ -739,8 +745,7 @@ static void test_stopped(void)
     rt = JS_NewRuntime();
     ctx = JS_NewContext(rt);
     CHECK(eval_int(ctx, "var r = 0; 1") == 1);
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 200000;
+    arm_stop_latch(20);
     JS_SetInterruptHandler(rt, stopping_interrupt, NULL);
     CHECK(eval_throws(ctx, "try { for (const x of { [Symbol.iterator]() { return { next() { return { done: false } },"
                            " return() { for (;;) {} } } } }) throw 1 } catch (e) { r++ }"));
@@ -848,8 +853,7 @@ static void test_stopped_prepare_stack_trace(void)
     const char *code = "var it = 0; Error.prepareStackTrace = () => { for (;;) it++ }; (function () { for (;;) {} })";
     JSValue loop = JS_Eval(ctx, code, strlen(code), "<test>", JS_EVAL_TYPE_GLOBAL);
     CHECK(JS_IsFunction(ctx, loop));
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 100000;
+    arm_stop_latch(10);
     JS_SetInterruptHandler(rt, stopping_interrupt, NULL);
     for (int i = 0; i < 4; i++) {
         CHECK(call_throws(ctx, loop));
@@ -871,7 +875,6 @@ static struct {
     int stop_at;
     int stopped;
     int after_stop;
-    uint64_t stop_units;
     int polls_after_stop;
 } disposer;
 
@@ -884,7 +887,6 @@ static JSValue counting_disposer(JSContext *ctx, JSValueConst this_val, int argc
     }
     if (disposer.calls == disposer.stop_at) {
         disposer.stopped = 1;
-        disposer.stop_units = JS_GetWorkUnits(JS_GetRuntime(ctx));
         JS_SetStopped(JS_GetRuntime(ctx));
         return JS_ThrowInternalError(ctx, "stopped");
     }
@@ -900,7 +902,7 @@ static int disposer_interrupt(JSRuntime *rt, void *opaque)
 }
 
 /* Runs `code` (built while the runtime runs) and then `dispose_code` with the disposer set to stop the runtime on its
-   `stop_at`th call: no disposer runs after it, and the disposal ends without work past the stop. */
+   `stop_at`th call: no disposer runs after it, and the disposal ends at the next poll at most. */
 static void dispose_after_stop(const char *setup, const char *dispose_code, int stop_at)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -919,10 +921,9 @@ static void dispose_after_stop(const char *setup, const char *dispose_code, int 
     CHECK(disposer.calls == stop_at);
     CHECK(disposer.after_stop == 0);
     CHECK(disposer.polls_after_stop <= 1);
-    CHECK(JS_GetWorkUnits(rt) - disposer.stop_units < 1000);
-    if (disposer.after_stop || JS_GetWorkUnits(rt) - disposer.stop_units >= 1000)
-        printf("  `%.40s`: %d disposers and %llu units after the stop\n", dispose_code, disposer.after_stop,
-               (unsigned long long)(JS_GetWorkUnits(rt) - disposer.stop_units));
+    if (disposer.after_stop || disposer.polls_after_stop > 1)
+        printf("  `%.40s`: %d disposers and %d handler calls after the stop\n", dispose_code, disposer.after_stop,
+               disposer.polls_after_stop);
     JS_SetInterruptHandler(rt, NULL, NULL);
     /* The resources not disposed are released with their stack (an object leak asserts in JS_FreeRuntime). */
     JS_FreeContext(ctx);
@@ -945,111 +946,9 @@ static void test_stopped_disposal(void)
     dispose_after_stop("var d = { [Symbol.dispose]: dispose }", scope, 100);
 }
 
-/* Fork change 11: `count` modules with names of their own, each kept in the context's list of loaded modules, and
-   `refused` more whose import fails, which QuickJS frees again (no module loader). */
-static void load_modules(JSContext *ctx, int count, int refused)
-{
-    char name[32];
-    for (int i = 0; i < count + refused; i++) {
-        const char *code = i < count ? "" : "import 'missing'";
-        snprintf(name, sizeof name, "m%d.mjs", i);
-        JSValue v = JS_Eval(ctx, code, strlen(code), name, JS_EVAL_TYPE_MODULE);
-        CHECK(JS_IsException(v) == (i >= count));
-        if (JS_IsException(v))
-            JS_FreeValue(ctx, JS_GetException(ctx));
-        JS_FreeValue(ctx, v);
-    }
-}
-
-/* The iterations an import.meta loop in a module runs under `units` of work, after load_modules(count, refused). */
-static int32_t import_meta_iterations(int count, int refused, uint64_t units)
-{
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx = JS_NewContext(rt);
-    load_modules(ctx, count, refused);
-    CHECK(eval_int(ctx, "Error.stackTraceLimit = 0; globalThis.n = 0; 1") == 1);
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + units;
-    JS_SetInterruptHandler(rt, latching_interrupt, NULL);
-    const char *code = "for (;;) { import.meta; globalThis.n++; }";
-    JSValue v = JS_Eval(ctx, code, strlen(code), "loop.mjs", JS_EVAL_TYPE_MODULE);
-    CHECK(stop_latch.latched);
-    if (JS_IsException(v))
-        JS_FreeValue(ctx, JS_GetException(ctx));
-    JS_FreeValue(ctx, v);
-    JS_SetInterruptHandler(rt, NULL, NULL);
-    int32_t n = global_int(ctx, "n");
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
-    return n;
-}
-
-/* The exception a module evaluation ended with: JS_EvalFunction's own, or its promise's rejection. Taken over. */
-static JSValue module_failure(JSContext *ctx, JSValue result)
-{
-    if (JS_IsException(result))
-        return JS_GetException(ctx);
-    JSValue reason = JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED ? JS_PromiseResult(ctx, result) : JS_UNDEFINED;
-    JS_FreeValue(ctx, result);
-    return reason;
-}
-
-/* Fork change 11: the walks of a context's loaded modules that script reaches (import.meta's lookup, an import's) are
-   charged JS_WORK_ELEMENT_UNITS (4) per module before they start, and a refused charge is the interrupt. */
-static void test_loaded_module_walks(void)
-{
-    /* Under one budget an import.meta loop's iteration costs 4 units more per module loaded: 1,984 more modules, 7,936
-       more units an iteration. Before the change the walk was free and both loops cost the same per iteration. */
-    const uint64_t units = 1000000;
-    int32_t few = import_meta_iterations(16, 0, units);
-    int32_t many = import_meta_iterations(2000, 0, units);
-    CHECK(few > 0 && many > 0);
-    double expected = 4.0 * (2000 - 16);
-    double grew = (double)units / many - (double)units / few;
-    CHECK(fabs(grew - expected) < 0.05 * expected);
-    /* The count goes down when a module is freed: 2,000 modules refused at their import are not charged for. */
-    int32_t refused = import_meta_iterations(16, 2000, units);
-    CHECK(refused == few);
-
-    /* A refused charge throws the interrupt, not the catchable "import.meta not supported in this context": the budget
-       ends inside the first import.meta's charge (8,004 units for 2,001 modules; the limit is 4,000 past the compiled
-       module), and the catch around it does not run. */
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx = JS_NewContext(rt);
-    load_modules(ctx, 2000, 0);
-    CHECK(eval_int(ctx, "Error.stackTraceLimit = 0; 1") == 1);
-    const char *meta = "try { globalThis.kind = typeof import.meta } catch (e) { globalThis.caught = 1 }";
-    JSValue fn = JS_Eval(ctx, meta, strlen(meta), "meta.mjs", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-    CHECK(!JS_IsException(fn));
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 4000;
-    JS_SetInterruptHandler(rt, latching_interrupt, NULL);
-    JSValue reason = module_failure(ctx, JS_EvalFunction(ctx, fn));
-    JS_SetInterruptHandler(rt, NULL, NULL);
-    CHECK(stop_latch.latched);
-    CHECK(JS_IsUncatchableError(reason));
-    CHECK(eval_int(ctx, "globalThis.kind === undefined && globalThis.caught === undefined ? 1 : 0") == 1);
-    JS_FreeValue(ctx, reason);
-
-    /* The same for an import's lookup (js_find_loaded_module, reached here with no normalize hook): the interrupt, not
-       the catchable "could not load module". */
-    const char *import = "import 'x'";
-    stop_latch.latched = 0;
-    stop_latch.limit = JS_GetWorkUnits(rt) + 4000;
-    JS_SetInterruptHandler(rt, latching_interrupt, NULL);
-    JSValue v = JS_Eval(ctx, import, strlen(import), "import.mjs", JS_EVAL_TYPE_MODULE);
-    JS_SetInterruptHandler(rt, NULL, NULL);
-    CHECK(stop_latch.latched);
-    reason = module_failure(ctx, v);
-    CHECK(JS_IsUncatchableError(reason));
-    JS_FreeValue(ctx, reason);
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
-}
-
 /* Fork change 12: the dumps are compiled in only on an explicit -DTELEGRAM_QJS_ENABLE_DUMPS, never because NDEBUG is
-   unset. With them every string carries a list link and the runtime a string list, so the work counter, the memory
-   limit's trip point and the GC thresholds moved with the build configuration. Without them both calls are no-ops
+   unset. With them every string carries a list link and the runtime a string list, so the memory limit's trip point
+   and the GC thresholds moved with the build configuration. Without them both calls are no-ops
    (JS_SetDumpFlags keeps nothing, JS_GetDumpFlags answers 0), in this suite's default build as under -c opt. */
 static void test_dumps_never_follow_ndebug(void)
 {
@@ -1075,7 +974,6 @@ int main(void)
     test_stopped_next_poll();
     test_stopped_prepare_stack_trace();
     test_stopped_disposal();
-    test_loaded_module_walks();
     test_dumps_never_follow_ndebug();
     if (failures) {
         printf("%d failure(s)\n", failures);

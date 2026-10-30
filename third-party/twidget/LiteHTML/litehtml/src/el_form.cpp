@@ -90,6 +90,7 @@ namespace litehtml
             child->set_attr("style", style.c_str());
             if(!text.empty())
             {
+                const document::generated_scope generated(doc.get()); // Telegram (VENDOR.md edit 84)
                 child->appendChild(std::make_shared<el_text>(text.c_str(), doc));
             }
             parent->appendChild(child);

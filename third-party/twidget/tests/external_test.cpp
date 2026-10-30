@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <functional>
 #include <map>
 #include <set>
@@ -182,6 +183,31 @@ static void testInsertChildAtEveryIndex() {
     }
 }
 
+// Twidget edit 83: accepts_child and accepts_text answer exactly what appendChild links, so a caller can ask before it
+// makes (and counts) anything.
+static void testAcceptsChildMatchesAppendChild() {
+    litehtml_test::TestContainer c;
+    auto doc = std::make_shared<litehtml::document>(&c);
+    for (const char* parentTag : {"div", "table", "style", "script", "p"}) {
+        for (const char* childTag : {"tbody", "thead", "tfoot", "caption", "tr", "td", "div"}) {
+            auto parent = make(doc, parentTag);
+            auto child = make(doc, childTag);
+            const bool asked = parent->accepts_child(child->tag());
+            const bool linked = parent->appendChild(child);
+            if (asked != linked) std::printf("  %s under %s: asked %d, linked %d\n", childTag, parentTag, asked, linked);
+            CHECK(asked == linked);
+        }
+        auto parent = make(doc, parentTag);
+        std::vector<element::ptr> pieces;
+        doc->make_text_pieces(parent, "x", pieces);
+        CHECK(pieces.size() == 1);
+        const bool asked = parent->accepts_text();
+        const bool linked = !pieces.empty() && parent->appendChild(pieces.front());
+        if (asked != linked) std::printf("  text under %s: asked %d, linked %d\n", parentTag, asked, linked);
+        CHECK(asked == linked);
+    }
+}
+
 static void testRemoveChildRepointsHover() {
     litehtml_test::TestContainer c;
     auto doc = litehtml::document::createFromString(
@@ -260,6 +286,13 @@ static void patchedMatchesFresh(const char* tag, const char* before, const char*
     CHECK(dump_of(doc) == dump_of(reference));
     CHECK(float(doc->height()) == float(reference->height()));
     CHECK(drawn(c, doc) == drawn(fresh, reference));
+}
+
+// VENDOR.md edit 16: a <button> never reads its children's text (el_button draws its bezel around them), so text inside one
+// is replaced in place as anywhere else.
+static void testButtonTextIsReplacedInPlace() {
+    patchedMatchesFresh("button", "go", "a much longer label");
+    patchedMatchesFresh("button", "one two three", "x");
 }
 
 static void testReplaceTextMatchesFresh() {
@@ -351,6 +384,7 @@ static void testReplaceTextRefusals() {
         CHECK(!doc->replace_text(style, 0, 1, "p{color:blue}", pieces));
         CHECK(pieces.empty());
         CHECK(!doc->can_replace_text(style, 0, 1, "p{color:blue}"));
+        CHECK(std::string(doc->refusal()) == "a parent whose children an element reads"); // edit 76
         doc->commit_patch();
         doc->render(litehtml::pixel_t(120.0f));
         CHECK(dump_of(doc) == before);
@@ -374,16 +408,13 @@ static void testReplaceTextRefusals() {
         text(doc, option, "one");
         add(doc, select, option);
         add(doc, body, select);
-        auto button = make(doc, "button");
-        text(doc, button, "go");
-        add(doc, body, button);
         add(doc, root, body);
         doc->finalize_from_external_root(root, litehtml::telegram_master_css());
         doc->render(litehtml::pixel_t(120.0f));
         std::vector<element::ptr> pieces;
         CHECK(!doc->can_replace_text(option, 0, 1, "two"));
+        CHECK(std::string(doc->refusal()) == "a parent whose children an element reads"); // edit 76
         CHECK(!doc->replace_text(option, 0, 1, "two", pieces));
-        CHECK(!doc->replace_text(button, 0, 1, "stop", pieces));
         CHECK(pieces.empty());
     }
     {
@@ -405,6 +436,7 @@ static void testReplaceTextRefusals() {
         std::vector<element::ptr> pieces;
         CHECK(doc->text_elements() == 10000);
         CHECK(!doc->can_replace_text(q, 0, 1, "a b"));       // 3 pieces for 1: 10002
+        CHECK(std::string(doc->refusal()) == "the text-piece cap"); // edit 76: WidgetRuntime walks the cut there
         CHECK(!doc->replace_text(q, 0, 1, "a b", pieces));
         CHECK(pieces.empty() && q->children().size() == 1);
         int growth = 0;
@@ -444,6 +476,7 @@ static void testReplaceTextRepointsHover() {
 struct PaintContainer : litehtml_test::TestContainer {
     std::vector<std::string> log;
     std::vector<std::string> limits;
+    std::string rootDeclarations;  // the root declarations structureDocument sets (edit 26)
     void sanitizer_limit(const char* what) override { limits.push_back(what); }
     void get_image_size(const char* url, const char*, litehtml::size& sz) override {
         const std::string u = url ? url : "";
@@ -474,6 +507,10 @@ struct PaintContainer : litehtml_test::TestContainer {
     }
     void draw_path(litehtml::uint_ptr, const litehtml::vector_path& path) override {
         log.push_back("path fill=" + std::to_string(path.fill) + ' ' + color(path.fill_color) + " pts=" + std::to_string(path.points.size()));
+    }
+    void draw_box_shadow(litehtml::uint_ptr, const litehtml::position& p, const litehtml::border_radiuses&,
+                         const litehtml::shadow_paint& shadow) override {
+        log.push_back("shadow " + box(p) + ' ' + color(shadow.color));
     }
 };
 
@@ -562,6 +599,10 @@ static void attributePatchedMatchesFresh(const char* sheet, const char* tag, lit
     CHECK(dump_of(doc) == dump_of(reference));
     CHECK(float(doc->height()) == float(reference->height()));
     CHECK(painted(c, doc) == painted(fresh, reference));
+    if (doc->style_bytes_charged() != reference->style_bytes_charged())
+        std::printf("  style bytes %zu, a fresh document's %zu: <%s> %s=%s\n", doc->style_bytes_charged(),
+                    reference->style_bytes_charged(), tag, name, value ? value : "(removed)");
+    CHECK(doc->style_bytes_charged() == reference->style_bytes_charged());
 }
 
 static void testSetAttributeMatchesFresh() {
@@ -570,6 +611,14 @@ static void testSetAttributeMatchesFresh() {
                         "[hidden]{display:none} a:link{color:#909} input:checked{outline:1px solid #f00}";
     // A class toggle (added, swapped, removed) and an id change.
     attributePatchedMatchesFresh(sheet, "p", {}, "class", "a");
+    // A <br>'s attributes (el_break): what a rule reads of it, a block one included, and its inline style.
+    {
+        const char* brSheet = ".v{display:block;height:4px;background:#00f} #k{border:1px solid #000}";
+        attributePatchedMatchesFresh(brSheet, "br", {}, "class", "v");
+        attributePatchedMatchesFresh(brSheet, "br", {{"class", "v"}}, "class", nullptr);
+        attributePatchedMatchesFresh(brSheet, "br", {}, "id", "k");
+        attributePatchedMatchesFresh(brSheet, "br", {}, "style", "display:block;height:3px");
+    }
     // Edit 31.5: matched again in place, an element with text is still not :empty.
     attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "span", {}, "class", "k");
     attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "p", {}, "class", "k");
@@ -600,6 +649,10 @@ static void testSetAttributeMatchesFresh() {
     attributePatchedMatchesFresh(sheet, "a", {}, "href", "x");
     attributePatchedMatchesFresh(sheet, "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}, {"fill", "red"}}, "fill", "blue");
     attributePatchedMatchesFresh(sheet, "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}}, "r", "15");
+    // A <button>'s class and disabled (it reads disabled again when restyled).
+    attributePatchedMatchesFresh(".on{background:#cfc}", "button", {}, "class", "on");
+    attributePatchedMatchesFresh("", "button", {}, "disabled", "");
+    attributePatchedMatchesFresh("", "button", {{"disabled", ""}}, "disabled", nullptr);
     // Several changes in one session, then one commit; the same attribute twice.
     {
         PaintContainer c, fresh;
@@ -646,10 +699,10 @@ static void attributeRefused(const char* sheet, const char* tag, litehtml::strin
 
 // Telegram (VENDOR.md edit 17), fix round 1.
 static void testSetAttributeFixRound() {
-    // I1: :link in an ancestor position names href, so an href change reaches the span and is refused either way.
-    attributeRefused("a:link span{color:#c00} span{color:#00c}", "a+span", {}, "href", "x");
-    attributeRefused("a:link span{color:#c00} span{color:#00c}", "a+span", {{"href", "x"}}, "href", nullptr);
-    attributeRefused("a:link span{color:#c00} span{color:#00c}", "a+span", {{"href", "x"}}, "href", "y");
+    // I1: :link in an ancestor position names href, so an href change reaches the span (edit 77), either way.
+    attributePatchedMatchesFresh("a:link span{color:#c00} span{color:#00c}", "a+span", {}, "href", "x");
+    attributePatchedMatchesFresh("a:link span{color:#c00} span{color:#00c}", "a+span", {{"href", "x"}}, "href", nullptr);
+    attributePatchedMatchesFresh("a:link span{color:#c00} span{color:#00c}", "a+span", {{"href", "x"}}, "href", "y");
     // ... while a class on the anchor, which no selector names, still patches, and the span follows the anchor.
     attributePatchedMatchesFresh("a:link span{color:#c00} span{color:#00c} .k{font-weight:bold}", "a+span", {{"href", "x"}}, "class", "k");
 
@@ -703,11 +756,10 @@ static void testSetAttributeFixRound() {
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}}, "xlink:title", "t");
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}, {"Fill", "red"}}, "Fill", "blue");
 
-    // I2: with a ::before or ::after rule with content, a patch is made unless a cap has been reached (freed pieces would
-    // go to later content in a fresh build). A build makes pseudo-element content after all text, in document order, so a
-    // patch whose content reaches a cap cut it where a build would cut other content: it posts the limit, and the caller
-    // rebuilds. Below the caps the patched document equals a fresh build. The shapes that got past a byte bound: function
-    // name case and spacing, and a second element's rule whose content overlaps in a fresh build.
+    // I2, under edit 84: with a ::before or ::after rule with content, a patch is made at the caps too: near one the commit
+    // replays the style pass in a build's order, so the patched document equals a fresh build, which makes pseudo-element
+    // content after all text, in document order. The shapes that got past a byte bound: function name case and spacing,
+    // and a second element's rule whose content overlaps in a fresh build.
     {
         const char* sheets[] = {
             ".x::before{content:\"a b c d\"} .x{color:#c00}",
@@ -717,7 +769,7 @@ static void testSetAttributeFixRound() {
             ".x:after{content:\"a b c d\"}",
         };
         const litehtml::string_map title = {{"title", "t t t t t t t t t t"}};
-        int compared = 0, refused = 0;
+        int compared = 0, capped = 0;
         for (const char* sheet : sheets) {
             for (int words : {0, 4000, 4990, 5004}) {
                 fillerWords = words;
@@ -732,36 +784,33 @@ static void testSetAttributeFixRound() {
                 beforeText = "before";
                 CHECK(doc->pseudo_content_possible());
                 auto p = doc->root()->select_one("p");
-                if (doc->text_limited() || doc->pseudo_limited()) {
-                    CHECK(!doc->can_set_element_attribute(target, "class", "x"));
-                    CHECK(!doc->set_element_attribute(target, "class", "x"));
-                    CHECK(!doc->can_replace_text(p, 0, p->children().size(), "other words"));
-                    refused++;
-                    continue;
-                }
-                const size_t posted = c.limits.size();
                 CHECK(doc->set_element_attribute(target, "class", "x"));
                 doc->commit_patch();
                 doc->render(litehtml::pixel_t(160.0f));
-                if (c.limits.size() != posted) {
-                    continue;   // a cap reached: the caller rebuilds
-                }
                 CHECK(dump_of(doc) == dump_of(reference));
                 CHECK(painted(c, doc) == painted(fresh, reference));
-                // Then a text patch (edit 16), below the caps too.
+                CHECK(doc->text_elements() == reference->text_elements());
+                CHECK(doc->text_limited() == reference->text_limited() && doc->pseudo_limited() == reference->pseudo_limited());
+                // Then a text patch (edit 16), unless the document's own text is at the cap: a fresh build cuts the filler
+                // after it, which is the caller's walk to find (WidgetRuntime's RenderCut), not the fork's.
                 std::vector<element::ptr> pieces;
+                if (doc->document_text_pieces() + 2 > litehtml::document::max_text_elements) {
+                    CHECK(!doc->can_replace_text(p, 0, p->children().size(), "other words"));
+                    continue;
+                }
                 CHECK(doc->can_replace_text(p, 0, p->children().size(), "other words"));
                 CHECK(doc->replace_text(p, 0, p->children().size(), "other words", pieces));
                 doc->commit_patch();
                 doc->render(litehtml::pixel_t(160.0f));
-                CHECK(c.limits.size() == posted);
                 CHECK(dump_of(doc) == dump_of(textReference));
                 CHECK(painted(c, doc) == painted(textFresh, textReference));
+                CHECK(doc->text_elements() == textReference->text_elements());
+                capped += textReference->text_limited() ? 1 : 0;
                 compared++;
             }
         }
         CHECK(compared > 0);
-        CHECK(refused > 0);
+        CHECK(capped > 0);
         fillerWords = 0;
         // What is not content does not count: a pseudo-element rule without `content`, with `content:none`, and content
         // on a real element; and then patches work near the cap and equal a fresh build, limits included.
@@ -816,10 +865,9 @@ static void testSetAttributeFixRound() {
         }
     }
 
-    // A control makes its lh-* parts when it is matched again: a rule for one counts wherever a control could make it, and
-    // a build counts the parts' content beyond what it keeps, so with such a rule nothing patches (part_content_possible).
-    // type text -> range in one patch, then a text patch near the cap: whatever is accepted equals a fresh build with the
-    // same text.
+    // A control makes its lh-* parts when it is matched again, and a build makes them between the master and author passes
+    // (edit 84: the commit's replay makes them there too). type text -> range in one patch, then a text patch near the
+    // cap: each equals a fresh build with the same text.
     {
         const char* sheet = "lh-range-thumb::before{content:\"B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20\"}"
                             " input lh-range-thumb::before{content:\"q\"}";
@@ -833,7 +881,6 @@ static void testSetAttributeFixRound() {
             beforeText = newText;
             auto reference = attrDocument(fresh, sheet, "input", {{"type", "range"}}, expected);
             beforeText = "before";
-            CHECK(doc->part_content_possible());
             if (doc->set_element_attribute(target, "type", "range")) {
                 typed++;
                 doc->commit_patch();
@@ -846,17 +893,31 @@ static void testSetAttributeFixRound() {
                 doc->commit_patch();
                 doc->render(litehtml::pixel_t(160.0f));
                 const bool same = dump_of(doc) == dump_of(reference) && painted(c, doc) == painted(fresh, reference) &&
-                                  doc->text_elements() == reference->text_elements() && c.limits == fresh.limits;
-                if (!same) std::printf("  range then text differs at %d filler words\n", words);
-                CHECK(same);
+                                  doc->text_elements() == reference->text_elements() &&
+                                  doc->text_limited() == reference->text_limited();
+                if (!same) {
+                    std::printf("  range then text differs at %d filler words: pieces %d/%d limited %d/%d replays %llu\n", words,
+                                doc->text_elements(), reference->text_elements(), doc->text_limited(), reference->text_limited(),
+                                (unsigned long long)doc->generated_replays());
+                    std::istringstream a(dump_of(doc)), b(dump_of(reference));
+                    std::string la, lb;
+                    int line = 0, shown = 0;
+                    while (std::getline(a, la) && std::getline(b, lb) && shown < 6) {
+                        line++;
+                        if (la != lb) { std::printf("    line %d: [%s] vs [%s]\n", line, la.c_str(), lb.c_str()); shown++; }
+                    }
+                }                CHECK(same);
             }
         }
         fillerWords = 0;
         std::printf("  range shape: %d type patches, %d text patches accepted\n", typed, texted);
-        CHECK(typed == 0 && texted == 0);   // the document has a control and a part rule from the start
+        // Every type change patches; a text past the document's own cap is refused here (the caller's walk cuts the filler
+        // after it, as a build does), and every other one patches.
+        CHECK(typed == 37 && texted > 20);
     }
 
-    // The table-cell cap: a span change that would take the cells past 200,000 is refused; below it, equal to fresh.
+    // The table-cell cap: a span change past 200,000 cells is made (edit 84: the commit recounts the cells from the root,
+    // cutting them as a build does); each equals a fresh build.
     {
         auto build = [](PaintContainer& c, const char* bspan, element::ptr& b) {
             auto doc = std::make_shared<litehtml::document>(&c);
@@ -888,12 +949,11 @@ static void testSetAttributeFixRound() {
         CHECK(doc->can_set_element_attribute(b, "colspan", "1000"));      // 200,000 exactly
         CHECK(doc->can_set_element_attribute(b, "rowspan", "2"));         // 199,002
         litehtml::string_map big = {{"colspan", "1000"}, {"rowspan", "2"}};
-        CHECK(!doc->can_set_element_attributes(b, big));                  // 2,000 cells
-        CHECK(!doc->set_element_attributes(b, big));
-        // Pending cells count too.
+        CHECK(doc->can_set_element_attributes(b, big));                   // 2,000 cells: past the cap
+        // Pending cells are threaded through.
         litehtml::document::attribute_growth pending;
         CHECK(doc->can_set_element_attributes(b, {{"colspan", "500"}}, &pending) && pending.cells == 499);
-        CHECK(!doc->can_set_element_attributes(b, {{"colspan", "1000"}}, &pending));   // 499 + 999 + 199,001 > cap
+        CHECK(doc->can_set_element_attributes(b, {{"colspan", "1000"}}, &pending) && pending.cells == 499 + 999);
         // An accepted change equals a fresh build.
         PaintContainer fresh;
         element::ptr expected;
@@ -904,6 +964,36 @@ static void testSetAttributeFixRound() {
         CHECK(dump_of(doc) == dump_of(reference));
         CHECK(painted(c, doc) == painted(fresh, reference));
         CHECK(c.limits == fresh.limits);
+        // Past the cap, equal to a fresh build that cuts there.
+        PaintContainer freshPast;
+        auto built = [&] {
+            auto d = std::make_shared<litehtml::document>(&freshPast);
+            d->set_document_mode(litehtml::no_quirks_mode);
+            auto root = make(d, "html");
+            auto body = make(d, "body");
+            auto table = make(d, "table");
+            auto tr = make(d, "tr");
+            auto a = make(d, "td", {{"colspan", "1000"}, {"rowspan", "199"}});
+            text(d, a, "a");
+            auto bb = make(d, "td", {{"colspan", "1000"}, {"rowspan", "2"}});
+            text(d, bb, "b");
+            auto tbody = make(d, "tbody");
+            add(d, tr, a);
+            add(d, tr, bb);
+            add(d, tbody, tr);
+            add(d, table, tbody);
+            add(d, body, table);
+            add(d, root, body);
+            d->finalize_from_external_root(root, litehtml::telegram_master_css());
+            d->render(litehtml::pixel_t(160.0f));
+            return d;
+        }();
+        CHECK(doc->set_element_attributes(b, big));
+        doc->commit_patch();
+        doc->render(litehtml::pixel_t(160.0f));
+        CHECK(dump_of(doc) == dump_of(built));
+        CHECK(painted(c, doc) == painted(freshPast, built));
+        CHECK(doc->table_cells() == built->table_cells());
     }
 }
 
@@ -917,19 +1007,18 @@ static void testFontSizeZeroMatchesFresh() {
 }
 
 static void testSetAttributeRefusals() {
-    // A class in a selector's ancestor position.
-    attributeRefused(".on p{color:#c00}", "div", {}, "class", "on");
-    attributeRefused(".on p{color:#c00}", "div", {{"class", "on"}}, "class", nullptr);
-    // An id and an attribute name in an ancestor position.
-    attributeRefused("#x p{color:#c00}", "div", {}, "id", "x");
-    attributeRefused("[hidden] p{color:#c00}", "div", {}, "hidden", "");
+    // A class, an id and an attribute name in a selector's ancestor position reach what they name (edit 77).
+    attributePatchedMatchesFresh(".on p{color:#c00}", "div", {}, "class", "on");
+    attributePatchedMatchesFresh(".on p{color:#c00}", "div", {{"class", "on"}}, "class", nullptr);
+    attributePatchedMatchesFresh("#x p{color:#c00}", "div", {}, "id", "x");
+    attributePatchedMatchesFresh("[hidden] p{color:#c00}", "div", {}, "hidden", "");
     // Sibling combinators anywhere in the sheets. (A positional pseudo-class reads an element's place, which no
     // attribute changes: VENDOR.md edit 42.)
     attributePatchedMatchesFresh("p:nth-child(2){color:#c00}", "div", {}, "class", "z");
     attributePatchedMatchesFresh("p:first-child{color:#c00}", "div", {}, "id", "z");
-    attributeRefused("div + p{color:#c00}", "div", {}, "class", "z");
-    // Counters.
-    attributeRefused("p{counter-increment:n}", "div", {}, "class", "z");
+    attributePatchedMatchesFresh("div + p{color:#c00}", "div", {}, "class", "z");
+    // Counters (edit 78: they run again in a build's order).
+    attributePatchedMatchesFresh("p{counter-increment:n}", "div", {}, "class", "z");
     // An option inside a select (and the select itself, which is not restylable in place).
     {
         PaintContainer c;
@@ -957,16 +1046,16 @@ static void testSetAttributeRefusals() {
         doc->render(litehtml::pixel_t(160.0f));
         CHECK(dump_of(doc) == before);
     }
-    // An inline style touching a custom property, var() or a counter, going in or out.
-    attributeRefused("", "div", {}, "style", "--x:1");
-    attributeRefused("", "div", {}, "style", "color:var(--x)");
-    attributeRefused("", "div", {}, "style", "counter-reset:n");
-    attributeRefused("", "div", {{"style", "--x:1"}}, "style", "color:red");
-    attributeRefused("", "div", {{"style", "--x:1"}}, "style", nullptr);
-    // An element no one patches in place: a table, a textarea, a button; and one that is not in the document.
-    attributeRefused("", "table", {}, "class", "z");
+    // An inline style touching a counter, going in or out; a custom property or var().
+    attributePatchedMatchesFresh("", "div", {}, "style", "counter-reset:n");
+    attributePatchedMatchesFresh("", "div", {{"style", "counter-reset:n"}}, "style", "color:red");
+    attributePatchedMatchesFresh("", "div", {{"style", "counter-reset:n"}}, "style", nullptr);
+    attributePatchedMatchesFresh("", "div", {}, "style", "--x:1");
+    attributePatchedMatchesFresh("", "div", {}, "style", "color:var(--x, #c00)");
+    attributePatchedMatchesFresh("", "div", {{"style", "--x:1"}}, "style", "color:red");
+    attributePatchedMatchesFresh("", "div", {{"style", "--x:1"}}, "style", nullptr);
+    // An element no one patches in place: a textarea; and one that is not in the document.
     attributeRefused("", "textarea", {}, "placeholder", "hint");
-    attributeRefused("", "button", {}, "class", "z");
     {
         PaintContainer c;
         element::ptr target;
@@ -1069,6 +1158,7 @@ struct Spec {
     litehtml::string_map attrs;
     std::string text;              // a text's data, or an element's single text child when not empty
     std::vector<Spec> kids;
+    bool hover = false;            // :hover set before the document is finalized, as WidgetRuntime's build sets it
 };
 
 static Spec el(const char* tag, const char* t = "", litehtml::string_map attrs = {}, std::vector<Spec> kids = {}) {
@@ -1089,6 +1179,7 @@ static void pieces(const litehtml::document::ptr& doc, const element::ptr& paren
 
 static element::ptr build(const litehtml::document::ptr& doc, const Spec& spec) {
     auto e = make(doc, spec.tag.c_str(), spec.attrs);
+    if (spec.hover) e->set_pseudo_class(litehtml::_hover_, true);
     if (!spec.text.empty()) pieces(doc, e, spec.text);
     for (const Spec& kid : spec.kids) {
         if (kid.tag.empty()) pieces(doc, e, kid.text);
@@ -1097,16 +1188,15 @@ static element::ptr build(const litehtml::document::ptr& doc, const Spec& spec) 
     return e;
 }
 
-// html > [head > style(sheet)] body(style=margin:0, kids). `body` gets the body.
-static litehtml::document::ptr structureDocument(PaintContainer& c, const char* sheet, const std::vector<Spec>& kids,
-                                                 element::ptr& body, bool render = true) {
-    auto doc = std::make_shared<litehtml::document>(&c);
-    doc->set_document_mode(litehtml::no_quirks_mode);
+// html > [head > style(sheet)...] body(style=margin:0, kids): a <style> for each of `sheets`, an empty one holding no
+// text. `body` gets the body.
+static element::ptr structureRoot(const litehtml::document::ptr& doc, const std::vector<std::string>& sheets,
+                                  const std::vector<Spec>& kids, element::ptr& body) {
     auto root = make(doc, "html");
     auto head = make(doc, "head");
-    if (*sheet) {
+    for (const std::string& sheet : sheets) {
         auto style = make(doc, "style");
-        text(doc, style, sheet);
+        if (!sheet.empty()) text(doc, style, sheet.c_str());
         add(doc, head, style);
     }
     add(doc, root, head);
@@ -1116,29 +1206,101 @@ static litehtml::document::ptr structureDocument(PaintContainer& c, const char* 
         else add(doc, body, build(doc, kid));
     }
     add(doc, root, body);
+    return root;
+}
+
+static litehtml::document::ptr structureDocument(PaintContainer& c, const std::vector<std::string>& sheets,
+                                                 const std::vector<Spec>& kids, element::ptr& body, bool render = true) {
+    auto doc = std::make_shared<litehtml::document>(&c);
+    doc->set_document_mode(litehtml::no_quirks_mode);
+    auto root = structureRoot(doc, sheets, kids, body);
+    if (!c.rootDeclarations.empty()) doc->set_root_declarations(c.rootDeclarations);
     doc->finalize_from_external_root(root, litehtml::telegram_master_css());
     if (render) doc->render(litehtml::pixel_t(200.0f));
     return doc;
 }
 
+// html > [head > style(sheet)] body(style=margin:0, kids), the <style> only when `sheet` is not empty.
+static litehtml::document::ptr structureDocument(PaintContainer& c, const char* sheet, const std::vector<Spec>& kids,
+                                                 element::ptr& body, bool render = true) {
+    return structureDocument(c, *sheet ? std::vector<std::string>{sheet} : std::vector<std::string>{}, kids, body, render);
+}
+
+// The caps the document's content has reached (edit 84: what a fresh build of it reports; a patched document's container
+// has heard every cap its history reached, a replay's again).
+static std::string capsReached(const litehtml::document::ptr& doc) {
+    return std::string(doc->text_limited() ? "text " : "") + (doc->pseudo_limited() ? "elements " : "") +
+           (doc->style_bytes_limited() ? "style-bytes " : "") + (doc->table_limited() ? "table" : "");
+}
+
 // Commits and lays out `doc`, then compares it with a document built afresh from `kids`: placements, height, everything
 // painted, the text-piece count and the limits reported.
-static void structureMatchesFresh(PaintContainer& c, const litehtml::document::ptr& doc, const char* sheet,
-                                  const std::vector<Spec>& kids, const char* what) {
+static void structureMatchesFresh(PaintContainer& c, const litehtml::document::ptr& doc,
+                                  const std::vector<std::string>& sheets, const std::vector<Spec>& kids, const char* what,
+                                  int width = 300, int reduced = 0, int scheme = 0) {
     doc->commit_patch();
     doc->render(litehtml::pixel_t(200.0f));
     PaintContainer fresh;
+    fresh.width = width;
+    fresh.reduced = reduced;
+    fresh.scheme = scheme;
+    fresh.rootDeclarations = c.rootDeclarations;
     element::ptr body;
-    auto reference = structureDocument(fresh, sheet, kids, body);
+    auto reference = structureDocument(fresh, sheets, kids, body);
     const bool same = dump_of(doc) == dump_of(reference) && float(doc->height()) == float(reference->height()) &&
                       painted(c, doc) == painted(fresh, reference) && doc->text_elements() == reference->text_elements() &&
-                      c.limits == fresh.limits;
+                      capsReached(doc) == capsReached(reference);
     if (!same) std::printf("  structure differs after: %s\n%s---\n%s", what, dump_of(doc).c_str(), dump_of(reference).c_str());
     CHECK(dump_of(doc) == dump_of(reference));
     CHECK(float(doc->height()) == float(reference->height()));
     CHECK(painted(c, doc) == painted(fresh, reference));
     CHECK(doc->text_elements() == reference->text_elements());
-    CHECK(c.limits == fresh.limits);
+    CHECK(capsReached(doc) == capsReached(reference));
+    if (doc->style_bytes_charged() != reference->style_bytes_charged())
+        std::printf("  style bytes %zu, a fresh document's %zu after: %s\n", doc->style_bytes_charged(),
+                    reference->style_bytes_charged(), what);
+    CHECK(doc->style_bytes_charged() == reference->style_bytes_charged());
+}
+
+static void structureMatchesFresh(PaintContainer& c, const litehtml::document::ptr& doc, const char* sheet,
+                                  const std::vector<Spec>& kids, const char* what, int width = 300, int reduced = 0,
+                                  int scheme = 0) {
+    structureMatchesFresh(c, doc, *sheet ? std::vector<std::string>{sheet} : std::vector<std::string>{}, kids, what, width,
+                          reduced, scheme);
+}
+
+// structureMatchesFresh against a document built with :hover set on the elements whose ids are `ids`.
+static void pseudoMatchesFresh(PaintContainer& c, const litehtml::document::ptr& doc, const char* sheet,
+                               std::vector<Spec> kids, const std::vector<std::string>& ids, const char* what) {
+    std::vector<Spec*> stack;
+    for (Spec& kid : kids) stack.push_back(&kid);
+    while (!stack.empty()) {
+        Spec* spec = stack.back();
+        stack.pop_back();
+        auto found = spec->attrs.find("id");
+        if (found != spec->attrs.end() && std::find(ids.begin(), ids.end(), found->second) != ids.end()) spec->hover = true;
+        for (Spec& kid : spec->kids) stack.push_back(&kid);
+    }
+    structureMatchesFresh(c, doc, sheet, kids, what);
+}
+
+// A parent's children but its ::before and ::after removed and `subtrees` inserted between them, as removals and
+// insertions (what WidgetRuntime makes of new children); true when each was taken.
+static bool replaceKids(const litehtml::document::ptr& doc, const element::ptr& parent, const std::vector<element::ptr>& subtrees) {
+    bool taken = true;
+    {
+        const litehtml::elements_list children = parent->children();
+        for (const auto& child : children) {
+            if (child->tag() != litehtml::__tag_before_ && child->tag() != litehtml::__tag_after_) taken = doc->remove_subtree(child) && taken;
+        }
+    }
+    size_t index = 0;
+    for (const auto& child : parent->children()) {
+        if (child->tag() != litehtml::__tag_before_) break;
+        index++;
+    }
+    for (const auto& subtree : subtrees) taken = doc->insert_subtree(parent, index++, subtree) && taken;
+    return taken;
 }
 
 static element::ptr childAt(const element::ptr& parent, size_t index) {
@@ -1250,6 +1412,23 @@ static void structureRefused(const char* what, const litehtml::document::ptr& do
     CHECK(c.limits.empty());
 }
 
+// VENDOR.md edits 16 and 18: a <button> reads nothing of its children, so structure inside one is patched in place.
+static void testStructureInsideAButton() {
+    const char* sheet = "";
+    std::vector<Spec> kids = {el("button", "go", {{"id", "b"}}), el("p", "after")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    auto button = doc->root()->select_one("#b");
+    CHECK(button != nullptr);
+    if (!button) return;
+    auto span = build(doc, el("span", "s"));
+    CHECK(doc->can_insert_subtree(button, button->children().size(), span));
+    CHECK(doc->insert_subtree(button, button->children().size(), span));
+    kids[0].kids.push_back(el("span", "s"));
+    structureMatchesFresh(c, doc, sheet, kids, "a span into a button");
+}
+
 static void testStructureRefusals() {
     const std::vector<Spec> kids = {el("p", "one"), el("select", "", {}, {el("option", "o")}), el("div", "two"),
                                     el("svg", "", {{"width", "20"}, {"height", "20"}}), el("button", "b")};
@@ -1278,32 +1457,26 @@ static void testStructureRefusals() {
         CHECK(victim->parent() == body);
     };
     // Document-level elements, inserted or removed.
-    refuseInsert("a <style>", "", {}, el("style", "p{color:red}"));
-    refuseInsert("a div holding a <style>", "", {}, el("div", "", {}, {el("style", "p{color:red}")}));
     refuseInsert("a div holding a <select>", "", {}, el("div", "", {}, {el("select")}));
     refuseInsert("a <body>", "", {}, el("body", "x"));
     refuseRemove("the <select>", "", 1);
-    // Inside <select>, a form control, an svg.
+    // Inside <select> and a form control (an svg replaces itself: testStructureInsideAnSvg).
     refuseInsert("an <option> into the <select>", "", {1}, el("option", "p"));
     refuseInsert("a span into the <option>", "", {1, 0}, el("span", "p"));
-    refuseInsert("a circle into the svg", "", {3}, el("circle", "", {{"r", "5"}}));
-    refuseInsert("a span into the <button>", "", {4}, el("span", "s"));
     // What the parent's own appendChild refuses: a <table> takes tbody, thead, tfoot and caption only.
     const std::vector<Spec> table = {el("table", "", {}, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "c")})})})};
     refuseInsert("a tr into the table", "", {0}, el("tr", "", {}, {el("td", "d")}), &table);
-    // Counters; sibling combinators and positional pseudo-classes outside a rule's subject (replace_children is the
-    // change for those; one in the subject alone matches the siblings again: testSubjectPositionsMatchSiblingsAgain).
-    refuseInsert("with counter-increment", "p{counter-increment:x}", {}, el("p", "x"));
-    refuseRemove("with counter-increment", "div{counter-increment:x}", 2);
-    refuseInsert("with :nth-child outside the subject", "p:nth-child(2n) b{color:red}", {}, el("p", "x"));
-    refuseInsert("with +", "p + div{color:red}", {}, el("p", "x"));
-    refuseRemove("with ~", "p ~ div{color:red}", 2);
-    // Pseudo-element content: already possible, or brought by the subtree (a tag a rule names; a control with lh-* rules).
-    refuseInsert("with p::before content", "p::before{content:'x'}", {}, el("div", "x"), &plain);
-    refuseRemove("with p::before content", "p::before{content:'x'}", 1, &plain);
-    refuseInsert("a <q> with q::before content", "q::before{content:'x'}", {}, el("div", "", {}, {el("q", "x")}), &plain);
-    refuseInsert("an input with an lh-* part rule", "lh-range-thumb::after{content:'x'}", {}, el("input", "", {{"type", "range"}}),
-                 &plain);
+    // A form control's parts' content, brought by the subtree, is no refusal (edit 84: the commit's replay makes it where a
+    // build does).
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "lh-range-thumb::after{content:'x'}", plain, body);
+        CHECK(doc->insert_subtree(body, 0, build(doc, el("input", "", {{"type", "range"}}))));
+        std::vector<Spec> next = plain;
+        next.insert(next.begin(), el("input", "", {{"type", "range"}}));
+        structureMatchesFresh(c, doc, "lh-range-thumb::after{content:'x'}", next, "an input with an lh-* part rule");
+    }
     // The same sheets let what they do not reach through.
     {
         PaintContainer c;
@@ -1312,7 +1485,8 @@ static void testStructureRefusals() {
         CHECK(doc->can_insert_subtree(childAt(body, 0), 1, build(doc, el("tbody", "", {}, {el("tr", "", {}, {el("td", "d")})}))));
         CHECK(doc->can_insert_subtree(childAt(body, 0), 0, build(doc, el("caption", "c"))));
     }
-    for (const char* sheet : {"q::before{content:'x'}", "lh-range-thumb::after{content:'x'}", "p::before{color:red}"}) {
+    for (const char* sheet : {"q::before{content:'x'}", "p::before{content:'x'}", "lh-range-thumb::after{content:'x'}",
+                              "p::before{color:red}", "p{counter-increment:x}", "div{counter-increment:x}"}) {
         PaintContainer c;
         element::ptr body;
         auto doc = structureDocument(c, sheet, plain, body);
@@ -1356,6 +1530,76 @@ static void testStructureRefusals() {
         CHECK(!input->children().empty());
         structureRefused("an lh-* part", withInput, ci, [&] { return withInput->can_remove_subtree(childAt(input, 0)); },
                          [&] { return withInput->remove_subtree(childAt(input, 0)); });
+    }
+}
+
+// 5,000 words: 9,999 text pieces, a document's text cap less one.
+static std::string capWords() {
+    std::string words;
+    for (int n = 0; n < 5000; n++) words += n ? " w" : "w";
+    return words;
+}
+
+// VENDOR.md edits 18 and 19: structure beside ::before/::after content is patched; the content of what a patch inserts
+// is made by the commit's match, in the inserted element's place, as a fresh build makes it.
+static void testStructureBesidePseudoContent() {
+    const char* sheet = "p::before{content:'x'} p{margin:1px}";
+    const std::vector<Spec> base = {el("p", "one"), el("div", "two"), el("p", "three")};
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = base;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto sub = build(doc, el("p", "new"));
+        CHECK(doc->can_insert_subtree(body, 1, sub));
+        CHECK(doc->insert_subtree(body, 1, sub));
+        kids.insert(kids.begin() + 1, el("p", "new"));
+        structureMatchesFresh(c, doc, sheet, kids, "a <p> inserted beside ::before content");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = base;
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->can_remove_subtree(childAt(body, 0)));
+        CHECK(doc->remove_subtree(childAt(body, 0)));
+        kids.erase(kids.begin());
+        structureMatchesFresh(c, doc, sheet, kids, "a <p> removed beside ::before content");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, base, body);
+        const std::vector<Spec> kids = {el("div", "a"), el("p", "b"), el("p", "c")};
+        std::vector<element::ptr> built;
+        for (const Spec& kid : kids) built.push_back(build(doc, kid));
+        CHECK(replaceKids(doc, body, built));
+        structureMatchesFresh(c, doc, sheet, kids, "the body's children replaced beside ::before content");
+    }
+    {
+        // The master sheet's summary::before, brought by the subtree into a document with no <summary>.
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = base;
+        auto doc = structureDocument(c, sheet, kids, body);
+        const Spec details = el("details", "", {}, {el("summary", "s"), el("p", "d")});
+        auto sub = build(doc, details);
+        CHECK(doc->can_insert_subtree(body, 2, sub));
+        CHECK(doc->insert_subtree(body, 2, sub));
+        kids.insert(kids.begin() + 2, details);
+        structureMatchesFresh(c, doc, sheet, kids, "a <summary> inserted (the master sheet's ::before)");
+    }
+    {
+        const char* words = "p::before{content:'a b c'}";
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = base;
+        auto doc = structureDocument(c, words, kids, body);
+        auto sub = build(doc, el("p", "new"));
+        CHECK(doc->can_insert_subtree(body, 3, sub));
+        CHECK(doc->insert_subtree(body, 3, sub));
+        kids.push_back(el("p", "new"));
+        structureMatchesFresh(c, doc, words, kids, "a <p> inserted under several-piece ::before content");
     }
 }
 
@@ -1440,10 +1684,15 @@ static void testStructureCaps() {
         auto doc = structureDocument(c, "", kids, body);
         CHECK(doc->table_cells() == 1);
         auto tr = childAt(childAt(childAt(body, 0), 0), 0);
+        // Past the cap: inserted, and the replacement cuts the cells as a build does (edit 84).
         auto wide = build(doc, el("td", "w", {{"colspan", "1000"}, {"rowspan", "200"}}));
-        structureRefused("past max_table_cells", doc, c, [&] { return doc->can_insert_subtree(tr, 1, wide); },
-                         [&] { return doc->insert_subtree(tr, 1, wide); });
+        CHECK(doc->can_insert_subtree(tr, 1, wide));
+        CHECK(doc->insert_subtree(tr, 1, wide));
+        kids[0].kids[0].kids[0].kids.push_back(el("td", "w", {{"colspan", "1000"}, {"rowspan", "200"}}));
+        structureMatchesFresh(c, doc, "", kids, "past the cell cap");
+        CHECK(doc->remove_subtree(wide));
         wide.reset();   // the piece count compares what the documents hold
+        kids[0].kids[0].kids[0].kids.pop_back();
         CHECK(doc->insert_subtree(tr, 1, build(doc, el("td", "w", {{"colspan", "1000"}, {"rowspan", "199"}}))));
         kids[0].kids[0].kids[0].kids.push_back(el("td", "w", {{"colspan", "1000"}, {"rowspan", "199"}}));
         structureMatchesFresh(c, doc, "", kids, "near the cell cap");
@@ -1451,9 +1700,10 @@ static void testStructureCaps() {
     }
 }
 
-// Under sibling combinators and positional pseudo-classes, insert_subtree and remove_subtree refuse and replace_children
-// matches every child afresh; it keeps the generated content where it is.
-static void testReplaceChildrenUnderPositionalSelectors() {
+// Under sibling combinators and positional pseudo-classes, insert_subtree and remove_subtree are taken, the siblings a rule
+// can reach matched again in place (edit 90): an item whose box does not change keeps its render item, one whose box the
+// match changes is a seed. New children keep the generated content where it is.
+static void testStructureUnderPositionalSelectorsMatchesFresh() {
     const char* sheet = "li:nth-child(2n){color:#f00;background:#eee} li + li{margin-top:3px} .x ~ li{font-weight:bold}"
                         " li:last-child{background:#0f0} li:first-child span{color:#00f}";
     std::vector<Spec> kids = {el("ul", "", {}, {el("li", "", {}, {el("span", "a")}), el("li", "b", {{"class", "x"}}), el("li", "c")})};
@@ -1462,33 +1712,32 @@ static void testReplaceChildrenUnderPositionalSelectors() {
     auto doc = structureDocument(c, sheet, kids, body);
     CHECK(doc->structure_reaches_siblings());
     auto ul = childAt(body, 0);
-    CHECK(!doc->can_insert_subtree(ul, 0, build(doc, el("li", "n"))));
-    CHECK(!doc->can_remove_subtree(childAt(ul, 0)));
+    CHECK(doc->can_insert_subtree(ul, 0, build(doc, el("li", "n"))));
+    CHECK(doc->can_remove_subtree(childAt(ul, 0)));
     std::vector<Spec> next = {el("li", "n"), el("li", "", {}, {el("span", "a")}), el("li", "b", {{"class", "x"}}), el("li", "c"),
                               el("li", "", {}, {el("span", "d")})};
     std::vector<element::ptr> built;
     for (const Spec& spec : next) built.push_back(build(doc, spec));
-    litehtml::document::structure_growth growth;
-    CHECK(doc->can_replace_children(ul, built, &growth));
-    CHECK(growth.elements == 7 - 4);
-    CHECK(doc->replace_children(ul, built));
+    CHECK(replaceKids(doc, ul, built));
     built.clear();   // the piece count compares what the documents hold
     kids[0].kids = next;
-    structureMatchesFresh(c, doc, sheet, kids, "replace_children under positional selectors");
+    structureMatchesFresh(c, doc, sheet, kids, "new children under positional selectors");
     // Down to one item, then none.
-    CHECK(doc->replace_children(ul, {build(doc, el("li", "only"))}));
+    CHECK(replaceKids(doc, ul, {build(doc, el("li", "only"))}));
     kids[0].kids = {el("li", "only")};
     structureMatchesFresh(c, doc, sheet, kids, "one item left");
-    CHECK(doc->replace_children(ul, {}));
+    CHECK(replaceKids(doc, ul, {}));
     kids[0].kids = {};
     structureMatchesFresh(c, doc, sheet, kids, "no item left");
-    // Counters still refuse it.
+    // And under counters (edit 78).
+    const char* countedSheet = "ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n) '. '}";
+    std::vector<Spec> countedKids = {el("ol", "", {}, {el("li", "a"), el("li", "b"), el("li", "c")})};
     PaintContainer cc;
     element::ptr body2;
-    auto counted = structureDocument(cc, "li{counter-increment:n}", {el("ul", "", {}, {el("li", "a")})}, body2);
-    structureRefused("replace_children with counters", counted, cc,
-                     [&] { return counted->can_replace_children(childAt(body2, 0), {build(counted, el("li", "b"))}); },
-                     [&] { return counted->replace_children(childAt(body2, 0), {build(counted, el("li", "b"))}); });
+    auto counted = structureDocument(cc, countedSheet, countedKids, body2);
+    CHECK(replaceKids(counted, childAt(body2, 0), {build(counted, el("li", "x")), build(counted, el("li", "y"))}));
+    countedKids[0].kids = {el("li", "x"), el("li", "y")};
+    structureMatchesFresh(cc, counted, countedSheet, countedKids, "an ordered list's items replaced");
 }
 
 // Telegram (VENDOR.md edit 18): one selector-step budget per session. A document of `divs` divs under a sheet of `rules`
@@ -1537,10 +1786,6 @@ static void testSelectorStepsAreOneBudgetPerSession() {
         perDiv = doc->end_selector_steps();
         CHECK(perDiv >= 1000);
         CHECK(div->css().get_color().red == 255);
-        // The bound holds it.
-        litehtml::document::selector_step_plan plan;
-        plan.inserted.push_back({body, build(doc, el("div", "x"))});
-        CHECK(doc->selector_step_bound(plan) >= perDiv);
     }
     // Two roots and three sheets share one session: a limit of a div and a half colours the first and not the second.
     // (Without the edit each outermost pass had 4,000,000 steps of its own, and both were coloured.)
@@ -1560,9 +1805,9 @@ static void testSelectorStepsAreOneBudgetPerSession() {
         CHECK(second->css().get_color().red != 255);
     }
     // The reviewer's parity probe: 1,000 rules, 4,099 divs. A fresh build in a session passes 4,000,000 steps and leaves
-    // the last divs uncoloured; a patch that matched in a session of its own would colour an appended div. With the
-    // build's steps recorded, the bound of the append says it does not fit (a caller rebuilds), and a session limited to
-    // what is left colours nothing, as the fresh build of the final document does not colour its last div.
+    // the last divs uncoloured; a patch that matched in a session of its own would colour an appended div. A session
+    // limited to what the build left colours nothing, as the fresh build of the final document does not colour its last
+    // div.
     {
         PaintContainer c;
         element::ptr body;
@@ -1572,9 +1817,6 @@ static void testSelectorStepsAreOneBudgetPerSession() {
         const int built = coloured(body);
         CHECK(built < 4099 && built > 3900);
         auto div = build(doc, el("div", "last"));
-        litehtml::document::selector_step_plan plan;
-        plan.inserted.push_back({body, div});
-        CHECK(used + doc->selector_step_bound(plan) >= litehtml::document::default_selector_steps);
         doc->begin_selector_steps(std::max<int64_t>(0, litehtml::document::default_selector_steps - used));
         CHECK(doc->insert_subtree(body, body->children().size(), div));
         doc->commit_patch();
@@ -1586,8 +1828,8 @@ static void testSelectorStepsAreOneBudgetPerSession() {
         CHECK(coloured(bodyf) == built);
         CHECK(bodyf->children().back()->css().get_color().red != 255);
         CHECK(div->css().get_color().red != 255);
-        // A patch session the caller opened no budget for opens its own (4,000,000): the appended div is coloured. That a
-        // patch agrees with a build near the cap is the caller's: the bound above says it does not fit, and it rebuilds.
+        // A patch session the caller opened no budget for opens its own (4,000,000): the appended div is coloured. A cut
+        // boot's first commit replays the style pass uncut (note_match_cut, testACutBootReplaysAtItsFirstCommit).
         auto again = build(doc, el("div", "own session"));
         CHECK(doc->insert_subtree(body, body->children().size(), again));
         doc->commit_patch();
@@ -1631,95 +1873,39 @@ static void testSelectorStepsAreOneBudgetPerSession() {
     }
 }
 
-// The bound is an upper bound: for selector shapes that walk ancestors, siblings and selector lists, the steps a patch
-// uses (inserting subtrees, re-matching an element) never pass it.
-static void testSelectorStepBoundHolds() {
-    const char* sheets[] = {
-        "div p span{color:red} div span{color:blue} p > span{margin:1px}",
-        "li + li{color:red} li ~ li{margin:1px} .x ~ li span{color:blue}",
-        ":is(div, p) :not(.x) span{color:red} li:nth-child(2n of .x){color:blue} :where(ul li) b{margin:1px}",
-        "a b c d e{color:red} a > b c > d e{color:blue} * *{margin:0} .x .y .z{padding:1px}",
-        "input{color:red} lh-input-text{color:blue} *{margin:0}",
-    };
-    int checked = 0;
-    for (const char* sheet : sheets) {
-        PaintContainer c;
-        element::ptr body;
-        Spec deep = el("div", "", {{"class", "x"}}, {el("p", "", {}, {el("span", "s")})});
-        for (int n = 0; n < 40; n++) deep = el(n % 2 ? "div" : "p", "", {{"class", n % 3 ? "y" : "x"}}, {deep});
-        std::vector<Spec> kids = {deep, el("ul", "", {}, {el("li", "a", {{"class", "x"}}), el("li", "b"), el("li", "c", {{"class", "x"}})}),
-                                  el("a", "", {}, {el("b", "", {}, {el("c", "", {}, {el("d", "", {}, {el("e", "e")})})})})};
-        auto doc = structureDocument(c, sheet, kids, body);
-        element::ptr deepest = body;
-        while (!deepest->children().empty() && std::dynamic_pointer_cast<litehtml::html_tag>(deepest->children().front()))
-            deepest = deepest->children().front();
-        const std::vector<Spec> inserts = {
-            el("span", "", {{"class", "z"}}, {el("span", "t")}),
-            el("li", "", {{"class", "x"}}, {el("span", "u"), el("b", "v")}),
-            el("div", "", {{"class", "x y"}}, {el("p", "", {}, {el("span", "w")}), el("input", "", {{"type", "range"}})}),
-            el("e", "", {}, {el("e", "e")}),
-        };
-        for (const element::ptr& parent : {body, deepest, childAt(body, 1), childAt(childAt(childAt(childAt(body, 2), 0), 0), 0)}) {
-            for (const Spec& spec : inserts) {
-                auto sub = build(doc, spec);
-                litehtml::document::selector_step_plan plan;
-                plan.inserted.push_back({parent, sub});
-                const int64_t bound = doc->selector_step_bound(plan);
-                if (!doc->can_insert_subtree(parent, 0, sub)) continue;
-                doc->begin_selector_steps(int64_t(1) << 60);
-                CHECK(doc->insert_subtree(parent, 0, sub));
-                doc->commit_patch();
-                const int64_t used = doc->end_selector_steps();
-                if (used > bound) std::printf("  bound %lld < used %lld: %s\n", (long long)bound, (long long)used, sheet);
-                CHECK(used <= bound);
-                checked++;
-            }
-        }
-        // A re-match (set_element_attributes) of the list's first item, with a class going away and one coming.
-        // (The shapes above keep their ancestors' sibling lists short; the many-sibling case follows the loop.)
-        auto li = childAt(childAt(body, 1), 0);
-        litehtml::string_map attrs = {{"class", "y"}};
-        litehtml::document::selector_step_plan plan;
-        plan.rematched.push_back({li, &attrs});
-        const int64_t bound = doc->selector_step_bound(plan);
-        if (doc->can_set_element_attributes(li, attrs)) {
-            doc->begin_selector_steps(int64_t(1) << 60);
-            CHECK(doc->set_element_attributes(li, attrs));
-            doc->commit_patch();
-            const int64_t used = doc->end_selector_steps();
-            CHECK(used <= bound);
-            checked++;
-        }
-    }
-    // The reviewer's shape (fix round 2): a compound left of a combinator, tested at an ancestor, walks that ancestor's
-    // siblings: `.a ~ p span` for spans under the last of 900 <p>s walks the body's children for each. The bound sees every
-    // ancestor's parent's children, not only the insertion parent's.
-    for (const char* sheet : {".a ~ p span{color:red}", "p:nth-child(2n of .a) span{color:red}", ".a ~ p > span b{color:red}"}) {
-        PaintContainer c;
-        element::ptr body;
-        std::vector<Spec> kids;
-        // No sibling matches `.a`, so each walk goes through all of them.
-        for (int n = 0; n < 900; n++) kids.push_back(el("p", "x"));
-        kids.push_back(el("p"));
-        auto doc = structureDocument(c, sheet, kids, body);
-        auto last = childAt(body, body->children().size() - 1);
-        std::vector<element::ptr> spans;
-        litehtml::document::selector_step_plan plan;
-        for (int n = 0; n < 20; n++) {
-            spans.push_back(build(doc, el("span", "", {}, {el("b", "s")})));
-            plan.inserted.push_back({last, spans.back()});
-        }
-        const int64_t bound = doc->selector_step_bound(plan);
-        doc->begin_selector_steps(int64_t(1) << 60);
-        CHECK(doc->replace_children(last, spans));
-        doc->commit_patch();
-        const int64_t used = doc->end_selector_steps();
-        if (used > bound) std::printf("  bound %lld < used %lld: %s\n", (long long)bound, (long long)used, sheet);
-        CHECK(used <= bound);
-        CHECK(used >= 20 * 900);
-        checked++;
-    }
-    CHECK(checked >= 43);
+// Telegram (VENDOR.md edit 84): a boot whose matching litehtml's budget cut (note_match_cut) replays the style pass at
+// its first commit, whatever the session changed, within the replay's limit: the patched document is matched as an uncut
+// build's. The mark goes with that replay: the next commit replays nothing.
+static void testACutBootReplaysAtItsFirstCommit() {
+    PaintContainer c;
+    element::ptr body;
+    int64_t used = 0;
+    auto doc = stepDocument(c, 1000, 4099, body, used);
+    CHECK(used > litehtml::document::default_selector_steps);
+    CHECK(coloured(body) < 4099);
+    doc->note_match_cut();
+    const uint64_t replays = doc->generated_replays();
+    // A text replaced by the same text: it matches nothing.
+    element::ptr first = body->children().front();
+    std::vector<element::ptr> pieces;
+    doc->begin_selector_steps(int64_t(1) << 60);
+    CHECK(doc->replace_text(first, 0, first->children().size(), "x", pieces));
+    doc->commit_patch();
+    doc->end_selector_steps();
+    doc->render(litehtml::pixel_t(300.0f));
+    CHECK(doc->generated_replays() == replays + 1);
+    CHECK(coloured(body) == 4099);
+    PaintContainer cf;
+    element::ptr bodyf;
+    int64_t usedf = 0;
+    auto fresh = stepDocument(cf, 1000, 4099, bodyf, usedf, int64_t(1) << 60);
+    CHECK(dump_of(doc) == dump_of(fresh));
+    CHECK(painted(c, doc) == painted(cf, fresh));
+    doc->begin_selector_steps(int64_t(1) << 60);
+    CHECK(doc->replace_text(first, 0, first->children().size(), "x", pieces));
+    doc->commit_patch();
+    doc->end_selector_steps();
+    CHECK(doc->generated_replays() == replays + 1);
 }
 
 // Telegram (VENDOR.md edit 18): a table's rows are placed once per layout. render_item_table shifted each row down by
@@ -1965,16 +2151,23 @@ struct RecordingObserver : litehtml::render_observer {
     std::set<const litehtml::render_item*> added, removed, texts;
     std::map<const litehtml::render_item*, unsigned> geometry;
     std::vector<std::pair<const litehtml::element*, bool>> restyled;
-    int rebuilt = 0;
+    // subtree_replaced's (old, new).
+    std::vector<std::pair<const litehtml::render_item*, const litehtml::render_item*>> replaced;
+    // subtree_linked's and subtree_unlinked's items (edit 89).
+    std::vector<const litehtml::render_item*> linked, unlinked;
     void item_added(const std::shared_ptr<litehtml::render_item>& item) override { added.insert(item.get()); }
     void item_removed(const litehtml::render_item* item) override { removed.insert(item); }
     void item_geometry_changed(const litehtml::render_item* item, unsigned what) override { geometry[item] |= what; }
     void element_restyled(const litehtml::element* el, bool paint_order) override { restyled.push_back({el, paint_order}); }
     void text_replaced(const litehtml::render_item* inline_context) override { texts.insert(inline_context); }
-    void tree_rebuilt() override { rebuilt++; }
+    void subtree_replaced(const litehtml::render_item* old_item, const std::shared_ptr<litehtml::render_item>& new_item) override {
+        replaced.push_back({old_item, new_item.get()});
+    }
+    void subtree_linked(const std::shared_ptr<litehtml::render_item>& item) override { linked.push_back(item.get()); }
+    void subtree_unlinked(const litehtml::render_item* item) override { unlinked.push_back(item); }
     void clear() {
-        added.clear(), removed.clear(), texts.clear(), geometry.clear(), restyled.clear();
-        rebuilt = 0;
+        added.clear(), removed.clear(), texts.clear(), geometry.clear(), restyled.clear(), replaced.clear();
+        linked.clear(), unlinked.clear();
     }
 };
 
@@ -2077,7 +2270,6 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(doc->replace_text(p, 0, p->children().size(), "a much longer text that has to wrap here", made));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 0);
         CHECK(observer.texts.size() == 1 && observer.texts.count(p->get_render_item().get()));
         CHECK(!observer.added.empty() && !observer.removed.empty());
         checkReports(doc, observer, before, was, "text patch");
@@ -2101,7 +2293,6 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(doc->set_element_attribute(div, "class", "b"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 0);
         CHECK(observer.restyled.size() == 1 && observer.restyled[0].first == div.get() && !observer.restyled[0].second);
         checkReports(doc, observer, before, was, "class patch");
         CHECK(observer.added.empty() && observer.removed.empty());
@@ -2111,12 +2302,12 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(doc->set_element_attribute(div, "class", "b o"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 0);
         CHECK(observer.restyled.size() == 1 && observer.restyled[0].first == div.get() && observer.restyled[0].second);
         checkReports(doc, observer, before2, was2, "opacity class patch");
         doc->set_render_observer(nullptr);
     }
-    // A structural patch and a style patch rebuild the render tree: tree_rebuilt, and no per-item reports.
+    // A block appended to the body is linked (edit 89: subtree_linked), and a style patch that changes a box replaces a
+    // render subtree (edit 74: subtree_replaced); neither gives per-item reports.
     {
         PaintContainer c;
         element::ptr body;
@@ -2126,13 +2317,13 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(doc->insert_subtree(body, body->children().size(), build(doc, el("p", "appended"))));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 1);
+        CHECK(observer.replaced.empty() && observer.linked.size() == 1);
         CHECK(observer.added.empty() && observer.removed.empty());
         observer.clear();
         CHECK(doc->set_element_attribute(childAt(body, 1), "style", "float:left"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 1);
+        CHECK(observer.replaced.size() == 1);
         doc->set_render_observer(nullptr);
     }
     // Edit 63: a style patch of a box's geometry alone keeps the render tree, and the layout reports every box it moved
@@ -2148,7 +2339,6 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(doc->set_element_attribute(childAt(body, 1), "style", "padding:4px"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
-        CHECK(observer.rebuilt == 0);
         checkReports(doc, observer, before, was, "padding style patch");
         doc->set_render_observer(nullptr);
     }
@@ -2410,62 +2600,3019 @@ static void testInheritedUrlsAreSharedAndCharged() {
     }
     {
         const std::string body = many_elements(9000);
-        size_t baseline = 0;
-        {
-            LimitContainer c;
-            const size_t before = heap_in_use();
-            auto doc = litehtml::document::createFromString(litehtml::estring("<style>b{display:list-item}</style>" + body), &c,
-                                                            litehtml::telegram_master_css());
-            doc->render(litehtml::pixel_t(300.0f));
-            baseline = heap_in_use() - before;
-        }
         LimitContainer c;
-        const size_t before = heap_in_use();
         auto doc = litehtml::document::createFromString(litehtml::estring(css + body), &c, litehtml::telegram_master_css());
         doc->render(litehtml::pixel_t(300.0f));
-        const double over = double(heap_in_use() - before) - double(baseline);
-        std::printf("inherited url over 9000 elements: +%.1f MB over the baseline, %zu bytes charged\n", over / 1048576,
-                    doc->style_bytes_charged());
-        // One shared string: the copies cost a pointer each.
-        CHECK(over < 2.0 * 1048576);
         CHECK(c.limits.empty() && !doc->style_bytes_limited());
         CHECK(doc->style_bytes_charged() <= litehtml::document::max_style_bytes / 2);
         const litehtml::elements_list bs = doc->root()->select_all("b");
+        // One shared string: the copies cost a pointer each. (A heap reading moves by megabytes with what earlier tests
+        // allocated, so the sharing itself is checked.)
+        const char* shared = nullptr;
+        size_t holders = 0;
+        bool one = true;
+        for (const auto& b : bs) {
+            const std::string& image = b->css().get_list_style_image();
+            if (image.empty()) continue;
+            holders++;
+            shared = shared ? shared : image.data();
+            one = one && image.data() == shared;
+        }
+        std::printf("inherited url over 9000 elements: %zu list items hold it, %zu bytes charged\n", holders,
+                    doc->style_bytes_charged());
+        CHECK(holders > 1 && one);
         CHECK(!bs.empty() && bs.front()->css().get_list_style_image() == url);
         CHECK(!bs.empty() && bs.back()->css().get_list_style_image().empty());
     }
-    // A template document's class changes, back and forth: each turn charges the items' bullet and gives it back alike.
-    {
-        LimitContainer c;
-        const auto page = [&](const char* cls) {
-            return "<style>.on{list-style:url(" + url + ")}</style><body><ul class=\"" + std::string(cls) +
-                   "\"><li></li><li></li></ul></body>";
-        };
-        auto doc = litehtml::document::createUpdatableFromString(page("off"), &c, litehtml::telegram_master_css());
-        doc->render(litehtml::pixel_t(300.0f));
-        const size_t off = doc->style_bytes_charged();
-        size_t on = 0;
-        for (int i = 0; i < 3; i++) {
-            bool changed = false;
-            doc->update_from_string(page("on"), &changed);
-            doc->render(litehtml::pixel_t(300.0f));
-            if (i == 0)
-                on = doc->style_bytes_charged();
-            if (doc->style_bytes_charged() != on) std::printf("class change %d on: %zu charged, first %zu\n", i, doc->style_bytes_charged(), on);
-            CHECK(doc->style_bytes_charged() == on);
-            doc->update_from_string(page("off"), &changed);
-            doc->render(litehtml::pixel_t(300.0f));
-            if (doc->style_bytes_charged() != off) std::printf("class change %d off: %zu charged, first %zu\n", i, doc->style_bytes_charged(), off);
-            CHECK(doc->style_bytes_charged() == off);
-        }
-        CHECK(on >= off + 2 * url.size());
+}
+
+// Edits 74, 89: after the boot the render tree is never re-created: a block inserted into the body is linked in place
+// (subtree_linked) and a viewport change replaces a render subtree in place (subtree_replaced).
+static void testAfterTheBootSubtreesAreReplaced() {
+    const char* sheet = "@media (max-width:260px){p{display:none}}";
+    std::vector<Spec> kids = {el("p", "one"), el("div", "two")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    CHECK(doc->insert_subtree(body, 0, build(doc, el("p", "new"))));
+    kids.insert(kids.begin(), el("p", "new"));
+    structureMatchesFresh(c, doc, sheet, kids, "an insert");
+    CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+    observer.clear();
+    c.width = 250;
+    CHECK(doc->viewport_changed());
+    structureMatchesFresh(c, doc, sheet, kids, "a media query flipped", 250);
+    CHECK(observer.replaced.size() == 1);
+    CHECK(!observer.replaced.empty() && observer.replaced[0].second == doc->root_render().get());
+    // The replaced items leave their elements: an element answers its new item, not the old one, nor null once the old
+    // one is gone.
+    CHECK(doc->root()->get_render_item() == doc->root_render());
+    doc->set_render_observer(nullptr);
+}
+
+// Edit 74: a patch replaces the render subtree of its nearest boundary, and keeps every render item outside it; edit 89:
+// a block inserted into a block links alone, so its parent keeps its item too.
+static element::ptr byId(const element::ptr& root, const char* id) {
+    const char* own = root->get_attr("id");
+    if (own && std::strcmp(own, id) == 0) return root;
+    for (const auto& child : root->children()) {
+        if (auto found = byId(child, id)) return found;
     }
+    return nullptr;
+}
+
+static bool inTree(const litehtml::document::ptr& doc, const std::shared_ptr<litehtml::render_item>& item) {
+    auto top = item;
+    while (top && top->parent()) top = top->parent();
+    return top && top == doc->root_render();
+}
+
+static void reasonIs(const litehtml::document::ptr& doc, const std::string& expected, const char* what);
+
+// What the boundary is: the element whose new item subtree_replaced reported, "root", or "" for no replacement.
+static std::string replacedAt(const litehtml::document::ptr& doc, const RecordingObserver& observer) {
+    if (observer.replaced.empty()) return "";
+    const litehtml::render_item* item = observer.replaced.back().second;
+    if (item == doc->root_render().get()) return "root";
+    const char* id = item->src_el()->get_attr("id");
+    return id ? id : "?";
+}
+
+static void testStructurePatchKeepsTheTreeOutsideItsBoundary() {
+    std::vector<Spec> kids = {el("div", "", {{"id", "a"}}, {el("p", "a")}), el("div", "", {{"id", "b"}}, {el("p", "b")})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    auto a = byId(body, "a"), b = byId(body, "b");
+    // Held, so that an item made again cannot take a kept one's address.
+    const std::shared_ptr<litehtml::render_item> root = doc->root_render();
+    const std::shared_ptr<litehtml::render_item> aItem = doc->live_item(*a), bItem = doc->live_item(*b);
+    CHECK(aItem != nullptr && bItem != nullptr);
+    CHECK(doc->insert_subtree(b, 1, build(doc, el("p", "new"))));
+    kids[1].kids.push_back(el("p", "new"));
+    structureMatchesFresh(c, doc, "", kids, "an insert into #b");
+    CHECK(doc->root_render() == root);
+    CHECK(doc->live_item(*a) == aItem);
+    CHECK(doc->live_item(*b) == bItem);
+    CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+    doc->set_render_observer(nullptr);
+}
+
+// WidgetRuntime's structure flush replaces a kept Text's pieces in the session of its insertions and removals, after
+// them (RenderTree::flushStructure). In another parent the run is replaced in place and its inline context kept; in its
+// own parent, whose children the session changed, the parent is a seed (edit 74). Each equals a fresh build.
+static void testReplaceTextBesideStructure() {
+    {
+        std::vector<Spec> kids = {el("div", "", {{"id", "a"}}, {el("p", "one two", {{"id", "t"}})}),
+                                  el("div", "", {{"id", "b"}}, {el("p", "x")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", kids, body);
+        auto t = byId(body, "t"), b = byId(body, "b");
+        // Held, so that an item made again cannot take the kept one's address.
+        const std::shared_ptr<litehtml::render_item> tItem = doc->live_item(*t);
+        CHECK(tItem != nullptr);
+        CHECK(doc->remove_subtree(b->children().front()));
+        CHECK(doc->insert_subtree(b, 0, build(doc, el("p", "y"))));
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_text(t, 0, t->children().size(), "three four five", made));
+        kids[1].kids = {el("p", "y")};
+        kids[0].kids[0].text = "three four five";
+        structureMatchesFresh(c, doc, "", kids, "a text beside structure in another parent");
+        CHECK(doc->live_item(*t) == tItem);
+    }
+    {
+        // An insertion before the run, at its first piece's place.
+        std::vector<Spec> kids = {el("p", "", {{"id", "t"}}, {txt("one "), el("b", "x")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", kids, body);
+        auto t = byId(body, "t");
+        CHECK(doc->insert_subtree(t, 0, build(doc, el("span", "s"))));
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_text(t, 1, 2, "uno dos", made));
+        kids[0].kids = {el("span", "s"), txt("uno dos"), el("b", "x")};
+        structureMatchesFresh(c, doc, "", kids, "a text after an insertion before it");
+    }
+    {
+        // Its sibling removed.
+        std::vector<Spec> kids = {el("p", "", {{"id", "t"}}, {txt("one "), el("b", "x", {{"id", "x"}})})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", kids, body);
+        auto t = byId(body, "t");
+        CHECK(doc->remove_subtree(byId(body, "x")));
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_text(t, 0, 2, "uno dos", made));
+        kids[0].kids = {txt("uno dos")};
+        structureMatchesFresh(c, doc, "", kids, "a text beside its removed sibling");
+    }
+}
+
+static void testReplacementBoundaries() {
+    struct Case {
+        const char* name;
+        const char* sheet;
+        std::vector<Spec> kids;
+        // Patches the document and the specs alike; true when the patch was taken.
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&, PaintContainer&)> patch;
+        const char* boundary;
+        int width;
+    };
+    std::vector<Case> cases = {
+        {"a <b> inside a <span> inside #p", "",
+         {el("p", "", {{"id", "p"}}, {txt("t "), el("span", "", {{"id", "s"}}, {el("b", "x")})})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[1].kids.push_back(el("b", "y"));
+             return doc->insert_subtree(byId(body, "s"), 1, build(doc, el("b", "y")));
+         },
+         "p", 300},
+        {"a <div> made inline inside #s", "",
+         {el("section", "", {{"id", "s"}}, {el("div", "d", {{"id", "d"}}), el("p", "after")})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].attrs["style"] = "display:inline";
+             return doc->set_element_attribute(byId(body, "d"), "style", "display:inline");
+         },
+         "s", 300},
+        {"a row appended to a <tbody> in #t", "",
+         {el("table", "", {{"id", "t"}}, {el("tbody", "", {{"id", "b"}}, {el("tr", "", {}, {el("td", "c1")})})})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].kids.push_back(el("tr", "", {}, {el("td", "c2")}));
+             return doc->insert_subtree(byId(body, "b"), 1, build(doc, el("tr", "", {}, {el("td", "c2")})));
+         },
+         "t", 300},
+        {"a circle's cx in #g", "",
+         {el("svg", "", {{"id", "g"}, {"width", "40"}, {"height", "40"}},
+             {el("circle", "", {{"id", "c"}, {"cx", "20"}, {"cy", "20"}, {"r", "10"}})})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].attrs["cx"] = "25";
+             return doc->set_element_attribute(byId(body, "c"), "cx", "25");
+         },
+         "g", 300},
+        {"a <p> appended under display:none", "",
+         {el("div", "", {{"id", "h"}, {"style", "display:none"}}, {el("p", "x")}), el("p", "shown")},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids.push_back(el("p", "y"));
+             return doc->insert_subtree(byId(body, "h"), 1, build(doc, el("p", "y")));
+         },
+         "", 300},
+        // An SVG element under an element that renders nothing is not dropped: a <use> or url(#…) anywhere can draw it.
+        {"a circle in a hidden svg", "",
+         {el("div", "", {{"id", "w"}}, {el("svg", "", {{"style", "display:none"}}, {el("circle", "", {{"id", "c"}, {"r", "4"}})})}),
+          el("p", "after")},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].kids[0].attrs["r"] = "9";
+             return doc->set_element_attribute(byId(body, "c"), "r", "9");
+         },
+         "w", 300},
+        // A replaced element displayed as a table part is held by the table's grid: the table is the boundary.
+        {"an img displayed as a table cell", "",
+         {el("div", "", {{"id", "t"}, {"style", "display:table"}},
+             {el("div", "", {{"style", "display:table-row"}},
+                 {el("img", "", {{"id", "i"}, {"style", "display:table-cell"}, {"src", "data:a"}})})})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].kids[0].attrs["src"] = "data:b";
+             return doc->set_element_attribute(byId(body, "i"), "src", "data:b");
+         },
+         "t", 300},
+        // A flex item that is not a block box (compute_flex blockifies the others, not inline-grid) sits in an anonymous
+        // block made from it, which inherits its style and is not in its subtree: the flex container is the boundary.
+        {"an inline-grid flex item's font size", ".big{font-size:28px}",
+         {el("div", "", {{"id", "f"}, {"style", "display:flex;flex-direction:column"}},
+             {el("span", "k", {{"id", "k"}, {"style", "display:inline-grid;height:20px"}})})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].attrs["class"] = "big";
+             return doc->set_element_attribute(byId(body, "k"), "class", "big");
+         },
+         "f", 300},
+        // A document with an <svg> drops no seed under an element that renders nothing: a <use> or url(#…) can draw an
+        // SVG element that the session moved into, out of, or under it.
+        {"a <p> under display:none beside an svg", "",
+         {el("div", "", {{"id", "w"}}, {el("div", "", {{"id", "h"}, {"style", "display:none"}}, {el("p", "x")})}),
+          el("svg", "", {{"width", "10"}, {"height", "10"}})},
+         [](auto doc, auto body, auto& kids, auto&) {
+             kids[0].kids[0].kids.push_back(el("p", "y"));
+             return doc->insert_subtree(byId(body, "h"), 1, build(doc, el("p", "y")));
+         },
+         "w", 300},
+        {"a media query flipped", "@media (max-width:260px){p{display:none}}", {el("p", "one"), el("div", "two")},
+         [](auto doc, auto, auto&, PaintContainer& c) {
+             c.width = 250;
+             return doc->viewport_changed();
+         },
+         "root", 250},
+    };
+    for (Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(k.patch(doc, body, k.kids, c));
+        structureMatchesFresh(c, doc, k.sheet, k.kids, k.name, k.width);
+        const std::string at = replacedAt(doc, observer);
+        if (at != k.boundary) std::printf("  %s: replaced at \"%s\", want \"%s\"\n", k.name, at.c_str(), k.boundary);
+        CHECK(at == k.boundary);
+        CHECK(*k.boundary || doc->rebuild_reason().empty());
+        doc->set_render_observer(nullptr);
+    }
+}
+
+static void testReplacedItemsLeaveTheirElements() {
+    std::vector<Spec> kids = {el("div", "", {{"id", "a"}}, {el("p", "a")}),
+                              el("div", "", {{"id", "b"}}, {el("p", "b one"), el("p", "", {}, {txt("b "), el("i", "two")})})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    auto b = byId(body, "b");
+    CHECK(doc->insert_subtree(b, 0, build(doc, el("p", "new"))));
+    doc->commit_patch();
+    const auto everyElement = [&](const char* when) {
+        std::vector<element::ptr> pending{b};
+        while (!pending.empty()) {
+            auto e = pending.back();
+            pending.pop_back();
+            auto item = e->get_render_item();
+            if (!item || !inTree(doc, item)) std::printf("  %s: an element of #b answers %s\n", when, item ? "an old item" : "no item");
+            CHECK(item && inTree(doc, item));
+            for (const auto& child : e->children()) pending.push_back(child);
+        }
+    };
+    everyElement("before the layout");
+    doc->render(litehtml::pixel_t(200.0f));
+    everyElement("after the layout");
+    CHECK(b->get_render_item() == doc->live_item(*b));
+}
+
+static void testReplacementGivesBackTableCells() {
+    std::vector<Spec> rows;
+    for (int r = 0; r < 3; r++) rows.push_back(el("tr", "", {}, {el("td", "1"), el("td", "2"), el("td", "3"), el("td", "4")}));
+    std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("table", "", {{"id", "t"}}, {el("tbody", "", {}, rows)})}),
+                              el("p", "after")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    const int before = doc->table_cells();
+    CHECK(doc->remove_subtree(byId(body, "t")));
+    kids[0].kids.clear();
+    structureMatchesFresh(c, doc, "", kids, "a table removed");
+    CHECK(doc->table_cells() == before - 12);
+    CHECK(replacedAt(doc, observer) == "w");
+    doc->set_render_observer(nullptr);
+}
+
+// A table in an inline-grid flex item is made twice (the flex wrapper inits the item again) and takes its cells twice,
+// as a fresh build does: a replacement gives all of them back, so the count does not drift.
+static void testReplacementGivesBackTableCellsUnderFlex() {
+    std::vector<Spec> rows;
+    for (int r = 0; r < 3; r++) rows.push_back(el("tr", "", {}, {el("td", "1"), el("td", "2"), el("td", "3"), el("td", "4")}));
+    std::vector<Spec> kids = {el("div", "", {{"id", "row"}, {"style", "display:flex"}},
+                                 {el("div", "", {{"style", "display:inline-grid"}}, {el("table", "", {}, {el("tbody", "", {}, rows)})})}),
+                              el("p", "after")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    const int before = doc->table_cells();
+    for (int round = 0; round < 3; round++) {
+        auto row = byId(body, "row");
+        CHECK(doc->insert_subtree(row, row->children().size(), build(doc, el("p", "in"))));
+        kids[0].kids.push_back(el("p", "in"));
+        structureMatchesFresh(c, doc, "", kids, "a paragraph into the flex row");
+        CHECK(doc->remove_subtree(childAt(row, row->children().size() - 1)));
+        kids[0].kids.pop_back();
+        structureMatchesFresh(c, doc, "", kids, "the paragraph out of the flex row");
+    }
+    if (doc->table_cells() != before) std::printf("  table cells %d, %d at the boot\n", doc->table_cells(), before);
+    CHECK(doc->table_cells() == before);
+}
+
+// The boundary walk and the splice are linear in what they touch (review C1): a session that seeds a thousand siblings
+// under a 200-deep chain walks each ancestor once, not once per pair of boundaries.
+static void testReplacementWalksAreLinear() {
+    std::vector<Spec> leaves;
+    for (int n = 0; n < 1000; n++) leaves.push_back(el("div", "l"));
+    Spec chain = el("div", "", {{"id", "deep"}}, leaves);
+    for (int d = 0; d < 200; d++) chain = el("div", "", {}, {chain});
+    std::vector<Spec> kids = {chain};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    auto deep = byId(body, "deep");
+    const uint64_t walked = doc->replacement_steps();
+    for (const auto& leaf : deep->children()) CHECK(doc->set_element_attribute(leaf, "data-x", "1"));
+    doc->commit_patch();
+    const uint64_t steps = doc->replacement_steps() - walked;
+    std::printf("  replacement steps for 1000 seeds under 200 ancestors: %llu\n", (unsigned long long)steps);
+    CHECK(steps <= 20000);
+}
+
+// A replacement that moves the table-cell cap's cut makes the root's replacement too: the observer hears the root's
+// alone, as edit 74's event order says (Step 2's review, M1). An element with large spans becomes a cell by its class:
+// the spans did not change, so can_set_element_attributes lets it through, and its cell passes the cap.
+static void testACapCrossingReplacementReportsTheRootAlone() {
+    const char* sheet = ".cell{display:table-cell}";
+    std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("div", "x", {{"id", "c"}, {"colspan", "1000"}, {"rowspan", "1000"}})})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    CHECK(doc->set_element_attribute(byId(body, "c"), "class", "cell"));
+    kids[0].kids[0].attrs["class"] = "cell";
+    structureMatchesFresh(c, doc, sheet, kids, "a cell past the cap by its class");
+    if (observer.replaced.size() != 1) std::printf("  %zu replacements reported\n", observer.replaced.size());
+    CHECK(observer.replaced.size() == 1 && observer.replaced[0].second == doc->root_render().get());
+    CHECK(std::count(c.limits.begin(), c.limits.end(), std::string("table")) == 1);
+    doc->set_render_observer(nullptr);
+}
+
+// A document a build cut at the table-cell cap: any replacement is the root's, which counts the cells in tree order as
+// a build does.
+static void testReplacementAtTheTableCellCap() {
+    std::vector<Spec> kids = {
+        el("div", "", {{"id", "w"}}, {el("p", "w")}),
+        el("table", "", {}, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "a", {{"colspan", "1000"}, {"rowspan", "199"}})})})}),
+        el("table", "", {}, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "b", {{"colspan", "1000"}, {"rowspan", "2"}})})})}),
+    };
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    CHECK(std::count(c.limits.begin(), c.limits.end(), std::string("table")) == 1);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    CHECK(doc->insert_subtree(byId(body, "w"), 1, build(doc, el("p", "new"))));
+    kids[0].kids.push_back(el("p", "new"));
+    structureMatchesFresh(c, doc, "", kids, "an insert beside tables cut at the cap");
+    CHECK(replacedAt(doc, observer) == "root");
+    reasonIs(doc, "structure: insert: at the table-cell cap", "an insert beside tables cut at the cap");
+    doc->set_render_observer(nullptr);
+}
+
+// Review Focus 1: an inline-block in a line of text is its own boundary; its line points at the old item until the next
+// layout, which places the new one.
+static void testAnInlineBoxInALineIsReplacedInPlace() {
+    const char* sheet = ".big{font-size:30px}";
+    std::vector<Spec> kids = {el("p", "", {{"id", "p"}},
+                                 {txt("text "), el("span", "k", {{"id", "k"}, {"style", "display:inline-block"}}), txt(" more text")})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    CHECK(doc->set_element_attribute(byId(body, "k"), "class", "big"));
+    kids[0].kids[1].attrs["class"] = "big";
+    structureMatchesFresh(c, doc, sheet, kids, "an inline-block's font size");
+    CHECK(replacedAt(doc, observer) == "k");
+    doc->set_render_observer(nullptr);
+}
+
+// Review Focus 2: a positioned descendant beside a linked block (edit 89), whose containing block is outside its parent.
+static void testAPositionedDescendantFollowsItsContainingBlock() {
+    std::vector<Spec> kids = {el("div", "", {{"style", "position:relative;padding:10px"}},
+                                 {el("div", "", {{"id", "b"}},
+                                     {el("span", "abs", {{"id", "a"}, {"style", "position:absolute;left:5px;top:7px"}})})})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    CHECK(doc->insert_subtree(byId(body, "b"), 1, build(doc, el("p", "new"))));
+    kids[0].kids[0].kids.push_back(el("p", "new"));
+    structureMatchesFresh(c, doc, "", kids, "a block appended beside a positioned span");
+    CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+    auto span = byId(body, "a");
+    const litehtml::position box = span->get_render_item()->get_placement();
+    const litehtml::pixel_t x = box.x + 1, y = box.y + 1;
+    auto hit = doc->root_render()->get_element_by_point(x, y, x, y, nullptr);
+    bool onSpan = false;
+    for (auto e = hit; e; e = e->parent()) onSpan = onSpan || e == span;
+    CHECK(onSpan);
+    doc->set_render_observer(nullptr);
+}
+
+// Review Focus 3: an item inserted into or removed from an ordered list numbers the items after it again.
+static void testListItemsAreNumberedAgain() {
+    std::vector<Spec> kids = {el("ol", "", {{"id", "o"}, {"start", "3"}},
+                                 {el("li", "one"), el("li", "two"), el("li", "three"), el("li", "four")})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    auto list = byId(body, "o");
+    CHECK(doc->insert_subtree(list, 1, build(doc, el("li", "inserted"))));
+    kids[0].kids.insert(kids[0].kids.begin() + 1, el("li", "inserted"));
+    structureMatchesFresh(c, doc, "", kids, "an item inserted");
+    CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+    observer.clear();
+    CHECK(doc->remove_subtree(childAt(list, 2)));
+    kids[0].kids.erase(kids[0].kids.begin() + 2);
+    structureMatchesFresh(c, doc, "", kids, "an item removed");
+    CHECK(observer.replaced.empty() && observer.unlinked.size() == 1);
+    doc->set_render_observer(nullptr);
+}
+
+// Review Focus 4: seeds in one session. Text replaced in place beside a block linked into its parent (edit 89); two
+// seeds whose boundaries nest (inline content inserted beside blocks, which is not linked) give one replacement, the
+// outer one.
+static void testSeedsInOneSession() {
+    {
+        std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("p", "old text", {{"id", "t"}})})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        auto t = byId(body, "t");
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_text(t, 0, t->children().size(), "new words here", made));
+        CHECK(doc->insert_subtree(byId(body, "w"), 1, build(doc, el("p", "appended"))));
+        kids[0].kids[0].text = "new words here";
+        kids[0].kids.push_back(el("p", "appended"));
+        structureMatchesFresh(c, doc, "", kids, "text then structure in one session");
+        CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+        doc->set_render_observer(nullptr);
+    }
+    {
+        std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("div", "", {{"id", "x"}}, {el("p", "x")}), el("p", "w")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->insert_subtree(byId(body, "x"), 1, build(doc, el("span", "into x"))));
+        CHECK(doc->insert_subtree(byId(body, "w"), 0, build(doc, el("span", "into w"))));
+        kids[0].kids[0].kids.push_back(el("span", "into x"));
+        kids[0].kids.insert(kids[0].kids.begin(), el("span", "into w"));
+        structureMatchesFresh(c, doc, "", kids, "nested seeds");
+        CHECK(observer.replaced.size() == 1 && replacedAt(doc, observer) == "w");
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// Edit 73: why a commit_patch, media_changed or viewport_changed re-created the render tree; "" when it kept it.
+static void reasonIs(const litehtml::document::ptr& doc, const std::string& expected, const char* what) {
+    if (doc->rebuild_reason() != expected)
+        std::printf("  %s: rebuild reason \"%s\", want \"%s\"\n", what, doc->rebuild_reason().c_str(), expected.c_str());
+    CHECK(doc->rebuild_reason() == expected);
+}
+
+static void testRebuildReasonsNameTheChange() {
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", {el("p", "one"), el("p", "two")}, body);
+        // Edit 89: a block linked or unlinked replaces nothing; inline content beside blocks is refused, by name.
+        CHECK(doc->insert_subtree(body, 0, build(doc, el("p", "new"))));
+        doc->commit_patch();
+        reasonIs(doc, "", "a block inserted");
+        CHECK(doc->remove_subtree(childAt(body, 0)));
+        doc->commit_patch();
+        reasonIs(doc, "", "a block removed");
+        CHECK(doc->insert_subtree(body, 1, build(doc, el("span", "s"))));
+        doc->commit_patch();
+        reasonIs(doc, "structure: insert: inline content", "a span inserted between blocks");
+        CHECK(doc->remove_subtree(childAt(body, 1)));
+        doc->commit_patch();
+        reasonIs(doc, "structure: remove: inline content", "a span removed from between blocks");
+    }
+    const auto attribute = [](const char* sheet, const char* tag, litehtml::string_map attrs, const char* name, const char* value,
+                              const char* expected, const char* what) {
+        PaintContainer c;
+        element::ptr target;
+        auto doc = attrDocument(c, sheet, tag, attrs, target);
+        CHECK(doc->set_element_attribute(target, name, value));
+        doc->commit_patch();
+        reasonIs(doc, expected, what);
+    };
+    attribute("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}}, "cx", "25", "attribute: cx", "a circle's cx");
+    attribute("", "div", {}, "style", "display:none", "property: display", "an inline display");
+    attribute(".abs{position:absolute}", "div", {}, "class", "abs", "rule: position", "a class whose rule positions");
+    attribute("div::before{content:'x'} .k{color:#c00}", "div", {}, "class", "k", "pseudo-element children", "beside ::before");
+    attribute("", "div", {}, "style", "color:#c00", "", "a paint-only inline style");
+    // Two rules start matching, three properties neither paint-only nor geometry-only: the smallest name, whatever
+    // order the rules come in (their selectors' addresses).
+    attribute(".a{position:absolute} .b{z-index:2;float:left}", "div", {}, "class", "a b", "rule: float", "two rules");
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "@media (max-width:260px){p{display:none}}", {el("p", "one")}, body);
+        c.width = 250;
+        doc->viewport_changed();
+        reasonIs(doc, "media", "a media query flipped");
+    }
+}
+
+// The index of `parent`'s first child whose tag is `tag`.
+static size_t indexOfTag(const element::ptr& parent, const char* tag) {
+    size_t index = 0;
+    for (const auto& child : parent->children()) {
+        if (child->get_tagName() && std::strcmp(child->get_tagName(), tag) == 0) return index;
+        index++;
+    }
+    return index;
+}
+
+// Edit 89: a block-level child inserted into or removed from a block formatting context is linked or unlinked alone:
+// nothing is replaced, the parent and every other child keep their render items, an unlinked item is the removed
+// element's own, and the patch equals a fresh build.
+static void testBlockChildrenLinkAndUnlink() {
+    struct Case {
+        const char* name;
+        std::vector<Spec> kids;
+        const char* parent; // its id; "" for the body
+        // Patches the document and the specs alike; true when the patch was taken. `removed` gets each element it
+        // removes, before it removes it.
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&, std::vector<element::ptr>&)> patch;
+        size_t linked, unlinked;
+    };
+    std::vector<Case> cases = {
+        {"a <p> between two <div>s of the body", {el("div", "a"), el("div", "b")}, "",
+         [](auto doc, auto parent, auto& kids, auto&) {
+             kids.insert(kids.begin() + 1, el("p", "new"));
+             return doc->insert_subtree(parent, 1, build(doc, el("p", "new")));
+         },
+         1, 0},
+        {"an <li> appended to a <ul> whose items newlines separate",
+         {el("ul", "", {{"id", "u"}}, {txt("\n"), el("li", "a"), txt("\n"), el("li", "b"), txt("\n")})}, "u",
+         [](auto doc, auto parent, auto& kids, auto&) {
+             kids[0].kids.push_back(el("li", "c"));
+             return doc->insert_subtree(parent, parent->children().size(), build(doc, el("li", "c")));
+         },
+         1, 0},
+        {"a <p> after an inline run's end, before a block",
+         {el("div", "", {{"id", "d"}}, {txt("one "), el("i", "two"), el("p", "x")})}, "d",
+         [](auto doc, auto parent, auto& kids, auto&) {
+             kids[0].kids.insert(kids[0].kids.begin() + 2, el("p", "new"));
+             return doc->insert_subtree(parent, indexOfTag(parent, "p"), build(doc, el("p", "new")));
+         },
+         1, 0},
+        {"the middle <div> of three removed", {el("div", "a"), el("div", "m", {{"id", "m"}}), el("div", "c")}, "",
+         [](auto doc, auto parent, auto& kids, auto& removed) {
+             kids.erase(kids.begin() + 1);
+             removed.push_back(byId(parent, "m"));
+             return doc->remove_subtree(removed.back());
+         },
+         0, 1},
+        {"a <ul>'s items replaced", {el("ul", "", {{"id", "u"}}, {el("li", "a"), el("li", "b")})}, "u",
+         [](auto doc, auto parent, auto& kids, auto& removed) {
+             kids[0].kids = {el("li", "x"), el("li", "y"), el("li", "z")};
+             for (const auto& child : parent->children()) removed.push_back(child);
+             return replaceKids(doc, parent, {build(doc, el("li", "x")), build(doc, el("li", "y")), build(doc, el("li", "z"))});
+         },
+         3, 2},
+        {"a <p> appended beside a float",
+         {el("div", "", {{"id", "d"}}, {el("div", "f", {{"style", "float:left;width:20px"}}), el("p", "a")})}, "d",
+         [](auto doc, auto parent, auto& kids, auto&) {
+             kids[0].kids.push_back(el("p", "b"));
+             return doc->insert_subtree(parent, parent->children().size(), build(doc, el("p", "b")));
+         },
+         1, 0},
+    };
+    for (Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", k.kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        auto parent = *k.parent ? byId(body, k.parent) : body;
+        CHECK(parent != nullptr);
+        if (!parent) continue;
+        // Held, so that an item made again cannot take a kept one's address.
+        const std::shared_ptr<litehtml::render_item> parentItem = doc->live_item(*parent);
+        std::map<const element*, std::shared_ptr<litehtml::render_item>> before;
+        for (const auto& child : parent->children()) before[child.get()] = doc->live_item(*child);
+        std::vector<element::ptr> removed;
+        CHECK(k.patch(doc, parent, k.kids, removed));
+        // The removed elements let go (their pieces count while alive), their former items kept by address only.
+        std::set<const litehtml::render_item*> formerItems;
+        for (const auto& gone : removed) {
+            auto was = before.find(gone.get());
+            if (was == before.end()) continue;
+            if (was->second) formerItems.insert(was->second.get());
+            before.erase(was);
+        }
+        removed.clear();
+        structureMatchesFresh(c, doc, "", k.kids, k.name);
+        if (!observer.replaced.empty() || observer.linked.size() != k.linked || observer.unlinked.size() != k.unlinked)
+            std::printf("  %s: %zu replaced, %zu linked, %zu unlinked (%s)\n", k.name, observer.replaced.size(),
+                        observer.linked.size(), observer.unlinked.size(), doc->rebuild_reason().c_str());
+        CHECK(observer.replaced.empty());
+        CHECK(observer.linked.size() == k.linked);
+        CHECK(observer.unlinked.size() == k.unlinked);
+        CHECK(doc->rebuild_reason().empty());
+        CHECK(doc->live_item(*parent) == parentItem);
+        for (const auto& child : parent->children()) {
+            auto kept = before.find(child.get());
+            if (kept != before.end()) CHECK(doc->live_item(*child) == kept->second);
+        }
+        const std::set<const litehtml::render_item*> unlinked(observer.unlinked.begin(), observer.unlinked.end());
+        CHECK(unlinked == formerItems);
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// Edit 89: what is not linked yet is replaced as before (edit 74), under a reason naming the case.
+static void testStructureRefusalsNameTheirCase() {
+    struct Case {
+        const char* name;
+        std::vector<Spec> kids;
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&)> patch;
+        const char* reason;
+        const char* boundary;
+    };
+    std::vector<Case> cases = {
+        {"a <b> into a <p>", {el("p", "one", {{"id", "p"}})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("b", "x"));
+             auto p = byId(body, "p");
+             return doc->insert_subtree(p, p->children().size(), build(doc, el("b", "x")));
+         },
+         "structure: insert: in an inline context", "p"},
+        {"a <span> between two <div>s", {el("div", "", {{"id", "d"}}, {el("div", "a"), el("div", "b")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.insert(kids[0].kids.begin() + 1, el("span", "s"));
+             return doc->insert_subtree(byId(body, "d"), 1, build(doc, el("span", "s")));
+         },
+         "structure: insert: inline content", "d"},
+        {"a <p> between the halves of a run", {el("div", "", {{"id", "d"}}, {txt("one "), el("i", "two"), el("p", "end")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.insert(kids[0].kids.begin() + 1, el("p", "x"));
+             auto d = byId(body, "d");
+             return doc->insert_subtree(d, indexOfTag(d, "i"), build(doc, el("p", "x")));
+         },
+         "structure: insert: inline content", "d"},
+        {"the block between two runs removed",
+         {el("div", "", {{"id", "d"}}, {txt("one"), el("p", "x", {{"id", "x"}}), txt("two"), el("p", "end")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.erase(kids[0].kids.begin() + 1);
+             return doc->remove_subtree(byId(body, "x"));
+         },
+         "structure: remove: inline content", "d"},
+        {"a removal that joins a space to a run",
+         {el("div", "", {{"id", "d"}}, {txt("one"), el("p", "x", {{"id", "x"}}), txt(" "), el("p", "y")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.erase(kids[0].kids.begin() + 1);
+             return doc->remove_subtree(byId(body, "x"));
+         },
+         "structure: remove: inline content", "d"},
+        {"the last block removed beside text", {el("div", "", {{"id", "d"}}, {txt("one"), el("p", "x", {{"id", "x"}})})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.erase(kids[0].kids.begin() + 1);
+             return doc->remove_subtree(byId(body, "x"));
+         },
+         "structure: remove: the formatting context flips", "d"},
+        {"a <div> into a flex container", {el("div", "", {{"id", "f"}, {"style", "display:flex"}}, {el("div", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("div", "b"));
+             return doc->insert_subtree(byId(body, "f"), 1, build(doc, el("div", "b")));
+         },
+         "structure: insert: in a flex container", "f"},
+        {"a <div> into a grid", {el("div", "", {{"id", "g"}, {"style", "display:grid"}}, {el("div", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("div", "b"));
+             return doc->insert_subtree(byId(body, "g"), 1, build(doc, el("div", "b")));
+         },
+         "structure: insert: in a grid", "g"},
+        {"a floated <div>", {el("div", "", {{"id", "d"}}, {el("p", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("div", "f", {{"style", "float:left;width:20px"}}));
+             return doc->insert_subtree(byId(body, "d"), 1, build(doc, el("div", "f", {{"style", "float:left;width:20px"}})));
+         },
+         "structure: insert: a float or an out-of-flow box", "d"},
+        {"an absolutely positioned <div>", {el("div", "", {{"id", "d"}, {"style", "position:relative"}}, {el("p", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("div", "abs", {{"style", "position:absolute;top:0"}}));
+             return doc->insert_subtree(byId(body, "d"), 1, build(doc, el("div", "abs", {{"style", "position:absolute;top:0"}})));
+         },
+         "structure: insert: a float or an out-of-flow box", "d"},
+        {"a <p> into a closed <details>", {el("details", "", {{"id", "s"}}, {el("summary", "s"), el("p", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("p", "b"));
+             return doc->insert_subtree(byId(body, "s"), byId(body, "s")->children().size(), build(doc, el("p", "b")));
+         },
+         "structure: insert: in a closed details", "s"},
+        {"a <p> under display:none beside an svg",
+         {el("div", "", {{"id", "w"}}, {el("div", "", {{"id", "h"}, {"style", "display:none"}}, {el("p", "x")})}),
+          el("svg", "", {{"width", "10"}, {"height", "10"}})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids[0].kids.push_back(el("p", "y"));
+             return doc->insert_subtree(byId(body, "h"), 1, build(doc, el("p", "y")));
+         },
+         "structure: insert: renders nothing", "w"},
+        {"a <p> into an inline holding a block",
+         {el("div", "", {{"id", "d"}}, {el("span", "", {{"id", "s"}}, {el("div", "x")}), el("p", "y")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids[0].kids.push_back(el("p", "z"));
+             auto span = byId(body, "s");
+             return doc->insert_subtree(span, span->children().size(), build(doc, el("p", "z")));
+         },
+         "structure: insert: several render items", "d"},
+        {"a <tr> into a block", {el("div", "", {{"id", "d"}}, {el("p", "a")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("tr", "", {}, {el("td", "c")}));
+             return doc->insert_subtree(byId(body, "d"), 1, build(doc, el("tr", "", {}, {el("td", "c")})));
+         },
+         "structure: insert: a table part outside a table", "d"},
+        {"a <p> beside a <tr> in a block", {el("div", "", {{"id", "d"}}, {el("p", "a"), el("tr", "", {}, {el("td", "c")})})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.insert(kids[0].kids.begin(), el("p", "z"));
+             return doc->insert_subtree(byId(body, "d"), 0, build(doc, el("p", "z")));
+         },
+         "structure: insert: a table part outside a table", "d"},
+        {"a <p> beside an inline holding a block",
+         {el("div", "", {{"id", "d"}}, {el("span", "", {}, {el("div", "x")}), el("p", "y")})},
+         [](auto doc, auto body, auto& kids) {
+             kids[0].kids.push_back(el("p", "z"));
+             auto d = byId(body, "d");
+             return doc->insert_subtree(d, d->children().size(), build(doc, el("p", "z")));
+         },
+         "structure: insert: an inline holding blocks", "d"},
+    };
+    for (Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", k.kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(k.patch(doc, body, k.kids));
+        structureMatchesFresh(c, doc, "", k.kids, k.name);
+        reasonIs(doc, k.reason, k.name);
+        const std::string at = replacedAt(doc, observer);
+        if (at != k.boundary) std::printf("  %s: replaced at \"%s\", want \"%s\"\n", k.name, at.c_str(), k.boundary);
+        CHECK(at == k.boundary);
+        CHECK(observer.linked.empty() && observer.unlinked.empty());
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// Edits 89, 42: a positional rule the insertion moves matches the parent's other children again with the check a kept
+// parent needs. A sibling whose box it changes replaces the parent, the link with it; one whose geometry it changes
+// keeps its item and is restyled beside the link.
+static void testAPositionalChangeBesideALink() {
+    {
+        const char* sheet = ".x:first-child{float:left;width:20px}";
+        std::vector<Spec> kids = {el("div", "", {{"id", "d"}}, {el("p", "a", {{"class", "x"}}), el("p", "b")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->insert_subtree(byId(body, "d"), 0, build(doc, el("p", "new"))));
+        kids[0].kids.insert(kids[0].kids.begin(), el("p", "new"));
+        structureMatchesFresh(c, doc, sheet, kids, "a float that is no longer first");
+        CHECK(replacedAt(doc, observer) == "d");
+        CHECK(observer.linked.empty());
+        doc->set_render_observer(nullptr);
+    }
+    {
+        const char* sheet = "p:first-child{margin-top:30px}";
+        std::vector<Spec> kids = {el("div", "", {{"id", "d"}}, {el("p", "a", {{"id", "a"}}), el("p", "b")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        auto a = byId(body, "a");
+        const std::shared_ptr<litehtml::render_item> aItem = doc->live_item(*a);
+        CHECK(doc->insert_subtree(byId(body, "d"), 0, build(doc, el("p", "new"))));
+        kids[0].kids.insert(kids[0].kids.begin(), el("p", "new"));
+        structureMatchesFresh(c, doc, sheet, kids, "a margin that is no longer first");
+        CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+        CHECK(doc->live_item(*a) == aItem);
+        CHECK(std::any_of(observer.restyled.begin(), observer.restyled.end(), [&](const auto& r) { return r.first == a.get(); }));
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// Edit 89: a linked table takes its cells and an unlinked one gives them back, as a replaced one does.
+static void testALinkedTableTakesAndGivesBackItsCells() {
+    std::vector<Spec> rows;
+    for (int r = 0; r < 3; r++) rows.push_back(el("tr", "", {}, {el("td", "1"), el("td", "2"), el("td", "3"), el("td", "4")}));
+    const Spec table = el("table", "", {{"id", "t"}}, {el("tbody", "", {}, rows)});
+    std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("p", "a")})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, "", kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    const int before = doc->table_cells();
+    CHECK(doc->insert_subtree(byId(body, "w"), 1, build(doc, table)));
+    kids[0].kids.push_back(table);
+    structureMatchesFresh(c, doc, "", kids, "a table linked");
+    CHECK(observer.replaced.empty() && observer.linked.size() == 1);
+    CHECK(doc->table_cells() == before + 12);
+    observer.clear();
+    CHECK(doc->remove_subtree(byId(body, "t")));
+    kids[0].kids.pop_back();
+    structureMatchesFresh(c, doc, "", kids, "a table unlinked");
+    CHECK(observer.replaced.empty() && observer.unlinked.size() == 1);
+    CHECK(doc->table_cells() == before);
+    doc->set_render_observer(nullptr);
+}
+
+// Edit 89 beside edit 74 in one session: a sibling's own replacement and a link into its parent both happen; a seed
+// inside the linked subtree makes the parent the boundary, and the link goes with it.
+static void testALinkBesideAReplacement() {
+    const char* sheet = ".big{font-size:30px}";
+    {
+        std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("div", "", {{"id", "a"}}, {el("p", "a")}), el("p", "w")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->set_element_attribute(byId(body, "a"), "class", "big"));
+        CHECK(doc->insert_subtree(byId(body, "w"), 2, build(doc, el("p", "new"))));
+        kids[0].kids[0].attrs["class"] = "big";
+        kids[0].kids.push_back(el("p", "new"));
+        structureMatchesFresh(c, doc, sheet, kids, "a sibling replaced beside a link");
+        CHECK(observer.replaced.size() == 1 && replacedAt(doc, observer) == "a");
+        CHECK(observer.linked.size() == 1);
+        doc->set_render_observer(nullptr);
+    }
+    {
+        std::vector<Spec> kids = {el("div", "", {{"id", "w"}}, {el("div", "", {{"id", "a"}}, {el("p", "a")}), el("p", "w")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->insert_subtree(byId(body, "w"), 2, build(doc, el("p", "new", {{"id", "n"}}))));
+        CHECK(doc->set_element_attribute(byId(body, "n"), "class", "big"));
+        kids[0].kids.push_back(el("p", "new", {{"id", "n"}, {"class", "big"}}));
+        structureMatchesFresh(c, doc, sheet, kids, "a seed inside a linked subtree");
+        CHECK(replacedAt(doc, observer) == "w");
+        CHECK(observer.linked.empty());
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// VENDOR.md edit 75: a pseudo-class change restyles what it reaches (the element; its descendants when a rule names the
+// class in a compound that is not its subject; its later siblings' subtrees when the sheets have sibling combinators),
+// keeping the render tree where every rule that started or stopped matching is neutral and replacing it where one is
+// not, as a document built with the class set lays out and paints.
+static void testPseudoClassStateRematchesItsReach() {
+    struct Case {
+        const char* sheet;
+        std::vector<Spec> kids;
+        bool neutral;
+        const char* what;
+    };
+    const Case cases[] = {
+        {"p:hover{color:#c00}", {el("p", "one", {{"id", "t"}}), el("p", "two")}, true, "a paint-only rule on the element"},
+        {".card:hover .x{display:none}",
+         {el("div", "", {{"id", "t"}, {"class", "card"}}, {el("span", "x", {{"class", "x"}}), txt(" y")}), el("p", "after")},
+         false, "a rule on a descendant"},
+        {"a:hover + .tip{display:block} .tip{display:none}",
+         {el("a", "link", {{"id", "t"}}), el("div", "tip", {{"class", "tip"}}), el("p", "after")}, false,
+         "a rule on the next sibling"},
+        {"#t:hover::before{content:'>'}", {el("p", "one", {{"id", "t"}}), el("p", "two")}, false, "pseudo-element content"},
+        {"#t:hover{background-color:#eee}", {el("table", "", {{"id", "t"}}, {el("tr", "", {}, {el("td", "c")})}), el("p", "after")},
+         true, "a table, which has no attribute patch"},
+        {"p:nth-last-child(1 of :not(:hover)){color:#c00}", {el("p", "one"), el("p", "two", {{"id", "t"}})}, true,
+         "an earlier sibling, by an nth-last-child of a list naming the class"},
+    };
+    const std::vector<std::pair<litehtml::string_id, bool>> hover{{litehtml::_hover_, true}};
+    for (const Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t != nullptr);
+        if (!t) continue;
+        CHECK(doc->can_set_pseudo_classes({{t, hover}}));
+        CHECK(doc->set_pseudo_classes({{t, hover}}));
+        pseudoMatchesFresh(c, doc, k.sheet, k.kids, {"t"}, k.what);
+        CHECK(t->has_pseudo_class(litehtml::_hover_));
+        if (observer.replaced.empty() != k.neutral) std::printf("  replacements %zu after: %s (%s)\n", observer.replaced.size(), k.what, doc->rebuild_reason().c_str());
+        CHECK(observer.replaced.empty() == k.neutral);
+        doc->set_render_observer(nullptr);
+    }
+    // Only what the flip can change is matched again: :hover set on an element no rule's match depends on (as a tap's
+    // chain sets it on <body>) leaves it alone, its ::before content and its render tree untouched, nothing restyled.
+    {
+        const char* sheet = "p:hover{color:#c00} body::before{content:'b'}";
+        std::vector<Spec> kids = {el("p", "one", {{"id", "t"}}), el("p", "two")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->set_pseudo_classes({{body, hover}}));
+        doc->commit_patch();
+        doc->render(litehtml::pixel_t(200.0f));
+        CHECK(body->has_pseudo_class(litehtml::_hover_));
+        CHECK(observer.replaced.empty());
+        CHECK(observer.restyled.empty());
+        doc->set_render_observer(nullptr);
+    }
+    // A tap's chain in one call: nested flips that each reach their subtree visit each element once, and the result is
+    // a document built with every class set.
+    {
+        const char* sheet = ".c:hover .x{display:none} .c:hover{color:#c00}";
+        std::vector<Spec> kids = {
+            el("div", "", {{"id", "o"}, {"class", "c"}},
+               {el("div", "", {{"id", "i"}, {"class", "c"}}, {el("span", "x", {{"class", "x"}}), txt(" y")}),
+                el("span", "z", {{"class", "x"}})}),
+            el("p", "after")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto o = doc->root()->select_one("#o");
+        auto i = doc->root()->select_one("#i");
+        CHECK(o && i);
+        if (o && i) {
+            const std::vector<litehtml::document::pseudo_flip> chain{{i, hover}, {o, hover}};
+            uint64_t nodes = 0;
+            std::vector<element::ptr> stack{o};
+            while (!stack.empty()) {
+                element::ptr next = stack.back();
+                stack.pop_back();
+                nodes++;
+                for (const auto& child : next->children()) stack.push_back(child);
+            }
+            const uint64_t steps = doc->predicate_steps();
+            const auto reach = doc->pseudo_reach(chain);
+            // #o's subtree's nodes once each, and #i once more, where the walk from #o meets it.
+            CHECK(reach.size() == 4);
+            if (doc->predicate_steps() - steps != nodes + 1) std::printf("  steps %llu, nodes %llu\n", (unsigned long long)(doc->predicate_steps() - steps), (unsigned long long)nodes);
+            CHECK(doc->predicate_steps() - steps == nodes + 1);
+            CHECK(doc->set_pseudo_classes(chain));
+            pseudoMatchesFresh(c, doc, sheet, kids, {"o", "i"}, "a chain of two");
+        }
+    }
+    // A link's :link stays one entry per sheet, as a fresh document's (el_anchor::apply_stylesheet adds it at each match).
+    {
+        const char* sheet = "a:hover{color:#c00}";
+        std::vector<Spec> kids = {el("a", "link", {{"id", "t"}, {"href", "#"}}), el("p", "after")};
+        auto links = [](const element::ptr& e) {
+            int count = 0;
+            while (e->set_pseudo_class(litehtml::_link_, false)) count++;
+            return count;
+        };
+        PaintContainer fresh;
+        element::ptr freshBody;
+        auto reference = structureDocument(fresh, sheet, kids, freshBody);
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t != nullptr);
+        if (t) {
+            for (int round = 0; round < 3; round++) {
+                CHECK(doc->set_pseudo_classes({{t, hover}}));
+                CHECK(doc->set_pseudo_classes({{t, {{litehtml::_hover_, false}}}}));
+            }
+            const int expected = links(reference->root()->select_one("#t"));
+            const int got = links(t);
+            if (got != expected) std::printf("  :link entries %d, a fresh document's %d\n", got, expected);
+            CHECK(expected > 0);
+            CHECK(got == expected);
+        }
+    }
+    // Counters reach the elements after it (edit 78: they run again in a build's order).
+    {
+        const char* sheet = "#t:hover{counter-increment:n} p::after{content:counter(n)}";
+        const std::vector<Spec> kids = {el("p", "one", {{"id", "t"}}), el("p", "two")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t && doc->can_set_pseudo_classes({{t, hover}}));
+        CHECK(t && doc->set_pseudo_classes({{t, hover}}));
+        pseudoMatchesFresh(c, doc, sheet, kids, {"t"}, "a hover incrementing a counter the next element reads");
+    }
+}
+
+// VENDOR.md edit 78: counters are made in a build's order, so a change that touches a counted element (one declaring
+// counter-reset or counter-increment, holding counter values, or with ::before/::after content reading a counter) runs
+// every counted element's match again in a build's pass order, as a document built with the change counts.
+static void testCountersRunAgainInBuildOrder() {
+    const char* sheet = "ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n) '. '} li:hover{color:#c00}"
+                        " li.skip{counter-increment:none}";
+    const auto list = [] {
+        return std::vector<Spec>{el("ol", "", {}, {el("li", "a", {{"id", "l1"}}), el("li", "b", {{"id", "l2"}}),
+                                                   el("li", "c", {{"id", "l3"}}), el("li", "d", {{"id", "l4"}})})};
+    };
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, list(), body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#l2"), {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, list(), {"l2"}, "a hover on a numbered item");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = list();
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->set_element_attribute(doc->root()->select_one("#l2"), "class", "skip"));
+        kids[0].kids[1].attrs["class"] = "skip";
+        structureMatchesFresh(c, doc, sheet, kids, "an item that stops counting");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = list();
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto ol = childAt(body, 0);
+        CHECK(doc->insert_subtree(ol, 0, build(doc, el("li", "z"))));
+        kids[0].kids.insert(kids[0].kids.begin(), el("li", "z"));
+        structureMatchesFresh(c, doc, sheet, kids, "an item inserted first");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = list();
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->remove_subtree(doc->root()->select_one("#l3")));
+        kids[0].kids.erase(kids[0].kids.begin() + 2);
+        structureMatchesFresh(c, doc, sheet, kids, "the third item removed");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = list();
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto ol = childAt(body, 0);
+        CHECK(doc->remove_subtree(doc->root()->select_one("#l1")));
+        CHECK(doc->insert_subtree(ol, ol->children().size(), build(doc, el("li", "a", {{"id", "l1"}}))));
+        std::rotate(kids[0].kids.begin(), kids[0].kids.begin() + 1, kids[0].kids.end());
+        structureMatchesFresh(c, doc, sheet, kids, "the first item moved last");
+    }
+    // The rules a build applies to the ::before/::after themselves (`*`, `li > *`), each in a build's place: an ::after
+    // after its owner's descendants.
+    struct Case {
+        const char* sheet;
+        std::vector<Spec> kids;
+        const char* what;
+    };
+    const std::vector<Spec> nested = {el("ol", "", {}, {el("li", "a", {{"id", "l1"}}),
+                                                         el("li", "", {{"id", "l2"}}, {txt("b"), el("ol", "", {}, {el("li", "c"), el("li", "d")})}),
+                                                         el("li", "e")})};
+    const Case cases[] = {
+        {"ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n) '. '} li > *{color:#c00}"
+         " li:hover{background:#eee}",
+         list(), "a rule on li > * reaching the ::before"},
+        {"*{padding:0} ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n) '. ';padding:0 9px}"
+         " li:hover{color:#c00}",
+         list(), "a * reset over the ::before's padding"},
+        {"ol{counter-reset:n} li{counter-increment:n} li::after{counter-increment:n;content:counter(n)} *{margin:0}"
+         " li:hover{color:#c00}",
+         nested, "an ::after that counts, reached by * after its owner's descendants"},
+        // A pseudo-element that counts and reads nothing (its owner is counted).
+        {"body{counter-reset:n} div::before{counter-increment:n;content:'-'} p::after{content:counter(n)}"
+         " p:hover{color:#c00}",
+         {el("div", "d"), el("p", "p", {{"id", "l2"}}), el("div", "d"), el("p", "q")}, "a ::before that counts"},
+    };
+    for (const Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.kids, body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#l2"), {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, k.sheet, k.kids, {"l2"}, k.what);
+    }
+    {
+        // Inserting an element whose ::before counts.
+        const char* sheet = "body{counter-reset:n} div::before{counter-increment:n;content:'-'} p::after{content:counter(n)}";
+        std::vector<Spec> kids = {el("div", "d"), el("p", "p"), el("p", "q")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->insert_subtree(body, 2, build(doc, el("div", "e"))));
+        kids.insert(kids.begin() + 2, el("div", "e"));
+        structureMatchesFresh(c, doc, sheet, kids, "an element whose ::before counts inserted");
+    }
+}
+
+// VENDOR.md edit 79: the same sheets parse to the same sorted rules at any viewport, so an environment change pairs them
+// by position; a rule whose parse folded a viewport unit is marked.
+static void testEnvironmentParsesPairUp() {
+    const char* sheet = "div{width:50vw} p{color:#c00} @media (min-width:250px){p{margin:1px}} li{font-size:2vmin}"
+                        " .a b{padding:1vh}";
+    PaintContainer narrow, wide;
+    narrow.width = 200;
+    wide.width = 400;
+    element::ptr b1, b2;
+    auto d1 = structureDocument(narrow, sheet, {el("p", "p")}, b1);
+    auto d2 = structureDocument(wide, sheet, {el("p", "p")}, b2);
+    const std::pair<const litehtml::css*, const litehtml::css*> sheets[] = {{&d1->master_css(), &d2->master_css()},
+                                                                         {&d1->author_css(), &d2->author_css()}};
+    for (const auto& [a, b] : sheets) {
+        CHECK(a->selectors().size() == b->selectors().size());
+        for (size_t i = 0; i < a->selectors().size() && i < b->selectors().size(); i++) {
+            const auto& x = a->selectors()[i];
+            const auto& y = b->selectors()[i];
+            CHECK(x->m_specificity == y->m_specificity);
+            CHECK(x->m_right.m_tag == y->m_right.m_tag);
+            CHECK(x->m_style->environment() == y->m_style->environment());
+        }
+    }
+    int marked = 0;
+    for (const auto& sel : d1->author_css().selectors()) marked += (sel->m_style->environment() & litehtml::environment_viewport) ? 1 : 0;
+    CHECK(marked == 3);
+}
+
+// VENDOR.md edit 79: a width or reduced-motion change patches the document in place: the users of rules whose media
+// lists flip are matched again and the elements whose style resolved a viewport unit restyled, as a build at the new
+// values makes them.
+static void testEnvironmentChangesMatchFresh() {
+    struct Case {
+        const char* sheet;
+        std::vector<Spec> kids;
+        int fromWidth, toWidth, fromReduced, toReduced;
+        bool paintOnly;
+        const char* what;
+    };
+    const std::vector<Spec> list = {el("p", "p"),
+                                    el("ol", "", {}, {el("li", "a", {{"class", "a"}}), el("li", "b"), el("li", "c")})};
+    const char* breakpoint = "@media (max-width:250px){li.a{display:none}} @media (min-width:250px){p::before{content:'*'}}"
+                             " ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n)}";
+    const Case cases[] = {
+        {breakpoint, list, 200, 300, 0, 0, false, "a breakpoint over ::before content and counters, widening"},
+        {breakpoint, list, 300, 200, 0, 0, false, "a breakpoint over ::before content and counters, narrowing"},
+        {"div{width:50vw;font-size:4vw}", {el("div", "d"), el("p", "p")}, 200, 300, 0, 0, false, "viewport units"},
+        {"@media (min-width:250px){li{counter-increment:n}} ol{counter-reset:n} li::before{content:counter(n)}", list, 200,
+         300, 0, 0, false, "counters under a media rule"},
+        {"@media (prefers-reduced-motion:reduce){p{color:#c00;padding:2px}}", list, 300, 300, 0, 1, false,
+         "reduced motion"},
+        {"@media (prefers-reduced-motion:reduce){p{color:#c00}}", list, 300, 300, 0, 1, true, "reduced motion, paint only"},
+    };
+    for (const Case& k : cases) {
+        PaintContainer c;
+        c.width = k.fromWidth;
+        c.reduced = k.fromReduced;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.kids, body);
+        c.width = k.toWidth;
+        c.reduced = k.toReduced;
+        CHECK(doc->environment_changed());
+        doc->commit_patch();
+        if (k.paintOnly && !doc->rebuild_reason().empty()) std::printf("  %s: replaced (%s)\n", k.what, doc->rebuild_reason().c_str());
+        CHECK(!k.paintOnly || doc->rebuild_reason().empty());
+        structureMatchesFresh(c, doc, k.sheet, k.kids, k.what, k.toWidth, k.toReduced);
+    }
+}
+
+// VENDOR.md edit 80: the same sheets parse to the same sorted rules under either scheme, so a scheme change pairs them by
+// position; a rule whose parse resolved light-dark() or a color-scheme naming both is marked.
+static void testSchemeParsesPairUp() {
+    const char* sheet = "p{color:light-dark(#000001,#000002)} div{color-scheme:light dark} span{color-scheme:dark}"
+                        " @media (prefers-color-scheme:dark){p{margin:1px}} li{color:#c00} .a b{background:light-dark(red,blue)}";
+    PaintContainer light, dark;
+    dark.scheme = 1;
+    element::ptr b1, b2;
+    auto d1 = structureDocument(light, sheet, {el("p", "p")}, b1);
+    auto d2 = structureDocument(dark, sheet, {el("p", "p")}, b2);
+    const std::pair<const litehtml::css*, const litehtml::css*> sheets[] = {{&d1->master_css(), &d2->master_css()},
+                                                                         {&d1->author_css(), &d2->author_css()}};
+    for (const auto& [a, b] : sheets) {
+        CHECK(a->selectors().size() == b->selectors().size());
+        for (size_t i = 0; i < a->selectors().size() && i < b->selectors().size(); i++) {
+            const auto& x = a->selectors()[i];
+            const auto& y = b->selectors()[i];
+            CHECK(x->m_specificity == y->m_specificity);
+            CHECK(x->m_right.m_tag == y->m_right.m_tag);
+            CHECK(x->m_style->environment() == y->m_style->environment());
+        }
+    }
+    int marked = 0;
+    for (const auto& sel : d1->author_css().selectors()) marked += (sel->m_style->environment() & litehtml::environment_scheme) ? 1 : 0;
+    CHECK(marked == 3);
+}
+
+// VENDOR.md edit 80: a scheme change, with new root declarations or not, patches the document in place as a build under
+// the new scheme makes it.
+static void testSchemeChangeMatchesFresh() {
+    struct Case {
+        const char* sheet;
+        std::vector<Spec> kids;
+        const char* fromDeclarations;
+        const char* toDeclarations;
+        bool paintOnly;
+        const char* what;
+    };
+    const std::vector<Spec> para = {el("p", "p"), el("div", "", {}, {el("p", "inner")})};
+    const Case cases[] = {
+        {"p{color:light-dark(#000001,#000002)}", para, "", "", true, "light-dark() in a sheet"},
+        {"", {el("p", "p", {{"style", "color:light-dark(#000001,#000002)"}})}, "", "", true, "an inline light-dark()"},
+        {"div{color:light-dark(#000001,#000002)}", para, "", "", true, "light-dark() inherited"},
+        {"@media (prefers-color-scheme:dark){p{display:none}}", para, "", "", false, "a prefers-color-scheme rule"},
+        {"div{color-scheme:light dark}", {el("div", "", {}, {el("input", "", {{"value", "v"}})})}, "", "", false,
+         "a color-scheme naming both over an <input>"},
+        {":root{--k:light-dark(#000001,#000002)} p{color:var(--k)}", para, "", "", true, "light-dark() through var()"},
+        {"p{color:var(--tg-theme-text-color)}", para, "--tg-theme-text-color:#000001", "--tg-theme-text-color:#000002",
+         true, "root declarations read through var()"},
+        {"p{margin:1px}", para, "color:light-dark(#000001,#000002)", "color:light-dark(#000001,#000002)", true,
+         "a light-dark() in unchanged root declarations"},
+        // Final review I2: a property kept as tokens resolves light-dark() at compute or at draw.
+        {"p{box-shadow:0 2px 3px light-dark(#000001,#000002)}", para, "", "", true, "light-dark() in a box-shadow"},
+    };
+    for (const Case& k : cases) {
+        PaintContainer c;
+        c.rootDeclarations = k.fromDeclarations;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.kids, body);
+        const std::string before = painted(c, doc);
+        c.scheme = 1;
+        c.rootDeclarations = k.toDeclarations;
+        CHECK(doc->change_root_declarations(k.toDeclarations) == (std::string(k.fromDeclarations) != k.toDeclarations));
+        CHECK(doc->environment_changed());
+        doc->commit_patch();
+        if (k.paintOnly && !doc->rebuild_reason().empty()) std::printf("  %s: replaced (%s)\n", k.what, doc->rebuild_reason().c_str());
+        CHECK(!k.paintOnly || doc->rebuild_reason().empty());
+        structureMatchesFresh(c, doc, k.sheet, k.kids, k.what, 300, 0, 1);
+        // The case reads the scheme: a dark build differs from the light one.
+        PaintContainer fresh;
+        fresh.scheme = 1;
+        fresh.rootDeclarations = k.toDeclarations;
+        element::ptr b;
+        auto reference = structureDocument(fresh, k.sheet, k.kids, b);
+        if (painted(fresh, reference) == before) std::printf("  %s: the scheme changes nothing painted\n", k.what);
+        CHECK(painted(fresh, reference) != before);
+    }
+}
+
+// VENDOR.md edit 80 (final review I2): an SVG paint resolves light-dark() at draw, from a rule's tokens or a presentation
+// attribute, so a scheme change restyles the shape (the render observer hears it, and repaints it): a fresh draw is right
+// either way, what was painted before is not.
+static void testSchemeChangeRestylesSvgPaint() {
+    const char* sheet = "rect{fill:light-dark(#000003,#000004)}";
+    const std::vector<Spec> kids = {el("svg", "", {{"width", "40"}, {"height", "20"}},
+                                       {el("circle", "", {{"cx", "10"}, {"cy", "10"}, {"r", "5"}, {"fill", "light-dark(#000001,#000002)"}}),
+                                        el("rect", "", {{"x", "20"}, {"y", "5"}, {"width", "10"}, {"height", "10"}})})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    c.scheme = 1;
+    CHECK(doc->environment_changed());
+    doc->commit_patch();
+    doc->render(litehtml::pixel_t(200.0f));
+    auto svg = childAt(body, 0);
+    auto restyled = [&](const element::ptr& el) {
+        for (const auto& [e, order] : observer.restyled)
+            for (const litehtml::element* p = el.get(); p; p = p->parent().get())
+                if (e == p) return true;
+        return false;
+    };
+    if (!restyled(childAt(svg, 0))) std::printf("  the circle (a fill attribute) was not restyled\n");
+    if (!restyled(childAt(svg, 1))) std::printf("  the rect (a fill rule) was not restyled\n");
+    CHECK(restyled(childAt(svg, 0)));
+    CHECK(restyled(childAt(svg, 1)));
+    doc->set_render_observer(nullptr);
+    structureMatchesFresh(c, doc, sheet, kids, "light-dark() in SVG paint", 300, 0, 1);
+}
+
+// VENDOR.md edits 79, 80: a rule an environment change replaced (a copy holding the new parse's style) is replaced again
+// by the next one, and nothing holds the first copy then but what matched it: a match again keeps it alive while it
+// compares, and the indexes derived from the sheets are made again, so nothing reads it after (AddressSanitizer).
+static void testEnvironmentChangesTwiceKeepNoFreedRule() {
+    const char* sheet = "p{color:light-dark(#000001,#000002)} p:hover{background:light-dark(#000003,#000004)}";
+    const std::vector<Spec> kids = {el("p", "p", {{"id", "p"}}), el("div", "d")};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, kids, body);
+    auto p = doc->root()->select_one("#p");
+    CHECK(p != nullptr);
+    if (!p) return;
+    const litehtml::string_id hover = litehtml::_hover_;
+    for (int round = 0; round < 4; round++) {
+        c.scheme = 1 - c.scheme;
+        CHECK(doc->environment_changed());
+        doc->commit_patch();
+        // A hover flip reads the sheets' indexes (selector_scope), made from the rules as they are now.
+        CHECK(doc->set_pseudo_classes({{p, {{hover, round % 2 == 0}}}}));
+        doc->commit_patch();
+    }
+    CHECK(doc->set_pseudo_classes({{p, {{hover, false}}}}));
+    structureMatchesFresh(c, doc, sheet, kids, "four scheme changes with hover flips between", 300, 0, c.scheme);
+}
+
+// VENDOR.md edit 81 (final review I1): a sheet change that leaves the applied texts as they were (a <style> set to its own
+// text, an empty one emptied) parses nothing: a sheet with @media skips the parse cache, so a parse would be the whole
+// author sheets' again, which the runtime charges only when the applied texts change.
+static void testUnchangedSheetsParseNothing() {
+    struct Counting : PaintContainer {
+        int lists = 0;
+        void sanitize_selector_list(std::vector<litehtml::css_token_vector>&) override { lists++; }
+    };
+    const std::string sheet = "@media (min-width:1px){p{color:#c00}} b{color:#00c}";
+    const std::vector<Spec> kids = {el("p", "p"), el("b", "b")};
+    Counting c;
+    element::ptr body;
+    auto doc = structureDocument(c, std::vector<std::string>{sheet, ""}, kids, body);
+    const int parsed = c.lists;
+    std::vector<element::ptr> made;
+    CHECK(doc->replace_style_text(childAt(childAt(doc->root(), 0), 0), sheet, made));
+    CHECK(doc->replace_style_text(childAt(childAt(doc->root(), 0), 1), "", made));
+    doc->commit_patch();
+    if (c.lists != parsed) std::printf("  %d selector lists parsed again\n", c.lists - parsed);
+    CHECK(c.lists == parsed);
+    structureMatchesFresh(c, doc, std::vector<std::string>{sheet, ""}, kids, "unchanged sheets");
+}
+
+// VENDOR.md edits 77, 81: a class change beside a sheet change in one session: the commit applies the sheets (which
+// makes the sheet-derived indexes again) and then matches the class change's reach by the rules naming the class, as a
+// build with both makes the document.
+static void testAClassChangeBesideASheetChangeMatchesFresh() {
+    std::vector<Spec> kids = {el("div", "", {{"id", "d"}}, {el("p", "p"), el("p", "q")}), el("b", "b")};
+    const std::vector<std::string> before = {".k p{color:#c00}", "b{color:#00c}"};
+    const std::vector<std::string> after = {".k p{color:#c00}", "b{color:#0c0}"};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, before, kids, body);
+    std::vector<element::ptr> made;
+    CHECK(doc->replace_style_text(childAt(childAt(doc->root(), 0), 1), after[1], made));
+    CHECK(doc->set_element_attribute(childAt(body, 0), "class", "k"));
+    kids[0].attrs["class"] = "k";
+    structureMatchesFresh(c, doc, after, kids, "a class change beside a sheet change");
+}
+
+// VENDOR.md edit 81 (final review C1): a new rule's tests against the elements count every step select takes into the
+// session, and stop at its limit, as a build's matching does: a sibling chain that never matches recurses over every
+// earlier sibling, so counting one step per test let one sheet edit run unbounded in the commit.
+static void testSheetTestsCountIntoTheSession() {
+    std::vector<Spec> kids;
+    for (int n = 0; n < 60; n++) kids.push_back(el("i", "i", {{"class", "a"}}));
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, std::vector<std::string>{"i{color:#c00}"}, kids, body);
+    constexpr int64_t limit = 20000;
+    doc->begin_selector_steps(limit);
+    // A sheet of its own: the first keeps its rules, so only the new rule's tests run (nothing holds a lost rule).
+    CHECK(doc->insert_subtree(childAt(doc->root(), 0), 1, build(doc, el("style", ".z~.a~.a~.a~.a{color:#00c}"))));
+    doc->commit_patch();
+    const int64_t used = doc->end_selector_steps();
+    if (used <= limit) std::printf("  %lld steps counted under a %lld limit\n", (long long)used, (long long)limit);
+    CHECK(used > limit);
+    {
+        // A class change beside a sheet change: the commit's attribute reach tests the rules naming the class against the
+        // reach (here a kept sheet's chain), in a counted pass too.
+        PaintContainer c2;
+        element::ptr body2;
+        const std::vector<Spec> held = {el("div", "", {{"id", "d"}}, kids)};
+        auto doc2 = structureDocument(c2, std::vector<std::string>{".k .z~.a~.a~.a~.a{color:#00c}", "b{color:#c00}"}, held, body2);
+        doc2->begin_selector_steps(limit);
+        std::vector<element::ptr> made2;
+        CHECK(doc2->replace_style_text(childAt(childAt(doc2->root(), 0), 1), "b{color:#0c0}", made2));
+        CHECK(doc2->set_element_attribute(childAt(body2, 0), "class", "k"));
+        doc2->commit_patch();
+        const int64_t used2 = doc2->end_selector_steps();
+        if (used2 <= limit) std::printf("  %lld steps counted under a %lld limit beside a class change\n", (long long)used2, (long long)limit);
+        CHECK(used2 > limit);
+    }
+    {
+        // A state flip with no sheet change (edit 75): the rules naming the state tested over its reach, counted too.
+        PaintContainer c3;
+        element::ptr body3;
+        auto doc3 = structureDocument(c3, std::vector<std::string>{".z~.a:hover~.a~.a~.a{color:#00c}"}, kids, body3);
+        doc3->begin_selector_steps(limit);
+        CHECK(doc3->set_pseudo_classes({{childAt(body3, 0), {{litehtml::_hover_, true}}}}));
+        doc3->commit_patch();
+        const int64_t used3 = doc3->end_selector_steps();
+        if (used3 <= limit) std::printf("  %lld steps counted under a %lld limit for a state flip\n", (long long)used3, (long long)limit);
+        CHECK(used3 > limit);
+    }
+}
+
+// VENDOR.md edit 81: a <style>'s text changed, a <style> inserted or removed: the sheets change in place, as a build with
+// the new sheets makes the document.
+static void testSheetChangesMatchFresh() {
+    const std::vector<Spec> kids = {el("p", "p", {{"class", "a b"}}), el("ol", "", {}, {el("li", "a"), el("li", "b")})};
+    const char* counters = "li{counter-increment:n} li::before{content:counter(n)}";
+    struct TextCase {
+        std::string from, to;
+        bool paintOnly;
+        const char* what;
+    };
+    const TextCase texts[] = {
+        {"p{color:#c00}", "p{color:#c00} .a{display:none}", false, "a rule added"},
+        {"p{color:#c00} .a{display:none}", "p{color:#c00}", false, "a rule removed"},
+        {".a{color:#c00} .b{color:#00c}", ".b{color:#00c} .a{color:#c00}", true, "two equal rules swapped"},
+        {"p{color:#c00}", "p{color:#00c}", true, "a colour changed"},
+        {"p{color:#c00}", "@media (min-width:100px){p{display:none}} p{color:#c00}", false, "an @media block added"},
+        {"p{color:#c00}", std::string("p{color:#c00} ") + counters, false, "counters added"},
+        {std::string("p{color:#c00} ") + counters, "p{color:#c00}", false, "counters removed"},
+        {"p{color:#c00}", "", false, "a sheet emptied"},
+        {"", "p::before{content:'x'}", false, "an empty sheet filled"},
+    };
+    for (const TextCase& k : texts) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, std::vector<std::string>{k.from}, kids, body);
+        auto style = childAt(childAt(doc->root(), 0), 0);
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_style_text(style, k.to, made));
+        doc->commit_patch();
+        if (k.paintOnly && !doc->rebuild_reason().empty()) std::printf("  %s: replaced (%s)\n", k.what, doc->rebuild_reason().c_str());
+        CHECK(!k.paintOnly || doc->rebuild_reason().empty());
+        structureMatchesFresh(c, doc, std::vector<std::string>{k.to}, kids, k.what);
+    }
+    {
+        // A second <style> inserted before the first and after it, then removed; and a sheet in the body changed.
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> withBody = kids;
+        withBody.insert(withBody.begin(), el("style", "li{color:#00c}"));
+        auto doc = structureDocument(c, std::vector<std::string>{"p{color:#c00}"}, withBody, body);
+        auto head = childAt(doc->root(), 0);
+        CHECK(doc->insert_subtree(head, 0, build(doc, el("style", "p{color:#00c;padding:1px}"))));
+        structureMatchesFresh(c, doc, std::vector<std::string>{"p{color:#00c;padding:1px}", "p{color:#c00}"}, withBody,
+                              "a <style> inserted before the first");
+        CHECK(doc->insert_subtree(head, 2, build(doc, el("style", "p{color:#0c0}"))));
+        structureMatchesFresh(c, doc,
+                              std::vector<std::string>{"p{color:#00c;padding:1px}", "p{color:#c00}", "p{color:#0c0}"},
+                              withBody, "a <style> inserted after it");
+        CHECK(doc->remove_subtree(childAt(head, 0)));
+        CHECK(doc->remove_subtree(childAt(head, 1)));
+        structureMatchesFresh(c, doc, std::vector<std::string>{"p{color:#c00}"}, withBody, "both removed");
+        std::vector<element::ptr> made;
+        CHECK(doc->replace_style_text(childAt(body, 0), "li{color:#0c0;margin:2px}", made));
+        CHECK(made.size() == 1);
+        withBody[0] = el("style", "li{color:#0c0;margin:2px}");
+        structureMatchesFresh(c, doc, std::vector<std::string>{"p{color:#c00}"}, withBody, "a sheet in the body changed");
+        CHECK(doc->insert_subtree(body, 1, build(doc, el("div", "", {}, {el("style", counters), el("i", "i")}))));
+        withBody.insert(withBody.begin() + 1, el("div", "", {}, {el("style", counters), el("i", "i")}));
+        structureMatchesFresh(c, doc, std::vector<std::string>{"p{color:#c00}"}, withBody, "a subtree holding a <style>");
+        CHECK(doc->remove_subtree(childAt(body, 1)));
+        withBody.erase(withBody.begin() + 1);
+        structureMatchesFresh(c, doc, std::vector<std::string>{"p{color:#c00}"}, withBody, "the subtree removed");
+    }
+}
+
+// VENDOR.md edit 82: the document element replaced in place: the old tree goes as a removal does, the new one is styled
+// fresh with its sheets and the root declarations, as a build of the new tree makes the document.
+static void testRootReplacementMatchesFresh() {
+    const std::vector<Spec> kids = {el("p", "p", {{"class", "a"}}), el("ol", "", {}, {el("li", "a"), el("li", "b")})};
+    const std::vector<std::string> sheets = {
+        ":root{--k:#c00} p{color:var(--k)} li{counter-increment:n} li::before{content:counter(n)}"};
+    const std::vector<Spec> next = {el("p", "new", {{"class", "a"}}),
+                                    el("ul", "", {}, {el("li", "x"), el("li", "y"), el("li", "z")}), el("div", "d")};
+    PaintContainer c;
+    c.rootDeclarations = "--tg:#00c;color:var(--tg)";
+    element::ptr body;
+    auto doc = structureDocument(c, std::vector<std::string>{"p{color:#0c0}"}, kids, body);
+    element::ptr nextBody;
+    auto root = structureRoot(doc, sheets, next, nextBody);
+    CHECK(doc->can_replace_root(root));
+    CHECK(doc->replace_root(root));
+    doc->commit_patch();
+    CHECK(doc->root() == root);
+    // The old tree's pieces count while anything holds them.
+    body.reset();
+    structureMatchesFresh(c, doc, sheets, next, "the document element replaced");
+    // And by a tree with no sheet: the old tree's goes with it.
+    auto bare = structureRoot(doc, {}, kids, body);
+    CHECK(doc->replace_root(bare));
+    doc->commit_patch();
+    root.reset();
+    nextBody.reset();
+    structureMatchesFresh(c, doc, std::vector<std::string>{}, kids, "replaced by a tree with no sheet");
+    // A root already in the document, or one with a parent, is refused.
+    CHECK(!doc->can_replace_root(bare));
+    CHECK(!doc->can_replace_root(childAt(bare, 1)));
+}
+
+// VENDOR.md edit 76: a predicate that refuses names why (document::refusal()).
+static void testRefusalsSayWhy() {
+    auto said = [](const litehtml::document::ptr& doc, const char* want, const char* what) {
+        const std::string got = doc->refusal();
+        if (got != want) std::printf("  %s: refused for \"%s\", want \"%s\"\n", what, got.c_str(), want);
+        CHECK(got == want);
+    };
+    {
+        // Counters refuse nothing (edit 78).
+        const char* sheet = "li{counter-increment:n} li::before{content:counter(n)}";
+        std::vector<Spec> kids = {el("div", "d", {{"id", "d"}}), el("ul", "", {}, {el("li", "a")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto d = doc->root()->select_one("#d");
+        CHECK(d && doc->set_element_attribute(d, "class", "x"));
+        kids[0].attrs["class"] = "x";
+        structureMatchesFresh(c, doc, sheet, kids, "a class beside counters");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        // Edit 84: an insertion beside ::before content at the text cap is made, and the commit's replay cuts as a build.
+        // The document's own text is under the cap (cutting it is the caller's walk): 9,997 pieces, the sheet's and "p".
+        std::string words;
+        for (int n = 0; n < 4999; n++) words += n ? " w" : "w";
+        std::vector<Spec> kids = {el("p", words.c_str()), el("p", "p")};
+        auto doc = structureDocument(c, "p::before{content:'x'}", kids, body);
+        CHECK(doc->text_limited());
+        CHECK(doc->insert_subtree(body, 0, build(doc, el("p", "new"))));
+        kids.insert(kids.begin(), el("p", "new"));
+        structureMatchesFresh(c, doc, "p::before{content:'x'}", kids, "an insertion beside ::before content at the text cap");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "p{color:#c00}", {el("p", "p")}, body);
+        CHECK(!doc->can_insert_subtree(body, 0, build(doc, el("body", "b"))));
+        said(doc, "a document-level element", "a <body> inserted");
+        CHECK(!doc->can_remove_subtree(doc->root()));
+        said(doc, "an invalid subtree", "the root removed");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "td{padding:1px}",
+                                     {el("table", "", {}, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "c", {{"id", "td"}})})})})},
+                                     body);
+        auto td = doc->root()->select_one("#td");
+        CHECK(td != nullptr);
+        if (td) {
+            litehtml::string_map attrs = std::static_pointer_cast<litehtml::html_tag>(td)->attributes();
+            attrs["colspan"] = "1000";
+            attrs["rowspan"] = "1000";
+            CHECK(doc->can_set_element_attributes(td, attrs)); // edit 84: the commit's recount cuts the cells
+        }
+    }
+    {
+        const char* sheet = "#t:hover{counter-increment:n} p::before{content:counter(n)}";
+        const std::vector<Spec> kids = {el("p", "one", {{"id", "t"}}), el("p", "two")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t && doc->set_pseudo_classes({{t, {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, kids, {"t"}, "a hover beside counters");
+    }
+    // The caps are no refusal (edit 84): elements counted up to 19,995 (the external build counts its own nowhere) beside
+    // the 4 pseudo-elements, one short of the cap, which the hover's reach (a <p>, two pseudo-elements) would pass.
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "p::before{content:'x'} p::after{content:'y'} p:hover{color:#c00}",
+                                     {el("p", "one", {{"id", "t"}}), el("p", "two")}, body);
+        for (int n = 0; n < 19995; n++) CHECK(doc->external_element_allowed(2));
+        auto t = doc->root()->select_one("#t");
+        CHECK(t && doc->can_set_pseudo_classes({{t, {{litehtml::_hover_, true}}}}));
+        CHECK(!doc->pseudo_limited());
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        const char* sheet = "p::before{content:'x'} p:hover{color:#c00}";
+        const std::vector<Spec> kids = {el("p", capWords().c_str()), el("p", "p", {{"id", "t"}})};
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->text_limited());
+        auto t = doc->root()->select_one("#t");
+        CHECK(t && doc->set_pseudo_classes({{t, {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, kids, {"t"}, "a hover beside ::before content at the text cap");
+    }
+}
+
+// VENDOR.md edit 21: a patched document holds the style bytes a fresh build of it holds, whatever patched it and however
+// often: what leaves the tree and what is styled again gives back what it held.
+static void testStyleBytesFollowPatches() {
+    const char* families = "p{font-family:'A Long Family Name', 'Another Family Name', serif}";
+    auto paragraphs = [] {
+        return std::vector<Spec>{el("p", "one", {{"id", "a"}}), el("p", "two", {{"id", "b"}}), el("p", "three")};
+    };
+    {
+        PaintContainer c;
+        element::ptr body;
+        std::vector<Spec> kids = paragraphs();
+        auto doc = structureDocument(c, families, kids, body);
+        CHECK(doc->style_bytes_charged() > 0);
+        CHECK(doc->remove_subtree(doc->root()->select_one("#b")));
+        kids.erase(kids.begin() + 1);
+        structureMatchesFresh(c, doc, families, kids, "a removal");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, families, paragraphs(), body);
+        CHECK(replaceKids(doc, body, {build(doc, el("p", "new"))}));
+        structureMatchesFresh(c, doc, families, {el("p", "new")}, "new children");
+    }
+    const char* vars = ":root{--k:#c00; --f:'A Long Family Name', serif} p{color:var(--k);font-family:var(--f)} .x{padding:1px}";
+    auto wrapped = [](const char* cls) {
+        litehtml::string_map attrs{{"id", "w"}};
+        if (*cls) attrs["class"] = cls;
+        return std::vector<Spec>{el("div", "", attrs, {el("p", "one"), el("p", "two")})};
+    };
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, vars, wrapped(""), body);
+        CHECK(doc->set_element_attribute(doc->root()->select_one("#w"), "class", "x"));
+        structureMatchesFresh(c, doc, vars, wrapped("x"), "a class restyling var() splices below it");
+    }
+    const char* inherited = "#w{font-family:'A Long Family Name', 'Another Family Name', serif} .x{padding:1px}";
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, inherited, wrapped(""), body);
+        CHECK(doc->set_element_attribute(doc->root()->select_one("#w"), "class", "x"));
+        structureMatchesFresh(c, doc, inherited, wrapped("x"), "a class restyling an inherited string below it");
+    }
+    {
+        const char* hover = "#t:hover{font-family:'A Long Family Name', serif}";
+        std::vector<Spec> kids = {el("p", "one", {{"id", "t"}}), el("p", "two")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, hover, kids, body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#t"), {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, hover, kids, {"t"}, "a hover flip");
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, vars, wrapped(""), body);
+        auto w = doc->root()->select_one("#w");
+        for (int i = 0; i < 500; i++) {
+            CHECK(doc->set_element_attribute(w, "class", i % 2 == 0 ? "x" : nullptr));
+            doc->commit_patch();
+        }
+        structureMatchesFresh(c, doc, vars, wrapped(""), "500 class toggles over var() splices");
+    }
+    // An inline style's var() is spliced again at every restyle (the style attribute is added again): what it held is
+    // given back first.
+    {
+        const char* sheet = ":root{--f:'A Long Family Name', 'Another Family Name', serif} .x{padding:1px}";
+        auto inline_var = [](const char* cls) {
+            litehtml::string_map attrs{{"id", "w"}};
+            if (*cls) attrs["class"] = cls;
+            return std::vector<Spec>{el("div", "", attrs, {el("p", "one", {{"style", "font-family:var(--f)"}})})};
+        };
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, inline_var(""), body);
+        auto w = doc->root()->select_one("#w");
+        for (int i = 0; i < 6; i++) {
+            CHECK(doc->set_element_attribute(w, "class", i % 2 == 0 ? "x" : nullptr));
+            doc->commit_patch();
+        }
+        structureMatchesFresh(c, doc, sheet, inline_var(""), "restyles of an inline var()");
+    }
+    // A ::before one rule makes and a content:none rule drops gives back what it held.
+    {
+        const char* sheet = "p::before{content:'x';font-family:'A Long Family Name', serif} p.off::before{content:none}";
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, {el("p", "x", {{"id", "p"}})}, body);
+        auto p = doc->root()->select_one("#p");
+        for (int i = 0; i < 100; i++) {
+            CHECK(doc->set_element_attribute(p, "class", i % 2 == 0 ? "off" : nullptr));
+            doc->commit_patch();
+        }
+        structureMatchesFresh(c, doc, sheet, {el("p", "x", {{"id", "p"}})}, "100 toggles of a content:none rule");
+    }
+}
+
+// The animated style (edit 27) for "style": the same declarations as a second inline style; nothing for another attribute.
+static const char* animated_attr(const char* attr) {
+    return std::string(attr) == "style" ? litehtml::animated_style_attribute : nullptr;
+}
+
+// VENDOR.md edit 17: an inline style with custom properties and var() is patched. A restyle substitutes no var() again
+// (subst_vars replaces them in the style), so the commit matches again the var() readers below an element whose custom
+// properties may have changed, whether they were declared inline or by :hover.
+static void testCustomPropertiesInInlineStyle() {
+    const char* sheet = "p{color:var(--k, #000)} .dark{--k:#fff} #w:hover{--k:#0a0}";
+    auto page = [](const char* attr, const char* parent, const char* child) {
+        litehtml::string_map w{{"id", "w"}}, p{{"id", "p"}};
+        if (*parent) w[attr] = parent;
+        if (*child) p[attr] = child;
+        return std::vector<Spec>{el("div", "", w, {el("p", "one", p), el("span", "two")})};
+    };
+    struct Case {
+        const char* id;
+        const char* attr;
+        const char* parentBefore;
+        const char* childBefore;
+        const char* value;
+        const char* what;
+    };
+    const Case cases[] = {
+        {"w", "style", "--k:#c00", "", "--k:#00f", "a parent's custom property under a child's var()"},
+        {"p", "style", "--k:#00f", "", "color:var(--k, #c00)", "a child's var() in its own style"},
+        {"p", "style", "", "", "--g:3px;padding:var(--g)", "a custom property and its var() on one element"},
+        {"p", "style", "", "", "--d:none;display:var(--d, block)", "a display from a var() (a replacement)"},
+    };
+    for (const Case& k : cases) {
+        for (const char* attr : {k.attr, animated_attr(k.attr)}) {
+            if (!attr) continue;
+            PaintContainer c;
+            element::ptr body;
+            auto doc = structureDocument(c, sheet, page(attr, k.parentBefore, k.childBefore), body);
+            auto target = doc->root()->select_one(std::string("#") + k.id);
+            CHECK(target != nullptr);
+            if (!target) continue;
+            const bool set = doc->set_element_attribute(target, attr, k.value);
+            if (!set) std::printf("  refused (%s): %s\n", doc->refusal(), k.what);
+            CHECK(set);
+            const bool parent = std::string(k.id) == "w";
+            const std::string what = std::string(k.what) + (std::string(attr) == k.attr ? "" : " (animated)");
+            structureMatchesFresh(c, doc, sheet,
+                                  page(attr, parent ? k.value : k.parentBefore, parent ? k.childBefore : k.value),
+                                  what.c_str());
+        }
+    }
+    // A hover that sets the custom property.
+    {
+        std::vector<Spec> kids = page("style", "", "");
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#w"), {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, kids, {"w"}, "a hover declaring the parent's custom property");
+    }
+    // A paint-only hover on an element declaring a custom property, whose readers have ::before content: the commit
+    // matches the readers again, and their render subtrees are replaced (alone, and beside a structure change).
+    for (const bool structure : {false, true}) {
+        const char* content = "p{color:var(--k, #000)} p::before{content:'*'} #w:hover{outline:1px solid #f0f}";
+        std::vector<Spec> kids = page("style", "--k:#c00", "");
+        kids.push_back(el("div", "x", {{"id", "d"}}));
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, content, kids, body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#w"), {{litehtml::_hover_, true}}}}));
+        if (structure) {
+            auto d = doc->root()->select_one("#d");
+            CHECK(doc->insert_subtree(d, d->children().size(), build(doc, el("b", "y"))));
+            kids.back().kids.push_back(el("b", "y"));
+        }
+        pseudoMatchesFresh(c, doc, content, kids, {"w"},
+                           structure ? "a hover beside a structure change, over readers with ::before content"
+                                     : "a hover over readers with ::before content");
+    }
+}
+
+// VENDOR.md edit 77: an attribute change whose names a rule reads beyond the element (in an ancestor position, or with
+// sibling selectors in the sheets) matches again what they reach, each element whose match by a rule naming a changed
+// name differs, as a document built with the change.
+static void testAttributeChangeRematchesItsReach() {
+    struct Case {
+        const char* sheet;
+        std::vector<Spec> before;
+        const char* name;
+        const char* value;
+        std::vector<Spec> after;
+        const char* what;
+    };
+    const Case cases[] = {
+        {".a p{display:none}", {el("div", "", {{"id", "t"}}, {el("p", "x"), el("span", "y")})}, "class", "a",
+         {el("div", "", {{"id", "t"}, {"class", "a"}}, {el("p", "x"), el("span", "y")})}, "a class an ancestor position names"},
+        {".x + .y{color:#0a0}", {el("p", "one", {{"id", "t"}}), el("p", "two", {{"class", "y"}})}, "class", "x",
+         {el("p", "one", {{"id", "t"}, {"class", "x"}}), el("p", "two", {{"class", "y"}})}, "the next sibling"},
+        {"p:nth-last-child(1 of .k){color:#c00}", {el("p", "one", {{"class", "k"}}), el("p", "two", {{"id", "t"}})}, "class",
+         "k", {el("p", "one", {{"class", "k"}}), el("p", "two", {{"id", "t"}, {"class", "k"}})}, "an earlier sibling"},
+        {"[data-k] span{padding:1px}", {el("div", "", {{"id", "t"}}, {el("span", "s")})}, "data-k", "1",
+         {el("div", "", {{"id", "t"}, {"data-k", "1"}}, {el("span", "s")})}, "an attribute an ancestor position names"},
+        {"#k1 li{margin:3px}", {el("ul", "", {{"id", "t"}}, {el("li", "a")})}, "id", "k1",
+         {el("ul", "", {{"id", "k1"}}, {el("li", "a")})}, "an id an ancestor position names"},
+        {"a:link span{color:#00f} span{color:#000}", {el("a", "", {{"id", "t"}, {"href", "#"}}, {el("span", "s")})}, "href",
+         nullptr, {el("a", "", {{"id", "t"}}, {el("span", "s")})}, "an href under a:link"},
+        {"details[open] p{color:#c00}", {el("details", "", {{"id", "t"}}, {el("summary", "s"), el("p", "p")})}, "open", "",
+         {el("details", "", {{"id", "t"}, {"open", ""}}, {el("summary", "s"), el("p", "p")})}, "details[open]"},
+        {".big p{display:flex}", {el("div", "", {{"id", "t"}}, {el("p", "", {}, {el("span", "a"), el("span", "b")})})}, "class",
+         "big", {el("div", "", {{"id", "t"}, {"class", "big"}}, {el("p", "", {}, {el("span", "a"), el("span", "b")})})},
+         "a descendant's display flips"},
+        {".dark{--k:#fff} p{color:var(--k, #000)}", {el("div", "", {{"id", "t"}}, {el("p", "x")})}, "class", "dark",
+         {el("div", "", {{"id", "t"}, {"class", "dark"}}, {el("p", "x")})}, "a class declaring a custom property"},
+    };
+    for (const Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, k.before, body);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t != nullptr);
+        if (!t) continue;
+        const bool set = doc->set_element_attribute(t, k.name, k.value);
+        if (!set) std::printf("  refused (%s): %s\n", doc->refusal(), k.what);
+        CHECK(set);
+        structureMatchesFresh(c, doc, k.sheet, k.after, k.what);
+    }
+    // An attribute change and a pseudo-class flip in one session that one rule reads together.
+    {
+        const char* sheet = ".open:hover .x{display:none}";
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, {el("div", "", {{"id", "t"}}, {el("span", "x", {{"class", "x"}}), txt(" y")})},
+                                     body);
+        auto t = doc->root()->select_one("#t");
+        CHECK(t && doc->set_element_attribute(t, "class", "open"));
+        CHECK(t && doc->set_pseudo_classes({{t, {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, {el("div", "", {{"id", "t"}, {"class", "open"}}, {el("span", "x", {{"class", "x"}}), txt(" y")})},
+                           {"t"}, "a class and a hover one rule reads together");
+    }
+    // Many siblings changed in one session under a sibling selector reach their parent's children once; a changed name
+    // no rule names reaches nothing.
+    {
+        const char* sheet = ".x + .y{color:#0a0}";
+        std::vector<Spec> kids;
+        for (int n = 0; n < 200; n++) kids.push_back(el("i", "i"));
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        std::vector<litehtml::string_map> wanted(body->children().size());
+        std::vector<std::pair<element::ptr, const litehtml::string_map*>> changes, unnamed;
+        std::vector<litehtml::string_map> data(body->children().size());
+        size_t at = 0;
+        for (const auto& child : body->children()) {
+            auto tag = std::dynamic_pointer_cast<litehtml::html_tag>(child);
+            if (!tag) { at++; continue; }
+            wanted[at] = tag->attributes();
+            wanted[at]["class"] = "x";
+            data[at] = tag->attributes();
+            data[at]["data-q"] = "1";
+            changes.emplace_back(child, &wanted[at]);
+            unnamed.emplace_back(child, &data[at]);
+            at++;
+        }
+        uint64_t steps = doc->predicate_steps();
+        doc->attribute_reach(changes);
+        const uint64_t walked = doc->predicate_steps() - steps;
+        const uint64_t nodes = 2 * kids.size() + 1;   // the <i>s, their texts, the body
+        if (walked > 2 * nodes) std::printf("  %llu steps for %zu sibling changes over %llu nodes\n", (unsigned long long)walked, changes.size(), (unsigned long long)nodes);
+        CHECK(walked <= 2 * nodes);
+        steps = doc->predicate_steps();
+        CHECK(doc->attribute_reach(unnamed).empty());
+        CHECK(doc->predicate_steps() - steps <= nodes);
+    }
+    // Nested changes reach once: each element of the outer subtree visited once, and the inner one once more.
+    {
+        const char* sheet = ".a p{color:#c00}";
+        std::vector<Spec> kids = {el("div", "", {{"id", "o"}}, {el("div", "", {{"id", "i"}}, {el("p", "x"), txt(" y")}), el("span", "z")})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto o = doc->root()->select_one("#o");
+        auto i = doc->root()->select_one("#i");
+        CHECK(o && i);
+        if (o && i) {
+            uint64_t nodes = 0;
+            std::vector<element::ptr> stack{o};
+            while (!stack.empty()) {
+                element::ptr next = stack.back();
+                stack.pop_back();
+                nodes++;
+                for (const auto& child : next->children()) stack.push_back(child);
+            }
+            litehtml::string_map wantedI = std::static_pointer_cast<litehtml::html_tag>(i)->attributes();
+            litehtml::string_map wantedO = std::static_pointer_cast<litehtml::html_tag>(o)->attributes();
+            wantedI["class"] = "a";
+            wantedO["class"] = "a";
+            const uint64_t steps = doc->predicate_steps();
+            doc->attribute_reach({{i, &wantedI}, {o, &wantedO}});
+            // Each change a step (its names compared), #o's subtree's nodes once each, and #i once more.
+            if (doc->predicate_steps() - steps != nodes + 3) std::printf("  steps %llu, nodes %llu\n", (unsigned long long)(doc->predicate_steps() - steps), (unsigned long long)nodes);
+            CHECK(doc->predicate_steps() - steps == nodes + 3);
+            CHECK(doc->set_element_attribute(i, "class", "a"));
+            CHECK(doc->set_element_attribute(o, "class", "a"));
+            structureMatchesFresh(c, doc, sheet,
+                                  {el("div", "", {{"id", "o"}, {"class", "a"}},
+                                      {el("div", "", {{"id", "i"}, {"class", "a"}}, {el("p", "x"), txt(" y")}), el("span", "z")})},
+                                  "two nested classes in one session");
+        }
+    }
+}
+
+// VENDOR.md edit 17: a <table>'s presentational attributes (parse_attributes maps them to styles) and a class that
+// changes its display are patched, each as a document built with it.
+static void testTableAttributesMatchFresh() {
+    auto table = [](const litehtml::string_map& attrs) {
+        litehtml::string_map with = attrs;
+        with["id"] = "t";
+        return std::vector<Spec>{el("table", "", with, {el("tbody", "", {}, {el("tr", "", {}, {el("td", "c")})})}), el("p", "after")};
+    };
+    const char* tableSheet = ".t{display:block}";
+    const std::pair<const char*, const char*> changes[] = {
+        {"border", "2"}, {"bgcolor", "#ccc"}, {"width", "120"}, {"cellspacing", "4"}, {"class", "t"}};
+    for (const auto& [name, value] : changes) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, tableSheet, table({}), body);
+        const bool set = doc->set_element_attribute(doc->root()->select_one("#t"), name, value);
+        if (!set) std::printf("  refused (%s): a table's %s\n", doc->refusal(), name);
+        CHECK(set);
+        structureMatchesFresh(c, doc, tableSheet, table({{name, value}}), name);
+    }
+}
+
+// VENDOR.md edits 16, 18: structure and text inside an <svg>, which paints its subtree itself (its render item an image),
+// replace the svg's render subtree, each as a document built with the change; the tree is never rebuilt.
+static void testStructureInsideAnSvg() {
+    auto svg = [](std::vector<Spec> shapes) {
+        return std::vector<Spec>{el("svg", "", {{"id", "s"}, {"width", "40"}, {"height", "40"}, {"viewBox", "0 0 40 40"}}, std::move(shapes)),
+                                 el("p", "after")};
+    };
+    auto circle = [](const char* id, const char* cx) {
+        return el("circle", "", {{"id", id}, {"cx", cx}, {"cy", "10"}, {"r", "5"}, {"fill", "red"}});
+    };
+    auto rect = [] { return el("rect", "", {{"x", "20"}, {"y", "20"}, {"width", "5"}, {"height", "5"}, {"fill", "blue"}}); };
+    auto label = [](const char* text) { return el("text", "", {{"id", "tx"}, {"x", "2"}, {"y", "35"}}, {txt(text)}); };
+    struct Case {
+        std::vector<Spec> before;
+        std::function<bool(const litehtml::document::ptr&)> change;
+        std::vector<Spec> after;
+        const char* what;
+    };
+    const Case cases[] = {
+        {svg({circle("a", "10")}),
+         [&](const litehtml::document::ptr& doc) { return doc->insert_subtree(doc->root()->select_one("#s"), 0, build(doc, circle("b", "30"))); },
+         svg({circle("b", "30"), circle("a", "10")}), "a circle inserted"},
+        {svg({circle("a", "10"), circle("b", "30")}),
+         [&](const litehtml::document::ptr& doc) { return doc->remove_subtree(doc->root()->select_one("#b")); },
+         svg({circle("a", "10")}), "a circle removed"},
+        {svg({circle("a", "10")}),
+         [&](const litehtml::document::ptr& doc) {
+             return doc->insert_subtree(doc->root()->select_one("#s"), 1, build(doc, el("g", "", {{"id", "g"}}, {rect()})));
+         },
+         svg({circle("a", "10"), el("g", "", {{"id", "g"}}, {rect()})}), "a <g> with a <rect> inserted"},
+        {svg({el("g", "", {{"id", "g"}}, {rect()})}),
+         [&](const litehtml::document::ptr& doc) {
+             return replaceKids(doc, doc->root()->select_one("#g"), {build(doc, circle("a", "10")), build(doc, rect())});
+         },
+         svg({el("g", "", {{"id", "g"}}, {circle("a", "10"), rect()})}), "a <g>'s new children"},
+        {svg({label("hi")}),
+         [&](const litehtml::document::ptr& doc) {
+             auto text = doc->root()->select_one("#tx");
+             std::vector<element::ptr> pieces;
+             return text && doc->replace_text(text, 0, text->children().size(), "bye now", pieces);
+         },
+         svg({label("bye now")}), "an svg <text>'s data"},
+        {svg({el("use", "", {{"href", "#c"}})}),
+         [&](const litehtml::document::ptr& doc) { return doc->insert_subtree(doc->root()->select_one("#s"), 0, build(doc, circle("c", "20"))); },
+         svg({circle("c", "20"), el("use", "", {{"href", "#c"}})}), "a <use>'s target inserted"},
+    };
+    for (const Case& k : cases) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, "", k.before, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        const bool changed = k.change(doc);
+        if (!changed) std::printf("  refused (%s): %s\n", doc->refusal(), k.what);
+        CHECK(changed);
+        structureMatchesFresh(c, doc, "", k.after, k.what);
+        CHECK(!observer.replaced.empty());
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// VENDOR.md edit 17: a ::before or ::after that reads var() follows its ancestors' custom properties, though its owner
+// reads none: the owner is matched again (its pseudo-elements made again).
+static void testPseudoElementsReadingVar() {
+    const char* sheet = ".dark{--k:#c00} #w:hover{--k:#0a0} p::before{content:'B';color:var(--k,#000)}";
+    auto page = [](const litehtml::string_map& attrs) {
+        litehtml::string_map w = attrs;
+        w["id"] = "w";
+        return std::vector<Spec>{el("div", "", w, {el("p", "x")})};
+    };
+    const std::pair<const char*, const char*> changes[] = {{"class", "dark"}, {"style", "--k:#00f"}};
+    for (const auto& [name, value] : changes) {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, page({}), body);
+        CHECK(doc->set_element_attribute(doc->root()->select_one("#w"), name, value));
+        structureMatchesFresh(c, doc, sheet, page({{name, value}}), name);
+    }
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, page({}), body);
+        CHECK(doc->set_pseudo_classes({{doc->root()->select_one("#w"), {{litehtml::_hover_, true}}}}));
+        pseudoMatchesFresh(c, doc, sheet, page({}), {"w"}, "a hover declaring the custom property a ::before reads");
+    }
+}
+
+// Twidget edit 84: a document built as WidgetRuntime builds one: every element counted by external_element_allowed, its
+// text through append_text (which asks the piece cap), then finalized and laid out.
+static void countedKid(const litehtml::document::ptr& doc, const element::ptr& parent, const Spec& spec, int depth) {
+    if (!doc->external_element_allowed(depth)) return;
+    auto e = make(doc, spec.tag.c_str(), spec.attrs);
+    add(doc, parent, e);
+    if (!spec.text.empty()) text(doc, e, spec.text.c_str());
+    for (const Spec& kid : spec.kids) {
+        if (kid.tag.empty()) text(doc, e, kid.text.c_str());
+        else countedKid(doc, e, kid, depth + 1);
+    }
+}
+
+static litehtml::document::ptr countedDocument(PaintContainer& c, const std::vector<std::string>& sheets,
+                                               const std::vector<Spec>& kids) {
+    auto doc = std::make_shared<litehtml::document>(&c);
+    doc->set_document_mode(litehtml::no_quirks_mode);
+    doc->external_element_allowed(0);
+    auto root = make(doc, "html");
+    doc->external_element_allowed(1);
+    auto head = make(doc, "head");
+    add(doc, root, head);
+    for (const std::string& sheet : sheets) {
+        doc->external_element_allowed(2);
+        auto style = make(doc, "style");
+        add(doc, head, style);
+        if (!sheet.empty()) text(doc, style, sheet.c_str());
+    }
+    doc->external_element_allowed(1);
+    auto body = make(doc, "body", {{"style", "margin:0"}});
+    add(doc, root, body);
+    for (const Spec& kid : kids) {
+        if (kid.tag.empty()) text(doc, body, kid.text.c_str());
+        else countedKid(doc, body, kid, 2);
+    }
+    doc->finalize_from_external_root(root, litehtml::telegram_master_css());
+    doc->render(litehtml::pixel_t(200.0f));
+    return doc;
+}
+
+// Commits and lays out `doc`, then compares it with countedDocument(kids): placements, height, everything painted, and
+// litehtml's counts and caps (pieces, elements, pseudo-elements, style bytes, and which caps were reached).
+static bool replayMatchesFresh(PaintContainer& c, const litehtml::document::ptr& doc, const std::vector<std::string>& sheets,
+                               const std::vector<Spec>& kids, const std::string& what) {
+    doc->commit_patch();
+    doc->render(litehtml::pixel_t(200.0f));
+    PaintContainer fresh;
+    auto reference = countedDocument(fresh, sheets, kids);
+    const bool same = dump_of(doc) == dump_of(reference) && float(doc->height()) == float(reference->height()) &&
+                      painted(c, doc) == painted(fresh, reference) && doc->text_elements() == reference->text_elements() &&
+                      doc->build_elements() == reference->build_elements() &&
+                      doc->pseudo_elements() == reference->pseudo_elements() &&
+                      doc->style_bytes_charged() == reference->style_bytes_charged() &&
+                      doc->text_limited() == reference->text_limited() && doc->pseudo_limited() == reference->pseudo_limited() &&
+                      doc->style_bytes_limited() == reference->style_bytes_limited();
+    if (!same) {
+        std::printf("  differs from a build after %s: pieces %d/%d, elements %d/%d, pseudo %d/%d, style bytes %zu/%zu, "
+                    "limited %d%d%d/%d%d%d, dump %s, painted %s\n",
+                    what.c_str(), doc->text_elements(), reference->text_elements(), doc->build_elements(),
+                    reference->build_elements(), doc->pseudo_elements(), reference->pseudo_elements(),
+                    doc->style_bytes_charged(), reference->style_bytes_charged(), doc->text_limited(), doc->pseudo_limited(),
+                    doc->style_bytes_limited(), reference->text_limited(), reference->pseudo_limited(),
+                    reference->style_bytes_limited(), dump_of(doc) == dump_of(reference) ? "same" : "differs",
+                    painted(c, doc) == painted(fresh, reference) ? "same" : "differs");
+    }
+    CHECK(same);
+    return same;
+}
+
+// The range of `parent`'s text pieces (its generated children aside), for replace_text.
+static std::pair<size_t, size_t> textRange(const element::ptr& parent) {
+    size_t first = 0, count = 0, at = 0;
+    for (const auto& child : parent->children()) {
+        if (child->is_text()) {
+            if (count == 0) first = at;
+            count++;
+        }
+        at++;
+    }
+    return {first, count};
+}
+
+static std::string words(int n, const char* word = "w") {
+    std::string out;
+    for (int i = 0; i < n; i++) {
+        if (i) out += ' ';
+        out += word;
+    }
+    return out;
+}
+
+// Twidget edit 84 (Review Focus 2): one element matched by two ::before content rules at the text-piece cap. A build
+// makes the second rule's content while the first's is alive, so the cap cuts it short; a text patch that moves the
+// document text near the cap is followed by the replay, which cuts it where a build does.
+static void testTwoContentRulesAtTheCapReplayAsABuild() {
+    const std::vector<std::string> sheets = {"p.a::before{content:\"a1 a2\"} p.b::before{content:\"b1 b2 b3\"}"};
+    const std::string filler = words(4993);
+    auto kids = [&](const char* span) {
+        return std::vector<Spec>{el("p", filler.c_str()), el("p", "x", {{"class", "a b"}}), el("span", span, {{"id", "s"}})};
+    };
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids("s"));
+    CHECK(!doc->text_limited());
+    auto span = doc->root()->select_one("#s");
+    const uint64_t replays = doc->generated_replays();
+    std::vector<element::ptr> made;
+    CHECK(doc->can_replace_text(span, 0, span->children().size(), "s t u v"));
+    CHECK(doc->replace_text(span, 0, span->children().size(), "s t u v", made));
+    replayMatchesFresh(c, doc, sheets, kids("s t u v"), "two content rules at the cap");
+    CHECK(doc->text_limited());
+    CHECK(doc->generated_replays() == replays + 1);
+}
+
+// Twidget edit 84: near a cap a patch is followed by the replay of the style pass in a build's order, so the generated
+// content (::before, ::after, a form control's parts) is cut where a fresh build cuts it, whatever the patch's order.
+static void testReplayFollowsBuildOrder() {
+    // The text-piece cap: words inserted before ::before content, removed, and a text grown under it.
+    {
+        const std::vector<std::string> sheets = {"p::before{content:\"c1 c2 c3\"}"};
+        const std::string filler = words(4980);
+        std::vector<Spec> kids = {el("div", filler.c_str()), el("p", "one", {{"id", "one"}}), el("p", "two"), el("p", "three")};
+        PaintContainer c;
+        auto doc = countedDocument(c, sheets, kids);
+        element::ptr body = doc->root()->select_one("body");
+        auto inserted = build(doc, el("p", "a b c d", {{"id", "new"}}));
+        CHECK(doc->can_insert_subtree(body, 0, inserted));
+        CHECK(doc->insert_subtree(body, 0, inserted));
+        inserted.reset();   // the piece counts compare what the documents hold
+        kids.insert(kids.begin(), el("p", "a b c d", {{"id", "new"}}));
+        replayMatchesFresh(c, doc, sheets, kids, "words inserted before the content");
+        CHECK(doc->can_remove_subtree(doc->root()->select_one("#new")));
+        CHECK(doc->remove_subtree(doc->root()->select_one("#new")));
+        kids.erase(kids.begin());
+        replayMatchesFresh(c, doc, sheets, kids, "the words removed");
+        auto one = doc->root()->select_one("#one");
+        std::vector<element::ptr> made;
+        const auto [first, count] = textRange(one);
+        CHECK(doc->replace_text(one, first, count, "one more words here", made));
+        kids[1] = el("p", "one more words here", {{"id", "one"}});
+        replayMatchesFresh(c, doc, sheets, kids, "a text grown under the content");
+    }
+    // The pseudo-element cap (edit 19): <i>s with two pseudo-elements each, 15 short of 20,000; three more fit and three
+    // more cross it, and their removal brings back what was cut.
+    {
+        const std::vector<std::string> sheets = {"i::before,i::after{content:''}"};
+        std::vector<Spec> is;
+        for (int n = 0; n < 6660; n++) is.push_back(el("i"));
+        std::vector<Spec> kids = {el("div", "", {{"id", "d"}}, is)};
+        PaintContainer c;
+        auto doc = countedDocument(c, sheets, kids);
+        CHECK(!doc->pseudo_limited());
+        auto d = doc->root()->select_one("#d");
+        for (int round = 0; round < 2; round++) {
+            for (int n = 0; n < 3; n++) {
+                auto i = build(doc, el("i", "", {{"class", "added"}}));
+                CHECK(doc->insert_subtree(d, 0, i));
+                kids[0].kids.insert(kids[0].kids.begin(), el("i", "", {{"class", "added"}}));
+            }
+            replayMatchesFresh(c, doc, sheets, kids, round ? "past the pseudo-element cap" : "up to the pseudo-element cap");
+        }
+        CHECK(doc->pseudo_limited());
+        for (int n = 0; n < 6; n++) {
+            CHECK(doc->remove_subtree(doc->root()->select_one("i.added")));
+            kids[0].kids.erase(kids[0].kids.begin());
+        }
+        replayMatchesFresh(c, doc, sheets, kids, "back under the pseudo-element cap");
+        CHECK(!doc->pseudo_limited());
+    }
+    // A form control's parts (lh-*), made between the master and author passes, with content on one of them: an input's
+    // type changed to range, then a text grown before it, near the text-piece cap.
+    {
+        const std::vector<std::string> sheets = {
+            "lh-range-thumb::before{content:\"B1 B2 B3 B4 B5 B6 B7 B8 B9 B10\"} p::after{content:\"q1 q2\"}"};
+        for (int fill : {4980, 4990, 4996}) {
+            const std::string filler = words(fill);
+            auto kids = [&](const char* type, const char* text) {
+                return std::vector<Spec>{el("p", text, {{"id", "p"}}), el("div", filler.c_str()),
+                                         el("input", "", {{"id", "in"}, {"type", type}}), el("p", "after")};
+            };
+            PaintContainer c;
+            auto doc = countedDocument(c, sheets, kids("text", "a"));
+            CHECK(doc->set_element_attribute(doc->root()->select_one("#in"), "type", "range"));
+            replayMatchesFresh(c, doc, sheets, kids("range", "a"), "an input made a range at " + std::to_string(fill));
+            auto p = doc->root()->select_one("#p");
+            std::vector<element::ptr> made;
+            const auto [first, count] = textRange(p);
+            CHECK(doc->replace_text(p, first, count, "a b c", made));
+            replayMatchesFresh(c, doc, sheets, kids("range", "a b c"), "a text grown before it at " + std::to_string(fill));
+        }
+    }
+    // Counters read by content at the cap: an item inserted first renumbers every item after it.
+    {
+        const std::vector<std::string> sheets = {"ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n) \". \"}"};
+        const std::string filler = words(4960);
+        std::vector<Spec> items;
+        for (int n = 0; n < 12; n++) items.push_back(el("li", "item"));
+        std::vector<Spec> kids = {el("p", filler.c_str()), el("ol", "", {{"id", "ol"}}, items)};
+        PaintContainer c;
+        auto doc = countedDocument(c, sheets, kids);
+        auto ol = doc->root()->select_one("#ol");
+        auto li = build(doc, el("li", "first"));
+        CHECK(doc->insert_subtree(ol, 0, li));
+        kids[1].kids.insert(kids[1].kids.begin(), el("li", "first"));
+        replayMatchesFresh(c, doc, sheets, kids, "an item inserted first, counters read by content at the cap");
+    }
+}
+
+// Twidget edit 84 (Review Focus 3): a class that pushes the style bytes past 16 MiB, then its removal. The replay charges
+// from zero in a build's order: the same elements lose their declarations as in a fresh build.
+static void testStyleBytesReplayFromZero() {
+    const std::string big(24000, 'a');
+    // The class's declaration is larger than one element's, so it passes the budget whatever room is left.
+    const std::vector<std::string> sheets = {"*{--big:" + big + "} .x{--more:" + std::string(30000, 'b') + "}"};
+    auto kids = [](int elements, const char* cls) {
+        std::vector<Spec> is;
+        for (int n = 0; n < elements; n++) is.push_back(el("i"));
+        litehtml::string_map attrs{{"id", "t"}};
+        if (*cls) attrs["class"] = cls;
+        return std::vector<Spec>{el("p", "target", attrs), el("div", "", {}, is)};
+    };
+    // Sized from a probe: the elements that leave room for three more of the --big declarations.
+    int elements = 0;
+    {
+        PaintContainer probe;
+        auto none = countedDocument(probe, sheets, kids(0, ""));
+        PaintContainer probe2;
+        auto hundred = countedDocument(probe2, sheets, kids(100, ""));
+        const size_t perElement = (hundred->style_bytes_charged() - none->style_bytes_charged()) / 100;
+        elements = int((litehtml::document::max_style_bytes - none->style_bytes_charged()) / perElement);
+    }
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids(elements, ""));
+    CHECK(!doc->style_bytes_limited());
+    auto count = [&c] { return std::count(c.limits.begin(), c.limits.end(), std::string("style-bytes")); };
+    CHECK(doc->set_element_attribute(doc->root()->select_one("#t"), "class", "x"));
+    replayMatchesFresh(c, doc, sheets, kids(elements, "x"), "a class past the style budget");
+    CHECK(doc->style_bytes_limited());
+    // The container hears the cap each time a pass reaches it (the commit's own, the replay's); the caller posts a kind
+    // once each time it is newly reached. Going back under reports nothing.
+    const auto reported = count();
+    CHECK(reported >= 1);
+    CHECK(doc->set_element_attribute(doc->root()->select_one("#t"), "class", nullptr));
+    replayMatchesFresh(c, doc, sheets, kids(elements, ""), "the class removed");
+    CHECK(!doc->style_bytes_limited());
+    CHECK(count() == reported);
+}
+
+// Twidget edit 84: a re-match whose generated content comes out equal changes nothing the cut reads, so no replay runs.
+static void testPaintOnlyChangeDoesNotReplay() {
+    const std::vector<std::string> sheets = {"p.a::before{content:\"a1 a2\"} p.b::before{content:\"b1 b2 b3\"}"};
+    const std::string filler = words(4993);
+    std::vector<Spec> kids = {el("p", filler.c_str()), el("p", "x", {{"class", "a b"}, {"id", "x"}}),
+                              el("span", "s t u v", {{"id", "s"}})};
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids);
+    CHECK(doc->text_limited());
+    const uint64_t replays = doc->generated_replays();
+    CHECK(doc->set_element_attribute(doc->root()->select_one("#x"), "style", "color:#c00"));
+    kids[1].attrs["style"] = "color:#c00";
+    replayMatchesFresh(c, doc, sheets, kids, "a paint-only change beside content at the cap");
+    CHECK(doc->generated_replays() == replays);
+}
+
+// Edit 84: a build's master pass gives every <summary> its triangle before the author pass drops the .x ones, so a build
+// holds them all at once. Near the text-piece cap that peak, not the content left after the author pass, decides where
+// a build cuts: a text that brings the document text 50 short of the cap cuts the plain summaries' triangles.
+static void testMasterContentCountsAtTheTextCap() {
+    const std::vector<std::string> sheets = {"summary.x::before{content:none}"};
+    auto kids = [&](int fill) {
+        std::vector<Spec> k;
+        k.push_back(el("p", words(fill).c_str(), {{"id", "p"}}));
+        for (int n = 0; n < 100; n++) k.push_back(el("summary", "s", {{"class", "x"}}));
+        for (int n = 0; n < 10; n++) k.push_back(el("summary", "t"));
+        return k;
+    };
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids(1000));
+    CHECK(!doc->text_limited());
+    const int fill = 1000 + (litehtml::document::max_text_elements - 50 - doc->document_text_pieces()) / 2;
+    auto p = doc->root()->select_one("#p");
+    const auto [first, count] = textRange(p);
+    std::vector<element::ptr> made;
+    CHECK(doc->can_replace_text(p, first, count, words(fill).c_str()));
+    CHECK(doc->replace_text(p, first, count, words(fill).c_str(), made));
+    made.clear();
+    replayMatchesFresh(c, doc, sheets, kids(fill), "a text near the cap beside master content an author rule drops");
+}
+
+// The same at the pseudo-element cap: the master pass's triangles count toward 20,000 with the elements until the author
+// pass drops them, so elements inserted near the cap cut the plain summaries' triangles in a build.
+static void testMasterContentCountsAtThePseudoCap() {
+    const std::vector<std::string> sheets = {"summary.x::before{content:none}"};
+    // html, head, the <style>, body, the div and 110 summaries: the master pass's peak 20 short of 20,000.
+    const int is = litehtml::document::max_external_elements - 20 - 110 - 115;
+    std::vector<Spec> filler;
+    for (int n = 0; n < is; n++) filler.push_back(el("i"));
+    std::vector<Spec> kids = {el("div", "", {{"id", "d"}}, filler)};
+    for (int n = 0; n < 100; n++) kids.push_back(el("summary", "s", {{"class", "x"}}));
+    for (int n = 0; n < 10; n++) kids.push_back(el("summary", "t"));
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids);
+    CHECK(!doc->pseudo_limited());
+    auto d = doc->root()->select_one("#d");
+    for (int n = 0; n < 30; n++) {
+        CHECK(doc->insert_subtree(d, 0, build(doc, el("i", "", {{"class", "added"}}))));
+        kids[0].kids.insert(kids[0].kids.begin(), el("i", "", {{"class", "added"}}));
+    }
+    replayMatchesFresh(c, doc, sheets, kids, "elements inserted near the cap beside master content an author rule drops");
+}
+
+// Edit 42: whether a subject positional rule reaches a parent's children is asked once per parent in a session, however
+// many of its children the session removes: a cut that moves removes thousands under one parent in one patch.
+static void testPositionParentsAreAskedOncePerSession() {
+    for (const char* tag : {"li", "p"}) {
+        const std::vector<std::string> sheets = {"li:first-child{color:#c00}"};
+        std::vector<Spec> items;
+        for (int n = 0; n < 2000; n++) items.push_back(el(tag, "x"));
+        std::vector<Spec> kids = {el("ol", "", {{"id", "o"}}, items)};
+        PaintContainer c;
+        auto doc = countedDocument(c, sheets, kids);
+        auto o = doc->root()->select_one("#o");
+        const uint64_t before = doc->position_scans();
+        {
+            const litehtml::elements_list children = o->children();
+            for (const auto& child : children) {
+                if (!child->is_text()) CHECK(doc->remove_subtree(child));
+            }
+        }
+        const uint64_t scans = doc->position_scans() - before;
+        if (scans > 4000) std::printf("  %s: %llu children scanned for 2,000 removals\n", tag, (unsigned long long)scans);
+        CHECK(scans <= 4000);
+        kids[0].kids.clear();
+        replayMatchesFresh(c, doc, sheets, kids, std::string("every ") + tag + " removed");
+    }
+    // A parent no rule reached is asked again once an element a rule names goes in: the second <li> inserted before the
+    // first in one session takes :first-child from it.
+    const std::vector<std::string> sheets = {"li:first-child{color:#c00}"};
+    std::vector<Spec> kids = {el("ol", "", {{"id", "o"}})};
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids);
+    auto o = doc->root()->select_one("#o");
+    CHECK(doc->insert_subtree(o, 0, build(doc, el("li", "a"))));
+    CHECK(doc->insert_subtree(o, 0, build(doc, el("li", "b"))));
+    kids[0].kids = {el("li", "b"), el("li", "a")};
+    replayMatchesFresh(c, doc, sheets, kids, "two <li>s inserted in one session");
+}
+
+// Edit 84: the replay's walks visit each node a bounded number of times, whatever the depth: an element whose ::after
+// waits for its subtree is found without climbing from every element below it. Spines 200 deep with a leaf after each
+// level's child are the shape where climbing costs the depth at every leaf.
+static void testReplayWalksAreLinear() {
+    const std::vector<std::string> sheets = {"s::before{content:'x'}"};
+    std::function<Spec(int)> spine = [&](int level) {
+        return level == 0 ? el("i") : el("i", "", {}, {spine(level - 1), el("u")});
+    };
+    auto kids = [&](int fill) {
+        std::vector<Spec> k = {el("p", words(fill).c_str(), {{"id", "p"}}), el("s")};
+        for (int n = 0; n < 15; n++) k.push_back(spine(200));
+        return k;
+    };
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids(1000));
+    // The document's text grown to the cap: the ::before's piece is past it, and the commit replays.
+    const int fill = 1000 + (litehtml::document::max_text_elements + 1 - doc->document_text_pieces()) / 2;
+    auto p = doc->root()->select_one("#p");
+    const auto [first, count] = textRange(p);
+    std::vector<element::ptr> made;
+    const uint64_t replays = doc->generated_replays();
+    CHECK(doc->replace_text(p, first, count, words(fill).c_str(), made));
+    made.clear();
+    replayMatchesFresh(c, doc, sheets, kids(fill), "a word near the cap beside deep spines");
+    CHECK(doc->generated_replays() == replays + 1);
+    // The tree's nodes: its elements and its text pieces.
+    const int64_t elements = doc->build_elements();
+    const int64_t nodes = elements + doc->text_elements();
+    if (doc->last_replay_visits() > 20 * nodes)
+        std::printf("  the replay visited %lld nodes for %lld in the tree\n", (long long)doc->last_replay_visits(),
+                    (long long)nodes);
+    CHECK(doc->last_replay_visits() <= 20 * nodes);
+    CHECK(doc->last_replay_weight() >= elements);
+}
+
+// Edit 85: fix_tables_layout's list of tabular render items is let go once the anonymous table boxes are made. Kept, it
+// held the items a later init() replaced, and with them the text pieces under them: a <p> in a <div> straight under a
+// <tr> (no <table>) kept its replaced text alive, one piece more than a fresh build counts.
+static void testFixedTablesHoldNoReplacedText() {
+    const std::vector<std::string> sheets = {".box{padding:2px;border:1px solid #000} .x{color:#c00}"};
+    auto kids = [&](const char* inner) {
+        return std::vector<Spec>{el("tbody", "", {}, {el("tr", "", {}, {el("td", "tb", {{"class", "x"}}),
+                                                                          el("div", "", {{"class", "box"}}, {el("p", inner, {{"id", "p"}}), el("span", "s")})})}),
+                                 el("q", "quote")};
+    };
+    PaintContainer c;
+    auto doc = countedDocument(c, sheets, kids("inner"));
+    auto p = doc->root()->select_one("#p");
+    const auto [first, count] = textRange(p);
+    std::vector<element::ptr> made;
+    CHECK(doc->replace_text(p, first, count, "two words", made));
+    made.clear();
+    replayMatchesFresh(c, doc, sheets, kids("two words"), "a text in a <p> in a <div> straight under a <tr>");
+}
+
+// Edit 86: an inline-flex or inline-grid paints its children in its own stacking context, as an inline-block does, and
+// the block and float passes do not reach them again: a block child is filled once and its shadow drawn once (a
+// translucent one composited twice before), and a hit test at its centre finds it.
+static void testAnInlineFlexPaintsItsChildrenOnce() {
+    for (const char* display : {"inline-flex", "inline-grid"}) {
+        const std::string sheet = std::string(".f{display:") + display + "} .b{display:block;width:20px;height:10px;"
+                                  "background:#00aa00;box-shadow:0 0 0 1px rgba(0,0,0,.1)}";
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet.c_str(), {el("p", "", {}, {el("span", "", {{"class", "f"}}, {el("div", "", {{"class", "b"}, {"id", "b"}})})})}, body);
+        const std::string paint = painted(c, doc);
+        size_t fills = 0, shadows = 0;
+        for (size_t at = paint.find("fill "); at != std::string::npos; at = paint.find("fill ", at + 1)) {
+            fills += paint.compare(paint.find(' ', paint.find(' ', at) + 1) + 1, 10, "0.170.0.25") == 0;
+        }
+        for (size_t at = paint.find("shadow "); at != std::string::npos; at = paint.find("shadow ", at + 1)) shadows++;
+        if (fills != 1 || shadows != 1) std::printf("  %s: %zu fills, %zu shadows\n%s", display, fills, shadows, paint.c_str());
+        CHECK(fills == 1);
+        CHECK(shadows == 1);
+        auto b = doc->root()->select_one("#b");
+        CHECK(b != nullptr);
+        if (b) {
+            const litehtml::position place = b->get_placement();
+            const float x = float(place.x) + float(place.width) / 2, y = float(place.y) + float(place.height) / 2;
+            CHECK(doc->root_render()->get_element_by_point(x, y, x, y, nullptr) == b);
+        }
+    }
+}
+
+// Edit 87: a positioned box is filed under its nearest transformed or contained ancestor (add_positioned), so a restyle
+// that keeps the render tree and the positions but makes a transform or `contain` appear or go fetches the positioned
+// lists again: kept, the box stayed on the list of an ancestor that no longer paints it, and nothing painted it.
+static void testATransformGoingKeepsPositionedPaint() {
+    const char* sheet = ".t{transform:translateX(5px)} .c{contain:paint} .r{position:absolute;left:2px;top:2px;width:10px;"
+                        "height:10px;background:#0000ff}";
+    for (const char* holder : {"t", "c"}) {
+        std::vector<Spec> kids = {el("div", "", {{"id", "d"}, {"class", holder}}, {el("div", "", {{"class", "r"}})}),
+                                  el("p", "after")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto d = doc->root()->select_one("#d");
+        CHECK(d && doc->set_element_attribute(d, "class", ""));
+        kids[0].attrs["class"] = "";
+        structureMatchesFresh(c, doc, sheet, kids, (std::string("the ") + holder + " holder's class removed").c_str());
+        CHECK(painted(c, doc).find("0.0.255.255") != std::string::npos);
+        // And back.
+        CHECK(d && doc->set_element_attribute(d, "class", holder));
+        kids[0].attrs["class"] = holder;
+        structureMatchesFresh(c, doc, sheet, kids, (std::string("the ") + holder + " holder's class back").c_str());
+    }
+}
+
+// Edit 88: structure beside :empty patches. A parent whose emptiness an insertion or a removal flips is matched again at
+// the commit, its own rules and content (:empty, :not(:empty)::before), and with sibling combinators in the sheets its
+// later siblings' subtrees (.e:empty + p), whose boxes and content a rule can change, and the var() readers below it
+// follow.
+// Edit 90: sessions of insertions and removals under positional and sibling selectors, each equal to a fresh build: an
+// item whose box does not change keeps its render item, one whose box the match changes is a seed.
+static void testStructureSessionsUnderPositionalSelectors() {
+    // Backgrounds as background-color: the shorthand declares background-attachment, which apply_retag does not call
+    // paint-only, so an item a rule starts or stops colouring would be replaced for that alone.
+    const char* sheet = "li:nth-child(2n){color:#f00;background-color:#eee} li + li{margin-top:3px} .x ~ li{font-weight:bold}"
+                        " li:last-child{background-color:#0f0} li:first-child span{color:#00f}";
+    struct Session {
+        const char* name;
+        const char* extra; // appended to the sheet
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&)> patch;
+        const char* boundary; // "": nothing replaced, every item that stays keeps its render item
+    };
+    const std::vector<Session> sessions = {
+        {"an item inserted first", "",
+         [](auto doc, auto list, auto& items) {
+             items.insert(items.begin(), el("li", "n"));
+             return doc->insert_subtree(list, 0, build(doc, el("li", "n")));
+         },
+         ""},
+        {"an item inserted between the second and third", "",
+         [](auto doc, auto list, auto& items) {
+             items.insert(items.begin() + 2, el("li", "n"));
+             return doc->insert_subtree(list, 2, build(doc, el("li", "n")));
+         },
+         ""},
+        {"an item appended", "",
+         [](auto doc, auto list, auto& items) {
+             items.push_back(el("li", "n"));
+             return doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         ""},
+        {"the first removed", "",
+         [](auto doc, auto list, auto& items) {
+             items.erase(items.begin());
+             return doc->remove_subtree(childAt(list, 0));
+         },
+         ""},
+        {"the last removed", "",
+         [](auto doc, auto list, auto& items) {
+             items.pop_back();
+             return doc->remove_subtree(childAt(list, list->children().size() - 1));
+         },
+         ""},
+        {"the first removed and one appended", "",
+         [](auto doc, auto list, auto& items) {
+             items.erase(items.begin());
+             items.push_back(el("li", "n"));
+             return doc->remove_subtree(childAt(list, 0)) &&
+                    doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         ""},
+        {"a .y inserted before the last floats it", " .y + li{float:left;width:20px}",
+         [](auto doc, auto list, auto& items) {
+             items.insert(items.begin() + 2, el("li", "y", {{"class", "y"}}));
+             return doc->insert_subtree(list, 2, build(doc, el("li", "y", {{"class", "y"}})));
+         },
+         "u"},
+    };
+    for (const Session& session : sessions) {
+        const std::string sessionSheet = std::string(sheet) + session.extra;
+        std::vector<Spec> items = {el("li", "", {}, {el("span", "a")}), el("li", "b", {{"class", "x"}}), el("li", "c")};
+        std::vector<Spec> page = {el("ul", "", {{"id", "u"}}, items)};
+        PaintContainer pc;
+        element::ptr pageBody;
+        auto patched = structureDocument(pc, sessionSheet.c_str(), page, pageBody);
+        RecordingObserver observer;
+        patched->set_render_observer(&observer);
+        auto list = byId(pageBody, "u");
+        // Held, so that an item made again cannot take a kept one's address.
+        std::map<const element*, std::shared_ptr<litehtml::render_item>> held;
+        for (const auto& child : list->children()) held[child.get()] = patched->live_item(*child);
+        const std::shared_ptr<litehtml::render_item> listItem = patched->live_item(*list);
+        CHECK(session.patch(patched, list, page[0].kids));
+        // The removed items let go (their pieces count while alive).
+        for (auto it = held.begin(); it != held.end();) it = it->first->parent() == list ? std::next(it) : held.erase(it);
+        structureMatchesFresh(pc, patched, sessionSheet.c_str(), page, session.name);
+        const std::string at = replacedAt(patched, observer);
+        if (at != session.boundary)
+            std::printf("  %s: replaced at \"%s\", want \"%s\" (%s)\n", session.name, at.c_str(), session.boundary,
+                        patched->rebuild_reason().c_str());
+        CHECK(at == session.boundary);
+        if (!*session.boundary) {
+            CHECK(patched->live_item(*list) == listItem);
+            for (const auto& child : list->children()) {
+                auto kept = held.find(child.get());
+                if (kept != held.end()) CHECK(patched->live_item(*child) == kept->second);
+            }
+        }
+        patched->set_render_observer(nullptr);
+    }
+}
+
+// Edit 90: what a structure change under sibling and positional selectors matches again (take_restyled): the parent's
+// element children from the first one the session changed, and their subtrees (rules that read preceding siblings only),
+// or every child when a rule reads following siblings outside its subject.
+static void testSiblingReachFollowsTheSelectors() {
+    const auto restyledIds = [](const litehtml::document::ptr& doc) {
+        std::set<std::string> ids;
+        for (const auto& el : doc->take_restyled()) {
+            const char* id = el->get_attr("id");
+            if (id) ids.insert(id);
+        }
+        return ids;
+    };
+    struct Session {
+        const char* name;
+        const char* sheet;
+        bool bold; // each item holds a <b id=b<item>>
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&)> patch;
+        std::set<std::string> restyled; // of the ids a, b, c, ba, bb, bc
+    };
+    const std::vector<Session> sessions = {
+        {"an append under li + li", "li + li{color:#c00}", false,
+         [](auto doc, auto list, auto& items) {
+             items.push_back(el("li", "n"));
+             return doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         {}},
+        {"an insert at 1 under li + li", "li + li{color:#c00}", false,
+         [](auto doc, auto list, auto& items) {
+             items.insert(items.begin() + 1, el("li", "n"));
+             return doc->insert_subtree(list, 1, build(doc, el("li", "n")));
+         },
+         {"b", "c"}},
+        {"the first removed and one appended under li + li", "li + li{color:#c00}", false,
+         [](auto doc, auto list, auto& items) {
+             items.erase(items.begin());
+             items.push_back(el("li", "n"));
+             return doc->remove_subtree(childAt(list, 0)) &&
+                    doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         {"b", "c"}},
+        {"an append under li:last-child b", "li:last-child b{color:#c00}", true,
+         [](auto doc, auto list, auto& items) {
+             items.push_back(el("li", "n"));
+             return doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         {"a", "b", "c", "ba", "bb", "bc"}},
+    };
+    for (const Session& session : sessions) {
+        std::vector<Spec> items;
+        for (const char* id : {"a", "b", "c"}) {
+            if (session.bold)
+                items.push_back(el("li", "", {{"id", id}}, {el("b", id, {{"id", std::string("b") + id}})}));
+            else
+                items.push_back(el("li", id, {{"id", id}}));
+        }
+        std::vector<Spec> page = {el("ul", "", {{"id", "u"}}, items)};
+        PaintContainer pc;
+        element::ptr pageBody;
+        auto patched = structureDocument(pc, session.sheet, page, pageBody);
+        RecordingObserver observer;
+        patched->set_render_observer(&observer);
+        CHECK(session.patch(patched, byId(pageBody, "u"), page[0].kids));
+        patched->commit_patch();
+        std::set<std::string> got = restyledIds(patched);
+        structureMatchesFresh(pc, patched, session.sheet, page, session.name);
+        std::set<std::string> wanted = session.restyled;
+        // Only the items and their <b>s are asked about.
+        const std::set<std::string> asked = {"a", "b", "c", "ba", "bb", "bc"};
+        for (auto it = got.begin(); it != got.end();) it = asked.count(*it) ? std::next(it) : got.erase(it);
+        if (got != wanted) {
+            std::printf("  %s: restyled", session.name);
+            for (const auto& id : got) std::printf(" %s", id.c_str());
+            std::printf("\n");
+        }
+        CHECK(got == wanted);
+        patched->set_render_observer(nullptr);
+    }
+}
+
+// Edit 90: an element the commit matches again whose match changed nothing (no rule started or stopped matching, its
+// declarations the same) is restyled but not reported to the render observer: it paints as it did. One whose match
+// changed is reported.
+static void testAnUnchangedReachIsNotReported() {
+    const auto reported = [](const RecordingObserver& observer) {
+        std::set<std::string> ids;
+        for (const auto& [el, order] : observer.restyled) {
+            const char* id = el->get_attr("id");
+            if (id) ids.insert(id);
+        }
+        return ids;
+    };
+    struct Case {
+        const char* sheet;
+        std::set<std::string> wanted;
+    };
+    // An item inserted at 1: under li + li, b and c match as they did; under li:nth-child(2n) b, the <b>s of b and c
+    // change parity.
+    const std::vector<Case> cases = {{"li + li{color:#c00}", {}}, {"li:nth-child(2n) b{color:#c00}", {"bb", "bc"}}};
+    for (const Case& k : cases) {
+        std::vector<Spec> items;
+        for (const char* id : {"a", "b", "c"}) items.push_back(el("li", "", {{"id", id}}, {el("b", id, {{"id", std::string("b") + id}})}));
+        std::vector<Spec> page = {el("ul", "", {{"id", "u"}}, items)};
+        PaintContainer pc;
+        element::ptr pageBody;
+        auto doc = structureDocument(pc, k.sheet, page, pageBody);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        CHECK(doc->insert_subtree(byId(pageBody, "u"), 1, build(doc, el("li", "n"))));
+        page[0].kids.insert(page[0].kids.begin() + 1, el("li", "n"));
+        structureMatchesFresh(pc, doc, k.sheet, page, k.sheet);
+        const std::set<std::string> got = reported(observer);
+        if (got != k.wanted) {
+            std::printf("  %s: reported", k.sheet);
+            for (const auto& id : got) std::printf(" %s", id.c_str());
+            std::printf("\n");
+        }
+        CHECK(got == k.wanted);
+        doc->set_render_observer(nullptr);
+    }
+}
+
+// Edit 90: an element matched earlier in the session (an attribute no rule names set before a removal) is matched again by
+// the reach: what it matches then may have changed with the structure.
+static void testASessionsEarlierMatchIsMatchedAgainByTheReach() {
+    const char* sheet = "li + li{color:#c00}";
+    const auto list = [] {
+        return std::vector<Spec>{el("ul", "", {{"id", "u"}}, {el("li", "a", {{"id", "a"}}), el("li", "b", {{"id", "b"}}), el("li", "c", {{"id", "c"}})})};
+    };
+    {
+        std::vector<Spec> kids = list();
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->set_element_attribute(byId(body, "b"), "data-x", "1"));
+        CHECK(doc->remove_subtree(byId(body, "a")));
+        kids[0].kids[1].attrs["data-x"] = "1";
+        kids[0].kids.erase(kids[0].kids.begin());
+        structureMatchesFresh(c, doc, sheet, kids, "an attribute on b, then a removed");
+    }
+    {
+        std::vector<Spec> kids = list();
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        CHECK(doc->set_element_attribute(byId(body, "a"), "data-x", "1"));
+        CHECK(doc->insert_subtree(byId(body, "u"), 0, build(doc, el("li", "n"))));
+        kids[0].kids[0].attrs["data-x"] = "1";
+        kids[0].kids.insert(kids[0].kids.begin(), el("li", "n"));
+        structureMatchesFresh(c, doc, sheet, kids, "an attribute on a, then an item inserted first");
+    }
+}
+
+// Edit 88 with edit 90: an :empty flip reaches the flipped element's earlier siblings too when a backward positional
+// pseudo-class has an `of S` list (:nth-last-child(1 of .e:empty) counts the following siblings S matches).
+static void testAnEmptyFlipReachesEarlierSiblingsThroughOfS() {
+    struct Case {
+        const char* name;
+        const char* sheet;
+        std::vector<Spec> kids;
+        bool fill; // into #d2: a span inserted, or its span removed
+    };
+    const std::vector<Case> cases = {
+        {"a later sibling fills, in the subject", "div{height:5px} div:nth-last-child(1 of .e:empty){background-color:#c00}",
+         {el("div", "", {{"class", "e"}, {"id", "d1"}}), el("div", "", {{"class", "e"}, {"id", "d2"}}), el("p", "x")}, true},
+        {"a later sibling fills, outside the subject", "p{margin:0} div{height:5px} div:nth-last-child(1 of .e:empty) + p{color:#c00}",
+         {el("div", "", {{"class", "e"}, {"id", "d1"}}), el("p", "x", {{"id", "p1"}}), el("div", "", {{"class", "e"}, {"id", "d2"}}),
+          el("p", "y")},
+         true},
+        {"a later sibling empties", "div{height:5px} div:nth-last-child(1 of .e:empty){background-color:#c00}",
+         {el("div", "", {{"class", "e"}, {"id", "d1"}}), el("div", "", {{"class", "e"}, {"id", "d2"}}, {el("span", "s")}), el("p", "x")},
+         false},
+    };
+    for (const Case& k : cases) {
+        std::vector<Spec> kids = k.kids;
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, kids, body);
+        auto d2 = byId(body, "d2");
+        for (Spec& kid : kids) {
+            if (kid.attrs.count("id") && kid.attrs.at("id") == "d2") kid.kids = k.fill ? std::vector<Spec>{el("span", "s")} : std::vector<Spec>{};
+        }
+        CHECK(k.fill ? doc->insert_subtree(d2, 0, build(doc, el("span", "s"))) : doc->remove_subtree(childAt(d2, 0)));
+        structureMatchesFresh(c, doc, k.sheet, kids, k.name);
+    }
+}
+
+// Edits 88, 89: an empty parent holding a block-level ::before is a block formatting context, so blocks inserted into it
+// could link; the flip of its :empty answer matches it again with the check a kept parent needs, and one whose box or
+// more than its paint the flip changes is replaced, never linked into.
+static void testAnEmptyParentsFlipBesideALink() {
+    const char* const sheets[] = {
+        ".e:empty::before{content:'';display:block;height:10px} .e:not(:empty){display:flex}",
+        ".e:empty::before{content:'';display:block;height:10px} .e:not(:empty){display:grid;grid-template-columns:40px 40px}",
+        ".e:empty::before{content:'';display:block;height:10px} .e:not(:empty){display:none}",
+        ".e:empty::before{content:'';display:block;height:10px} .e:not(:empty){float:left;width:60px}",
+        ".e:empty::before{content:'';display:block;height:10px} .e:not(:empty){font-size:30px;padding:1em}",
+    };
+    for (const char* sheet : sheets) {
+        std::vector<Spec> kids = {el("div", "", {{"class", "e"}, {"id", "e"}}), el("p", "after")};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, kids, body);
+        auto e = byId(body, "e");
+        CHECK(e != nullptr);
+        if (!e) continue;
+        CHECK(doc->insert_subtree(e, e->children().size(), build(doc, el("p", "one"))));
+        CHECK(doc->insert_subtree(e, e->children().size(), build(doc, el("p", "two"))));
+        kids[0].kids = {el("p", "one"), el("p", "two")};
+        structureMatchesFresh(c, doc, sheet, kids, sheet);
+    }
+}
+
+static void testStructureBesideEmptyMatchesFresh() {
+    const char* const sheets[] = {
+        ".e:empty{outline:1px solid #f00}",
+        ".e:not(:empty)::before{content:'x'}",
+        ".e:empty + p{color:#c00}",
+        ".e:empty{--c:#00f} .e:not(:empty){--c:#0a0} .e span{color:var(--c, #000)}",
+        ".e:empty + p{display:none}",
+        ".e:empty + p::before{content:'x'}",
+        ".e:not(:empty) + p{float:left;width:20px}",
+    };
+    for (const char* sheet : sheets) {
+        for (const bool asText : {false, true}) {
+            std::vector<Spec> kids = {el("div", "", {{"class", "e"}, {"id", "e"}}), el("p", "after")};
+            PaintContainer c;
+            element::ptr body;
+            auto doc = structureDocument(c, sheet, kids, body);
+            auto e = doc->root()->select_one("#e");
+            if (!e) {
+                CHECK(e != nullptr);
+                continue;
+            }
+            const std::string what = std::string(sheet) + (asText ? ", a Text" : ", an element");
+            std::vector<element::ptr> made;
+            if (asText) {
+                doc->make_text_pieces(e, "t", made);
+                kids[0].kids = {Spec{"", {}, "t"}};
+            } else {
+                made.push_back(build(doc, el("span", "s")));
+                kids[0].kids = {el("span", "s")};
+            }
+            for (const auto& piece : made) CHECK(doc->insert_subtree(e, e->children().size(), piece));
+            made.clear();
+            structureMatchesFresh(c, doc, sheet, kids, (what + " gained").c_str());
+            {
+                const litehtml::elements_list children = e->children();
+                for (const auto& child : children) {
+                    if (child->tag() != litehtml::__tag_before_ && child->tag() != litehtml::__tag_after_) CHECK(doc->remove_subtree(child));
+                }
+            }
+            kids[0].kids.clear();
+            structureMatchesFresh(c, doc, sheet, kids, (what + " lost").c_str());
+        }
+    }
+}
+
+// The ::before or the ::after (`tag`) of `owner`, or none.
+static element::ptr pseudoOf(const element::ptr& owner, litehtml::string_id tag) {
+    if (!owner) return nullptr;
+    for (const auto& child : owner->children()) {
+        if (child->tag() == tag) return child;
+    }
+    return nullptr;
+}
+
+// Edit 91: a match that changes nothing keeps its owner's ::before, the same element with the same render item. An item
+// inserted at 1 under li + li: b and c match as they did.
+static void testAnUnchangedPseudoElementKeepsItsIdentity() {
+    const char* sheet = "li::before{content:'•'} li + li{color:#c00}";
+    std::vector<Spec> page = {
+        el("ul", "", {{"id", "u"}}, {el("li", "a", {{"id", "a"}}), el("li", "b", {{"id", "b"}}), el("li", "c", {{"id", "c"}})})};
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheet, page, body);
+    RecordingObserver observer;
+    doc->set_render_observer(&observer);
+    // Weak, so that what is made again lets go (its pieces count while alive) and cannot take a kept one's address.
+    std::map<std::string, std::pair<std::weak_ptr<element>, std::weak_ptr<litehtml::render_item>>> before;
+    for (const char* id : {"a", "b", "c"}) {
+        const element::ptr pseudo = pseudoOf(byId(body, id), litehtml::__tag_before_);
+        CHECK(pseudo != nullptr);
+        if (pseudo) before[id] = {pseudo, doc->live_item(*pseudo)};
+    }
+    CHECK(doc->insert_subtree(byId(body, "u"), 1, build(doc, el("li", "n"))));
+    page[0].kids.insert(page[0].kids.begin() + 1, el("li", "n"));
+    structureMatchesFresh(c, doc, sheet, page, "an item inserted at 1 beside ::before content");
+    if (!observer.replaced.empty())
+        std::printf("  %zu replaced (%s)\n", observer.replaced.size(), doc->rebuild_reason().c_str());
+    CHECK(observer.replaced.empty());
+    for (const char* id : {"b", "c"}) {
+        const element::ptr pseudo = pseudoOf(byId(body, id), litehtml::__tag_before_);
+        const element::ptr was = before[id].first.lock();
+        const std::shared_ptr<litehtml::render_item> item = before[id].second.lock();
+        if (!pseudo || pseudo != was) std::printf("  %s: its ::before made again\n", id);
+        CHECK(pseudo && pseudo == was);
+        CHECK(pseudo && item && doc->live_item(*pseudo) == item);
+    }
+    doc->set_render_observer(nullptr);
+}
+
+// Edit 91: generated content is kept only when the match changes nothing and it prints as it did; otherwise it is made
+// again, appears or goes, as a fresh build has it.
+static void testGeneratedContentFollowsItsPrint() {
+    enum class Outcome { kept, madeAgain, appears, goes };
+    struct Case {
+        const char* name;
+        const char* sheet;
+        const char* list; // the list's tag
+        std::vector<litehtml::string_map> items; // a, b, c's attributes, their ids added
+        std::function<bool(const litehtml::document::ptr&, const element::ptr&, std::vector<Spec>&)> patch;
+        litehtml::string_id side;
+        Outcome outcome;
+    };
+    const auto itemSpec = [](const char* id, litehtml::string_map attrs) {
+        attrs["id"] = id;
+        return el("li", id, attrs);
+    };
+    const std::vector<Case> cases = {
+        {"an item inserted first under counters", "ol{counter-reset:n} li{counter-increment:n} li::before{content:counter(n)}",
+         "ol", {{}, {}, {}},
+         [](auto doc, auto body, auto& page) {
+             page[0].kids.insert(page[0].kids.begin(), el("li", "n"));
+             return doc->insert_subtree(byId(body, "u"), 0, build(doc, el("li", "n")));
+         },
+         litehtml::__tag_before_, Outcome::madeAgain},
+        {"b's data-x set under attr()", "li::after{content:attr(data-x)}", "ul",
+         {{{"data-x", "1"}}, {{"data-x", "1"}}, {{"data-x", "1"}}},
+         [](auto doc, auto body, auto& page) {
+             page[0].kids[1].attrs["data-x"] = "2";
+             return doc->set_element_attribute(byId(body, "b"), "data-x", "2");
+         },
+         litehtml::__tag_after_, Outcome::madeAgain},
+        {"class on added to b", "li.on::before{content:'+'}", "ul", {{}, {}, {}},
+         [](auto doc, auto body, auto& page) {
+             page[0].kids[1].attrs["class"] = "on";
+             return doc->set_element_attribute(byId(body, "b"), "class", "on");
+         },
+         litehtml::__tag_before_, Outcome::appears},
+        {"class on taken from b", "li.on::before{content:'+'}", "ul", {{}, {{"class", "on"}}, {}},
+         [](auto doc, auto body, auto& page) {
+             page[0].kids[1].attrs["class"] = "";
+             return doc->set_element_attribute(byId(body, "b"), "class", "");
+         },
+         litehtml::__tag_before_, Outcome::goes},
+        {"an item appended under :first-child", "li:first-child{color:#c00} li::before{content:'•'}", "ul", {{}, {}, {}},
+         [](auto doc, auto body, auto& page) {
+             page[0].kids.push_back(el("li", "n"));
+             const element::ptr list = byId(body, "u");
+             return doc->insert_subtree(list, list->children().size(), build(doc, el("li", "n")));
+         },
+         litehtml::__tag_before_, Outcome::kept},
+    };
+    for (const Case& k : cases) {
+        std::vector<Spec> page = {el(k.list, "", {{"id", "u"}},
+                                     {itemSpec("a", k.items[0]), itemSpec("b", k.items[1]), itemSpec("c", k.items[2])})};
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, k.sheet, page, body);
+        // Weak, so that what is made again lets go (its pieces count while alive).
+        const std::weak_ptr<element> was = pseudoOf(byId(body, "b"), k.side);
+        const bool had = !was.expired();
+        CHECK(k.patch(doc, body, page));
+        structureMatchesFresh(c, doc, k.sheet, page, k.name);
+        const element::ptr now = pseudoOf(byId(body, "b"), k.side);
+        const bool same = now && now == was.lock();
+        bool wanted = false;
+        switch (k.outcome) {
+        case Outcome::kept: wanted = had && same; break;
+        case Outcome::madeAgain: wanted = had && now && !same; break;
+        case Outcome::appears: wanted = !had && now; break;
+        case Outcome::goes: wanted = had && !now; break;
+        }
+        if (!wanted) std::printf("  %s: b's generated content %s, %s now, the same: %d\n", k.name, had ? "was" : "was none",
+                                 now ? "one" : "none", int(same));
+        CHECK(wanted);
+    }
+}
+
+// Edit 91: a match that keeps an element's ::before needs no style room beside it, since the old one's charges are given
+// back before the match charges the new one, as before. Room for one more item and its ::before, not two: an item
+// inserted at 1 under li + li (b and c matched again) replays nothing and replaces nothing for the budget.
+static void testAKeptPseudoElementNeedsNoStyleRoom() {
+    const std::vector<std::string> sheets = {"li::before{content:'x';--pad:" + std::string(20000, 'p') +
+                                             "} li + li{color:#c00} i{--fill:" + std::string(4000, 'f') + "}"};
+    auto kids = [](int fill, bool inserted) {
+        std::vector<Spec> items = {el("li", "a", {{"id", "a"}}), el("li", "b", {{"id", "b"}}), el("li", "c", {{"id", "c"}})};
+        if (inserted) items.insert(items.begin() + 1, el("li", "n"));
+        std::vector<Spec> is;
+        for (int n = 0; n < fill; n++) is.push_back(el("i"));
+        return std::vector<Spec>{el("ul", "", {{"id", "u"}}, items), el("div", "", {}, is)};
+    };
+    // Sized from probes: what an <i> and what an item with its ::before charge.
+    size_t base = 0, perFill = 0, perItem = 0;
+    {
+        PaintContainer p0, p1, p2;
+        element::ptr body;
+        auto none = structureDocument(p0, sheets, kids(0, false), body);
+        auto filled = structureDocument(p1, sheets, kids(100, false), body);
+        auto more = structureDocument(p2, sheets, kids(0, true), body);
+        base = none->style_bytes_charged();
+        perFill = (filled->style_bytes_charged() - base) / 100;
+        perItem = more->style_bytes_charged() - base;
+    }
+    const int fill = int((litehtml::document::max_style_bytes - base - perItem * 3 / 2) / perFill);
+    PaintContainer c;
+    element::ptr body;
+    auto doc = structureDocument(c, sheets, kids(fill, false), body);
+    CHECK(!doc->style_bytes_limited());
+    const std::weak_ptr<element> was = pseudoOf(byId(body, "b"), litehtml::__tag_before_);
+    const uint64_t replays = doc->generated_replays();
+    CHECK(doc->insert_subtree(byId(body, "u"), 1, build(doc, el("li", "n"))));
+    structureMatchesFresh(c, doc, sheets, kids(fill, true), "an item inserted at 1 with room for one ::before");
+    if (doc->generated_replays() != replays || doc->style_bytes_limited())
+        std::printf("  %llu replays, limited %d (%s)\n", (unsigned long long)(doc->generated_replays() - replays),
+                    int(doc->style_bytes_limited()), doc->rebuild_reason().c_str());
+    CHECK(doc->generated_replays() == replays);
+    CHECK(!doc->style_bytes_limited());
+    CHECK(doc->rebuild_reason() != "the style budget");
+    const element::ptr now = pseudoOf(byId(body, "b"), litehtml::__tag_before_);
+    CHECK(now && now == was.lock());
 }
 
 int main() {
     testExternalBuildMatchesParse();
     testExternalSvgMatchesParse();
     testInsertChildAtEveryIndex();
+    testAcceptsChildMatchesAppendChild();
     testRemoveChildRepointsHover();
     testTextPiecesFollowTheCap();
     testReplaceTextMatchesFresh();
@@ -2480,21 +5627,85 @@ int main() {
     testInsertRemoveMatchesFresh();
     testSubjectPositionsMatchSiblingsAgain();
     testStructureRefusals();
+    testStructureBesidePseudoContent();
     testStructureCaps();
-    testReplaceChildrenUnderPositionalSelectors();
+    testStructureUnderPositionalSelectorsMatchesFresh();
     testSelectorStepsAreOneBudgetPerSession();
-    testSelectorStepBoundHolds();
+    testACutBootReplaysAtItsFirstCommit();
     testTableRowsArePlacedOncePerLayout();
     testMatchingBoundCountsPseudoElementsAndParts();
     testFontSizeZeroMatchesFresh();
     testWalkVisitsWhatDrawPaints();
     testObserverReportsEveryRenderTreeChange();
     testStyleBytesAreBudgeted();
+    testRebuildReasonsNameTheChange();
+    testAfterTheBootSubtreesAreReplaced();
+    testStructurePatchKeepsTheTreeOutsideItsBoundary();
+    testReplacementBoundaries();
+    testReplacedItemsLeaveTheirElements();
+    testReplacementGivesBackTableCells();
+    testReplacementGivesBackTableCellsUnderFlex();
+    testReplacementWalksAreLinear();
+    testPseudoClassStateRematchesItsReach();
+    testCountersRunAgainInBuildOrder();
+    testEnvironmentParsesPairUp();
+    testEnvironmentChangesMatchFresh();
+    testSchemeParsesPairUp();
+    testSchemeChangeMatchesFresh();
+    testSchemeChangeRestylesSvgPaint();
+    testEnvironmentChangesTwiceKeepNoFreedRule();
+    testSheetChangesMatchFresh();
+    testUnchangedSheetsParseNothing();
+    testAClassChangeBesideASheetChangeMatchesFresh();
+    testSheetTestsCountIntoTheSession();
+    testRootReplacementMatchesFresh();
+    testRefusalsSayWhy();
+    testStyleBytesFollowPatches();
+    testCustomPropertiesInInlineStyle();
+    testAttributeChangeRematchesItsReach();
+    testTableAttributesMatchFresh();
+    testStructureInsideAnSvg();
+    testPseudoElementsReadingVar();
+    testButtonTextIsReplacedInPlace();
+    testStructureInsideAButton();
+    testReplacementAtTheTableCellCap();
+    testACapCrossingReplacementReportsTheRootAlone();
+    testAnInlineBoxInALineIsReplacedInPlace();
+    testAPositionedDescendantFollowsItsContainingBlock();
+    testListItemsAreNumberedAgain();
+    testSeedsInOneSession();
+    testBlockChildrenLinkAndUnlink();
+    testStructureRefusalsNameTheirCase();
+    testAPositionalChangeBesideALink();
+    testALinkedTableTakesAndGivesBackItsCells();
+    testALinkBesideAReplacement();
+    testAnEmptyParentsFlipBesideALink();
+    testStructureSessionsUnderPositionalSelectors();
+    testSiblingReachFollowsTheSelectors();
+    testAnUnchangedReachIsNotReported();
+    testASessionsEarlierMatchIsMatchedAgainByTheReach();
+    testAnEmptyFlipReachesEarlierSiblingsThroughOfS();
     testStyleBudgetIsDeterministic();
     testVarSplicesAreBudgeted();
     testInheritedStringsAreBounded();
     testInheritedUrlsAreSharedAndCharged();
     testRefreshAfterTheLimitEqualsARebuild();
+    testTwoContentRulesAtTheCapReplayAsABuild();
+    testReplayFollowsBuildOrder();
+    testStyleBytesReplayFromZero();
+    testPaintOnlyChangeDoesNotReplay();
+    testMasterContentCountsAtTheTextCap();
+    testMasterContentCountsAtThePseudoCap();
+    testPositionParentsAreAskedOncePerSession();
+    testReplayWalksAreLinear();
+    testFixedTablesHoldNoReplacedText();
+    testAnInlineFlexPaintsItsChildrenOnce();
+    testATransformGoingKeepsPositionedPaint();
+    testStructureBesideEmptyMatchesFresh();
+    testAnUnchangedPseudoElementKeepsItsIdentity();
+    testGeneratedContentFollowsItsPrint();
+    testAKeptPseudoElementNeedsNoStyleRoom();
+    testReplaceTextBesideStructure();
     if (failures) {
         std::printf("%d failure(s)\n", failures);
         return 1;

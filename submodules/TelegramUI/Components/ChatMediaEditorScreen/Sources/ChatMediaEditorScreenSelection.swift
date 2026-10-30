@@ -6,6 +6,10 @@ import SwiftSignalKit
 import MediaAssetsContext
 
 extension ChatMediaEditorScreen.Node {
+    var hasSelectionCheckButton: Bool {
+        return self.selectionModel?.isEnabled == true && self.selectionCheckButton != nil
+    }
+
     func setupSelection() {
         guard self.isGallery, let adapter = self.controller?.selection else {
             return
@@ -97,10 +101,12 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
-        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets)
+        let toolbarSide = self.toolbarSide(layout: layout)
+        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets, statusIsland: chatMediaEditorStatusIslandRow(layout: layout), toolbarSide: toolbarSide)
         transition.updateFrame(view: checkButton, frame: checkFrame)
-        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo)
-        let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize)
+        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, toolbarSide: toolbarSide)
+        let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize, toolbarSide: toolbarSide)
+        stripView.updateToolbarSide(toolbarSide)
         if stripView.frame != stripFrame {
             stripView.frame = stripFrame
         }

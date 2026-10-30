@@ -5,7 +5,6 @@
 #include "Sources/DOM/CSSComponents.h"
 #include "Sources/Host/CSSPolicy.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::css {
 
@@ -23,11 +22,9 @@ std::string lowered(std::string s) {
 } // namespace
 
 // V4 plan, Task 2: the answers are the profile policy's verdicts (CSSPolicy.h), so CSS.supports and the renderer's copy
-// can never disagree. The policy charges nothing; its walk is bounded by componentValues' caps, whose text was charged
-// first, and is charged here once it has run.
+// can never disagree. The policy's walk is bounded by componentValues' caps.
 bool supportsDeclaration(JSContext* ctx, std::string_view property, std::span<const litehtml::css_token> value) {
     const policy::Judged judged = policy::declaration(property, value);
-    charge(ctx, uint64_t(judged.visited) * work::kNodeVisit);
     return policy::supported(judged.verdict);
 }
 
@@ -53,10 +50,7 @@ bool supportsCondition(JSContext* ctx, const String& conditionText) {
         return false;
     }
     // CSSOM: the text as a condition, and if that is not true, the text in parentheses (a bare declaration).
-    size_t visited = 0;
-    const bool result = policy::supportsCondition(*tokens, &visited) || policy::supportsParenthesized(*tokens, &visited);
-    charge(ctx, uint64_t(visited) * work::kNodeVisit);
-    return result;
+    return policy::supportsCondition(*tokens) || policy::supportsParenthesized(*tokens);
 }
 
 } // namespace wr::css
