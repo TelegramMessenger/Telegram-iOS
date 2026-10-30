@@ -75,6 +75,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     private var animationCompletion: (() -> Void)?
     private var suppressGestureEvents = false
     private var deliveringAction = false
+    private var holdsRevealOptionsUntilClosed = false
     private var lastSurfaceProgress: CGFloat = 0
     public private(set) var revealOffset: CGFloat = 0.0
     public private(set) var isRevealOptionsActive: Bool = false
@@ -377,7 +378,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
 
     override open func didExitHierarchy() {
         super.didExitHierarchy()
-        self.resetRevealInteraction(notify: true)
+        // The list reinserts a row it is removing, which must not cut the row's fill short. The host still hears of the
+        // close now: the row may be gone before the fill ends, and undoing its removal would bring it back open.
+        if self.motion.state == .filling {
+            self.revealOptionsInteractivelyClosed()
+        } else {
+            self.resetRevealInteraction(notify: true)
+        }
     }
 
     private var activeRevealNode: ItemListRevealOptionsNode? {
@@ -408,7 +415,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         }
         self.revealOptions = options
         self.enableAnimations = enableAnimations
-        if let node = self.activeRevealNode {
+        // A fill keeps showing the option it was started for, whatever its action has since made of the row's options.
+        if let node = self.activeRevealNode, self.motion.state != .filling, !self.holdsRevealOptionsUntilClosed {
             node.setOptions(self.activeOptions, isLeft: self.revealDirection > 0, enableAnimations: enableAnimations)
             self.updateActiveRevealMetrics()
             // Appearance changes (mute/read toggles, themes, localization) keep
@@ -500,6 +508,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
                 }
                 guard self.setupRevealNode(direction: newDirection) else { return }
             }
+            self.releaseHeldRevealOptions()
             self.animationCompletion = nil
             let highlightAlpha = self.revealOptionsHighlightedBackgroundNode.flatMap { node -> CGFloat? in
                 guard node.supernode != nil, !node.isHidden else { return nil }
@@ -629,6 +638,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
             self.revealOptionsSurfaceUpdated(progress: progress)
         }
         if self.motion.state == .closed {
+            self.holdsRevealOptionsUntilClosed = false
             self.leftRevealNode?.removeFromSupernode()
             self.rightRevealNode?.removeFromSupernode()
             self.leftRevealNode = nil
@@ -724,6 +734,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         guard self.motion.state != .filling, value != self.motion.wantsOpen else { return }
         if value {
             guard self.setupRevealNode(direction: -1) else { return }
+            self.releaseHeldRevealOptions()
         } else {
             self.cancelRevealRecognizers()
         }
@@ -744,6 +755,26 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         self.motion.settle(to: Double(size.width + 74), velocity: self.motion.body.velocity, animated: !UIAccessibility.isReduceMotionEnabled, filling: true)
         self.renderRevealMotion()
         self.startRevealAnimation()
+    }
+
+    // Closes the row still showing the chosen option, for an action that replaces it
+    // with one of another look (unhide, then hide) while the row would be closing.
+    public func closeRevealOptionsHoldingOptions() {
+        self.holdsRevealOptionsUntilClosed = self.activeRevealNode != nil
+        self.setRevealOptionsOpened(false, animated: true)
+    }
+
+    private func releaseHeldRevealOptions() {
+        guard self.holdsRevealOptionsUntilClosed else { return }
+        self.holdsRevealOptionsUntilClosed = false
+        self.activeRevealNode?.setOptions(self.activeOptions, isLeft: self.revealDirection > 0, enableAnimations: self.enableAnimations)
+        self.updateActiveRevealMetrics()
+    }
+
+    // A fill stays filled, which suits a row on its way out. A row that remains in
+    // the list (one that is only hidden) ends it here once the fill has finished.
+    public func resetRevealOptionsAfterFill() {
+        self.resetRevealInteraction(notify: false)
     }
 
     open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {

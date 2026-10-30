@@ -1370,8 +1370,23 @@ public final class ChatListNode: ListViewImpl {
     public var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     
     private let currentRemovingItemId = Atomic<ChatListNodeState.ItemId?>(value: nil)
+    private var currentRemovingItemIdGeneration = 0
     public func setCurrentRemovingItemId(_ itemId: ChatListNodeState.ItemId?) {
-        let _ = self.currentRemovingItemId.swap(itemId)
+        self.currentRemovingItemIdGeneration += 1
+        guard itemId == nil else {
+            let _ = self.currentRemovingItemId.swap(itemId)
+            return
+        }
+        // Callers clear this when their transaction completes, which reaches the main queue at about the same time as
+        // the view showing the change reaches viewProcessingQueue, in either order. Cleared first, the row's removal
+        // or insertion would not animate.
+        let generation = self.currentRemovingItemIdGeneration
+        Queue.mainQueue().after(0.5) { [weak self] in
+            guard let self, self.currentRemovingItemIdGeneration == generation else {
+                return
+            }
+            let _ = self.currentRemovingItemId.swap(nil)
+        }
     }
     
     private var hapticFeedback: HapticFeedback?
@@ -2706,7 +2721,7 @@ public final class ChatListNode: ListViewImpl {
                 forceAllUpdated = true
             }
             let presentationData = state.presentationData
-            
+
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, scrollPosition: updatedScrollPosition, searchMode: searchMode, forceAllUpdated: forceAllUpdated)
             |> map({ mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, location: location, isPremium: accountIsPremium, filterData: filterData, chatListFilters: chatListFilters, mode: mode, isPeerEnabled: isPeerEnabled, presentationData: presentationData, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)

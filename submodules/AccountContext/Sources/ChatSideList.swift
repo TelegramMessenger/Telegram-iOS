@@ -43,10 +43,12 @@ public enum ChatSideListKind: Equatable {
         }
     }
 
+    /// Bots' threads and forums: a New Topic button at the bottom of the list (a forum's only for who can create topics).
     public var showsNewTopicButton: Bool {
-        if case .botThreads = self {
+        switch self {
+        case .botThreads, .forum:
             return true
-        } else {
+        case .savedMessages, .monoforum:
             return false
         }
     }

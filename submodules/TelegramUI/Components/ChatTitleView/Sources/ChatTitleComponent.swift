@@ -427,7 +427,7 @@ public final class ChatTitleComponent: Component {
         private var lentContentWrapper: UIView?
 
         /// The pill's frame in this view, nil without one.
-        var glassPillFrame: CGRect? {
+        public var glassPillFrame: CGRect? {
             guard let backgroundView = self.backgroundView, !backgroundView.frame.isEmpty else {
                 return nil
             }
@@ -469,7 +469,7 @@ public final class ChatTitleComponent: Component {
         /// assigns roles, after the expansion has borrowed. The expansion's end returns them (`reclaimExpansionLabels`);
         /// the pill's re-attachment does not, because the bars' transition ends before the expansion's and the
         /// expansion's end takes its views out.
-        func lendExpansionLabels() -> ChatTitleExpansionLabels? {
+        public func lendExpansionLabels() -> ChatTitleExpansionLabels? {
             guard self.lentExpansionLabels == nil, self.lentContentWrapper == nil, let component = self.component, let layout = self.expansionLayout, let titleView = self.title.view, titleView.superview === self.contentContainer else {
                 return nil
             }
@@ -495,7 +495,7 @@ public final class ChatTitleComponent: Component {
             return labels
         }
 
-        func reclaimExpansionLabels() {
+        public func reclaimExpansionLabels() {
             guard let labels = self.lentExpansionLabels else {
                 return
             }
@@ -701,7 +701,9 @@ public final class ChatTitleComponent: Component {
                                 )]
                             }
                         }
-                        if peer.id != component.context.account.peerId {
+                        // A topic's title (its own, with the peer's status hidden) is not the peer's name: its marks don't apply.
+                        let isTopicTitle = customTitle != nil && hidePeerStatus
+                        if peer.id != component.context.account.peerId, !isTopicTitle {
                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with({ $0 }))
                             if peer.isFake {
                                 titleCredibilityIcon = .fake
@@ -728,7 +730,12 @@ public final class ChatTitleComponent: Component {
                         leftTitleIconSpacing = 6.0
                     } else if case let .emojiStatus(content) = component.leadingIcon {
                         leadingEmojiStatus = content
-                        leftTitleIconSpacing = 6.0
+                        // General's "#" has room of its own inside its image.
+                        if case .image = content {
+                            leftTitleIconSpacing = 2.0
+                        } else {
+                            leftTitleIconSpacing = 6.0
+                        }
                     } else if case let .peer(peer, imageOverride) = component.leadingIcon {
                         leadingAvatar = (peer, imageOverride)
                         leftTitleIconSpacing = 6.0
@@ -1446,7 +1453,7 @@ public final class ChatTitleComponent: Component {
             }
             self.expansionLayout = ExpansionLayout(titleFrame: titleFrame, statusFrame: subtitleViewFrame, statusTextSize: subtitleSize, containerFrame: component.displayBackground ? CGRect(origin: CGPoint(), size: containerFrame.size) : containerFrame)
             
-            let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing)
+            let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing, lockIconIsOutermost: leadingEmojiStatus != nil || leadingAvatar != nil)
             
             var leadingLeftIconFrame = leadingIconsLayout.lockIconFrame
             if titleLeftIcon == .savedMessages || leadingEmojiStatus != nil || leadingAvatar != nil, let frame = leadingLeftIconFrame {

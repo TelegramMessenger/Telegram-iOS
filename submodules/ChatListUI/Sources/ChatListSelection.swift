@@ -63,13 +63,17 @@ func forumSelectionOptions(context: AccountContext, peerId: EnginePeer.Id, threa
         EngineDataList(threadIds.map { TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: $0) })
     )
     |> map { peer, threadDatas -> ChatListSelectionOptions in
-        guard !threadIds.isEmpty, case let .channel(channel) = peer else {
+        guard !threadIds.isEmpty else {
             return ChatListSelectionOptions(read: .selective(enabled: false), delete: false)
         }
-        
-        var canDelete = !threadIds.contains(1)
-        if !channel.hasPermission(.deleteAllMessages) {
-            canDelete = false
+        var canDelete: Bool
+        if case let .channel(channel) = peer {
+            canDelete = !threadIds.contains(1) && channel.hasPermission(.deleteAllMessages)
+        } else if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum) {
+            // A bot's threads are the user's own.
+            canDelete = true
+        } else {
+            return ChatListSelectionOptions(read: .selective(enabled: false), delete: false)
         }
         
         var hasUnread = false

@@ -7,6 +7,9 @@ import ChatPresentationInterfaceState
 import ChatSideListPanel
 import ChatListUI
 import ChatControllerInteraction
+import SwiftSignalKit
+import ContextUI
+import ForumCreateTopicScreen
 
 extension ChatControllerImpl {
     func currentSideListKind(presentationInterfaceState: ChatPresentationInterfaceState) -> ChatSideListKind? {
@@ -14,8 +17,9 @@ extension ChatControllerImpl {
         return chatSideListKindForChatPresentationInterfaceState(presentationInterfaceState, context: self.context, isRegularWidth: isRegularWidth)
     }
 
-    private static var sideListTransition: ContainedViewLayoutTransition {
-        return .animated(duration: 0.4, curve: .spring)
+    /// `initialVelocity` is the finger's speed over the distance left to go, so a released drag carries on.
+    private static func sideListTransition(initialVelocity: CGFloat = 0.0) -> ContainedViewLayoutTransition {
+        return .animated(duration: 0.42, curve: .customSpring(damping: 110.0, initialVelocity: initialVelocity))
     }
 
     func toggleSideList() {
@@ -26,9 +30,11 @@ extension ChatControllerImpl {
         }
     }
 
-    func openSideList() {
+    /// The panel for the chat's side list, made and laid out closed if there is none yet.
+    @discardableResult
+    func ensureSideListPanel() -> ChatSideListPanelNode? {
         guard let kind = self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState), self.validLayout != nil else {
-            return
+            return nil
         }
         if let sideListPanel = self.sideListPanel, sideListPanel.kind != kind {
             self.removeSideListPanel()
@@ -39,21 +45,34 @@ extension ChatControllerImpl {
         } else {
             let listController = ChatListControllerImpl(context: self.context, location: kind.listLocation, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: false, enableDebugActions: false, isSideList: true)
             self.addChild(listController)
-            panel = ChatSideListPanelNode(kind: kind, listController: listController, presentationData: self.presentationData)
+            var showsNewTopicButton = kind.showsNewTopicButton
+            if case .forum = kind {
+                showsNewTopicButton = (self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel)?.hasPermission(.createTopics) ?? false
+            }
+            panel = ChatSideListPanelNode(kind: kind, listController: listController, presentationData: self.presentationData, showsNewTopicButton: showsNewTopicButton)
             panel.requestClose = { [weak self] in
                 self?.closeSideList(animated: true)
+            }
+            panel.dragBegan = { [weak self] in
+                self?.catchSideListInFlight()
             }
             panel.dragUpdated = { [weak self] fraction in
                 self?.setSideListOpenFraction(fraction, transition: .immediate)
             }
-            panel.dragEnded = { [weak self] remainsOpen in
+            panel.dragEnded = { [weak self] remainsOpen, velocity in
                 guard let self else {
                     return
                 }
                 if remainsOpen {
-                    self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition)
+                    self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition(initialVelocity: self.sideListInitialVelocity(velocity, targetFraction: 1.0)))
                 } else {
-                    self.closeSideList(animated: true)
+                    self.closeSideList(animated: true, velocity: velocity)
+                }
+            }
+            if case .savedMessages = kind {
+            } else {
+                listController.sideListMoreAction = { [weak self] sourceView, gesture in
+                    self?.openSideListMoreMenu(sourceView: sourceView, gesture: gesture)
                 }
             }
             listController.interceptPeerSelection = { [weak self] peerId, threadId, messageId in
@@ -63,9 +82,14 @@ extension ChatControllerImpl {
                 guard let self else {
                     return
                 }
-                // A bot's new thread starts from its root chat, as the topics strip's "all" item does.
-                self.closeSideList(animated: true)
-                self.updateChatLocationThread(threadId: nil)
+                switch kind {
+                case let .forum(peerId):
+                    self.openSideListCreateTopic(peerId: peerId)
+                default:
+                    // A bot's new thread starts from its root chat, as the topics strip's "all" item does.
+                    self.closeSideList(animated: true)
+                    self.updateChatLocationThread(threadId: nil)
+                }
             }
             self.sideListPanel = panel
             self.chatDisplayNode.insertSubnode(panel.backgroundNode, at: 0)
@@ -74,6 +98,16 @@ extension ChatControllerImpl {
             // Lay it out closed first, so the opening animates in from the right edge.
             self.setSideListOpenFraction(0.0, transition: .immediate)
         }
+        return panel
+    }
+
+    /// Opens the list, from wherever it is (closed, or part of the way out under a finger). `velocity` is a released
+    /// drag's, in points per second.
+    func openSideList(velocity: CGFloat = 0.0) {
+        guard let panel = self.ensureSideListPanel() else {
+            return
+        }
+        let kind = panel.kind
 
         self.chatDisplayNode.dismissInput()
         // The open chat's row is highlighted, as on iPad's master list. Saved Messages and direct-messages rows are
@@ -85,28 +119,123 @@ extension ChatControllerImpl {
                 highlightedLocation = .peer(id: EnginePeer.Id(threadId))
             }
         case .botThreads, .forum:
-            break
+            // A topic's or thread's row matches the open thread (`ChatListSideListHighlightKey.thread`).
+            if case .replyThread = self.chatLocation {
+                highlightedLocation = self.chatLocation
+            }
         }
         panel.listController.updateNavigationCustomData(highlightedLocation, progress: 1.0, transition: .immediate)
-        let wasOpen = self.sideListOpenFraction > 0.0
+        let wasOpen = self.sideListAppeared
         if !wasOpen {
+            self.sideListAppeared = true
             panel.listController.viewWillAppear(true)
+            // A list opened again goes back to its top, its search shown rather than scrolled under the header. A new
+            // one is laid out there already: scrolling it would slide its search in from under the header.
+            if panel.hasBeenOpened {
+                panel.listController.scrollToTop?()
+            }
+            panel.hasBeenOpened = true
         }
-        self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition, completion: { [weak panel] in
+        self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition(initialVelocity: self.sideListInitialVelocity(velocity, targetFraction: 1.0)), completion: { [weak panel] in
             if !wasOpen {
                 panel?.listController.viewDidAppear(true)
             }
         })
     }
 
-    func closeSideList(animated: Bool) {
+    func closeSideList(animated: Bool, velocity: CGFloat = 0.0) {
         guard let panel = self.sideListPanel, self.sideListOpenFraction > 0.0 else {
             return
         }
-        panel.listController.viewWillDisappear(animated)
-        self.setSideListOpenFraction(0.0, transition: animated ? ChatControllerImpl.sideListTransition : .immediate, completion: { [weak panel] in
-            panel?.listController.viewDidDisappear(animated)
+        // A pop may still be running, or its glass animating, above the list's header, and would stay behind as it leaves.
+        self.effectiveNavigationController?.endNavigationBarTransitionNow()
+        let wasOpen = self.sideListAppeared
+        self.sideListAppeared = false
+        if wasOpen {
+            panel.listController.viewWillDisappear(animated)
+        }
+        self.setSideListOpenFraction(0.0, transition: animated ? ChatControllerImpl.sideListTransition(initialVelocity: self.sideListInitialVelocity(velocity, targetFraction: 0.0)) : .immediate, completion: { [weak panel] in
+            if wasOpen {
+                panel?.listController.viewDidDisappear(animated)
+            }
         })
+    }
+
+    /// The distance the list moves between closed and open.
+    private var sideListTravel: CGFloat {
+        guard let layout = self.validLayout else {
+            return 1.0
+        }
+        return max(1.0, layout.size.width - ChatSideListPanelNode.stripWidth)
+    }
+
+    private func sideListInitialVelocity(_ velocity: CGFloat, targetFraction: CGFloat) -> CGFloat {
+        let distance = abs(targetFraction - self.sideListOpenFraction) * self.sideListTravel
+        return distance > 1.0 ? min(abs(velocity) / distance, 30.0) : 0.0
+    }
+
+    /// A drag caught the list while it slides: it goes on from where the chat is on screen.
+    func catchSideListInFlight() {
+        self.effectiveNavigationController?.endNavigationBarTransitionNow()
+        guard let presentationFrame = self.chatDisplayNode.wrappingNode.layer.presentation()?.frame else {
+            return
+        }
+        let fraction = max(0.0, -presentationFrame.minX / self.sideListTravel)
+        self.chatDisplayNode.removeSideListAnimations()
+        self.sideListPanel?.removeLayoutAnimations()
+        self.setSideListOpenFraction(fraction, transition: .immediate)
+    }
+
+    /// A drag from the chat's right edge brings the list out under the finger.
+    private func attachSideListEdgePan() {
+        guard self.sideListEdgePanHandler == nil, self.isNodeLoaded else {
+            return
+        }
+        let handler = ChatSideListEdgePanHandler(controller: self)
+        self.sideListEdgePanHandler = handler
+        self.chatDisplayNode.view.addGestureRecognizer(handler.recognizer)
+    }
+
+    fileprivate func sideListEdgePanAllowed(at point: CGPoint) -> Bool {
+        guard let layout = self.validLayout, self.sideListOpenFraction == 0.0, self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != nil else {
+            return false
+        }
+        // Not over the composer, whose controls reach the edge.
+        if let inputPanelView = self.chatDisplayNode.textInputPanelNode?.view, inputPanelView.window != nil {
+            let inputPanelFrame = inputPanelView.convert(inputPanelView.bounds, to: self.chatDisplayNode.view)
+            if point.y >= inputPanelFrame.minY - 8.0 {
+                return false
+            }
+        }
+        return point.x >= layout.size.width - ChatSideListEdgePanHandler.edgeWidth
+    }
+
+    fileprivate func sideListEdgePanUpdated(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.chatDisplayNode.dismissInput()
+            self.ensureSideListPanel()
+        case .changed:
+            guard self.sideListPanel != nil else {
+                return
+            }
+            let translation = -recognizer.translation(in: self.chatDisplayNode.view).x
+            self.setSideListOpenFraction(ChatSideListPanelNode.rubberBandedFraction(translation / self.sideListTravel), transition: .immediate)
+        case .ended, .cancelled:
+            guard self.sideListPanel != nil else {
+                return
+            }
+            let velocity = recognizer.velocity(in: self.chatDisplayNode.view).x
+            let isOpen = recognizer.state == .ended && ChatSideListPanelNode.remainsOpen(fraction: self.sideListOpenFraction, velocity: velocity)
+            if isOpen {
+                self.openSideList(velocity: velocity)
+            } else {
+                // The list never appeared: back to closed without the appearance calls.
+                self.setSideListOpenFraction(0.0, transition: ChatControllerImpl.sideListTransition(initialVelocity: self.sideListInitialVelocity(velocity, targetFraction: 0.0)))
+            }
+        default:
+            break
+        }
     }
 
     enum SideListAppearance {
@@ -118,7 +247,7 @@ extension ChatControllerImpl {
 
     /// The chat's own appearance reaches the list only while the list is open; opening and closing send their own.
     func forwardSideListAppearance(_ appearance: SideListAppearance, animated: Bool) {
-        guard let panel = self.sideListPanel, self.sideListOpenFraction > 0.0 else {
+        guard let panel = self.sideListPanel, self.sideListAppeared else {
             return
         }
         switch appearance {
@@ -131,6 +260,128 @@ extension ChatControllerImpl {
         case .didDisappear:
             panel.listController.viewDidDisappear(animated)
         }
+    }
+
+    /// The side list header's More menu, by the kind of chat it lists. Its avatar already opens the profile.
+    private func openSideListMoreMenu(sourceView: UIView, gesture: ContextGesture?) {
+        guard let panel = self.sideListPanel else {
+            return
+        }
+        let kind = panel.kind
+        let peerId = kind.parentPeerId
+        let context = self.context
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak panel] peer, notificationSettings in
+            guard let self, let panel, let peer else {
+                return
+            }
+            let strings = self.presentationData.strings
+            var isMuted = false
+            if case .muted = notificationSettings.muteState {
+                isMuted = true
+            }
+
+            var items: [ContextMenuItem] = []
+            let muteItem: ContextMenuItem = .action(ContextMenuActionItem(text: isMuted ? strings.Conversation_Unmute : strings.Conversation_Mute, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                let _ = context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: nil, muteInterval: isMuted ? 0 : Int32.max).startStandalone()
+            }))
+            let selectItem: ContextMenuItem = .action(ContextMenuActionItem(text: strings.Common_Select, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak panel] _, f in
+                f(.default)
+                panel?.listController.activateEdit()
+            }))
+
+            switch kind {
+            case .savedMessages:
+                return
+            case .botThreads:
+                items.append(muteItem)
+                items.append(selectItem)
+            case .monoforum:
+                items.append(muteItem)
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                    let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: false).startStandalone()
+                })))
+            case .forum:
+                guard case let .channel(channel) = peer else {
+                    return
+                }
+                items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsTopics, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/List"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    self?.openSideListForumAsTopics(peerId: peerId)
+                })))
+                items.append(muteItem)
+                if channel.hasPermission(.createTopics) {
+                    items.append(.action(ContextMenuActionItem(text: strings.Chat_CreateTopic, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        self?.openSideListCreateTopic(peerId: peerId)
+                    })))
+                }
+                if channel.hasPermission(.inviteMembers) {
+                    items.append(.action(ContextMenuActionItem(text: strings.GroupInfo_AddParticipant, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        context.sharedContext.openAddPeerMembers(context: context, updatedPresentationData: self.updatedPresentationData, parentController: self, groupPeer: peer, selectAddMemberDisposable: MetaDisposable(), addMemberDisposable: MetaDisposable())
+                    })))
+                }
+                items.append(selectItem)
+            }
+
+            let contextController = makeContextController(presentationData: self.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: self, sourceView: sourceView, insets: .zero)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            self.presentInGlobalOverlay(contextController)
+        })
+    }
+
+    /// The forum leaves "view as messages": its topic list takes the chat's place.
+    private func openSideListForumAsTopics(peerId: EnginePeer.Id) {
+        let _ = self.context.engine.peers.updateForumViewAsMessages(peerId: peerId, value: false).startStandalone()
+        guard let navigationController = self.effectiveNavigationController else {
+            return
+        }
+        let listController = self.context.sharedContext.makeChatListController(context: self.context, location: .forum(peerId: peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+        navigationController.replaceController(self, with: listController, animated: false)
+    }
+
+    private func openSideListCreateTopic(peerId: EnginePeer.Id) {
+        let controller = ForumCreateTopicScreen(context: self.context, peerId: peerId, mode: .create)
+        controller.navigationPresentation = .modal
+        controller.completion = { [weak self, weak controller] title, fileId, iconColor, _ in
+            controller?.isInProgress = true
+            controller?.view.endEditing(true)
+            guard let self else {
+                return
+            }
+            let _ = (self.context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] topicId in
+                guard let self else {
+                    return
+                }
+                self.closeSideList(animated: false)
+                self.updateChatLocationThread(threadId: topicId)
+                controller?.dismiss()
+            }, error: { [weak controller] _ in
+                controller?.isInProgress = false
+            })
+        }
+        self.push(controller)
     }
 
     private func handleSideListSelection(peerId: EnginePeer.Id, threadId: Int64?, messageId: EngineMessage.Id?) -> Bool {
@@ -160,14 +411,15 @@ extension ChatControllerImpl {
         guard let panel = self.sideListPanel else {
             return
         }
-        let wasOpen = self.sideListOpenFraction > 0.0
+        let wasOpen = self.sideListAppeared
         self.sideListPanel = nil
         self.sideListOpenFraction = 0.0
+        self.sideListAppeared = false
         if wasOpen {
             panel.listController.viewWillDisappear(false)
             panel.listController.viewDidDisappear(false)
         }
-        self.chatDisplayNode.updateSideListOffset(0.0, transition: .immediate)
+        self.chatDisplayNode.updateSideListOffset(0.0, dimAlpha: 0.0, transition: .immediate)
         panel.listController.willMove(toParent: nil)
         panel.backgroundNode.removeFromSupernode()
         panel.removeFromSupernode()
@@ -180,6 +432,7 @@ extension ChatControllerImpl {
     }
 
     func updateSideListLayout(transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
+        self.attachSideListEdgePan()
         guard let panel = self.sideListPanel, let layout = self.validLayout else {
             completion?()
             return
@@ -190,12 +443,13 @@ extension ChatControllerImpl {
             completion?()
             return
         }
-        let offset = self.sideListOpenFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
+        let offset = self.sideListOpenFraction * self.sideListTravel
         // The list's background shows only through the chat card's corners, from opening until fully closed.
         if self.sideListOpenFraction > 0.0 {
             panel.backgroundNode.isHidden = false
         }
-        self.chatDisplayNode.updateSideListOffset(offset, transition: transition, completion: { [weak self, weak panel] in
+        let isDark = self.presentationData.theme.overallDarkAppearance
+        self.chatDisplayNode.updateSideListOffset(offset, dimAlpha: (isDark ? 0.45 : 0.22) * min(1.0, self.sideListOpenFraction), transition: transition, completion: { [weak self, weak panel] in
             if let self, let panel, self.sideListOpenFraction == 0.0 {
                 panel.backgroundNode.isHidden = true
             }
@@ -203,5 +457,52 @@ extension ChatControllerImpl {
         })
         transition.updateFrame(node: panel, frame: CGRect(origin: CGPoint(), size: layout.size))
         panel.updateLayout(layout: layout, openFraction: self.sideListOpenFraction, transition: transition)
+    }
+}
+
+/// The drag from the chat's right edge that brings its side list out. Message swipes, the history's scrolling and the
+/// back swipe wait while it may still begin; taps and long presses don't.
+final class ChatSideListEdgePanHandler: NSObject, UIGestureRecognizerDelegate {
+    static let edgeWidth: CGFloat = 24.0
+
+    private weak var controller: ChatControllerImpl?
+    let recognizer: ChatSideListEdgePanGestureRecognizer
+
+    init(controller: ChatControllerImpl) {
+        self.controller = controller
+        self.recognizer = ChatSideListEdgePanGestureRecognizer()
+
+        super.init()
+
+        self.recognizer.addTarget(self, action: #selector(self.panGesture(_:)))
+        self.recognizer.delegate = self
+        self.recognizer.isInEdge = { [weak self] point in
+            return self?.controller?.sideListEdgePanAllowed(at: point) ?? false
+        }
+    }
+
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        self.controller?.sideListEdgePanUpdated(recognizer)
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let velocity = self.recognizer.velocity(in: self.recognizer.view)
+        return velocity.x < 0.0 && abs(velocity.x) > abs(velocity.y)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return otherGestureRecognizer is UIPanGestureRecognizer
+    }
+}
+
+/// A pan that can only start at the chat's right edge.
+final class ChatSideListEdgePanGestureRecognizer: UIPanGestureRecognizer {
+    var isInEdge: ((CGPoint) -> Bool)?
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        if let touch = touches.first, let view = self.view, !(self.isInEdge?(touch.location(in: view)) ?? false) {
+            self.state = .failed
+        }
     }
 }

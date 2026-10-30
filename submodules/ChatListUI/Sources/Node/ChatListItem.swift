@@ -5632,12 +5632,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: strongSelf.backgroundNode, alpha: 1.0)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.backgroundColor = highlightedBackgroundColor
+                    // The side list's plate matches its search field.
+                    strongSelf.highlightedBackgroundNode.backgroundColor = item.interaction.isSideListMode ? item.presentationData.theme.rootController.navigationSearchBar.inputFillColor : highlightedBackgroundColor
                     let topNegativeInset: CGFloat = 0.0
                     var highlightedBackgroundFrame = CGRect(origin: CGPoint(x: params.leftInset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     if item.interaction.isSideListMode {
-                        // The side list highlights a row as an inset rounded plate.
-                        highlightedBackgroundFrame = highlightedBackgroundFrame.insetBy(dx: 8.0, dy: 0.0)
+                        // The side list highlights a row as an inset rounded plate. Its search's list is inset itself.
+                        if !item.interaction.isSearchMode {
+                            highlightedBackgroundFrame = highlightedBackgroundFrame.insetBy(dx: 8.0, dy: 0.0)
+                        }
                         strongSelf.revealOptionsHighlightedBackgroundRestingCornerRadius = 24.0
                     } else {
                         strongSelf.revealOptionsHighlightedBackgroundRestingCornerRadius = 0.0
@@ -5933,10 +5936,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
                     self.customAnimationInProgress = false
+                    self.resetRevealOptionsAfterFill()
                 }
             case RevealOptionKey.unhide.rawValue:
+                self.closeRevealOptionsHoldingOptions()
                 item.interaction.toggleArchivedFolderHiddenByDefault()
-                close = false
             case RevealOptionKey.hidePsa.rawValue:
                 if let item = self.item, case let .peer(peerData) = item.content {
                     item.interaction.hidePsa(peerData.peer.peerId)
@@ -5980,8 +5984,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
                     self.customAnimationInProgress = false
+                    self.resetRevealOptionsAfterFill()
                 }
             case RevealOptionKey.unhide.rawValue:
+                self.closeRevealOptionsHoldingOptions()
                 item.interaction.setPeerThreadHidden(peerId, threadId, false)
             default:
                 break

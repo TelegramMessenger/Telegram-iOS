@@ -8748,6 +8748,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
 
     override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        // While the side list is open its header is the one on screen, as for `navigationBarTransitionSource`.
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+            return sideListPanel.listController.navigationExpansionSource(above: controller, operation: operation)
+        }
         switch operation {
         case .push:
             guard let profile = self.expansionProfileToPush, profile === controller else {

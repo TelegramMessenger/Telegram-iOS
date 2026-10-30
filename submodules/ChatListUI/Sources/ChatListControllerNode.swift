@@ -2092,9 +2092,17 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         
         let effectiveLocation = self.inlineStackContainerNode?.location ?? self.location
         
-        let filter: ChatListNodePeersFilter = []
+        var filter: ChatListNodePeersFilter = []
         if case .forum = effectiveLocation {
             //filter.insert(.excludeRecent)
+        }
+        if self.controller?.isSideList == true {
+            // Only the listed chat's threads and messages; Saved Messages and direct messages as their profile searches.
+            filter.insert(.onlyLocationResults)
+            filter.insert(.excludeRecent)
+            if case .savedMessagesChats = effectiveLocation {
+                filter.insert(.removeSearchHeader)
+            }
         }
         
         var folder: (Int32, String)?

@@ -20,7 +20,7 @@ public func isAgentBotPeer(appConfiguration: AppConfiguration, peerId: EnginePee
     })
 }
 
-/// The model and speed an agent chat shows, with test values until the API carries them. Kept in memory per chat.
+/// The model and effort an agent chat shows, with test values until the API carries them. Kept in memory per chat.
 public final class AgentChatPlaceholderOptions {
     public struct Model: Equatable {
         public let id: String
@@ -28,30 +28,37 @@ public final class AgentChatPlaceholderOptions {
         public let title: String
         /// The chat title's subtitle: "Claude Opus 5.5".
         public let fullTitle: String
+        /// The model menu's line under the title.
+        public let subtitle: String
     }
 
-    public struct Speed: Equatable {
+    /// How hard the agent thinks: a step of the model menu's effort slider.
+    public struct Effort: Equatable {
         public let id: String
         public let title: String
     }
 
     public struct Selection: Equatable {
         public var model: Model
-        public var speed: Speed
+        public var effort: Effort
     }
 
     public static let shared = AgentChatPlaceholderOptions()
 
     public let models: [Model] = [
-        Model(id: "opus", title: "Opus 5.5", fullTitle: "Claude Opus 5.5"),
-        Model(id: "sonnet", title: "Sonnet 5.5", fullTitle: "Claude Sonnet 5.5"),
-        Model(id: "haiku", title: "Haiku 5.5", fullTitle: "Claude Haiku 5.5")
+        Model(id: "fable", title: "Fable 5.1", fullTitle: "Claude Fable 5.1", subtitle: "Most capable for ambitious work"),
+        Model(id: "opus", title: "Opus 5.5", fullTitle: "Claude Opus 5.5", subtitle: "Deep reasoning for complex tasks"),
+        Model(id: "sonnet", title: "Sonnet 5.5", fullTitle: "Claude Sonnet 5.5", subtitle: "Smart and fast for everyday use"),
+        Model(id: "haiku", title: "Haiku 5.5", fullTitle: "Claude Haiku 5.5", subtitle: "Fastest for quick answers")
     ]
 
-    public let speeds: [Speed] = [
-        Speed(id: "fast", title: "Fast"),
-        Speed(id: "balanced", title: "Balanced"),
-        Speed(id: "thorough", title: "Thorough")
+    /// The effort slider's steps, lowest first.
+    public let efforts: [Effort] = [
+        Effort(id: "low", title: "Low"),
+        Effort(id: "medium", title: "Medium"),
+        Effort(id: "high", title: "High"),
+        Effort(id: "xhigh", title: "Extra High"),
+        Effort(id: "max", title: "Max")
     ]
 
     private var selections: [EnginePeer.Id: Selection] = [:]
@@ -62,7 +69,7 @@ public final class AgentChatPlaceholderOptions {
 
     public func selection(peerId: EnginePeer.Id) -> Selection {
         assert(Queue.mainQueue().isCurrent())
-        return self.selections[peerId] ?? Selection(model: self.models[0], speed: self.speeds[0])
+        return self.selections[peerId] ?? Selection(model: self.models[1], effort: self.efforts[2])
     }
 
     public func update(peerId: EnginePeer.Id, _ f: (Selection) -> Selection) {

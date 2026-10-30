@@ -86,7 +86,7 @@ final class ChatSideListFlagTests: XCTestCase {
         XCTAssertEqual(value, .forum(peerId: self.channelPeerId))
         XCTAssertEqual(value?.listLocation, .forum(peerId: self.channelPeerId))
         XCTAssertEqual(value?.parentPeerId, self.channelPeerId)
-        XCTAssertEqual(value?.showsNewTopicButton, false)
+        XCTAssertEqual(value?.showsNewTopicButton, true)
     }
 
     func testInlineForumDisabled() {

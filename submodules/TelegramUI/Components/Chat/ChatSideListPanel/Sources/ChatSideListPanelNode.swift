@@ -9,7 +9,7 @@ import SolidRoundedButtonNode
 /// The chat side list: the parent chat list over the right of the chat, with the chat's right edge left visible as a
 /// strip. The owner moves the chat itself by `openFraction * (width - stripWidth)`; this node covers the whole chat and
 /// lays the list out from its right edge, so both move together.
-public final class ChatSideListPanelNode: ASDisplayNode {
+public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDelegate {
     public static let stripWidth: CGFloat = 75.0
     /// A drag from the list's own left edge closes it too; further in, row swipes win.
     private static let listEdgeDragWidth: CGFloat = 20.0
@@ -24,6 +24,8 @@ public final class ChatSideListPanelNode: ASDisplayNode {
     private var newTopicButton: SolidRoundedButtonNode?
 
     public private(set) var openFraction: CGFloat = 0.0
+    /// Set by the owner the first time it opens the list.
+    public var hasBeenOpened = false
     private var validLayout: ContainerViewLayout?
     private var validListLayout: ContainerViewLayout?
     private var panStartFraction: CGFloat = 0.0
@@ -31,17 +33,37 @@ public final class ChatSideListPanelNode: ASDisplayNode {
 
     private let closeAccessibilityLabel: String
     public var requestClose: (() -> Void)?
+    /// A drag began: the owner stops the panel where it is on screen if it was sliding.
+    public var dragBegan: (() -> Void)?
     /// A drag moved the panel: the owner relayouts the chat at `fraction`.
     public var dragUpdated: ((CGFloat) -> Void)?
-    /// A drag ended: the owner animates to open (true) or closed (false).
-    public var dragEnded: ((Bool) -> Void)?
+    /// A drag ended: the owner animates to open (true) or closed (false), carrying on with the finger's velocity
+    /// (points per second, positive to the right).
+    public var dragEnded: ((Bool, CGFloat) -> Void)?
     public var newTopic: (() -> Void)?
 
     public var isOpen: Bool {
         return self.openFraction > 0.0
     }
 
-    public init(kind: ChatSideListKind, listController: ChatListController, presentationData: PresentationData) {
+    /// Past the open position the list follows the finger reluctantly.
+    public static func rubberBandedFraction(_ fraction: CGFloat) -> CGFloat {
+        if fraction > 1.0 {
+            return 1.0 + (fraction - 1.0) * 0.15
+        }
+        return max(0.0, fraction)
+    }
+
+    /// Where a released drag settles: a flick decides by its direction, a slow release by how far out the list is.
+    public static func remainsOpen(fraction: CGFloat, velocity: CGFloat) -> Bool {
+        if abs(velocity) > 300.0 {
+            return velocity < 0.0
+        }
+        return fraction > 0.5
+    }
+
+    /// `showsNewTopicButton`: the kind's button, where the user can make one (a forum's needs the right to create topics).
+    public init(kind: ChatSideListKind, listController: ChatListController, presentationData: PresentationData, showsNewTopicButton: Bool) {
         self.closeAccessibilityLabel = presentationData.strings.Chat_SideList_Close
         self.kind = kind
         self.listController = listController
@@ -60,7 +82,7 @@ public final class ChatSideListPanelNode: ASDisplayNode {
         self.addSubnode(self.listContainer)
         self.addSubnode(self.stripNode)
 
-        if kind.showsNewTopicButton {
+        if showsNewTopicButton {
             let theme = presentationData.theme
             let button = SolidRoundedButtonNode(title: presentationData.strings.Chat_SideList_NewTopic, theme: SolidRoundedButtonTheme(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor), glass: true, height: 52.0, cornerRadius: 26.0)
             button.pressed = { [weak self] in
@@ -86,6 +108,9 @@ public final class ChatSideListPanelNode: ASDisplayNode {
         self.stripNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.stripTapGesture(_:))))
 
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        // Through the delegate: a view's own `gestureRecognizerShouldBegin` is asked of the view under the touch, and a
+        // list row answers for itself without asking this one, which let the pan take a row's swipe.
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.panRecognizer = panRecognizer
         self.view.addGestureRecognizer(panRecognizer)
     }
@@ -126,17 +151,29 @@ public final class ChatSideListPanelNode: ASDisplayNode {
         let distance = max(1.0, layout.size.width - ChatSideListPanelNode.stripWidth)
         switch recognizer.state {
         case .began:
+            self.dragBegan?()
             self.panStartFraction = self.openFraction
         case .changed:
             let translation = recognizer.translation(in: self.view).x
-            let fraction = max(0.0, min(1.0, self.panStartFraction - translation / distance))
-            self.dragUpdated?(fraction)
+            self.dragUpdated?(ChatSideListPanelNode.rubberBandedFraction(self.panStartFraction - translation / distance))
         case .ended, .cancelled:
             let velocity = recognizer.velocity(in: self.view).x
-            let remainsOpen = recognizer.state == .ended ? (velocity < -200.0 || (velocity < 200.0 && self.openFraction > 0.5)) : true
-            self.dragEnded?(remainsOpen)
+            let remainsOpen = recognizer.state == .ended ? ChatSideListPanelNode.remainsOpen(fraction: self.openFraction, velocity: velocity) : true
+            self.dragEnded?(remainsOpen, velocity)
         default:
             break
+        }
+    }
+
+    /// Stops the slide where it is: the owner lays the panel out at the fraction it is shown at right after.
+    public func removeLayoutAnimations() {
+        var layers: [CALayer] = [self.listContainer.layer, self.stripNode.layer, self.backgroundNode.layer]
+        if let newTopicButton = self.newTopicButton {
+            layers.append(newTopicButton.layer)
+        }
+        for layer in layers {
+            layer.removeAnimation(forKey: "position")
+            layer.removeAnimation(forKey: "bounds")
         }
     }
 
@@ -159,7 +196,8 @@ public final class ChatSideListPanelNode: ASDisplayNode {
             division: nil,
             additionalInsets: layout.additionalInsets,
             statusBarHeight: layout.statusBarHeight,
-            inputHeight: nil,
+            // The keyboard only matters to the list while it is out, for its search.
+            inputHeight: self.openFraction > 0.0 ? layout.inputHeight : nil,
             inputHeightIsInteractivellyChanging: false,
             inVoiceOver: layout.inVoiceOver,
             presentedInFormSheet: false
