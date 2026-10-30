@@ -3440,7 +3440,12 @@ public final class ChatListNode: ListViewImpl {
                                     continue
                                 }
                                 switch transition.chatListView.filteredEntries[entryCount - 1 - i] {
-                                case .PeerEntry, .GroupReferenceEntry:
+                                case let .PeerEntry(peerEntry):
+                                    // The side list's "All Messages" row sorts above everything without being pinned.
+                                    if peerEntry.isSideListAllThreadsItem {
+                                        continue
+                                    }
+                                case .GroupReferenceEntry:
                                     break
                                 default:
                                     continue
