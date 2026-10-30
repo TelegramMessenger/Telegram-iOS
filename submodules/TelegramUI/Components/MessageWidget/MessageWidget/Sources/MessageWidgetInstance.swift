@@ -366,9 +366,9 @@ public final class MessageWidgetInstance {
                 core.setMaximumHeight(maximumHeight)
             }
         }
-        if self.bootQueued, self.contentSafeArea != self.requestedContentSafeArea {
+        if self.bootQueued, self.deadReason == nil, self.contentSafeArea != self.requestedContentSafeArea {
             // sdk-v1 §5.12: only with the bubble's layout (a caption edited, "edited"), never per frame: an equal value is
-            // nothing.
+            // nothing, and a frozen widget takes none.
             self.requestedContentSafeArea = self.contentSafeArea
             let area = self.contentSafeArea
             self.perform(.layout, wait: true, key: "contentSafeArea") { core in

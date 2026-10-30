@@ -165,6 +165,17 @@ public final class WidgetHarnessListHost {
         self.requestUpdate(id)
     }
 
+    /// Replaces the caption of the post at `path`, its text and whether it shows above the widget
+    /// (`InvertMediaMessageAttribute`, widget-sandbox v0.4.0; every other attribute goes, and no "edited" is added), and
+    /// updates its bubble as the chat does a message's edit.
+    public func replaceCaption(path: String, text: String, captionAbove: Bool) {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let index = self.messages.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        self.messages[index] = self.messages[index].withUpdatedText(text).withUpdatedAttributes(captionAbove ? [InvertMediaMessageAttribute()] : [])
+        self.requestUpdate(id)
+    }
+
     public func load(posts: [WidgetHarnessPost], incoming: Bool = false) {
         self.pinnedToTop = []
         let accountPeer = TelegramUser(

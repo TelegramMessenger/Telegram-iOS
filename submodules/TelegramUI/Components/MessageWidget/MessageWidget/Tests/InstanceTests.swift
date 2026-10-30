@@ -277,7 +277,8 @@ class InstanceTests: MessageWidgetTestCase {
     /// URL loading system makes; WidgetRuntime has no loader of its own (`WidgetRuntimeNoIOScanTests`), and its container
     /// refuses every URL but `data:` that reaches it, counting each. Each page gets three animation frames, so the
     /// rAF-driven attacks run past boot, and is drawn, so the draw-time sites are reached too. The URL pages' URLs never
-    /// reach the container: profile 1 renders the placeholder in their place.
+    /// reach the container: profile 1 renders the placeholder in their place. No task of any page holds its thread past
+    /// two slices of CPU (the record's "Our DOM and renderer are native code").
     func testAttackCorpusRequestsNothing() throws {
         URLProtocol.registerClass(RecordingURLProtocol.self)
         defer {
@@ -289,6 +290,8 @@ class InstanceTests: MessageWidgetTestCase {
         var rafBurnFrames: String?
         var rafBurnReason: String?
         var layoutLoopReason: String?
+        var largest: [(path: String, kind: WidgetSnapshot.Kind, cpu: Double)] = []
+        let kinds: [WidgetSnapshot.Kind] = [.boot, .layout, .theme, .touch, .timer, .wake, .frame, .visibility, .event, .state, .draw, .selection]
         for page in pages {
             let (instance, view) = self.booted(page.source)
             for _ in 0 ..< 3 {
@@ -308,7 +311,21 @@ class InstanceTests: MessageWidgetTestCase {
             if InstanceTests.urlPages.contains(page.path) {
                 XCTAssertEqual(refused, 0, "\(page.path): a planted URL reached the container")
             }
+            if let top = kinds.map({ (kind: $0, cpu: instance.largestTaskCpuMillisecondsForTesting($0)) }).max(by: { $0.cpu < $1.cpu }) {
+                largest.append((page.path, top.kind, top.cpu))
+            }
             instance.destroy()
+        }
+        // No page runs a native path (our DOM, our renderer: nothing interrupts them) on and on: the CPU of each task's
+        // runtime steps stays within two slices, the most a task may take by design (a runaway fails here, not a native
+        // path a few hundred ms long); the largest are the pages the 500 ms slice stops (measured 2026-10-30: timer-flood's
+        // boot 546 ms, fallback-at-boot's 500 ms, layout-query-loop's 107 ms, every other page under 60 ms).
+        largest.sort { $0.cpu > $1.cpu }
+        for row in largest.prefix(5) {
+            print("attack scan: \(String(format: "%.1f", row.cpu)) ms, a \(row.kind) task of \(row.path)")
+        }
+        for row in largest where row.cpu >= 1000.0 {
+            XCTFail("\(row.path): a \(row.kind) task held its thread for \(row.cpu) ms")
         }
         // A frame spinning 30 ms on performance.now() is well inside its slice (500 ms) and, three of them, the JS quota
         // (300 ms a second): it runs, as upstream's does, and would be throttled past the quota rather than stopped.

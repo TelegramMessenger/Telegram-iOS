@@ -114,6 +114,10 @@ final class MessageWidgetCore {
         if !self.tornDown {
             body()
         }
+        // Read before the publish, which drops the session of a widget the task stopped.
+        let bootExemption = MessageWidgetCore.bootDemotionExemptionSlices * self.cpuLimits.cpuLimitMs
+        let bootCpuMilliseconds = self.session.map { max(0.0, min($0.bootCpuMilliseconds, bootExemption) - min(bootCpuBefore, bootExemption)) } ?? 0.0
+        let cpuMilliseconds = self.session.map { max(0.0, $0.stepCpuMilliseconds - cpuBefore) } ?? 0.0
         self.publish()
         var frame: WidgetFrame?
         if kind == .draw {
@@ -134,9 +138,6 @@ final class MessageWidgetCore {
                 self.frameTasks += 1
             }
         }
-        let bootExemption = MessageWidgetCore.bootDemotionExemptionSlices * self.cpuLimits.cpuLimitMs
-        let bootCpuMilliseconds = self.session.map { max(0.0, min($0.bootCpuMilliseconds, bootExemption) - min(bootCpuBefore, bootExemption)) } ?? 0.0
-        let cpuMilliseconds = self.session.map { max(0.0, $0.stepCpuMilliseconds - cpuBefore) } ?? 0.0
         self.largestTaskCpuMilliseconds[kind] = max(self.largestTaskCpuMilliseconds[kind] ?? 0.0, cpuMilliseconds)
         let needsDraw = kind != .draw && self.renderer.map { self.drawer.needsDraw($0) } == true
         self.scheduleWake()

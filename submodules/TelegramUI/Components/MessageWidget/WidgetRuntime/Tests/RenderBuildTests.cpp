@@ -771,8 +771,10 @@ WR_TEST(testABuildStoppedPartwayIsAtomic) {
         }
         return stopped;
     };
-    // The least slack the build completes with, to 256 bytes; then refusals swept finely over the build below it, so
-    // each of its allocations of any size is likely refused once (the fix waves' M-5: eight coarse points before).
+    // The least slack the build completes with, to 256 bytes (a search that assumes a larger slack never fails where a
+    // smaller one completes); then 64 refusals spread evenly below it, each at the allocation that crosses its point,
+    // about 1/64 of the build apart, so a small allocation between two points is never the refused one (the fix
+    // waves' M-5: eight coarse points before).
     size_t refused = 0;
     size_t completes = size_t(8) << 20;
     CHECK(!rebuildWithSlack(completes));

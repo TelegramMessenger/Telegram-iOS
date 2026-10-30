@@ -90,6 +90,14 @@ WR_TEST(testTheBodysOwnPaddingWins) {
     checkEval(env, "(r => Math.round(r.right - $('bar').getBoundingClientRect().right))($('row').getBoundingClientRect())", "64");
 }
 
+/// A reset of every padding (`* { padding: 0 }`) wins over the UA layer's band too, whatever its specificity: the layer
+/// is an origin below the author's, so such a widget handles the band itself.
+WR_TEST(testAPaddingResetWinsOverTheBand) {
+    RenderEnv env(page("* { padding: 0 }"), {}, true, passing(band(24, 0, 64)));
+    checkEval(env, "getComputedStyle(document.body).paddingBottom", "0px");
+    checkEval(env, "W('e1')", "24");
+}
+
 /// CSS.supports and @supports: true for the safe-area insets, false for another env() name.
 WR_TEST(testOnlyTheSafeAreaInsetsAreSupported) {
     RenderEnv env(replaced(page("#s1,#s2{height:1px} @supports (padding: env(safe-area-inset-top)) { #s1 { height: 5px } }"
@@ -110,6 +118,19 @@ WR_TEST(testInlineStyleAndCSSOMAreRewritten) {
     checkEval(env, "W('w')", "24");
     checkEval(env, "$('u').style.width = 'calc(1px + env(safe-area-inset-bottom))'; W('u')", "25");
     checkEval(env, "CSS.supports('background-image', 'url(env(safe-area-inset-bottom))')", "false");
+}
+
+/// An SVG attribute whose value is CSS (profile 1's table: paint, colours, urls) meets the same rewrite, so a fallback
+/// never applies to a safe-area inset there either; another attribute is no CSS value (upstream's validator leaves it as
+/// written), so env() in it is the renderer's own: 0, or its fallback.
+WR_TEST(testAnSVGAttributeIsRewrittenWhenItsValueIsCSS) {
+    RenderEnv env(replaced(page(), "<div id=w></div>",
+                           "<svg width=\"40\" height=\"40\"><rect id=\"sf\" width=\"10\" height=\"10\" fill=\"env(safe-area-inset-bottom, red)\"/>"
+                           "<rect id=\"sk\" width=\"10\" height=\"10\" fill=\"env(keyboard-inset-height, red)\"/>"
+                           "<rect id=\"sw\" width=\"10\" height=\"10\" stroke=\"black\" stroke-width=\"env(safe-area-inset-bottom, 2px)\"/></svg>"),
+                  {}, true, passing(band(24, 0, 64)));
+    checkEval(env, "[getComputedStyle($('sf')).fill != 'rgb(255, 0, 0)', getComputedStyle($('sk')).fill, getComputedStyle($('sw')).strokeWidth].join()",
+              "true,rgb(255, 0, 0),2px");
 }
 
 /// The values as upstream's checkContentSafeArea keeps them: an inset 0–64 and a corner 0–200, then rounded to two

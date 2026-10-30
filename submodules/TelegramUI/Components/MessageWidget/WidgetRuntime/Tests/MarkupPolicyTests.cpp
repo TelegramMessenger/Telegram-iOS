@@ -132,6 +132,7 @@ WR_TEST(testTheAttributeRules) {
         {N::SVG, "rect", "stroke", "env(keyboard-inset-height, red)", "1|stroke|red|0"},
         {N::SVG, "rect", "stroke", "env(keyboard-inset-height)", "0"},
         {N::SVG, "rect", "fill", "url(env(safe-area-inset-bottom))", "0"},
+        {N::SVG, "rect", "stroke-width", "env(safe-area-inset-bottom, 2px)", "1|stroke-width|env(safe-area-inset-bottom, 2px)|0"},
         {N::SVG, "text", "font-family", "Inter, monospace", "1|font-family|monospace|0"},
         {N::SVG, "svg", "overflow", "scroll", "1|overflow|scroll|0"},
         {N::HTML, "img", "src", "https://x", "1|src|https://x|0"},

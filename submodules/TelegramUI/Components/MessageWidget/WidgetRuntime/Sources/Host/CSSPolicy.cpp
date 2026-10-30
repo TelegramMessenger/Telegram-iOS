@@ -381,8 +381,9 @@ std::optional<std::string_view> safeAreaVariable(std::string_view name) {
 
 /// widget-sandbox v0.4.0 (sdk-v1 §2.17, css-sanitizer.ts): every env() in `values`, at any depth, as the validator
 /// rewrites it. A safe-area inset becomes var(--tg-content-safe-area-inset-…[, fallback]) (`safeArea`); another name
-/// becomes its fallback (`resolved`). False, which drops the declaration, for another name without a fallback and for
-/// an env() that is not a name with an optional fallback.
+/// becomes its fallback (`resolved`). False, which drops the declaration, for another name without a fallback or with an
+/// empty one (a safe-area inset keeps an empty one: `var(--…,)`), and for an env() that is not a name with an optional
+/// fallback.
 bool rewriteEnv(css_token_vector& values, bool& safeArea, bool& resolved) {
     for (size_t i = 0; i < values.size(); i++) {
         if (values[i].type != litehtml::CV_FUNCTION && values[i].type != litehtml::ROUND_BLOCK &&
@@ -422,16 +423,16 @@ bool rewriteEnv(css_token_vector& values, bool& safeArea, bool& resolved) {
             while (to > from && isWhitespace(args[to - 1])) {
                 to--;
             }
-            if (from == to) {
-                return false;
-            }
+            // An empty fallback, as upstream's resolveEnv reads it: kept for a safe-area inset (var() takes one), nothing
+            // to resolve to for another name.
             fallback = css_token_vector(args.begin() + std::ptrdiff_t(from), args.begin() + std::ptrdiff_t(to));
         }
         css_token_vector replacement;
         if (const std::optional<std::string_view> variable = safeAreaVariable(name)) {
-            replacement = tokensOf("var(" + std::string(*variable) + (fallback ? ", " + litehtml::get_repr(*fallback) : std::string()) + ")");
+            const std::string rest = fallback ? (fallback->empty() ? std::string(",") : ", " + litehtml::get_repr(*fallback)) : std::string();
+            replacement = tokensOf("var(" + std::string(*variable) + rest + ")");
             safeArea = true;
-        } else if (fallback) {
+        } else if (fallback && !fallback->empty()) {
             replacement = std::move(*fallback);
             resolved = true;
         } else {

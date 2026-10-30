@@ -68,8 +68,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private let tailMask = CALayer()
     /// The tail's side while the widget's bottom corner joins one (true: the left, an incoming bubble's); nil without.
     private var tailOnLeft: Bool?
-    /// The corner box the widget is told the date covers (its content safe area: the pill with its margins), in this
-    /// node's coordinates; nil without a date over the widget.
+    /// The box around the date over the widget, the pill with its margins on both sides, within the widget, in this node's
+    /// coordinates; nil without a date. Unclamped, unlike the corner the widget is told (at most 200 × 64), so a pill
+    /// past 184 pt takes a few points more than the widget was told.
     private var timeCorner: CGRect?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
@@ -400,10 +401,10 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 // the widget's edges on both sides, as upstream's reference draws the time (reference.ts timeCornerStyle).
                 // The corner assumes the widget fills the bubble; centred in a wider one its true corner is narrower.
                 // Clamped to what the runtime keeps (an inset 64, a corner 200), so an unusually wide date still counts.
+                let marginBottom = max(0.0, statusBottom - bubbleInsets.bottom)
+                let marginRight = max(0.0, statusRight - bubbleInsets.right)
                 let contentSafeArea: MessageWidgetContentSafeArea
                 if statusType != nil {
-                    let marginBottom = max(0.0, statusBottom - bubbleInsets.bottom)
-                    let marginRight = max(0.0, statusRight - bubbleInsets.right)
                     contentSafeArea = MessageWidgetContentSafeArea(bottom: min(64.0, statusSize.height + 2.0 * marginBottom), cornerRight: min(200.0, statusSize.width + 2.0 * marginRight))
                 } else {
                     contentSafeArea = .none
@@ -529,7 +530,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         self.item = item
                         self.updatePublicDataPolling()
                         self.laidOutEnabled = enabled
-                        self.timeCorner = contentSafeArea == .none ? nil : CGRect(x: widgetFrame.maxX - contentSafeArea.cornerRight, y: widgetFrame.maxY - contentSafeArea.bottom, width: contentSafeArea.cornerRight, height: contentSafeArea.bottom).intersection(widgetFrame)
+                        // The pill's own box (its margins on both sides) within the widget: the box the widget is told, when the
+                        // widget fills the bubble; in a wider bubble only the part of the widget the pill is near.
+                        self.timeCorner = statusApply == nil ? nil : statusFrame.insetBy(dx: -marginRight, dy: -marginBottom).intersection(widgetFrame)
                         self.laidOutResize = (MessageWidgetLaidOutHeight(autoHeight: anchors.height <= 0, placeholder: showsPlaceholder, pill: showsPill, widgetsEnabled: enabled, height: widgetHeight), source, heightKey)
 
                         // The clip follows the bubble's own height animation, so the widget never shows past the bubble's
@@ -878,8 +881,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         }
     }
 
-    /// Whether `point` is on the date drawn over the widget or in the corner box the widget is told it covers (widget-sandbox
-    /// v0.4.0, sdk-v1 §5.12: a view over the widget, whose touches are the client's). The box, the pill with its margins,
+    /// Whether `point` is on the date drawn over the widget or in the box around it (widget-sandbox v0.4.0, sdk-v1 §5.12: a
+    /// view over the widget, whose touches are the client's). The box, the pill with its margins (`timeCorner`),
     /// also takes the questions asked after a touch's down, which convert its point through the press's shrink, several
     /// points toward the corner (the fix-wave review's F-1).
     private func dateContains(_ point: CGPoint) -> Bool {
@@ -890,9 +893,10 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // The date over the widget takes its touches (a reaction button of its own, or the date itself), so the widget's
-        // view behind it never gets one.
-        if self.dateContains(point) {
+        // The date over the widget takes its touches (the date node's own hit test, nil here, as it shows no inline
+        // reactions, then this node), so the widget's view behind it never gets one; while the bubble is lifted the text
+        // selection over the widget takes them.
+        if !self.isExtracted, self.dateContains(point) {
             return self.dateAndStatusNode.view.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) ?? self.view
         }
         return super.hitTest(point, with: event)

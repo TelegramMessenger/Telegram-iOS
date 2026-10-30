@@ -412,7 +412,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   profile 1's types and the placeholder (V4), and refuses and counts everything else, and `RenderHost` is never handed
   a URL, only the decoded bytes of an accepted image; the placeholder is the one SVG it is ever handed. Nothing in the runtime or the libraries compiled into it opens a URL, a file or a socket:
   `testNoIOInTheRuntime` scans 313 source files for it (a text scan, not a proof: its known gaps are in M1b's carry-over, in `feature/message-widgets`' history),
-  `testAttackCorpusLoadsNothing` runs the 93 attack documents and `testLoadsAreRefused` pins each path. The fork's SVG
+  `testAttackCorpusLoadsNothing` runs the 110 attack documents and `testLoadsAreRefused` pins each path. The fork's SVG
   painter never loads an `<image>` (`testAttackCorpusLoadsNothing` prints that a nested `data:` image is not decoded).
 - **The tree is plain data and outlives its document.** A `LayerTree` holds no `Node*`, no litehtml pointer and no
   `uint_ptr` handle; fonts and images are held by `std::shared_ptr` and every paint argument is copied. Published, it
@@ -866,8 +866,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   from demotion, wherever they run, and only for their first two slices of CPU in all, the boot task's own included,
   so the wakes that finish a boot get a slice or less of it (`MessageWidgetCore.bootDemotionExemptionSlices`); what else a task runs while the document is incomplete counts,
   frames included (`testABootThatFinishesOnWakesIsNotDemoted`, `testABootChainThatKeepsTheLoadAwayIsDemoted`,
-  `testARunOfHeavyBootScriptsIsDemotedPastTheExemption`). An async module script's execution is not a link, so it is
-  not exempt. A width, theme or reduced-motion change lays out at the call, outside any step
+  `testARunOfHeavyBootScriptsIsDemotedPastTheExemption`). An async script the parse placed (a classic or a module one)
+  runs as a link too (`queueExecution`'s `parserInserted`, `testTheParsesAsyncScriptsAreBootLinks`); one the widget
+  inserts is its own. A width, theme or reduced-motion change lays out at the call, outside any step
   (`EventLoop::flushForHostChange`), as a step of its kind (resize, theme, viewport) that no window defers: a slice,
   an operations batch and follow-ups of its own kind, recorded as a step is (`testAHostChangeRecordsItsScriptAtItsTime`,
   `testAHostChangesOperationsAreABatchOfTheirOwn`, `testAHostChangesFollowUpIsOfItsKind`,
@@ -904,7 +905,10 @@ did. The order of the checks is upstream's glue's (`packages/ios` `SandboxEngine
 - **The state:** `setInitialData` and `setData` take the bot's two strings as bytes. `checkWidgetData` decides what is
   text. `data-rejected` is one report naming the rejected fields; a copy's `chatData` is dropped silently.
 - **A change:** `setData` queues the task that puts the new values in place and runs `chatDataChanged`, then
-  `publicDataChanged` (`TelegramWidget::Event`), each only for a value that changed. Nothing restarts.
+  `publicDataChanged` (`TelegramWidget::Event`), each only for a value that changed. Nothing restarts. A change while
+  the boot's tasks run waits for its load, in order with the content safe area's (the held inputs, released by the Load
+  link: upstream's inputs wait for its boot; `testAStateChangeDuringTheBootWaitsForTheLoad`). The held list has no cap
+  of its own, as upstream's queue of posted inputs has none.
 - **What the widget reads:** `TelegramWidget` answers the members from `HostState`. `viewer` is one frozen object per
   context generation.
 
@@ -948,10 +952,15 @@ takes. The bubble's numbers and its touches are the message widgets guide's ("Th
   px, checked as upstream's `checkContentSafeArea` (an inset 0–64, a corner 0–200, the range before the rounding to two
   decimals; anything else 0: `testTheValuesAreCheckedAsUpstreamChecksThem`).
 - **CSS** (`css::policy`'s `rewriteEnv`, run by `declaration` and `value`, so stylesheets, style attributes, CSSOM writes,
-  substituted values and SVG presentation attributes meet it alike): `env(safe-area-inset-top|right|bottom|left[, fb])`
-  becomes `var(--tg-content-safe-area-inset-…[, fb])` (Augment: `CSS.supports` and `@supports` say yes); another name
-  becomes its fallback (Rewrite: they say no), or the declaration is dropped without one; names are exact, as in CSS;
-  `url()` takes one string, so `env()` inside it stays out. `SafeAreaCSSTests`, `CSSPolicyTests`, `MarkupPolicyTests`.
+  substituted values and the SVG attributes whose value is CSS meet it alike): `env(safe-area-inset-top|right|bottom|left[, fb])`
+  becomes `var(--tg-content-safe-area-inset-…[, fb])` (Augment: `CSS.supports` and `@supports` say yes), an empty
+  fallback kept (`env(safe-area-inset-bottom,)` is `var(--…-bottom,)`, as upstream's rewrite keeps it); another name
+  becomes its fallback (Rewrite: they say no), or the declaration is dropped without one or with an empty one; names are
+  exact, as in CSS; `url()` takes one string, so `env()` inside it stays out. The SVG attributes whose value is CSS are
+  the profile's (`CSSValuedSVGAttributes`: paint, colours, urls, as upstream's validator judges them); any other SVG
+  attribute is kept as written, as upstream keeps it, so `env()` in a `stroke-width` or a `width` is the renderer's own:
+  0, or its fallback, never the band. `SafeAreaCSSTests` (`testAnSVGAttributeIsRewrittenWhenItsValueIsCSS`),
+  `CSSPolicyTests`, `MarkupPolicyTests`.
 - **The root variables**: the six `--tg-content-safe-area-*`, each `!important`, always set (`0px` until the host says),
   after the theme's (`RenderOptions::contentSafeAreaDeclarations`, apart from the theme's `rootDeclarations` so either
   changes alone; `wr::rootDeclarationsOf` joins them for the builder and the tests' parse paths). The UA layer's
@@ -968,7 +977,8 @@ takes. The bubble's numbers and its touches are the message widgets guide's ("Th
   (`HostState::contentSafeAreaGeneration`); `contentSafeAreaChanged` is an `onEvent` type.
 - **Upward**: `WRSession.setContentSafeAreaTop:…` (before the boot the initial value, after it a change),
   `MessageWidgetCore.boot(…contentSafeArea:)` and `setContentSafeArea`, `MessageWidgetInstance.contentSafeArea` (Swift
-  `SafeAreaTests`).
+  `SafeAreaTests`): a change is a waited `.layout` task, which a frozen widget is not given
+  (`testAFrozenWidgetQueuesNoChange`; one that failed to start still gets it, and its core drops it).
 
 ## Profile enforcement (V4)
 
@@ -1007,8 +1017,9 @@ neutralised is `css.box.logical`, whose RTL check needs `direction` layout (out 
   `twplaceholder:` plus `data-tg-placeholder`. The container answers that URL with the reference's 48 px SVG, the one
   SVG the host is ever handed, and the element loads at 48 × 48. A parsed image's `load`/`error` waits for the window's
   load (`DOMState::parsingDocument`), when the page's listeners exist.
-- **The strict budgets** (`Builder.h`): a text value of at most 65,536 UTF-16 units, 262,144 units in the document,
-  8,192 complex-script units (>= U+0590), 50,000 nodes. A build hands them out in tree order, counting only what
+- **The strict budgets** (`Builder.h`, `Limits`): a text value of at most 32,768 UTF-16 units (compat 65,536), 49,152
+  units in the document (compat 262,144), 8,192 complex-script units (>= U+0590) under both, 50,000 nodes; past the
+  first two the strict policy stops the widget ("Limits"), compat leaves the text out as below. A build hands them out in tree order, counting only what
   renders: a Text that does not fit renders nothing, a text attribute or a `style` is left out, a sheet is not applied,
   and the walk goes on; past the node cap it stops. The patches keep the counts in step: a structure patch only adds
   to the node count, comments it inserts included, and an insertion the journal does not hear (under an element no
@@ -1212,7 +1223,7 @@ reader select of the published layout, built on the widget's queue while its bub
 | litehtml's caps | depth 256, 20,000 elements, 10,000 text pieces, 200,000 table cells | `document.h` | not built; `depth`, `elements`, `text-pieces`, `table-cells` | litehtml's own |
 | `<style>` text | 64 KiB per document, in tree order | `Builder.cpp` `kMaxStyleText` | that sheet is not applied; `css` | ~545 B of litehtml heap per CSS byte |
 | `style` attribute | 16 KiB | `Builder.cpp` `kMaxStyleAttribute` | that attribute is left out, the element renders; `style-attribute` | the same |
-| Text and attribute values | 1 MiB (UTF-8) per document, in tree order | `Builder.h` `kMaxRenderBytes` | the node that would pass it and every node after it are not rendered; `bytes` | replaces today's 256 KiB serialized-document cap |
+| Text and attribute values | 1 MiB (UTF-8) per document, in tree order | `Builder.h` `kMaxRenderBytes` | the node that would pass it and every node after it are not rendered; `bytes` | replaced the old runtime's 256 KiB serialized-document cap |
 | List-valued CSS | 8 layers, shadows or transform/filter functions; 32 colour stops or points | `css_parser.h` (twidget edit 15) | later entries dropped | each element copies its lists, each entry paints (100 shadows: 105 MB per 1,000 divs) |
 | CSS nesting | 64 blocks | `css_parser.h` (twidget edit 14) | the deeper block is parsed as empty | litehtml's componentizer recursed once per block |
 | Pseudo-elements | none nest; `content` keeps 32 items; they count against the element cap | twidget edit 19 | not created | unbounded recursion, and 1,002,004 elements from 1,000 divs |
@@ -1441,8 +1452,8 @@ M1d's, from the old runtime (spec §10.1):
 - **The badge is drawn, not injected.** `WidgetTreeRenderer` draws it in CoreGraphics over the bottom left of the
   last tiles (V1: the bottom right is where the widget bubble's date pill sits), with the old badge's look; the old renderer put it into the document as HTML, with a rule that set the
   body's opacity to 0.85, which is not drawn now.
-- **No `innerWidth` or `innerHeight` until M2.** The old core sent the offered width and 300 by a `viewport` task;
-  the core has no such task now.
+- **`innerWidth` and `innerHeight` are the layout's** (V3: the layout width and the document's height, "Layout
+  queries"). The old core sent the offered width and 300 by a `viewport` task; the core has no such task now.
 - **No keyboard events.** There is no `KeyboardEvent` interface (iOS has no keyboard path into widgets), and
   `createEvent('KeyboardEvent')` throws `NotSupportedError`; the `onkey*` handler attributes stay and never fire.
 - **A widget that published nothing is `.failedToStart`**, the unsupported pill, not frozen: a caught failure or a
@@ -1548,7 +1559,15 @@ purpose. One line each:
      JavaScript, which polls, and its renderer runs off the widget's thread; ours are C++ on that thread, so a long
      DOM walk or a render build also runs to its end. One hostile message can hold one of `MessageWidgetPool`'s two
      threads for as long as that call takes, delaying every widget queued there; main keeps its 20 ms cap (the user's
-     call, exact parity over interrupt points of our own).
+     call, exact parity over interrupt points of our own). No page of the attack corpus does (measured 2026-10-30,
+     `InstanceTests.testAttackCorpusRequestsNothing`, over the boot, three frames and 0.2 s): the CPU of each task's
+     runtime steps (their JS and render, on the thread's clock; not the boot's parse and first build, which are no
+     step, nor the publish and the tile drawing) is largest for the tasks the slice stops, `timer-flood`'s boot at
+     546 ms and `fallback-at-boot`'s at 500 ms, then `layout-query-loop`'s at 107 ms (its query limit), every other page
+     under 60 ms. The test fails a task past two slices, which is the most a task may take by design (a drain stops
+     after a slice, and the step that crosses it runs to its end), so it catches a runaway, not a native path a few
+     hundred ms long. A task that stops its widget after its first publish has its CPU read before the stop drops the
+     session (it read 0 before); a boot that stops before it publishes still reads 0.
    - **A follow-up is a task of its own, on a slice of its own.** Upstream settles a delivery's follow-ups inside that
      delivery's slice (at most 20 rounds); here each follow-up task inherits its root's kind and gets its own slice,
      so a chain rooted in a boot, event or visibility step is never deferred by the JS quota. A core drain, and the
@@ -1578,6 +1597,11 @@ purpose. One line each:
 11. **A style attribute keeps the `env()` its author wrote** (v0.4.0): the renderer gets the policy's rewrite, as for every
     rewrite here, so `el.style.paddingBottom` reads `env(safe-area-inset-bottom)` back where upstream's validator stored
     `var(--tg-content-safe-area-inset-bottom)`.
+12. **The bubble's touches take the whole corner box the widget is told is covered** (v0.4.0), the date pill with its
+    8 pt margins on both sides, where upstream's reference keeps the pill alone from the widget: the bubble's press
+    shrinks it, and a long press's activation, the tap recognizer's own long tap and a tap's up all convert a held
+    finger's down point through that shrink, several points toward the corner, so a touch begun on the pill's edge
+    would otherwise reach the widget late (the message widgets guide, "The time over the widget").
 
 ## What the corpus still trips on
 
@@ -1751,6 +1775,6 @@ The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreT
   by being clipped, not reflowed, and the view paints the canvas colour right of a narrower picture;
 - `CoreTextRenderHost` never throws and never calls back into the runtime, and its fonts and images (`IOSHostFont`,
   `IOSHostImage`) outlive it;
-- out-of-memory is fatal at the facade, and the 256 KiB source cap is `WRSession`'s;
+- out-of-memory is fatal at the facade, and no source is refused for its size (V1 removed `WRSession`'s 256 KiB cap);
 - a tile the renderer cannot draw keeps the last frame up and leaves a `tile-draw-failed` diagnostic;
 - taps, the UI events and the activation behaviour are built, and `TapTests` and `ActivationTests` pin their order.

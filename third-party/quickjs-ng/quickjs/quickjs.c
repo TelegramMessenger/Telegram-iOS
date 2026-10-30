@@ -565,7 +565,7 @@ enum {
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
-#ifndef JS_INTERRUPT_COUNTER_INIT /* Telegram: set in BUILD (VENDOR.md, local edit 1) */
+#ifndef JS_INTERRUPT_COUNTER_INIT /* Telegram: VENDOR.md, change 1 (reverted: nothing sets it, the stock rate holds) */
 #define JS_INTERRUPT_COUNTER_INIT 10000
 #endif
 

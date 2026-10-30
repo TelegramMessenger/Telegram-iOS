@@ -39,6 +39,18 @@ final class SafeAreaTests: MessageWidgetTestCase {
         instance.destroy()
     }
 
+    /// A frozen widget takes no change: main queues no layout task for it (the core would drop it).
+    func testAFrozenWidgetQueuesNoChange() {
+        let instance = self.make(self.page + "<script>for (;;) {}</script>")
+        _ = instance.layout(width: 300.0)
+        XCTAssertNotNil(instance.deadReason)
+        let layouts = instance.queuedForTesting[.layout]?.waited ?? 0
+        instance.contentSafeArea = self.band
+        _ = instance.layout(width: 300.0)
+        XCTAssertEqual(instance.queuedForTesting[.layout]?.waited ?? 0, layouts)
+        instance.destroy()
+    }
+
     func testAnEqualValueQueuesNothing() {
         let instance = self.make(self.page)
         instance.contentSafeArea = self.band

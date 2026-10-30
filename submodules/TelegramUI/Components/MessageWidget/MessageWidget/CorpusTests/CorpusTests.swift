@@ -90,6 +90,10 @@ final class CorpusTests: MessageWidgetTestCase {
         for file in self.files() {
             let (instance, view) = self.booted(file.source)
             // Demotion exempts the boot's own steps for their first two slices of CPU: no honest widget's boot reaches it.
+            // Read once the boot is over: a boot past its task's slice finishes on wakes, and a wake's snapshot is where
+            // demotion is decided, so the document's load and the snapshot of the task that reached it come first.
+            _ = self.pump(until: { instance.deadReason != nil || instance.evaluateForTesting("document.readyState") == "complete" }, timeout: 5.0)
+            self.pump(0.05)
             if instance.demoted {
                 demotedByTheBoot.append(file.path)
             }

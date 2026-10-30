@@ -139,6 +139,9 @@ WR_TEST(testTheDeclarationRules) {
                  {"width", "calc(1px + env(safe-area-inset-top))", "Augment|calc(1px + var(--tg-content-safe-area-inset-top))"},
                  {"width", "env(keyboard-inset-height, 13px)", "Rewrite|13px"},
                  {"width", "env(keyboard-inset-height)", "Drop|"},
+                 // An empty fallback: kept for a safe-area inset (var() takes one), dropped for another name (resolveEnv).
+                 {"width", "env(safe-area-inset-bottom,)", "Augment|var(--tg-content-safe-area-inset-bottom,)"},
+                 {"width", "env(keyboard-inset-height,)", "Drop|"},
                  {"width", "env(SAFE-AREA-INSET-TOP)", "Drop|"},
                  {"--s", "env(safe-area-inset-bottom)", "Augment|var(--tg-content-safe-area-inset-bottom)"},
                  {"width", "round(10px, 3px)", "Drop|"},

@@ -33,8 +33,9 @@ enum class StepResult : uint8_t { Ran, Idle, Stopped, Deferred };
 /// is `script` in a CPU stop's message, as upstream's pumpScripts names it.
 enum class TaskSource : uint8_t { DOMManipulation, Timer, UserInteraction, Networking, Rendering, Script };
 /// Upstream's task kinds (CpuBudget): boot, event and visibility always run; the others wait while a window is spent.
-/// Resize is upstream's and never queued here (a width change is Viewport). SafeArea (widget-sandbox v0.4.0) is the
-/// client's content safe area changing, which upstream never defers.
+/// A width change's own layout is a Resize step (`flushForHostChange`), so its follow-ups are Resize; the widget's
+/// task after it (its media changes, ResizeObserver) is Viewport. SafeArea (widget-sandbox v0.4.0) is the client's
+/// content safe area changing, which upstream never defers.
 enum class TaskKind : uint8_t { Boot, Event, Visibility, Timer, Frame, Viewport, Resize, Theme, Bridge, SafeArea };
 /// Upstream's string for `kind` ("boot", "event", …).
 std::string_view kindName(TaskKind kind);
@@ -73,7 +74,8 @@ public:
     /// without the widget's thread, and charges no window for it). The flush is a step of `kind` that no window defers:
     /// the whole cpuLimitMs (script its style-change step runs is the widget's: the final review's C1), an operations
     /// batch of its own, its follow-ups of its kind, and endStep's records (the script's time to the JS quota, its
-    /// queries and operations to the main-thread window, the flush's render time to cpuMsTotal only).
+    /// queries and operations to the main-thread window, the flush's render time to cpuMsTotal and, as every step's, to
+    /// largestStepMs: a host change's whole relayout is a step there, the renderer's work included).
     void flushForHostChange(TaskKind kind);
 
     // Statistics (the stress kit's runner): never read by a decision.

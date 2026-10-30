@@ -243,6 +243,18 @@ final class NativeCoreTests: MessageWidgetTestCase {
         instance.destroy()
     }
 
+    /// The task that stops a widget after its first publish is measured too: the stop drops the session, so its CPU is read
+    /// before that (the attack scan's largest tasks, the snapshot's demotion input).
+    func testTheTaskThatStopsAWidgetRecordsItsCpu() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(NativeCoreTests.page + "<script>for (;;) {}</script></body></html>")
+        _ = instance.layout(width: 360.0)
+        XCTAssertTrue(self.pump(until: { instance.deadReason != nil }, timeout: 10.0), "the spin was never stopped")
+        let cpu = instance.largestTaskCpuMillisecondsForTesting(.boot)
+        XCTAssertGreaterThanOrEqual(cpu, 450.0, "the stopping boot task recorded \(cpu) ms")
+        instance.destroy()
+    }
+
     /// The fix wave's review I-A: the boot's own loop is bounded the same way. A chain that doubles at every boot script
     /// (each toBlob callback asks for two more, and a boot link runs only after what the one before it queued) ran 2^10
     /// passes inside the boot task before its load.

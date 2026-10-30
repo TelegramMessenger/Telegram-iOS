@@ -101,15 +101,23 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   assumes the widget fills the bubble (centred in a wider one, its true corner is narrower). With a caption below, all
   0. The date's layout comes before the widget's pass, so the boot has it and the first height has the band
   (`MessageWidgetInstance.contentSafeArea`, read by `layout`; a change is a waited `.layout` task, an equal value
-  nothing, so it changes only with the bubble's layout: a caption edited, "edited", a wider views count). The widget sees
+  nothing, as is any change to a frozen widget, so it changes only with the bubble's layout: a caption edited
+  above or below, "edited", a wider views count; `testACaptionEditChangesTheBandOnce`). The widget sees
   it as `env(safe-area-inset-*)`, the `--tg-content-safe-area-*` root variables, the UA layer's body padding (an
   unstyled widget is that much taller; a full-bleed one sets `body { padding: 0 }`) and `TelegramWidget.contentSafeAreaInset`
-  with `contentSafeAreaChanged` (runtime record, "The content safe area"). The date, and the whole corner box the widget
-  is told it covers (the pill with its margins), are the bubble's, never the widget's: the content node takes touches
-  there (`hitTest`), its tap action is `.none` (a reaction button of the date keeps `.ignore`) and it claims no drag, so
-  swipe-to-reply asks the widget nothing (asking presses it early). The box, not just the pill: a long press's
-  activation and a tap's up convert the down point through the press's shrink, several points toward the corner. The
-  harness: `WidgetHarnessSafeAreaTests`, posts with `captionAbove`.
+  with `contentSafeAreaChanged` (runtime record, "The content safe area"; `env()` in an SVG attribute that is no CSS
+  value, a `stroke-width`, is the renderer's own, as upstream keeps it). The date, and the box around it (`timeCorner`:
+  the pill with its margins on both sides, within the widget), are the bubble's, never the widget's: the content node
+  takes touches there (`hitTest`), its tap action is `.none` (a reaction button of the date keeps `.ignore`) and it
+  claims no drag, so swipe-to-reply asks the widget nothing (asking presses it early). The box, not just the pill: a
+  long press's activation, the tap recognizer's own 0.3 s long tap and a tap's up all convert the down point through the
+  press's shrink, several points toward the corner (the runtime record's v0.4.0 divergence 12). The box is anchored at the pill, so
+  in a bubble wider than a fixed-width widget it covers only the part of the widget the pill is near, and it is nil
+  without a date (a widget that failed to start). While the bubble is lifted (the context menu) nothing shrinks and the
+  text selection takes touches there, its end knob included. Left open: a touch begun just inside the box's inner edge
+  can still drift out of it under the shrink when the pill is wide against the widget (an incoming 200 pt widget with
+  views and "edited", or on iPad; computed 2–5 pt, not measured, not reproducible in the harness). The harness:
+  `WidgetHarnessSafeAreaTests`, posts with `captionAbove`, `WidgetHarnessListHost.replaceCaption`.
 - **Widgets exist only where the bubble lays out on main.** A widget's instance and the height cache are main-thread
   only, so the node boots and queries a widget only in a main-thread pass. The chat history's CoreList backend lays
   out on main; `ListViewImpl` (other lists, and the chat under `ios_killswitch_disable_corelist_chat_backend`) lays

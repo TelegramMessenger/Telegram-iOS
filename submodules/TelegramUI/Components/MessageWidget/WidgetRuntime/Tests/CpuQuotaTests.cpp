@@ -220,18 +220,19 @@ WR_TEST(testTheQuotaRecordsATaskAtItsEnd) {
 }
 
 /// Upstream decides at dispatch on its clock (`dispatch`: `budget_.decide(kind, nowMs())`), not at the drain's start:
-/// a step of a drain begun at 950 that the host reaches at 1010 finds the bucket at 0 gone, and its slice is the 290 ms
-/// the window leaves, not the 50 ms floor.
+/// a step of a drain begun at 950 that the host reaches at 1150 finds the bucket at 0 gone, and its slice is the 290 ms
+/// the window leaves, not the 50 ms floor it would get at 950. The step before it ends past 1100, so its record lands in
+/// the next bucket and leaves the one at 0 in place for a decision at 950 to see.
 WR_TEST(testALaterStepOfADrainIsAdmittedAtTheHostsTime) {
     ScopedCpuLimits limits(wr::CpuLimits{});
     ScopedFakeClock clock(0.0);
-    RenderEnv env(page("setTimeout(() => burn(250), 0); setTimeout(() => { burn(10); elapse(60) }, 950);"
+    RenderEnv env(page("setTimeout(() => burn(250), 0); setTimeout(() => { burn(10); elapse(200) }, 950);"
                        "setTimeout(() => { for (;;) {} }, 950);"),
                   {}, true, installNatives);
     wr::EventLoop& loop = wr::EventLoop::of(env.ctx());
     env.env().host().now = 950;
     CHECK(loop.runNextTask(950) == StepResult::Ran);
-    CHECK_EQ(env.env().host().now, 1010.0);
+    CHECK_EQ(env.env().host().now, 1150.0);
     clock->stepMs = 1.0;
     CHECK(loop.runNextTask(950) == StepResult::Stopped);
     CHECK_EQ(env.env().runtime().stopDetail(), std::string("CPU limit exceeded: more than 290 ms of continuous execution (timer; CPU "

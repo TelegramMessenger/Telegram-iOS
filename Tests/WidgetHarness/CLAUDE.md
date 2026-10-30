@@ -190,7 +190,8 @@ the instance before its first layout (`ConformanceTest.safeArea`); its checks co
 they hold at the bubble's own numbers too. The channel posts such a widget twice, `withoutCaption` and `captionAbove`
 (`MessageWidgetChannelPost.captionPlacement`): the harness's posts and the DEBUG insertion send the first without a
 caption and the second with its caption above (`WidgetHarnessPost.captionAbove`, `InvertMediaMessageAttribute`), where
-the real bubble draws its date over the widget and passes its own band.
+the real bubble draws its date over the widget and passes its own band. `WidgetHarnessListHost.replaceCaption(path:text:captionAbove:)`
+edits a post's caption and where it shows as a message edit does (`testACaptionEditChangesTheBandOnce`).
 
 **The message context and the bot** (widget-sandbox v0.2.1, CLIENTS.md "The message context"):
 - **The context and state:** a test with `message` runs with its first spec's kind (`MessageWidgetMessageKind`, upstream's
