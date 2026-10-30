@@ -1140,6 +1140,20 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         super.didLoad()
     }
     
+    // Start can appear while the chat is off screen (the bot blocked from its profile): the panel then has no window to
+    // measure against, and the tooltip presented then would point at the top of the screen. The chat still lays the
+    // panel out and reports where (`updateAbsoluteRect`), so measure from that.
+    private func startButtonTooltipLocation() -> CGRect {
+        let buttonFrame = self.view.convert(self.startButton.bounds, from: self.startButton.view)
+        let panelMinY: CGFloat
+        if self.view.window == nil, let (absoluteRect, _) = self.absoluteRect {
+            panelMinY = absoluteRect.minY
+        } else {
+            panelMinY = self.view.convert(self.bounds, to: nil).minY
+        }
+        return CGRect(origin: CGPoint(x: buttonFrame.midX, y: panelMinY + buttonFrame.minY - 1.0), size: CGSize())
+    }
+    
     public func loadTextInputNodeIfNeeded() {
         if self.richTextInputNode == nil {
             self.loadTextInputNode(useNative: self.alwaysUseNativeInput)
@@ -1925,17 +1939,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         self.richTextInputNode?.inputIsUserInteractionEnabled = !sendingTextDisabled
         
-        var displayBotStartButton = false
-        if case .scheduledMessages = interfaceState.subject {
-        } else {
-            if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true, _) = chatHistoryState, interfaceState.chatLocation.threadId == nil {
-                    displayBotStartButton = true
-                } else if interfaceState.peerIsBlocked {
-                    displayBotStartButton = true
-                }
-            }
-        }
+        let displayBotStartButton = chatDisplaysBotStartButton(interfaceState)
         
         let inputHasText = !isRecording && !(self.richTextInputNode?.inputContentIsEmpty ?? true)
         
@@ -2016,9 +2020,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     transition.animatePosition(layer: self.startButton.layer, from: CGPoint(x: 0.0, y: 80.0), to: CGPoint(), additive: true)
                 }
                 if let context = self.context {
-                    let parentFrame = self.view.convert(self.bounds, to: nil)
-                    let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-                    let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
+                    let location = self.startButtonTooltipLocation()
                     
                     if let tooltipController = self.tooltipController {
                         if self.view.window != nil {
@@ -2041,10 +2043,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                             guard let self, let tooltipController, self.tooltipController === tooltipController else {
                                 return
                             }
-                            let parentFrame = self.view.convert(self.bounds, to: nil)
-                            let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-                            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
-                            controller.location = .point(location, .bottom)
+                            controller.location = .point(self.startButtonTooltipLocation(), .bottom)
                             self.interfaceInteraction?.presentControllerInCurrent(controller, nil)
                         })
                     }
