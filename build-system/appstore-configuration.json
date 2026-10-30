@@ -9,6 +9,6 @@
 	"appstore_id": "686449807",
 	"app_specific_url_scheme": "tg",
 	"premium_iap_product_id": "org.telegram.telegramPremium.monthly",
-	"enable_siri": true,
+	"enable_siri": false,
 	"enable_icloud": true
 }

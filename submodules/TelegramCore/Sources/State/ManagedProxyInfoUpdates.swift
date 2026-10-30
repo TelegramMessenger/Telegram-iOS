@@ -1,6 +1,7 @@
 import Foundation
 internal import TelegramApi
 import Postbox
+import TwelveSettings
 import SwiftSignalKit
 import MtProtoKit
 
@@ -223,6 +224,9 @@ func _internal_fetchPromoInfo(accountPeerId: EnginePeer.Id, postbox: Postbox, ne
                 }
                 
                 var additionalChatListItems: [AdditionalChatListItem] = []
+                if TwelveSettings.hideAds {
+                    kind = nil
+                }
                 if let kind, let peer, let parsedPeer = transaction.getPeer(peer.peerId) {
                     additionalChatListItems.append(PromoChatListItem(peerId: parsedPeer.id, kind: kind))
                 }

@@ -251,5 +251,10 @@ public func stringForMessageTimestampStatus(
         }
     }
     
+    // Kept by "Save deleted messages" (Настройки Pure) after it was deleted on the server.
+    if message.isTwelveDeleted {
+        dateText = "🗑 \(dateText)"
+    }
+    
     return dateText
 }

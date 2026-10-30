@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TwelveSettings
 import SwiftSignalKit
 internal import TelegramApi
 
@@ -39,6 +40,9 @@ public class AdPeer: Equatable {
 }
 
 func _internal_searchAdPeers(account: Account, query: String) -> Signal<[AdPeer], NoError> {
+    if TwelveSettings.hideAds {
+        return .single([])
+    }
     return account.network.request(Api.functions.contacts.getSponsoredPeers(q: query))
     |> map(Optional.init)
     |> `catch` { _ in

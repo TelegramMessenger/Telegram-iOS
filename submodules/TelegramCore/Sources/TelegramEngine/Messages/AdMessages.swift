@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TwelveSettings
 import SwiftSignalKit
 internal import TelegramApi
 
@@ -451,7 +452,7 @@ private class AdMessagesHistoryContextImpl {
 
         self.stateValue = State(interPostInterval: nil, messages: [])
 
-        if messageId == nil {
+        if messageId == nil && !TwelveSettings.hideAds {
             self.state.set(CachedState.getCached(postbox: account.postbox, peerId: peerId)
             |> mapToSignal { cachedState -> Signal<State, NoError> in
                 if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
@@ -481,6 +482,10 @@ private class AdMessagesHistoryContextImpl {
             return
         }
         self.isActivated = true
+        
+        if TwelveSettings.hideAds {
+            return
+        }
         
         let peerId = self.peerId
         let accountPeerId = self.account.peerId

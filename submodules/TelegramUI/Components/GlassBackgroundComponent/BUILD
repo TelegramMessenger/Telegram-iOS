@@ -16,6 +16,7 @@ swift_library(
         "//submodules/UIKitRuntimeUtils",
         "//submodules/AppBundle",
         "//submodules/TelegramUI/Components/MeshTransform",
+        "//submodules/TwelveSettings",
     ],
     visibility = [
         "//visibility:public",

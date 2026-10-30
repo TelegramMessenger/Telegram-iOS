@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import TwelveSettings
 import ComponentDisplayAdapters
 import UIKitRuntimeUtils
 import CoreImage
@@ -565,6 +566,7 @@ public class GlassBackgroundView: UIView {
     }
     
     public private(set) var params: Params?
+    private var appliedIsFlat: Bool?
         
     public static var useCustomGlassImpl: Bool = false
     
@@ -772,10 +774,15 @@ public class GlassBackgroundView: UIView {
         }
         
         let params = Params(shape: shape, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
-        if self.params != params {
+        // "Disable fake glass" (Настройки Pure) only changes the custom glass: no rim, highlights or shadow, just a fill.
+        let isFlat = self.foregroundView != nil && TwelveSettings.disableFakeGlass
+        if self.params != params || self.appliedIsFlat != isFlat {
             self.params = params
+            self.appliedIsFlat = isFlat
             
-            if let shadowView = self.shadowView {
+            if let shadowView = self.shadowView, isFlat {
+                shadowView.image = nil
+            } else if let shadowView = self.shadowView {
                 switch shape {
                 case let .roundedRect(cornerRadius):
                     shadowView.image = Self.generateLegacyShadowImage(cornerRadius: cornerRadius, shadowInset: shadowInset)
@@ -808,11 +815,28 @@ public class GlassBackgroundView: UIView {
                         borderWidthFactor = 1.0
                     }
                 }
+                if isFlat {
+                    let flatFillColor: UIColor
+                    switch tintColor.kind {
+                    case .panel:
+                        if isDark {
+                            flatFillColor = UIColor(white: 0.11, alpha: 0.92)
+                        } else {
+                            flatFillColor = UIColor(white: 0.97, alpha: 0.9)
+                        }
+                    case .clear:
+                        flatFillColor = UIColor(white: isDark ? 0.0 : 1.0, alpha: 0.12)
+                    case .custom:
+                        flatFillColor = fillColor
+                    }
+                    foregroundView.image = GlassBackgroundView.generateFlatGlassImage(cornerRadii: shape.cornerRadii(for: size), inset: shadowInset, fillColor: flatFillColor)
+                } else {
                 switch shape {
                 case let .roundedRect(cornerRadius):
                     foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
                 case let .customRoundedRect(cornerRadii):
                     foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(cornerRadii: GlassBackgroundView.clampedCornerRadii(size: size, cornerRadii: cornerRadii), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
+                }
                 }
                 #if DEBUG
                 //foregroundView.image = nil
@@ -1160,6 +1184,21 @@ private func legacyResizableImageMetrics(cornerRadii: GlassBackgroundView.Corner
 }
 
 public extension GlassBackgroundView {
+    /// The custom glass's foreground with "Disable fake glass" (Настройки Pure) on: the shape filled with one colour,
+    /// laid out exactly like `generateLegacyGlassImage(cornerRadii:...)` so it stretches into the same frame.
+    static func generateFlatGlassImage(cornerRadii: CornerRadii, inset: CGFloat, fillColor: UIColor) -> UIImage? {
+        let metrics = legacyResizableImageMetrics(cornerRadii: cornerRadii, inset: inset)
+        return generateImage(metrics.imageSize, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(fillColor.cgColor)
+            context.addPath(GlassBackgroundView.generateRoundedRectPath(rect: metrics.innerRect, cornerRadii: cornerRadii))
+            context.fillPath()
+        })?.stretchableImage(
+            withLeftCapWidth: metrics.leftCapWidth,
+            topCapHeight: metrics.topCapHeight
+        )
+    }
+    
     static func generateLegacyShadowImage(cornerRadius: CGFloat, shadowInset: CGFloat = 32.0, shadowIntensity: CGFloat = 0.04, shadowBlur: CGFloat = 40.0) -> UIImage? {
         let shadowInnerInset: CGFloat = 0.5
         let diameter = max(1.0, cornerRadius * 2.0)
