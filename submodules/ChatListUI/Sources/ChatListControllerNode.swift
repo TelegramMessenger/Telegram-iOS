@@ -1898,7 +1898,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var storiesInset = storiesInset
         
         let navigationBarLayout = self.updateNavigationBar(layout: layout, deferScrollApplication: true, transition: ComponentTransition(transition))
-        self.mainContainerNode.initialScrollingOffset = ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
+        // The chat side list opens with its search shown, not scrolled under the header.
+        self.mainContainerNode.initialScrollingOffset = ((self.controller?.isSideList ?? false) ? 0.0 : ChatListNavigationBar.searchScrollHeight) + navigationBarLayout.storiesInset
         
         navigationBarHeight = navigationBarLayout.navigationHeight
         visualNavigationHeight = navigationBarLayout.navigationHeight
