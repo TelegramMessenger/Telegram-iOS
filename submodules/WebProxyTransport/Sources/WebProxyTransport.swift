@@ -45,6 +45,12 @@ public final class WebProxyTransport: WebProxyCarrier {
 
     private var configuration: WebProxyConfiguration?
     private var demand = WebProxyDemandSet()
+    private let processPolicy: WebProxyProcessPolicy
+    private var hasViewHost = false
+
+    private var shouldRunCarrier: Bool {
+        return self.processPolicy.shouldRun(hasConfiguration: self.configuration != nil, hasDemand: !self.demand.isEmpty, hasViewHost: self.hasViewHost)
+    }
     /// Main-queue confined; never touched from `self.queue`.
     private let viewAttachment = WebProxyViewAttachment()
     private var carrier: WebProxyWebViewCarrier?
@@ -65,7 +71,8 @@ public final class WebProxyTransport: WebProxyCarrier {
     private var lastPageStatus: WebProxyPageStatus?
     private var testPage: ((WebProxyFrame) -> Void)?
 
-    init() {
+    init(processPolicy: WebProxyProcessPolicy = .current) {
+        self.processPolicy = processPolicy
     }
 
     /// Stands a page in for the web view, for tests: frames sent go to `page`, and the carrier is ready.
@@ -112,6 +119,14 @@ public final class WebProxyTransport: WebProxyCarrier {
     public func setViewHost(_ host: WebProxyCarrierViewHost?) {
         DispatchQueue.main.async {
             self.viewAttachment.setHost(host)
+            let hasViewHost = host != nil
+            self.queue.async {
+                guard self.hasViewHost != hasViewHost else { return }
+                self.hasViewHost = hasViewHost
+                // In Share, releasing the visible host also cancels retries and
+                // closes streams even if an Account still owns a demand lease.
+                self.updateCarrierActivation()
+            }
         }
     }
 
@@ -128,7 +143,7 @@ public final class WebProxyTransport: WebProxyCarrier {
 
     /// The carrier runs exactly while a configuration is present and someone wants it.
     private func updateCarrierActivation() {
-        if self.configuration != nil && !self.demand.isEmpty {
+        if self.shouldRunCarrier {
             guard self.carrierState == .inactive, self.retryWorkItem == nil else { return }
             self.startCarrier()
         } else {
@@ -243,7 +258,7 @@ public final class WebProxyTransport: WebProxyCarrier {
     }
 
     private func startCarrier() {
-        guard let configuration = self.configuration else { return }
+        guard self.shouldRunCarrier, let configuration = self.configuration else { return }
         self.generation &+= 1
         let generation = self.generation
         self.carrierState = .loading
@@ -327,12 +342,12 @@ public final class WebProxyTransport: WebProxyCarrier {
         WebProxyDiagnostics.failure(reason)
         self.statusPromise.set(.failed)
         self.stopCarrier(reportInactive: false)
-        guard self.configuration != nil, !self.demand.isEmpty else { return }
+        guard self.shouldRunCarrier else { return }
         let delay = min(30.0, pow(2.0, Double(self.retryAttempt)))
         self.retryAttempt = min(self.retryAttempt + 1, 6)
         let jitter = Double.random(in: 0 ... min(1.0, delay * 0.2))
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.configuration != nil else { return }
+            guard let self, self.shouldRunCarrier else { return }
             self.retryWorkItem = nil
             self.startCarrier()
         }
