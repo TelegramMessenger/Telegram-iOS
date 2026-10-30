@@ -1620,6 +1620,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var category: PeerActivitySpace.Category = .global
                         if case .speakingInGroupCall = activity {
                             category = .voiceChat
+                        } else if let threadId = threadId {
+                            category = .thread(threadId)
                         }
                         
                         updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), category: category), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), activity: activity)
