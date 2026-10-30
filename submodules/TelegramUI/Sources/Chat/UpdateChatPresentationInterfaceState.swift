@@ -16,6 +16,8 @@ import WebUI
 import LegacyChatHeaderPanelComponent
 import ComponentFlow
 import ComponentDisplayAdapters
+import ChatTitleView
+import EmojiStatusComponent
 
 extension ChatControllerImpl {
     func updateRightNavigationButtons(presentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition) {
@@ -515,11 +517,31 @@ func updateChatPresentationInterfaceStateImpl(
     var forceLayout = false
     
     if var chatTitleContent = selfController.contentData?.state.chatTitleContent, let chatTitleView = selfController.chatTitleView {
-        // With the side list, Saved Messages' header is its avatar and name: the list replaces "Tap to view as chats".
-        var showsSavedMessagesAvatar = false
-        if case .savedMessages = selfController.currentSideListKind(presentationInterfaceState: updatedChatPresentationInterfaceState), case .peer = updatedChatPresentationInterfaceState.chatLocation, case let .peer(peerView, customTitle, _, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, hidePeerStatus, isEnabled) = chatTitleContent {
-            showsSavedMessagesAvatar = true
-            chatTitleContent = .peer(peerView: peerView, customTitle: customTitle, customSubtitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: isMuted, customMessageCount: customMessageCount, hidePeerStatus: hidePeerStatus, isEnabled: isEnabled)
+        // With the side list, the header's right avatar gives way to the list's button, so the title carries the chat's
+        // icon before it: Saved Messages' own (the list replaces "Tap to view as chats"), a sub-chat's peer, a topic's
+        // icon. A channel's direct messages name the channel below.
+        var leadingIcon: ChatTitleLeadingIcon?
+        if let sideListKind = selfController.currentSideListKind(presentationInterfaceState: updatedChatPresentationInterfaceState), case let .peer(peerView, customTitle, customSubtitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, hidePeerStatus, isEnabled) = chatTitleContent {
+            var subtitle = customSubtitle
+            if updatedChatPresentationInterfaceState.chatLocation.threadId == nil {
+                if case .savedMessages = sideListKind {
+                    leadingIcon = .savedMessages
+                    subtitle = nil
+                }
+            } else {
+                switch selfController.contentData?.state.infoAvatar {
+                case let .peer(peer, imageOverride, _, _):
+                    leadingIcon = .peer(peer, imageOverride: imageOverride)
+                case let .emojiStatus(content, _):
+                    leadingIcon = .emojiStatus(chatTitleLeadingEmojiStatus(content))
+                case .none:
+                    break
+                }
+                if case .monoforum = sideListKind, let channel = updatedChatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = updatedChatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] {
+                    subtitle = "\(EnginePeer(mainChannel).compactDisplayTitle) · \(selfController.presentationData.strings.Chat_SideList_DirectMessages)"
+                }
+            }
+            chatTitleContent = .peer(peerView: peerView, customTitle: customTitle, customSubtitle: subtitle, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: isMuted, customMessageCount: customMessageCount, hidePeerStatus: hidePeerStatus, isEnabled: isEnabled)
         }
         var titleTransition = ComponentTransition(transition)
         if case .messageOptions = selfController.subject {
@@ -534,7 +556,7 @@ func updateChatPresentationInterfaceStateImpl(
             dateTimeFormat: selfController.presentationData.dateTimeFormat,
             nameDisplayOrder: selfController.presentationData.nameDisplayOrder,
             content: chatTitleContent,
-            showsSavedMessagesAvatar: showsSavedMessagesAvatar,
+            leadingIcon: leadingIcon,
             transition: titleTransition,
             ignoreParentTransitionRequests: true
         )
@@ -651,4 +673,17 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     selfController.stateUpdated?(transition)
+}
+
+/// A topic's icon at the size of the title's leading icon.
+private func chatTitleLeadingEmojiStatus(_ content: EmojiStatusComponent.Content) -> EmojiStatusComponent.Content {
+    let size = CGSize(width: 22.0, height: 22.0)
+    switch content {
+    case let .topic(title, color, _):
+        return .topic(title: title, color: color, size: size)
+    case let .animation(animationContent, _, placeholderColor, themeColor, loopMode):
+        return .animation(content: animationContent, size: size, placeholderColor: placeholderColor, themeColor: themeColor, loopMode: loopMode)
+    default:
+        return content
+    }
 }
