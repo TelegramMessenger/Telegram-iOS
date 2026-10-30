@@ -187,7 +187,8 @@ subsystem from elsewhere.
   `RichTextInputDecObjC/` (edit them here; their own tests are in `RichTextEditor/Host/Engine/`). Guides there and in
   `Sources/RichTextEngineEditor/` (the "Input V3" editor) and `Sources/RichTextEditorUIKit/InputBackend/`.
 - **TelegramApi** (generated from `swift_scheme.tl`): `submodules/TelegramApi/CLAUDE.md`. Only TelegramCore may
-  `import TelegramApi`; elsewhere it would still compile.
+  `import TelegramApi`; elsewhere it would still compile. The news feed and agent APIs are parked behind `#if` there
+  ("Parked APIs"); News and an agent bot's provider rows are off while they are.
 - **Chat history list, send animation, a non-contact's unaccepted chat**: `submodules/TelegramUI/Sources/CLAUDE.md`;
   the CoreList backend: `submodules/TelegramUI/Components/CoreList/CLAUDE.md`,
   [`docs/chat/corelist-chat-history-backend.md`](docs/chat/corelist-chat-history-backend.md).

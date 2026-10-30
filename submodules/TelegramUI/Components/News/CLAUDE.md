@@ -5,6 +5,16 @@ The News tab (`NewsScreen`) draws its own header (`NewsHeaderView`) over two Cor
 which has a host-free `ios_unit_test` (`//submodules/TelegramUI/Components/News/NewsFeedSupport:NewsFeedSupportTests`,
 run via `Make.py test --target`).
 
+## Parked: News is off while the feed API is (2026-10-30)
+
+Layer 233 as the server serves it has no feed API, so News is parked (`submodules/TelegramApi/CLAUDE.md`, "Parked
+APIs"). `isNewsFeedEnabled` and `isNewsFeedServerAvailable` take `apiIsAvailable` (default `newsFeedApiIsAvailable`,
+false in this build) and are false while it is, before `dev` and `news_feed_enabled`: the tab, the channel bar's News
+states and the title's mute badge are gone for every account, the device-built Added feed included, though it needs no
+feed API. `NewsScreen` is still created, like the hidden Calls tab, and never loads, so no feed context starts. The
+app's News code has no `#if`: it compiles and its tests run; the parameter exists so the tests can pin the app-config
+rules as they apply with the API.
+
 ## Compact / Expanded posts (2026-10-23)
 
 The "…" menu's last section switches every post row between **Compact** (channel line, up to three lines of

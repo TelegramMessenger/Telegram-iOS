@@ -6,6 +6,7 @@ import TelegramApi
 final class FeedApiConversionTests: XCTestCase {
     private let channel = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(77))
 
+#if TELEGRAM_NEWS_FEED_API
     func testPositionRoundTripsThroughApi() {
         let position = EngineFeedPosition(date: 1_700_000_000, peerId: self.channel, id: 42)
         XCTAssertEqual(EngineFeedPosition(apiPosition: position.apiPosition), position)
@@ -54,6 +55,7 @@ final class FeedApiConversionTests: XCTestCase {
         }
         XCTAssertEqual(messages.compactMap { $0.id()?.id }, [5, 6])
     }
+#endif
 
     func testForYouBatchTakesAGroupsStoredMessages() {
         let peer = Api.Peer.peerChannel(.init(channelId: 77))
@@ -76,6 +78,7 @@ final class FeedApiConversionTests: XCTestCase {
         ])
     }
 
+#if TELEGRAM_NEWS_FEED_API
     func testInterestCategories() {
         let result = Api.feed.InterestCategories.interestCategories(.init(categories: [
             .interestCategory(.init(flags: 1 << 0, id: 3, title: "AI", emoji: "🤖", emojiDocumentId: nil)),
@@ -87,4 +90,5 @@ final class FeedApiConversionTests: XCTestCase {
         ], selectedIds: [4]))
         XCTAssertNil(parseInterestCategories(.interestCategoriesNotModified))
     }
+#endif
 }

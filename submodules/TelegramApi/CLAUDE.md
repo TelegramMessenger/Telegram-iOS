@@ -93,3 +93,40 @@ Compiler-invisible rules:
 - Tests: `swift test --package-path submodules/TelegramApi` after `generate-swiftpm.sh` (and
   `-c release -Xswiftc -enable-testing`), `swift test --package-path build-system/SwiftTL`; Bazel:
   `Make.py test --target //submodules/TelegramApi:TelegramApiTests`.
+
+## Parked APIs: the news feed and the agent (layer 233)
+
+Layer 233 as the server serves it (the schema of 2026-10-30) has no news feed API (`feed.*`, `feedPosition`,
+`updateReadFeed`, `channels.editChannelNews`, `channels.joinChannel`'s `for_news`) and no agent API (`agent.*`,
+`updateAgentSettings`). Their code is parked, not deleted: TelegramCore wraps only the lines that name a removed symbol
+in `#if TELEGRAM_NEWS_FEED_API` or `#if TELEGRAM_AGENT_API`, and nothing defines either. None of this shows up as a
+build error:
+
+- **Each `#else` sends nothing.** The feed answers with empty successes (an empty For you batch or Added page, a read
+  mark kept local, the interests unchanged, a vote dropped), so no context retries; a join is always the plain one and
+  asserts that nothing asked for a News-only one. The agent's requests fail with `.notAvailable` and its provider
+  refresh completes. Both features' models, contexts, caches and read state stay compiled. Code in an inactive `#if`
+  is not type-checked, which is why the blocks are kept small.
+- **The agent settings travel as `EngineAgentSettings`** through the state pipeline (the operation, the final state's
+  events, the event hub), not as the Api type: a parameter of `AccountFinalStateEvents`' initializer cannot be inside
+  an `#if`. Only the interpreter's decode is parked.
+- **One gate per feature hides it in the app.** TelegramCore exports `newsFeedApiIsAvailable` and
+  `agentApiIsAvailable` (Swift defines are per module, so the app cannot test the conditions itself).
+  `isNewsFeedEnabled` and `isNewsFeedServerAvailable` (NewsFeedSupport) are false while the first is: News is off for
+  every account, the device-built Added feed included (`submodules/TelegramUI/Components/News/CLAUDE.md`).
+  An agent bot's profile shows no provider rows while the second is false (`peerInfoScreenData` checks it beside
+  `isAgentBotPeer`, which stays ungated: the agent chat's composer does not use the API). A new entry point to either
+  feature's API must go through its gate.
+- **`in_news` is not parked:** layer 233's `channel` keeps `flags2.21`. With News off a channel stored with it shows
+  Join or Mute/Unmute, as before News (`NewsChannelBarAction`).
+
+To bring one back:
+
+1. restore its entries in `swift_scheme.tl` as the server has them;
+2. define its condition for both TelegramCore and its tests: `"-DTELEGRAM_NEWS_FEED_API"` (or
+   `"-DTELEGRAM_AGENT_API"`) in the `copts` of `TelegramCore` and `TelegramCoreTestsLib` in
+   `submodules/TelegramCore/BUILD`, and `.define(...)` in the `swiftSettings` of the `TelegramCore` and
+   `TelegramCoreTests` targets in its `Package.swift`. The tests are their own module: `ParkedApiTests` fails when
+   only TelegramCore has the condition, which would leave the parked tests (`FeedApiConversionTests`' Api cases)
+   compiled out;
+3. run `generate-swiftpm.sh`.

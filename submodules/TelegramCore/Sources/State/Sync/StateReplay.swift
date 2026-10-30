@@ -271,7 +271,7 @@ final class ReplayContext {
     /// Event.
     var updatedWalletState: Api.WalletState?
     /// Event.
-    var updatedAgentSettings: Api.agent.Settings?
+    var updatedAgentSettings: EngineAgentSettings?
     /// Event.
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     /// Persisted by `finalize`.

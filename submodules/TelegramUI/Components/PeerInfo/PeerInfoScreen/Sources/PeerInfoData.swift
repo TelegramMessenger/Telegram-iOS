@@ -1482,7 +1482,9 @@ func peerInfoScreenData(
             let webAppPermissions: Signal<WebAppPermissionsState?, NoError>
             var agentSettingsContext: AgentSettingsContext?
             let agentState: Signal<AgentSettingsContext.State?, NoError>
-            if case .bot = kind, isAgentBotPeer(appConfiguration: context.currentAppConfiguration.with({ $0 }), peerId: userPeerId) {
+            // The provider rows run on the agent API, parked while `agentApiIsAvailable` is false (its requests would all
+            // fail); the agent chat's own composer does not need it.
+            if case .bot = kind, agentApiIsAvailable, isAgentBotPeer(appConfiguration: context.currentAppConfiguration.with({ $0 }), peerId: userPeerId) {
                 let agentSettingsContextValue = context.engine.agent.settingsContext()
                 agentSettingsContext = agentSettingsContextValue
                 agentState = agentSettingsContextValue.state

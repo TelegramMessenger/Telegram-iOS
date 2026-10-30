@@ -92,7 +92,9 @@ extension UpdateInterpreter {
         updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId, messages), date: nil)
     }
 
+#if TELEGRAM_NEWS_FEED_API
     mutating func applyReadFeed(_ updateReadFeedData: Api.Update.Cons_updateReadFeed) {
         updatedState.updateReadFeed(filterId: updateReadFeedData.filterId, maxPosition: EngineFeedPosition(apiPosition: updateReadFeedData.maxPosition))
     }
+#endif
 }

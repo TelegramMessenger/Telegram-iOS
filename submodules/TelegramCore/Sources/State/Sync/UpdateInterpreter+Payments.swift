@@ -32,9 +32,11 @@ extension UpdateInterpreter {
         updatedState.updateWalletState(updateWalletStateData.state)
     }
 
+#if TELEGRAM_AGENT_API
     mutating func applyAgentSettings(_ updateAgentSettingsData: Api.Update.Cons_updateAgentSettings) {
-        updatedState.updateAgentSettings(updateAgentSettingsData.settings)
+        updatedState.updateAgentSettings(EngineAgentSettings(apiSettings: updateAgentSettingsData.settings))
     }
+#endif
     
     mutating func applyStarsRevenueStatus(_ updateStarsRevenueStatusData: Api.Update.Cons_updateStarsRevenueStatus) {
         updatedState.updateStarsRevenueStatus(peerId: updateStarsRevenueStatusData.peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: updateStarsRevenueStatusData.status))

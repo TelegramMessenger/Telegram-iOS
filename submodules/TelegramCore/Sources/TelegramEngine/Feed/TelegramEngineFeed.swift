@@ -2,6 +2,15 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 
+/// Whether this build talks the feed API (`TELEGRAM_NEWS_FEED_API`). Layer 233 as the server serves it has none: while
+/// this is false nothing is sent, and the app hides News (`isNewsFeedEnabled`; `submodules/TelegramApi/CLAUDE.md`,
+/// "Parked APIs").
+#if TELEGRAM_NEWS_FEED_API
+public let newsFeedApiIsAvailable = true
+#else
+public let newsFeedApiIsAvailable = false
+#endif
+
 public extension TelegramEngine {
     final class Feed {
         private let account: Account
