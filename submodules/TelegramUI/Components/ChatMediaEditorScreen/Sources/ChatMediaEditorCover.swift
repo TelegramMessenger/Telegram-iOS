@@ -95,8 +95,11 @@ let chatMediaEditorCoverGalleryButtonOffset: CGFloat = 16.0
 public let chatMediaEditorCoverSaveButtonHeight: CGFloat = 50.0
 let chatMediaEditorCoverSideInset: CGFloat = 16.0
 
-public func chatMediaEditorCoverButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, headerFrame: CGRect, buttonWidth: CGFloat) -> CGRect {
+public func chatMediaEditorCoverButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, headerFrame: CGRect, buttonWidth: CGFloat, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
     let trackMinY = headerFrame.minY + floor((headerFrame.height - chatMediaEditorCoverScrubberTrackHeight) / 2.0)
+    if toolbarSide != nil {
+        return CGRect(x: headerFrame.minX + floorToScreenPixels((headerFrame.width - buttonWidth) / 2.0), y: trackMinY - 1.0 - chatMediaEditorCoverButtonHeight, width: buttonWidth, height: chatMediaEditorCoverButtonHeight)
+    }
     let availableWidth = size.width - safeInsets.left - safeInsets.right
     return CGRect(x: safeInsets.left + floorToScreenPixels((availableWidth - buttonWidth) / 2.0), y: trackMinY - 1.0 - chatMediaEditorCoverButtonHeight, width: buttonWidth, height: chatMediaEditorCoverButtonHeight)
 }

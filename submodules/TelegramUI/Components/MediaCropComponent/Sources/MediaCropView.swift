@@ -10,6 +10,15 @@ private let mediaCropBackdropDuration: Double = 0.16
 private let mediaCropConfirmDelay: Double = 1.0
 private let mediaCropInterfaceFadeDuration: Double = 0.2
 
+public func mediaCropDialHitInsets(axis: MediaCropDialAxis) -> UIEdgeInsets {
+    switch axis {
+    case .horizontal:
+        return mediaCropDialHitInsets
+    case .vertical:
+        return UIEdgeInsets(top: mediaCropControlHitInset - mediaCropContainerInset, left: mediaCropDialHitInsets.left, bottom: mediaCropDialHitInsets.bottom, right: mediaCropDialHitInsets.right)
+    }
+}
+
 private final class MediaCropCompletionGroup {
     private var remaining: Int
     private let completion: (() -> Void)?
@@ -132,6 +141,7 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
     private var disabledAdjustments: [MediaCropAdjustment: CGFloat] = [:]
 
     private var containerFrame: CGRect?
+    private var laidOutContainerFrame: CGRect?
     private var areaFrame: CGRect = .zero
     private var placement = MediaCropContentPlacement(center: .zero, scale: 1.0)
 
@@ -316,7 +326,14 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
         self.interactionBegan?()
     }
 
+    private var canLayoutToContainer: Bool {
+        return !self.areaView.isTracking && !self.isAnimatingSettle && !self.isAnimatingRotation && !self.isAnimatingMirror && self.activeContentGestures.isEmpty && !(self.rotationDialView?.isTracking ?? false)
+    }
+
     private func endInteractionIfIdle() {
+        if let containerFrame = self.containerFrame, containerFrame != self.laidOutContainerFrame, self.confirmWorkItem == nil, self.canLayoutToContainer {
+            self.layoutToState(transition: mediaCropSettleTransition)
+        }
         if !self.isInteracting || self.isTracking {
             return
         }
@@ -337,11 +354,12 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
         self.blurView.frame = self.bounds
     }
 
-    public func update(containerFrame: CGRect, rotationDialFrame: CGRect, rotationDialScale: CGFloat = 1.0, selectorFrame: CGRect? = nil, transition: ComponentTransition) {
+    public func update(containerFrame: CGRect, rotationDialFrame: CGRect, rotationDialScale: CGFloat = 1.0, rotationDialAxis: MediaCropDialAxis = .horizontal, selectorFrame: CGRect? = nil, transition: ComponentTransition) {
         let previousContainerFrame = self.containerFrame
         self.containerFrame = containerFrame
 
         if let adjustmentSelectorView = self.adjustmentSelectorView, let selectorFrame {
+            adjustmentSelectorView.layoutAxis = rotationDialAxis
             if previousContainerFrame == nil {
                 adjustmentSelectorView.frame = selectorFrame
             } else {
@@ -351,10 +369,24 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
 
         if let rotationDialView = self.rotationDialView {
             rotationDialView.rulerScale = rotationDialScale
-            if previousContainerFrame == nil {
-                rotationDialView.frame = rotationDialFrame
+            rotationDialView.hitInsets = mediaCropDialHitInsets(axis: rotationDialAxis)
+            if case .horizontal = rotationDialAxis, rotationDialView.transform.isIdentity {
+                if previousContainerFrame == nil {
+                    rotationDialView.frame = rotationDialFrame
+                } else {
+                    transition.setFrame(view: rotationDialView, frame: rotationDialFrame)
+                }
             } else {
-                transition.setFrame(view: rotationDialView, frame: rotationDialFrame)
+                let placement = mediaCropDialPlacement(frame: rotationDialFrame, axis: rotationDialAxis)
+                let axisChanged = rotationDialView.transform != placement.transform
+                rotationDialView.transform = placement.transform
+                if previousContainerFrame == nil || axisChanged {
+                    rotationDialView.bounds = placement.bounds
+                    rotationDialView.center = placement.center
+                } else {
+                    transition.setBounds(view: rotationDialView, bounds: placement.bounds)
+                    transition.setPosition(view: rotationDialView, position: placement.center)
+                }
             }
         }
 
@@ -372,7 +404,7 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
         if self.confirmWorkItem != nil {
             self.performConfirm(animated: false)
         }
-        if !self.areaView.isTracking && !self.isAnimatingSettle && !self.isAnimatingRotation && !self.isAnimatingMirror && self.activeContentGestures.isEmpty && !(self.rotationDialView?.isTracking ?? false) {
+        if self.canLayoutToContainer {
             self.layoutToState(transition: mediaCropContainedTransition(transition))
         }
     }
@@ -382,6 +414,7 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
             completion?()
             return
         }
+        self.laidOutContainerFrame = containerFrame
         let frame = mediaCropAreaFrame(cropSize: self.state.cropRect.size, orientation: self.state.orientation, container: containerFrame)
         let placement = mediaCropContentPlacement(cropRect: self.state.cropRect, state: self.state, frame: frame)
         let group = MediaCropCompletionGroup(count: 2, completion: completion)

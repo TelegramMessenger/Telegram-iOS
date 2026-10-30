@@ -66,12 +66,11 @@ extension ChatMediaEditorScreen.Node {
         self.updateEntityInteraction()
         self.requestLayout(transition: .animated(duration: 0.3, curve: .spring))
 
-        let previewFrame = self.previewFrame(layout: layout)
         let toolsScreen = MediaToolsScreen(
             context: self.context,
             mediaEditor: self.mediaEditor,
             hiddenTools: self.canEnhance ? [] : [.enhance],
-            layoutStyle: .chat(previewFrame: previewFrame, mediaGeometry: chatMediaEditorToolsMediaGeometry(values: self.mediaEditor.values, previewFrame: previewFrame)),
+            layoutStyle: self.toolsLayoutStyle(layout: layout),
             externalControls: true
         )
         toolsScreen.dismissed = { [weak self] in
@@ -79,6 +78,7 @@ extension ChatMediaEditorScreen.Node {
                 return
             }
             self.toolsScreen = nil
+            self.setInteractionTracking(false, source: "tools")
             self.selectionEditCommitted()
             self.activeTool = nil
             self.updateEntityInteraction()
@@ -94,9 +94,31 @@ extension ChatMediaEditorScreen.Node {
                 self.requestLayout(transition: .animated(duration: 0.2, curve: .easeInOut))
             }
         }
+        toolsScreen.externalTrackingUpdated = { [weak self] isTracking in
+            self?.setInteractionTracking(isTracking, source: "tools")
+        }
         self.lastHighlightedToolsTabs = self.highlightedToolsTabs
         self.toolsScreen = toolsScreen
         self.embedToolController(toolsScreen)
+    }
+
+    func toolsLayoutStyle(layout: ContainerViewLayout) -> MediaToolsScreen.LayoutStyle {
+        let previewFrame = self.previewFrame(layout: layout)
+        let sidePanelFrame = self.toolbarSide(layout: layout).flatMap { side in
+            chatMediaEditorLandscapeToolsPanelFrame(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), side: side)
+        }
+        return .chat(
+            previewFrame: previewFrame,
+            mediaGeometry: chatMediaEditorToolsMediaGeometry(values: self.mediaEditor.values, previewFrame: previewFrame),
+            sidePanelFrame: sidePanelFrame
+        )
+    }
+
+    func updateToolsLayoutStyle(layout: ContainerViewLayout) {
+        guard self.activeTool == .tools, let toolsScreen = self.toolsScreen else {
+            return
+        }
+        toolsScreen.updateLayoutStyle(self.toolsLayoutStyle(layout: layout))
     }
 
     func selectToolsSection(_ tab: ChatMediaEditorToolsTab) {

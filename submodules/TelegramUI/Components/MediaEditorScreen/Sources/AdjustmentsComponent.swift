@@ -220,6 +220,7 @@ final class AdjustmentsComponent: Component {
     let tools: [AdjustmentTool]
     let bottomInset: CGFloat
     let bottomContentInset: CGFloat?
+    let ignoresSafeArea: Bool
     let valueUpdated: (EditorToolKey, Float) -> Void
     let isTrackingUpdated: (Bool) -> Void
     
@@ -227,12 +228,14 @@ final class AdjustmentsComponent: Component {
         tools: [AdjustmentTool],
         bottomInset: CGFloat = 0.0,
         bottomContentInset: CGFloat? = nil,
+        ignoresSafeArea: Bool = false,
         valueUpdated: @escaping (EditorToolKey, Float) -> Void,
         isTrackingUpdated: @escaping (Bool) -> Void
     ) {
         self.tools = tools
         self.bottomInset = bottomInset
         self.bottomContentInset = bottomContentInset
+        self.ignoresSafeArea = ignoresSafeArea
         self.valueUpdated = valueUpdated
         self.isTrackingUpdated = isTrackingUpdated
     }
@@ -245,6 +248,9 @@ final class AdjustmentsComponent: Component {
             return false
         }
         if lhs.bottomContentInset != rhs.bottomContentInset {
+            return false
+        }
+        if lhs.ignoresSafeArea != rhs.ignoresSafeArea {
             return false
         }
         return true
@@ -363,6 +369,10 @@ final class AdjustmentsComponent: Component {
             let contentSize = CGSize(width: availableSize.width, height: origin.y)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
+            }
+            let adjustmentBehavior: UIScrollView.ContentInsetAdjustmentBehavior = component.ignoresSafeArea ? .never : .automatic
+            if self.scrollView.contentInsetAdjustmentBehavior != adjustmentBehavior {
+                self.scrollView.contentInsetAdjustmentBehavior = adjustmentBehavior
             }
             let insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: component.bottomContentInset ?? component.bottomInset, right: 0.0)
             if self.scrollView.contentInset != insets {

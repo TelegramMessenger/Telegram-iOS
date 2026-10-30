@@ -31,6 +31,8 @@ public final class MediaEditorBottomControlsComponent: Component {
     public let leftPressed: () -> Void
     public let rightPressed: () -> Void
     public let rightLongPressed: ((UIView) -> Void)?
+    public let customLayout: MediaEditorBottomControlsCustomLayout?
+    public let middleFadesWhenEmpty: Bool
 
     public init(
         spec: MediaEditorBottomControlsLayoutSpec,
@@ -48,7 +50,9 @@ public final class MediaEditorBottomControlsComponent: Component {
         infoString: String?,
         leftPressed: @escaping () -> Void,
         rightPressed: @escaping () -> Void,
-        rightLongPressed: ((UIView) -> Void)?
+        rightLongPressed: ((UIView) -> Void)?,
+        customLayout: MediaEditorBottomControlsCustomLayout? = nil,
+        middleFadesWhenEmpty: Bool = false
     ) {
         self.spec = spec
         self.left = left
@@ -66,6 +70,8 @@ public final class MediaEditorBottomControlsComponent: Component {
         self.leftPressed = leftPressed
         self.rightPressed = rightPressed
         self.rightLongPressed = rightLongPressed
+        self.customLayout = customLayout
+        self.middleFadesWhenEmpty = middleFadesWhenEmpty
     }
 
     public static func ==(lhs: MediaEditorBottomControlsComponent, rhs: MediaEditorBottomControlsComponent) -> Bool {
@@ -76,6 +82,9 @@ public final class MediaEditorBottomControlsComponent: Component {
             return false
         }
         if lhs.contentAlpha != rhs.contentAlpha || lhs.infoString != rhs.infoString || (lhs.rightLongPressed == nil) != (rhs.rightLongPressed == nil) {
+            return false
+        }
+        if lhs.customLayout?.key != rhs.customLayout?.key || lhs.middleFadesWhenEmpty != rhs.middleFadesWhenEmpty {
             return false
         }
         if lhs.middle.count != rhs.middle.count {
@@ -113,6 +122,7 @@ public final class MediaEditorBottomControlsComponent: Component {
         private(set) var isGlassShown = true
         var isShown = false
         var firstShowScales = true
+        var fadesWhenEmpty = false
         private var lastTintColor: GlassBackgroundView.TintColor = .init(kind: .panel)
         private var lastIsInteractive = false
 
@@ -191,12 +201,13 @@ public final class MediaEditorBottomControlsComponent: Component {
             containerTransition.setPosition(view: self.containerView, position: capsuleFrame.center)
             containerTransition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: capsuleFrame.size))
             containerTransition.setFrame(view: self.glassView, frame: CGRect(origin: .zero, size: capsuleFrame.size))
-            self.glassView.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.height * 0.5, isDark: true, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible && !self.holdsGlassHidden, transition: containerTransition)
+            let revealsGlass = !wasShown && self.fadesWhenEmpty && !transition.animation.isImmediate
+            self.glassView.update(size: capsuleFrame.size, cornerRadius: mediaEditorBottomControlsCapsuleCornerRadius(capsuleFrame.size), isDark: true, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible && !self.holdsGlassHidden, transition: revealsGlass ? transition : containerTransition)
             self.isGlassShown = isVisible && !self.holdsGlassHidden
             containerTransition.setFrame(view: self.clipView, frame: CGRect(origin: .zero, size: capsuleFrame.size))
-            containerTransition.setCornerRadius(layer: self.clipView.layer, cornerRadius: capsuleFrame.height * 0.5)
+            containerTransition.setCornerRadius(layer: self.clipView.layer, cornerRadius: mediaEditorBottomControlsCapsuleCornerRadius(capsuleFrame.size))
             if !wasShown {
-                if transition.animation.isImmediate {
+                if transition.animation.isImmediate || self.fadesWhenEmpty {
                     ComponentTransition.immediate.setScale(view: self.containerView, scale: 1.0)
                     self.containerView.alpha = alpha
                 } else if !self.firstShowScales {
@@ -311,14 +322,14 @@ public final class MediaEditorBottomControlsComponent: Component {
             }
             self.holdsGlassHidden = false
             let size = self.containerView.bounds.size
-            self.glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: self.lastTintColor, isInteractive: self.lastIsInteractive, isVisible: true, transition: transition)
+            self.glassView.update(size: size, cornerRadius: mediaEditorBottomControlsCapsuleCornerRadius(size), isDark: true, tintColor: self.lastTintColor, isInteractive: self.lastIsInteractive, isVisible: true, transition: transition)
             self.isGlassShown = true
         }
 
         func hideGlassForAppearance() {
             self.holdsGlassHidden = true
             let size = self.containerView.bounds.size
-            self.glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: self.lastTintColor, isInteractive: false, isVisible: false, transition: .immediate)
+            self.glassView.update(size: size, cornerRadius: mediaEditorBottomControlsCapsuleCornerRadius(size), isDark: true, tintColor: self.lastTintColor, isInteractive: false, isVisible: false, transition: .immediate)
             self.isGlassShown = false
         }
 
@@ -353,6 +364,13 @@ public final class MediaEditorBottomControlsComponent: Component {
                 return
             }
             self.isShown = false
+            if self.fadesWhenEmpty {
+                self.firstShowScales = false
+                let size = self.containerView.bounds.size
+                self.glassView.update(size: size, cornerRadius: mediaEditorBottomControlsCapsuleCornerRadius(size), isDark: true, tintColor: tintColor, isInteractive: false, isVisible: false, transition: transition)
+                self.isGlassShown = false
+                return
+            }
             let collapsedSize = CGSize(width: mediaEditorBottomControlsCollapsedSide, height: mediaEditorBottomControlsCollapsedSide)
             let collapsedBounds = CGRect(origin: .zero, size: collapsedSize)
             transition.setFrame(view: self.glassView, frame: collapsedBounds)
@@ -710,6 +728,7 @@ public final class MediaEditorBottomControlsComponent: Component {
 
             let width = availableSize.width
             let spec = component.spec
+            let customLayout = component.customLayout
             let side = spec.buttonSide
             let contentAlpha = component.contentAlpha
             let sidesHidden = component.isHidden || component.areSideButtonsHidden
@@ -723,7 +742,7 @@ public final class MediaEditorBottomControlsComponent: Component {
                 })],
                 layout: { sizes in
                     leftWidth = sizes.first?.width ?? side
-                    let layout = mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: [], middleSpacing: 0.0, leftWidth: leftWidth, rightWidth: side)
+                    let layout = customLayout.map { $0.layout(availableSize, [], leftWidth, side) } ?? mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: [], middleSpacing: 0.0, leftWidth: leftWidth, rightWidth: side)
                     return (layout.leftFrame, [layout.leftFrame])
                 },
                 tintColor: self.tintColor(component.left.tint),
@@ -743,7 +762,7 @@ public final class MediaEditorBottomControlsComponent: Component {
                 })],
                 layout: { sizes in
                     rightWidth = sizes.first?.width ?? side
-                    let layout = mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: [], middleSpacing: 0.0, leftWidth: leftWidth, rightWidth: rightWidth)
+                    let layout = customLayout.map { $0.layout(availableSize, [], leftWidth, rightWidth) } ?? mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: [], middleSpacing: 0.0, leftWidth: leftWidth, rightWidth: rightWidth)
                     return (layout.rightFrame, [layout.rightFrame])
                 },
                 tintColor: self.tintColor(component.right.tint),
@@ -817,10 +836,11 @@ public final class MediaEditorBottomControlsComponent: Component {
             }
             let middleVisible = !component.isHidden && !middleItems.isEmpty
             let middleSpacing = component.middleSpacing
+            self.middleCapsule.fadesWhenEmpty = component.middleFadesWhenEmpty
             let middleResult = self.middleCapsule.update(
                 items: middleItems,
                 layout: { sizes in
-                    let layout = mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: sizes.map(\.width), middleSpacing: middleSpacing, leftWidth: leftWidth, rightWidth: rightWidth)
+                    let layout = customLayout.map { $0.layout(availableSize, sizes.map(\.width), leftWidth, rightWidth) } ?? mediaEditorBottomControlsLocalLayout(width: width, spec: spec, middleItemWidths: sizes.map(\.width), middleSpacing: middleSpacing, leftWidth: leftWidth, rightWidth: rightWidth)
                     return (layout.middleFrame, layout.itemFrames)
                 },
                 tintColor: .init(kind: .panel),

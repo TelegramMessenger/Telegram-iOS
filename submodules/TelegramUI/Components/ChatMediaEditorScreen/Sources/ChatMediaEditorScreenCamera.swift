@@ -8,7 +8,18 @@ import ContextUI
 
 public let chatMediaEditorCameraButtonSize = CGSize(width: 44.0, height: 44.0)
 
-public func chatMediaEditorCameraButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool, hasSelection: Bool) -> CGRect {
+public func chatMediaEditorCameraButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool, hasSelection: Bool, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let innerEdge = chatMediaEditorLandscapeInnerEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = innerEdge + 1.0
+        case .right:
+            x = innerEdge - 1.0 - chatMediaEditorCameraButtonSize.width
+        }
+        return CGRect(origin: CGPoint(x: x, y: safeInsets.top + 1.0 + (hasSelection ? 50.0 : 0.0)), size: chatMediaEditorCameraButtonSize)
+    }
     let counterFrame = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: captionBaseHeight, hasVideoHeader: hasVideoHeader)
     let centerY = counterFrame.minY + chatMediaEditorCounterCircleFrame.midY
     return CGRect(origin: CGPoint(x: size.width - 46.0 - safeInsets.right - (hasSelection ? 50.0 : 0.0), y: floor(centerY - chatMediaEditorCameraButtonSize.height / 2.0)), size: chatMediaEditorCameraButtonSize)
@@ -117,7 +128,7 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
-        let frame = chatMediaEditorCameraButtonFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, hasSelection: self.hasCameraReviewSelection)
+        let frame = chatMediaEditorCameraButtonFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, hasSelection: self.hasCameraReviewSelection, toolbarSide: self.toolbarSide(layout: layout))
         transition.updateFrame(view: cameraButton, frame: frame)
         let isHidden = self.activeTool != nil || self.isInterfaceHiddenBySwipe || self.isEditingCaption || keyboardHeight > 0.0 || self.isSending || (self.controller?.isDismissing ?? true)
         let alphaTransition: ContainedViewLayoutTransition = transition.isAnimated ? .animated(duration: 0.2, curve: .linear) : .immediate

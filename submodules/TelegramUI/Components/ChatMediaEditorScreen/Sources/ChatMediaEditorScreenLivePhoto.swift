@@ -58,7 +58,7 @@ extension ChatMediaEditorScreen.Node {
             self.livePhotoButtonMode = mode
             button.setLivePhotoMode(mode.legacyMode)
         }
-        let buttonFrame = chatMediaEditorLivePhotoButtonFrame(size: layout.size, safeInsets: safeInsets, keyboardHeight: layout.inputHeight ?? 0.0, buttonSize: chatMediaEditorLivePhotoButtonSize)
+        let buttonFrame = chatMediaEditorLivePhotoButtonFrame(size: layout.size, safeInsets: safeInsets, keyboardHeight: layout.inputHeight ?? 0.0, buttonSize: chatMediaEditorLivePhotoButtonSize, toolbarSide: self.toolbarSide(layout: layout))
         if isNew {
             button.frame = buttonFrame
         } else {

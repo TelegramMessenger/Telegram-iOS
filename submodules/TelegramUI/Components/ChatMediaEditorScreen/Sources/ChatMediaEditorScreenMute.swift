@@ -7,14 +7,18 @@ import MediaEditor
 import TooltipUI
 
 public let chatMediaEditorMuteButtonSize: CGFloat = 40.0
-let chatMediaEditorMuteButtonLeftInset: CGFloat = 5.0
-let chatMediaEditorMuteButtonHeaderGap: CGFloat = 26.0
+let chatMediaEditorMuteButtonLeftInset: CGFloat = 16.0
+let chatMediaEditorMuteButtonHeaderGap: CGFloat = 34.0
 
 public func chatMediaEditorMuteButtonIsVisible(isGallery: Bool, isVideo: Bool, isAnimation: Bool) -> Bool {
     return isGallery && isVideo && !isAnimation
 }
 
-public func chatMediaEditorMuteButtonFrame(headerFrame: CGRect, safeInsets: UIEdgeInsets) -> CGRect {
+public func chatMediaEditorMuteButtonFrame(headerFrame: CGRect, safeInsets: UIEdgeInsets, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if toolbarSide != nil {
+        let y = headerFrame.minY - chatMediaEditorMuteButtonHeaderGap - floor((chatMediaEditorVideoHeaderHeight - chatMediaEditorVideoScrubberPanelHeight) / 2.0)
+        return CGRect(x: headerFrame.minX + chatMediaEditorMuteButtonLeftInset, y: y, width: chatMediaEditorMuteButtonSize, height: chatMediaEditorMuteButtonSize)
+    }
     return CGRect(x: safeInsets.left + chatMediaEditorMuteButtonLeftInset, y: headerFrame.minY - chatMediaEditorMuteButtonHeaderGap, width: chatMediaEditorMuteButtonSize, height: chatMediaEditorMuteButtonSize)
 }
 
@@ -27,6 +31,10 @@ private let chatMediaEditorMuteButtonBackground: UIImage? = generateImage(CGSize
 extension ChatMediaEditorScreen.Node {
     var isCurrentVideoMuted: Bool {
         return self.subject.isVideo && self.mediaEditor.values.videoIsMuted
+    }
+
+    var isVideoScrubberShown: Bool {
+        return self.playerState?.tracks.contains(where: { $0.id == 0 }) ?? false
     }
 
     var isMuteButtonVisible: Bool {
@@ -53,7 +61,7 @@ extension ChatMediaEditorScreen.Node {
         }
         button.setImage(self.isCurrentVideoMuted ? TGPhotoEditorInterfaceAssets.muteActiveIcon() : TGPhotoEditorInterfaceAssets.muteIcon(), for: .normal)
         transition.updateFrame(view: button, frame: self.muteButtonFrame(layout: layout, safeInsets: safeInsets))
-        let isHidden = self.activeTool != nil || self.isInterfaceHiddenBySwipe || self.isEditingCaption || (layout.inputHeight ?? 0.0) > 0.0 || self.isSending
+        let isHidden = !self.isVideoScrubberShown || self.activeTool != nil || self.isInterfaceHiddenBySwipe || self.isEditingCaption || (layout.inputHeight ?? 0.0) > 0.0 || self.isSending
         transition.updateAlpha(layer: button.layer, alpha: isHidden ? 0.0 : 1.0)
         button.isUserInteractionEnabled = !isHidden
         if isHidden {
@@ -63,8 +71,9 @@ extension ChatMediaEditorScreen.Node {
 
     private func muteButtonFrame(layout: ContainerViewLayout, safeInsets: UIEdgeInsets) -> CGRect {
         let toolbarMinY = chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY
-        let headerFrame = chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0)
-        return chatMediaEditorMuteButtonFrame(headerFrame: headerFrame, safeInsets: safeInsets)
+        let toolbarSide = self.toolbarSide(layout: layout)
+        let headerFrame = chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0, safeInsets: safeInsets, toolbarSide: toolbarSide, reservedCorners: layout.reservedCorners)
+        return chatMediaEditorMuteButtonFrame(headerFrame: headerFrame, safeInsets: safeInsets, toolbarSide: toolbarSide)
     }
 
     @objc func muteButtonPressed() {
@@ -93,9 +102,13 @@ extension ChatMediaEditorScreen.Node {
             account: self.context.account,
             sharedContext: self.context.sharedContext,
             text: .plain(text: strings.MediaPicker_VideoMuteDescription),
+            balancedTextLayout: true,
             style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+            arrowStyle: .small,
             location: .point(sourceRect, .bottom),
             displayDuration: .default,
+            inset: chatMediaEditorMuteButtonLeftInset,
+            cornerRadius: 10.0,
             shouldDismissOnTouch: { _, _ in
                 return .dismiss(consume: false)
             }

@@ -14,7 +14,18 @@ public func chatMediaEditorLivePhotoButtonIsVisible(hasLivePhotoButton: Bool, is
 
 public let chatMediaEditorLivePhotoButtonSize = CGSize(width: 160.0, height: 18.0)
 
-public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize) -> CGRect {
+public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let notchEdge = chatMediaEditorLandscapeNotchEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = notchEdge - 16.0 - buttonSize.width
+        case .right:
+            x = notchEdge + 16.0
+        }
+        return CGRect(origin: CGPoint(x: x, y: safeInsets.top + 48.0), size: buttonSize)
+    }
     let y: CGFloat
     if size.width > size.height {
         y = 48.0

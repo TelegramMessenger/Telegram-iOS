@@ -6,6 +6,10 @@ import SwiftSignalKit
 import MediaAssetsContext
 
 extension ChatMediaEditorScreen.Node {
+    var hasSelectionCheckButton: Bool {
+        return self.selectionModel?.isEnabled == true && self.selectionCheckButton != nil
+    }
+
     func setupSelection() {
         guard self.isGallery, let adapter = self.controller?.selection else {
             return
@@ -97,14 +101,18 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
-        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets)
+        let toolbarSide = self.toolbarSide(layout: layout)
+        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets, toolbarSide: toolbarSide)
         transition.updateFrame(view: checkButton, frame: checkFrame)
         var counterSafeInsets = safeInsets
-        let counterSideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: layout.reservedCorners)
-        counterSafeInsets.left = counterSideInsets.left
-        counterSafeInsets.right = counterSideInsets.right
-        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: counterSafeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo)
-        let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize)
+        if toolbarSide == nil {
+            let counterSideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: layout.reservedCorners)
+            counterSafeInsets.left = counterSideInsets.left
+            counterSafeInsets.right = counterSideInsets.right
+        }
+        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: counterSafeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, toolbarSide: toolbarSide)
+        let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize, toolbarSide: toolbarSide)
+        stripView.updateToolbarSide(toolbarSide)
         if stripView.frame != stripFrame {
             stripView.frame = stripFrame
         }

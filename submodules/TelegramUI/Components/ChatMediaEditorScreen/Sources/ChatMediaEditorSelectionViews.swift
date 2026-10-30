@@ -570,6 +570,10 @@ final class ChatMediaEditorStripView: UIView, UICollectionViewDataSource, UIColl
 
     private(set) var items: [String] = []
     private(set) var isInternalHidden = true
+    private(set) var toolbarSide: ChatMediaEditorToolbarSide?
+    var isVertical: Bool {
+        return self.toolbarSide != nil
+    }
     var itemInfo: ((String) -> ChatMediaEditorStripItemInfo?)?
     var isItemChecked: ((String) -> Bool)?
     var itemTapped: ((String) -> Void)?
@@ -662,10 +666,36 @@ final class ChatMediaEditorStripView: UIView, UICollectionViewDataSource, UIColl
         }
     }
 
+    func updateToolbarSide(_ toolbarSide: ChatMediaEditorToolbarSide?) {
+        guard self.toolbarSide != toolbarSide else {
+            return
+        }
+        let wasVertical = self.isVertical
+        self.toolbarSide = toolbarSide
+        if wasVertical != self.isVertical {
+            if self.isVertical {
+                self.collectionViewLayout.scrollDirection = .vertical
+                self.collectionView.contentInset = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+                self.collectionView.contentOffset = CGPoint(x: 0.0, y: -4.0)
+            } else {
+                self.collectionViewLayout.scrollDirection = .horizontal
+                self.collectionView.contentInset = UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0)
+                self.collectionView.contentOffset = CGPoint(x: -4.0, y: 0.0)
+            }
+            self.collectionViewLayout.invalidateLayout()
+        }
+        self.setNeedsLayout()
+    }
+
     private func scrollToEnd(animated: Bool) {
         self.collectionView.layoutIfNeeded()
-        let offsetX = max(-self.collectionView.contentInset.left, self.collectionView.contentSize.width - self.collectionView.bounds.width + self.collectionView.contentInset.right)
-        self.collectionView.setContentOffset(CGPoint(x: offsetX, y: 0.0), animated: animated)
+        if self.isVertical {
+            let offsetY = max(-self.collectionView.contentInset.top, self.collectionView.contentSize.height - self.collectionView.bounds.height + self.collectionView.contentInset.bottom)
+            self.collectionView.setContentOffset(CGPoint(x: 0.0, y: offsetY), animated: animated)
+        } else {
+            let offsetX = max(-self.collectionView.contentInset.left, self.collectionView.contentSize.width - self.collectionView.bounds.width + self.collectionView.contentInset.right)
+            self.collectionView.setContentOffset(CGPoint(x: offsetX, y: 0.0), animated: animated)
+        }
     }
 
     func updateCheckedStates(animated: Bool) {
@@ -677,8 +707,7 @@ final class ChatMediaEditorStripView: UIView, UICollectionViewDataSource, UIColl
     }
 
     private func hiddenCenter() -> CGPoint {
-        let size = self.bounds.size
-        return CGPoint(x: size.width / 2.0, y: size.height / 2.0 + size.height / 3.0)
+        return chatMediaEditorStripHiddenCenter(size: self.bounds.size, toolbarSide: self.toolbarSide)
     }
 
     func setInternalHidden(_ hidden: Bool, animated: Bool) {
@@ -721,9 +750,8 @@ final class ChatMediaEditorStripView: UIView, UICollectionViewDataSource, UIColl
 
     private func layoutBackground() {
         let size = self.bounds.size
-        let width = chatMediaEditorStripBackgroundWidth(frameWidth: size.width, count: self.items.count, cellWidth: self.cellSize.width)
-        self.effectView.frame = CGRect(x: size.width - width, y: 0.0, width: width, height: size.height)
-        let maskFrame = CGRect(x: size.width - width, y: 4.0, width: width, height: max(0.0, size.height - 8.0))
+        self.effectView.frame = chatMediaEditorStripBackgroundFrame(size: size, count: self.items.count, cellSize: self.cellSize, isVertical: self.isVertical)
+        let maskFrame = chatMediaEditorStripMaskFrame(size: size, count: self.items.count, cellSize: self.cellSize, isVertical: self.isVertical)
         if self.maskContainerView.frame != maskFrame {
             self.maskContainerView.frame = maskFrame
             self.collectionView.frame = CGRect(origin: .zero, size: maskFrame.size)
@@ -758,7 +786,13 @@ final class ChatMediaEditorStripView: UIView, UICollectionViewDataSource, UIColl
             return
         }
         let frame = collectionView.convert(cell.frame, to: superview)
-        if frame.minX < 0.0 {
+        if self.isVertical {
+            if frame.minY < 0.0 {
+                collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x, y: collectionView.contentOffset.y + frame.minY), animated: true)
+            } else if frame.maxY > superview.bounds.height {
+                collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x, y: collectionView.contentOffset.y + frame.maxY - superview.bounds.height), animated: true)
+            }
+        } else if frame.minX < 0.0 {
             collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x + frame.minX, y: collectionView.contentOffset.y), animated: true)
         } else if frame.maxX > superview.bounds.width {
             collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x + frame.maxX - superview.bounds.width, y: collectionView.contentOffset.y), animated: true)

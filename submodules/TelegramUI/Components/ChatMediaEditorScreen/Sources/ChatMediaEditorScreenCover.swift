@@ -35,7 +35,7 @@ extension ChatMediaEditorScreen.Node {
 
     private func coverHeaderFrame(layout: ContainerViewLayout, safeInsets: UIEdgeInsets) -> CGRect {
         let toolbarMinY = chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY
-        return chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0)
+        return chatMediaEditorVideoHeaderFrame(size: layout.size, toolbarMinY: toolbarMinY, captionBaseHeight: self.captionPanelView?.baseHeight() ?? 0.0, safeInsets: safeInsets, toolbarSide: self.toolbarSide(layout: layout), reservedCorners: layout.reservedCorners)
     }
 
     func updateCoverLayout(layout: ContainerViewLayout, safeInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
@@ -58,7 +58,7 @@ extension ChatMediaEditorScreen.Node {
         }
         button.setThumbnail(self.coverModel?.coverImage(for: self.pageModel.currentItem.uniqueId))
         let headerFrame = self.coverHeaderFrame(layout: layout, safeInsets: safeInsets)
-        let buttonFrame = chatMediaEditorCoverButtonFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, buttonWidth: button.contentWidth)
+        let buttonFrame = chatMediaEditorCoverButtonFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, buttonWidth: button.contentWidth, toolbarSide: self.toolbarSide(layout: layout))
         if isNew {
             button.frame = buttonFrame
         } else {
@@ -86,7 +86,7 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let headerFrame = self.coverHeaderFrame(layout: layout, safeInsets: safeInsets)
-        let availableWidth = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: 0.0).width
+        let availableWidth = chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: 0.0, toolbarSide: self.toolbarSide(layout: layout)).width
         let mediaEditor = self.mediaEditor
         let scrubberSize = self.coverScrubber.update(
             transition: transition,
@@ -133,7 +133,7 @@ extension ChatMediaEditorScreen.Node {
         guard let scrubberView = self.coverScrubber.view else {
             return
         }
-        let scrubberFrame = chatMediaEditorCoverScrubberFrame(trimScrubberFrame: chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: scrubberSize.height))
+        let scrubberFrame = chatMediaEditorCoverScrubberFrame(trimScrubberFrame: chatMediaEditorScrubberFrame(size: layout.size, safeInsets: safeInsets, headerFrame: headerFrame, scrubberHeight: scrubberSize.height, toolbarSide: self.toolbarSide(layout: layout)))
         if scrubberView.superview == nil {
             scrubberView.alpha = 0.0
             if let editView = self.coverEditView {

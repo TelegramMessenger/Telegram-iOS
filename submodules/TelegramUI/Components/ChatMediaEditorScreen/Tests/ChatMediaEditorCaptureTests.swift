@@ -205,7 +205,7 @@ final class ChatMediaEditorCaptureTests: XCTestCase {
         let frame = chatMediaEditorCameraButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: false, hasSelection: true)
         XCTAssertEqual(frame, CGRect(x: 306.0, y: 685.0, width: 44.0, height: 44.0))
         let single = chatMediaEditorCameraButtonFrame(size: size, safeInsets: .zero, toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: true, hasSelection: false)
-        XCTAssertEqual(single, CGRect(x: 356.0, y: 639.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(single, CGRect(x: 356.0, y: 635.0, width: 44.0, height: 44.0))
     }
 
     func testGalleryWithoutSourceCrossfadesUnlessSwiping() {

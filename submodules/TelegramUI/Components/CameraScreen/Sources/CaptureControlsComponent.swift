@@ -115,7 +115,7 @@ private final class ShutterButtonContentComponent: Component {
     final class View: UIView {
         private var component: ShutterButtonContentComponent?
         
-        private let backgroundView = BlurredBackgroundView(color: UIColor(rgb: 0x222222, alpha: 0.3))
+        private let backgroundView = GlassBackgroundView()
         
         private let underRingLayer = SimpleShapeLayer()
         private let ringLayer = SimpleShapeLayer()
@@ -134,6 +134,7 @@ private final class ShutterButtonContentComponent: Component {
         init() {
             super.init(frame: CGRect())
             
+            self.backgroundView.isUserInteractionEnabled = false
             self.addSubview(self.backgroundView)
                         
             self.layer.allowsGroupOpacity = true
@@ -339,7 +340,6 @@ private final class ShutterButtonContentComponent: Component {
                 }
             }
 
-            transition.setAlpha(view: self.backgroundView, alpha: glassAlpha)
             transition.setAlpha(view: self.chromeView, alpha: chromeAlpha)
             
             if let labelView = self.label.view {
@@ -467,7 +467,7 @@ private final class ShutterButtonContentComponent: Component {
             self.progressLayer.animateStrokeEnd(from: previousValue, to: self.progressLayer.strokeEnd, duration: 0.33)
             
             let backgroundFrame = buttonFrame.insetBy(dx: -6.0, dy: -6.0)
-            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, isDark: true, tintColor: .init(kind: .custom(style: .default, color: UIColor(white: 0.0, alpha: 0.5))), isVisible: glassAlpha > 0.0, transition: transition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
                         
             return maximumShutterSize

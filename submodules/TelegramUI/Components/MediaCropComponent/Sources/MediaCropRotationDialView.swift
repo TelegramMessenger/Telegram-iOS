@@ -9,9 +9,30 @@ private let mediaCropDialTickWidth: CGFloat = 2.0
 private let mediaCropDialDotSize: CGFloat = 6.0
 private let mediaCropDialDotCenterY: CGFloat = 5.0
 private let mediaCropDialFadeLength: CGFloat = 36.0
-private let mediaCropDialHitInsets = UIEdgeInsets(top: -12.0, left: 0.0, bottom: -12.0, right: 0.0)
+let mediaCropDialHitInsets = UIEdgeInsets(top: -12.0, left: 0.0, bottom: -12.0, right: 0.0)
 private let mediaCropDialMarkerColor = UIColor(rgb: 0xffcc00)
 private let mediaCropDialDotColor = UIColor(white: 1.0, alpha: 0.5)
+
+public enum MediaCropDialAxis: Equatable {
+    case horizontal
+    case vertical(clockwise: Bool)
+}
+
+public struct MediaCropDialPlacement: Equatable {
+    public let bounds: CGRect
+    public let center: CGPoint
+    public let transform: CGAffineTransform
+}
+
+public func mediaCropDialPlacement(frame: CGRect, axis: MediaCropDialAxis) -> MediaCropDialPlacement {
+    let center = CGPoint(x: frame.midX, y: frame.midY)
+    switch axis {
+    case .horizontal:
+        return MediaCropDialPlacement(bounds: CGRect(origin: .zero, size: frame.size), center: center, transform: .identity)
+    case let .vertical(clockwise):
+        return MediaCropDialPlacement(bounds: CGRect(x: 0.0, y: 0.0, width: frame.height, height: frame.width), center: center, transform: CGAffineTransform(rotationAngle: clockwise ? CGFloat.pi / 2.0 : -CGFloat.pi / 2.0))
+    }
+}
 
 final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
     private enum Motion {
@@ -32,6 +53,7 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
     private var rawDegrees: CGFloat = 0.0
     private var visualDegrees: CGFloat = 0.0
     private var selectedTickIndex = 0
+    var hitInsets: UIEdgeInsets = mediaCropDialHitInsets
     var rulerScale: CGFloat = 1.0 {
         didSet {
             if self.rulerScale != oldValue {
@@ -118,7 +140,7 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        return self.bounds.inset(by: mediaCropDialHitInsets).contains(point)
+        return self.bounds.inset(by: self.hitInsets).contains(point)
     }
 
     private var rubberBandDimension: CGFloat {

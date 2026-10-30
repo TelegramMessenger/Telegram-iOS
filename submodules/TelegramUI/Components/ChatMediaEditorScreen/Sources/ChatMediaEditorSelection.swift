@@ -178,16 +178,57 @@ public let chatMediaEditorCheckButtonRingInset: CGFloat = 3.0
 public let chatMediaEditorCounterButtonSize = CGSize(width: 64.0, height: 38.0)
 public let chatMediaEditorCounterCircleFrame = CGRect(x: 16.0, y: 1.0, width: 31.0, height: 31.0)
 
-public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
+public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
     let topInset = safeInsets.top
+    if let toolbarSide {
+        let notchEdge = chatMediaEditorLandscapeNotchEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = notchEdge - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset)
+        case .right:
+            x = notchEdge + chatMediaEditorScreenEdgeInset - chatMediaEditorCheckButtonRingInset
+        }
+        return CGRect(origin: CGPoint(x: x, y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
+    }
     return CGRect(origin: CGPoint(x: size.width - safeInsets.right - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset), y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
 }
 
-public func chatMediaEditorCounterButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool) -> CGRect {
-    return CGRect(origin: CGPoint(x: size.width - chatMediaEditorCounterButtonSize.width - safeInsets.right, y: toolbarMinY - captionBaseHeight - 50.0 - (hasVideoHeader ? 46.0 : 0.0)), size: chatMediaEditorCounterButtonSize)
+func chatMediaEditorLandscapeHeaderInset(hasVideoHeader: Bool) -> CGFloat {
+    return hasVideoHeader ? chatMediaEditorVideoScrubberPanelHeight : 0.0
 }
 
-public func chatMediaEditorStripFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool, cellSize: CGSize) -> CGRect {
+public func chatMediaEditorCounterButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let innerEdge = chatMediaEditorLandscapeInnerEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = innerEdge + 1.0
+        case .right:
+            x = innerEdge - 1.0 - chatMediaEditorCounterButtonSize.width
+        }
+        return CGRect(origin: CGPoint(x: x, y: chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, toolbarSide: toolbarSide).midY - chatMediaEditorCounterCircleFrame.midY), size: chatMediaEditorCounterButtonSize)
+    }
+    return CGRect(origin: CGPoint(x: size.width - chatMediaEditorCounterButtonSize.width - safeInsets.right, y: toolbarMinY - captionBaseHeight - 50.0 - (hasVideoHeader ? 50.0 : 0.0)), size: chatMediaEditorCounterButtonSize)
+}
+
+let chatMediaEditorLandscapeStripInnerOffset: CGFloat = 66.0
+
+public func chatMediaEditorStripFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool, cellSize: CGSize, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let innerEdge = chatMediaEditorLandscapeInnerEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let headerInset = chatMediaEditorLandscapeHeaderInset(hasVideoHeader: hasVideoHeader)
+        let width = cellSize.width + 4.0 * 2.0
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = innerEdge + chatMediaEditorLandscapeStripInnerOffset
+        case .right:
+            x = innerEdge - chatMediaEditorLandscapeStripInnerOffset - width
+        }
+        return CGRect(x: x, y: safeInsets.top + 4.0, width: width, height: max(0.0, size.height - safeInsets.top - safeInsets.bottom - 4.0 * 2.0 - headerInset))
+    }
     let height = cellSize.height + 4.0 * 2.0
     return CGRect(x: safeInsets.left + 4.0, y: toolbarMinY - captionBaseHeight - height - 64.0 - (hasVideoHeader ? 46.0 : 0.0), width: max(0.0, size.width - safeInsets.left - 4.0 * 2.0 - safeInsets.right), height: height)
 }
@@ -196,4 +237,32 @@ public func chatMediaEditorStripBackgroundWidth(frameWidth: CGFloat, count: Int,
     let count = max(1, count)
     let width = CGFloat(count) * (cellWidth + 4.0) - 4.0
     return max(0.0, min(frameWidth, width + 8.0))
+}
+
+public func chatMediaEditorStripBackgroundFrame(size: CGSize, count: Int, cellSize: CGSize, isVertical: Bool) -> CGRect {
+    if isVertical {
+        let height = chatMediaEditorStripBackgroundWidth(frameWidth: size.height, count: count, cellWidth: cellSize.height)
+        return CGRect(x: 0.0, y: 0.0, width: size.width, height: height)
+    }
+    let width = chatMediaEditorStripBackgroundWidth(frameWidth: size.width, count: count, cellWidth: cellSize.width)
+    return CGRect(x: size.width - width, y: 0.0, width: width, height: size.height)
+}
+
+public func chatMediaEditorStripMaskFrame(size: CGSize, count: Int, cellSize: CGSize, isVertical: Bool) -> CGRect {
+    let backgroundFrame = chatMediaEditorStripBackgroundFrame(size: size, count: count, cellSize: cellSize, isVertical: isVertical)
+    if isVertical {
+        return CGRect(x: 4.0, y: backgroundFrame.minY, width: max(0.0, backgroundFrame.width - 8.0), height: backgroundFrame.height)
+    }
+    return CGRect(x: backgroundFrame.minX, y: 4.0, width: backgroundFrame.width, height: max(0.0, backgroundFrame.height - 8.0))
+}
+
+public func chatMediaEditorStripHiddenCenter(size: CGSize, toolbarSide: ChatMediaEditorToolbarSide?) -> CGPoint {
+    switch toolbarSide {
+    case .none:
+        return CGPoint(x: size.width / 2.0, y: size.height / 2.0 + size.height / 3.0)
+    case .left:
+        return CGPoint(x: size.width / 2.0 - size.width / 3.0, y: size.height / 2.0)
+    case .right:
+        return CGPoint(x: size.width / 2.0 + size.width / 3.0, y: size.height / 2.0)
+    }
 }
