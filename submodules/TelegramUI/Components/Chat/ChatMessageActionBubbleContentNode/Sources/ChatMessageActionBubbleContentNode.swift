@@ -82,6 +82,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
         self.labelNode.textNode.displaysAsynchronously = false
+        // A service message's emoji (a topic's icon) stays still: animated, it keeps drawing the eye to a notice.
+        self.labelNode.enableLooping = false
 
         self.backgroundColorNode = ASDisplayNode()
         self.backgroundMaskNode = ASImageNode()
