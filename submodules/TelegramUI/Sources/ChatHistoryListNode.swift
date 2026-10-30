@@ -830,9 +830,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
 
     // Configures the rotation on the concrete backend before it is upcast to the protocol, so the
     // construction-only `rotated` flag need not appear on the ChatHistoryListViewBackend contract.
-    private static func makeListView(rotated: Bool, useCoreListBackend: Bool) -> ChatHistoryListViewBackend {
+    private static func makeListView(rotated: Bool, useCoreListBackend: Bool, scrollTrace: Bool) -> ChatHistoryListViewBackend {
         if useCoreListBackend {
-            return makeCoreListChatHistoryBackend(rotated: rotated)
+            return makeCoreListChatHistoryBackend(rotated: rotated, scrollTrace: scrollTrace)
         }
         let listView = ListViewImpl()
         listView.rotated = rotated
@@ -1008,7 +1008,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             useCoreListBackend = false
         }
         self.usesCoreListBackend = useCoreListBackend
-        self.listView = ChatHistoryListNodeImpl.makeListView(rotated: rotated, useCoreListBackend: useCoreListBackend)
+        self.listView = ChatHistoryListNodeImpl.makeListView(rotated: rotated, useCoreListBackend: useCoreListBackend, scrollTrace: context.sharedContext.immediateExperimentalUISettings.coreListScrollTrace)
 
         super.init()
         
