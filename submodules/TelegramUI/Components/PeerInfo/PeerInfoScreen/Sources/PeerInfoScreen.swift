@@ -7267,10 +7267,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             return nil
         }
         let node = self.controllerNode
-        guard peerInfoExpansionAllowed(isOpenedFromChat: self.isOpenedFromChat, isSettings: self.isSettings, scrollOffset: node.scrollNode.view.contentOffset.y, isEditing: node.state.isEditing, isSearching: node.searchDisplayController != nil) else {
+        let path: ExpansionPath = peerInfoExpansionPath(isAvatarExpanded: node.headerNode.isAvatarExpanded) == .photo ? .photo : .origin
+        let titleKey: AnyHashable = path == .photo ? TitleNodeStateExpanded : TitleNodeStateRegular
+        let titleSize = node.headerNode.titleNode.stateNode(forKey: titleKey)?.bounds.size ?? .zero
+        guard peerInfoExpansionAllowed(isOpenedFromChat: self.isOpenedFromChat, isSettings: self.isSettings, scrollOffset: node.scrollNode.view.contentOffset.y, isEditing: node.state.isEditing, isSearching: node.searchDisplayController != nil, titleSize: titleSize) else {
             return nil
         }
-        let path: ExpansionPath = peerInfoExpansionPath(isAvatarExpanded: node.headerNode.isAvatarExpanded) == .photo ? .photo : .origin
         if operation != .push, node.scrollNode.view.contentOffset.y > 0.0 {
             // At most 8 pt (the policy): back to the top at once, under the card's first frames, before its views are
             // measured and lent.
