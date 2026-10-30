@@ -2767,6 +2767,19 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
         
+        // Set before the expanding layout below, which creates the animation that reports its start (a node expanded
+        // earlier has already reported it).
+        let iconHandoff = ReactionFlyInIconHandoff()
+        if itemNode.didBeginExpandedAnimation {
+            iconHandoff.expandedAnimationBegan()
+        }
+        itemNode.expandedAnimationDidBegin = { [weak targetView] in
+            iconHandoff.expandedAnimationBegan()
+            if iconHandoff.hidesTargetIcon, let targetView = targetView as? ReactionIconView {
+                targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+            }
+        }
+        
         self.addSubnode(itemNode)
         itemNode.position = expandedFrame.center
         transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
@@ -2931,7 +2944,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                         targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
                         itemNode.isHidden = true
                     } else {
-                        targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                        iconHandoff.land()
+                        targetView.updateIsAnimationHidden(isAnimationHidden: iconHandoff.hidesTargetIcon, transition: .immediate)
                         targetView.addSubnode(itemNode)
                         itemNode.frame = selfTargetBounds
                     }
@@ -2974,6 +2988,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, maxDuration * UIView.animationDurationFactor()), execute: { [self] in
+                iconHandoff.finish()
                 if self.didTriggerExpandedReaction {
                     self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                         if let strongSelf = self, strongSelf.didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
