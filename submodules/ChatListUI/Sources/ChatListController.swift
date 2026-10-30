@@ -7644,6 +7644,8 @@ private final class ChatListLocationContext {
         avatarNode.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: isSavedMessages ? .savedMessagesIcon : nil, emptyColor: theme.list.mediaPlaceholderColor, clipStyle: clipStyle)
         self.rightButton = NavigationBarComponent.Button(id: "sideListAvatar",
             content: .node(avatarNode),
+            // A forum's square avatar sits on square glass, its corners concentric with the avatar's.
+            glassCornerRadius: clipStyle == .roundedRect ? ChatListSideListAvatarButtonNode.roundedRectGlassCornerRadius : nil,
             action: { [weak self] _ in
                 guard let self, let parentController = self.parentController, let navigationController = parentController.navigationController as? NavigationController else {
                     return
@@ -7727,9 +7729,13 @@ private final class ChatListSideListAvatarButtonNode: ASDisplayNode {
         return CGSize(width: 44.0, height: 44.0)
     }
 
+    private static let avatarInset: CGFloat = 3.0
+    /// The avatar's own rounded-rect radius (a quarter of its 38 pt side, as `AvatarNode` draws it) plus the inset.
+    static let roundedRectGlassCornerRadius: CGFloat = floor((44.0 - avatarInset * 2.0) * 0.25) + avatarInset
+
     override func layout() {
         super.layout()
         // Inside the button's glass, as the chat header's avatar sits.
-        self.avatarNode.frame = self.bounds.insetBy(dx: 3.0, dy: 3.0)
+        self.avatarNode.frame = self.bounds.insetBy(dx: ChatListSideListAvatarButtonNode.avatarInset, dy: ChatListSideListAvatarButtonNode.avatarInset)
     }
 }

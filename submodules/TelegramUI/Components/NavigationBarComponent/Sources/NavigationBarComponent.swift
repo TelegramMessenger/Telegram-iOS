@@ -862,6 +862,8 @@ public final class NavigationBarComponent: Component {
                 var secondaryWeight: CGFloat = 0.0
                 var primaryTint: NavigationBarComponent.Button.Tint = .generic
                 var secondaryTint: NavigationBarComponent.Button.Tint = .generic
+                var primaryCornerRadius: CGFloat?
+                var secondaryCornerRadius: CGFloat?
                 if let index = owners.primary, let contentView = self.primaryContentView {
                     let container = contentView.rightPillContainer(at: index)
                     if container.superview !== pill.itemsContainer {
@@ -879,6 +881,7 @@ public final class NavigationBarComponent: Component {
                     }
                     primaryWeight = width * (secondaryPills == nil ? 1.0 : 1.0 - component.secondaryTransition)
                     primaryTint = contentView.rightPillTints[index]
+                    primaryCornerRadius = contentView.rightPillCornerRadii[index]
                 }
                 if let index = owners.secondary, let contentView = self.secondaryContentView {
                     let container = contentView.rightPillContainer(at: index)
@@ -897,11 +900,13 @@ public final class NavigationBarComponent: Component {
                     }
                     secondaryWeight = width * component.secondaryTransition
                     secondaryTint = contentView.rightPillTints[index]
+                    secondaryCornerRadius = contentView.rightPillCornerRadii[index]
                 }
                 // The tint of the content the pill mostly belongs to (a forum sliding over Chats has no compose circle,
                 // so Chats' keeps its accent glass while it narrows).
                 let tint = secondaryWeight > primaryWeight ? secondaryTint : primaryTint
                 pill.appliedTint = tint
+                let pillCornerRadius = (secondaryWeight > primaryWeight ? secondaryCornerRadius : primaryCornerRadius) ?? frame.height * 0.5
                 let tintColor = navigationBarGlassTintColor(tint, theme: component.theme)
 
                 guard metrics.width != 0.0 else {
@@ -936,7 +941,7 @@ public final class NavigationBarComponent: Component {
                     pill.background = background
                     self.addSubview(background)
                     background.contentView.addSubview(pill.itemsContainer)
-                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
+                    background.update(size: frame.size, cornerRadius: pillCornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 // A pill that comes grows out of the nearest previous pill nearer the edge (UIKit's sections are
                 // contiguous, so that is every one).
@@ -956,7 +961,7 @@ public final class NavigationBarComponent: Component {
                     self.retargetInPlace(inPlace, frame: frame, tintColor: tintColor, isDark: isDark, transition: transition)
                 } else {
                     backgroundTransition.setFrame(view: background, frame: frame)
-                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
+                    background.update(size: frame.size, cornerRadius: pillCornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
                     backgroundTransition.setFrame(view: pill.itemsContainer, frame: CGRect(origin: CGPoint(), size: frame.size))
                 }
                 // A menu from any of its buttons morphs the whole pill, its other buttons with it, and closes back into it:
