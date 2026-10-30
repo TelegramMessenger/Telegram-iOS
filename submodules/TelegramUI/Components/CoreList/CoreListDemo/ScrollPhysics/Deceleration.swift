@@ -50,19 +50,21 @@ struct Deceleration {
             let decayE = Self.decay(dtMs: timeToBound, rate: rate)
             offset += velocity * rate * (1 - decayE) / (1 - rate) * vScale // ≈ edge (frac approximates time, per §2)
             velocity *= decayE
-            spring(dtMs: dtMs - timeToBound)
+            // The edge just crossed, not one re-derived from the offset: a release exactly ON the min edge
+            // moving past it (a short flick at a chat's newest end that began and ended with no translation)
+            // integrates for zero time and is still `== min` here, which `offset < min` reads as the MAX
+            // edge — an open one is 10,000,000 pt away, and the "bounce" flew the list there.
+            spring(dtMs: dtMs - timeToBound, toward: edge)
             return (settleIfNeeded(), true)
         } else {
             // §2-B: overscrolled — spring toward the crossed edge
-            spring(dtMs: dtMs)
+            spring(dtMs: dtMs, toward: offset < min ? min : hi)
             return (settleIfNeeded(), true)
         }
     }
 
-    private mutating func spring(dtMs: CGFloat) {
+    private mutating func spring(dtMs: CGFloat, toward edge: CGFloat) {
         guard dtMs > 0 else { return }
-        let hi = Swift.max(max, min)
-        let edge = offset < min ? min : hi
         let springK = exp(Self.bounceLnRate * dtMs)         // fixed 0.99/ms stiffness
         let decayRem = Self.decay(dtMs: dtMs, rate: rate)
         offset = edge + springK * (offset - edge)
