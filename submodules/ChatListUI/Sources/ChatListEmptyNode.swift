@@ -54,7 +54,8 @@ final class ChatListEmptyNode: ASDisplayNode {
     private var globalPrivacySettings: GlobalPrivacySettings = .default
     private var archiveSettingsDisposable: Disposable?
     
-    init(context: AccountContext, subject: Subject, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
+    /// `hidesButton`: the screen offers the action elsewhere (the chat side list's New Topic button).
+    init(context: AccountContext, subject: Subject, isLoading: Bool, hidesButton: Bool = false, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -94,7 +95,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 1.0, false))
         
-        var buttonIsHidden = false
+        var buttonIsHidden = hidesButton
         let animationName: String
         if case let .filter(showEdit) = subject {
             animationName = "ChatListFilterEmpty"

@@ -744,6 +744,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sharedMediaGridLegacy(Bool)
     case storyLegacyVideoWriter(Bool)
     case chatLegacyVideoWriter(Bool)
+    case chatSideListLegacy(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
     case videoMessageCameraMode(ExperimentalUISettings.VideoMessageCameraMode)
@@ -796,7 +797,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .coreListScrollTrace, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter, .chatSideListLegacy:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -971,6 +972,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 81
         case .chatLegacyVideoWriter:
             return 82
+        case .chatSideListLegacy:
+            return 83
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1521,6 +1524,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.chatLegacyVideoWriter = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .chatSideListLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat side list: legacy strip", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.chatSideListLegacy = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -2134,6 +2147,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.sharedMediaGridLegacy(experimentalSettings.sharedMediaGridLegacy))
         entries.append(.storyLegacyVideoWriter(experimentalSettings.storyLegacyVideoWriter))
         entries.append(.chatLegacyVideoWriter(experimentalSettings.chatLegacyVideoWriter))
+        entries.append(.chatSideListLegacy(experimentalSettings.chatSideListLegacy))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

@@ -90,6 +90,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var sharedMediaGridLegacy: Bool
     public var storyLegacyVideoWriter: Bool
     public var chatLegacyVideoWriter: Bool
+    public var chatSideListLegacy: Bool
     public var inputDecTextBackend: Bool
     public var respectSystemMicrophone: Bool
     public var springSendAnimation: Bool
@@ -157,6 +158,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             sharedMediaGridLegacy: false,
             storyLegacyVideoWriter: false,
             chatLegacyVideoWriter: false,
+            chatSideListLegacy: false,
             inputDecTextBackend: false,
             respectSystemMicrophone: false,
             springSendAnimation: false,
@@ -222,6 +224,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         sharedMediaGridLegacy: Bool,
         storyLegacyVideoWriter: Bool,
         chatLegacyVideoWriter: Bool,
+        chatSideListLegacy: Bool,
         inputDecTextBackend: Bool,
         respectSystemMicrophone: Bool,
         springSendAnimation: Bool,
@@ -285,6 +288,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.sharedMediaGridLegacy = sharedMediaGridLegacy
         self.storyLegacyVideoWriter = storyLegacyVideoWriter
         self.chatLegacyVideoWriter = chatLegacyVideoWriter
+        self.chatSideListLegacy = chatSideListLegacy
         self.inputDecTextBackend = inputDecTextBackend
         self.respectSystemMicrophone = respectSystemMicrophone
         self.springSendAnimation = springSendAnimation
@@ -354,6 +358,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.sharedMediaGridLegacy = try container.decodeIfPresent(Bool.self, forKey: "sharedMediaGridLegacy") ?? false
         self.storyLegacyVideoWriter = try container.decodeIfPresent(Bool.self, forKey: "storyLegacyVideoWriter") ?? false
         self.chatLegacyVideoWriter = try container.decodeIfPresent(Bool.self, forKey: "chatLegacyVideoWriter") ?? false
+        self.chatSideListLegacy = try container.decodeIfPresent(Bool.self, forKey: "chatSideListLegacy") ?? false
         self.inputDecTextBackend = try container.decodeIfPresent(Bool.self, forKey: "inputDecTextBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
         self.springSendAnimation = try container.decodeIfPresent(Bool.self, forKey: "springSendAnimation") ?? false
@@ -421,6 +426,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.sharedMediaGridLegacy, forKey: "sharedMediaGridLegacy")
         try container.encodeIfPresent(self.storyLegacyVideoWriter, forKey: "storyLegacyVideoWriter")
         try container.encodeIfPresent(self.chatLegacyVideoWriter, forKey: "chatLegacyVideoWriter")
+        try container.encodeIfPresent(self.chatSideListLegacy, forKey: "chatSideListLegacy")
         try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")
         try container.encodeIfPresent(self.springSendAnimation, forKey: "springSendAnimation")

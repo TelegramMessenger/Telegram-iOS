@@ -315,10 +315,19 @@ public final class ContextControllerReferenceViewInfo {
     public let customPosition: CGPoint?
     public let actionsPosition: ActionsPosition
     public let centersMorphedActions: Bool
+    /// Which of the source's side edges a morphing menu keeps. `.automatic` takes the one nearer the screen edge.
+    public let morphedActionsAlignment: MorphedActionsAlignment
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom, sourcePath: UIBezierPath? = nil, centersMorphedActions: Bool = false) {
+    public enum MorphedActionsAlignment {
+        case automatic
+        case leading
+        case trailing
+    }
+    
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom, sourcePath: UIBezierPath? = nil, centersMorphedActions: Bool = false, morphedActionsAlignment: MorphedActionsAlignment = .automatic) {
         self.sourcePath = sourcePath
         self.centersMorphedActions = centersMorphedActions
+        self.morphedActionsAlignment = morphedActionsAlignment
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
@@ -542,6 +551,8 @@ public struct ContextControllerItems {
     public var dismissed: (() -> Void)?
     public var usesClearGlass: Bool
     public var glassBlurRadius: CGFloat?
+    /// A list menu is at least 220pt wide; a menu of short items can lower that floor. It still fits its widest item.
+    public var minimumListWidth: CGFloat?
 
     public init(
         id: AnyHashable? = nil,

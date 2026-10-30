@@ -1125,6 +1125,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             guard let strongSelf = self else {
                 return false
             }
+            // With the side list open a right swipe closes the list, not the chat.
+            if strongSelf.sideListOffset > 0.0 {
+                return true
+            }
             if let _ = strongSelf.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
                 return true
             }
@@ -1203,6 +1207,70 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return CGSize(width: layout.size.width, height: height)
     }
     
+    /// How far the chat is moved left for the side list (`ChatSideListPanelNode`); the panel itself is the controller's.
+    private(set) var sideListOffset: CGFloat = 0.0
+
+    /// Dims the chat while the side list is out (the strip of it left on screen).
+    private var sideListDimNode: ASDisplayNode?
+
+    func updateSideListOffset(_ offset: CGFloat, dimAlpha: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
+        self.sideListOffset = offset
+        guard let (layout, _) = self.validLayout else {
+            completion?()
+            return
+        }
+        if dimAlpha > 0.0 || self.sideListDimNode != nil {
+            let dimNode: ASDisplayNode
+            if let current = self.sideListDimNode {
+                dimNode = current
+            } else {
+                dimNode = ASDisplayNode()
+                dimNode.backgroundColor = .black
+                dimNode.alpha = 0.0
+                dimNode.isUserInteractionEnabled = false
+                self.sideListDimNode = dimNode
+            }
+            // Over everything of the chat, panels it inserted later included; inside the card, so it keeps its corners.
+            if dimNode.supernode !== self.wrappingNode.contentNode || self.wrappingNode.contentNode.subnodes?.last !== dimNode {
+                self.wrappingNode.contentNode.addSubnode(dimNode)
+            }
+            dimNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+            transition.updateAlpha(node: dimNode, alpha: dimAlpha, completion: { [weak self, weak dimNode] _ in
+                guard let self, let dimNode, self.sideListOffset == 0.0, self.sideListDimNode === dimNode else {
+                    return
+                }
+                self.sideListDimNode = nil
+                dimNode.removeFromSupernode()
+            })
+        }
+        // Moved aside, the chat is a card: its right corners take the screen's radius over the list's background.
+        if offset > 0.0 {
+            self.wrappingNode.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            self.wrappingNode.clipsToBounds = true
+            transition.updateCornerRadius(node: self.wrappingNode, cornerRadius: layout.deviceMetrics.screenCornerRadius)
+        } else {
+            transition.updateCornerRadius(node: self.wrappingNode, cornerRadius: 0.0, completion: { [weak self] _ in
+                guard let self, self.sideListOffset == 0.0 else {
+                    return
+                }
+                self.wrappingNode.clipsToBounds = false
+            })
+        }
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: layout.size), completion: { _ in
+            completion?()
+        })
+    }
+
+    /// Stops the side list's slide where it is (`updateSideListOffset` follows at the on-screen offset).
+    func removeSideListAnimations() {
+        for layer in [self.wrappingNode.layer, self.sideListDimNode?.layer].compactMap({ $0 }) {
+            layer.removeAnimation(forKey: "position")
+            layer.removeAnimation(forKey: "bounds")
+            layer.removeAnimation(forKey: "cornerRadius")
+            layer.removeAnimation(forKey: "opacity")
+        }
+    }
+
     func forceUpdateWarpContents() {
         guard let (layout, _) = self.validLayout else {
             return
@@ -1218,7 +1286,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition = protoTransition
         }
         
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -self.sideListOffset, y: 0.0), size: layout.size))
         self.wrappingNode.update(size: layout.size, cornerRadius: layout.deviceMetrics.screenCornerRadius, transition: ComponentTransition(transition))
         
         if let statusBar = self.statusBar {
@@ -1475,7 +1543,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var footerPanels: [HeaderPanelContainerComponent.Panel] = []
         let hideTopPanels = self.controller?.hideTopPanels ?? false
         
-        if !hideTopPanels, self.chatPresentationInterfaceState.search == nil, let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+        if !hideTopPanels, self.chatPresentationInterfaceState.search == nil, let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false, sideListActive: chatSideListKindForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, isRegularWidth: layout.metrics.widthClass == .regular) != nil) {
             let panel = HeaderPanelContainerComponent.Panel(
                 key: "topics",
                 orderIndex: 0,
@@ -1793,7 +1861,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance = false
         var didChangeFloatingTopicsPanel = false
         
-        if let floatingTopicsPanelComponent = floatingTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+        if let floatingTopicsPanelComponent = floatingTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false, sideListActive: chatSideListKindForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, isRegularWidth: layout.metrics.widthClass == .regular) != nil) {
             if self.floatingTopicsPanel == nil {
                 self.floatingTopicsPanel = (ComponentView(), floatingTopicsPanelComponent)
                 immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance = true
@@ -3461,7 +3529,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             return nil
                         }
                         let strings = self.chatPresentationInterfaceState.strings
-                        let foundLocalPeers = context.engine.messages.searchLocalSavedMessagesPeers(query: query.lowercased(), indexNameMapping: [
+                        let foundLocalPeers = context.engine.messages.searchLocalSavedMessagesPeers(peerId: context.account.peerId, query: query.lowercased(), indexNameMapping: [
                             context.account.peerId: [
                                 PeerIndexNameRepresentation.title(title: strings.DialogList_MyNotes.lowercased(), addressNames: []),
                                 PeerIndexNameRepresentation.title(title: "my notes".lowercased(), addressNames: [])
@@ -4165,8 +4233,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func sendButtonFrame() -> CGRect? {
-        if let frame = self.textInputPanelNode?.sendActionButtons.frame {
-            return self.textInputPanelNode?.convert(frame, to: self)
+        if let sendActionButtons = self.textInputPanelNode?.sendActionButtons {
+            return sendActionButtons.view.convert(sendActionButtons.bounds, to: self.view)
         } else {
             return nil
         }

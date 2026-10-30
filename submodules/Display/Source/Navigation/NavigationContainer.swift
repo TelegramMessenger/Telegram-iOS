@@ -1158,6 +1158,15 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
         }
     }
 
+    /// A push or pop's bar part ends now, whether its screens still slide or only its glass still animates: each bar's
+    /// content goes back to its bar, the glass hands over. An expansion's bars belong to its card and stay.
+    func endNavigationBarTransitionNow() {
+        if let coordinator = self.state.transition?.coordinator, !coordinator.isExpansion {
+            coordinator.endNavigationBarTransition(lingering: false)
+        }
+        self.endLingeringNavigationBarTransition()
+    }
+
     /// The lingering glass hands over to its bar at once.
     func endLingeringNavigationBarTransition() {
         if let layer = self.lingeringNavigationBarTransitionLayer {

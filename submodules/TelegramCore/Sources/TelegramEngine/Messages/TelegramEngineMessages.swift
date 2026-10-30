@@ -1897,8 +1897,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func searchLocalSavedMessagesPeers(query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
-            return _internal_searchLocalSavedMessagesPeers(account: self.account, query: query, indexNameMapping: indexNameMapping)
+        public func searchLocalSavedMessagesPeers(peerId: EnginePeer.Id, query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
+            return _internal_searchLocalSavedMessagesPeers(account: self.account, peerId: peerId, query: query, indexNameMapping: indexNameMapping)
         }
         
         public func internalReindexSavedMessagesCustomTagsIfNeeded(threadId: Int64?, tag: MemoryBuffer) {

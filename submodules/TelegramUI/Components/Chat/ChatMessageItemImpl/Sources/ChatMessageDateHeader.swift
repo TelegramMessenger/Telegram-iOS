@@ -585,7 +585,8 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             let avatarIconContent: EmojiStatusComponent.Content
             if id != 1 {
                 if let fileId = info.icon, fileId != 0 {
-                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.theme.list.itemAccentColor, loopMode: .count(0))
+                    // A template emoji takes the header's text colour, as the General icon does.
+                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper), loopMode: .count(0))
                 } else {
                     avatarIconContent = .topic(title: String(info.title.prefix(1)), color: info.iconColor, size: CGSize(width: 16.0, height: 16.0))
                 }

@@ -53,6 +53,7 @@ import BirthdayPickerScreen
 import OldChannelsController
 import TextFormat
 import AvatarUploadToastScreen
+import AvatarNode
 import AdsInfoScreen
 import AdsReportScreen
 import SearchBarNode
@@ -148,6 +149,50 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var didAppear = false
     private var dismissSearchOnDisappear = false
     public var onDidAppear: (() -> Void)?
+    public var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)?
+    /// Hosted by the chat side list: compact inline rows, an "All Messages" row, a rounded highlight.
+    public let isSideList: Bool
+    /// Set by the chat side list: its header's More button opens the menu of the chat it lists (`sourceView` is where
+    /// the menu grows from).
+    public var sideListMoreAction: ((UIView, ContextGesture?) -> Void)?
+    
+    /// The profile the side list's header is about to push, and the one it expanded into.
+    fileprivate weak var sideListExpansionProfileToPush: ViewController?
+    private weak var sideListExpandedProfile: ViewController?
+    
+    override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        guard self.isSideList, self.isNodeLoaded else {
+            return nil
+        }
+        switch operation {
+        case .push:
+            guard let profile = self.sideListExpansionProfileToPush, profile === controller else {
+                return nil
+            }
+            self.sideListExpansionProfileToPush = nil
+        case .pop, .interactivePop:
+            guard let profile = self.sideListExpandedProfile, profile === controller else {
+                return nil
+            }
+        }
+        guard let barView = self.chatListDisplayNode.navigationBarView.view, let titleView = chatListSideListTitleView(in: barView), titleView.glassPillFrame != nil else {
+            return nil
+        }
+        if case .push = operation {
+            self.sideListExpandedProfile = controller
+        }
+        let avatar = self.primaryContext?.sideListAvatarButtonNodes
+        return ChatListSideListExpansionSource(titleView: titleView, barView: barView as? ChatListNavigationBar.View, avatarButtonNode: avatar?.button, avatarView: avatar?.avatar, isDark: self.presentationData.theme.overallDarkAppearance)
+    }
+    
+    /// Offers a tap to `interceptPeerSelection`, resolved to the parent's thread (`chatSideListResolvedSelection`).
+    private func interceptsSelection(peer: EnginePeer, threadId: Int64?, messageId: EngineMessage.Id?, isListRow: Bool) -> Bool {
+        guard let interceptPeerSelection = self.interceptPeerSelection else {
+            return false
+        }
+        let resolved = chatSideListResolvedSelection(location: self.location, peerId: peer.id, threadId: threadId, isListRow: isListRow)
+        return interceptPeerSelection(resolved.peerId, resolved.threadId, messageId)
+    }
         
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
@@ -260,8 +305,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    public init(context: AccountContext, location: ChatListControllerLocation, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, previewing: Bool = false, enableDebugActions: Bool) {
+    public init(context: AccountContext, location: ChatListControllerLocation, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, previewing: Bool = false, enableDebugActions: Bool, isSideList: Bool = false) {
         self.context = context
+        self.isSideList = isSideList
         self.controlsHistoryPreload = controlsHistoryPreload
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
@@ -1396,9 +1442,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.setPeerThreadHidden(peerId: peerId, threadId: threadId, isHidden: isHidden)
         }
         
+        self.chatListDisplayNode.mainContainerNode.sideListAllThreadsSelected = { [weak self] in
+            guard let self, let interceptPeerSelection = self.interceptPeerSelection, case let .savedMessagesChats(parentPeerId) = self.location else {
+                return
+            }
+            let _ = interceptPeerSelection(parentPeerId, nil, nil)
+        }
         self.chatListDisplayNode.mainContainerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
             Task { @MainActor [weak self] in
                 guard let self else {
+                    return
+                }
+                if self.interceptsSelection(peer: peer, threadId: threadId, messageId: nil, isListRow: true) {
+                    self.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
                     return
                 }
                 
@@ -1739,6 +1795,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, threadId, messageId, deactivateOnAction in
             if let strongSelf = self {
+                if strongSelf.interceptsSelection(peer: peer, threadId: threadId, messageId: messageId, isListRow: false) {
+                    if deactivateOnAction {
+                        strongSelf.deactivateSearch(animated: false)
+                    }
+                    return
+                }
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
                 |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] actualPeer in
                     if let strongSelf = strongSelf {
@@ -1769,6 +1831,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer, threadId, dismissSearch in
             if let strongSelf = self {
+                if strongSelf.interceptsSelection(peer: peer, threadId: threadId, messageId: nil, isListRow: false) {
+                    if dismissSearch {
+                        strongSelf.deactivateSearch(animated: false)
+                    }
+                    return
+                }
                 let storedPeer = strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> map { _ -> Void in return Void() }
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).startStrict(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
@@ -4740,7 +4808,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let (_, _) = await combineLatest(self.chatListDisplayNode.mainContainerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(components: [:])) |> take(1)).get()
 
                 do {
-                    let displaySearchFilters = true
+                    // The chat side list searches one chat: no global tabs.
+                    let displaySearchFilters = !self.isSideList
                     
                     if let filterContainerNodeAndActivate = await self.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode?.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: self.hasDownloads, initialFilter: filter, navigationController: self.navigationController as? NavigationController, searchBarIsExternal: false) {
                         let activate = filterContainerNodeAndActivate
@@ -7010,7 +7079,49 @@ private final class ChatListLocationContext {
                     presentationData: presentationData
                 )
             })
-        case .savedMessagesChats:
+        case let .savedMessagesChats(peerId):
+            // Pushed screens show this list inside the profile; the chat side list hosts it bare, so it titles itself.
+            self.titleDisposable = (combineLatest(queue: Queue.mainQueue(),
+                context.account.viewTracker.peerView(peerId),
+                parentController.updatedPresentationData.1
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, presentationData in
+                guard let self else {
+                    return
+                }
+                let isSavedMessages = peerId == self.context.account.peerId
+                // A channel's direct messages show as the channel: its avatar and its title.
+                var mainPeer = peerView.peers[peerId].flatMap(EnginePeer.init)
+                if let channel = peerView.peers[peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let linkedPeer = peerView.peers[linkedMonoforumId] {
+                    mainPeer = EnginePeer(linkedPeer)
+                }
+                if let mainPeer {
+                    self.updateSideListAvatarButton(peer: mainPeer, isSavedMessages: isSavedMessages, theme: presentationData.theme)
+                }
+                if !isSavedMessages {
+                    self.leftButton = self.sideListMoreButton()
+                }
+                let customTitle: String? = isSavedMessages ? presentationData.strings.Conversation_SavedMessages : (mainPeer?.id != peerId ? mainPeer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) : nil)
+                self.chatTitleComponent = ChatTitleComponent(
+                    context: self.context,
+                    theme: presentationData.theme,
+                    preferClearGlass: false,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    displayBackground: self.parentController?.isSideList ?? false,
+                    content: .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: customTitle, customSubtitle: isSavedMessages ? nil : presentationData.strings.Chat_SideList_DirectMessages, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: nil, customMessageCount: nil, hidePeerStatus: isSavedMessages, isEnabled: true),
+                    activities: nil,
+                    networkState: nil,
+                    tapped: { [weak self] in
+                        self?.openSideListProfile()
+                    },
+                    longTapped: { [weak self] in
+                        self?.parentController?.activateSearch()
+                    }
+                )
+                self.parentController?.requestLayout(transition: .immediate)
+            })
             self.didSetReady = true
             self.ready.set(.single(true))
         }
@@ -7440,12 +7551,16 @@ private final class ChatListLocationContext {
                 strings: presentationData.strings,
                 dateTimeFormat: presentationData.dateTimeFormat,
                 nameDisplayOrder: presentationData.nameDisplayOrder,
-                displayBackground: false,
+                displayBackground: self.parentController?.isSideList ?? false,
                 content: .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, customSubtitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: nil, customMessageCount: nil, hidePeerStatus: false, isEnabled: true),
                 activities: nil,
                 networkState: nil,
                 tapped: { [weak self] in
                     guard let self else {
+                        return
+                    }
+                    if self.parentController?.isSideList == true {
+                        self.openSideListProfile()
                         return
                     }
                     let _ = (self.context.engine.data.get(
@@ -7494,6 +7609,15 @@ private final class ChatListLocationContext {
             )
         }
         
+        if self.parentController?.isSideList == true, !stateAndFilterId.state.editing {
+            // The side list's header: the menu on the left, the parent's avatar on the right.
+            self.leftButton = self.sideListMoreButton() ?? self.rightButton
+            self.rightButton = nil
+            if let peer = peerView.peers[peerId].flatMap(EnginePeer.init) {
+                self.updateSideListAvatarButton(peer: peer, isSavedMessages: false, theme: presentationData.theme)
+            }
+        }
+        
         let isFirstUpdate = !self.didSetReady
         if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, !channel.isForumOrMonoForum {
             if isFirstUpdate {
@@ -7512,6 +7636,80 @@ private final class ChatListLocationContext {
                 self.ready.set(.single(true))
             }
         }
+    }
+    
+    private var sideListAvatarNode: ChatListSideListAvatarButtonNode?
+    
+    /// The side list header's More button, when its host chat offers a menu.
+    private func sideListMoreButton() -> NavigationBarComponent.Button? {
+        guard let parentController = self.parentController, parentController.isSideList, parentController.sideListMoreAction != nil else {
+            return nil
+        }
+        return NavigationBarComponent.Button(id: "more",
+            content: .more,
+            action: { [weak parentController] sourceView in
+                guard let parentController else {
+                    return
+                }
+                parentController.sideListMoreAction?(parentController.headerMenuSourceView(sourceView), nil)
+            },
+            contextAction: { [weak parentController] sourceView, gesture in
+                guard let parentController else {
+                    return
+                }
+                parentController.sideListMoreAction?(parentController.headerMenuSourceView(sourceView), gesture)
+            }
+        )
+    }
+    
+    /// The side list header's right button: the parent's avatar, opening its profile.
+    private func updateSideListAvatarButton(peer: EnginePeer, isSavedMessages: Bool, theme: PresentationTheme) {
+        let avatarNode: ChatListSideListAvatarButtonNode
+        if let current = self.sideListAvatarNode {
+            avatarNode = current
+        } else {
+            avatarNode = ChatListSideListAvatarButtonNode()
+            self.sideListAvatarNode = avatarNode
+        }
+        // A forum's avatar is a rounded square, as everywhere forums show.
+        var clipStyle: AvatarNodeClipStyle = .round
+        if case let .channel(channel) = peer, channel.isForum {
+            clipStyle = .roundedRect
+        }
+        avatarNode.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: isSavedMessages ? .savedMessagesIcon : nil, emptyColor: theme.list.mediaPlaceholderColor, clipStyle: clipStyle)
+        self.rightButton = NavigationBarComponent.Button(id: "sideListAvatar",
+            content: .node(avatarNode),
+            // A forum's square avatar sits on square glass, its corners concentric with the avatar's.
+            glassCornerRadius: clipStyle == .roundedRect ? ChatListSideListAvatarButtonNode.roundedRectGlassCornerRadius : nil,
+            action: { [weak self] _ in
+                self?.openSideListProfile()
+            }
+        )
+        self.sideListProfilePeer = peer
+    }
+    
+    private var sideListProfilePeer: EnginePeer?
+    
+    /// The side list header's avatar or title was tapped: the profile opens out of them, as out of the chat's header.
+    private func openSideListProfile() {
+        guard let peer = self.sideListProfilePeer, let parentController = self.parentController, let navigationController = parentController.navigationController as? NavigationController else {
+            return
+        }
+        guard let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: .chatSideList, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) else {
+            return
+        }
+        // Saved Messages' profile has no avatar to fly to, and slides, as from its chat.
+        if peer.id != self.context.account.peerId {
+            parentController.sideListExpansionProfileToPush = controller
+        }
+        navigationController.pushViewController(controller)
+    }
+    
+    fileprivate var sideListAvatarButtonNodes: (button: ASDisplayNode, avatar: UIView)? {
+        guard let node = self.sideListAvatarNode, node.isNodeLoaded else {
+            return nil
+        }
+        return (node, node.avatarNode.view)
     }
     
     private func performMoreAction(sourceView: UIView) {
@@ -7568,5 +7766,42 @@ public func resolveChatListNavigationTarget(navigationController: NavigationCont
         return ChatListNavigationTarget(chatListController: chatListController, popToController: nil)
     }
     
+    return nil
+}
+
+/// The chat side list header's avatar button.
+private final class ChatListSideListAvatarButtonNode: ASDisplayNode {
+    let avatarNode: AvatarNode
+
+    override init() {
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 16.0))
+        super.init()
+        self.addSubnode(self.avatarNode)
+    }
+
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return CGSize(width: 44.0, height: 44.0)
+    }
+
+    private static let avatarInset: CGFloat = 3.0
+    /// The avatar's own rounded-rect radius (a quarter of its 38 pt side, as `AvatarNode` draws it) plus the inset.
+    static let roundedRectGlassCornerRadius: CGFloat = floor((44.0 - avatarInset * 2.0) * 0.25) + avatarInset
+
+    override func layout() {
+        super.layout()
+        // Inside the button's glass, as the chat header's avatar sits.
+        self.avatarNode.frame = self.bounds.insetBy(dx: ChatListSideListAvatarButtonNode.avatarInset, dy: ChatListSideListAvatarButtonNode.avatarInset)
+    }
+}
+
+private func chatListSideListTitleView(in view: UIView) -> ChatTitleComponent.View? {
+    if let view = view as? ChatTitleComponent.View {
+        return view
+    }
+    for subview in view.subviews {
+        if let result = chatListSideListTitleView(in: subview) {
+            return result
+        }
+    }
     return nil
 }

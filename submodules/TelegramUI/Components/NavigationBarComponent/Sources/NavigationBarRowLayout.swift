@@ -172,6 +172,14 @@ func navigationBarCapsuleTint(_ buttons: [NavigationBarComponent.Button]) -> Nav
     return buttons.allSatisfy({ $0.tint == first.tint }) ? first.tint : .generic
 }
 
+/// A pill's own corner radius: its button's, when it is alone in the pill; nil for a circle or capsule.
+func navigationBarCapsuleCornerRadius(_ buttons: [NavigationBarComponent.Button]) -> CGFloat? {
+    guard buttons.count == 1 else {
+        return nil
+    }
+    return buttons[0].glassCornerRadius
+}
+
 /// The glass of a capsule or circle with `tint`, as the old glass bar drew it: a generic one takes the theme's glass
 /// tint when it has one.
 func navigationBarGlassTintColor(_ tint: NavigationBarComponent.Button.Tint, theme: NavigationBarTheme) -> GlassBackgroundView.TintColor {

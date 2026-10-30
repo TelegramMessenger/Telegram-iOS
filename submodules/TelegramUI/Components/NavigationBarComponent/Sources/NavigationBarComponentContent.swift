@@ -137,11 +137,15 @@ extension NavigationBarComponent {
         /// iPhone Duo: stays in the row rather than moving into the side column (`navigationBarIsColumnItem`), for a
         /// button that takes turns with a text button in the same place (Done after Edit).
         public let staysInRow: Bool
+        /// The corner radius of the button's glass when it has a pill of its own (a forum's square avatar); nil: a
+        /// circle. Navigation transitions still morph it as a circle.
+        public let glassCornerRadius: CGFloat?
         public let action: (UIView) -> Void
         public let contextAction: ((UIView, ContextGesture?) -> Void)?
 
-        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, staysInRow: Bool = false, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil) {
+        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, staysInRow: Bool = false, glassCornerRadius: CGFloat? = nil, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil) {
             self.id = id
+            self.glassCornerRadius = glassCornerRadius
             self.content = content
             self.isEnabled = isEnabled
             self.tint = tint
@@ -153,7 +157,7 @@ extension NavigationBarComponent {
         }
 
         public func withOverflow(_ overflow: OverflowInfo?) -> Button {
-            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, staysInRow: self.staysInRow, action: self.action, contextAction: self.contextAction)
+            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, staysInRow: self.staysInRow, glassCornerRadius: self.glassCornerRadius, action: self.action, contextAction: self.contextAction)
         }
 
         /// Actions are not compared: they are recreated on every update.
@@ -177,6 +181,9 @@ extension NavigationBarComponent {
                 return false
             }
             if lhs.staysInRow != rhs.staysInRow {
+                return false
+            }
+            if lhs.glassCornerRadius != rhs.glassCornerRadius {
                 return false
             }
             return true

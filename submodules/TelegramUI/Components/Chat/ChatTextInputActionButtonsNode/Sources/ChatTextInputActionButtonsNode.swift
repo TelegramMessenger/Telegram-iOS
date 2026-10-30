@@ -135,6 +135,10 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     private let strings: PresentationStrings
     
     public let micButtonBackgroundView: GlassBackgroundView
+    /// The send capsule's width; 40 unless the host sets its own (the agent composer's is 42).
+    public var sendButtonWidth: CGFloat = 40.0
+    /// The mic sits inside a glass container (the agent composer) and draws no circle of its own.
+    public var hidesMicBackground = false
     public let micButtonTintMaskView: UIImageView
     public let micButton: ChatTextInputMediaRecordingButton
     public let stopButtonIcon: GlassBackgroundView.ContentImageView
@@ -368,7 +372,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         self.validLayout = size
         
         var innerSize = size
-        innerSize.width = 40.0 + 3.0 * 2.0
+        innerSize.width = self.sendButtonWidth + 3.0 * 2.0
         
         let defaultGlassTintColor: GlassBackgroundView.TintColor
         if case .clear = interfaceState.preferredGlassType {
@@ -430,7 +434,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         // does not follow its view's alpha (the panel's fade-out leaves it on screen, under the translucent blob), so
         // it is dissolved through the glass itself.
         let isRecording = interfaceState.inputTextPanelState.mediaRecordingState != nil
-        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark:  interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !isRecording, transition: ComponentTransition(transition))
+        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark:  interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !isRecording && !self.hidesMicBackground, transition: ComponentTransition(transition))
         
         transition.updatePosition(layer: self.micButton.layer, position: CGRect(origin: CGPoint(), size: size).center)
         transition.updateBounds(layer: self.micButton.layer, bounds: CGRect(origin: CGPoint(), size: size))
@@ -482,7 +486,16 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         let sendButtonCornerDiameter = min(sendButtonBackgroundFrame.width, sendButtonBackgroundFrame.height)
         if self.sendButtonBackgroundImageDiameter != sendButtonCornerDiameter {
             self.sendButtonBackgroundImageDiameter = sendButtonCornerDiameter
-            self.sendButtonBackgroundView.image = generateStretchableFilledCircleImage(diameter: sendButtonCornerDiameter, color: .white)?.withRenderingMode(.alwaysTemplate)
+            // A circle stretched from its middle column repeats a slice of its curve along the flat edges, so the
+            // straight part meets the rounding with a visible kink. The image is a capsule one point longer than its
+            // diameter each way, whose middle row and column are flat, and only those stretch.
+            let radius = sendButtonCornerDiameter * 0.5
+            self.sendButtonBackgroundView.image = generateImage(CGSize(width: sendButtonCornerDiameter + 1.0, height: sendButtonCornerDiameter + 1.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
+                context.fillPath()
+            })?.resizableImage(withCapInsets: UIEdgeInsets(top: radius, left: radius, bottom: radius, right: radius), resizingMode: .stretch).withRenderingMode(.alwaysTemplate)
         }
         
         let slowmodeInset: CGFloat = 4.0
