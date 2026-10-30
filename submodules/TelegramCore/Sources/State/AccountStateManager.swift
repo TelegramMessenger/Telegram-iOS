@@ -267,6 +267,11 @@ public final class AccountStateManager {
             return self.joinChatWebViewDecisionsPipe.signal()
         }
         
+        private let storyReactionNotificationsPipe = ValuePipe<[StoryReactionNotification]>()
+        public var storyReactionNotifications: Signal<[StoryReactionNotification], NoError> {
+            return self.storyReactionNotificationsPipe.signal()
+        }
+        
         private let externallyUpdatedPeerIdsPipe = ValuePipe<[PeerId]>()
         var externallyUpdatedPeerIds: Signal<[PeerId], NoError> {
             return self.externallyUpdatedPeerIdsPipe.signal()
@@ -1291,6 +1296,9 @@ public final class AccountStateManager {
                 if !events.joinChatWebViewDecisions.isEmpty {
                     self.joinChatWebViewDecisionsPipe.putNext(events.joinChatWebViewDecisions)
                 }
+                if !events.storyReactionNotifications.isEmpty {
+                    self.storyReactionNotificationsPipe.putNext(events.storyReactionNotifications)
+                }
 
                 if !events.externallyUpdatedPeerId.isEmpty {
                     self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
@@ -1961,6 +1969,12 @@ public final class AccountStateManager {
     public var joinChatWebViewDecisions: Signal<[JoinChatWebViewDecision], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.joinChatWebViewDecisions.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public var storyReactionNotifications: Signal<[StoryReactionNotification], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.storyReactionNotifications.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
 

@@ -3209,3 +3209,15 @@ func _internal_sendStoryStars(account: Account, peerId: EnginePeer.Id, id: Int32
         }*/
     }
 }
+
+public struct StoryReactionNotification: Equatable {
+    public let storyId: Int32
+    public let reactionAuthorId: EnginePeer.Id
+    public let reaction: MessageReaction.Reaction
+
+    public init(storyId: Int32, reactionAuthorId: EnginePeer.Id, reaction: MessageReaction.Reaction) {
+        self.storyId = storyId
+        self.reactionAuthorId = reactionAuthorId
+        self.reaction = reaction
+    }
+}
