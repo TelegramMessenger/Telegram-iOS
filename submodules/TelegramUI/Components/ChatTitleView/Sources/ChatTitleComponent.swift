@@ -1201,7 +1201,12 @@ public final class ChatTitleComponent: Component {
                         isVisibleForAnimations: true,
                         action: nil
                     ))
-                    leftIconContainerSize = TitleIconComponent.savedMessagesSize
+                    // An image (General's "#") takes its own size, so the spacing to the title is the image's.
+                    if case let .image(image, _) = leadingEmojiStatus, let image {
+                        leftIconContainerSize = image.size
+                    } else {
+                        leftIconContainerSize = TitleIconComponent.savedMessagesSize
+                    }
                 } else if let leadingAvatar {
                     leftIconComponent = AnyComponent(TitleAvatarComponent(
                         context: component.context,

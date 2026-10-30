@@ -533,7 +533,13 @@ func updateChatPresentationInterfaceStateImpl(
                 case let .peer(peer, imageOverride, _, _):
                     leadingIcon = .peer(peer, imageOverride: imageOverride)
                 case let .emojiStatus(content, _):
-                    leadingIcon = .emojiStatus(chatTitleLeadingEmojiStatus(content))
+                    if updatedChatPresentationInterfaceState.chatLocation.threadId == 1 {
+                        // General's "#" at the side list row's size (the info avatar's is a large one), in the status
+                        // line's colour.
+                        leadingIcon = .emojiStatus(.image(image: PresentationResourcesChatList.generalTopicSmallIcon(selfController.presentationData.theme)?.withRenderingMode(.alwaysTemplate), tintColor: selfController.presentationData.theme.chat.inputPanel.inputControlColor))
+                    } else {
+                        leadingIcon = .emojiStatus(chatTitleLeadingEmojiStatus(content))
+                    }
                 case .none:
                     break
                 }
