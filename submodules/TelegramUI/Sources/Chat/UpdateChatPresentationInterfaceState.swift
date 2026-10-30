@@ -514,7 +514,13 @@ func updateChatPresentationInterfaceStateImpl(
     
     var forceLayout = false
     
-    if let chatTitleContent = selfController.contentData?.state.chatTitleContent, let chatTitleView = selfController.chatTitleView {
+    if var chatTitleContent = selfController.contentData?.state.chatTitleContent, let chatTitleView = selfController.chatTitleView {
+        // With the side list, Saved Messages' header is its avatar and name: the list replaces "Tap to view as chats".
+        var showsSavedMessagesAvatar = false
+        if case .savedMessages = selfController.currentSideListKind(presentationInterfaceState: updatedChatPresentationInterfaceState), case .peer = updatedChatPresentationInterfaceState.chatLocation, case let .peer(peerView, customTitle, _, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, hidePeerStatus, isEnabled) = chatTitleContent {
+            showsSavedMessagesAvatar = true
+            chatTitleContent = .peer(peerView: peerView, customTitle: customTitle, customSubtitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: isMuted, customMessageCount: customMessageCount, hidePeerStatus: hidePeerStatus, isEnabled: isEnabled)
+        }
         var titleTransition = ComponentTransition(transition)
         if case .messageOptions = selfController.subject {
             titleTransition = titleTransition.withAnimation(.none)
@@ -528,6 +534,7 @@ func updateChatPresentationInterfaceStateImpl(
             dateTimeFormat: selfController.presentationData.dateTimeFormat,
             nameDisplayOrder: selfController.presentationData.nameDisplayOrder,
             content: chatTitleContent,
+            showsSavedMessagesAvatar: showsSavedMessagesAvatar,
             transition: titleTransition,
             ignoreParentTransitionRequests: true
         )

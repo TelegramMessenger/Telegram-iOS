@@ -3,12 +3,17 @@ import UIKit
 import Display
 import ComponentFlow
 import TelegramPresentationData
+import AvatarNode
 
 final class TitleIconComponent: Component {
     enum Kind {
         case mute
         case lock
+        /// Saved Messages' avatar, before the title (the chat side list's Saved Messages header).
+        case savedMessages
     }
+    
+    static let savedMessagesSize = CGSize(width: 22.0, height: 22.0)
     
     let kind: Kind
     let color: UIColor
@@ -71,10 +76,17 @@ final class TitleIconComponent: Component {
                         let _ = try? drawSvgPath(context, path: "M4.5,0.600000024 C5.88071187,0.600000024 7,1.88484952 7,3.46979169 L7,7.39687502 C7,8.9818172 5.88071187,10.2666667 4.5,10.2666667 C3.11928813,10.2666667 2,8.9818172 2,7.39687502 L2,3.46979169 C2,1.88484952 3.11928813,0.600000024 4.5,0.600000024 S ")
                         let _ = try? drawSvgPath(context, path: "M1.32,5.65999985 L7.68,5.65999985 C8.40901587,5.65999985 9,6.25098398 9,6.97999985 L9,10.6733332 C9,11.4023491 8.40901587,11.9933332 7.68,11.9933332 L1.32,11.9933332 C0.59098413,11.9933332 1.11022302e-16,11.4023491 0,10.6733332 L2.22044605e-16,6.97999985 C1.11022302e-16,6.25098398 0.59098413,5.65999985 1.32,5.65999985 Z ")
                     })?.withRenderingMode(.alwaysTemplate)
+                case .savedMessages:
+                    self.iconView.image = generateSavedMessagesAvatarImage(size: TitleIconComponent.savedMessagesSize)
                 }
             }
             
-            let size = CGSize(width: 14.0, height: 14.0)
+            let size: CGSize
+            if case .savedMessages = component.kind {
+                size = TitleIconComponent.savedMessagesSize
+            } else {
+                size = CGSize(width: 14.0, height: 14.0)
+            }
             
             if let image = self.iconView.image {
                 let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) * 0.5), y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: image.size)

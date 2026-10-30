@@ -68,8 +68,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         let dateTimeFormat: PresentationDateTimeFormat
         let nameDisplayOrder: PresentationPersonNameOrder
         let content: ChatTitleContent
+        let showsSavedMessagesAvatar: Bool
         
-        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent) {
+        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent, showsSavedMessagesAvatar: Bool) {
             self.context = context
             self.theme = theme
             self.preferClearGlass = preferClearGlass
@@ -78,6 +79,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             self.dateTimeFormat = dateTimeFormat
             self.nameDisplayOrder = nameDisplayOrder
             self.content = content
+            self.showsSavedMessagesAvatar = showsSavedMessagesAvatar
         }
         
         static func ==(lhs: ContentData, rhs: ContentData) -> Bool {
@@ -103,6 +105,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                 return false
             }
             if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.showsSavedMessagesAvatar != rhs.showsSavedMessagesAvatar {
                 return false
             }
             return true
@@ -187,6 +192,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         dateTimeFormat: PresentationDateTimeFormat,
         nameDisplayOrder: PresentationPersonNameOrder,
         content: ChatTitleContent,
+        showsSavedMessagesAvatar: Bool = false,
         transition: ComponentTransition,
         ignoreParentTransitionRequests: Bool = false
     ) -> Bool {
@@ -199,7 +205,8 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             strings: strings,
             dateTimeFormat: dateTimeFormat,
             nameDisplayOrder: nameDisplayOrder,
-            content: content
+            content: content,
+            showsSavedMessagesAvatar: showsSavedMessagesAvatar
         )
         let isUpdated = self.contentData != contentData
         self.contentData = contentData
@@ -246,6 +253,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                     nameDisplayOrder: contentData.nameDisplayOrder,
                     displayBackground: displayBackground,
                     content: contentData.content,
+                    showsSavedMessagesAvatar: contentData.showsSavedMessagesAvatar,
                     activities: self.activities,
                     networkState: self.networkState,
                     tapped: { [weak self] in
@@ -315,6 +323,8 @@ public final class ChatTitleComponent: Component {
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let displayBackground: Bool
     public let content: ChatTitleContent
+    /// Saved Messages' avatar before its title, as the chat side list's Saved Messages header shows it.
+    public let showsSavedMessagesAvatar: Bool
     public let activities: Activities?
     public let networkState: AccountNetworkState?
     public let tapped: () -> Void
@@ -329,6 +339,7 @@ public final class ChatTitleComponent: Component {
         nameDisplayOrder: PresentationPersonNameOrder,
         displayBackground: Bool,
         content: ChatTitleContent,
+        showsSavedMessagesAvatar: Bool = false,
         activities: Activities?,
         networkState: AccountNetworkState?,
         tapped: @escaping () -> Void,
@@ -342,6 +353,7 @@ public final class ChatTitleComponent: Component {
         self.nameDisplayOrder = nameDisplayOrder
         self.displayBackground = displayBackground
         self.content = content
+        self.showsSavedMessagesAvatar = showsSavedMessagesAvatar
         self.activities = activities
         self.networkState = networkState
         self.tapped = tapped
@@ -371,6 +383,9 @@ public final class ChatTitleComponent: Component {
             return false
         }
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.showsSavedMessagesAvatar != rhs.showsSavedMessagesAvatar {
             return false
         }
         if lhs.activities != rhs.activities {
@@ -584,7 +599,7 @@ public final class ChatTitleComponent: Component {
         
         func update(component: ChatTitleComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let statusIconsSpacing: CGFloat = 4.0
-            let leftTitleIconSpacing: CGFloat = 3.0
+            var leftTitleIconSpacing: CGFloat = 3.0
             let rightTitleIconSpacing: CGFloat = 3.0
             let containerSideInset: CGFloat = 14.0
             
@@ -689,6 +704,9 @@ public final class ChatTitleComponent: Component {
                     }
                     if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
                         titleLeftIcon = .lock
+                    } else if component.showsSavedMessagesAvatar, customTitle == nil, peerView.peerId == component.context.account.peerId, !peerView.isSavedMessages {
+                        titleLeftIcon = .savedMessages
+                        leftTitleIconSpacing = 6.0
                     }
                     if let isMuted {
                         if isMuted {
@@ -1369,7 +1387,12 @@ public final class ChatTitleComponent: Component {
             
             let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing)
             
-            if let leftIconFrame = leadingIconsLayout.lockIconFrame, let leftIconView = self.leftIcon?.view {
+            var leadingLeftIconFrame = leadingIconsLayout.lockIconFrame
+            if case .savedMessages = titleLeftIcon, let frame = leadingLeftIconFrame {
+                // An avatar sits on the title's centre line, not on the lock's baseline offset.
+                leadingLeftIconFrame = CGRect(origin: CGPoint(x: frame.minX, y: floorToScreenPixels(titleFrame.midY - frame.height * 0.5)), size: frame.size)
+            }
+            if let leftIconFrame = leadingLeftIconFrame, let leftIconView = self.leftIcon?.view {
                 if leftIconView.superview == nil {
                     leftIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(leftIconView)
