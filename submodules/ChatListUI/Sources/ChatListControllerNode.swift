@@ -1742,8 +1742,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 tabsNodeIsSearch: false,
                 accessoryPanelContainer: self.controller?.accessoryPanelContainer,
                 accessoryPanelContainerHeight: self.controller?.accessoryPanelContainerHeight ?? 0.0,
-                // The chat side list's header is clear over the list, as in the design.
-                hasEdgeEffect: !(self.controller?.isSideList ?? false),
+                // The chat side list's header fades into the list's own background, whatever row is first (a pinned
+                // row's tint would colour the header).
+                edgeEffectColor: (self.controller?.isSideList ?? false) ? self.presentationData.theme.chatList.backgroundColor : nil,
                 activateSearch: { [weak self] searchContentNode in
                     guard let self, let controller = self.controller else {
                         return
