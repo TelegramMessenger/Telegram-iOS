@@ -150,6 +150,8 @@ cc_library(
 
 cc_test(
     name = "WidgetRuntimeTests",
+    # About 250 s on an idle machine (the randomized oracles), past the default 300 s timeout under load.
+    size = "large",
     srcs = glob(["Tests/*Tests.cpp"], exclude = [
         "Tests/BindingTests.cpp",
         "Tests/MeasurementTests.cpp",
@@ -157,6 +159,7 @@ cc_test(
         "Tests/CorpusBootTests.cpp",
         "Tests/RenderCorpusTests.cpp",
         "Tests/CorpusGoldenTests.cpp",
+        "Tests/CorpusIncrementalTests.cpp",
         "Tests/NoIOScanTests.cpp",
         "Tests/NoWorkUnitsScanTests.cpp",
         "Tests/URLDataTests.cpp",
@@ -169,6 +172,10 @@ cc_test(
         "Tests/FakeRenderHost.h",
         "Tests/HostHarness.cpp",
         "Tests/HostHarness.h",
+        "Tests/IncrementalEdits.cpp",
+        "Tests/IncrementalEdits.h",
+        "Tests/LayerChurn.cpp",
+        "Tests/LayerChurn.h",
         "Tests/RenderHarness.cpp",
         "Tests/RenderHarness.h",
         "Tests/VirtualTime.cpp",
@@ -411,6 +418,40 @@ cc_test(
     copts = WR_COPTS,
     data = ["//third-party/widget-sandbox:CorpusFiles"] + glob(["Tests/CorpusGoldens/**"], allow_empty = True),
     env = {"WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# Every corpus document and client fixture runs incrementally: one build, at the boot, and no inconsistency.
+cc_test(
+    name = "WidgetRuntimeCorpusIncrementalTests",
+    size = "large",
+    srcs = [
+        "Tests/DOMHarness.cpp",
+        "Tests/DOMHarness.h",
+        "Tests/FakeRenderHost.cpp",
+        "Tests/FakeRenderHost.h",
+        "Tests/HostHarness.cpp",
+        "Tests/HostHarness.h",
+        "Tests/LayerChurn.cpp",
+        "Tests/LayerChurn.h",
+        "Tests/CorpusIncrementalTests.cpp",
+        "Tests/RenderHarness.cpp",
+        "Tests/RenderHarness.h",
+        "Tests/VirtualTime.cpp",
+        "Tests/VirtualTime.h",
+    ],
+    copts = WR_COPTS,
+    data = [
+        "//third-party/widget-sandbox:CorpusFiles",
+        "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetFixtures",
+    ],
+    env = {
+        "WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)",
+        "WR_FIXTURES": "$(locations //submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetFixtures)",
+    },
     deps = [
         ":WidgetRuntime",
         ":WidgetRuntimeTestSupport",

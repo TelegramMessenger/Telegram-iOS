@@ -27,6 +27,7 @@
 #include "Sources/Host/Profile.h"
 #include "Sources/Render/Builder.h"
 #include "Sources/Render/LayerTree.h"
+#include "Sources/Render/RenderCut.h"
 #include "Sources/Render/RenderDump.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Render/WidgetContainer.h"
@@ -218,6 +219,17 @@ WR_TEST(testCorpusRenders) {
             stopped.push_back(name + " (" + stopName(stop) + ")");
         }
 
+        // A build's first publish is Inserts that replay into its tree (a fresh tree over the document as it ends).
+        if (stop == wr::StopReason::None) {
+            wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
+            fresh.build(env.ctx());
+            const std::string why = wr_test::insertsMismatch(*fresh.layerTree(), fresh.layerOps());
+            if (!why.empty()) {
+                std::printf("  %s: a build's publish: %s\n", name.c_str(), why.c_str());
+            }
+            CHECK(why.empty());
+        }
+
         // The control: the same document with no render tree.
         const PlainRun plain = runWithoutTree(html);
         if (stop != wr::StopReason::None && plain.stop == wr::StopReason::None) {
@@ -348,6 +360,43 @@ WR_TEST(testCorpusRenders) {
     CHECK(nonImage.empty());
     CHECK(buildMismatch.empty());
     CHECK(mirrorMismatch.empty());
+}
+
+// The cut walk (RenderCut.h) over every corpus document, the attacks included, after its boot: it finds no node that
+// differs from the build and posts the build's limits.
+WR_TEST(testTheCutWalkAgreesOverTheCorpus) {
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+    std::vector<std::string> files = corpusFiles(false);
+    const std::vector<std::string> attacks = corpusFiles(true);
+    files.insert(files.end(), attacks.begin(), attacks.end());
+    CHECK(files.size() >= 200 && !attacks.empty());
+    size_t walked = 0;
+    std::vector<std::string> differ;
+    for (const std::string& file : files) {
+        wr::RenderOptions options;
+        options.width = kWidth;
+        RenderEnv env(readFile(file), options, false);
+        try {
+            env.render().flushForQuery(env.ctx());
+        } catch (const wr::Aborted&) {
+        }
+        if (env.env().runtime().stopReason() != wr::StopReason::None || !env.render().document()) {
+            continue;
+        }
+        const wr::RenderBuild& built = env.render().publishedBuild();
+        const wr::RenderCutDiff diff = wr::renderCutDiff(env.ctx(), env.render().container(), built, {});
+        walked++;
+        if (!diff.nodes.empty() || diff.limits != built.limits || diff.end.bytes != built.bytes ||
+            diff.end.elements != built.elementCount || diff.end.nodes != built.nodeCount) {
+            differ.push_back(shortName(file) + " (" + std::to_string(diff.nodes.size()) + " nodes)");
+        }
+    }
+    std::printf("  the cut walk over %zu documents; %zu differ from their build\n", walked, differ.size());
+    for (const std::string& name : differ) {
+        std::printf("    %s\n", name.c_str());
+    }
+    CHECK(walked >= 200);
+    CHECK(differ.empty());
 }
 
 WR_TEST(testDeclarationAmplificationIsMeasured) {

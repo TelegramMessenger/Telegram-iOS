@@ -113,18 +113,13 @@ static NSData *Encode(NSString *uti, size_t w, size_t h)
     // The host's css is trusted, so the sanitizer leaves it alone: its remote background reaches the renderer,
     // which refuses it and counts it (once for each time it arrives: parsing, layout, drawing).
     NSString *css = @"div{background:url(https://evil.example/e.png)}";
-    LHDocument *host = [[LHDocument alloc] initWithHTML:@"<div data-k='1' style='width:10px;height:10px'></div>" css:css previous:nil];
+    LHDocument *host = [[LHDocument alloc] initWithHTML:@"<div data-k='1' style='width:10px;height:10px'></div>" css:css];
     [host layoutWithMaxWidth:300];
     image = [host copyImageWithMaxWidth:300 rect:CGRectMake(0, 0, 300, 50) scale:2];
     if (image) CGImageRelease(image);
     const NSUInteger refused = host.refusedRequests;
     XCTAssertGreaterThanOrEqual(refused, 1u);
 
-    // A document made by patching takes over its predecessor's renderer, and the count with it.
-    LHDocument *next = [[LHDocument alloc] initWithPrevious:host styles:@{@"1": @"width:20px;height:10px"} attribute:@"data-k" css:css];
-    XCTAssertNotNil(next);
-    XCTAssertTrue(next.reusedPrevious);
-    XCTAssertGreaterThanOrEqual(next.refusedRequests, refused);
 }
 
 @end

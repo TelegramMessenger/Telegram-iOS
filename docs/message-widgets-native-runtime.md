@@ -44,11 +44,12 @@ M1b built:
 M1c built the rendering, in `Sources/Render/`:
 - `RenderTree`: the main document built into one litehtml document element by element (no HTML string, no
   validator), the node↔element maps, the mutation journal and the flush, with in-place paths for text, attributes and
-  inline style, and inserted, removed and moved subtrees, each equal to a rebuild;
+  inline style, and inserted, removed and moved subtrees, each equal to a fresh build;
 - `WidgetContainer`, the runtime's own litehtml container, and `RenderHost`, the interface the app implements for fonts,
   text, images and path containment (a deterministic `FakeRenderHost` in the tests);
-- `LayerTree`, plain data that the app paints, kept current by operations (`LayerMirror`: `Reset`, `Insert`, `Remove`,
-  `Move`, `Frame`, `Content`, `Clip`, `Group`) and published with the rects that changed;
+- `LayerTree`, plain data that the app paints, kept current by operations (`LayerMirror`: `Insert`, `Remove`, `Move`,
+  `Frame`, `Content`, `Clip`, `Group`; the boot's publish is `Insert`s of the whole tree) and published with the rects
+  that changed;
 - hit-testing and boxes (`nodeAt`, `borderBox`, `clientRects`), read from the published layout;
 - the render limits, the corpus and attack gates, and a scan that nothing in the runtime does I/O;
 - twidget edits 12–21 in the litehtml fork.
@@ -119,10 +120,20 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   Matching is right to left with WebKit's match results, so a failed ancestor search stops instead of backtracking.
 - **Rendering (M1c).** `RenderTree` listens to the main document and only records changes in a journal. The flush
   (end of every task and animation frame, after the microtask checkpoint; in `boot` after the parse; and
-  `HostState::flushRender`) applies the journal by patching the published litehtml document in place or rebuilding
-  it, lays it out, and publishes the layer tree with its operations and changed rects. Anything a patch could get
-  wrong rebuilds, and a rebuild is the oracle: `testRandomEditsMatchARebuild` holds the patched document, its render
-  input and its layer tree equal to a fresh rebuild's after seeded random edit sequences. Not rendered: `script
+  `HostState::flushRender`) builds the litehtml document once, at the boot, and from then on applies the journal by
+  patching it in place, lays it out, and publishes the layer tree with its operations and changed rects. A fresh build
+  is the oracle: `testRandomEditsMatchARebuild` holds the patched document, its render input and its layer tree equal
+  to a fresh build's after seeded random edit sequences. The environment patches in
+  place: a width, reduced motion and the theme (the scheme and the root's theme declarations) are applied in the
+  flush's patch session, the rules whose media list flips and the elements whose style read the viewport or the scheme
+  matched again (twidget edits 79, 80). So do sheets: a `<style>`'s text, or a `<style>` inserted or removed, has the
+  author sheets parsed again in tree order, an unchanged sheet keeping its rules (edit 81), within Ruling 7's 64 KiB and
+  profile 1's budgets, cut where a build cuts them (`RenderTree::planSheets`). A replaced document element is built detached
+  and replaces the old tree in place (`RenderTree::flushRoot`, edit 82), as is one whose children changed which head or
+  body is the document's own or moved either; any other child of it patches as an element's does; a comment beside it
+  renders nothing. After
+  every flush that publishes, the container's font and image caches are cut to what the document names
+  (`WidgetContainer::prune`), so a widget cycling image sources keeps only what it shows decoded. Not rendered: `script
   noscript template iframe frame frameset noframes object embed noembed applet param portal fencedframe video audio
   source track math link meta base title area` (any namespace), comments, doctypes and template contents; everything
   else renders as the DOM holds it (spec §4 item 3).
@@ -130,8 +141,18 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   images decoded). `LayerMirror` publishes the same painting as `Context`, `Box` and `Inline` nodes with stable ids,
   context-relative origins and clip chains, built by one walk of litehtml's own `draw()` loop
   (`walk_paint_order`, twidget edit 20) and then kept current by operations the fork reports at its mutation points.
-  Nothing is compared on a patched flush. `record()` stays as the oracle: a mirror flattens to what it records, after
-  `wr_test::normalized` drops empty clip pairs and lone `del_clip`s.
+  Nothing is compared on a patched flush. litehtml's render tree is made once, at the boot: a block-level child of a block formatting context inserted or
+  removed is linked or unlinked alone, its parent and the other children keeping their render items (twidget edit 89;
+  the cases it does not link are named, `structure: <op>: <why>`), any other patch that gives up a render item replaces
+  the render subtree of its nearest boundary in place and keeps the rest (edit 74), and the mirror re-places what a
+  link or a replacement brings: the old items' nodes go, and a walk that captures only the new subtree (and the runs of
+  the inline contexts it paints in) builds its nodes, inserted by the placement rule. A change
+  of paint order or visibility anywhere but a plain in-flow block is re-placed the same way, and so is the root's
+  replacement (an edit of the document element, a media query or the viewport), the root Context keeping its id. The
+  boot's publish is `Insert`s of the whole tree, the root's first; a report the mirror cannot place stops the widget as an
+  inconsistency (`LayerMirror::Inconsistent`). `record()` stays as the
+  oracle: a mirror flattens to what it records, after `wr_test::normalized` drops empty clip pairs and lone
+  `del_clip`s.
 - **Taps and events (M1d).** The host's pointer phases (`HostState::pointer`) are hit-tested on the runtime's own
   layout and dispatched as touch browsers dispatch a tap, each phase one trusted task (spec §5 has the order and the
   click rule). Each finger is its own pointer with a press of its own, up to `kMaxPointers` (5; a down past them, or
@@ -141,8 +162,12 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
   `:active` live in `UserActions` (`:active` one entry per press, removed by that press's end or by its element leaving
   the document, so a second finger on an element holds it after the first lifts, even when the element left and came
-  back between their downs; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
-  `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild.
+  back between their downs; `:hover` the primary pointer's). A change to them is a patch, made only when the build's
+  `<style>` text names `:hover`, `:active` or `:focus` or the document has a form control (the UA sheet's pressed
+  button): the elements whose state changed (the old and new target's inclusive ancestors) are journaled
+  (`JournalKind::State`), and the flush sets their classes on litehtml's elements together and matches again what that
+  reaches, each element once, so a deep chain costs its subtree once (twidget edit 75), beside any structure in the same
+  flush.
 - **Who gets a press (widget-sandbox's shared gesture policy, v0.1.2 and v0.1.3).** The policy's C++ copy is vendored
   (`third-party/widget-sandbox/gesture/`, the `GesturePolicy` library, its fixture run by the host `GesturePolicyTests`),
   and `TapState` runs it rather than restating it. Every press decides its claim at its down task (sdk-v1 §5.5;
@@ -348,7 +373,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 
 - **Profile 1 is the renderer's, never the DOM's** (V4, 2026-10-21; it replaces M1c's "there is no validator"). The
   widget's DOM keeps everything it wrote, and script reads it back unchanged; what litehtml gets follows widget-sandbox
-  v0.1.0's validator, ported as rules from its tables, not as code. One decision per rule, read alike by a rebuild, the
+  v0.1.0's validator, ported as rules from its tables, not as code. One decision per rule, read alike by the build, the
   in-place patches and the render input:
   - **elements:** `markup::renderTagFor` (`Sources/Host/MarkupPolicy.*`): kept, rendered as an inert `span` or `div`
     carrying `data-tg-tag` (legacy, unknown, `dialog`, a second `body`), or dropped with its subtree (form controls but
@@ -403,25 +428,29 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   height down (`WidgetTreeRenderer.canvas`, `MessageWidgetView`'s canvas layer) where the bubble is taller than the
   document: the 50 pt minimum, a fixed-height anchor. Starting at the rounded-up height left a band of the bubble's colour
   (`testTheCanvasHasNoSeamUnderAFractionalDocument`).
-- **The flush is atomic, and its only script is the style-change step's.** It dispatches no event and is never run from
-  `afterOutermostNative`; the style-change step settles CSS animations' promises, which reads a `then` a widget may
-  define (`testScriptInsideTheStyleStepFreesNothingItHolds`). It builds on a new document with new maps and swaps them in only when the build, the layout,
-  the mirror and the publish have succeeded; a stop or a failure leaves the document, maps, render input and published
-  tree as they were (`testAStoppedWidgetKeepsItsLastFlush`). A failure goes through `abortForCaughtException`, which
-  latches the stop and throws `Aborted` to the step boundary. The CPU limits never stop a build or a patch partway: it
-  runs in a render scope, where the slice is not checked. The style-change step's script is the widget's: it runs in a
-  `Runtime::ScriptScope`, which books the render time so far, checks the slice and counts its time as JS
-  (`testScriptInsideTheStyleStepStopsAtTheSlice`); a width, theme or reduced-motion change's flush runs in a slice of
-  its own (`testScriptInAWidthChangesFlushStopsAtTheSlice`, `testScriptInAThemeChangesFlushStopsAtTheSlice`); and
-  script that reaches a poll anywhere else inside a render scope meets the wall backstop, max(10 × slice, 5 s) from
-  the scope's start (`testScriptOutsideAScriptScopeMeetsTheBackstop`; the final review's C1). A strict cap or a memory
-  refusal can still land inside a build, which then leaves everything as it was (`testARebuildStoppedPartwayIsAtomic`).
-  A flush entered from inside a flush returns at once
-  (`testFlushIsNotReentrant`).
+- **The flush is atomic in what it publishes, and its only script is the style-change step's.** It dispatches no event
+  and is never run from `afterOutermostNative`; the style-change step settles CSS animations' promises, which reads a
+  `then` a widget may define (`testScriptInsideTheStyleStepFreesNothingItHolds`). The boot builds on a new document
+  with new maps and installs them only when the build, the layout, the mirror and the publish have succeeded. A patch
+  plans before it touches litehtml; a stop during or after its commit leaves the published tree as it was, its
+  document, maps and render input patched, which nothing reads once the widget has stopped
+  (`testAStoppedWidgetKeepsItsLastFlush`, `testACutPatchStopsTheWidget`). A failure goes through
+  `abortForCaughtException`, which latches the stop and throws `Aborted` to the step boundary. The CPU limits never
+  stop a build or a patch partway: it runs in a render scope, where the slice is not checked. The style-change step's
+  script is the widget's: it runs in a `Runtime::ScriptScope`, which books the render time so far, checks the slice and
+  counts its time as JS (`testScriptInsideTheStyleStepStopsAtTheSlice`); a width, theme or reduced-motion change's
+  flush runs in a slice of its own (`testScriptInAWidthChangesFlushStopsAtTheSlice`,
+  `testScriptInAThemeChangesFlushStopsAtTheSlice`); and script that reaches a poll anywhere else inside a render scope
+  meets the wall backstop, max(10 × slice, 5 s) from the scope's start (`testScriptOutsideAScriptScopeMeetsTheBackstop`;
+  the final review's C1). A strict cap or a memory refusal can still land inside the boot's build, which then leaves
+  everything as it was (`testABuildStoppedPartwayIsAtomic`). A flush entered from inside a flush returns at once (`testFlushIsNotReentrant`).
 - **The journal only records.** The listener runs no script and reads no attribute value; it records the node and the
   kind of change, holding a `Ref<Node>`. It drops `attributeChanged` on an element with no parent (all of the parse's
   and of cloning's), records nothing detached, in a template or outside the rendered tree
-  (`testDetachedBuildsAreNotJournaled`), and collapses to "rebuild" past 4,096 distinct nodes (`testJournalCollapses`).
+  (`testDetachedBuildsAreNotJournaled`), and keeps an entry for every distinct node a task changes, each allocated
+  under the session's memory limit, what a flush does linear in them (`testTheJournalKeepsEveryNode`,
+  `testAMassChangePatches`). The fork's session lists (the restyled elements, the inserted roots, the
+  position parents) are searched linearly: quadratic up to litehtml's caps.
   A failure in it latches the stop and throws `Aborted`.
 - **`RenderTree` is destroyed first.** It is not a payload: it holds an untraced, counted `Ref<Node>` for every node
   it maps or journals, released when its entry goes and in its destructor, so it must go while the context and the
@@ -431,12 +460,28 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 - **The first flush is in `boot`**, right after the parse and before any script, so a first script that never ends
   still leaves the parsed markup laid out and published (`testBootBuildsTheParsedMarkup`,
   `testHangingFirstScriptLeavesTheParsedMarkup`).
-- **Matching is one budget per build or patch session.** litehtml counts a step per selector test and gives up at
-  4,000,000; that count is per session (twidget edit 18), not per outermost pass. A build runs its session with all
-  4,000,000 (`Builder.cpp`) and records the steps it used. A patch bounds its steps first and rebuilds when they and
-  the published build's might reach 4,000,000 (`selectorStepsFit`); one cut midway is abandoned and the same flush
-  rebuilds. No patch ends in an abort. This budget and the count caps are what bound a render build: nothing
-  interrupts one.
+- **Selector steps are a budget of each build or patch session.** litehtml counts a step per selector test, per build
+  or patch session (twidget edit 18), not per outermost pass. The boot is cut by litehtml's own 4,000,000 (a hostile
+  boot, whose first patch replays the style pass uncut: twidget edit 84); every patch (a replaced document element's
+  build included) by `kPatchSelectorSteps`, 28,000,000 (`RenderTree.h`), and nothing counts what earlier patches took.
+  A patch whose matching that cuts midway stops the widget (`RenderTree::stopInternally`), frozen on the tree published
+  before (`testACutPatchStopsTheWidget`). No patch ends in an abort. These budgets and the count caps are what bound a
+  render flush: nothing interrupts one.
+- **A patch cuts where a build cuts.** A build and a patch hand every cap out in the same order, counting only what
+  renders (twidget edit 83: an element its parent's own append refuses is in no build and counts toward nothing): the
+  document's own content in tree order, then generated content (`::before`/`::after` content, a form control's `lh-*`
+  parts) in match order. A flush plans against the rest of the document's sums; one whose plan would cross a cap, or
+  that follows a build whose walk hit a limit, walks the cut instead (`RenderCut`, `renderCutDiff`: the build's own
+  walk in a dry mode that decides and makes nothing) and builds again, in
+  cut mode, each node whose fate differs from its entry; an element's own attribute change it still renders is set in
+  place, whatever its length (`RenderTree.h`, "The caps"). Near litehtml's text-piece, pseudo-element or style-byte
+  cap (a `summary`'s master content counting at its most: twidget edit 84) the commit replays the style pass in a
+  build's order, within `kPatchSelectorSteps`, a replay cut there stopping the widget (`RenderTree::stopInternally`)
+  frozen on the tree published before. The document's html, head or body
+  cut at one is built again through the root, cut as a build cuts it (`RenderTree::flushRoot`). A
+  cap's `render-limit` diagnostic is
+  posted when a flush first reaches it, and again only after a flush that did not (`RenderTree::publishLimits`,
+  `testDiagnosticsPostOncePerHit`).
 - **The fork keeps its discipline** (`third-party/twidget/VENDOR.md`): each edit is numbered, cites the code it
   touches, is pinned by a test that failed before it, and records what it changes on macOS.
 
@@ -450,7 +495,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 - **A caught failure is final.** Every entry catches what C++ throws, latches `failed` and drops the runtime. From
   then on every call is a no-op answering its empty default, and the getters keep their last values, which the freeze
   reads. A memory stop is fatal the same way: the runtime goes in the call that latched it, so nothing reads the
-  litehtml document an abandoned fallback rebuild may have left mutated (spec §10.3), and the last published tree stays
+  litehtml document a stopped patch may have left mutated (spec §10.3), and the last published tree stays
   (`testMemoryStopIsFatal`).
 - **The tree outlives the session.** A `WRTree` holds one `shared_ptr<const LayerTree>`; the renderer keeps it after the
   session is gone, and it paints on any thread, which is what lets the draw task paint tiles concurrently.
@@ -481,7 +526,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   another point) is its host's time there and the slice's here, bounded by the slice. Each task's slice starts the count again. Known cost, parked with its measurement (a parked patch in
   `feature/message-widgets`'s history, conformance first): litehtml's hit test and paint make one pass over a stacking
   context's children per distinct z-index, so 3,000 positioned divs with distinct values cost 42 ms per
-  `elementFromPoint` and 79 ms per rebuild.
+  `elementFromPoint` and 79 ms per whole-document build.
 - **matchMedia** (V3b, `DOM/MediaQueries.cpp`): a query is evaluated by litehtml's own media query parser against the
   container's media features (`RenderTree::matchesMedia`), exactly what `@media` sees, so the two agree:
   `prefers-color-scheme` follows the theme and `prefers-reduced-motion` the system's Reduce Motion
@@ -572,7 +617,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     (its width and height are its intrinsic size, not dimension properties); the container draws the bitmap's current
     snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes its box alone
     (`RenderTree::canvasPainted`): the mirror captures it again (`Content`) with the current snapshot, beside the
-    flush's patch or with none, and nothing is laid out or rebuilt for it.
+    flush's patch or with none, and nothing is laid out for it.
   - The context keeps two states: the interpreter's (what draws) and what the IDL reads back, saved and restored
     together. Profile 1's out features are API-visible and inert: `createConicGradient`/`createPattern` paint nothing,
     `globalCompositeOperation`, shadows, `filter` and the text-rendering attributes read back and never apply,
@@ -622,12 +667,11 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     same task, and a paused or filling animation costs no relayout per frame. A change of only paint-only properties
     (`transform`, `opacity`, colours, `filter`, `visibility`, …) keeps litehtml's render tree and republishes as mirror
     operations, as a class change does, and so does one of a box's geometry (`width`, `left`, margins, padding:
-    twidget edit 63); a property that shapes the render tree (`display`, `position`, `float`, …) rebuilds it, as it does
-    in an inline style or a class's rules. The mirror still publishes
-    its own `Reset` when a positioned element becomes or stops being a paint group (an animation's first and last
-    frames): it places a new group only for an in-flow block. A property's underlying value is what the animations
-    below give, else the element's inline declaration, else the reference renderer's initial table (`opacity` 1,
-    `transform` none, …); cascaded and computed values are V5f's. A change of the style attribute, and any change of an
+    twidget edit 63); a property that shapes the render tree (`display`, `position`, `float`, …) replaces a render
+    subtree, as it does in an inline style or a class's rules, and the mirror places it, as it re-places an element that
+    becomes or stops being a paint group anywhere but in flow (an animation's first and last frames). A property's
+    underlying value is what the animations below give, else the element's inline declaration, else the reference
+    renderer's initial table (`opacity` 1, `transform` none, …); cascaded and computed values are V5f's. A change of the style attribute, and any change of an
     effect (its target, keyframes, timing, composite, pseudo-element, or the animation's effect itself), samples the
     element again. Sampling is linear in an effect's values (hash lookups; only a word that is a named colour reaches
     litehtml's colour parser). A value that would not stay inside its declaration (`;`, `{`, `}`, `!`, unbalanced
@@ -654,15 +698,15 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - *The style-change step* (`CSSAnimationState`, run by `AnimationState::stylesResolved`) runs inside
     `RenderTree::flush`, after its first publish: for every element after a build; else for the elements whose DOM
     attributes changed (their before-change values read from the published tree before the patch,
-    `pendingStyleChange`) and every element of an inserted subtree; a removal cancels the animations of the elements
-    that left. A change other elements' selectors depend on is refused by the patch and rebuilt, so an ancestor's class
-    change reaches its descendants. A second pass publishes what the step started; a flush makes at most two passes.
-    Frames, seeks and paused animations never run the step, nor does a build an animated frame falls back to (litehtml
-    refuses patches on pages with generated content or sibling selectors), and `getAnimations` flushes style first, as a
-    layout query (its time the query's: `testGetAnimationsFlushesAsAQuery`), as upstream's is one (waapi.ts
+    `pendingStyleChange`), every element of an inserted subtree, and every element a patch restyled (the commit's
+    restyled elements with their subtrees, `document::take_restyled`, `RenderTree::noteRestyled`: an ancestor's class,
+    a hover, a custom property and a positional rule's siblings reach the transitions below them, as a build's would);
+    a removal cancels the animations of the elements that left. A second pass publishes what the step started; a flush
+    makes at most two passes. Frames, seeks and paused animations never run the step, and `getAnimations` flushes style
+    first, as a layout query (its time the query's: `testGetAnimationsFlushesAsAQuery`), as upstream's is one (waapi.ts
     `cssAnimations`: `query({q: 'anims'}, false)`, uncached), whose flush ends the operations batch here as there.
-    `@keyframes` are read again only when the sheets' text changed, so a rebuild keeps what script did to a CSS
-    animation's effect. The step can run script (creating or cancelling an animation resolves its `ready` promise, which
+    `@keyframes` are read again only when the sheets' text changed, so a patch that leaves them keeps what script
+    did to a CSS animation's effect. The step can run script (creating or cancelling an animation resolves its `ready` promise, which
     reads `then`): a flush inside it does nothing, the rules' entries leave their map before they are cancelled, and a
     build's walk holds every element before it updates one. A play state from style resumes without auto-rewind and
     never throws.
@@ -687,8 +731,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     sorts first. The `onanimation*`/`ontransition*` handlers fire, and the legacy `webkitAnimation*`/`webkitTransition*`
     names reach listeners when nothing listens to the standard name.
   - *Not in V5f:* the reversing shortening factor (a transition reversed mid-way takes its full duration back),
-    `transition-behavior: allow-discrete`, `@starting-style`, animations of `::before`/`::after`, computed values, and a
-    transition on an element a rebuild restyled before anything tracked it (it has no before-change style).
+    `transition-behavior: allow-discrete`, `@starting-style`, animations of `::before`/`::after` and computed values.
 - **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over widget-sandbox's `intl` capability: `NumberFormat`,
   `DateTimeFormat`, `PluralRules`, `RelativeTimeFormat`, `ListFormat`, `Collator` and `getCanonicalLocales`, with
   `formatToParts` for the first two and `resolvedOptions` and `supportedLocalesOf` for all six; `Number`/`BigInt`/
@@ -970,8 +1013,10 @@ neutralised is `css.box.logical`, whose RTL check needs `direction` layout (out 
   and the walk goes on; past the node cap it stops. The patches keep the counts in step: a structure patch only adds
   to the node count, comments it inserts included, and an insertion the journal does not hear (under an element no
   build renders) is counted beside it (`RenderTree::nodeInserted`), so the count stays an upper bound until the next
-  build, and past the cap the flush rebuilds. The policy core's rewrites are single passes, linear in their input,
-  pinned by `CSSPolicyTests.testTheRewritesAreLinear`.
+  walk, and past the cap the flush walks the cut ("A patch cuts where a build cuts"). A removal the journal does not
+  hear lowers the count, so once the published build was cut at the cap the next flush walks too
+  (`RenderTree::nodeRemoved`, `Journal::markCut`): what the cut dropped may fit. The policy core's rewrites are single
+  passes, linear in their input, pinned by `CSSPolicyTests.testTheRewritesAreLinear`.
 - **The DOM side:** no focus (`focus()`/`blur()` no-ops, a tap focuses nothing, `activeElement` is the body),
   `HTMLDialogElement` as the sandbox has it, an input's selection methods no-ops, `matchMedia` false past 1,024 units,
   and selection only through the client: `user-select` computes as the widget writes it (the UA layer's `none` on the
@@ -979,11 +1024,11 @@ neutralised is `css.box.logical`, whose RTL check needs `direction` layout (out 
   selectable text export (below) gives it, and `getSelection()` stays the stub: the widget never learns what the reader
   selected.
 
-**The agreement points** (where a rebuild, a patch and the parity re-parse must read the same function), as built:
+**The agreement points** (where the build, a patch and the parity re-parse must read the same function), as built:
 
 | Point | Read by |
 |---|---|
-| The CSS verdicts | litehtml only, through the container hooks: the build's finalize, the attribute patch's re-match, the parity re-parse. A `<style>` change always rebuilds. |
+| The CSS verdicts | litehtml only, through the container hooks: the build's finalize, the attribute patch's re-match, the sheet patch's re-parse (twidget edit 81), the parity re-parse. |
 | An element's rendered tag | `renderTagFor`, through `tagOf`/`renderTagOf`: `Builder::element`, the attribute plan ("the rendered tag changed" refuses), the render input's tags. |
 | The attribute filter, the rewrites and the host markers | `scanAttributes` only, for the build and the attribute patch. |
 | Form-control counting | the rendered tag (`button` is the one control left). |
@@ -1028,7 +1073,8 @@ are the v0.1.1 update's); the runtime's side is below. Each change is pinned by 
   `touch-action`, the background longhands per layer (a gradient layer reads `none`: litehtml keeps no gradient text),
   `vertical-align`, `border-collapse`, `user-select`, `direction`, and a calc as its tree.
 - **Styles** (edits 31 to 33, 39, 48): every named colour, `:lang()` (nothing matches without a `lang` in the chain, as
-  in a browser with no Content-Language), `:empty` (any text piece counts, as in Blink; a child-list patch rebuilds),
+  in a browser with no Content-Language), `:empty` (any text piece counts, as in Blink; a child-list patch matches a
+  flipped parent and its later siblings again: twidget edit 88),
   `initial`, `unset`, `revert` and `revert-layer` (resolved from the element's matched master rules at every compute:
   `revert` skips the UA layer to the engine's rules, `revert-layer` stops at it; on a pseudo-element both are
   `unset`), `word-break`, `word-spacing`, `quotes` (stored and read back; `<q>` keeps literal
@@ -1049,7 +1095,7 @@ are the v0.1.1 update's); the runtime's side is below. Each change is pinned by 
   reaches the UA's rules as the Builder's host marker `data-tg-dir`, so an author's `[dir=auto]` matches and
   `[dir=rtl]` does not match an `auto` that resolves to rtl, as in a browser.
 - **The runtime's UA sheet** (`kWidgetUAStylesheet`, unlayered, after litehtml's master): `<q>`'s marks, the `[dir]`
-  rules, and a pressed `<button>` without author CSS (a press restyles by rebuilding when the build renders a button).
+  rules, and a pressed `<button>` without author CSS (a press restyles it in a patch).
 - **Events:** `movementX` and `movementY` on pointer and mouse moves; Pointer Events' `setPointerCapture`,
   `releasePointerCapture` and `hasPointerCapture` (2026-10-22): an explicit capture takes the press's pointer events
   from the next one, `gotpointercapture` before it and `lostpointercapture` after the `pointerup`; touch events stay
@@ -1171,7 +1217,6 @@ reader select of the published layout, built on the widget's queue while its bub
 | CSS nesting | 64 blocks | `css_parser.h` (twidget edit 14) | the deeper block is parsed as empty | litehtml's componentizer recursed once per block |
 | Pseudo-elements | none nest; `content` keeps 32 items; they count against the element cap | twidget edit 19 | not created | unbounded recursion, and 1,002,004 elements from 1,000 divs |
 | Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB, but for the bullet URL, which is shared and charged per list item up to half the budget | `document.h` `max_style_bytes`, `style_charge_bullet` (twidget edits 21, 60) | declarations holding heap payload are dropped in document order; `style-bytes`. A bullet past half the budget falls back to the type, latching nothing | 16 KiB on `*` over 9,000 elements held 353.6 MB |
-| Journal | 4,096 distinct nodes | `Journal.h` | the flush rebuilds | bounds the journal |
 | `TelegramWidget` handlers | 16 per `onEvent` type, and 16 `onTheme` callbacks | `TelegramWidget.h` `kMaxHandlersPerEvent` | ignored, no exception | sdk-policy.ts `MAX_HANDLERS_PER_EVENT` |
 | Link URLs | 256 UTF-8 bytes as given and 256 characters normalised; one link call per press | `Links.h` `kMaxLinkLength` | `TypeError`; a second call is `activation-blocked` | sdk-policy.ts `MAX_LINK_LENGTH` |
 | Link diagnostics | 20 `activation-blocked` and 20 `navigation-blocked` per widget | `Links.h` `kMaxLinkDiagnostics` | not reported | the reference's 20 (and ours for navigation) |
@@ -1208,9 +1253,9 @@ reader select of the published layout, built on the widget's queue while its bub
 | Document text | 49,152 UTF-16 units (compat 262,144), of which 8,192 complex-script (>= U+0590) | `Limits::textBudgetUnits`, `kComplexTextBudgetUnits` | strict: a stop ("…the document's text is over 49152 characters"); compat, and complex script under both: what does not fit in tree order renders nothing (`text-budget`) | `textBudget`, `complexTextBudget` |
 | Attribute value | 8,192 UTF-16 units, any attribute, an inline style included (compat: none) | `Limits::attributeUnits`, `Builder.cpp` `scanAttributes` | a stop ("Attribute limit exceeded: …") | `maxAttr` |
 | Operations per batch | 10,000 (compat: none), counted as upstream's shim sends a flush's difference (capture.ts): a node's first insertion 2, a later insertion or removal 1, a move (removed and inserted in one batch) 1 in all, an attribute or a text changed in a batch 1 however often, a property of an inline style added before the batch set or removed through the CSSOM 1 per property (a style added in the batch, `cssText` and `setAttribute('style')` 1 in all), nothing for a node first inserted in the same batch, a removal from a tree outside the document (a fragment's, a detached element's) nothing, a sole text replaced by a new one (`textContent`, `replaceChildren` with a string) 1, each canvas drawn on 1; a batch is a task, a frame, or what a layout query flushes | `Runtime::addOps`, `Node::countsChange`, `m_announcedBatch`, `m_removedBatch`, `replaceAllChildren`, `CSSStyleDeclaration::countPropertyChange`, `EventLoop` | a stop ("Ops limit exceeded: N operations in one batch (max 10000)") | `maxOps` (upstream counts its wire batches; ours are the same points) |
-| CSS rules, `@keyframes` | 400 and 32 over the applied sheets, as written (compat: none) | `Render/CSSRuleCount.cpp` (a port of upstream's `countCssRules`), `Builder.cpp` | a stop | `maxCssRules`, `maxKeyframes` |
+| CSS rules, `@keyframes` | 400 and 32 over the applied sheets, as written (compat: none); judged by the boot's build, and after it by every patch whose sheets change, over all the applied sheets in tree order (`RenderTree::planSheets`) | `Render/CSSRuleCount.cpp` (a port of upstream's `countCssRules`), `Builder.cpp` | a stop | `maxCssRules`, `maxKeyframes` |
 | Canvas commands | 10,000 to one canvas in one batch (compat 400,000) | `CanvasContext2D` `command` | `RangeError("Canvas limit exceeded: …")` (compat: dropped) | `maxCanvasCmds` |
-| Canvas pixels | the connected canvases' width × height together, 2048² (compat: the bitmap allocator's own cap); judged on full builds, a resize rebuilds | `Builder.cpp` `m_canvasPixels` | a stop ("Canvas limit exceeded: canvases of N pixels together (max 4194304)") | `maxCanvasPixels` |
+| Canvas pixels | the connected canvases' width × height together, 2048² (compat: the bitmap allocator's own cap); judged by a walk of the whole document: the boot's build, and after it the cut walk, where a canvas in a new subtree or a canvas resized sends its patch (`Builder.cpp` refuses one outside the walk) | `Builder.cpp` `m_canvasPixels`, `RenderTree.cpp` ("a canvas's size changed") | a stop ("Canvas limit exceeded: canvases of N pixels together (max 4194304)") | `maxCanvasPixels` |
 | A `data:` image's pixels | 1024² as its header claims (PNG, GIF, WebP, JPEG read from the decoded start), under both policies | `Host/DataImageSize.cpp`, `CSSPolicy` `imageSource` | the 48 px placeholder; unreadable bytes are a broken image | `MAX_IMAGE_PIXELS` (upstream's constant) |
 | Nodes (V4) | 50,000: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside | `kMaxRenderNodes` | the walk stops (`nodes`) | profile 1 `MAX_NODES` |
 | A refused `<img src>` (V4) | the 48 × 48 placeholder, `twplaceholder:` | `WidgetContainer::kPlaceholderURL`, `placeholderSVG` | — | the reference's placeholder; the element loads at 48 × 48 |
@@ -1228,10 +1273,11 @@ The resulting transient-heap bounds:
 The render limits bound litehtml's heap and the layer tree, which are on the system heap and outside the widget's
 memory limit. The estimates are written at `RenderTree.h`, and `testHostileSizesAreBounded` holds each
 hostile single build under 160 MB and prints its growth:
-- 10,000 styled elements: about 10.4 KB each, so about 104 MB published and about 210 MB at a rebuild's peak, when the
-  old and new document and tree are alive together (atomicity). The test's styled-elements shape measured 95.5 MB;
+- 10,000 styled elements: about 10.4 KB each, so about 104 MB published. The test's styled-elements shape measured
+  95.5 MB;
 - 10,000 text pieces: about 36 MB (measured 36.4 MB); 256 form controls: about 5 MB (measured 5.0 MB);
-- all limits together: about 156 MB published, 200 MB at a first build's peak and 360 MB at a rebuild's (estimates).
+- all limits together: about 156 MB published and 200 MB at the boot's build's peak (estimates); a patch never holds two
+  documents.
 
 Not bounded by the limits: litehtml's process-global caches (master and author sheets, declarations) and its interned
 names (below).
@@ -1287,8 +1333,6 @@ After M1c (spec §6.2, 2026-10-18; the corpus booted with the render tree at a w
   re-parse (0 are skipped) and lays out as litehtml's own parse of it does, and the mirror equals the recorded tree on
   230 of 230; no document stops only because of the tree; the largest style charge is 585,504 bytes of 16 MiB; the 93
   attacks load nothing.
-- **The random edit run** (`LayerMirrorTests`): 2,644 flushes, 91 published as operations, 976 as `Reset` because litehtml
-  rebuilt its render tree, 17 as `Reset` for a change the mirror could not place.
 
 After M1d (spec §6.2, 2026-10-19; `MessageWidgetCorpusTests` in the iPhone 17 / 26.5 test simulator, a debug build,
 wall time, printed and not asserted):
@@ -1317,11 +1361,10 @@ Per-frame publishes (2026-10-26; the 254 corpus documents and the client's 14 fi
 the host's fake render host and run through 120 frames, thread CPU time, best of three, under a load of about 30):
 - **What a frame publishes:** before the patch paths' refusals were narrowed (canvas repaints, `::before`/`::after`
   content, `textContent` swaps, paint-only and geometry-only styles, the style bound per subtree), 4,105 whole-document
-  builds and 1,702 render-tree `Reset`s per 2 s over all documents; after, about 480 builds and 2,683 `Reset`s.
+  builds per 2 s over all documents; after, about 480. None now: every flush after the boot is a patch published as
+  operations (`:WidgetRuntimeCorpusIncrementalTests`).
 - **CPU:** 6,901 ms → 3,131 ms over all documents (JS included); the heaviest, `showcase/travel/01-boarding-pass`,
-  357 ms → under 45 ms, `htmlbubbles-ported/09-code-review/01-leo-bare` 324 → 118 ms. What still builds: text inside a
-  `<button>` (the text path refuses text a form control reads), structure beside a kept node's own change (a mixed
-  journal), and structure under `::before`/`::after` content.
+  357 ms → under 45 ms, `htmlbubbles-ported/09-code-review/01-leo-bare` 324 → 118 ms.
 
 Paint cost per frame (2026-10-26; one widget, 360 × 260: a card floating by `translateY` and `rotate(±1deg)` under
 three box shadows of 25–55 px, over a glow pulsing in `opacity` and `scale` with `filter: blur(45px)`, and a counter
@@ -1344,6 +1387,37 @@ tiles at 3×, frames from the real display link):
   (`MessageWidgetTests`, `MessageWidgetCorpusTests`, `WidgetRuntimeIOSTests`) have no Metal device, and there a CSS
   filter or backdrop paints nothing, so their timings leave filters out. The simulator's Core Image runs on the Mac's
   GPU; the cost on a device is unmeasured.
+
+The corpus runs incrementally (`:WidgetRuntimeCorpusIncrementalTests`, every corpus document with the attacks and the
+client's fixtures, 367 documents, in the corpus goldens' deterministic mode: the boot, 3 s, a 6 × 4 grid of taps, 120
+frames): each builds once, at the boot, and none stops for an inconsistency. The randomized oracles fail on any flush
+that builds or stops the widget:
+`testRandomEditsMatchARebuild`, 6,105 flushes over 31 groups, 5,565 patched and the rest clean, and
+`testOpsMatchAFreshMirror`, 4,085 flushes, every one published as operations (40 of them batches an animation frame
+published twice). A predicate's refusal is named by its reason (twidget edit 76). Structure beside
+`::before`/`::after` content patches (near a cap the commit replays the style pass in a build's order: twidget edit
+84), and counters run again in a build's order at the commit (edit 78).
+
+Churn (2026-10-30; the layers a flush re-creates though their element did not change, `Tests/LayerChurn.h`, a
+`::before`'s, an `::after`'s or a form control part's layers counted with their element, on the corpus run above, 367
+documents): 58,562 flushes removed 467,779 layers, 410,002 of them re-created as churn (6,986 elements). By the fork's
+reason for replacing render subtrees, the layers of an element the runtime built again apart: `property: font-size`
+110,836; none at all (the mirror's own re-placements) 78,424; `rule: animation` 44,128; `element: svg` 38,794;
+`structure: remove: in an inline context` 25,119; `text: pieces not placeable` 17,703; `attribute: points` 16,579;
+`attribute: stroke` 15,957; `pseudo-element children` 13,936 (a match that changes nothing keeps an element's `::before`
+and `::after`, twidget edit 91, and a change of its own style makes them again, as every frame of an animation does);
+the other structure refusals (`a float or an out-of-flow box` 11,362, `in an inline` 2,393); `rule: transition` 9,217;
+the rest under 4,600 each. A kept node's own change beside structure is set in place (an element's attributes, an
+animation frame's included, and a Text's pieces), so an element built again though unchanged (`(built again)`) is 372
+layers; where that change restyles the element's box (`hidden`, `display`, `font-size`, `transition`), the attribute
+path replaces the boundary above the element, as it does for the same change without structure. The most churned
+documents: `htmlbubbles-ported/09-code-review/02-leo-bare.html` 135,662,
+`htmlbubbles-ported/08-analytics/09-bot-bare.html` 40,342, `htmlbubbles-ported/06-trip-lisbon/10-ana-bare.html` 30,472.
+The randomized oracles: `testRandomEditsMatchARebuild` 141,855 of 170,937 removed (`structure: …: renders nothing`
+31,392, `attribute: hidden` 22,394, `rule: background-attachment` 17,042, `property: display` 9,408, `structure: remove:
+in an inline context` 7,982, `(built again)` 7,042, nearly all the document element replaced, `RenderTree::flushRoot`),
+`testOpsMatchAFreshMirror` 45,411 of 61,649 (`structure: …: renders nothing` 7,065, `(built again)` 6,922, `attribute:
+hidden` 6,179). A flush's churn goes under the first reason its session gave.
 
 KB are deterministic on one platform (the units were too, while they existed): the same on every run and, since
 quickjs-ng change 12, in every build configuration (before it, a build without `NDEBUG` made every string larger).
@@ -1439,7 +1513,7 @@ What V4 does differently from the reference validator and sandbox at v0.1.0, on 
 6. **Absent members throw:** `showPopover`, `hidePopover`, `togglePopover`, `scrollIntoView` and the textarea's
    `select()` are not defined, so a call throws `TypeError` where the reference does nothing; and **no diagnostics
    report what the profile dropped**: no `tag-dropped`, `attr-dropped`, `css-dropped`, `url-blocked` or `profile`.
-7. **The text budgets count what renders, in tree order, on every build:** text under a dropped element, a comment's
+7. **The text budgets count what renders, in tree order, on every build and patch:** text under a dropped element, a comment's
    data and a sheet that is not applied count nothing; a sheet's strings are read from its raw text (`"\5b57"` is five
    units, not one); and what fits is decided by tree order, where the reference decides by the order of operations
    over time.
@@ -1631,6 +1705,28 @@ WR_GOLDENS_UPDATE=1 ./build-input/bazel-9.2.0-darwin-arm64 run \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeCorpusGoldenTests
 ```
 
+The corpus incremental run, `:WidgetRuntimeCorpusIncrementalTests` (size large, about a minute), runs every corpus
+document (the attacks included) and every client fixture in the goldens' deterministic mode (the boot, 3 s, a grid of
+taps, 120 frames) and fails when one builds more than once or stops for an inconsistency (`RenderTree::stopInternally`).
+It and both randomized oracles print the churn (`Tests/LayerChurn.h`, a `RenderTree::FlushProbe`): the layers their
+flushes re-created though the element did not change, summed and by the fork's reason (`rebuild_reason`), the layers
+of an element the runtime built again apart: `(moved)` for a moved node, `(built again)` for an unchanged one.
+
+The randomized oracles (`testRandomEditsMatchARebuild`, `LayerMirrorTests.testOpsMatchAFreshMirror`) share
+`Tests/IncrementalEdits` (one page, one `__edit` generator: structure, text, class, style, `hidden`, tables,
+templates, any attribute, box-type styles, `<style>` edits, the document element) and run groups for each kind, the
+environment (width, the theme's own declarations, reduced motion, taps, each with something on the page that renders
+it; a tap is a task, run by draining the loop), animations with structure, and pages near each limit (the text pieces,
+selector steps, form controls, litehtml's element cap, the render bytes, the text budget, the node cap and the style
+bytes), whose filler goes first so that an insertion crosses the cut and a removal comes back; each patches across
+its limit. After every flush, which must not build or stop the widget,
+the render oracle compares the patched tree with a fresh one: the layout, the render input, the recorded paint, the
+render limits, litehtml's own counts (`text_elements`, `build_elements`, `pseudo_elements`), and what the read APIs answer (`wr_test::readsDump`: boxes, client and visual rects, computed style, hit
+tests, the selectable text, the filler aside); the mirror oracle, the operations replayed on the previous tree against
+a fresh mirror, and the union of the batch's changed rects (`takeChangedRects`) against the diff of the published trees,
+which share every node no operation names (`LayerDiff` matches them by identity first), for a batch that did not
+build.
+
 The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox:CorpusFiles`).
 
 ## Open
@@ -1642,10 +1738,7 @@ The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox
   end to end (forward, edit, delete), the SDK group's interactive rows (links, haptics, an app restart), the feed
   bench on a low-end device, an iPad trackpad, and a resize during a drag.
 - **After V6** (the spec's §5): WPT rendering (reftests and `check-layout-th.js` tests through litehtml, with their own
-  ratcheting expectations); the rest of Task 10c, an incremental render subtree in the fork, so that a structural patch
-  other than a Text swap, and a change of a property that shapes the render tree (`display`, `position`, `float`, …),
-  stop re-creating litehtml's render tree and publishing `Reset` ("Measured", per-frame publishes); the boot measured
-  against main's 20 ms wait on a device.
+  ratcheting expectations); the boot measured against main's 20 ms wait on a device.
 
 The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreTextRenderHost`):
 - the loop is stepped with `now`, `CACurrentMediaTime()` in milliseconds, which is also the clock `WRProductionHost`

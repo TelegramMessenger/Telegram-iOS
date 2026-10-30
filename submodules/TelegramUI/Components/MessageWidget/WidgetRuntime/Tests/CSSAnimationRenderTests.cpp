@@ -7,6 +7,7 @@
 
 #include "Sources/Animation/AnimationState.h"
 #include "Tests/HostHarness.h"
+#include "Sources/Host/HostState.h"
 #include "Tests/RenderHarness.h"
 
 using wr_test::RenderEnv;
@@ -111,6 +112,21 @@ WR_TEST(testIdentity) {
               "true,true,2");
     checkEval(env, "$('i').style.animation = 'slide 2s'; const m = $('i').getAnimations(); [m.length, m[0] === a, a.effect.getTiming().duration, b.playState].join()",
               "1,true,2000,idle");
+}
+
+/// Twidget edit 81: a sheet patch that adds an @keyframes and an animation naming it starts one animation, with no
+/// rebuild.
+WR_TEST(testASheetPatchReadsNewKeyframes) {
+    RenderEnv env(page("<div id=k class=box></div>"));
+    const uint64_t builds = env.render().buildCount();
+    checkEval(env, "document.getAnimations().length", "0");
+    checkEval(env,
+              "const s = document.createElement('style'); s.textContent = '@keyframes late{from{opacity:1}to{opacity:0}}"
+              " #k{animation:late 1s}'; document.head.append(s); 'ok'",
+              "ok");
+    env.flush();
+    checkEval(env, "[document.getAnimations().length, document.getAnimations()[0].animationName].join()", "1,late");
+    CHECK_EQ(env.render().buildCount(), builds);
 }
 
 /// An element leaving the document cancels its CSS animations; a name with no @keyframes makes none.
@@ -268,6 +284,18 @@ WR_TEST(testAnAncestorsClassStartsTransitions) {
     checkEval(env, "$('c').getAnimations().map(a => a.transitionProperty).join()", "opacity");
 }
 
+/// A hover restyles what its rules reach: a descendant's transition starts as a class's would (twidget edit 75's reach
+/// is patched, and the style step sees every element the patch restyled).
+WR_TEST(testAHoverStartsTransitions) {
+    RenderEnv env(page("<div id=wrap style='position:absolute;left:0;top:0;width:100px;height:100px'><div id=c class=box></div></div>",
+                       "#c{transition:opacity 1s linear;opacity:1} #wrap:hover #c{opacity:.2}"));
+    env.env().frame(16);
+    wr::HostState::of(env.ctx()).pointer(env.ctx(), wr::PointerPhase::Down, 50, 50, 1, true);
+    env.env().drain();
+    env.env().frame(16);
+    checkEval(env, "$('c').getAnimations().map(a => a.transitionProperty).join()", "opacity");
+}
+
 /// A value that stops being declared transitions back to the initial value (`.hide{opacity:0}` removed fades the
 /// element in), as browsers do; a property without an initial value in the table does not transition back.
 WR_TEST(testATransitionBackToAnUndeclaredValue) {
@@ -333,39 +361,6 @@ WR_TEST(testScriptInsideTheStyleStepFreesNothingItHolds) {
     checkEval(env, "[window.twice, document.body.childNodes.length, document.getAnimations().length].join()", "true,0,0");
 }
 
-/// I1: script's changes to a CSS animation's effect survive a rebuild that leaves the style sheets as they were (a
-/// class change other elements' selectors depend on rebuilds).
-WR_TEST(testScriptsEffectChangesSurviveARebuild) {
-    RenderEnv env(page("<div id=c class=box style='animation:slide 10s linear infinite'></div><div id=o></div>",
-                       ".x #o{color:red}"));
-    env.env().frame(16);
-    env.env().eval("window.a = $('c').getAnimations()[0]; a.effect.updateTiming({duration: 20000}); 1");
-    const uint64_t builds = env.render().buildCount();
-    env.env().eval("document.body.className = 'x'; 1");
-    env.env().frame(16);
-    CHECK(env.render().buildCount() > builds);
-    checkEval(env, "[a.effect.getTiming().duration, $('c').getAnimations()[0] === a].join()", "20000,true");
-}
-
-/// I1: on a page whose patches litehtml refuses (a sibling combinator), every animated frame is a rebuild; the
-/// style-change step still runs only when the frame changed something it reads.
-WR_TEST(testARebuildFromAnAnimatedFrameRunsNoStyleStep) {
-    int steps = 0;
-    RenderEnv env(page("<div id=m class=box style='animation:grow 10s linear'></div><p id=p>x</p>", "#m + p{color:#c00}"), {}, true,
-                  [&](wr_test::HostEnv& host) {
-                      wr::animation::AnimationState::of(host.ctx()).setStyleObserverForTesting([&](const wr::animation::StyleChange&) { steps++; });
-                  });
-    env.env().frame(16);
-    env.env().frame(16);
-    const int stepsBefore = steps;
-    const uint64_t builds = env.render().buildCount();
-    for (int i = 0; i < 5; i++) {
-        env.env().frame(100);
-    }
-    CHECK(env.render().buildCount() > builds);
-    CHECK_EQ(steps, stepsBefore);
-}
-
 /// I2: play and pause driven by style never throw out of a flush: a reversed infinite animation that style resumes or
 /// pauses keeps the widget running; a finished one that style pauses and resumes stays finished (no auto-rewind).
 WR_TEST(testPlayStateFromStyleNeverThrows) {
@@ -391,4 +386,23 @@ WR_TEST(testPlayStateFromStyleNeverThrows) {
     env.env().frame(16);
     env.env().frame(16);
     checkEval(env, "[g.playState, Math.round(g.currentTime)].join()", "finished,100");
+}
+
+/// A class change that starts an animation, beside an insertion in the same task (a mixed journal, whose own attribute
+/// change the structure path sets in place), is heard by the style-change step as the attribute path's is: with and
+/// without ::before content on the animated element.
+WR_TEST(testAPlayStateChangeBesideAnInsertionIsHeard) {
+    for (const bool pseudo : {false, true}) {
+        RenderEnv env(page("<div id=c><div id=s class=box></div></div><p id=p>p</p>",
+                           std::string("@keyframes spin{to{transform:rotate(360deg)}} #s{animation:spin 4s linear infinite;"
+                                       "animation-play-state:paused} .run #s{animation-play-state:running}") +
+                               (pseudo ? " #s::before{content:''}" : "")));
+        env.env().frame(16);
+        const uint64_t builds = env.render().buildCount(), patches = env.render().patchCount();
+        env.env().eval("$('c').className = 'run'; $('p').append(document.createElement('b')); 1");
+        env.env().frame(16);
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().patchCount(), patches + 1);
+        checkEval(env, "$('s').getAnimations().map(a => a.playState).join()", "running");
+    }
 }

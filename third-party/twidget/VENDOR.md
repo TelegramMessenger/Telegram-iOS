@@ -121,6 +121,26 @@ app no longer draws through `LHDocument`, and its painter (`LayerTreePainter`, t
 its own bitmap context. Line numbers in the edits below are 80dad8c's; after the merge
 they can be off by upstream's insertions — find an edit by the code it quotes.
 
+## The template path (removed)
+
+`LHDocument`'s update API, and the fork code only it reached, are gone: nothing in the app used them, and the widget
+runtime patches a document through the external DOM API (edits 12, 16 to 18). Removed from `LHDocument`:
+`initWithHTML:css:previous:` and its `viewportSize:` variant (replaced by `initWithHTML:css:viewportSize:`),
+`initWithPrevious:styles:attribute:css:`, `initWithPrevious:changes:attribute:css:`, `reusedPrevious`, `reusedLayout`,
+`layoutDirtyRects`, `patchDirtyRects`, `dependsOnViewport` and the consumed-document restore. Removed from `document`:
+`createUpdatableFromString`, `update_from_string`, `update_from_template`, `update_structure`, `build_template`,
+`apply_template_values`, `update_styles`, `update_holes`, `template_html`, `layout_dirty_regions`,
+`last_patch_regions`, `last_patch_paint_only`, `begin_layout_patch`, `class_change_allowed`, `retag_allowed`,
+`retext_in_place`, the template's holes and literals, the parse-node tracking, and the file-local helpers only they used;
+`apply_retag` lost its `region` and `geometry` arguments (edit 63). The tests of the update API went with it:
+BackgroundStylePatchTests, PatchRegionTests, RebuildMemoryTests and StructurePatchTests whole; the update tests of
+ContainTests, DocumentFuzzTests, LayoutCacheTests, OverflowWrapTests, StylePatchTests, SubtreeCullingTests,
+SVGGeometryTests (the SVG group cache across patches), TextLayoutPatchTests and TextPaintExclusionTests, and the patched
+part of TelegramPolicyTests' remote URL count; the fork's update-path text-piece cap checks (`fork_test.cpp`) and a
+template class change's style charge (`external_test.cpp`). TwidgetRenderingTests went from 227 tests to 173. Edits
+below that mention the template path (`update_document`, `update_structure`, `update_styles`, `update_holes`) describe
+how they met it while it existed. New edits state no macOS effect.
+
 ## Edits to the vendored sources
 
 In LiteHTML no upstream line was changed or removed: the diff against `751715a0ba` is insertions only. Edits 1-3,
@@ -324,7 +344,7 @@ same boxes from the render items) and edit 7's two (its `viewport_changed()` sti
       `vmax` length. `viewport_changed()` (after `media_changed()`, `:3168`) reads the media features
       again; when the viewport's width or height moved it applies the media lists again and, when a list
       flipped or the document resolved a viewport unit, empties the style-sharing cache (it holds computed
-      values, viewport lengths already in pixels) and rebuilds styles and the render tree as
+      values, viewport lengths already in pixels), restyles and replaces the root's render subtree (edit 74) as
       `media_changed()` does. A document with neither pays one comparison. The flag misses nothing hidden:
       `html_tag::compute_styles` (`html_tag.cpp:618`) recurses into every child whatever its `display`, so a
       viewport length under `display:none` is resolved, and flags the document, like any other; a patch
@@ -540,7 +560,7 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     **macOS effect:** Telegram-Mac's container reports `color_scheme` 0, so `(prefers-color-scheme: light)` now matches
     there and `light-dark()` resolves to its first branch; before this edit the feature and the function were unknown.
     **Today's iOS path never reaches the new code:** its validator rewrites all three before litehtml parses
-    (`policy.md` §5), and `LHContainer` reports `color_scheme` 0.
+    (`policy.md` §5), and `LHContainer` reports `color_scheme` 0. A scheme change in place: edit 80.
 
 14. **CSS component nesting is bounded** (2026-10-18, M1c Task 2b; both platforms, as insertions only). litehtml's
     componentizer recurses once per block (`css_parser::consume_simple_block` and `consume_function` through
@@ -613,33 +633,43 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `m_patch_new_text`).
     1. **`replace_text`** replaces `count` pieces of `parent` from child index `first` with `text` split as
        `append_text` splits it (`split_text`'s words, one `el_space` per whitespace character; always new pieces, even
-       at the same count), through `element::m_children` as `replace_children` does. It re-points `m_over_element`
+       at the same count), through `element::m_children` as `element::replace_children` does. It re-points `m_over_element`
        and `m_active_element` away from a replaced piece to the parent, tries `replace_text_renderers` (the render tree
        is kept when the run's renderers are a run among the children of the parent's render item, which is its inline
        context or, for an inline element, its own item (a `<span>`'s pieces, which its inline context lays out), beside
-       other children or not; only that run is replaced, the original under `#if 0`; otherwise the session is marked to
-       rebuild the render tree at commit, which is always correct), and collects the new pieces for `commit_patch`.
+       other children or not; only that run is replaced, the original under `#if 0`; otherwise the parent is a seed of
+       the commit's replacement, edit 74, which is always correct), and collects the new pieces for `commit_patch`.
        `pieces` is assigned. WidgetRuntime's mirror then re-captures the inline context's runs (an inline element's
        through `ItemInfo::runOf`), and publishes anew where a paint group in the line holds a run of its own.
     2. **`can_replace_text`** is the single predicate, so a caller can plan before it changes anything: false for a
        raw-text parent (`<style>`, `<script>`), a parent inside a `select`, `option`, `optgroup`, `datalist`,
-       `textarea`, `button`, `input`, `progress`, `meter` or `svg` (their generated content or drawing reads the
-       text), a run that is not `count` `el_text`/`el_space` pieces in range, and a text that would take the document
+       `textarea`, `input`, `progress` or `meter` (their generated content reads the text; a `<button>`'s does not:
+       `el_button` draws its bezel around its children, `testButtonTextIsReplacedInPlace`; an `<svg>` draws its subtree
+       itself from its render item, an image, so text under it replaces the svg's render subtree through edit 74's
+       boundary, `testStructureInsideAnSvg`), a
+       run that is not `count` `el_text`/`el_space` pieces in range, and a text that would take the document
        past `max_text_elements` (+ the allowance of edit 10). The cap counts logically: `m_text_elements` at the start
        of a session plus the net growth of the session, and a caller's `pending_growth` for replacements planned and
        not yet made, because the replaced pieces stay alive until the render tree lets go of them. A refusal changes
-       nothing and calls no container hook (`sanitizer_limit("text")` is not raised; the caller rebuilds).
+       nothing and calls no container hook (`sanitizer_limit("text")` is not raised); it names why (edit 76), and
+       WidgetRuntime walks the cut at the text-piece cap and hands any other refusal to its next path.
     3. **`commit_patch`** runs `restyle_after_patch` (the private function the template-hole path uses) over the new
-       pieces with the tree kept or rebuilt as above, `forget_positions()` when kept, and clears the paint-only and
-       confined-region state, which describes only template patches. It does nothing when nothing was collected. The
-       caller lays out afterwards (`render()`). Edits 17 and 18 (attributes, structure) collect into the same session.
+       pieces with the tree kept or its seeds' boundaries replaced as above, `forget_positions()` when kept, and clears
+       the paint-only and confined-region state, which describes only template patches. It does nothing when nothing was
+       collected. The caller lays out afterwards (`render()`). Edits 17 and 18 (attributes, structure) collect into the
+       same session: WidgetRuntime's structure flush replaces a kept Text's pieces after its insertions and removals, and
+       a run whose parent's children the session changed is not one for one with its render item's, so the parent is a
+       seed.
     Pinned by `tests/external_test.cpp` (`:TwidgetExternalTests`), which did not compile before the edit (none of the
     three existed): `testReplaceTextMatchesFresh` (same piece count, more words wrapping, fewer words, whitespace only
     both ways, inside `pre`, `li`, `div`, and two replacements in one session; each patched document's placements,
     height and draw calls equal a fresh build of the final text), `testReplaceTextBesideElements` (a run beside
     elements equals a fresh build), `testReplaceTextRefusals` (`<style>`, a `select`'s `option`, a
     `button`, a run out of range or not text, and the cap with `pending_growth` and a session that replaces and grows;
-    each refusal leaves the document and `pieces` as they were) and `testReplaceTextRepointsHover`. Mutation checks:
+    each refusal leaves the document and `pieces` as they were), `testReplaceTextRepointsHover` and
+    `testReplaceTextBesideStructure` (beside a removal and an insertion in another parent the run is replaced and its
+    inline context kept; after an insertion before it or its sibling's removal in its own parent; each equals a fresh
+    build). Mutation checks:
     keeping the tree when `replace_text_renderers` fails fails `testReplaceTextBesideElements`; restyling nothing at
     commit fails `testReplaceTextMatchesFresh`. WidgetRuntime's `testTextInAnInlineElementKeepsTheTree` pins the
     kept tree in a `<span>`, a `<b>`, beside an `<i>` and a `::before`, and the new mirror where a paint group follows.
@@ -657,39 +687,30 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     implemented in `src/telegram_external.cpp`.
     1. **`can_set_element_attributes`** is the single predicate, so a caller plans before it changes anything. `attrs` is
        the element's complete new attribute map (lowercased names). False for: an element outside the types `apply_retag`
-       re-reads completely (`restylable_in_place`'s `html_tag`, `el_div`, `el_para`, `el_td`, `el_tr`, `el_body`, and
-       `el_image`, `el_anchor`, `el_input`, `el_svg`, checked against a fresh build; a table, select, option, button,
-       textarea, font, style, link and the rest rebuild); one not under the document root or inside a `<select>`; a
-       document whose sheets hold a sibling combinator, a positional pseudo-class or a counter (`selector_scope() != 0`:
-       litehtml.md section (c) 3-5); a changed `id`, `class` or attribute name that a selector names in an ancestor
-       position (`m_left_*`, filled by `selector_scope()` through `collect_ancestor_names`, which now also maps `:link`
-       to `href`, since `el_anchor` pushes `:link` for an href: `a:link span` makes `href` an ancestor name); an inline
-       `style` whose old or new value holds `--`, `var(` or `counter`; and the two caps a fresh build enforces where a
-       match or a layout makes things:
+       re-reads completely (`attribute_patch_kind`'s `html_tag`, `el_div`, `el_para`, `el_td`, `el_tr`, `el_body`,
+       `el_break` (it reads none of its own) and `el_button`, which reads `disabled` again when restyled, and `el_image`, `el_anchor`, `el_input`, `el_svg` and
+       `el_table`, whose `parse_attributes` maps its presentational attributes, checked against a fresh build; a select,
+       option, textarea, font, style, link and the rest are seeds of a replacement, edit 74); one not under the document
+       root or inside a `<select>` (a changed `id`, `class` or attribute name that a selector names in an ancestor
+       position, or sibling selectors in the sheets, is matched over its reach: edit 77; counters run again in a build's
+       order: edit 78); and the two caps a fresh build enforces where a match or a layout makes things:
        - **pseudo-element content.** Matching again makes the element's `::before`/`::after` content, asking
          `text_element_allowed()` for each word; a build makes all of it after the text, in document order, so at
-         `max_text_elements` (or the pseudo-element cap) a patch and a rebuild cut at different words: the patch cuts the
-         element it matched again, a build the later element's content (bounds on the pieces were tried and fell to
-         function-name case and spacing, `ATTR(`, `attr (`, and to overlap with other elements' rules). So the cut is
-         found after the fact: `pseudo_content_possible()`, computed from the selectors as litehtml parsed them (a
-         pseudo-element `before`/`after` in the rightmost compound and a `content` declaration that is not empty or
-         `none`; a rule naming a tag counts only when the document has an element with that tag, so the master sheet's
-         `summary::before` and `details[open] > summary::before`, which declare content, matter only in a document with
-         a `<summary>`), says whether one can happen, and a patch that reaches a cap posts its limit (`text_limited()`,
-         `pseudo_limited()`), after which the caller must replace the patched document by a fresh build. While it is
-         true, `can_set_element_attributes` and edit 16's `can_replace_text` refuse once a cap has been reached (freed
-         pieces would go to later content in a fresh build). A rule for an `lh-*` part (a form control's generated parts:
-         `lh-range-thumb`, also reached as `input::-webkit-slider-thumb`), or a `*` rule, counts wherever the document has
-         an `input`, `select` or `textarea`, since a patch can make the part; such content refuses every patch
-         (`part_content_possible()`, bit 2 of the same answer), because a build counts the parts' content beyond what it
-         keeps and so near the cap cuts where a patch, which posts nothing, does not. The answer is recomputed on the
-         first query after each `commit_patch` (the walk of the tree is O(elements); WidgetRuntime charges the build's
-         element count first). `text_element_allowed` (under `#if 0`/`#else`) also counts logically in a patch session
-         (not the pieces the session replaced or forgot, kept alive in `m_patch_hold` until `commit_patch`).
+         `max_text_elements` (or the pseudo-element cap) a patch and a fresh build cut at different words: the patch
+         cuts the element it matched again, a build the later element's content (bounds on the pieces were tried and
+         fell to function-name case and spacing, `ATTR(`, `attr (`, and to overlap with other elements' rules). Near a
+         cap the commit replays the style pass in a build's order (edit 84), so the patch cuts where a build does.
+         `pseudo_content_possible()`, computed from the selectors as litehtml parsed them (a pseudo-element
+         `before`/`after` in the rightmost compound and a `content` declaration that is not empty or `none`; a rule naming
+         a tag counts only when the document has an element with that tag, so the master sheet's `summary::before` and
+         `details[open] > summary::before`, which declare content, matter only in a document with a `<summary>`; a rule
+         for an `lh-*` part, or a `*` rule, wherever the document has an `input`, `select` or `textarea`), is read by the
+         replay's gate. It is recomputed on the first query after each `commit_patch`. `text_element_allowed` (under
+         `#if 0`/`#else`) counts logically in a patch session (not the pieces the session replaced or forgot, kept alive
+         in `m_patch_hold` until `commit_patch`).
        - **table cells.** A `colspan`/`rowspan` change that raises the cell product (clamped to 1000 each, as
-         `table_grid::add_cell` reads them) is refused when `m_table_cells` plus the rise and the caller's
-         `pending.cells` passes `max_table_cells`. This is defence in depth: `restyle_after_patch` rebuilds the render tree
-         from the root and recounts the cells as a build does, so a patch and a rebuild agree without it.
+         `table_grid::add_cell` reads them) adds the rise to the caller's `pending.cells`. Nothing refuses it: a
+         replacement that moves the cap's cut replaces the root, which recounts the cells as a build does (edits 74, 84).
        The container's `sanitize_element` is not asked: nothing validates (Ruling 2).
     2. **`set_element_attributes`** answers false, changing nothing, where the predicate does; true and nothing where the
        element already holds the map. Else it bumps `m_match_epoch`, joins the patch session of edit 16 (starting one),
@@ -709,7 +730,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     and removed, id, local and background-only `style`, `hidden`, `checked`, `value`, `placeholder`, `type`, `img src`,
     `a href`, an svg shape's `fill` and `r`, several attributes in one session, same value), `testSetAttributeRefusals`
     (ancestor-position class, id and attribute, `:nth-child`, `:first-child`, `+`, a counter, `option`/`select`, `--`,
-    `var(`, `counter`, table, textarea, button, an element outside the document, null and empty names) and
+    `var(`, an inline `counter-reset`, table, textarea, button, an element outside the document, null and empty names)
+    and
     `testSetAttributeFixRound` (`a:link span` both ways; href x, y, x, y keeps `:link`; one re-match for a map; the svg
     element, body's `style`, `viewBox`, `xlink:title`, `Fill`; five sheets with pseudo content (plain, `ATTR(`, `attr (`,
     the overlap shape, `:after`) at 0 to 5,004 filler words: an attribute and then a text patch equal a fresh build
@@ -723,49 +745,68 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     cap, dropping the part-content refusal and the cell refusal each fail their cases.
     **macOS effect:** none; the entry points have no caller in the Objective-C++ layer, and the new members are only
     read by them. `text_element_allowed` counts as before outside a patch session (`m_patch_released` is 0).
+    **Custom properties and `var()`** (`html_tag::reads_var`, `declares_custom_properties`; `document::var_readers`,
+    `m_patch_custom_tops`, `commit_patch`). A restyle substitutes no `var()` again: `subst_vars` replaces an element's
+    `var()`s in its style with what they resolved to. So an element that declares custom properties (in its matched
+    style, or its inline or animated style) before or after `rematch` matches it again is a custom-property top, and
+    `commit_patch`, before its restyle, matches again each element below the tops whose style read a `var()` when it
+    was computed (`reads_var`, kept by `compute_styles` and `compute_background_style`, counted by the document so that
+    `var_readers` walks nothing in a document where no style reads one), and the owner of a `::before` or `::after`
+    that read one (matching the owner again makes its pseudo-elements again), as a pseudo-class reach is matched
+    (`set_pseudo_classes`); the commit takes the session's seeds, boxes and kept-tree verdict (edit 74) only after those
+    matches, so a reader whose pseudo-elements are made again has its render subtree replaced even when nothing else of
+    the session gave up the kept tree (a paint-only hover on an element declaring a custom property). An inline `style`
+    or animated style is patched whatever it holds (a custom property, `var()`, or a counter, which litehtml reads from
+    matched rules alone: `handle_counter_properties` runs in `add_style`, never for the inline style
+    `compute_styles` adds). WidgetRuntime lists `var_readers` of what a flush
+    matches again in its selector step plan. Pinned by `external_test.cpp` `testCustomPropertiesInInlineStyle` (a
+    parent's custom property under a child's `var()`, a child's own `var()`, a property and its `var()` on one element,
+    a `display` from a `var()`, each also through the animated style, a hover declaring the parent's custom property,
+    and a paint-only hover over readers with `::before` content, alone and beside a structure change),
+    `testPseudoElementsReadingVar` (a class, an inline style and a hover declaring the custom property a
+    `::before` reads) and WidgetRuntime's render oracle group "custom properties".
 
 18. **Structure patched in place** (2026-10-18, M1c Task 9 and its fix rounds; both platforms, insertions plus five lines
     set aside under `#if 0`/`#else`: four in `html_tag.cpp`, one in `render_table.cpp`; items 6 and 7 change output on
     macOS and in today's iOS renderer). The flush of
     edits 16 and 17 extends to inserted, removed and moved subtrees. Fork `document.h` gains public `insert_subtree(parent, index,
-    subtree)`, `remove_subtree(subtree)`, `replace_children(parent, subtrees)`, their predicates `can_insert_subtree`,
-    `can_remove_subtree` and `can_replace_children` (each taking a `structure_growth* pending`: the pieces planned removals
+    subtree)`, `remove_subtree(subtree)`, their predicates `can_insert_subtree` and
+    `can_remove_subtree` (each taking a `structure_growth* pending`: the pieces planned removals
     release, the net elements and the cells planned insertions add), `structure_reaches_siblings()`,
     `make_text_pieces(parent, text, pieces)`, `max_external_depth` (= `max_build_depth`, public), private
     `structure_parent_allowed`, `structure_insertable`, `structure_removable`, `link_subtree`, `unlink_subtree`, the
     session member `m_patch_inserted`, and `m_content_tags`/`m_content_parts` (the tags the `::before`/`::after` content
-    rules name and whether one names an `lh-*` part, read from the sheets once: they never change after finalize);
+    rules name and whether one could make a form control's parts' content, naming an `lh-*` part or `*`, read from the
+    sheets once: they never change after finalize);
     implemented in `src/telegram_external.cpp`.
     1. **The predicates** are what a caller plans with before it changes anything; each entry point asks its own again
        and answers false, changing nothing, where it does. Refused (litehtml.md section (c) 1, 2, 4): a subtree holding
        a document-level element (`update_structure`'s list, `document.cpp` `has_document_level_element`: html head body
-       style link base meta title script frameset select option optgroup datalist), removed or inserted; a parent that is
+       link base meta title script frameset select option optgroup datalist; a `<style>` is not, edit 81), removed or
+       inserted; a parent that is
        not in the document, is raw text (`<style>`, `<script>`), is generated content, or is inside a select, option,
-       optgroup, datalist, textarea, button, input, progress, meter or svg (edit 16's list: their generated content or
-       drawing reads their children); a parent's own `appendChild` refusal, which a build leaves out (`el_table` takes
-       tbody, thead, tfoot and caption only); sheets with counters (`selector_scope() & 4`); for `insert_subtree` and
-       `remove_subtree`, sheets with sibling combinators or positional pseudo-classes (`& 3`: the other children's
-       matches would go stale), where `replace_children` is the change; `pseudo_content_possible()` (edit 17) for the
-       tree as it will be: it is true, or the subtree has an element a `::before`/`::after` content rule names by tag,
-       or a form control while an `lh-*` part rule exists (the subtree's pseudo-element content would be made in the
-       patch's order, not a fresh build's, the near-cap divergence of edit 17's fix rounds); and the caps, so a patch
-       never cuts what a fresh build would keep or keeps what it would cut: an element at `max_build_depth` or deeper,
-       `max_build_elements` (`m_build_elements`, which `insert_subtree` raises and `remove_subtree` lowers by the
-       subtree's elements, generated content left out), the text pieces counted logically (the alive ones, less the
-       session's released and `pending`'s: a planned subtree's pieces are alive, and counted, already), and
-       `max_table_cells` (every element of the subtree counted as a cell with its colspan x rowspan as `table_grid::
-       add_cell` clamps them, an upper bound; a removal frees none). A subtree that is attached, the root, a detached
-       element, generated content (`::before`, `::after`, a form control's `lh-*` parts) and an index past the end are
-       refused too.
-    2. **The changes** each join edit 16's patch session (starting one), bump `m_match_epoch`, and mark the render tree
-       for rebuilding. `insert_subtree` links through `insert_child` (edit 12); `remove_subtree` goes through
-       `remove_child` (edit 12, which re-points hover and active) and releases the subtree's pieces (edit 17's
-       `release_pieces`: alive until `commit_patch`, uncounted from now on); `replace_children` removes every child but
-       the generated content and links the subtrees between a leading `::before` and the rest. **Styling is deferred to
-       `commit_patch`:** it styles every subtree linked in the session and still in the document as `update_structure`
-       styles a fresh one (the master sheet for all, then `parse_attributes`, then the author sheets, then the user
-       sheet), after every structure change of the session, so a positional match (`li:last-child`) reads the final
-       children; the subtrees join the restyle roots, and the render tree is rebuilt from the root.
+       optgroup, datalist, textarea, input, progress or meter (edit 16's list: their generated content reads their
+       children; a `<button>` is not on it, `testStructureInsideAButton`, nor an `<svg>`, whose render subtree a change
+       under it replaces through edit 74's boundary, `testStructureInsideAnSvg`); a parent's own `appendChild` refusal, which a build leaves out (`el_table` takes
+       tbody, thead, tfoot and caption only; WidgetRuntime asks `accepts_child` first and never builds one, edit 83).
+       Sheets with sibling combinators or positional pseudo-classes refuse nothing: the commit matches again the other
+       children a rule can reach (edit 90). The commit's match makes an inserted element's
+       generated content in its place, as a fresh build does, and near a cap replays the style pass in a build's order
+       (edit 84; `testStructureBesidePseudoContent`). The caps the caller cuts at before it asks (WidgetRuntime's walk)
+       are checked as defence: an element at `max_build_depth` or deeper, `max_build_elements` (`m_build_elements`,
+       which `insert_subtree` raises and `remove_subtree` lowers by the subtree's elements, generated content left out),
+       and the document's own text pieces (edit 84's `document_text_pieces`, less what `pending` releases: a planned
+       subtree's pieces are alive, and counted, already). A subtree that is attached, the root, a detached element,
+       generated content (`::before`, `::after`, a form control's `lh-*` parts) and an index past the end are refused
+       too.
+    2. **The changes** each join edit 16's patch session (starting one), bump `m_match_epoch`, and name the parent a
+       seed of the commit's replacement (edit 74). `insert_subtree` links through `insert_child` (edit 12);
+       `remove_subtree` goes through `remove_child` (edit 12, which re-points hover and active) and releases the
+       subtree's pieces (edit 17's `release_pieces`: alive until `commit_patch`, uncounted from now on). **Styling is deferred to `commit_patch`:** it styles every subtree linked in the session
+       and still in the document as `update_structure` styles a fresh one (the master sheet for all, then
+       `parse_attributes`, then the author sheets, then the user sheet), after every structure change of the session, so
+       a positional match (`li:last-child`) reads the final children; the subtrees join the restyle roots, and the
+       seeds' boundaries are replaced (edit 74).
     3. **`make_text_pieces`** makes the pieces `append_text` would append (one in a raw-text parent, else `split_text`'s
        words and spaces) with no parent and without asking `text_element_allowed`, for a subtree the predicate counts:
        built while the pieces it replaces are still alive, `append_text` would ask the cap of both and could report a
@@ -775,17 +816,15 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     parents in one session, a table row into a tbody, a list item, text pieces inserted and removed; each patched
     document's placements, height, draw calls, text-piece count and reported limits equal a fresh build's),
     `testStructureRefusals` (a `<style>`, inside one, a `<select>` in a div and removed, a `<body>`, an option into the
-    select and a span into its option, a circle into an svg, a span into a button, a tr into a table, counters,
-    `:nth-child`, `+` and `~`, `p::before` content, a `<q>` with `q::before` content, an input with an `lh-*` part rule,
+    select and a span into its option, a circle into an svg, a span into a button, a tr into a table, `:nth-child`, `+`
+    and `~`, an input with an `lh-*` part rule,
     an attached subtree, a detached parent, an index past the end, a `<style>`'s text, the root, a detached element, an
     `lh-*` part; each leaves the document and the piece count as they were and reports no limit; the same sheets let what
     they do not reach through), `testStructureCaps` (depth 255 accepted and 256 refused; 20,000 elements with `pending`;
     the text cap with a planned removal's release, accepted at 9,998 and equal to a fresh build; 199,001 cells accepted
     and 200,001 refused) and `testReplaceChildrenUnderPositionalSelectors` (`:nth-child`, `+`, `~`, `:last-child`,
-    `:first-child`: the replaced children equal a fresh build, down to one and to none; counters refuse it); in fix round
-    2, `testSelectorStepBoundHolds`' many-sibling shapes (`.a ~ p span`, `p:nth-child(2n of .a) span`, `.a ~ p > span b`
-    under the last of 900 `<p>`s; RED before the sibling widening: the steps used passed the bound) and
-    `testFontSizeZeroMatchesFresh` (RED before item 7). Mutation
+    `:first-child`, and an ordered list's items under counters: the replaced children equal a fresh build, down to one
+    and to none); and `testFontSizeZeroMatchesFresh` (RED before item 7). Mutation
     checks: styling each subtree as it is linked instead of at commit fails the positional case; dropping the scope
     refusal, the element count's decrement, the release of removed pieces, the subtree's pseudo-content tags or the
     table's `appendChild` rule each fail their cases.
@@ -805,16 +844,10 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        when its caller has not, and `commit_patch` closes it; a build has one when its caller opens it (WidgetRuntime does,
        around `finalize_from_external_root`). `~document` closes an open one (an insertion in `document.cpp`). Matching
        replayed from an element's memo (`apply_matching`) runs outside any pass and counts nothing, as before.
-    5. **`selector_step_bound(plan)`**, an upper bound of a patch's steps, for a caller that refuses a patch that could
-       pass a limit: for each element the patch matches (inserted subtrees with their parents, re-matched elements with
-       their new attributes, a form control's lh-* parts), every selector `apply_selector`'s filter lets through (rightmost
-       tag, and first class when it starts with one; bucketed once per call), twice (the test without pseudo-classes, then
-       the one with), each test bounded by the selector's shape at the plan's deepest place and most siblings: a descendant
-       combinator walks every ancestor (with `find_ancestor`'s prune where it applies), a general sibling one every
-       sibling (`find_sibling`'s prune), `:is`/`:not`/`:where` test their lists and `:nth-child(of S)` S against each
-       sibling. `selector_count()` is its work. The content-rule tags of item 1 are cached once per document.
-       `max_external_elements` (= `max_build_elements`) is public: a build counts every element it creates against it,
-       one a parent's `appendChild` then refuses included.
+    5. **The counts a caller charges by.** `selector_count()` is the three sheets' selectors (a caller weighs a match's
+       filter loop by it), and `max_external_elements` (= `max_build_elements`) is public. The content-rule tags of item
+       1 are cached once per document. A caller asks a parent's `accepts_child` before it makes an element (edit 83), so
+       a build counts only what it links.
     6. **A table's rows are placed once per layout.** `render_item_table::_render` moved each row down by its top
        captions with `+=`, and nothing else places a row, so every pass of the table's layout moved the rows, and the
        placements of the cells under them, down again, and so did every later layout of a kept render tree (a text or
@@ -831,11 +864,7 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `font_metrics()` (an insertion), what a fresh element's metrics are. This changes today's iOS renderer as well as
        Telegram-Mac: `LHDocument.mm` restyles kept render trees (`update_styles`, `:877`; `update_holes`, `:949`), so an
        element it restyles to `font-size: 0` loses its old line height there too.
-    8. **Fix round 2 (Rulings E20, E21).** `selector_step_bound` also widens its sibling term by every ancestor's
-       parent's child count, from the plan's elements up to the root: a compound left of a combinator is tested at an
-       ancestor, and a sibling combinator or `:nth-child(of S)` there walks that ancestor's siblings (the reviewer's
-       `.a ~ p span` with spans under the last of 9,000 `<p>`s: 900,800 steps used against a bound of 102,401). And
-       `finalize_from_external_root` asks an optional matching gate (`set_matching_gate`, `matching_gated()`; two inserted
+    8. **Fix round 2 (Ruling E21).** `finalize_from_external_root` asks an optional matching gate (`set_matching_gate`, `matching_gated()`; two inserted
        checks) before the master-and-host pass and before the author pass, with the pass's rule count, so a caller can
        refuse `apply_selector`'s filter loop (every rule against every element, which no step counts) before it runs,
        without charging inside litehtml; declined, finalize returns before that pass and the document is left unfinished
@@ -853,23 +882,21 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        after the author's: a correction of item 8, which counted it with the master's, and no change where no gate is
        set, as on macOS) with theirs and all three sheets' creators; it may lower
        the open session's step limit (`set_selector_step_limit`, `selector_step_limit`) by what it set aside for the loop.
-       `selector_step_bound` counts each creatable element's pseudo-elements as two `*` elements with no class. Pinned by
+       Pinned by
        `testMatchingBoundCountsPseudoElementsAndParts` (six sheets: a div's, a `*`'s, `content: none`, `.x::after` for
        every tag, an `lh-input-text` part rule; the master sheet's `summary::before` creates for a summary only). RED:
        without the pseudo-element term four checks fail; counting generated elements again, the bound of a matched input
        and a matched `.x` div differ from their fresh ones.
     Also pinned (fix round): `testSelectorStepsAreOneBudgetPerSession` (one div's steps; two roots under a limit of a div
     and a half: the first coloured, the second not; the reviewer's parity probe: a build of 4,099 divs under 1,000 rules
-    passes the budget, the bound of an append says it does not fit; 300 roots under a 16,000-selector rule share one
-    budget, 250 roots' worth; a session counts only its own document), `testSelectorStepBoundHolds` (five sheets of
-    descendant, child, sibling, `:is`/`:not`/`:where`, `:nth-child(of S)` and lh-* selectors, subtrees inserted at four
-    depths and a re-match: the steps used never pass the bound) and `testTableRowsArePlacedOncePerLayout` (three more
-    layouts leave a captioned table's placements as they were). RED: with the per-pass reset restored, five checks of the
-    first fail (one div's steps read 0, both roots coloured, the build not cut, the bound not reached, the append
-    coloured); without the binding the other document counts into the session; without the patch session's own budget
+    passes the budget, and a session limited to what it left colours an appended div no more than a build does; 300
+    roots under a 16,000-selector rule share one budget, 250 roots' worth; a session counts only its own document) and
+    `testTableRowsArePlacedOncePerLayout` (three more layouts leave a captioned table's placements as they were). RED:
+    with the per-pass reset restored, four checks of the first fail (one div's steps read 0, both roots coloured, the
+    build not cut, the append coloured); without the binding the other document counts into the session; without the patch session's own budget
     all 300 roots are coloured; with `+=` the placements move.
     **macOS effect:** items 1-5: none; the entry points have no caller in the Objective-C++ layer, the new members are
-    only read by them (`commit_patch`'s styling runs only for subtrees `insert_subtree` or `replace_children` linked), and
+    only read by them (`commit_patch`'s styling runs only for subtrees `insert_subtree` linked), and
     with no session open (Telegram-Mac opens none) every outermost pass has litehtml's 4,000,000 steps as before.
     Items 6 and 7 apply on macOS. Item 6: in a table with a top caption, a row's position is the captions' height once,
     where it was that height once per layout pass (two to four by formatting context, as above) and grew with every later
@@ -906,18 +933,9 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     whose content lists run past 32 items shows the first 32, and one whose pseudo-elements would pass 20,000 elements
     stops creating them (the limit is reported to the container, which Telegram-Mac's ignores). Nothing else changes: a
     page within the bounds renders identically.
-    3. **The patch gates (W Ruling E28).** A rebuild hands the remaining pseudo-element budget out in document order, so
-       a patch that crosses the cap would commit a different document. `document::pseudo_cap_in_play(extra)`
-       (`telegram_external.cpp`) is true when the author or user sheets hold any `::before`/`::after` rule (content or
-       not; the master sheet's two are content rules on `summary`, `pseudo_content_possible`'s) and either the limit was
-       already reported or `m_build_elements + m_pseudo_elements + extra` reaches `max_build_elements`. Coarse on
-       purpose. `structure_insertable` refuses with `extra = 3 x` the elements it adds (each plus two pseudo-elements),
-       `attribute_change_allowed` with `2 x m_build_elements` (a change can give every element two), and
-       `structure_removable` refuses while the limit has been reported (freed budget would go to later elements in a
-       rebuild). A refusal takes W's normal rebuild fallback. Pinned in W by `testPatchPastThePseudoCapMatchesRebuild`
-       (4,000 divs patched onto 5,000, two pseudo-elements each) and `testAttributePatchPastThePseudoCapMatchesRebuild`;
-       both failed before the gates. `testFilterChargeCountsPseudoElements` keeps its patch at 1,000 divs, the in-cap
-       contract.
+    3. **Patches near the cap.** A build hands the pseudo-element budget out in document order, which a patch's
+       matching does not follow; near the cap the commit replays the style pass in a build's order (edit 84), and
+       `pseudo_element_allowed` does not count the pseudo-elements a patch session released (held to its commit).
 
 20. **The paint walk and the render observer** (2026-10-18, M1c Task 10b; both platforms, as insertions only: eleven item
     draw sites set aside under `#if 0`/`#else`, everything else added). WidgetRuntime's layer mirror (`W/Sources/Render/
@@ -946,9 +964,11 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `document::set_render_observer`; null by default, and with none set nothing is reported or saved.
        - `replace_text_renderers` (edit 16) reports the inline context's old children removed, its new ones added and
          `text_replaced(context)`;
-       - every site that drops the render tree and builds it again from the root (`restyle_after_patch` when the patch did
-         not keep it: every structural patch of edit 18 and every attribute patch `apply_retag` does not call neutral;
-         `finalize`'s build, `media_changed`, `viewport_changed`) reports `tree_rebuilt()` first;
+       - `finalize`'s build reports nothing (an observer walks the new tree whole); after it nothing re-creates the
+         tree: a patch that gives up
+         the kept tree (every structural patch of edit 18, every attribute patch `apply_retag` does not call neutral,
+         text pieces `replace_text_renderers` cannot place), `media_changed` and `viewport_changed` replace render
+         subtrees in place and report `subtree_replaced(old, new)` (edit 74);
        - `commit_patch` reports each element `restyle_after_patch` restyled with the tree kept,
          `element_restyled(el, paint_order)`, where `apply_retag` set `paint_order` when a rule that started or stopped
          matching declares `opacity`, `transform`, `transform-origin`, `filter`, `visibility` or `-lh-anim`;
@@ -967,12 +987,10 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `testObserverReportsEveryRenderTreeChange` (after a text patch and a neutral class patch the items reported added and
     removed are exactly the difference of the render trees, every box layout changed is reported (an inline item's
     through its inline context's reflow) and nothing unchanged is; an opacity class change is reported with paint order; a
-    structural patch and a `style` patch report `tree_rebuilt`). Both failed to compile before the edit.
+    structural patch and a `style` patch report `subtree_replaced`). Both failed to compile before the edit.
     **macOS and today's iOS:** nothing changes. Neither sets a visitor or an observer, every hook falls through to the
     upstream call, and the observer's bookkeeping (a few fields per render item) is never written.
-    Known: litehtml's block pass enters an inline-flex or inline-grid (its recursion condition excludes only
-    inline-block), whose own context then paints its content again, so one item's own paint can happen twice; the
-    mirror marks such items and rebuilds rather than update them.
+    litehtml's block pass does not enter an inline-flex or inline-grid (edit 86), so each item's own paint happens once.
 
 21. **A style-byte budget** (2026-10-18, M1c Task 11b, Ruling E46; both platforms, as insertions only). litehtml copies
     every declared value into each element it matches (`html_tag::add_style` -> `style::combine` ->
@@ -994,7 +1012,7 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       the document is limited, or a replay could reach the budget, `document::refresh_all_styles` (media, viewport and
       language changes; `refresh_styles` is kept under `#if 0`) charges again from zero in a build's order instead: it
       clears every element, replays the master rules over the tree, `parse_attributes`, the author rules, then the user
-      rules (`used_selector::m_sheet`), so the result equals a rebuild at the new viewport.
+      rules (`used_selector::m_sheet`), so the result equals a fresh build at the new viewport.
     - **`var()` splices are charged** (Ruling E47; `style.cpp` `resolve_vars`, `html_tag::find_custom_property` /
       `charge_splice`). `subst_vars` copies a custom property's value into each element's declaration, outside any sheet
       pass, so the splice is charged unconditionally (author- and user-derived values) and BEFORE the copy: the size of the
@@ -1022,22 +1040,24 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       dropped, and fixed-size declarations (enums, lengths, colours) still apply (`style::combine_fixed`). The same rule
       holds on the build, refresh and patch paths. The document stays renderable.
     - **Deterministic.** A new document charges from zero in that order; two builds of one document dump identically.
-    - **Patches** (`telegram_external.cpp`, `document.cpp`). The patch paths charge cumulatively as they restyle. A patch
-      that could pass the budget is refused up front, as edit 19's `pseudo_cap_in_play` refuses: `style_budget_in_play(n)`
-      is true once the limit was hit, or when the running charge plus `n` elements each holding the largest value of every
-      property the author and user sheets declare (plus up to 64 `var()` uses of the largest custom property value) could
-      reach the budget. The cached sum is reset when the sheets are parsed or added. W abandons a patch that passes the budget anyway (Ruling E51: `RenderTree.cpp` records `style_bytes_limited()` before
-      mutating and throws `abandoned: the style budget was passed` after the selector-step check, for both the attribute and
-      the structure patch), because the estimate cannot see inline styles. It joins `attribute_change_allowed` (n = the
-      element and its subtree, what `restyle_after_patch` restyles: WidgetRuntime's `testPatchPastTheStyleBudgetMatchesRebuild`
-      patches a leaf's class near the budget and not the body's; only WidgetRuntime calls it, so macOS is unchanged. The
-      subtree is walked only when the whole document could pass the budget, and no further than it takes to know; each
-      element visited counts in `predicate_steps()`, which WidgetRuntime charges, twice, since `set_element_attributes`
-      asks again at the commit),
-      `structure_insertable` (n = 3 x the elements inserted), `structure_removable` (n = 0: a limit-cut document
-      is never patched) and `retag_allowed` (n = every element; `class_change_allowed` and the template path go through
-      it). A refusal makes the caller rebuild. The cumulative count only makes a patch refuse earlier; it never makes one
-      diverge from a rebuild, which charges at most what the patch sequence did.
+    - **Patches** (`telegram_external.cpp`, `document.cpp`, `html_tag.cpp`). A patched document holds what a fresh build
+      of it holds (`style_bytes_charged()`). An element leaving the tree gives back what it and its subtree hold
+      (`document::release_style_charges`, `html_tag::release_style_charges`): `document::remove_child`, which removals
+      and a form control's parts go through, does it, and so do `forget_matched_styles` for each pseudo-element it drops
+      (one a match puts back takes the new one's charges: edit 91) and a match whose `content:none` drops one. A rematch
+      gives back before it charges. `subst_vars` replaces a matched `var()` in the style with what it resolved to, so a
+      restyle splices again only what it adds again (the inline and animated style, and the matched style
+      `restore_base_style` puts back): each property's splices are charged to that property (`html_tag::begin_splice`,
+      `m_splice_charges`), and a property spliced again gives back what it held first, while one substituted earlier
+      keeps its charge. So a patch's charge is its own and exact, and the patch predicates ask the budget nothing; a
+      patch that passes it, or one in a document past it, is followed by edit 84's
+      replay at the commit, which charges from zero in a build's order. `style_budget_in_play(n)` (true once the limit
+      was hit, or when the running charge plus `n` elements each holding the largest value of every property the author
+      and user sheets declare, plus up to 64 `var()` uses of the largest custom property value, could reach the budget;
+      the cached sum reset when the sheets are parsed or added) is left to `refresh_all_styles`. Pinned by
+      `external_test.cpp` `testStyleBytesFollowPatches`, by `structureMatchesFresh` and `attributePatchedMatchesFresh`,
+      which compare `style_bytes_charged()` with a fresh document's, and by WidgetRuntime's render oracle, which compares
+      it with a fresh build's after every flush.
     - **Measured** (WidgetRuntime, `:WidgetRuntimeRenderCorpusTests`): the corpus's largest charge is 585,504 bytes
       (`common/heavy/01-long-table.html`, `var()` splices included); a plainly styled 10,000-element document (5,000 divs with 6 declared properties
       each, 5,000 spans with 3, a `body` font-family) charges 879,872. The budget is `max(16 MiB, 4 x the larger)`:
@@ -1124,7 +1144,7 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     the root's `style` attribute would not do: a widget's attribute ending in an unclosed construct
     (`--y: (`) swallows what follows into its own value. The root then never shares a style. Pinned by WidgetRuntime's
     `ThemeParamsTests` (`testTheRootCarriesTheVariablesNoWidgetRuleReplaces`,
-    `testAnUnclosedRootStyleCannotSwallowTheVariables`).
+    `testAnUnclosedRootStyleCannotSwallowTheVariables`). New declarations in place: edit 80.
 27. **Animated declarations** (2026-10-21, V5e plan, Task 6; both platforms, as insertions only: `html_tag.h`,
     `html_tag.cpp`, `telegram_external.cpp`). Web Animations' values are the animations origin of the cascade: above
     every normal declaration, the element's own `style` included, and below every `!important` one. WidgetRuntime
@@ -1133,19 +1153,18 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `html_tag::add_animated_style` parses it on its own and combines it right after the `style` attribute, in both
     places that add that (`compute_styles` and `compute_background_style`), saving the base style first as the `style`
     attribute does, so a restyle starts from the matched rules. Being an attribute, it rides the attribute patch, and
-    the element never shares a style (only `class`, `id` and `data-*` attributes allow sharing). `attribute_change_allowed`
-    refuses a change of it whose old or new text holds `var(`, `--` or `counter`, as it does for `style` (that change
-    rebuilds). Pinned by WidgetRuntime's `AnimationRenderTests`.
+    the element never shares a style (only `class`, `id` and `data-*` attributes allow sharing). Pinned by WidgetRuntime's
+    `AnimationRenderTests`.
     Second part (Task 7, `document.cpp`): the attribute changes on every frame of a running animation, so
-    `apply_retag` treats it as it treats `class` rather than as any other attribute, which always rebuilds the render
-    tree. It sets the two texts aside before comparing the rest, and keeps the tree when every property whose
-    declaration differs between them (`changed_declarations`) is a `paint_only_property`: so `transform`, `opacity`,
-    colours and the rest of that list are restyled in place and republished as mirror operations (and, since edit 63,
-    a box's geometry), while a property that shapes the render tree (`display`, `position`, …) still rebuilds. The
-    changed properties feed the region as a changed rule's do, and
+    `apply_retag` treats it as it treats `class` rather than as any other attribute, which always replaces the
+    element's render subtree (edit 74). It sets the two texts aside before comparing the rest, and keeps the tree when
+    every property whose declaration differs between them (`changed_declarations`) is a `paint_only_property`: so
+    `transform`, `opacity`, colours and the rest of that list are restyled in place and republished as mirror operations
+    (and, since edit 63, a box's geometry), while a property that shapes the render tree (`display`, `position`, …)
+    still replaces it (edit 74). The changed properties feed the region as a changed rule's do, and
     one of `paint_order_property`'s six (the list edit 20 tests a rule against, now one helper) tells the render
     observer that paint order may have changed. Pinned by `AnimationRenderTests` (`testAPaintOnlyFrameKeepsTheTree`:
-    no tree rebuild on any frame, and on an in-flow block no Reset at all).
+    the render tree kept on every frame, on an in-flow block and on a positioned element).
 28. **A rounded border's sides cover its ring** (2026-10-21, V5f plan, Task 8; iOS only: `LHContainer.mm`'s
     `draw_borders`). A border whose sides differ is painted side by side, each a polygon clipped to the ring (the
     outer rounded rect less the inner one). Each polygon ended at the inner rect, so where the inner corners are
@@ -1209,9 +1228,9 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       `lang` joins the attributes whose change re-matches beyond the element (`collect_ancestor_names`,
       `document.cpp`), on the subject compound too.
     - **31.5** `:empty` (`string_id.h` `_empty_`, `html_tag.cpp`): no children but `::before`/`::after`, a text piece of
-      any data counting. A sheet using it sets `selector_scope()` bit 8 (`uses_empty`, `document.cpp`): insertion and
-      removal were refused for any scope already, and `can_replace_children` and `update_structure` now refuse for
-      bit 8 too, since a change of an element's children changes how the element itself matches. Matched again in place
+      any data counting. A sheet using it sets `selector_scope()` bit 8 (`uses_empty`, `document.cpp`): a change of an
+      element's children changes how the element itself matches, which the structure patches match again (edit 88).
+      Matched again in place
       (`document::apply_retag` sets the element's children aside, so that matching makes only its `::before`/`::after`),
       `:empty` reads the children set aside (`html_tag::set_children_for_matching`, cleared by a scope guard): an
       attribute patch on an element with children never makes it `:empty`. Pinned by `testSetAttributeMatchesFresh` (a
@@ -1343,11 +1362,14 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       or with a sibling combinator or `of S`, the bits are as before.
     - **42.2** An attribute patch refuses only on bits 1 and 4 (`can_set_element_attributes`): a position is read from an
       element's place, which no attribute changes, and `:empty` (8) from its children.
-    - **42.3** An insertion or a removal is allowed under bit 16 (`can_insert_subtree`, `can_remove_subtree`); a parent it
+    - **42.3** An insertion or a removal is allowed under bit 16 (and under bits 1 and 2, edit 90) (`can_insert_subtree`, `can_remove_subtree`); a parent it
       touches whose element children such a rule can match (`positions_reach`: the parent's tag, a child's tag) is noted
       (`note_position_parent`), and `commit_patch` matches its other element children again in place (`apply_retag` with
-      their own attributes) once the fresh subtrees are styled, adding them to the restyle. `update_structure` (the HTML
-      path) treats bit 16 as bit 2.
+      their own attributes, checked: one whose box or more than its paint changes is a seed, edit 89) once the fresh
+      subtrees are styled, adding them to the restyle. A parent is asked once in a
+      session however many of its children it changes: one noted stays noted, and one no rule reaches stays so while
+      its children only go (`m_patch_position_unreached`), until an element a rule names is inserted under it. Pinned by
+      `testPositionParentsAreAskedOncePerSession`. `update_structure` (the HTML path) treats bit 16 as bit 2.
 43. **A rule's declarations in their written order** (2026-10-22, widget-sandbox v0.1.1 plan, Task 2; `style::combine`
     and `combine_fixed`, the replaced loops under `#if 0`). The upstream copied a rule's properties onto an element in
     its map's order (by string id), which renumbered them, so `subst_vars` could take a longhand written before a `var()`
@@ -1548,33 +1570,30 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     attribute, which `apply_retag` never called neutral, so every frame re-created the render tree. `apply_retag` now
     sets the `style` texts aside as it does the animated declarations (edit 27; the old comparison under `#if 0`), and
     their changed properties join the animated ones: the tree is kept when every one is a `paint_only_property`, with
-    their regions and paint order told as a changed rule's, and a property that shapes the tree still rebuilds it.
+    their regions and paint order told as a changed rule's, and a property that shapes the tree still replaces it.
     `changed_declarations` compares values without the whitespace around them, since CSSOM writes the whole attribute
     again (`width: 40px;` for `width:40px`) the first time a script sets one property. Pinned by WidgetRuntime's
     `testAPaintOnlyInlineStyleKeepsTheTree` (`transform`, `opacity` and `color` frames keep the tree from the first;
-    `display`, and `float` beside `transform`, rebuild it; each equal to a rebuild); comparing the style texts as before,
-    and comparing untrimmed values, each fail it. **macOS effect:** the template path (`update_document` →
+    `display`, and `float` beside `transform`, replace it; each equal to a fresh build); comparing the style texts as
+    before, and comparing untrimmed values, each fail it. **macOS effect:** the template path (`update_document` →
     `apply_retag`) keeps the render tree for a patch whose inline style changes only paint-only properties, where it
     re-created it; the restyle and layout are the same code, but no macOS test covers it in this repo.
 63. **A change of a box's geometry alone keeps the render tree** (`document.cpp` `geometry_only_property`, read by
     `apply_retag` beside `paint_only_property` for an inline style's, an animated declarations' and a changed rule's
-    properties when its new `geometry` argument is true, which only `set_element_attributes` passes; the two
-    `paint_only_property` tests it joins under `#if 0`, as is the old call). Creating and initialising render items reads
-    `display`, `position`, `float`, `list-style-type`, `white-space` and `flex-direction`; a box's size (`width`,
-    `height` and their `min-`/`max-`), margins, padding, offsets (`top` … `left`, `inset`), gaps and flex sizes
-    (`flex-grow`, `-shrink`, `-basis`) only layout reads, so a change of only those and paint-only properties keeps the
-    tree for a box that is not `display: inline` (an inline element's geometry is its line's, which a kept tree did not
-    lay out again: the padding of a `<span>` left the line as it was; it rebuilds): the restyle marks the box's layout dirty up to its relayout boundary (`compute_styles` → `mark_layout_dirty`),
-    the next `render()` lays it out again, and edit 20 reports every box that moved or resized, exactly. A progress bar
-    whose script sets `style.width` on every frame no longer re-creates the tree. Pinned by `external_test.cpp`
-    (a `padding` style patch keeps the tree and reports what it moved; `float` rebuilds) and WidgetRuntime's
-    `testAGeometryChangeKeepsTheTree` (widths, a relative box's `left`, margin and padding, `gap` and `flex-grow`, a
-    class whose rule sets `width` and `padding`, and a resize below the pixel epsilon kept; `display`, `position`, and
-    `width` beside `float` rebuilt; each equal to a rebuild). Comparing geometry within the epsilon fails the resize
-    below it; not testing `geometry_only_property` fails every kept step. **macOS effect:** none. The template path
-    (`update_document` → `apply_retag`) reuses the last layout whenever it keeps the tree, so a geometry change kept
-    there drew the old layout (`TwidgetRenderingTests`' random text-and-class and structure runs, and the rebuild memory
-    run, fail with it); it does not pass `geometry`.
+    properties; the two `paint_only_property` tests it joins). Creating and initialising render items reads `display`,
+    `position`, `float`, `list-style-type`, `white-space` and `flex-direction`; a box's size (`width`, `height` and
+    their `min-`/`max-`), margins, padding, offsets (`top` … `left`, `inset`), gaps and flex sizes (`flex-grow`,
+    `-shrink`, `-basis`) only layout reads, so a change of only those and paint-only properties keeps the tree for a box
+    that is not `display: inline` (an inline element's geometry is its line's, which a kept tree did not lay out again:
+    the padding of a `<span>` left the line as it was; it is replaced): the restyle marks the box's layout dirty up to
+    its relayout boundary (`compute_styles` → `mark_layout_dirty`), the caller lays the document out again after every
+    `commit_patch`, and edit 20 reports every box that moved or resized, exactly. A progress bar whose script sets
+    `style.width` on every frame no longer re-creates the tree. Pinned by `external_test.cpp` (a `padding` style patch
+    keeps the tree and reports what it moved; `float` replaces it) and WidgetRuntime's `testAGeometryChangeKeepsTheTree`
+    (widths, a relative box's `left`, margin and padding, `gap` and `flex-grow`, a class whose rule sets `width` and
+    `padding`, and a resize below the pixel epsilon kept; `display`, `position`, and `width` beside `float` replaced;
+    each equal to a fresh build). Comparing geometry within the epsilon fails the resize below it; not testing
+    `geometry_only_property` fails every kept step.
 64. **A filter's and a backdrop's result: made only where it shows, and once for a host's paints** (`LHContainer.mm`
     `draw_filtered`, `draw_backdrop`, `allow_backdrops`, `EffectKey`; `LHHostSupport.h` `LHEffectStore`,
     `LHHostContainer::setEffectStore`, `allowBackdrops`). A filter's result draws inside its target and a backdrop's
@@ -1654,6 +1673,530 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     and its ancestors' up to the `<svg>` for `getBoundingClientRect`, which ignored SVG transforms.
     `testFillBoxScalesAShapeAboutItself` (a moved shape takes its box along, as a rebuild does). **macOS effect:**
     LHDocument's SVG shapes honour `transform-box: fill-box` too.
+
+73. **Why render subtrees were replaced** (`document.h` `rebuild_reason`, `note_rebuild`; `telegram_external.cpp` at
+    every place a patch session gives up its kept render tree; `document.cpp` `apply_retag`, `media_changed`,
+    `viewport_changed`). `rebuild_reason()` names why the last `commit_patch`, `media_changed` or `viewport_changed`
+    replaced render subtrees (edit 74), and is empty when it replaced none (a session whose every seed renders nothing
+    included); it is set before the first replacement: `structure: <op>: <why>` (edit 89's refusals),
+    `text: pieces not placeable`, `media`, `viewport`, and from `apply_retag` `element: <tag>` (an
+    element it does not check: an image, an anchor, an input, an svg, or one it does not know), `pseudo-element
+    children` (an element with a `::before` or `::after` before or after the match whose old ones do not go back: edit
+    91), `attribute: <name>` (the first attribute other than `class`, `style` and the animated declarations whose
+    value changed), `property: <name>` (the first changed inline or animated property neither paint-only nor
+    geometry-only) and `rule: <property>` (of the such properties the rules that started or stopped matching declare,
+    the smallest by name: the rules come sorted by address, which a first one would follow). The first reason of a
+    session is kept. Tests read it to tell which change replaced subtrees. Pinned by `external_test.cpp`'s
+    `testRebuildReasonsNameTheChange` (an insert, a removal, a circle's `cx`, an inline `display`, a class whose rule
+    sets `position`, two rules at once (`rule: float` of `position`, `z-index` and `float`), a class change beside a
+    `::before`, a paint-only inline style that keeps the tree, a media query that flips).
+74. **A patch replaces the render subtree of its nearest boundary** (`document.h`/`document.cpp`
+    `replace_render_subtrees`, `replace_root_render`, `replacement_boundaries`, `inside_any`, `outer_box`,
+    `record_boxes`, `note_replacement`, `live_item`, `m_replaced_hold`, `replacement_steps`; `telegram_external.cpp` at
+    the sites edit 73 names and in `commit_patch`; `element.h`/`.cpp` `remove_render`; `table.h`/`table.cpp` and
+    `render_table.h`/`.cpp` `cells_taken`). After the boot litehtml's render tree is never re-created. Each site that
+    gives up the kept tree names the element it changed (a seed: an insertion's, a removal's or new children's parent
+    that edit 89 does not link,
+    the owner of text pieces `replace_text_renderers` cannot place, which it now tries whatever else the session
+    replaces, an element `apply_retag` does not call neutral) and records, as its first statement, the outer box
+    (`display`, `float`, `position`: what a parent's `init` reads of a child) of it and its ancestors as they were.
+    After the restyle, `commit_patch` walks each seed in the document up to its boundary: the first element whose outer
+    box is what it was, that stands alone (`block`, `list-item`, `inline-block`, `table`, `inline-table`, `flex`,
+    `inline-flex`, `grid`, `inline-grid`, or a replaced element) and has one live render item (`live_item`: registered,
+    reachable from the root, outermost, distinct). Not `inline` (its block parent splits it around block children), nor
+    a table part whatever it is (the table's grid holds its item: an `<img>` displayed as a cell), nor an item in an
+    anonymous block made from it (`render_item_flex::init` wraps a flex item that is not a block box, an `inline-grid`,
+    in a block that inherits from it and is outside its subtree). A seed under an element that rendered nothing and
+    still does not is dropped, unless the document has had an `<svg>` (`has_svg`): a `<use>` or a `url(#…)` paint
+    resolves ids anywhere in the document (`svg_element_by_id`), so the walk goes on to a boundary. A walk that reaches
+    the root, or a document the table-cell cap has cut, replaces the root (which counts cells in tree order, as a build
+    does); of nested boundaries the outer one is replaced. Every walk is memoised (each element a walk passes keeps
+    where it led; `inside_any`), so a commit steps through each element once whatever its number of seeds: a thousand
+    seeds under a 200-deep chain took 7,404 steps, where pairwise checks took 203 million. The boundaries' old subtrees
+    leave `m_layout_marked`, `m_relayout_roots` and `m_observed` in one pass and their elements (`remove_render`, so
+    `get_render_item`, which answers the first entry, answers the new item), and give back their tables' granted cells
+    (summed over every `init` of a table: the flex wrapper inits its item twice and a build counts both; a grid sums its
+    grants, not its asks). Each subtree is made as a build makes it (`create_render_item`, `fix_tables_layout` over its
+    own tabular items, `init`), each parent's children are swapped in one pass, the new items are marked dirty up to
+    their relayout boundary, and the old ones are kept alive until the next full layout (line boxes, flex lines and
+    positioned lists can point at them until then). The root's replacement is a build's, and `media_changed` and
+    `viewport_changed` make it too (so they now run `fix_tables_layout`). The render observer hears, within one
+    `commit_patch`: the in-place piece replacements' `item_removed`, `item_added` and `text_replaced` as they happen;
+    then one `subtree_replaced(old, new)` per boundary, told at the end of the commit (`report_replacements`, the old
+    items kept alive until then) with each new one linked under `new->parent()`; a commit that replaced the root (a
+    replacement that moved the table-cell cap's cut makes the root's too) tells the root's alone, from the root as it
+    was; a root that appears or goes (`display: none` on the document element) is told too, its missing side null, and
+    a root that goes leaves no size, as a fresh document's (`replace_root_render`); then `element_restyled` for each
+    restyled element outside every replaced subtree; geometry at the next layout.
+    Pinned by `external_test.cpp` (`testAfterTheBootSubtreesAreReplaced`,
+    `testStructurePatchKeepsTheTreeOutsideItsBoundary`, `testReplacementBoundaries`: an inline parent, a display flip, a
+    table part, an svg child, a circle in a hidden svg, an `<img>` as a table cell, an `inline-grid` flex item, a hidden
+    subtree with and without an svg in the document, media; `testReplacedItemsLeaveTheirElements`,
+    `testReplacementGivesBackTableCells`, `testReplacementGivesBackTableCellsUnderFlex`,
+    `testReplacementWalksAreLinear`, `testReplacementAtTheTableCellCap`,
+    `testACapCrossingReplacementReportsTheRootAlone`, `testAnInlineBoxInALineIsReplacedInPlace`,
+    `testAPositionedDescendantFollowsItsContainingBlock`, `testListItemsAreNumberedAgain`, `testSeedsInOneSession`) and
+    WidgetRuntime's `testAStructurePatchKeepsTheRenderTreeOutsideItsSubtree`, `testEditsNoOracleGeneratesPatch` (the
+    document element hidden and shown, by its style and by a class),
+    `testAHiddenSvgReferenceTargetRepaintsItsUsers` and `testAHiddenSpriteChangeRepaintsItsUsers` (a dropped seed leaves
+    the `<use>` and the gradient that draw a hidden target stale), besides the render oracle, which holds every flush to
+    a fresh build. Replacing the root every time fails the identity checks; not unregistering the old items fails
+    `get_render_item` on the elements they belonged to; without the wrapper rule an `inline-grid` flex item is its own
+    boundary; giving back one grid's cells drifts the count by a table per replacement.
+75. **Elements' pseudo-classes change in place** (`document.h`/`document.cpp` `rematch`, `collect_ancestor_names`'s
+    `m_left_pseudo`; `telegram_external.cpp` `pseudo_reach`, `can_set_pseudo_classes`, `set_pseudo_classes`;
+    `element.h`/`html_tag.h` `has_pseudo_class`). WidgetRuntime sets `:hover` and `:active` on a tap's chain; the change
+    is a patch, not a new document. `set_pseudo_classes` takes the flush's flips together (`pseudo_flip`: an element and
+    its classes), sets or clears the classes, then matches again what they reach: each element; its descendants when a
+    rule names a changed class in a compound that is not its subject (`m_left_pseudo`, collected as `m_left_classes`
+    is); its siblings and their descendants when the sheets have sibling combinators or `of S` lists
+    (`selector_scope() & 1`: a combinator reaches the later siblings, an `nth-last-child(… of S)` the earlier ones). The
+    reach is one walk that stops at what it already took with its subtree, so a tap's nested chain visits each element
+    once. Of those, only an element that some rule naming a changed class (`m_pseudo_class_rules`, collected with the
+    scope) matches differently with the changes and without them is matched again (the changes made and undone once per
+    run of 256 elements: edit 77's `differing_matches`, and its `rematch_reach` matches them), so a tap's chain leaves the root and the body (and their `::before` content and render items)
+    alone when no rule reads their state. Each element matched again is matched as an attribute change matches it
+    (`rematch`, `apply_retag`'s tail, with no attribute reset, so an element type with no attribute patch is matched
+    too; an `<a>`'s `:link` entries dropped first, as `set_element_attributes` drops them) and keeps the render tree or
+    seeds a replacement (edit 74) by the same rule; the reach's tops are restyled with their subtrees. The predicate
+    refuses an element inside a `<select>` and generated content (counters run again at the commit: edit 78); each
+    element visited is a predicate step. The caps are no refusal: near one the commit replays the style pass (edit 84).
+    Pinned by
+    `external_test.cpp` `testPseudoClassStateRematchesItsReach` (a paint-only rule, a rule on a descendant, a rule on the
+    next sibling, `::before` content, a `<table>`, an earlier sibling by `nth-last-child(… of S)`, an ancestor no rule
+    reads, a chain of two set together, a link's `:link`, and a hover incrementing a counter the next element reads),
+    each against a document built with the
+    classes set, `testRefusalsSayWhy` (both caps accepted), and WidgetRuntime's `testAPressChangesOnlyWhatItRestyles` and
+    `testADeepTapPatches`.
+
+76. **A predicate names why it refused** (`document.h` `refusal`, `refuse`; `telegram_external.cpp`
+    `can_replace_text`, `can_set_element_attributes`, `attribute_change_allowed`, `structure_parent_allowed`, `structure_insertable`,
+    `structure_removable`, `can_insert_subtree`, `can_remove_subtree`, `can_set_pseudo_classes`).
+    Each refusing answer of those predicates goes through `refuse(why)`, which keeps a string literal that `refusal()`
+    returns until the next refusal; a predicate that passes an inner one's false on leaves the inner reason. The reasons:
+    not a rendered element; an element type with no attribute patch; positional or sibling selectors in the sheets;
+    inside a `<select>`; a document-level element; a parent whose children an element
+    reads; generated content; a subtree a parent's own append refuses; an invalid subtree; the depth cap; the element
+    cap; the text-piece cap. WidgetRuntime keeps the latest refusal and its reason (`RenderTree::refusedBy`,
+    `lastPatchRefusal`) and hands the change to its next path. Pinned by `external_test.cpp` `testRefusalsSayWhy` and
+    `testReplaceTextRefusals`.
+
+77. **An attribute change matches what its names reach** (`document.cpp` `collect_names`, `selector_scope`'s
+    `m_class_rules`, `m_id_rules`, `m_attr_rules`; `telegram_external.cpp` `changed_names`, `names_reach_others`,
+    `attribute_reach`, `match_attribute_reach`, `differing_matches`, `rematch_reach`, `take_reach`). A change of a class,
+    id or attribute that a selector names in an ancestor position (`m_left_*`, as `collect_ancestor_names` fills them,
+    `:link` naming `href` and a custom property's rule its subject's names), or any attribute change when the sheets have
+    sibling combinators or `of S` lists (`selector_scope() & 1`), is no longer refused: `set_element_attributes` records
+    the element with its attributes before the session, and the session matches the recorded changes over their reach
+    at the first of `set_pseudo_classes` and `commit_patch`, so before its pseudo-class flips and each filter compares
+    one step of the chain. The reach (`attribute_reach`, one walk that stops at what it already took with its subtree,
+    as `pseudo_reach`, each change and each element visited a predicate step): the element's subtree when a changed
+    name is in an ancestor position, and with sibling selectors in the sheets every sibling's subtree when some rule
+    names a changed name, each parent's children taken once however many of them changed. A change of names no rule
+    names reaches nothing and is not recorded (an animated style on every frame, beside an unrelated `+` rule). A recorded element in the reach
+    is matched again whatever its match (it was matched with the other changes' attributes as they were); any other is
+    matched again when a rule naming a changed name (`m_class_rules`, `m_id_rules`, `m_attr_rules`: every rule naming the
+    name anywhere, `:checked`, `:disabled`, `:enabled`, `:link` and `:lang()` naming the attributes they read) matches it
+    differently with every recorded element's attributes before and after (`differing_matches`, edit 75's run-of-256
+    filter, flipping the attributes with `reset_attributes`), except for an `href` change, which matches the whole reach
+    again because `:link` follows `href` only at a match. Each is matched as edit 75 matches (`rematch_reach`, also edit
+    75's and edit 17's `var()` readers'), in a new match epoch, since a match memo of the epoch replays its rules without
+    `el_anchor::apply_stylesheet`, which gives back the `:link` the rematch strips; an element of the reach whose paint
+    order or paint group changed is restyled itself, so that the render observer hears of it (edit 20). Counters run
+    again at the commit (edit 78). WidgetRuntime lists `attribute_reach` of a flush's changes in its selector
+    step plan, and its style-change step (CSS transitions and animations) looks at every element below the restyle tops
+    and the subtrees styled fresh the commits handed it (`take_restyled`: a moved node, which the structure patch
+    builds again where it lands, is a fresh subtree), as it looks at every element after a build. Pinned by
+    `external_test.cpp` `testAttributeChangeRematchesItsReach` (a class, an id and an attribute an ancestor position names,
+    the next and an earlier sibling, an `href` under `a:link`, `details[open]`, a descendant's display, a class declaring a
+    custom property, a class and a hover one rule reads together, and nested changes reaching once), the patched cases of
+    `testSetAttributeRefusals` and `testSetAttributeFixRound`, and WidgetRuntime's `testARootClassPatches`, `testAnAncestorsClassStartsTransitions`,
+    `testAHoverStartsTransitions`, `testAPlayStateChangeBesideAnInsertionIsHeard` and the render oracle group "names in
+    ancestor positions".
+
+78. **Counters run again in a build's order** (`document.h`/`document.cpp` `rematch_begin`, `rematch_pass`,
+    `rematch_finish`, `rematch_state`; `telegram_external.cpp` `rerun_counters`, `counted_elements`,
+    `counters_in_sheets`, `note_counted_subtree`, `m_patch_counters`, `commit_patch`; `html_tag.h`/`.cpp` `counted`,
+    `apply_matching_pass`; `el_before_after.h`/`.cpp` `reads_counters`). litehtml's counters are state a build makes as
+    it goes: each `add_style` runs `handle_counter_properties` on the style so far, which resets a counter on the
+    element or increments the one `element::find_counter` finds (on the element, a previous sibling, an ancestor or an
+    ancestor's previous sibling), and a `::before`/`::after` takes `counter()`/`counters()` text as it is made. A build
+    runs the master pass, the attributes and the author pass, and the user pass, each over the tree in order. A patch
+    matches an element out of that order, so an element is counted (`html_tag::counted`: its style declares
+    `counter-reset` or `counter-increment`, it holds counter values, or a `::before`/`::after` of it reads a counter or
+    is counted itself) when
+    the session matches it again, counted before or after (`rematch_finish`), removes a subtree holding one
+    (`unlink_subtree`) or inserts one (`commit_patch`'s styling of the new subtrees); then `commit_patch`, after every
+    other match of the commit and before its seeds are taken, runs `rerun_counters`: one walk collects the counted
+    elements in tree order and clears every element's counter values, and each counted element is matched again
+    (`rematch_begin`, its pieces released and an `<a>`'s `:link` dropped, as `rematch_reach` does), pass by pass over
+    them in tree order (`rematch_pass` → `apply_matching_pass`: the element's selectors alone, its children left in place
+    so that a counter's sibling lookups read what a build's read, set aside only for `parse_attributes`, which
+    recurses; `:link` added per pass as `el_anchor::apply_stylesheet` adds it; then the pass's rules applied to its
+    generated children where a build's recursion reaches them, `apply_matching_pass_generated`: its `::before` and
+    `lh-*` parts at once, its `::after` once the counted elements below it have had the pass, so a `*` or `li > *` rule
+    reaches them, and in a build's order), then each kept or replaced
+    (`rematch_finish`) and the tops restyled. The custom-property tops the replay notes are dropped (the elements are
+    matched with what they were matched with). `rematch` is `rematch_begin`, the three passes through the match memo
+    (`apply_matching`) and `rematch_finish`, as before. Nothing runs when the sheets use no counters (`selector_scope() &
+    4`): an inline style's counters are inert in litehtml (`compute_styles` adds the `style` attribute with
+    `style::add`, never `add_style`), so the predicates' counter refusals are gone (edits 17, 18, 75, 76, 77).
+    `find_counter`'s search (the element, then the siblings before it, nearest first, at every
+    level up to the root) reads the siblings in place, and every element it visits is a selector step of the matching
+    pass (`counter_lookup_step`, in builds and patches alike: past the pass's budget the counter is not found, as a
+    selector past it matches nothing); `get_counters_value`'s walk up counts a step per level. So a numbered list's
+    quadratic lookups are counted and cut by the steps' budget. Pinned by
+    `external_test.cpp` `testCountersRunAgainInBuildOrder` (a hover on a numbered item, an item that stops counting, one
+    inserted first, the third removed, the first moved last; `li > *` and a `*` reset reaching the `::before`, an
+    `::after` that counts reached by `*` after its owner's nested list, a `::before` that counts and reads nothing,
+    hovered beside and inserted), the counter cases of `testRefusalsSayWhy`,
+    `testSetAttributeRefusals`, `testStructureRefusals`, `testReplaceChildrenUnderPositionalSelectors` and
+    `testPseudoClassStateRematchesItsReach`, and WidgetRuntime's `testCountersPatch` (02-weekly-bare's tap, a story
+    appended and removed, a tap under a `*` reset, a counter reset on `<body>`), `testCounterLookupsCountAsSelectorSteps` (300
+    numbered items patch within their bound, counting their lookups; 2,000 cut at the boot and patched, replayed uncut) and the
+    render oracle's "counters" groups.
+
+79. **The environment changes in place** (`media_query.h`/`.cpp` `would_flip`; `style.h`/`style.cpp` `environment`,
+    `environment_viewport`, `environment_scheme`, `note_environment`, `text_may_hold_viewport_unit`, the declaration
+    cache's `cached_declaration`; `css_effects.cpp` `fold_math`; `stylesheet.h` `replace_selectors`; `html_tag.h`
+    `style_environment`; `document.h`/`document.cpp` `parsed_master`, `parsed_author`, `environment_key`,
+    `m_master_styles`, `author_css`; `telegram_external.cpp` `environment_reach`, `environment_changed`,
+    `reparse_environment`, `environment_users`, `media_users`). A width, a height or a media feature changes without a
+    new render tree. `environment_changed` reads the container's media features again and, in the patch session (opened
+    unless one is), applies them to the media lists. It matches again (`rematch_reach`) the elements whose
+    `m_used_styles` hold a rule under a list that flipped, since litehtml records a rule that matches while its list is
+    off, so no selector is tested to find them. A viewport unit folds to pixels while a declaration is parsed (edit 11),
+    so a parse records what it read of the environment: `fold_math` notes `environment_viewport` into the declaration
+    being parsed (`style::add_property`'s scope), `combine` carries it into an element's style, and the declaration
+    cache keeps it with each entry. When the viewport moved, the master and author sheets are parsed again under it
+    (finalize's parses, now `parsed_master`/`parsed_author`, through their caches, whose keys carry the viewport where a
+    text may hold a viewport unit: `environment_key`; they did not, so a build at another width took a stale fold), each
+    rule whose style read the viewport is replaced by a copy holding the new parse's style and keeping its media list
+    (the same text parses to the same sorted rules, paired by position: `testEnvironmentParsesPairUp`), media lists no
+    rule uses are dropped, and every element whose style, or a `::before`'s or `::after`'s, read the viewport is matched
+    again (rules, inline styles and `var()` values folded at compute alike). What the document derived from its sheets
+    is made again when next asked (`forget_sheet_derivations`: `selector_scope`'s indexes hold rules by pointer, and a
+    replaced copy can be freed), and a match again keeps the rules the element held alive while it compares them
+    (`rematch_state::held_before`): a copy an earlier change made has no owner but what matched it
+    (`testEnvironmentChangesTwiceKeepNoFreedRule`, a use-after-free under AddressSanitizer before). A match
+    again keeps the render tree where only paint or geometry changed (edit 75). `environment_reach(next, …)` answers
+    without changing anything what the change matches again (`would_flip`), for a caller's selector step plan.
+    `media_changed`/`viewport_changed` stay as `LHDocument`'s. WidgetRuntime's `setWidth` and `setReducedMotion` mark
+    the journal's environment (`Journal::markEnvironment`): the next flush applies it as its patch session's first
+    change, lays out at the new width, and has the style step look at every element. Pinned by `external_test.cpp`
+    `testEnvironmentParsesPairUp` and `testEnvironmentChangesMatchFresh` (a breakpoint over `::before` content and
+    counters both ways, viewport units, counters under a media rule, reduced motion, a paint-only one that keeps the
+    tree), and WidgetRuntime's `testWidthChangePatches` and `testReducedMotionPatches`.
+80. **The theme changes in place** (`web_color.cpp` `parse_light_dark_color`, `style.cpp` `color-scheme`: the
+    scheme mark; `document.h` `change_root_declarations`, `root_declarations_text`, `environment_change`;
+    `telegram_external.cpp` `change_root_declarations`, `environment_reach`, `environment_changed`,
+    `reparse_environment`). The scheme is edit 79's second part of the environment. Edit 13 resolves `light-dark()` and
+    a `color-scheme` naming both while a declaration is parsed, and each notes `environment_scheme` there (with a
+    container), so a rule, an inline or animated style, a `var()` value substituted at compute (`subst_vars` parses it
+    through `add_property`) and the root declarations all carry the mark into the element's style. A value kept as
+    tokens and resolved later (a shadow or a filter at compute, an SVG paint at draw) is marked where `add_property`
+    keeps it when it names `light-dark()` (a custom property's readers are marked instead), and an SVG `fill` or
+    `stroke` attribute naming it marks the element's style (`html_tag::note_paint_attributes`; pinned by
+    `testSchemeChangeRestylesSvgPaint` and `testSchemeChangeMatchesFresh`'s box-shadow). A scheme change is
+    then edit 79's path with the scheme bit: the sheets parsed again under it through their scheme-keyed caches, each
+    marked rule swapped for the new parse's (`testSchemeParsesPairUp`), the root declarations parsed again from their
+    text when they read it, and every element whose style read it matched again with its subtree; a
+    `prefers-color-scheme` list flips as any media list does. `change_root_declarations` sets new root declarations
+    (edit 26) in the patch session and matches the root again (a restyle would keep the old ones, which its style
+    combined in), which notes it as a custom-property top, so the commit matches the `var()` readers below it again
+    (edit 17); equal text changes nothing. `environment_reach(next, declarations_changed)` lists the elements whose
+    style read the scheme when it changes, and the root when the declarations do. WidgetRuntime's `setTheme` marks the
+    journal's environment, as a change of the content safe area's does (WidgetRuntime's root declarations are the theme's
+    then the safe area's, `rootDeclarationsOf`); the flush calls `change_root_declarations` before `environment_changed`.
+    Pinned by `external_test.cpp` `testSchemeParsesPairUp` and
+    `testSchemeChangeMatchesFresh` (`light-dark()` in a sheet, inline, inherited, through `var()` and in unchanged root
+    declarations; a `prefers-color-scheme` rule; a `color-scheme` over an `<input>`; new root declarations read
+    through `var()`; the paint-only ones keep the tree), and WidgetRuntime's `testThemeChangePatches` and
+    `testAThemeSwitchKeepsTheTree`.
+81. **Sheets change in place** (`stylesheet.h` `parsed`, `sheet_ends`, `end_sheet`, `replace_selectors`; `el_style.h`
+    `sheet_pieces`, `replace_pieces`; `document.cpp` `add_stylesheet`, `parsed_author`, `m_sheets_parsed`;
+    `document.h` `replace_style_text`, `apply_sheets`, `m_patch_sheets`; `telegram_external.cpp` `replace_style_text`,
+    `apply_sheets`, `commit_patch`, `count_pieces`, `document_level_element`, `subtree_shape::sheets`, `link_subtree`,
+    `unlink_subtree`). A `<style>`'s text, and a `<style>` inserted or removed, change the author sheets without a new
+    render tree. `replace_style_text` gives a `<style>` one piece holding the new text (or none) in the patch session;
+    `insert_subtree` and `remove_subtree` note a subtree holding a `<style>` (a `<style>` is no longer
+    a document-level element). Then `commit_patch` first runs `apply_sheets`: the `<style>` texts read from the tree in
+    tree order (finalize's `parse_attributes` order; `add_stylesheet` adds nothing once finalize has parsed the sheets,
+    so a `<style>` an inserted subtree's `parse_attributes` meets is read here), paired with the current ones by their
+    common ends and a longest common subsequence (none past a 2^20-cell table: every sheet there is new), and parsed as
+    finalize parses them, through the styles cache. A paired sheet keeps its rules: `css` keeps its selectors in parse
+    order and each sheet's end there (`parsed`, `sheet_ends`), so the new parse's k-th rule of the sheet is replaced by
+    the old parse's k-th (`css_selector::m_order` is read only by the sort, which never runs again), and what holds those
+    rules keeps its match. Matched again (`rematch_reach`): each element that holds a rule the sheets lost (or whose
+    `::before` or `::after` does), and each one a new rule matches, every new rule apply_selector's tag and class filter
+    lets through tested against every element without pseudo-classes, in a counted pass (`counted_selection`,
+    html_tag.cpp: every step select takes is the session's, and none past its limit, the session then cut); subtrees the
+    session linked are left to the commit's fresh styling. The same applied texts change nothing and parse nothing.
+    `differing_matches` (edits 75, 77: the rules naming a changed state or name tested over its reach) runs in a counted
+    pass too, and the commit's attribute reach fills the indexes it reads first (`selector_scope`), which a sheet change
+    forgot (pinned by `testSheetTestsCountIntoTheSession`, `testUnchangedSheetsParseNothing` and
+    `testAClassChangeBesideASheetChangeMatchesFresh`). The media lists no rule uses are dropped and the features applied to the new ones, and
+    what was derived from the sheets is computed again when next asked (`forget_sheet_derivations`: `selector_scope` and
+    its indexes, the content tags, the pseudo-element facts, the style-rule bytes, the share cache). A `<style>`'s piece is in its own list, which
+    `element::children()` never holds, so `count_pieces` counts it. `<style media>` is never applied, by a build or a
+    patch: `el_style` holds no attributes (upstream `element::set_attr` is empty). WidgetRuntime routes every journal
+    that touches a `<style>` (its children, its Text, its attributes, a subtree holding one) to the structure path:
+    `RenderTree::planSheets` reads each `<style>` again where its children or Text changed, checks every sheet of the
+    patched tree in tree order against Ruling 7's 64 KiB and profile 1's budgets (past one, the flush walks the cut and
+    leaves out the sheets a fresh build leaves out), and the commit calls `replace_style_text`, keeps each sheet's piece in its `<style>`'s entry and
+    each sheet in `RenderBuild::sheets`, splices the render input and has the style step read `@keyframes` again; a
+    `<style>` in an inserted subtree is built (`Builder::styleSheet`). Pinned by `external_test.cpp`
+    `testSheetChangesMatchFresh` (a rule added and removed, two equal rules swapped, a paint-only change keeping the
+    tree, an `@media` block, counters added and removed, a sheet emptied and filled, a `<style>` inserted before and
+    after another and removed, one in the body, a subtree holding one inserted and removed), and WidgetRuntime's
+    `testSheetChangesPatch`, `testStructureFallsBack` and `testASheetPatchReadsNewKeyframes`.
+82. **The document element replaced in place** (`document.h` `replace_root`, `can_replace_root`;
+    `telegram_external.cpp` `replace_root`, `can_replace_root`). `replace_root` takes a detached
+    `html_tag` subtree the caller built as `insert_subtree`'s, in the patch session: the old tree goes as a removal does
+    (`unlink_subtree`: its counted elements noted, its elements uncounted, its pieces released and held to the commit;
+    its style charges given back, the pointer elements cleared, `:root` taken off), and the new one comes as an
+    insertion does (counted, `:root` set, styled fresh at the commit, where `add_root_declarations` gives it the root
+    declarations, and `m_patch_sheets` set when either tree holds a `<style>`, so edit 81 applies its sheets); the root
+    is the session's replacement seed, so the render tree is made again from it. `can_replace_root` asks what
+    `can_remove_subtree` asks of the old tree and the depth, element and text-piece caps of the new one; it
+    takes html, head and body, which an insertion refuses. WidgetRuntime replaces the document element when the document's children changed and
+    it is another node (`RenderTree::flushRoot`): everything published goes, the new document element is built detached
+    as a build walks it (`buildRenderRoot`, an empty `<html>` under Ruling 11), its sheets are planned (edit 81), and the
+    render input after the doctype, the maps (each node that stays keeping its mirror key) and every count are the new
+    tree's. The root's render item is made again, which the mirror re-places as any replaced subtree, the root Context
+    keeping its id. A comment or the doctype
+    beside the document element renders nothing: that flush is clean, and a document element that went and came back
+    is replaced by itself. A change of the document element's children replaces it too when it changes which head or
+    body is the document's own or moves either (no subtree build makes those, `RenderTree::ownHeadAndBodyStay`); any
+    other is reconciled as any element's children are, the root's render subtree replaced (edit 74). An own attribute change of the document's html, head or body beside structure (no subtree
+    build makes one of those; a body whose `dir` is `auto` hears every change under it) is set in place with
+    `set_element_attributes` in the structure session, its start tag and budgets kept in step. Pinned by `external_test.cpp` `testRootReplacementMatchesFresh`, and WidgetRuntime's
+    `testDocumentChildrenPatch`, `testATapOnAReplacedDocument`, `testChangesUnderTheDocumentAreJournaled`,
+    `testAnHtmlChildBesideTheBodyPatchesInPlace` and the oracle's "document children" group (edit kind 28).
+83. **Only what renders counts** (`element.h`/`element.cpp`, `html_tag.h`, `el_table.h`/`el_table.cpp`, `el_style.h`,
+    `el_script.h` `accepts_child`, `accepts_text`; `document.h` `build_elements`, `pseudo_elements`). Each element
+    answers whether its own `appendChild` would link an element with a given `tag()`, or a text piece: `html_tag` takes
+    both, `el_table` takes tbody, thead, tfoot and caption and no text (its `appendChild` asks `accepts_child`, so the
+    two cannot disagree), `el_style` takes text only, `el_script` both, and a plain `element` neither. WidgetRuntime's
+    Builder asks before any limit counts an element: one its parent refuses (a `<div>` or a `<tr>` straight under a
+    `<table>`) renders nothing, counts toward no cap or budget, and its subtree is not walked; a Text under a parent that
+    takes no text stays in the render input (its bytes and units count) but makes no pieces and asks the piece cap
+    nothing. So a build's counts are what litehtml holds, a patch's agree with them, and inserting, changing or removing
+    a refused element renders nothing. `build_elements` (what `external_element_allowed` counted) and `pseudo_elements`
+    (those alive) are read by WidgetRuntime's oracles. Pinned by `external_test.cpp`
+    `testAcceptsChildMatchesAppendChild`, and WidgetRuntime's `testRefusedChildrenCountNothing`,
+    `testRefusedInsertionsPatch`, `testRefusedElementsCountNothing` and `testARefusedElementsOwnChangeRendersNothing`.
+
+84. **Near a cap the commit replays the style pass in build order** (`document.h`/`telegram_external.cpp`
+    `document_text_pieces`, `generated_cut_in_play`, `replay_generated_content`, `set_replay_step_limit`,
+    `last_replay_*`, `generated_replays`, `style_pass_limits`, `generated_fingerprint`, `table_limited`; `el_text.h`
+    `generated`; `el_before_after.cpp`, `el_form.cpp` `generated_scope`; `html_tag.h`/`.cpp` `parse_own_attributes`,
+    `adopt_matched`, `used_rules`; `document.cpp` `rematch_begin`, `rematch_finish`, `rematch_settle`,
+    `pseudo_element_allowed`, `replace_root_render`). A build makes the document's own text first and the generated
+    content (`::before`/`::after` content, a form control's `lh-*` parts) while it matches, in match order: the master
+    pass over the tree, the attributes (where a control makes its parts), the author sheets, the host sheet. A patch
+    matches in its own order, so near the text-piece, pseudo-element or style-byte cap its cut can differ from a build's.
+    - Generated pieces are made inside a `generated_scope` and counted apart (`m_generated_pieces`), so
+      `document_text_pieces()` is the document's own text, which every `can_*` text check counts against
+      `max_text_elements`; `release_pieces` counts the generated pieces and pseudo-elements it releases too
+      (`unrelease_pieces` takes them back for those a match puts back, edit 91), and
+      `pseudo_element_allowed` leaves the released pseudo-elements out.
+    - `generated_cut_in_play()`, asked by `commit_patch` after `rerun_counters`, answers whether the session changed what
+      the cut reads (generated content made or dropped and not made again equal, which `rematch_finish` judges by
+      `generated_fingerprint`; the document's text; the style bytes) while the style budget or the pseudo-element cap
+      was reached, or the text-piece cap was with content rules in the sheets, or the generated pieces could reach it:
+      the document's text, the generated pieces and the most a pseudo-element held while it made its next content (one
+      rule's content after another's: `note_generated_transient`) reach `max_text_elements`. A build's master pass gives
+      every element a master content rule names (`summary`) its content before the author pass can drop it, all of it at
+      once, so those elements count at their most toward both caps: `m_master_content_elements` (counted at finalize and
+      by `link_subtree`, `unlink_subtree` and `replace_root` through `shape_of`) times the most pieces one such rule
+      makes (`master_content_pieces`, read from the master sheet when first asked; content that is not literal strings
+      counts as `max_text_elements`).
+    - `replay_generated_content()` then sets every element's generated content aside (held to the commit), counts the
+      document's own pieces in the tree (replaced render items can keep others alive until a layout), resets the caps'
+      flags and the style budget (`m_style_budget_epoch++`), and matches every element again pass by pass in a build's
+      order, as edit 78's `rerun_counters` does, with every element's attributes parsed between the master and author
+      passes. An element whose generated content comes out the same (shape, text, and the rules each part matched) gets
+      its old content back with the new match (`adopt_matched`), so its render items stay; elsewhere it is a
+      replacement seed, and near the style budget the root is (a match can keep its rules and lose declarations). Every
+      element is restyled at the commit. Its steps are a counted session limited to `set_replay_step_limit` (the
+      session's total), reported with the weight it matched every rule against (`last_replay_weight`: `matching_weight` summed, as a patch's re-match is weighed) and the nodes its
+      walks visited (`last_replay_visits`, linear in the tree: where an owner's `::after` waits for its subtree, each
+      element's subtree end is known from the tree order, never climbed to).
+    - The limits the latest style pass reached are kept in the order reached (`style_pass_limits`, "table" last when the
+      cell cap cut the render tree). A root made again counts its cells from zero, and a cap it had reached is not
+      reported again.
+    - A build whose matching its selector-step session cut (`note_match_cut`, which WidgetRuntime calls after a boot
+      litehtml's 4,000,000 steps cut) is matched where a fresh build with no cut would match every element:
+      `generated_cut_in_play` answers true at the next commit whatever the session changed, the replay runs within its
+      limit, and the mark goes unless the replay was cut too.
+
+    The refusals that only kept a patch from cutting elsewhere go: `pseudo_content_possible()` with a cap reached,
+    `part_content_possible()`, `pseudo_cap_in_play()`, `style_budget_in_play()` in the structure predicates,
+    `m_pseudo_limited`, and the table-cell cap in `can_set_element_attributes`, `structure_insertable` and
+    `can_replace_root`. WidgetRuntime sets the replay's limit to its patch's step limit (`kPatchSelectorSteps`), stops
+    the widget (`stopInternally`) when it is cut (litehtml's document then patched and never laid out, the published
+    tree kept), and publishes `style_pass_limits()` after its own walk's limits as the
+    patch's. Pinned by `external_test.cpp` `testTwoContentRulesAtTheCapReplayAsABuild`, `testReplayFollowsBuildOrder`,
+    `testStyleBytesReplayFromZero`, `testPaintOnlyChangeDoesNotReplay`, `testMasterContentCountsAtTheTextCap`,
+    `testMasterContentCountsAtThePseudoCap`, `testReplayWalksAreLinear`, `testACutBootReplaysAtItsFirstCommit`, the I2
+    shapes and the range shape in `testSetAttributeMatchesFresh`, `testStructureCaps`, `testRefusalsSayWhy`, and
+    WidgetRuntime's `testPseudoContentAtTheCapPatches`, `testStructureBesidePseudoContentPatches`,
+    `testSpanChangeCutsAtTheCellCap`, `testMasterContentNearTheTextCapPatchesAsABuild`,
+    `testAReplayCutLeavesNothingToSelect` and `testACutBootsFirstPatchReplaysUncut`.
+
+85. **The tabular items are let go after the table fix** (`document.cpp` `fix_tables_layout`). A build, a replaced
+    subtree and the HTML path fill `m_tabular_elements` with the tabular render items `create_render_item` made, and
+    `fix_tables_layout` reads them to make the anonymous table boxes; then each item's `init()` can replace it with an
+    item of another type. The list is cleared at the end of `fix_tables_layout`, which the replaced-subtree path already
+    did after it: kept from a build, it held the items `init()` replaced, and with them the elements under them, so a text
+    replaced under a block in a `<tr>` with no `<table>` stayed alive, one piece more than a fresh build counts. Pinned by
+    `external_test.cpp` `testFixedTablesHoldNoReplacedText`.
+
+86. **An inline-flex or inline-grid paints its children once** (`render_item.cpp` `draw_children`). The inline pass
+    paints an `inline-flex` or `inline-grid` and its own stacking context, as it does an `inline-block`; the block and
+    float passes recursed into it all the same (only `inline-block` stopped them), so its blockified flex or grid items
+    were painted twice, translucent paint composited twice (a `box-shadow` at `rgba(0,0,0,.1)` read about 0.19), as
+    Chromium never paints them. Those passes now stop at all three, as the hit test (`get_child_by_point`) already did.
+    WidgetRuntime's mirror, which walks the same loop, no longer meets an item painted in several places. Pinned by
+    `external_test.cpp` `testAnInlineFlexPaintsItsChildrenOnce` and WidgetRuntime's
+    `testAMovedInlineFlexPublishesOperations`.
+
+87. **A restyle reuses the positioned lists only while what files them holds** (`document.cpp`, `restyle_after_patch`'s
+    `positioned_fresh`). A restyle that keeps the render tree reuses the positioned lists when no element's `position`
+    changed. `add_positioned` also files a positioned box under its nearest transformed or `contain: layout`/`paint`
+    ancestor, so the snapshot holds those too: a transform going (a class removed, an animation ended) left the box on the
+    list of an ancestor that no longer paints positioned boxes, and nothing painted it, where a fresh build does. Pinned by
+    `external_test.cpp` `testATransformGoingKeepsPositionedPaint` and WidgetRuntime's
+    `testAnEndedTransformAnimationPaintsItsPositionedChild`.
+
+88. **Structure beside `:empty` patches** (`telegram_external.cpp` `can_insert_subtree`, `can_remove_subtree`,
+    `note_empty_parent`, `commit_patch`; `document.h` `empty_in_sheets`, `sibling_combinators`).
+    `:empty` in the sheets (bit 8) no longer refuses an insertion or a removal. With it,
+    each parent the session changes the children of is noted with whether it matched `:empty` before the session's
+    first change, and `commit_patch` matches again (`apply_retag`, its `::before`/`::after` pieces released first) each
+    one whose answer flipped, checked (a replacement seed where more than paint changed: edit 89 may keep its render
+    tree), and with sibling combinators in the sheets (bit 1) every
+    element of its later siblings' subtrees (`.e:empty + p`, `.e:empty ~ div span`). Those are outside the parent's
+    replacement and such a rule can change their boxes and content (`display:none`, a float, `::before` content), so
+    each is matched as an attribute's reach is: its outer box recorded before any match (`record_boxes`), and a
+    replacement seed where more than paint changed. A parent's children are walked once, from its first flipped
+    child, and each subtree once, whatever the number of flipped siblings before it; a subtree inserted in the session
+    is styled afresh. The parent's own descendants never read it (an empty element has none), and the `var()` readers
+    below what is matched again follow (edit 17). Pinned by
+    `external_test.cpp` `testStructureBesideEmptyMatchesFresh` (sibling rules that hide, float and give content
+    included) and WidgetRuntime's `testStructureBesideEmptySiblingsPatches` and randomized oracles (their
+    `:empty` groups patch).
+89. **A block-level child links into and unlinks from a block formatting context** (`document.h`/`document.cpp`
+    `render_observer::subtree_linked`, `subtree_unlinked`, `plan_link`, `link_render_children`,
+    `release_render_subtrees`, `make_render_subtree`, `report_replacements`, `m_patch_structure`, `m_pending_links`,
+    `m_pending_unlinks`; `telegram_external.cpp` `note_structure`, `insert_subtree`, `remove_subtree`, `commit_patch`).
+    An insertion or a removal no longer seeds its parent (edit 74): each notes the parent once, with its first
+    operation (`insert`, `remove`). After the restyle and
+    the style-budget replay, `commit_patch` asks of each such parent in the document and outside a subtree the session
+    inserted whether its render children follow by links alone (`plan_link`): its one live item is a
+    `render_item_block_context`, and the children `render_item_block::init` would make from its children now (each
+    child that is not inline alone, each run of inline children an anonymous block when it holds more than white space,
+    a run of white space alone dropped, a child with `display: none` or a comment nothing) are its render children,
+    position by position, but the fresh block-level ones and the items of the children it lost. Otherwise the parent is
+    a seed (edit 74) under `structure: <op>: <why>`, the first of: `at the table-cell cap` (the document is cut there),
+    `renders nothing` (no render item: a seed the walk drops, unless the document has an `<svg>`), `several render
+    items` (an inline split around a block), `in a replaced element`, `in an inline context`, `in an inline`, `in a flex container`, `in a
+    grid`, `in a table` (a table, row or part), `elsewhere` (any other item class), `in a closed details`, `a table
+    part outside a table` (a rendered child that is one, an anonymous table among the render children, or a removed one:
+    `fix_table_parent` wraps it with its like siblings in an anonymous table, which a link does not follow), `the
+    formatting context flips` (no rendered child left that is a non-float block box), `an inline holding blocks` (a
+    render child that is neither a child's item, nor an anonymous block made from the parent, nor a removed child's: a
+    block `split_inlines` put there), `a float or an out-of-flow box` (a child linked or unlinked floats or is absolutely
+    or fixed positioned), `inline content` (any other difference: an inline child inserted or removed, a run split or
+    merged). A parent whose `:empty` answer flipped (edit 88) is matched again with the check, so one whose box or more
+    than its paint the flip changes is a seed, and its boundary holds its links (an empty parent holding a block-level
+    `::before` is a block formatting context, and a flip to `display: flex` must not link into it). The refusals' seeds
+    join the session's.
+    After the boundaries are replaced, each linkable parent outside every boundary links (`link_render_children`): the
+    removed children's render subtrees leave the parent's item (their tables' cells given back, out of the layout's
+    lists and their elements, kept alive until the next layout), each fresh block-level child's is made as a build
+    makes it and put where it goes, the new items and a parent that lost one are marked dirty, and the parent's list
+    items are numbered again as `render_item_block::init` numbers them (from its `start`, every list item counted, the
+    number in `list_index`). A replacement swaps a child's item where it was, so the plan holds; one that did not would
+    replace the root (no known change does). A link that moves the table-cell cap's cut replaces the root, as a
+    replacement does. Edit 74's positional re-match (edit 42) now checks: a child whose box or more than its paint the
+    match changes is a seed, its box recorded before any match, since its parent's render tree is kept. The observer
+    hears, at the end of the commit, the replacements, then `subtree_unlinked(old)` for each unlinked item (alive until
+    then), then `subtree_linked(item)` for each linked one; a commit that replaced the root tells the root's alone. A
+    commit that only linked or unlinked has an empty `rebuild_reason()`. `element_restyled` leaves out the elements of a
+    linked subtree, and is told for each list item whose number changed. The classification and the link step through
+    the parent's children once each (and an anonymous block's children). Pinned by `external_test.cpp`
+    (`testBlockChildrenLinkAndUnlink`, `testStructureRefusalsNameTheirCase`, `testAPositionalChangeBesideALink`,
+    `testAnEmptyParentsFlipBesideALink`,
+    `testALinkedTableTakesAndGivesBackItsCells`, `testALinkBesideAReplacement`, `testListItemsAreNumberedAgain`,
+    `testRebuildReasonsNameTheChange`) and WidgetRuntime's `LayerChurnTests` (an appended, removed or inserted list item
+    and a child of `<html>` re-create no other layer; a moved item only its own),
+    `testAnOrderedListRenumbersInPlace` and randomized oracles.
+
+90. **Structure beside sibling and positional selectors matches the reached siblings again in place**
+    (`document.h`/`document.cpp` `backward_positions`, `m_backward_positions`, `scan_positions`, `selector_scope`;
+    `telegram_external.cpp` `can_insert_subtree`, `can_remove_subtree`, `note_structure`, `insert_subtree`,
+    `remove_subtree`, `commit_patch`). Sibling combinators, `of S` and positional pseudo-classes outside a rule's subject
+    (scope bits 1 and 2) no longer refuse an insertion or a removal. Each parent whose children the session changes keeps
+    the earliest child index any change took (an insertion's index, a removed child's place before it went; the
+    minimum, since a change at index j moves only the children from j on). With bit 1 or 2, `commit_patch` matches again
+    the element children of each such parent in the document and outside a subtree the session inserted, from that index,
+    and their subtrees: those rules read only preceding siblings (`+`, `~`, `:first-child`, `:first-of-type`,
+    `:nth-child`, `:nth-of-type`, their `of S` forms), so a change at index i can change how the children from i on and
+    their descendants match, never those before. When a positional pseudo-class that reads following siblings
+    (`:last-child`, `:last-of-type`, `:only-child`, `:only-of-type`, `:nth-last-child`, `:nth-last-of-type`) is outside a
+    rule's subject compound (`backward_positions`, found by `scan_positions` with the scope), every element child's
+    subtree is matched again. One in the subject alone stays edit 42's (the other children, not their subtrees). Each is
+    matched as an attribute's reach is: every box recorded before any match (`record_boxes`), `apply_retag` checked, a
+    replacement seed where more than paint changed; each element walked once with edit 88's reach, and matched again
+    unless the commit's own re-matches (edit 42's, edit 88's) took it (its subtree still walked): one matched earlier in
+    the session (an environment change, an attribute patch) is matched again, since the structure may have changed what
+    it matches; a subtree the session inserted is styled afresh. With a `:nth-last-child` or `:nth-last-of-type` with an
+    `of S` list in the sheets, subject or not (`backward_of_lists`), edit 88's walk starts at the flipped element's first
+    sibling, not the one after it: such a rule reads what S matches in the following siblings, their `:empty` included. The other children's render items and layers stay (a parent edit 89 links keeps them), unless a
+    match changes their box. A re-match of the commit (this one, edit 42's or edit 88's) that newly restyles an element
+    and changes nothing it matches (no rule started or stopped matching, no declaration changed: `rematch_settle` sets
+    `m_rematch_changed`) is restyled but not told to the observer (`m_patch_quiet`; a later rematch that changes it, or
+    a style replay, takes it out), so the mirror re-captures only what a change reaches; an element with a `::before` or
+    `::after` is one when they go back (edit 91).
+    WidgetRuntime makes every change of a parent's children insertions and removals (the document has no other structure
+    change of children). Pinned by `external_test.cpp`
+    (`testStructureUnderPositionalSelectorsMatchesFresh`, `testStructureSessionsUnderPositionalSelectors`: a float
+    another item's insertion starts replaces the list, every other session keeps every item's render item;
+    `testSiblingReachFollowsTheSelectors`: what is matched again under `li + li` and under `li:last-child b`;
+    `testAnUnchangedReachIsNotReported`; `testASessionsEarlierMatchIsMatchedAgainByTheReach`;
+    `testAnEmptyFlipReachesEarlierSiblingsThroughOfS`;
+    `testStructureBesideEmptyMatchesFresh`, which inserts and removes under its sibling sheets) and WidgetRuntime's
+    `testAppendingUnderSiblingSelectorsChurnsNothing`, `testSiblingsKeepTheirRenderItemsUnderSiblingSelectors`,
+    `testAnAppendUnderSiblingSelectorsPatches`, `testAnEnvironmentChangeBesideStructureUnderSiblingRules`,
+    `testAnEmptyFlipThroughOfSReachesEarlierSiblings` and the randomized oracles' sibling groups (one with the
+    environment).
+91. **A match that changes nothing keeps its element's `::before` and `::after`** (`document.h` `rematch_state`'s
+    `generated_aside` and `generated_reads_var`, `take_back_generated`, `unrelease_pieces`; `document.cpp`
+    `rematch_begin`, `rematch_settle`; `telegram_external.cpp`). `rematch_begin` keeps the element's `::before` and
+    `::after` (and whether one's style read a `var()`) before `forget_matched_styles` drops them and gives their charges
+    back; the match makes new ones. `rematch_settle` puts the old ones back in the new ones' places, so the element is
+    matched again in place (`m_rematch_changed` false, no replacement seed), only when the match changes nothing: the
+    element was matched checked; its attributes other than `class` are the same; no inline or animated declaration
+    changed; no rule started or stopped matching (`::before` and `::after` rules are the element's own used rules); the
+    match made the same sides; each side prints as it did (`print_generated`, as `generated_fingerprint`: tags, text,
+    `src`, which holds what a rule change cannot show: `counter()` values, `attr()`); each element of an old one is
+    matched by the same rules as its counterpart (`used_rules`); and no old one's style read a `var()` (it held what the
+    custom properties were). Every side goes back or none; otherwise the element is a seed with the reason
+    `pseudo-element children`, as before. This is the style replay's put-back (edit 84) on a re-match: the old ones take
+    the new ones' styles, charges and counter values (`html_tag::adopt_matched`, pair by pair over `pair_subtrees`), so
+    the restyle computes them as a build's and the style budget holds what a build's would (a match charges only what
+    it makes, as before). Every re-match path releases the old ones' pieces before the match (`release_pieces`), so what
+    it makes counts within the caps; a put-back releases the new ones (held to the commit) and takes the old ones'
+    pieces back (`unrelease_pieces`, the inverse of `release_pieces`'s three counts; the hold keeps its reference).
+    Pinned by `external_test.cpp` (`testAnUnchangedPseudoElementKeepsItsIdentity`: an item inserted under `li + li`, the
+    later items' `::before` the same elements with the same render items and nothing replaced;
+    `testGeneratedContentFollowsItsPrint`: renumbered by a counter, an `attr()` whose attribute changed, a `::before`
+    appearing and going, all made again or dropped as a fresh build has them, and one kept under `li:first-child`;
+    `testAKeptPseudoElementNeedsNoStyleRoom`: with room for one more `::before` and not two, the insertion replays
+    nothing; `testPseudoElementsReadingVar`, which a put-back of a `var()` reader fails) and WidgetRuntime's
+    `testAnUnchangedReMatchKeepsPseudoLayers` (the `::before` layers stay).
 
 ## The iOS font resolver
 

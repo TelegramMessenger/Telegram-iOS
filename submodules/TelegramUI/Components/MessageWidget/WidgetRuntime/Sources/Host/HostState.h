@@ -190,8 +190,8 @@ public:
     /// The bridge (M1d plan, Task 4), from script: Host::bridgeCall, whose throw (a host bug) is dropped.
     void bridgeCall(JSContext* ctx, std::string_view method, std::string_view argsJson);
     /// The host's: the chat's colour scheme, with the palette last set (setThemeParams). SDK v1 §2.3: when the scheme or
-    /// any completed colour changed, colorScheme, themeParams and the root's variables change at once (the render tree
-    /// rebuilds at the next flush, RenderTree::setTheme) and a task fires themeChanged and the onTheme callbacks;
+    /// any completed colour changed, colorScheme, themeParams and the root's variables change at once (the next flush
+    /// patches the render tree, RenderTree::setTheme) and a task fires themeChanged and the onTheme callbacks;
     /// otherwise nothing happens. Never throws.
     void themeChanged(JSContext* ctx, Theme theme);
     /// The host's: the chat's palette (ThemePalette, checked as checkThemeParams does) and its button tokens
@@ -207,7 +207,7 @@ public:
     /// resize and intersection observations): a width change is told to an idle widget (the V3b review's I4). The
     /// host's, as themeChanged is: it never throws.
     void setWidth(JSContext* ctx, double width);
-    /// The system's Reduce Motion, which prefers-reduced-motion answers: the render tree rebuilds at the next flush, and a
+    /// The system's Reduce Motion, which prefers-reduced-motion answers: the next flush patches the render tree, and a
     /// task runs, after which the media query lists whose answer flipped report a change. Never throws.
     void setReducedMotion(JSContext* ctx, bool reduced);
     /// The chat's theme as the host last reported it (installRender's options first).

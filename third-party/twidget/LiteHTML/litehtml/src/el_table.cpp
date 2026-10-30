@@ -15,11 +15,21 @@ namespace litehtml
         {
             return false;
         }
+#if 0
         if(el->tag() == _tbody_ || el->tag() == _thead_ || el->tag() == _tfoot_ || el->tag() == _caption_)
+#else
+        if(accepts_child(el->tag())) // Telegram (VENDOR.md edit 83)
+#endif
         {
             return html_tag::appendChild(el);
         }
         return false;
+    }
+
+    // Telegram (VENDOR.md edit 83).
+    bool el_table::accepts_child(string_id tag) const
+    {
+        return tag == _tbody_ || tag == _thead_ || tag == _tfoot_ || tag == _caption_;
     }
 
     void el_table::parse_attributes()

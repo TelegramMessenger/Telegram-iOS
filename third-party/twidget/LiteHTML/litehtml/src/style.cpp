@@ -166,7 +166,27 @@ namespace litehtml
         }
 
         std::mutex&                                                  declaration_cache_lock = *new std::mutex;
-        std::unordered_map<std::string, std::vector<style_op>>&      declaration_cache = *new std::unordered_map<std::string, std::vector<style_op>>;
+        // Telegram (VENDOR.md edit 79): with what the declaration's parse read of the environment.
+        struct cached_declaration
+        {
+            std::vector<style_op> ops;
+            int                   environment = 0;
+        };
+        std::unordered_map<std::string, cached_declaration>&         declaration_cache = *new std::unordered_map<std::string, cached_declaration>;
+
+        // Telegram (VENDOR.md edit 79): the environment the declaration being parsed read.
+        thread_local int g_environment = 0;
+        struct environment_scope
+        {
+            int& target;
+            int  outer;
+            explicit environment_scope(int& t) : target(t), outer(g_environment) { g_environment = 0; }
+            ~environment_scope()
+            {
+                target |= g_environment;
+                g_environment |= outer;
+            }
+        };
 
         bool split_declarations(const std::string& txt, std::vector<std::pair<size_t, size_t>>& out)
         {
@@ -247,14 +267,16 @@ namespace litehtml
                 key += std::to_string(media.height.value());
             }
             std::vector<style_op> ops;
+            int                   environment = 0;
             bool                  hit = false;
             {
                 std::lock_guard<std::mutex> guard(declaration_cache_lock);
                 auto                        it = declaration_cache.find(key);
                 if(it != declaration_cache.end())
                 {
-                    ops = it->second;
-                    hit = true;
+                    ops         = it->second.ops;
+                    environment = it->second.environment;
+                    hit         = true;
                 }
             }
             if(!hit)
@@ -267,11 +289,13 @@ namespace litehtml
                 scratch.add(tokens, baseurl, container);
                 recorded_ops = nullptr;
                 suppress_raw = suppressed;
+                environment  = scratch.m_environment;
                 std::lock_guard<std::mutex> guard(declaration_cache_lock);
                 if(declaration_cache.size() > 50000)
                     declaration_cache.clear();
-                declaration_cache.emplace(key, ops);
+                declaration_cache.emplace(key, cached_declaration{ops, environment});
             }
+            m_environment |= environment; // Telegram (VENDOR.md edit 79)
             for(const auto& op : ops)
             {
                 if(layer && is_raw_declaration(op.name))
@@ -522,9 +546,42 @@ namespace litehtml
     }
 
     // `value` is a list of component values with all whitespace tokens removed, including those inside component values
+    // Telegram (VENDOR.md edit 79).
+    void note_environment(int bits)
+    {
+        g_environment |= bits;
+    }
+
+    bool text_may_hold_viewport_unit(const std::string& text)
+    {
+        return declaration_may_hold_viewport_unit(text);
+    }
+
+    namespace
+    {
+        // Telegram (VENDOR.md edit 80): whether a value names light-dark() anywhere, a nested function included.
+        bool names_light_dark(const css_token_vector& tokens)
+        {
+            for(const auto& tok : tokens)
+            {
+                if(tok.type == CV_FUNCTION && lowcase(tok.name()) == "light-dark")
+                    return true;
+                if(tok.is_component_value() && names_light_dark(tok.value))
+                    return true;
+            }
+            return false;
+        }
+    } // namespace
+
     void style::add_property(string_id name, const css_token_vector& value, const std::string& baseurl, bool important,
                              document_container* container)
     {
+        environment_scope scope(m_environment); // Telegram (VENDOR.md edit 79)
+        // Telegram (VENDOR.md edit 80): a value kept as tokens (a shadow, a filter, an SVG paint) resolves light-dark()
+        // later, at compute or at draw, outside this scope: it reads the scheme all the same. A custom property's readers
+        // are marked where the value is substituted (subst_vars parses it here), not the rule declaring it.
+        if(container && _s(name).compare(0, 2, "--") != 0 && names_light_dark(value))
+            note_environment(environment_scheme);
         if(is_raw_declaration(name))
         {
             add_parsed_property(name, property_value(value, important, has_var(value)));
@@ -1202,6 +1259,8 @@ namespace litehtml
                 add_parsed_property(name, property_value(dark && !light ? 1 : 0, important));
 #else
                 // Telegram (VENDOR.md edit 13): naming both light and dark gives the container's scheme.
+                if(light && dark && container)
+                    note_environment(environment_scheme); // edit 80
                 add_parsed_property(name, property_value(light && dark ? container_color_scheme(container) : (dark ? 1 : 0), important));
 #endif
             }
@@ -2581,6 +2640,7 @@ namespace litehtml
         {
             add_parsed_property(property->first, property->second);
         }
+        m_environment |= src.m_environment; // Telegram (VENDOR.md edit 79)
     }
 #endif
 
@@ -2627,7 +2687,7 @@ namespace litehtml
 
     // Telegram (VENDOR.md edit 33).
     void style::resolve_reverts(const std::function<const property_value*(string_id, bool)>& master,
-                                const std::function<bool(size_t)>&                            admit)
+                                const std::function<bool(string_id, size_t)>&                 admit)
     {
         for(auto& prop : m_properties)
         {
@@ -2636,7 +2696,7 @@ namespace litehtml
             property_value resolved(unset(), false);
             if(const property_value* value = master(prop.first, prop.second.get<revert>().layer))
             {
-                if(admit(value_heap(*value)))
+                if(admit(prop.first, value_heap(*value)))
                     resolved = *value;
             }
             resolved.m_important = prop.second.m_important;
@@ -2701,6 +2761,7 @@ namespace litehtml
                 add_parsed_property(property->first, property->second);
         }
 #endif
+        m_environment |= src.m_environment; // Telegram (VENDOR.md edit 79)
     }
 
     void style::max_payload_into(std::map<string_id, size_t>& most) const
@@ -2884,7 +2945,9 @@ namespace litehtml
 #else
                 // Telegram (VENDOR.md edit 57): whether every var() resolved.
                 std::set<string_id> chain = {prop.first};
+                el->begin_splice(prop.first); // Telegram (VENDOR.md edit 21)
                 const bool resolved = resolve_vars(value, el, chain, 0);
+                el->end_splice();
 #endif
                 if(g_splice_refused)
                 {

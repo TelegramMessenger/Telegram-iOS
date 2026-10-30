@@ -22,7 +22,7 @@ static NSData *Pixels(LHDocument *document)
 
 - (void)testTextExclusionPreservesTheBoxAndComputedColor
 {
-    LHDocument *document = [[LHDocument alloc] initWithHTML:Page(@"Color changes") css:nil previous:nil];
+    LHDocument *document = [[LHDocument alloc] initWithHTML:Page(@"Color changes") css:nil];
     LHDocument *empty = [[LHDocument alloc] initWithHTML:Page(@"") css:nil];
     NSData *before = Pixels(document);
     NSString *bounds = document.layoutSignature;
@@ -35,21 +35,6 @@ static NSData *Pixels(LHDocument *document)
     XCTAssertEqualObjects([document computedStyleForAttribute:@"data-id" value:@"field"], style);
     [document setTextPaintExclusions:[NSSet set] attribute:@"data-id"];
     XCTAssertEqualObjects(Pixels(document), before);
-}
-
-- (void)testTextExclusionSurvivesPatchingAndRestoringAnOlderDocument
-{
-    LHDocument *original = [[LHDocument alloc] initWithHTML:Page(@"Original") css:nil previous:nil];
-    [original setTextPaintExclusions:[NSSet setWithObject:@"field"] attribute:@"data-id"];
-    NSData *expected = Pixels(original);
-    LHDocument *patched = [[LHDocument alloc] initWithHTML:Page(@"Several new words\non two lines") css:nil previous:original];
-    XCTAssertTrue(patched.reusedPrevious);
-    [patched setTextPaintExclusions:[NSSet setWithObject:@"field"] attribute:@"data-id"];
-    XCTAssertEqualObjects(Pixels(patched), expected);
-    XCTAssertEqualObjects(Pixels(original), expected);
-    [patched setTextPaintExclusions:[NSSet set] attribute:@"data-id"];
-    LHDocument *fresh = [[LHDocument alloc] initWithHTML:Page(@"Several new words\non two lines") css:nil];
-    XCTAssertEqualObjects(Pixels(patched), Pixels(fresh));
 }
 
 @end

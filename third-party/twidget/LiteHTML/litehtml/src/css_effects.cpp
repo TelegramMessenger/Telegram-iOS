@@ -525,6 +525,7 @@ namespace litehtml
                 const float extent = axis == 1 ? width : axis == 2 ? height : axis == 3 ? std::min(width, height) : std::max(width, height);
                 tok = css_token(DIMENSION, extent * tok.n.number / 100, css_number_number, "px");
                 changed = true;
+                note_environment(environment_viewport); // Telegram (VENDOR.md edit 79)
             }
             if(!tok.is_component_value())
                 continue;

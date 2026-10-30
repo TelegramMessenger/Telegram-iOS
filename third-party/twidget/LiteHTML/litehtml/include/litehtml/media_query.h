@@ -143,6 +143,8 @@ namespace litehtml
         {
             return m_is_used;
         }
+        // Telegram (VENDOR.md edit 79): whether apply_media_features(features) would change is_used().
+        bool would_flip(const media_features& features) const;
 
         bool apply_media_features(const media_features& features); // returns true if the m_is_used changed
     };

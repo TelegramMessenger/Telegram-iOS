@@ -209,8 +209,11 @@ namespace litehtml
         pixel_t              m_bottom_captions_height = 0_px;
 
         std::vector<std::shared_ptr<render_item>> m_captions;
+        // Telegram (VENDOR.md edit 74): the cells add_cell was granted against max_table_cells.
+        int m_cells_taken = 0;
 
       public:
+        int           cells_taken() const { return m_cells_taken; }
         void          clear();
         void          begin_row(const std::shared_ptr<render_item>& row);
         void          add_cell(const std::shared_ptr<render_item>& el);

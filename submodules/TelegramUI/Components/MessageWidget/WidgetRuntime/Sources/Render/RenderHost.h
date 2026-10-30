@@ -120,6 +120,10 @@ struct RenderOptions {
     /// prefers-reduced-motion (twidget edit 29.5): reduce when true, the system's Reduce Motion (HostState::setReducedMotion,
     /// WRSession's setReducedMotion:); no preference until the host says.
     bool reducedMotion = false;
+    /// Ruling E19: whether the boot's build cuts its matching at litehtml's 4,000,000 selector steps (a hostile boot);
+    /// every patch is held to kPatchSelectorSteps (RenderTree.h). Off in the tests' fresh trees, which stand for what a
+    /// patched document must equal.
+    bool selectorStepCut = true;
 };
 
 /// What the root takes after its own style (twidget edit 26): the theme's declarations, then the content safe area's.

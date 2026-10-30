@@ -6,9 +6,8 @@
 //   request is refused and counted (Review Focus 3). The host is never handed a URL.
 // - Paint: record() draws a laid-out document into a new LayerTree (Task 4), one item per paint call. The tree is plain
 //   data: fonts and images by shared_ptr, every argument copied, nothing pointing into the document or this container.
-// Fonts and decoded images are cached for the container's lifetime, by font description and by the data: URL's text
-// (Ruling 19), so rebuilds reuse the same objects. beginBuild/endBuild bracket a build, and endBuild drops what that
-// build did not ask for.
+// Fonts and decoded images are cached by font description and by the data: URL's text (Ruling 19), so builds and patches
+// reuse the same objects; after every flush that publishes, prune drops what no element of the document names.
 // - Profile 1 (V4 plan, Task 3b): litehtml's profile hooks (twidget edit 29) are answered with CSSPolicy.h's verdicts,
 //   so a declaration, a selector, an at-rule, an @media query and an @supports condition reach the document as the
 //   profile keeps them. The master sheet (litehtml's, the profile's UA sheet and the host's) passes whole: litehtml
@@ -80,20 +79,27 @@ public:
     std::optional<DecodedImage> decodeImageUncached(std::string_view src);
     /// The image layout already decoded for `src`, if it did: a lookup that adds nothing.
     std::optional<DecodedImage> decodedByLayout(std::string_view src) const;
+    /// Tests: the fonts and the images (refused URLs included) the caches hold.
+    size_t cachedFonts() const { return m_fonts.size(); }
+    size_t cachedImages() const { return m_images.size(); }
     static std::optional<CanvasURL> parseCanvasURL(std::string_view url);
     ~WidgetContainer() override;
     WidgetContainer(const WidgetContainer&) = delete;
     WidgetContainer& operator=(const WidgetContainer&) = delete;
 
     const RenderOptions& options() const { return m_options; }
-    /// Takes effect at the next question litehtml asks; a width or theme change needs a rebuild (Rulings 6, 16).
+    /// Takes effect at the next question litehtml asks; a width or theme change is applied by the next flush's patch
+    /// session (twidget edits 79, 80).
     void setOptions(RenderOptions options);
     /// Every load request refused so far: one per refused call, never reset.
     uint64_t refusedLoads() const { return m_refusedLoads; }
-    /// A build's fonts and images are the ones it asks for; endBuild drops cached ones it did not. Questions asked
-    /// after endBuild (layout, recording) count for the build that ended, until the next one's endBuild.
+    /// A build begins: the limits reported (limitsHit) count from here.
     void beginBuild();
-    void endBuild();
+    /// The caches cut to what `document` uses: the font of each element (its font handle's description) and the images
+    /// each names (its background layers' URLs, its list-style-image, an <img>'s src); every other entry, a refused URL
+    /// included, is erased. A load site missed here costs a decode again, never a dangling handle (a handle owns its
+    /// font, a tree its images).
+    void prune(litehtml::document& document);
     /// The render-limit kinds litehtml reported through sanitizer_limit since the last beginBuild, each once, in the
     /// order first reported (Ruling 7: Task 5 posts the first of each kind).
     const std::vector<std::string>& limitsHit() const { return m_limitsHit; }
@@ -209,7 +215,6 @@ private:
         /// the computed font-family text verbatim, which only the CSS caps bound.
         std::shared_ptr<const litehtml::font_description> description;
         litehtml::font_metrics metrics;
-        uint64_t lastBuild = 0;
     };
     /// A URL's decision. Decoded and Undecodable are image/* data: URLs, handed to the host; Undecodable is one it
     /// could not decode, which loads nothing but is not a refusal.
@@ -217,14 +222,14 @@ private:
     struct CachedImage {
         Load load = Load::Refused;
         DecodedImage image;
-        uint64_t lastBuild = 0;
     };
 
     /// The handle behind litehtml's uint_ptr; null for litehtml's 0 ("no font").
     static const FontHandle* handleOf(litehtml::uint_ptr hFont);
     /// The host font a handle stands for; null for litehtml's 0 ("no font").
     static const std::shared_ptr<const HostFont>& fontOf(litehtml::uint_ptr hFont);
-    /// The decision for `src` (not empty), made once and kept while builds ask for it; it does not count refusals.
+    /// The decision for `src` (not empty), made once and kept while the document names it (prune); it does not count
+    /// refusals.
     const CachedImage& decide(std::string_view src);
     /// The layer a paint call appends to: the innermost open one; null outside record().
     Layer* openLayer() const { return m_open.empty() ? nullptr : m_open.back(); }
@@ -235,8 +240,6 @@ private:
     RenderOptions m_options;
     std::string m_defaultFontName;
     uint64_t m_refusedLoads = 0;
-    /// The running build; each cache entry remembers the last build that asked for it.
-    uint64_t m_build = 0;
     std::map<std::string, CachedFont, std::less<>> m_fonts;
     std::map<std::string, CachedImage, std::less<>> m_images;
     std::vector<std::string> m_limitsHit;

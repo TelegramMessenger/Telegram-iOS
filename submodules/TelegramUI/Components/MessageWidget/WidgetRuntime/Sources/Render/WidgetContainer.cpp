@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 
 #include <litehtml.h>
@@ -382,13 +383,42 @@ void WidgetContainer::setOptions(RenderOptions options) {
 }
 
 void WidgetContainer::beginBuild() {
-    m_build++;
     m_limitsHit.clear();
 }
 
-void WidgetContainer::endBuild() {
-    std::erase_if(m_fonts, [this](const auto& entry) { return entry.second.lastBuild != m_build; });
-    std::erase_if(m_images, [this](const auto& entry) { return entry.second.lastBuild != m_build; });
+void WidgetContainer::prune(litehtml::document& document) {
+    std::unordered_set<std::string> fonts;
+    std::unordered_set<std::string_view> images;
+    std::vector<const litehtml::element*> stack;
+    if (document.root()) {
+        stack.push_back(document.root().get());
+    }
+    while (!stack.empty()) {
+        const litehtml::element* el = stack.back();
+        stack.pop_back();
+        const litehtml::css_properties& css = el->css();
+        if (const FontHandle* handle = handleOf(css.get_font()); handle && handle->description) {
+            fonts.insert(fontKey(*handle->description));
+        }
+        for (const litehtml::image& image : css.get_bg().m_image) {
+            if (image.type == litehtml::image::type_url && !image.url.empty()) {
+                images.insert(image.url);
+            }
+        }
+        if (!css.get_list_style_image().empty()) {
+            images.insert(css.get_list_style_image());
+        }
+        if (el->tag() == litehtml::_img_) {
+            if (const char* src = el->get_attr("src")) {
+                images.insert(src);
+            }
+        }
+        for (const litehtml::element::ptr& child : el->children()) {
+            stack.push_back(child.get());
+        }
+    }
+    std::erase_if(m_fonts, [&fonts](const auto& entry) { return fonts.count(entry.first) == 0; });
+    std::erase_if(m_images, [&images](const auto& entry) { return images.count(entry.first) == 0; });
 }
 
 const WidgetContainer::FontHandle* WidgetContainer::handleOf(litehtml::uint_ptr hFont) {
@@ -437,7 +467,6 @@ const WidgetContainer::CachedImage& WidgetContainer::decide(std::string_view src
         }
         found = m_images.emplace(std::string(src), std::move(entry)).first;
     }
-    found->second.lastBuild = m_build;
     return found->second;
 }
 
@@ -457,7 +486,6 @@ litehtml::uint_ptr WidgetContainer::create_font(const litehtml::font_description
         entry.description = std::make_shared<const litehtml::font_description>(descr);
         found = m_fonts.emplace(std::move(key), std::move(entry)).first;
     }
-    found->second.lastBuild = m_build;
     if (fm) {
         *fm = found->second.metrics;
     }

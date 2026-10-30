@@ -40,7 +40,7 @@ struct SelectableRun {
     std::vector<float> carets;
     /// a b c d tx ty: box space → document, its ancestors' transforms composed as transformRects composes them.
     double transform[6] = {1, 0, 0, 1, 0, 0};
-    /// The Text node's NodeKey (stable across rebuilds), and the UTF-16 offset of `start` in that node's drawn text.
+    /// The Text node's NodeKey (stable across patches), and the UTF-16 offset of `start` in that node's drawn text.
     uint64_t node = 0;
     uint32_t nodeOffset = 0;
 };

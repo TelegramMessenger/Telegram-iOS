@@ -170,7 +170,7 @@ WR_TEST(testLoadsAreRefused) {
     container.get_image_size(nullptr, nullptr, size);
     CHECK_EQ(container.refusedLoads(), beforeEmpty);
     CHECK(isZero(size));
-    container.endBuild();
+    container.prune(*loads);
 
     CHECK(host.decodedMimeTypes.empty());
     CHECK_EQ(FakeRenderHost::liveImages(), size_t(0));
@@ -189,39 +189,33 @@ WR_TEST(testDataImagesDecodeOnce) {
         const std::string html = std::string("<img src='") + kPng3x2 + "'>";
         litehtml::document::ptr first = layOut(container, html);
         litehtml::document::ptr second = layOut(container, html);
-        container.endBuild();
+        container.prune(*second);
         CHECK(host.decodedMimeTypes == std::vector<std::string>{"image/png"});
         CHECK_EQ(container.refusedLoads(), uint64_t(0));
         const std::string img = lineStartingWith(wr::dumpLayout(*second), "    img ");
         CHECK(img.size() > 4 && img.compare(img.size() - 4, 4, " 3 2") == 0);
         CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore + 1);
 
-        // The next build that asks for it reuses it; one that does not drops it.
-        container.beginBuild();
+        // A document that names it keeps it at a prune; one that does not drops it.
         litehtml::document::ptr third = layOut(container, html);
-        container.endBuild();
+        container.prune(*third);
         CHECK_EQ(host.decodedMimeTypes.size(), size_t(1));
         CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore + 1);
-        container.beginBuild();
         litehtml::document::ptr fourth = layOut(container, "<p>no image</p>");
-        container.endBuild();
+        container.prune(*fourth);
         CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore);
 
         // An image/* data: URL of bytes no decoder takes (widget-sandbox v0.3.0) never reaches the host, reports no
         // size and is not a refusal.
-        container.beginBuild();
         container.load_image("data:image/png;base64,AAEC", nullptr, true);
         container.get_image_size("data:image/png;base64,AAEC", nullptr, size);
-        container.endBuild();
         CHECK(isZero(size));
         CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png"}));
         CHECK_EQ(container.refusedLoads(), uint64_t(0));
 
         // A GIF: the host is handed the type's essence.
-        container.beginBuild();
         container.get_image_size("data:image/gif;base64,R0lGODlhBQAHAAAAACwAAAAABQAHAAACAkwBADs=", nullptr, size);
         CHECK(float(size.width) == 5 && float(size.height) == 7);
-        container.endBuild();
         CHECK(host.decodedMimeTypes == (std::vector<std::string>{"image/png", "image/gif"}));
     }
     CHECK_EQ(FakeRenderHost::liveImages(), imagesBefore);
@@ -253,7 +247,6 @@ WR_TEST(testOnlyProfileImagesDecode) {
     CHECK(!container.decodeImageUncached("data:image/svg+xml,<svg/>").has_value());
     std::optional<wr::DecodedImage> placeholder = container.decodeImageUncached(wr::WidgetContainer::kPlaceholderURL);
     CHECK(placeholder && placeholder->width == 48 && placeholder->height == 48);
-    container.endBuild();
     // Byte for byte the reference's (widget-sandbox v0.1.0 url-policy.ts; RB §3.5).
     std::optional<wr::DataUrl> reference = wr::parseDataUrl(
         "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2248%22%20height%3D%2248%22"
@@ -277,27 +270,24 @@ WR_TEST(testFontsAreCachedAcrossBuilds) {
     {
         FakeRenderHost host;
         wr::WidgetContainer container(host, options(300, 0));
-        container.beginBuild();
         litehtml::document::ptr first = layOut(container, both);
-        container.endBuild();
+        container.prune(*first);
         const size_t created = host.fontsCreated;
         CHECK(created > fontsForSansOnly);
         const size_t liveAfterFirst = FakeRenderHost::liveFonts();
         CHECK_EQ(liveAfterFirst, liveBefore + created);
 
-        container.beginBuild();
         litehtml::document::ptr second = layOut(container, both);
-        container.endBuild();
+        container.prune(*second);
         CHECK_EQ(host.fontsCreated, created);
         // litehtml deletes the first document's handles; the cache and the second document keep the fonts.
         first.reset();
         CHECK_EQ(FakeRenderHost::liveFonts(), liveAfterFirst);
 
-        // The third build drops the serif font from the cache, but the second document still holds a handle to it:
-        // the font stays alive, and the handle stays usable, until litehtml deletes it.
-        container.beginBuild();
+        // A prune for the third document drops the serif font from the cache, but the second document still holds a
+        // handle to it: the font stays alive, and the handle stays usable, until litehtml deletes it.
         litehtml::document::ptr third = layOut(container, sansOnly);
-        container.endBuild();
+        container.prune(*third);
         CHECK_EQ(host.fontsCreated, created);
         CHECK_EQ(FakeRenderHost::liveFonts(), liveAfterFirst);
         second->render(litehtml::pixel_t(200.0f));
@@ -421,13 +411,11 @@ WR_TEST(testHostQuestionsAndInertCallbacks) {
     container.sanitizer_limit("elements");
     container.sanitizer_limit(nullptr);
     CHECK(container.limitsHit() == (std::vector<std::string>{"elements", "depth"}));
-    container.endBuild();
     CHECK_EQ(container.limitsHit().size(), size_t(2));
     container.beginBuild();
     CHECK(container.limitsHit().empty());
     container.sanitizer_limit("text");
     CHECK(container.limitsHit() == std::vector<std::string>{"text"});
-    container.endBuild();
 
     litehtml::document::ptr document = layOut(container, "<a href='http://x'>link</a>");
     container.on_anchor_click("http://x", document->root());

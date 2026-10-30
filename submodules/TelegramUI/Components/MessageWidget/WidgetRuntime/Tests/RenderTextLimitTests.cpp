@@ -2,7 +2,7 @@
 // Text value of at most 65,536 UTF-16 units and 262,144 units of text in the document (widget-sandbox v0.3.0's strict
 // caps stop the widget instead: StrictLimitsTests), 8,192 of complex-script text, and 50,000 nodes. A build hands the
 // budgets out in tree order; what does not fit is not rendered, the walk going on (past the node cap it stops), and a
-// patch that would cross a limit rebuilds, so a flush always equals a rebuild.
+// patch that crosses a limit walks the cut as a build walks it (RenderCut.h), so a flush always equals a rebuild.
 #include <cstdio>
 #include <string>
 #include <tuple>
@@ -87,7 +87,9 @@ WR_TEST(testATextNodeAtTheCapRendersAndOnePastItDoesNot) {
     env.env().eval("$('a').firstChild.data = 'a'.repeat(65537); 1");
     env.flush();
     CHECK_EQ(env.env().eval("h('a')"), std::string("0"));
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    // Past the cap the flush walks the cut (RenderCut.h) and patches.
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
     CHECK(hasLimit(env, "text-node"));
     expectMatchesRebuild(env, "past the cap");
     RenderEnv markup(page("<div id=a>" + std::string(65537, 'b') + "</div>"));
@@ -161,8 +163,9 @@ WR_TEST(testAStructurePatchPastABudgetMatchesARebuild) {
     const uint64_t builds = env.render().buildCount();
     env.env().eval("$('d').appendChild(document.createTextNode('a'.repeat(70000))); 1");
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
     CHECK(hasLimit(env, "text-node"));
+    CHECK(wr_test::countsMatchAFreshBuild(env, "inserted past the cap"));
     expectMatchesRebuild(env, "inserted past the cap");
 }
 
@@ -187,7 +190,7 @@ void appendTheLastSpan(RenderEnv& env) {
 } // namespace
 
 /// The final review's C2: nodes a patch inserts without building them (comments) count toward the node cap, so a later
-/// patch past it rebuilds, as a fresh build would cut.
+/// patch past it cuts where a fresh build would.
 WR_TEST(testCommentsAPatchInsertsCountTowardTheNodeCap) {
     wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(nearTheNodeCap());
@@ -199,6 +202,23 @@ WR_TEST(testCommentsAPatchInsertsCountTowardTheNodeCap) {
     CHECK_EQ(env.env().eval("document.getElementById('last').getBoundingClientRect().height > 0"), std::string("false"));
     CHECK(hasLimit(env, "nodes"));
     expectMatchesRebuild(env, "the span past the cap");
+}
+
+/// A removal the journal does not hear (inside an element no build renders) lowers the node count: what a build cut at
+/// the cap comes back, as a fresh build renders it.
+WR_TEST(testAnUnheardRemovalBringsBackWhatTheNodeCapCut) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    RenderEnv env(nearTheNodeCap());
+    env.env().eval("const v = document.getElementById('v'); for (let i = 0; i < 150; i++) v.appendChild(document.createElement('i')); 1");
+    env.flush();
+    appendTheLastSpan(env);
+    CHECK_EQ(env.env().eval("document.getElementById('last').getBoundingClientRect().height > 0"), std::string("false"));
+    CHECK(hasLimit(env, "nodes"));
+    env.env().eval("document.getElementById('v').replaceChildren(); 1");
+    env.flush();
+    CHECK_EQ(env.env().eval("document.getElementById('last').getBoundingClientRect().height > 0"), std::string("true"));
+    expectMatchesRebuild(env, "the span back under the cap");
 }
 
 /// The final review's C2: an insertion the journal does not hear (inside an element the profile drops) still counts.

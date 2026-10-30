@@ -20,18 +20,6 @@ static NSData *SVGCachePixels(LHDocument *document)
     return data;
 }
 
-static LHDocument *SVGCacheWarmDocument(NSString *html)
-{
-    NSString *initial = [html stringByReplacingOccurrencesOfString:@"style='opacity:1'" withString:@"style='opacity:.99'"];
-    LHDocument *previous = [[LHDocument alloc] initWithHTML:initial css:nil previous:nil];
-    SVGCachePixels(previous);
-    LHDocument *document = [[LHDocument alloc] initWithPrevious:previous styles:@{@"hand": @"opacity:1"} attribute:@"id" css:nil];
-    XCTAssertNotNil(document);
-    if(!document) return previous;
-    SVGCachePixels(document);
-    return document;
-}
-
 - (NSString *)groupScene:(NSString *)attributes extra:(NSString *)extra style:(NSString *)style
 {
     NSMutableString *html = [NSMutableString stringWithFormat:@"<style>body{margin:0;background:#fff;color:#246b92}</style><svg id='svg' style='%@' width='200' height='100' viewBox='0 0 100 100'>%@<g %@>", style, extra, attributes];
@@ -52,89 +40,6 @@ static LHDocument *SVGCacheWarmDocument(NSString *html)
     XCTAssertLessThanOrEqual(worst, 1);
 }
 
-- (void)testSVGGroupCachePreservesFractionalAndLetterboxedPixels
-{
-    for(NSString *style in @[@"display:block", @"display:block;margin:10.25px;width:200.25px;height:100.5px", @"display:block;opacity:.55;transform:scaleX(-1)"])
-    {
-        NSString *html = [self groupScene:@"fill='currentColor' stroke='#c74880'" extra:@"" style:style];
-        [LHDocument setSVGGroupCacheEnabled:NO];
-        LHDocument *document = SVGCacheWarmDocument(html);
-        [LHDocument purgeCaches];
-        NSData *plain = SVGCachePixels(document);
-        NSUInteger plainBytes = [LHDocument rasterCacheBytes];
-        [LHDocument setSVGGroupCacheEnabled:YES];
-        [LHDocument purgeCaches];
-        NSData *cached = SVGCachePixels(document);
-        if([style isEqualToString:@"display:block"])
-            XCTAssertGreaterThan([LHDocument rasterCacheBytes], plainBytes);
-        [self assertPixels:plain match:cached];
-    }
-}
-
-- (void)testSVGGroupCacheInvalidatesInheritedColors
-{
-    NSString *first = [self groupScene:@"fill='currentColor' stroke='#c74880'" extra:@"" style:@"display:block;color:#246b92"];
-    NSString *next = [first stringByReplacingOccurrencesOfString:@"display:block;color:#246b92" withString:@"display:block;color:#a2d534"];
-    [LHDocument setSVGGroupCacheEnabled:YES];
-    [LHDocument purgeCaches];
-    LHDocument *document = SVGCacheWarmDocument(first);
-    NSData *initial = SVGCachePixels(document);
-    LHDocument *updated = [[LHDocument alloc] initWithPrevious:document styles:@{@"svg": @"display:block;color:#a2d534"} attribute:@"id" css:nil];
-    XCTAssertNotNil(updated);
-    NSData *cached = SVGCachePixels(updated);
-    XCTAssertNotEqualObjects(initial, cached);
-    [LHDocument setSVGGroupCacheEnabled:NO];
-    [LHDocument purgeCaches];
-    LHDocument *reference = [[LHDocument alloc] initWithHTML:next css:nil];
-    [self assertPixels:cached match:SVGCachePixels(reference)];
-    [LHDocument setSVGGroupCacheEnabled:YES];
-}
-
-- (void)testSVGGroupCachePreservesNestedOpacityAndAnimatedSiblings
-{
-    NSString *first = [self groupScene:@"fill='rgba(36,107,146,.6)' stroke='#c74880'" extra:@"" style:@"display:block;margin:10.25px"];
-    first = [first stringByReplacingOccurrencesOfString:@"<circle" withString:@"<g opacity='.55'><circle"];
-    first = [first stringByReplacingOccurrencesOfString:@"stroke-width='2'/>" withString:@"stroke-width='2'/></g>"];
-    NSString *next = [first stringByReplacingOccurrencesOfString:@"style='opacity:1'" withString:@"style='opacity:.5'"];
-    [LHDocument setSVGGroupCacheEnabled:YES];
-    [LHDocument purgeCaches];
-    LHDocument *document = SVGCacheWarmDocument(first);
-    NSData *initial = SVGCachePixels(document);
-    LHDocument *updated = [[LHDocument alloc] initWithPrevious:document styles:@{@"hand": @"opacity:.5"} attribute:@"id" css:nil];
-    XCTAssertNotNil(updated);
-    NSData *cached = SVGCachePixels(updated);
-    XCTAssertNotEqualObjects(initial, cached);
-    [LHDocument setSVGGroupCacheEnabled:NO];
-    [LHDocument purgeCaches];
-    LHDocument *reference = [[LHDocument alloc] initWithHTML:next css:nil];
-    [self assertPixels:cached match:SVGCachePixels(reference)];
-    [LHDocument setSVGGroupCacheEnabled:YES];
-}
-
-- (void)testSVGGroupCacheTracksReferencedGradientChanges
-{
-    for(NSString *paint in @[@"fill='url(#paint)'", @"fill='URL(#paint)'", @"style='fill:var(--paint)'", @"fill='var(--paint)'"])
-    {
-        NSString *extra = @"<style>:root{--paint:url(#paint)}</style><defs><linearGradient id='paint'><stop id='stop' stop-color='#ff0000'/><stop offset='1' stop-color='#0000ff'/></linearGradient></defs>";
-        NSString *first = [self groupScene:paint extra:extra style:@"display:block"];
-        NSString *next = [first stringByReplacingOccurrencesOfString:@"stop-color='#ff0000'" withString:@"stop-color='#00ff00'"];
-        [LHDocument setSVGGroupCacheEnabled:YES];
-        [LHDocument purgeCaches];
-        LHDocument *document = SVGCacheWarmDocument(first);
-        NSData *initial = SVGCachePixels(document);
-        const char changes[] = "stop\0stop-color\0#00ff00\0";
-        LHDocument *updated = [[LHDocument alloc] initWithPrevious:document changes:[NSData dataWithBytes:changes length:sizeof(changes) - 1] attribute:@"id" css:nil];
-        XCTAssertNotNil(updated);
-        NSData *cached = SVGCachePixels(updated);
-        XCTAssertNotEqualObjects(initial, cached, @"%@", paint);
-        [LHDocument setSVGGroupCacheEnabled:NO];
-        [LHDocument purgeCaches];
-        LHDocument *reference = [[LHDocument alloc] initWithHTML:next css:nil];
-        [self assertPixels:cached match:SVGCachePixels(reference)];
-        [LHDocument setSVGGroupCacheEnabled:YES];
-    }
-}
-
 - (void)testStaticSVGDoesNotAllocateGroupImages
 {
     NSString *html = [self groupScene:@"fill='currentColor' stroke='#c74880'" extra:@"" style:@"display:block"];
@@ -148,27 +53,6 @@ static LHDocument *SVGCacheWarmDocument(NSString *html)
     LHDocument *cached = [[LHDocument alloc] initWithHTML:html css:nil];
     SVGCachePixels(cached);
     XCTAssertEqual([LHDocument rasterCacheBytes], plainBytes);
-}
-
-- (void)testSVGCacheTracksExternalGradientChanges
-{
-    for(NSString *paint in @[@"fill='url(#paint)'", @"fill='URL(#paint)'", @"class='filled'", @"style='fill:var(--paint)'", @"fill='var(--paint)'", @""])
-    {
-        NSString *inherited = paint.length ? @"" : @"fill:url(#paint);";
-        NSString *first = [NSString stringWithFormat:@"<style>body{margin:0;background:white;%@--paint:url(#paint)}.filled{fill:url(#paint)}</style><svg width='0' height='0'><defs><linearGradient id='paint'><stop id='external-stop' stop-color='#ff0000'/><stop offset='1' stop-color='#0000ff'/></linearGradient></defs></svg><svg width='200' height='100'><rect %@ x='10' y='10' width='180' height='80'/></svg>", inherited, paint];
-        NSString *next = [first stringByReplacingOccurrencesOfString:@"stop-color='#ff0000'" withString:@"stop-color='#00ff00'"];
-        [LHDocument purgeCaches];
-        LHDocument *document = [[LHDocument alloc] initWithHTML:first css:nil previous:nil];
-        NSData *initial = SVGCachePixels(document);
-        const char changes[] = "external-stop\0stop-color\0#00ff00\0";
-        LHDocument *updated = [[LHDocument alloc] initWithPrevious:document changes:[NSData dataWithBytes:changes length:sizeof(changes) - 1] attribute:@"id" css:nil];
-        XCTAssertNotNil(updated);
-        NSData *cached = SVGCachePixels(updated);
-        XCTAssertNotEqualObjects(initial, cached, @"%@", paint);
-        [LHDocument purgeCaches];
-        LHDocument *reference = [[LHDocument alloc] initWithHTML:next css:nil];
-        [self assertPixels:cached match:SVGCachePixels(reference)];
-    }
 }
 
 - (LHDocument*)document

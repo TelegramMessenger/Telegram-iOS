@@ -15,6 +15,8 @@ namespace litehtml
         size        m_size;
         bool        m_use_transformed;
         bool        m_draw_spaces;
+        // Telegram (VENDOR.md edit 84): made as generated content (::before/::after content, a form control's parts).
+        bool        m_generated = false;
         uint_ptr    m_measured_font = 0;
         // Telegram (VENDOR.md edit 32.3): the measured width, before word-spacing.
         pixel_t     m_measured_width = 0;
@@ -25,6 +27,7 @@ namespace litehtml
         el_text(const char* text, const document::ptr& doc);
         // Telegram (VENDOR.md edit 10): the document counts the text pieces it holds.
         ~el_text() override;
+        bool generated() const { return m_generated; } // Telegram (VENDOR.md edit 84)
 
         void get_text(std::string& text) const override;
         void set_text(const std::string& text);

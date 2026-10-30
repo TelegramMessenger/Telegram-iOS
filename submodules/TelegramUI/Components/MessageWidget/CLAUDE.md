@@ -144,7 +144,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   `docs/superpowers/specs/2026-10-29-message-widgets-cpu-clock-limits-design.md`). The values are upstream's
   `LIMIT_DEFAULTS` (`wr::CpuLimits`, `MessageWidgetCpuLimits.product`), in every build and under both limit policies:
   - **a task's slice, up to 500 ms of CPU.** Every runtime step (an event, a timer, a frame, each boot script and the
-    load, a width or theme rebuild's task) runs in one: 500 ms for a boot task, otherwise min(500 ms, what the JS quota
+    load, a width or theme change's task) runs in one: 500 ms for a boot task, otherwise min(500 ms, what the JS quota
     has left, at least 50 ms) (`CpuBudget::decide`). Past it the widget stops, uncatchably, with upstream's "CPU limit
     exceeded: more than <slice> ms of continuous execution (<where>)" (`StopReason::Cpu`). A wall-clock backstop,
     max(10 × slice, 5 s), stops a step whose thread is starved;
@@ -294,6 +294,21 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (edit 65); a smaller one is painted by every tile its ink reaches. On an animated widget, blurred effects are still
   the frame's cost (the runtime record's "Measured", paint cost per frame). **Measure paint cost in the widget
   harness's app process**: the hostless test processes have no Metal device and paint no CSS filter.
+- **Every flush after the boot is incremental**: a patch of litehtml's render tree published as mirror operations.
+  The runtime builds its litehtml document once, at the boot (`RenderTree::build`), and has no other build: a path that
+  cannot patch hands the change to the next (the text and attribute path, the structure path, its walk of the cut), and
+  a refusal at the last is an inconsistency that stops the widget with a `render-internal` diagnostic
+  (`RenderTree::stopInternally`), as is a report the mirror cannot place (`LayerMirror::Inconsistent`). The fork never
+  re-creates its render tree after the boot: a block-level child of a block formatting context inserted or removed is
+  linked or unlinked alone (twidget edit 89), any other patch replaces the render subtree of its nearest boundary in
+  place (edit 74), and the mirror re-places what they bring (`LayerMirror`'s file comment). A patch's time is the
+  renderer's, never the widget's slice (above).
+  `:WidgetRuntimeCorpusIncrementalTests` runs every corpus document and fixture (one build each, no inconsistency), and
+  the randomized oracles (`testRandomEditsMatchARebuild`, `testOpsMatchAFreshMirror`) fail on any flush that builds or
+  stops the widget. A fork predicate's refusal names its reason (twidget edit 76). A patch equals a
+  fresh build in its style bytes too, and the elements it restyled reach the style-change step (CSS transitions) as a
+  build's elements do. A patch near a cap cuts where a fresh build would: both hand the caps out in one order,
+  counting only what renders (the runtime record's "A patch cuts where a build cuts").
 - **The runtime opens nothing; the app asks Telegram's server for a widget in exactly two ways** (widget-sandbox v0.2;
   the user's decision, `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md` §4.A). Both requests go only
   to Telegram's server, carry only the bot's data and never a URL, and `openLink` always prompts.
@@ -494,7 +509,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     `a[href]` becomes `#` plus `data-tg-link`; a tap still reads the DOM's href), CSS through twidget edit 29's hooks
     answered by `css::policy` (keep, augment, rewrite or drop; `CSS.supports` agrees), images by one predicate
     (`imageSourceKept`) in layout and the DOM, and the strict text and node budgets in tree order. Each rule is one
-    decision that a rebuild, the patches and the render input read alike. litehtml's master, UA and host sheets are
+    decision that the build, the patches and the render input read alike. litehtml's master, UA and host sheets are
     parsed once per process and cached, so the hooks pass them through whole (`trusted_styles`); every cache is keyed
     on the container's `sanitizer_key`. **Hooks are pure functions of their text and post no diagnostics** (litehtml
     caches their answers by text). There is no focus (`focus()` is a no-op). Record and divergences: the runtime doc's

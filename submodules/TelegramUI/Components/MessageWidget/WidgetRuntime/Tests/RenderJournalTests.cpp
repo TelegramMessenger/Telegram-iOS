@@ -3,6 +3,7 @@
 // keeps the last flush (Review Focus 2) and a published tree that outlives the runtime (Review Focus 5).
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -34,6 +35,24 @@ const char* const kFixed = "<!doctype html><body style='height:100px'><p>x</p></
 const std::string kPng3x2 =
     "data:image/png;base64,"
     "iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAAEUlEQVR4nGP4z8DwH4YZkDkAm34L9XKwuTwAAAAASUVORK5CYII=";
+
+// A data: PNG of `width` × 1 px: the signature and IHDR alone, which FakeRenderHost decodes by its size.
+std::string pngOfWidth(uint32_t width) {
+    const uint8_t bytes[] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 13, 'I', 'H', 'D', 'R',
+                             uint8_t(width >> 24), uint8_t(width >> 16), uint8_t(width >> 8), uint8_t(width), 0, 0, 0, 1,
+                             8, 6, 0, 0, 0, 0, 0, 0, 0};
+    static const char* const kDigits = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out = "data:image/png;base64,";
+    const size_t n = sizeof bytes;
+    for (size_t i = 0; i < n; i += 3) {
+        const uint32_t v = uint32_t(bytes[i]) << 16 | (i + 1 < n ? uint32_t(bytes[i + 1]) << 8 : 0) | (i + 2 < n ? bytes[i + 2] : 0);
+        out += kDigits[(v >> 18) & 63];
+        out += kDigits[(v >> 12) & 63];
+        out += i + 1 < n ? kDigits[(v >> 6) & 63] : '=';
+        out += i + 2 < n ? kDigits[v & 63] : '=';
+    }
+    return out;
+}
 
 bool hasText(wr::RenderTree& render, const std::string& text) {
     std::shared_ptr<const wr::LayerTree> tree = render.layerTree();
@@ -221,7 +240,7 @@ WR_TEST(testDetachedBuildsAreNotJournaled) {
     CHECK_EQ(countOf(env.render().renderInput(), "<span data-a=\"999\" data-b=\"999\" class=\"c\">u</span>"), size_t(1));
 }
 
-WR_TEST(testJournalCollapses) {
+WR_TEST(testTheJournalKeepsEveryNode) {
     // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
     wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(kEmpty);
@@ -231,38 +250,26 @@ WR_TEST(testJournalCollapses) {
                             "e.setAttribute('a', '1'); e.className = 'b'; e.append('t'); 'ok'"),
              std::string("ok"));
     CHECK_EQ(env.render().journalNodes(), size_t(2));
-    // 5,000 distinct nodes in one go: past 4,096 the journal is "rebuild everything", with no entries.
+    // 5,000 distinct nodes in one go: each keeps its entry (each allocated under the memory limit), beside
+    // the body's and the first div's.
     CHECK_EQ(env.env().eval("for (let i = 0; i < 5000; i++) document.body.appendChild(document.createElement('div'));"
                             "'ok'"),
              std::string("ok"));
+    CHECK_EQ(env.render().journalNodes(), size_t(5002));
+    // The flush patches them all.
+    env.flush();
+    CHECK_EQ(env.render().buildCount(), builds);
     CHECK_EQ(env.render().journalNodes(), size_t(0));
-    // Still dirty: the flush makes one rebuild, and then it is clean.
-    env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
     CHECK_EQ(countOf(env.render().renderInput(), "<div></div>"), size_t(5000));
-    env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
-    // The collapse ended with that flush: the journal records again.
+    // And records again.
     CHECK_EQ(env.env().eval("document.body.setAttribute('data-x', '1'); 'ok'"), std::string("ok"));
     CHECK_EQ(env.render().journalNodes(), size_t(1));
-    // An attribute change alone is patched in place (Task 8), not rebuilt.
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
-    CHECK_EQ(env.render().patchCount(), uint64_t(1));
-    // The same in one task, which first empties the body (under the 10,000-element limit, Ruling E9): one rebuild at
-    // its end.
-    CHECK_EQ(env.env().eval("setTimeout(() => { document.body.textContent = ''; for (let i = 0; i < 5000; i++) "
-                            "document.body.appendChild(document.createElement('span')); }); 'ok'"),
-             std::string("ok"));
-    env.env().advance(1);
-    CHECK_EQ(env.render().buildCount(), builds + 2);
-    CHECK_EQ(env.render().journalNodes(), size_t(0));
-    CHECK_EQ(countOf(env.render().renderInput(), "<span></span>"), size_t(5000));
-    CHECK_EQ(env.env().eval("document.body.setAttribute('data-x', '2'); 'ok'"), std::string("ok"));
-    CHECK_EQ(env.render().journalNodes(), size_t(1));
+    CHECK_EQ(env.render().buildCount(), builds);
 }
 
-// The Document is not mapped, but its children render: a root inserted into it is journaled.
+// The Document is not mapped, but its children render: a root inserted into it is journaled, and the document element
+// replaced in place (twidget edit 82).
 WR_TEST(testChangesUnderTheDocumentAreJournaled) {
     RenderEnv env("<!doctype html><p>old</p>");
     CHECK_EQ(env.env().eval("setTimeout(() => document.documentElement.remove()); 'ok'"), std::string("ok"));
@@ -274,25 +281,29 @@ WR_TEST(testChangesUnderTheDocumentAreJournaled) {
                             " 'ok'"),
              std::string("ok"));
     env.env().advance(1);
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
     CHECK(hasText(env.render(), "new"));
 }
 
-// A `<style>`'s Text children are not mapped (its sheet is one piece of the style): their parent is.
+// A `<style>`'s Text children are not mapped (its sheet is one piece of the style): their parent is, and the change is
+// its sheet's, patched in place (twidget edit 81).
 WR_TEST(testStyleTextChangesAreJournaled) {
     RenderEnv env("<!doctype html><style id=s>p{color:#000001}</style><p>t</p>");
     const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
     CHECK_EQ(env.env().eval("setTimeout(() => { document.getElementById('s').firstChild.data = 'p{color:#000002}'; });"
                             " 'ok'"),
              std::string("ok"));
     env.env().advance(1);
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
     const wr::TextItem* item = env.render().layerTree() ? findText(*env.render().layerTree(), "t") : nullptr;
     CHECK(item && item->color.blue == 2);
     CHECK_EQ(env.env().eval("setTimeout(() => { document.getElementById('s').append(' p{color:#000003}'); }); 'ok'"),
              std::string("ok"));
     env.env().advance(1);
-    CHECK_EQ(env.render().buildCount(), builds + 2);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
     item = env.render().layerTree() ? findText(*env.render().layerTree(), "t") : nullptr;
     CHECK(item && item->color.blue == 3);
 }
@@ -377,53 +388,106 @@ WR_TEST(testAStoppedWidgetKeepsItsLastFlush) {
     CHECK(tree && tree->width() == 300);
 }
 
-WR_TEST(testThemeChangeRebuilds) {
+// Twidget edit 80: a theme change is a patch: the scheme and the root's theme declarations applied in place, as a
+// rebuild under the new theme makes them.
+WR_TEST(testThemeChangePatches) {
     RenderEnv env("<!doctype html><div style=\"color:light-dark(#000001,#000002)\">t</div>");
     std::shared_ptr<const wr::LayerTree> light = env.render().layerTree();
     const wr::TextItem* item = light ? findText(*light, "t") : nullptr;
     CHECK(item && item->color.red == 0 && item->color.green == 0 && item->color.blue == 1);
     const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
     env.render().setTheme(env.ctx(), wr::Theme::Dark, themeDeclarations(wr::Theme::Dark));
     // The next flush performs it.
     CHECK(env.render().layerTree() == light);
-    CHECK_EQ(env.render().buildCount(), builds);
     wr::HostState::of(env.ctx()).flushRender(env.ctx());
     std::shared_ptr<const wr::LayerTree> dark = env.render().layerTree();
     item = dark ? findText(*dark, "t") : nullptr;
     CHECK(item && item->color.red == 0 && item->color.green == 0 && item->color.blue == 2);
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
     // The same theme again changes nothing.
     env.render().setTheme(env.ctx(), wr::Theme::Dark, themeDeclarations(wr::Theme::Dark));
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
     // And back.
     env.render().setTheme(env.ctx(), wr::Theme::Light, themeDeclarations(wr::Theme::Light));
     env.flush();
     item = env.render().layerTree() ? findText(*env.render().layerTree(), "t") : nullptr;
     CHECK(item && item->color.blue == 1);
-    CHECK_EQ(env.render().buildCount(), builds + 2);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
 }
 
-WR_TEST(testWidthChangeRebuilds) {
-    RenderEnv env("<!doctype html><p>some words to lay out</p>");
+// The container's caches follow the document at every flush, patch or build: a font or image no element names is
+// dropped, and an image under an element hidden for one flush keeps its entry, so showing it again decodes nothing.
+WR_TEST(testCachesFollowTheDocument) {
+    RenderEnv env("<!doctype html><body style='margin:0'><img id=i src='" + pngOfWidth(1) +
+                  "'><p id=p style='font-size:10px'>t</p><div id=d><img src='" + kPng3x2 + "'></div></body>");
+    const uint64_t builds = env.render().buildCount();
+    for (int n = 2; n <= 41; n++) {
+        CHECK_EQ(env.env().eval("document.getElementById('i').src = '" + pngOfWidth(uint32_t(n)) +
+                                "'; document.getElementById('p').style.fontSize = '" + std::to_string(10 + n) + "px'; 'ok'"),
+                 std::string("ok"));
+        env.flush();
+    }
+    CHECK_EQ(env.render().buildCount(), builds);
+    if (env.render().cachedImages() > 2 || env.render().cachedFonts() > 3) {
+        std::printf("  %zu images and %zu fonts cached\n", env.render().cachedImages(), env.render().cachedFonts());
+    }
+    CHECK(env.render().cachedImages() <= 2);
+    CHECK(env.render().cachedFonts() <= 3);
+    const size_t decodes = env.host().decodedMimeTypes.size();
+    CHECK_EQ(env.env().eval("document.getElementById('d').style.display = 'none'; 'ok'"), std::string("ok"));
+    env.flush();
+    CHECK_EQ(env.env().eval("document.getElementById('d').style.display = ''; 'ok'"), std::string("ok"));
+    env.flush();
+    CHECK_EQ(env.host().decodedMimeTypes.size(), decodes);
+}
+
+// Twidget edit 79: a width change is a patch: the document relaid out at the new width, its media rules and viewport
+// units applied again, as a rebuild at that width.
+WR_TEST(testWidthChangePatches) {
+    RenderEnv env("<!doctype html><style>@media (min-width:400px){p.a{display:none}} div{width:50vw}</style>"
+                  "<p>some words to lay out</p><p class=a>gone when wide</p><div>half</div>");
     const std::string narrow = env.render().layoutDump();
     const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
     CHECK(narrow.rfind("html 0 0 300 ", 0) == 0);
     env.render().setWidth(env.ctx(), 600);
     CHECK_EQ(env.render().layoutDump(), narrow);
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
     const std::string wide = env.render().layoutDump();
-    CHECK(wide != narrow);
     CHECK(wide.rfind("html 0 0 600 ", 0) == 0);
     CHECK(env.render().layerTree() && env.render().layerTree()->width() == 600);
+    auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
+    if (wide != layout) std::printf("  patched:\n%s---\n  rebuilt:\n%s", wide.c_str(), layout.c_str());
+    CHECK_EQ(wide, layout);
+    CHECK_EQ(env.render().layerTree()->dump(), rebuilt);
     // The same width again changes nothing.
     env.render().setWidth(env.ctx(), 600);
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
-    if (wide.rfind("html 0 0 600 ", 0) != 0) {
-        std::printf("  narrow:\n%s  wide:\n%s", narrow.c_str(), wide.c_str());
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+}
+
+// Twidget edit 79: reduced motion is a patch, its media rules applied again.
+WR_TEST(testReducedMotionPatches) {
+    RenderEnv env("<!doctype html><style>@media (prefers-reduced-motion:reduce){p{color:#c00;padding:3px}}</style>"
+                  "<p>moving words</p>");
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    for (const bool reduced : {true, false}) {
+        env.render().setReducedMotion(env.ctx(), reduced);
+        env.flush();
+        auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
+        CHECK_EQ(env.render().layoutDump(), layout);
+        CHECK_EQ(env.render().layerTree()->dump(), rebuilt);
     }
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
 }
 
 WR_TEST(testFlushIsNotReentrant) {

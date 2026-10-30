@@ -11,17 +11,13 @@ Journal::Journal(JSContext* ctx)
 Journal::~Journal() = default;
 
 void Journal::record(JSContext* ctx, Node& node, JournalKind kind) {
-    if (m_rebuild) {
+    if (!m_built) {
         return;
     }
     auto found = m_index.find(&node);
     if (found != m_index.end()) {
         m_entries[found->second].kinds |= journalBit(kind);
         m_kinds |= journalBit(kind);
-        return;
-    }
-    if (m_entries.size() == kMaxNodes) {
-        this->markRebuild();
         return;
     }
     // The entry, then its index: a failure of either leaves the journal as it was (a dropped entry releases its node).
@@ -35,18 +31,17 @@ void Journal::record(JSContext* ctx, Node& node, JournalKind kind) {
     m_kinds |= journalBit(kind);
 }
 
-void Journal::markRebuild() noexcept {
-    m_index.clear();
-    m_entries.clear();
-    m_kinds = 0;
-    m_rebuild = true;
+void Journal::markBuilt() noexcept {
+    this->clear();
+    m_built = true;
 }
 
 void Journal::clear() noexcept {
     m_index.clear();
     m_entries.clear();
     m_kinds = 0;
-    m_rebuild = false;
+    m_environment = false;
+    m_cut = false;
 }
 
 } // namespace wr

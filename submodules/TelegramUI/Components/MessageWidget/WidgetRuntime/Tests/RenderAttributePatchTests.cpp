@@ -3,6 +3,7 @@
 // (Review Focus 1). What rebuilds instead (a selector the change could reach, an unsafe inline style, an element the
 // fork does not patch, the render limits), what is ignored (an element Ruling 4 leaves out), that the render input is
 // kept in step, and that a stop while planning leaves the published state alone (Review Focus 2).
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <memory>
@@ -138,13 +139,14 @@ WR_TEST(testRemovedAttributeIsRemoved) {
 
 // What the fork refuses rebuilds, and agrees with a rebuild.
 WR_TEST(testAttributePatchFallsBack) {
-    // A class in an ancestor position of a selector, and sibling selectors.
-    for (const char* sheet : {".on p{color:#c00}", "div + p{color:#c00}"}) {
+    // A class in an ancestor position of a selector, and sibling selectors, patch what they reach (twidget edit 77);
+    // so do counters in the sheets (edit 78).
+    for (const char* sheet : {".on p{color:#c00}", "div + p{color:#c00}", "li{counter-increment:n} .on p{color:#c00}"}) {
         RenderEnv env(std::string("<!doctype html><style>") + sheet + "</style><body><div id=d><p>one</p><p>two</p></div></body>");
         const uint64_t builds = env.render().buildCount();
         edit(env, "document.getElementById('d').className = 'on'");
-        CHECK_EQ(env.render().buildCount(), builds + 1);
-        CHECK_EQ(env.render().patchCount(), uint64_t(0));
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().patchCount(), uint64_t(1));
         expectMatchesRebuild(env, sheet);
     }
     // A positional pseudo-class reads an element's place, which no attribute changes (twidget edit 42): it patches.
@@ -161,20 +163,27 @@ WR_TEST(testAttributePatchFallsBack) {
                   "<select id=s><option id=o>one</option><option>two</option></select><textarea id=ta></textarea>"
                   "<p id=p>p</p></div></body>");
     uint64_t builds = env.render().buildCount();
-    // An inline style touching a custom property, var() or a counter, in or out.
+    // An inline style touching a counter, in or out (twidget edit 78), or a custom property or var() (edit 17), patches.
+    edit(env, "document.getElementById('d').setAttribute('style', 'counter-reset:n;color:#0c0')");
+    CHECK_EQ(env.render().buildCount(), builds);
+    expectMatchesRebuild(env, "counter-reset");
+    edit(env, "document.getElementById('d').setAttribute('style', 'color:#00c')");
+    CHECK_EQ(env.render().buildCount(), builds);     // out of a style with a counter
+    expectMatchesRebuild(env, "out of counter-reset");
     edit(env, "document.getElementById('d').setAttribute('style', '--x:1;color:#0c0')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
+    CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "--x");
     edit(env, "document.getElementById('d').setAttribute('style', 'color:var(--x)')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
+    CHECK_EQ(env.render().buildCount(), builds);
     edit(env, "document.getElementById('d').setAttribute('style', 'color:#00c')");
-    CHECK_EQ(env.render().buildCount(), ++builds);     // out of a style with --x
+    CHECK_EQ(env.render().buildCount(), builds);       // out of a style with --x
     expectMatchesRebuild(env, "out of var");
-    // An element the fork does not patch in place: a table (border is out of profile 1: its change renders nothing).
+    // A table's class is patched (twidget edit 17).
+    const uint64_t patchesAtTable = env.render().patchCount();
     edit(env, "document.getElementById('t').setAttribute('class', 'b')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
+    CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "table");
-    CHECK_EQ(env.render().patchCount(), uint64_t(0));
+    CHECK_EQ(env.render().patchCount(), patchesAtTable + 1);
     // A select, its option and a textarea are dropped by profile 1 (V4 plan, Task 4): their changes render nothing,
     // neither a rebuild nor a patched element.
     edit(env, "document.getElementById('o').setAttribute('selected', '')");
@@ -183,71 +192,118 @@ WR_TEST(testAttributePatchFallsBack) {
     CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "dropped controls");
     const uint64_t patchesBefore = env.render().patchCount();
-    // A change beside a removal elsewhere: not attribute-only, so the removal is not ignored.
+    // A change beside a removal elsewhere: not attribute-only, so the removal is not ignored; the structure path applies
+    // both (a mixed journal).
     edit(env, "document.getElementById('p').className = 'q'; document.getElementById('t').remove()");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    CHECK_EQ(env.render().patchCount(), patchesBefore);
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patchesBefore + 1);
     expectMatchesRebuild(env, "removal beside attribute");
     // A node mapped and then removed: the change sits beside its Removed entry and goes with it (Task 9 patches the
     // removal).
     edit(env, "const p = document.getElementById('p'); p.className = 'r'; p.remove()");
     CHECK_EQ(env.render().buildCount(), builds);
-    CHECK_EQ(env.render().patchCount(), patchesBefore + 1);
+    CHECK_EQ(env.render().patchCount(), patchesBefore + 2);
     expectMatchesRebuild(env, "removed");
     // And an ordinary change still patches afterwards.
     edit(env, "document.getElementById('d').setAttribute('style', 'color:#0c0')");
     CHECK_EQ(env.render().buildCount(), builds);
-    CHECK_EQ(env.render().patchCount(), patchesBefore + 2);
+    CHECK_EQ(env.render().patchCount(), patchesBefore + 3);
     expectMatchesRebuild(env, "resumed");
 }
 
-// The render limits decide what a build leaves out, so a change that crosses one rebuilds, and a build that hit a
-// limit is never patched.
-WR_TEST(testAttributePatchRespectsLimits) {
+namespace {
+
+// A page whose first <div> has a `style` over 16 KiB: the build leaves it out and posts style-attribute, a limit its walk
+// hit, so every later flush walks the cut (RenderCut.h).
+std::string walkingPage(const std::string& body) {
+    std::string declarations;
+    while (declarations.size() < 17 * 1024) {
+        declarations += "color:red;";
+    }
+    return "<!doctype html><body><div style=\"" + declarations + "\">x</div>" + body + "</body>";
+}
+
+} // namespace
+
+// A <br>'s attributes patch (twidget's el_break takes kind 1, as a plain element): a class a rule makes block-level, and
+// its removal.
+WR_TEST(testABreaksAttributesPatch) {
+    RenderEnv env("<!doctype html><style>.x{display:block;height:4px;background:#00f}</style><body><p>a<br id=b>b</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    edit(env, "document.getElementById('b').className = 'x'");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    expectMatchesRebuild(env, "a <br>'s class");
+    edit(env, "document.getElementById('b').removeAttribute('class')");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
+    expectMatchesRebuild(env, "a <br>'s class removed");
+}
+
+// Walking the cut, a <style>'s own attribute change builds it again, its sheet with it, as the structure path does.
+WR_TEST(testAStyleAttributeChangeWhileWalkingPatches) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    RenderEnv env(walkingPage("<style id=s data-x=1>p{color:#c00}</style><p>p</p>"));
+    CHECK(!env.render().renderLimits().empty());
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    edit(env, "document.getElementById('s').setAttribute('data-x', '2')");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    expectMatchesRebuild(env, "a <style>'s attribute while walking");
+}
+
+// Walking the cut, an element's own attribute change sets its attributes in place whatever their length, never building
+// its subtree again: on a container of 3,000 paragraphs it patches and equals a fresh build.
+WR_TEST(testAnAttributeChangeWhileWalkingSetsInPlace) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    std::string paragraphs;
+    for (int i = 0; i < 3000; i++) {
+        paragraphs += "<p>x</p>";
+    }
+    RenderEnv env(walkingPage("<div id=c class=a>" + paragraphs + "</div>"));
+    CHECK(!env.render().renderLimits().empty());
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    edit(env, "document.getElementById('c').className = 'ab'");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    expectMatchesRebuild(env, "a longer class while walking");
+}
+
+// The render limits decide what a build leaves out. A change that crosses one, or one in a document a build cut, walks the
+// cut (RenderCut.h) and patches: every flush below patches and equals a build, its counts and limits included.
+WR_TEST(testAttributePatchCutsAtTheLimits) {
     // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
     wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env("<!doctype html><body><div id=d>d</div><p id=p>p</p></body>");
-    uint64_t builds = env.render().buildCount();
-    // A `style` over 16 KiB is not rendered, and the build posts style-attribute.
-    edit(env, "document.getElementById('d').setAttribute('style', 'color:#c00;' + ' '.repeat(16400))");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    expectMatchesRebuild(env, "style over 16 KiB");
-    // That build hit a limit, so even a small change rebuilds.
-    edit(env, "document.getElementById('p').className = 'q'");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    expectMatchesRebuild(env, "limit");
-    // The limit is gone with the style that caused it: patching resumes.
-    edit(env, "document.getElementById('d').setAttribute('style', 'color:#0c0')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    edit(env, "document.getElementById('p').className = 'q2'");
-    CHECK_EQ(env.render().buildCount(), builds);
-    CHECK_EQ(env.render().patchCount(), uint64_t(1));
-    expectMatchesRebuild(env, "resumed");
-    // A style just under the cap patches.
-    edit(env, "document.getElementById('d').setAttribute('style', 'color:#c00;' + ' '.repeat(16300))");
-    CHECK_EQ(env.render().buildCount(), builds);
-    CHECK_EQ(env.render().patchCount(), uint64_t(2));
-    expectMatchesRebuild(env, "style under 16 KiB");
+    const uint64_t builds = env.render().buildCount();
+    const auto patched = [&](const std::string& script, const char* what) {
+        const uint64_t patches = env.render().patchCount();
+        edit(env, script);
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().patchCount(), patches + 1);
+        expectMatchesRebuild(env, what);
+        CHECK(wr_test::countsMatchAFreshBuild(env, what));
+    };
+    // A `style` over 16 KiB is not rendered, and style-attribute is posted.
+    patched("document.getElementById('d').setAttribute('style', 'color:#c00;' + ' '.repeat(16400))", "style over 16 KiB");
+    patched("document.getElementById('p').className = 'q'", "a change beside the limit");
+    patched("document.getElementById('d').setAttribute('style', 'color:#0c0')", "the limit gone");
+    patched("document.getElementById('p').className = 'q2'", "resumed");
+    patched("document.getElementById('d').setAttribute('style', 'color:#c00;' + ' '.repeat(16300))", "style under 16 KiB");
     // Past the byte budget: 1.1 MB of one attribute value (one the text budgets do not count: V4 plan, Task 7).
-    edit(env, "document.getElementById('p').setAttribute('datetime', 'y'.repeat(1100000))");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    expectMatchesRebuild(env, "bytes");
-    // Within the budget again: the smaller value patches in place.
-    edit(env, "document.getElementById('p').setAttribute('datetime', 'y'.repeat(500000))");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(400000))");
-    CHECK_EQ(env.render().buildCount(), builds);
-    expectMatchesRebuild(env, "smaller");
+    patched("document.getElementById('p').setAttribute('datetime', 'y'.repeat(1100000))", "bytes");
+    patched("document.getElementById('p').setAttribute('datetime', 'y'.repeat(500000))", "within the budget again");
+    patched("document.getElementById('p').setAttribute('datetime', 'z'.repeat(400000))", "smaller");
     // The budget a patch leaves is kept in step: a value that grows twice over, and then fits only because the first
     // growth was counted.
-    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(700000))");
-    CHECK_EQ(env.render().buildCount(), builds);
-    edit(env, "document.getElementById('p').setAttribute('datetime', 'z'.repeat(1000000))");
-    CHECK_EQ(env.render().buildCount(), builds);
-    expectMatchesRebuild(env, "grown twice");
-    edit(env, "document.getElementById('d').setAttribute('role', 'w'.repeat(60000))");
-    CHECK_EQ(env.render().buildCount(), ++builds);   // 1,000,000 + 60,000 passes the budget
-    expectMatchesRebuild(env, "over after growing");
+    patched("document.getElementById('p').setAttribute('datetime', 'z'.repeat(700000))", "grown once");
+    patched("document.getElementById('p').setAttribute('datetime', 'z'.repeat(1000000))", "grown twice");
+    patched("document.getElementById('d').setAttribute('role', 'w'.repeat(60000))", "over after growing");
 }
 
 // The flush publishes a new tree with changedRects against the previous one, as a rebuild does.
@@ -275,20 +331,30 @@ size_t limitPosts(RenderEnv& env) {
     return n;
 }
 
-// Runs `script` and flushes; whatever the flush did, the result and the limits it posted equal a rebuild's. True when it
-// patched.
+// Runs `script` and flushes; whatever the flush did, the result, litehtml's counts and the limits equal a rebuild's. A
+// rebuild posts every limit it hits; a patch, the kinds the published limits lacked (RenderTree::publishLimits). True
+// when it patched.
 bool flushAgreesWithRebuild(RenderEnv& env, const std::string& script, const char* what) {
     const size_t posted = limitPosts(env);
     const uint64_t patches = env.render().patchCount();
+    const std::vector<std::string> before = env.render().renderLimits();
     edit(env, script);
+    const bool patched = env.render().patchCount() != patches;
     const size_t byFlush = limitPosts(env) - posted;
     expectMatchesRebuild(env, what);
-    const size_t byRebuild = limitPosts(env) - posted - byFlush;
-    if (byFlush != byRebuild) {
-        std::printf("  limits differ after: %s (%zu vs %zu)\n", what, byFlush, byRebuild);
+    size_t wanted = limitPosts(env) - posted - byFlush;
+    if (patched) {
+        wanted = 0;
+        for (const std::string& kind : env.render().renderLimits()) {
+            wanted += std::find(before.begin(), before.end(), kind) == before.end();
+        }
     }
-    CHECK_EQ(byFlush, byRebuild);
-    return env.render().patchCount() != patches;
+    if (byFlush != wanted) {
+        std::printf("  limits posted after: %s (%zu, want %zu)\n", what, byFlush, wanted);
+    }
+    CHECK_EQ(byFlush, wanted);
+    CHECK(wr_test::countsMatchAFreshBuild(env, what));
+    return patched;
 }
 
 std::string wordsPage(int words, const char* sheet, const char* body) {
@@ -310,17 +376,17 @@ static wr::RenderOptions withMasterCSS(const std::string& css) {
     return options;
 }
 
-WR_TEST(testLinkInAnAncestorPositionRebuilds) {
+WR_TEST(testLinkInAnAncestorPositionPatches) {
     RenderEnv env("<!doctype html><body><a>link <span>t</span></a></body>", withMasterCSS("a:link span{color:#c00} span{color:#00c}"));
-    uint64_t builds = env.render().buildCount();
+    const uint64_t builds = env.render().buildCount();
     edit(env, "document.querySelector('a').setAttribute('href', 'x')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
-    CHECK_EQ(env.render().patchCount(), uint64_t(0));
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), uint64_t(1));
     expectMatchesRebuild(env, "href added");
     const wr::TextItem* span = wr_test::findText(*env.render().layerTree(), "t");
     CHECK(span && span->color.red == 0xcc);
     edit(env, "document.querySelector('a').removeAttribute('href')");
-    CHECK_EQ(env.render().buildCount(), ++builds);
+    CHECK_EQ(env.render().buildCount(), builds);
     expectMatchesRebuild(env, "href removed");
     span = wr_test::findText(*env.render().layerTree(), "t");
     CHECK(span && span->color.blue == 0xcc);
@@ -344,31 +410,33 @@ WR_TEST(testHrefRoundTripKeepsLink) {
 
 // twidget edit 62: a script's inline style change keeps litehtml's render tree when every property it changes is
 // paint-only (an rAF loop setting el.style.transform), as an animated frame's does (or geometry only, edit 63); a property
-// that shapes the tree still rebuilds it, alone or beside paint-only ones. Each flush equals a rebuild.
+// that shapes the tree still replaces a render subtree, alone or beside paint-only ones, which the mirror places with
+// operations. Each flush equals a rebuild.
 WR_TEST(testAPaintOnlyInlineStyleKeepsTheTree) {
     RenderEnv env("<!doctype html><body><div id=b style='width:40px;height:20px;background:#ccc'>b</div><p>after</p></body>");
     const uint64_t builds = env.render().buildCount();
-    uint64_t resets = env.render().treeRebuildResets();
+    uint64_t replaced = env.render().subtreeReplacements();
     for (int i = 1; i <= 4; i++) {
         const std::string n = std::to_string(i);
         edit(env, "const b = document.getElementById('b'); b.style.transform = 'translateX(" + n + "0px)';"
                   " b.style.opacity = '0." + n + "'; b.style.color = 'rgb(" + n + "0, 0, 0)'");
         expectMatchesRebuild(env, ("paint-only " + n).c_str());
-        CHECK_EQ(env.render().treeRebuildResets(), resets);
+        CHECK_EQ(env.render().subtreeReplacements(), replaced);
     }
     edit(env, "document.getElementById('b').style.display = 'inline-block'");
     expectMatchesRebuild(env, "display");
-    CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+    CHECK(env.render().subtreeReplacements() > replaced);
+    replaced = env.render().subtreeReplacements();
     edit(env, "const b = document.getElementById('b'); b.style.transform = 'none'; b.style.cssFloat = 'left'");
     expectMatchesRebuild(env, "transform beside float");
-    CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+    CHECK(env.render().subtreeReplacements() > replaced);
     CHECK_EQ(env.render().buildCount(), builds);
 }
 
 // twidget edit 63: a change of a box's geometry alone (its size, margins, padding, offsets, gaps, flex sizes) keeps
 // litehtml's render tree, which only the layout reads them from; the restyle marks the box's layout dirty and the next
-// layout places it. A change that shapes the tree (display, position, float) still rebuilds it. Inline style and a class
-// rule alike; each flush equals a rebuild.
+// layout places it. A change that shapes the tree (display, position, float) still replaces a render subtree, which the
+// mirror places with operations. Inline style and a class rule alike; each flush equals a rebuild.
 WR_TEST(testAGeometryChangeKeepsTheTree) {
     RenderEnv env("<!doctype html><style>.wide{width:200px;padding:6px} .gone{display:none} .abs{position:absolute}</style>"
                   "<body><div id=bar style='width:10px;height:8px;background:#0a0'></div>"
@@ -378,19 +446,20 @@ WR_TEST(testAGeometryChangeKeepsTheTree) {
                   "<div style='flex:1;overflow:hidden;border-radius:2px;background:#ccc'>c</div></div>"
                   "<p><span id=k>k</span> then <span style='opacity:.5'>faded</span> end</p></body>");
     const uint64_t builds = env.render().buildCount();
-    uint64_t resets = env.render().treeRebuildResets();
+    uint64_t replacements = env.render().subtreeReplacements();
     auto kept = [&](const std::string& script, const char* what) {
         edit(env, script);
         expectMatchesRebuild(env, what);
-        if (env.render().treeRebuildResets() != resets) {
-            std::printf("  the render tree was rebuilt after: %s\n", what);
+        if (env.render().subtreeReplacements() != replacements) {
+            std::printf("  a render subtree was replaced after: %s\n", what);
         }
-        CHECK_EQ(env.render().treeRebuildResets(), resets);
+        CHECK_EQ(env.render().subtreeReplacements(), replacements);
     };
-    auto rebuilt = [&](const std::string& script, const char* what) {
+    auto replaced = [&](const std::string& script, const char* what) {
         edit(env, script);
         expectMatchesRebuild(env, what);
-        CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+        CHECK(env.render().subtreeReplacements() > replacements);
+        replacements = env.render().subtreeReplacements();
     };
     for (int i = 1; i <= 3; i++) {
         kept("document.getElementById('bar').style.width = '" + std::to_string(i * 50) + "px'", "a progress bar's width");
@@ -402,12 +471,12 @@ WR_TEST(testAGeometryChangeKeepsTheTree) {
     kept("const p = document.getElementById('p'); p.style.marginTop = '12px'; p.style.paddingLeft = '9px'", "margin and padding");
     kept("document.getElementById('flex').style.gap = '11px'; document.getElementById('f1').style.flexGrow = '1'", "gap and flex-grow");
     kept("document.getElementById('p').className = 'wide'", "a class whose rule sets width and padding");
-    // An inline element's geometry is its line's: the tree is built again (the line is laid out anew), a paint group after
-    // it in the line included.
-    rebuilt("document.getElementById('k').style.paddingLeft = '20px'", "an inline element's padding before a paint group");
-    rebuilt("document.getElementById('p').className = 'gone'", "a class whose rule sets display");
-    rebuilt("document.getElementById('box').style.position = 'absolute'", "position");
-    rebuilt("document.getElementById('bar').style.width = '20px'; document.getElementById('bar').style.cssFloat = 'left'", "width beside float");
+    // An inline element's geometry is its line's: its subtree is built again (the line is laid out anew), a paint group
+    // after it in the line included.
+    replaced("document.getElementById('k').style.paddingLeft = '20px'", "an inline element's padding before a paint group");
+    replaced("document.getElementById('p').className = 'gone'", "a class whose rule sets display");
+    replaced("document.getElementById('box').style.position = 'absolute'", "position");
+    replaced("document.getElementById('bar').style.width = '20px'; document.getElementById('bar').style.cssFloat = 'left'", "width beside float");
     CHECK_EQ(env.render().buildCount(), builds);
 }
 
@@ -456,28 +525,27 @@ WR_TEST(testPseudoContentPatchesBelowTheCaps) {
 }
 
 // Content a class change makes crosses the text-piece cap. A build makes pseudo-element content after all text, in
-// document order, so it cuts the later element's content; the patch made the earlier one's last and cut that instead.
-// The flush abandons the patch and rebuilds; once a build has hit the cap, the next change is not patched (freed pieces
-// would go to later content). Every flush equals a rebuild, limits included.
-WR_TEST(testPseudoContentAtTheCapRebuilds) {
+// document order, so it cuts the later element's content; the commit replays the style pass in that order (twidget
+// edit 84), so the patch cuts it there too. Every flush equals a rebuild, limits included.
+WR_TEST(testPseudoContentAtTheCapPatches) {
     const char* const sheet = ".x::before{content:\"a b c d e f g h i j k l m n o p q r s t u v w x y z\"}"
                               " .later::before{content:\"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z\"}";
-    int abandoned = 0;
+    int reached = 0;
     for (int words = 4920; words <= 5000; words += 4) {
         RenderEnv env(wordsPage(words, sheet, "<div id=d>t</div><div class=later>u</div>"));
         if (!env.render().renderLimits().empty()) {
             continue;
         }
         const uint64_t builds = env.render().buildCount();
-        const bool patched = flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "content past the cap");
-        if (!patched) {
-            CHECK_EQ(env.render().buildCount(), builds + 1);
-            CHECK_EQ(std::string(env.render().lastPatchRefusal()), std::string("abandoned: pseudo-element content at a cap"));
-            abandoned++;
-            CHECK(!flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'u'", "text after the cap"));
+        CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "content past the cap"));
+        CHECK_EQ(env.render().buildCount(), builds);
+        if (!env.render().renderLimits().empty()) {
+            reached++;
         }
+        CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'u'", "text after the cap"));
+        CHECK_EQ(env.render().buildCount(), builds);
     }
-    CHECK(abandoned > 0);
+    CHECK(reached > 0);
 }
 
 // A control makes its lh-* parts when it is matched again. Profile 1 drops the <input> (V4 plan, Task 4), so its type
@@ -508,10 +576,10 @@ WR_TEST(testPseudoRulesWithoutContentPatch) {
     }
 }
 
-// twidget edit 21: the style-byte budget. A document that has charged most of its budget keeps the rest for a rebuild: a
-// class patch whose restyle could pass the budget (every rule on every element of the restyled subtree) makes no patch,
-// and what the flush publishes is a rebuild's; one whose subtree's restyle fits patches. The same document with small
-// values patches.
+// twidget edit 21: the style-byte budget. A patch is charged exactly (what an element held is given back before it is
+// charged again), so a document that has charged most of its budget still patches a leaf's class and the body's; a
+// patch that really passes the budget replays the style pass in a build's order (twidget edit 84), so it cuts where a
+// fresh build does. The same document with small values patches.
 WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
     auto page = [](size_t listBytes) {
         std::string elements;
@@ -524,8 +592,8 @@ WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
             list += "color 1s,";
         }
         list.pop_back();
-        return "<!doctype html><style>*{transition:" + list + "} .x{color:#c00}</style><body><div id=d>t</div>" +
-               elements + "</body>";
+        return "<!doctype html><style>*{transition:" + list + "} .x{color:#c00} .big{transition:" + list + "," + list +
+               "}</style><body><div id=d>t</div>" + elements + "</body>";
     };
     // A list charging ~26 KB on each of ~400 elements: about 10 MB of the 16 MiB charged, below the budget, so the build is not cut.
     {
@@ -537,18 +605,22 @@ WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
         for (const std::string& limit : env.render().renderLimits()) {
             CHECK(limit != "style-bytes");
         }
-        // A leaf's restyle (the element and its subtree) fits in what is left: it patches, the predicate having walked
-        // the leaf and its text twice (the plan's question and the commit's: predicate_steps, charged).
+        // A leaf's class patches, and the predicate walks nothing for the budget.
         const uint64_t builds = env.render().buildCount();
         const uint64_t steps = env.render().document()->predicate_steps();
         CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "a leaf's class near the style budget"));
         CHECK_EQ(env.render().buildCount(), builds);
-        CHECK_EQ(env.render().document()->predicate_steps(), steps + 4);
-        // The body's restyle is every element's, which could pass it: no patch, the flush rebuilds.
-        const uint64_t patches = env.render().patchCount();
-        CHECK(!flushAgreesWithRebuild(env, "document.body.className = 'x'", "the body's class near the style budget"));
-        CHECK_EQ(env.render().patchCount(), patches);
-        CHECK_EQ(env.render().buildCount(), builds + 1);
+        // The predicate walks nothing for the budget.
+        CHECK_EQ(env.render().document()->predicate_steps(), steps);
+        // The body's restyle is every element's, each giving back what it held before it is charged again: it patches.
+        CHECK(flushAgreesWithRebuild(env, "document.body.className = 'x'", "the body's class near the style budget"));
+        CHECK_EQ(env.render().buildCount(), builds);
+        // Each <b> taking a list twice as long holds ~26 KB more, past the budget: the commit replays the style pass and
+        // charges it from zero in a build's order (twidget edit 84), so the patch cuts where a rebuild does.
+        CHECK(flushAgreesWithRebuild(env, "for (const b of document.querySelectorAll('b')) b.className = 'big'",
+                                     "every <b> past the style budget"));
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK(env.render().document()->style_bytes_limited());
     }
     // The control: values a hundred times smaller patch.
     {
@@ -556,13 +628,13 @@ WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
         const uint64_t builds = env.render().buildCount();
         CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "class far from the style budget"));
         CHECK_EQ(env.render().buildCount(), builds);
-        // The whole document fits: nothing is walked.
+        // Nothing is walked for the budget.
         CHECK_EQ(env.render().document()->predicate_steps(), uint64_t(0));
     }
 }
 
-// Ruling E51: the patch's estimate cannot see inline styles, so an insert whose elements' inline var() splices pass the
-// budget is abandoned for a rebuild after the fact, and what is published is the rebuild's.
+// Ruling E51 under twidget edit 84: no estimate sees inline styles, which are charged as styles are computed, so an insert
+// whose elements' inline var() splices pass the budget is replayed after the commit's restyle, as a build's style pass.
 WR_TEST(testInsertPastTheStyleBudgetByInlineStylesMatchesRebuild) {
     std::string value;
     while (value.size() < 600) {
@@ -578,27 +650,25 @@ WR_TEST(testInsertPastTheStyleBudgetByInlineStylesMatchesRebuild) {
     std::printf("style budget (inline): %zu of %zu bytes charged by the build\n", charged, size_t(litehtml::document::max_style_bytes));
     CHECK(charged > size_t(12) * 1024 * 1024);
     CHECK(charged < size_t(litehtml::document::max_style_bytes));
-    const uint64_t patches = env.render().patchCount();
     const uint64_t builds = env.render().buildCount();
-    CHECK(!flushAgreesWithRebuild(env,
-                                  "const d = document.getElementById('d'); for (let i = 0; i < 100; i++) { const e = document.createElement('b'); "
-                                  "e.setAttribute('style', '--y:var(--x)'); d.appendChild(e); }",
-                                  "inserts past the style budget"));
-    CHECK_EQ(std::string(env.render().lastPatchRefusal()), std::string("abandoned: the style budget was passed"));
-    CHECK_EQ(env.render().patchCount(), patches);
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK(flushAgreesWithRebuild(env,
+                                 "const d = document.getElementById('d'); for (let i = 0; i < 100; i++) { const e = document.createElement('b'); "
+                                 "e.setAttribute('style', '--y:var(--x)'); d.appendChild(e); }",
+                                 "inserts past the style budget"));
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK(env.render().document()->style_bytes_limited());
 }
 
-// The table-cell cap: a span change that would pass it rebuilds; below it patches.
-WR_TEST(testSpanChangeRespectsTheCellCap) {
+// The table-cell cap: a span change past it patches, as one below it does.
+WR_TEST(testSpanChangeCutsAtTheCellCap) {
     RenderEnv env("<!doctype html><body><table><tbody><tr><td colspan=1000 rowspan=199>a</td><td id=b>b</td></tr></tbody></table></body>");
     const uint64_t builds = env.render().buildCount();
     CHECK(flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('colspan', '1000')", "200,000 cells"));
     CHECK_EQ(env.render().buildCount(), builds);
-    CHECK(!flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('rowspan', '2')", "past the cap"));
-    CHECK_EQ(env.render().buildCount(), builds + 1);
-    // The build past the cap hit the limit, so the next change rebuilds too, and resumes patching after.
-    CHECK(!flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('colspan', '2')", "back under"));
+    // Past the cap: the commit recounts the cells from the root, as a build does (twidget edit 84).
+    CHECK(flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('rowspan', '2')", "past the cap"));
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK(flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('colspan', '2')", "back under"));
     CHECK(flushAgreesWithRebuild(env, "document.getElementById('b').removeAttribute('rowspan')", "limit gone"));
     CHECK(flushAgreesWithRebuild(env, "document.getElementById('b').setAttribute('colspan', '3')", "patching again"));
 }
@@ -647,4 +717,29 @@ WR_TEST(testFontSizeZeroPatchMatchesRebuild) {
         edit(env, "document.getElementById('c').setAttribute('style', 'font-size:4px')");
         expectMatchesRebuild(env, "a caption at font-size 4px");
     }
+}
+
+// twidget edit 77: a class on <html> that rules read in an ancestor position is one patch over the document, its reach
+// walked once; a descendant's display that flips with it is replaced and placed.
+WR_TEST(testARootClassPatches) {
+    std::string page = "<!doctype html><html><head><style>body{margin:0} .dark p{color:#eee} .big b{display:block}</style>"
+                       "</head><body>";
+    for (int i = 0; i < 600; i++) {
+        page += "<p>p <b>b</b></p>";
+    }
+    RenderEnv env(page + "</body></html>");
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    edit(env, "document.documentElement.className = 'dark'");
+    if (env.render().buildCount() != builds) {
+        std::printf("  rebuilt (%s)\n", env.render().lastPatchRefusal());
+    }
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    expectMatchesRebuild(env, "a theme class on <html>");
+    // A descendant's display flips: its subtree is replaced.
+    edit(env, "document.documentElement.className = 'dark big'");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), patches + 2);
+    expectMatchesRebuild(env, "a display flipped below <html>");
 }

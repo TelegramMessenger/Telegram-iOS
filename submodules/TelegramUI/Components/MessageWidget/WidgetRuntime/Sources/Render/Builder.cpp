@@ -1,4 +1,5 @@
 #include "Sources/Render/Builder.h"
+#include "Sources/Render/RenderCut.h"
 
 #include <algorithm>
 #include <string_view>
@@ -27,7 +28,7 @@ namespace wr {
 namespace {
 
 // Whether CSS text names a user-action pseudo-class, ASCII case-insensitively (M1d plan, Task 3). A false positive (in
-// a comment, a string) only costs a rebuild on a state change.
+// a comment, a string) only costs a patch on a state change.
 bool mentionsUserActionPseudo(const std::string& css) {
     static constexpr const char* kNames[] = {":hover", ":active", ":focus"};
     for (size_t i = 0; i < css.size(); i++) {
@@ -73,16 +74,8 @@ void syncUserActionState(JSContext* ctx, Element& element, litehtml::element& cr
 }
 
 
-// Ruling 7.
-constexpr size_t kMaxStyleText = 64 * 1024;
+// Ruling 7 (kMaxStyleText is Builder.h's).
 constexpr size_t kMaxStyleAttribute = 16 * 1024;
-// Ruling E9: litehtml and the layer tree cost about 10.4 KB per styled element (20,000 styled divs measured 153 MB of
-// litehtml and 55 MB of tree), so W renders half of litehtml's own 20,000.
-constexpr size_t kMaxElements = 10000;
-// Ruling E6: litehtml generates each control's parts outside its element and text caps (20,000 inputs measured 436 MB;
-// the corpus maximum is 19 controls). Profile 1 drops every control but <button> (V4 plan, Task 4), which is the one
-// counted, by the rendered tag.
-constexpr size_t kMaxFormControls = 256;
 
 char asciiLower(char c) {
     return c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;
@@ -289,7 +282,7 @@ bool isTextAttribute(std::string_view name) {
 }
 
 /// The one reading of an element's attributes for litehtml, the build's and the in-place patch's (Ruling 8: a patch
-/// must agree with a rebuild). Profile 1 decides what the renderer gets of each attribute (markup::renderAttribute, V4
+/// must agree with a fresh build). Profile 1 decides what the renderer gets of each attribute (markup::renderAttribute, V4
 /// plan, Task 5): one it drops by name is skipped before its value is read, and one whose output name repeats an
 /// earlier one is left out; a `style` over 16 KiB is left out (styleTooLong); the budget is kMaxRenderBytes counting
 /// the names and values read from `usedBefore` on, and the attribute that would pass it ends the scan (overBudget). A
@@ -448,36 +441,74 @@ class Builder {
 public:
     Builder(JSContext* ctx, WidgetContainer& container, RenderBuild& build)
         : m_ctx(ctx), m_rt(JS_GetRuntime(ctx)), m_state(DOMState::of(ctx)), m_container(container), m_build(build),
-          m_keepInput(container.options().keepRenderInput) {}
+          m_cut(RenderCutState{.nodes = 1}), m_keepInput(container.options().keepRenderInput), m_seen(size_t(0), std::hash<const Node*>(), std::equal_to<const Node*>(), JSAllocator<const Node*>(m_rt)) {}
+
+    /// The dry mode (renderCutDiff): the build's walk over the document, deciding and making nothing; `scratch` takes
+    /// what the walk would write to a build.
+    Builder(JSContext* ctx, WidgetContainer& container, RenderBuild& scratch, const RenderBuild& published,
+            const std::unordered_set<const Node*>& wanted, RenderCutDiff& diff, bool all)
+        : m_ctx(ctx), m_rt(JS_GetRuntime(ctx)), m_state(DOMState::of(ctx)), m_container(container), m_build(scratch),
+          m_cut(RenderCutState{.nodes = 1}), m_keepInput(false), m_seen(size_t(0), std::hash<const Node*>(), std::equal_to<const Node*>(), JSAllocator<const Node*>(m_rt)), m_dry(true), m_published(&published),
+          m_wanted(&wanted), m_diff(&diff), m_all(all) {}
 
     /// The subtree mode (Task 9): one node's subtree, built detached with the published document, within what the rest of
     /// the document uses of the limits.
     Builder(JSContext* ctx, WidgetContainer& container, const RenderSubtreePlace& place, RenderBuild& staging,
-            const RenderSubtreeTotals& totals, std::vector<litehtml::element::ptr>& roots)
+            const RenderSubtreeTotals& totals, std::vector<litehtml::element::ptr>& roots, bool applyCut)
         : m_ctx(ctx), m_rt(JS_GetRuntime(ctx)), m_state(DOMState::of(ctx)), m_container(container), m_build(staging),
-          m_keepInput(container.options().keepRenderInput), m_roots(&roots) {
+          m_cut(totals), m_keepInput(container.options().keepRenderInput), m_seen(size_t(0), std::hash<const Node*>(), std::equal_to<const Node*>(), JSAllocator<const Node*>(m_rt)), m_roots(&roots),
+          m_applyCut(applyCut) {
         m_doc = place.document;
         m_baseDepth = place.parentDepth;
-        m_bytes = totals.bytes;
-        m_units = totals.textUnits;
-        m_nodes = totals.nodes;
-        m_elements = totals.elements;
-        m_formControls = totals.formControls;
+        m_documentElement = place.documentElement;
         m_textSeq = totals.seq;
         // The parent's frame: the bottom of the stack, never closed. Its element is not built here.
         m_stack.push_back(Frame{place.parent, place.parentElement, std::string(), place.rawText, place.silent, nullptr});
     }
 
-    /// Builds `node`'s subtree; false where a fresh build would post a render limit inside it or meet a `<style>`.
+    /// Builds `node`'s subtree; false where a fresh build would post a render limit inside it.
     bool runSubtree(Node& node, RenderSubtreeTotals& totals) {
-        this->walk(node);
-        totals.bytes = m_bytes;
-        totals.textUnits = m_units;
-        totals.nodes = m_nodes;
-        totals.elements = m_elements;
-        totals.formControls = m_formControls;
+        // A subtree past the walk's stop (the byte budget's, the node cap's) is not walked, as a build does not reach it.
+        if (!(m_applyCut && m_cut.state().stopped)) {
+            this->walk(node);
+        }
+        for (const std::string& kind : m_cut.limits()) {
+            noteLimit(m_build.limits, kind);
+        }
+        static_cast<RenderCutState&>(totals) = m_cut.state();
         totals.seq = m_textSeq;
         return !m_refused;
+    }
+
+    /// The dry mode's walk, as run() walks: then the published entries it did not reach, and the wanted nodes it did not
+    /// visit.
+    void runDry() {
+        // Room for every node the walk can reach that has an entry, so the maps grow nothing as it goes.
+        m_seen.reserve(m_published->nodes.size() + m_wanted->size());
+        if (m_all) {
+            m_diff->nodes.reserve(m_published->nodes.size() + m_wanted->size());
+        }
+        if (Element* root = m_state.document().documentElementNode()) {
+            this->walk(*root);
+        }
+        if (!m_rootMade) {
+            // No document element, or none rendered: the empty html (Ruling 11), which litehtml counts.
+            m_cut.addLitehtmlElement();
+        }
+        for (const auto& [node, entry] : m_published->nodes) {
+            if (renders(entry) && !m_seen.count(node)) {
+                m_diff->nodes.push_back(RenderCutNode{node, RenderFate::Stopped, m_cut.state(), 0, {}, 0, true});
+                m_seen.insert(node);
+            }
+        }
+        for (const Node* node : *m_wanted) {
+            if (!m_seen.count(node)) {
+                m_diff->nodes.push_back(
+                    RenderCutNode{const_cast<Node*>(node), RenderFate::Unrendered, m_cut.state(), 0, {}, 0, false});
+            }
+        }
+        m_diff->limits = m_cut.limits();
+        m_diff->end = m_cut.state();
     }
 
     void run() {
@@ -497,14 +528,17 @@ public:
         if (!m_root) {
             // No document element, or none rendered: an empty html (Ruling 11). Nothing of the DOM maps to it.
             if (m_doc->external_element_allowed(0)) {
+                m_cut.addLitehtmlElement();
                 m_root = m_doc->create_element("html", litehtml::string_map());
                 m_build.boxes++;
             }
             this->append("<html></html>");
         }
         const std::string& hostCSS = m_container.options().hostCSS;
-        // Ruling E19: matching gets one selector-step budget for the whole build, litehtml's 4,000,000; cut there, it
-        // is the document's.
+        // Ruling E19: matching gets one selector-step budget for the whole build: the first build litehtml's 4,000,000,
+        // cut there as the document's (its first patch replays the style pass uncut, twidget edit 84); a test's fresh
+        // tree no cut.
+        const int64_t litehtmlCut = m_build.mayCutSteps ? litehtml::document::default_selector_steps : INT64_MAX / 2;
         int64_t used = 0;
         {
             struct Session {
@@ -512,16 +546,25 @@ public:
                 int64_t& used;
                 ~Session() { used = document.end_selector_steps(); }
             } session{*m_doc, used};
-            m_doc->begin_selector_steps(litehtml::document::default_selector_steps);
+            m_doc->begin_selector_steps(litehtmlCut);
             m_doc->finalize_from_external_root(m_root, masterWithHostCSS(hostCSS), "");
         }
         m_build.selectorSteps = used;
+        m_build.stepCut = used > litehtmlCut;
+        // Twidget edit 84: the first patch matches the whole document again, uncut, as a build with no cut would.
+        if (m_build.stepCut) {
+            m_doc->note_match_cut();
+        }
+        // The walk's limits in the order first hit, then what matching hit.
+        m_build.limits = m_cut.limits();
+        m_build.walkLimits = m_build.limits.size();
         collectContainerLimits(m_container, m_build.limits);
-        m_build.bytes = m_bytes;
-        m_build.textUnits = m_units;
-        m_build.nodeCount = m_nodes;
-        m_build.elementCount = m_elements;
-        m_build.formControlCount = m_formControls;
+        const RenderCutState& totals = m_cut.state();
+        m_build.bytes = totals.bytes;
+        m_build.textUnits = totals.units;
+        m_build.nodeCount = totals.nodes;
+        m_build.elementCount = totals.elements;
+        m_build.formControlCount = totals.formControls;
         m_build.nextSeq = m_textSeq;
     }
 
@@ -544,7 +587,13 @@ private:
     /// A subtree build: the bottom frame is the parent's, which this build neither opens nor closes.
     size_t baseFrames() const { return m_roots ? 1 : 0; }
 
-    /// What the build refuses in the subtree mode, where a full build would post a limit: the patch rebuilds.
+    /// Whether a cap refuses: in the subtree mode, unless it applies the cut (a patch walking the cut, RenderCut.h).
+    bool refusing() const { return m_roots && !m_applyCut; }
+    /// Whether litehtml's element and piece caps are this walk's to count (a subtree's are the fork's predicate's).
+    bool countsLitehtml() const { return !m_roots || m_applyCut; }
+
+    /// What the build refuses in the subtree mode, where a full build would post a limit: the patch walks the cut
+    /// instead (RenderCut.h).
     Step refuse() {
         m_refused = true;
         return Step::Stop;
@@ -553,14 +602,14 @@ private:
     /// Adds `count` nodes to the node count (RB §7.1 MAX_NODES); false once past kMaxRenderNodes, which a build notes and
     /// the subtree mode refuses: the walk stops.
     bool countNodes(size_t count) {
-        m_nodes += count;
-        if (m_nodes <= kMaxRenderNodes) {
+        if (m_cut.addNodes(count)) {
             return true;
         }
-        if (m_roots) {
+        if (this->refusing()) {
             this->refuse();
         } else {
-            noteLimit(m_build.limits, "nodes");
+            m_cut.note("nodes");
+            m_cut.stop();
         }
         return false;
     }
@@ -595,7 +644,8 @@ private:
                 this->close();
             }
             // Profile 1's node cap (V4 plan, Task 7), in tree order: every node the walk visits, and the ones under a node
-            // whose children it does not build.
+            // whose children it does not build. What the caps held before the node is its cut state (RenderCutNode).
+            const RenderCutState before = m_cut.state();
             if (!this->countNodes(1)) {
                 break;
             }
@@ -603,9 +653,9 @@ private:
             if (node != &root && m_stack.empty()) {
                 step = Step::SkipChildren;
             } else if (node->isElement()) {
-                step = this->element(static_cast<Element&>(*node));
+                step = this->element(static_cast<Element&>(*node), before);
             } else if (node->type() == NodeType::Text) {
-                step = this->text(static_cast<CharacterData&>(*node));
+                step = this->text(static_cast<CharacterData&>(*node), before);
             }
             if (step == Step::Stop) {
                 break;
@@ -653,73 +703,74 @@ private:
 
     const std::string& name(JSAtom atom) { return m_names.name(atom); }
 
-    size_t remainingBytes() const { return kMaxRenderBytes - m_bytes; }
-
-    Step element(Element& element) {
+    Step element(Element& element, const RenderCutState& before) {
         const markup::RenderTag rendered = tagOf(m_ctx, m_names, m_state, element);
         if (!rendered.rendered) {
+            this->decided(element, RenderFate::Unrendered, before);
             return Step::SkipChildren;
         }
-        // Which html, head and body are the document's own can move with the structure: rebuild.
-        if (m_roots && element.ns() == Namespace::HTML &&
-            (isRootName(rendered.tag) || isRootName(rendered.dataTgTag))) {
+        // Twidget edit 83: only what renders counts. An element its parent's own append refuses (a <div> or a <tr>
+        // straight under a <table>) renders nothing; it is asked first, so no limit counts it.
+        if (!m_stack.empty() && m_stack.back().element && !renderParentAccepts(*m_stack.back().element, rendered.tag)) {
+            this->decided(element, RenderFate::Unrendered, before);
+            return Step::SkipChildren;
+        }
+        // The document's own head or body (rendered as one) is built with its document element alone (flushRoot,
+        // twidget edit 82), which every change to which they are routes to; another one is an inert div or span.
+        if (m_roots && !m_documentElement && element.ns() == Namespace::HTML && isRootName(rendered.tag)) {
             return this->refuse();
         }
-        // W's limits are asked before litehtml's caps, so an element past one takes no slot of litehtml's.
-        if (m_elements >= kMaxElements) {
-            if (m_roots) {
-                return this->refuse();
-            }
-            noteLimit(m_build.limits, "elements");
-            return Step::SkipChildren;
-        }
+        // W's limits are asked before litehtml's caps, so an element past one takes no slot of litehtml's. The subtree
+        // mode asks litehtml's depth without counting (twidget edit 18 counts the elements it links).
         const bool formControl = isFormControl(rendered.tag);
-        if (formControl && m_formControls >= kMaxFormControls) {
-            if (m_roots) {
-                return this->refuse();
-            }
-            noteLimit(m_build.limits, "form-controls");
-            return Step::SkipChildren;
-        }
         const int depth = m_baseDepth + int(m_stack.size());
-        if (m_roots) {
-            // litehtml's depth cap, asked without counting (twidget edit 18 counts the elements it links).
-            if (depth >= litehtml::document::max_external_depth) {
+        if (const char* limit = m_cut.elementLimit(formControl, depth, this->countsLitehtml())) {
+            if (this->refusing()) {
                 return this->refuse();
             }
-        } else if (!m_doc->external_element_allowed(depth)) {
-            collectContainerLimits(m_container, m_build.limits);
+            m_cut.note(limit);
+            this->decided(element, RenderFate::Cut, before);
             return Step::SkipChildren;
         }
         // The render input's names and start tag only when it is kept (Ruling E11).
         const std::string tagName = m_keepInput ? rendered.tag : std::string();
         RenderAttributes scanned =
-            scanAttributes(m_ctx, m_names, m_state, element, rendered, m_bytes, m_units, m_keepInput);
-        if (m_roots && (scanned.styleTooLong || scanned.overBudget || scanned.textLeftOut)) {
+            scanAttributes(m_ctx, m_names, m_state, element, rendered, before.bytes, before.units, m_keepInput);
+        if (this->refusing() && (scanned.styleTooLong || scanned.overBudget || scanned.textLeftOut)) {
             return this->refuse();
         }
         if (scanned.overTextBudget && m_limits.stops) {
             stopForTextBudget(m_ctx);
         }
         if (scanned.styleTooLong) {
-            noteLimit(m_build.limits, "style-attribute");
+            m_cut.note("style-attribute");
         }
         if (scanned.textLeftOut) {
-            noteLimit(m_build.limits, "text-budget");
+            m_cut.note("text-budget");
         }
         if (scanned.overBudget) {
-            noteLimit(m_build.limits, "bytes");
+            m_cut.note("bytes");
+            m_cut.stop();
+            this->decided(element, RenderFate::Stopped, before);
             return Step::Stop;
         }
-        m_bytes += scanned.bytes;
-        m_units += scanned.units;
-        // limit.canvas-pixels (widget-sandbox v0.3.0): the canvases a build sees, width × height together; past
-        // Limits::canvasPixels the widget stops. A subtree with a canvas rebuilds, so a full build judges.
+        // litehtml counts it once it renders (only what renders counts): after its attributes fit the byte budget. It
+        // counts the same elements the cut does, so this does not refuse; its own answer goes.
+        if (!m_roots && !m_dry && !m_doc->external_element_allowed(depth)) {
+            m_cut.note(depth >= litehtml::document::max_external_depth ? "depth" : "elements");
+            return Step::SkipChildren;
+        }
+        m_cut.add(scanned.bytes, scanned.units);
+        m_cut.addElement(formControl, this->countsLitehtml());
+        // limit.canvas-pixels (widget-sandbox v0.3.0): the canvases a walk of the whole document sees (the boot's build,
+        // the cut walk's dry mode, a document element built again), width × height together; past Limits::canvasPixels the
+        // widget stops. A subtree outside the walk refuses one, so the patch walks the cut and the walk judges the document's.
         if (element.isHTMLElement() && element.localNameAtom() == m_state.name(Name::canvas)) {
-            if (m_roots) {
+            if (this->refusing()) {
                 return this->refuse();
             }
-            if (const auto* canvas = dynamic_cast<const HTMLCanvasElement*>(&element)) {
+            const auto* canvas = dynamic_cast<const HTMLCanvasElement*>(&element);
+            if (canvas && (!m_roots || m_documentElement)) {
                 m_canvasPixels += uint64_t(canvas->width(m_ctx)) * canvas->height(m_ctx);
                 if (m_limits.stops && m_limits.canvasPixels && m_canvasPixels > m_limits.canvasPixels) {
                     stopForLimit(m_ctx, "Canvas limit exceeded: canvases of " + std::to_string(m_canvasPixels) +
@@ -727,14 +778,21 @@ private:
                 }
             }
         }
+        if (m_dry) {
+            const uint32_t pieces = rendered.stylesheet ? this->styleSheet(element, nullptr, false, nullptr) : 0;
+            this->decided(element, RenderFate::Rendered, before, scanned.bytes, scanned.units, pieces);
+            if (m_stack.empty()) {
+                m_rootMade = true;
+            }
+            if (rendered.stylesheet) {
+                return Step::SkipChildren;
+            }
+            m_stack.push_back(Frame{&element, this->prototype(rendered.tag), std::string(), false, true, nullptr});
+            return Step::Descend;
+        }
         litehtml::string_map& attributes = scanned.map;
         const std::string startTag = m_keepInput ? "<" + tagName + scanned.text + ">" : std::string();
 
-        // A `<style>` in an inserted subtree is a document-level change (its sheet), which the fork refuses: rebuild
-        // before anything of it is made.
-        if (m_roots && rendered.stylesheet) {
-            return this->refuse();
-        }
         litehtml::element::ptr created = m_doc->create_element(rendered.tag.c_str(), attributes);
         syncUserActionState(m_ctx, element, *created);
         if (m_roots && m_stack.size() == 1) {
@@ -745,23 +803,12 @@ private:
         } else {
             const litehtml::element::ptr& parent = m_stack.back().element;
             m_doc->insert_child(parent, parent->children().size(), created);
-            if (created->parent() != parent) {
-                // litehtml counted it (external_element_allowed, or the patch's predicate through refusedElements).
-                m_build.refusedElements++;
-                // The parent's own appendChild refused it: a <table> takes its row groups and caption only (a <style>
-                // refuses too, and its children are not walked).
-                return Step::SkipChildren;
-            }
         }
         RenderEntry& entry = this->map(element, created);
         entry.bytes = scanned.bytes;
         entry.units = scanned.units;
         entry.seq = m_textSeq++;
         m_build.boxes++;
-        m_elements++;
-        if (formControl) {
-            m_formControls++;
-        }
         if (m_keepInput && !this->silent()) {
             // The start tag, for the in-place attribute patch (Task 8).
             entry.inputOffset = m_build.input.size();
@@ -774,7 +821,7 @@ private:
         const bool rawText = kept && element.isHTMLElement() && m_state.hasRawTextChildren(element.localNameAtom());
         if (rendered.stylesheet) {
             // litehtml makes every element named style an el_style, whatever its namespace.
-            this->styleSheet(element, created, rawText);
+            this->styleSheet(element, created, rawText, &entry);
             const std::string endTag = "</" + tagName + ">";
             this->append(endTag);
             if (entry.inputOffset != kNoRenderInput) {
@@ -794,146 +841,175 @@ private:
         return Step::Descend;
     }
 
-    /// The sheet of a `<style>` (Ruling 10), within the 64 KiB of `<style>` text (Ruling 7).
-    void styleSheet(Element& style, const litehtml::element::ptr& created, bool raw) {
-        // Its Text children's length first, so a sheet too long to apply is never copied or converted.
-        size_t units = 0;
-        for (size_t i = 0; i < style.childCount(); i++) {
-            Node* child = style.childAt(i);
-            if (child->type() == NodeType::Text) {
-                units += static_cast<CharacterData*>(child)->dataString(m_ctx).length();
+    /// The sheet of a `<style>` (Ruling 10), within the 64 KiB of `<style>` text (Ruling 7), its piece its entry's; the
+    /// pieces it made (one, or none when not applied). The subtree mode refuses where a build posts a limit, and makes
+    /// the piece without asking the cap (twidget edit 18 counts it); the 64 KiB there are the subtree's, which the patch
+    /// checks against the document's (edit 81). The dry mode decides and makes nothing.
+    uint32_t styleSheet(Element& style, const litehtml::element::ptr& created, bool raw, RenderEntry* entry) {
+        // limit.text-node (widget-sandbox v0.3.0): the sheet's text is one text value; past the cap the widget stops.
+        if (m_limits.stops) {
+            size_t units = 0;
+            for (size_t i = 0; i < style.childCount(); i++) {
+                Node* child = style.childAt(i);
+                if (child->type() == NodeType::Text) {
+                    units += static_cast<CharacterData*>(child)->dataString(m_ctx).length();
+                }
+            }
+            if (units > m_limits.textValueUnits) {
+                stopForTextValue(m_ctx, units);
             }
         }
-        // limit.text-node (widget-sandbox v0.3.0): the sheet's text is one text value; past the cap the widget stops.
-        if (m_limits.stops && units > m_limits.textValueUnits) {
-            stopForTextValue(m_ctx, units);
-        }
-        const size_t room = kMaxStyleText - m_cssBytes;
-        std::string utf8;
-        if (units > room) {
-            noteLimit(m_build.limits, "css");
-            return;
-        }
-        String sheet = childTextContent(m_ctx, style);
-        const bool fits = utf8AtMost(sheet, room, utf8);
-        if (!fits) {
-            noteLimit(m_build.limits, "css");
-            return;
+        RenderSheet sheet;
+        if (!renderStyleSheet(m_ctx, style, m_cut.cssRoom(), sheet)) {
+            if (this->refusing()) {
+                this->refuse();
+                return 0;
+            }
+            m_cut.note("css");
+            return 0;
         }
         // Profile 1's text budgets (V4 plan, Task 7; RB §7.2): the sheet's text, and the contents of its strings. A sheet
         // that does not fit is not applied, and counts nothing.
-        const TextUnits text = renderTextUnits(sheet);
-        const TextUnits strings = renderCssStringUnits(utf8);
-        const TextFit textFit = renderTextFit(m_limits, text, m_units);
-        const TextFit fit = textFit != TextFit::Fits ? textFit : renderTextFit(m_limits, strings, m_units + text);
+        const TextUnits units = m_cut.state().units;
+        const TextFit textFit = renderTextFit(m_limits, sheet.text, units);
+        const TextFit fit = textFit != TextFit::Fits ? textFit : renderTextFit(m_limits, sheet.strings, units + sheet.text);
         if (fit != TextFit::Fits) {
+            if (this->refusing()) {
+                this->refuse();
+                return 0;
+            }
             if (fit == TextFit::OverBudget && m_limits.stops) {
                 stopForTextBudget(m_ctx);
             }
-            noteLimit(m_build.limits, "text-budget");
-            return;
+            m_cut.note("text-budget");
+            return 0;
         }
-        m_units += text + strings;
-        if (utf8.empty()) {
-            return;
+        m_cut.addUnits(sheet.text + sheet.strings);
+        if (m_dry) {
+            if (sheet.utf8.empty() || m_cut.keepPieces(1) == 0) {
+                return 0;
+            }
+            m_cut.addCss(sheet.utf8.size());
+            return 1;
         }
-        // limit.css-rules (widget-sandbox v0.3.0): the document's sheets hold at most Limits::cssRules style rules and
-        // Limits::cssKeyframes @keyframes, counted as upstream's validator counts them, over each sheet as written; past
-        // either the widget stops before the sheet is parsed. The scan is over the UTF-8 converted above.
-        if (m_limits.stops && (m_limits.cssRules || m_limits.cssKeyframes)) {
-            const CSSRuleCount count = countCssRules(utf8);
-            m_cssRules += count.rules;
-            m_cssKeyframes += count.keyframes;
-            if (m_limits.cssRules && m_cssRules > m_limits.cssRules) {
-                stopForLimit(m_ctx, "CSS limit exceeded: " + std::to_string(m_cssRules) + " rules in the document's stylesheets (max " +
-                                        std::to_string(m_limits.cssRules) + ")");
-            }
-            if (m_limits.cssKeyframes && m_cssKeyframes > m_limits.cssKeyframes) {
-                stopForLimit(m_ctx, "CSS limit exceeded: " + std::to_string(m_cssKeyframes) +
-                                        " @keyframes in the document's stylesheets (max " + std::to_string(m_limits.cssKeyframes) + ")");
-            }
+        // limit.css-rules (widget-sandbox v0.3.0): counted over the sheets a walk of the whole document applies (the
+        // boot's build, a document element built again); a patch's sheets are the plan's to count (RenderTree::planSheets).
+        if (!m_roots || m_documentElement) {
+            renderCountCssRules(m_ctx, m_limits, sheet.utf8, m_cssRules, m_cssKeyframes);
         }
         std::vector<litehtml::element::ptr> pieces;
-        m_doc->append_text(created, utf8.c_str(), pieces);
-        collectContainerLimits(m_container, m_build.limits);
-        if (pieces.empty()) {
-            return;
+        if (!sheet.utf8.empty()) {
+            if (m_roots && m_applyCut && m_cut.keepPieces(1) == 0) {
+                // Past the piece cap, as append_text would refuse it: the sheet is not applied.
+            } else if (m_roots) {
+                m_doc->make_text_pieces(created, sheet.utf8.c_str(), pieces);
+                for (const litehtml::element::ptr& piece : pieces) {
+                    created->appendChild(piece);
+                }
+                if (!m_applyCut) {
+                    m_cut.addPieces(pieces.size());
+                }
+            } else {
+                if (!m_doc->append_text(created, sheet.utf8.c_str(), pieces)) {
+                    m_cut.note("text-pieces");
+                }
+                m_cut.addPieces(pieces.size());
+            }
+            if (pieces.empty()) {
+                sheet.utf8.clear();
+            } else {
+                m_cut.addCss(sheet.utf8.size());
+                m_build.styleSheets.push_back(sheet.utf8);
+                if (!m_build.usesUserActionPseudo) {
+                    m_build.usesUserActionPseudo = mentionsUserActionPseudo(sheet.utf8);
+                }
+                entry->pieces.reserve(pieces.size());
+                for (const litehtml::element::ptr& piece : pieces) {
+                    m_build.elements.emplace(piece.get(), &style);
+                    entry->pieces.push_back(piece);
+                }
+                m_build.boxes += pieces.size();
+                this->appendText(sheet.utf8, raw);
+            }
         }
-        m_cssBytes += utf8.size();
-        m_build.styleSheets.push_back(utf8);
-        if (!m_build.usesUserActionPseudo) {
-            m_build.usesUserActionPseudo = mentionsUserActionPseudo(utf8);
-        }
-        for (const litehtml::element::ptr& piece : pieces) {
-            m_build.elements.emplace(piece.get(), &style);
-        }
-        m_build.boxes += pieces.size();
-        this->appendText(utf8, raw);
+        m_build.sheets.insert_or_assign(&style, std::move(sheet));
+        return uint32_t(pieces.size());
     }
 
-    Step text(CharacterData& text) {
+    Step text(CharacterData& text, const RenderCutState& before) {
         Frame& parent = m_stack.back();
         String data = text.dataString(m_ctx);
         // Profile 1's text limits (V4 plan, Task 7; RB §7.1): a Text over Limits::textValueUnits, or one the document's text
         // budgets have no room left for, is mapped and renders nothing; the walk goes on.
         const TextUnits units = renderTextUnits(data);
-        const TextFit fit = renderTextFit(m_limits, units, m_units);
+        const TextFit fit = renderTextFit(m_limits, units, before.units);
         if (fit != TextFit::Fits) {
             // widget-sandbox v0.3.0: under strict a value past its cap stops the widget, and so does the document's text
-            // past its budget once a full build counts it (a patch's count is its own part's).
+            // past its budget where a build counts it (a subtree's count is its own part's).
             if (fit == TextFit::ValueTooLong && m_limits.stops) {
                 stopForTextValue(m_ctx, units.units);
             }
-            if (m_roots) {
+            if (this->refusing()) {
                 return this->refuse();
             }
             if (fit == TextFit::OverBudget && m_limits.stops) {
                 stopForTextBudget(m_ctx);
             }
-            noteLimit(m_build.limits, fit == TextFit::ValueTooLong ? "text-node" : "text-budget");
+            m_cut.note(fit == TextFit::ValueTooLong ? "text-node" : "text-budget");
+            if (m_dry) {
+                this->decided(text, RenderFate::Cut, before);
+                return Step::SkipChildren;
+            }
             RenderEntry& entry = this->map(text, nullptr);
             entry.seq = m_textSeq++;
             return Step::SkipChildren;
         }
         std::string utf8;
-        if (!utf8AtMost(data, this->remainingBytes(), utf8)) {
-            if (m_roots) {
+        if (!utf8AtMost(data, m_cut.remainingBytes(), utf8)) {
+            if (this->refusing()) {
                 return this->refuse();
             }
-            noteLimit(m_build.limits, "bytes");
+            m_cut.note("bytes");
+            m_cut.stop();
+            this->decided(text, RenderFate::Stopped, before);
             return Step::Stop;
         }
-        m_bytes += utf8.size();
-        m_units += units;
+        m_cut.add(utf8.size(), units);
+        const bool takesText = !parent.element || parent.element->accepts_text();
+        if (m_dry) {
+            const uint32_t pieces = takesText ? m_cut.keepPieces(this->countPieces(*parent.element, utf8)) : 0;
+            this->decided(text, RenderFate::Rendered, before, utf8.size(), units, pieces);
+            return Step::SkipChildren;
+        }
         std::vector<litehtml::element::ptr> pieces;
         bool all = true;
-        if (m_roots) {
-            // Made without asking the cap (twidget edit 18 counts them); the parent's own appendChild decides, as
-            // append_text's does, except under the parent of the subtree, which nothing here attaches to.
-            std::vector<litehtml::element::ptr> made;
-            m_doc->make_text_pieces(parent.element, utf8.c_str(), made);
-            for (const litehtml::element::ptr& piece : made) {
+        if (!takesText) {
+            // Twidget edit 83: a parent that takes no text (a <table>'s whitespace): in the render input, and its bytes
+            // and units count, but litehtml holds nothing, so its piece cap is not asked.
+        } else if (m_roots) {
+            // Made without asking the cap (twidget edit 18 counts them), except under the parent of the subtree, which
+            // nothing here attaches to. Applying the cut, the pieces past the cap go, as append_text would not make them.
+            m_doc->make_text_pieces(parent.element, utf8.c_str(), pieces);
+            if (m_applyCut) {
+                const uint32_t kept = m_cut.keepPieces(uint32_t(pieces.size()));
+                all = kept == pieces.size();
+                pieces.resize(kept);
+            } else {
+                m_cut.addPieces(pieces.size());
+            }
+            for (const litehtml::element::ptr& piece : pieces) {
                 if (m_stack.size() == 1) {
-                    pieces.push_back(piece);
                     m_roots->push_back(piece);
                 } else {
                     m_doc->insert_child(parent.element, parent.element->children().size(), piece);
-                    if (piece->parent() == parent.element) {
-                        pieces.push_back(piece);
-                    } else {
-                        m_build.refusedPieces++;
-                    }
                 }
             }
         } else {
             all = m_doc->append_text(parent.element, utf8.c_str(), pieces);
             if (!all) {
-                collectContainerLimits(m_container, m_build.limits);
+                m_cut.note("text-pieces");
             }
-            // A <table> takes no Text: append_text asked the piece cap for each piece it then could not append.
-            if (!utf8.empty() && parent.element && parent.element->tag() == litehtml::_table_) {
-                m_build.refusedPieces++;
-            }
+            m_cut.addPieces(pieces.size());
         }
         RenderEntry& entry = this->map(text, nullptr);
         entry.bytes = utf8.size();
@@ -964,6 +1040,60 @@ private:
         return Step::SkipChildren;
     }
 
+    /// The pieces append_text makes of `utf8` under `parent`: one under a raw-text parent, else the container's split's
+    /// words and spaces.
+    uint32_t countPieces(const litehtml::element& parent, const std::string& utf8) {
+        if (parent.tag() == litehtml::_style_ || parent.tag() == litehtml::_script_) {
+            return 1;
+        }
+        uint32_t count = 0;
+        m_container.split_text(utf8.c_str(), [&](const char*) { count++; }, [&](const char*) { count++; });
+        return count;
+    }
+
+    /// The dry mode's: one element of litehtml's for each rendered tag, never linked, standing for a parent whose
+    /// acceptance and raw text the walk asks.
+    litehtml::element::ptr prototype(const std::string& tag) {
+        auto found = m_prototypes.find(tag);
+        if (found != m_prototypes.end()) {
+            return found->second;
+        }
+        if (!m_scratch) {
+            m_scratch = std::make_shared<litehtml::document>(&m_container);
+        }
+        litehtml::element::ptr made = m_scratch->create_element(tag.c_str(), litehtml::string_map());
+        m_prototypes.emplace(tag, made);
+        return made;
+    }
+
+    /// Whether a published entry renders something a fresh build that leaves its node out would not have: an element,
+    /// pieces, or a place in the render input (a Text under a parent that takes no text: twidget edit 83).
+    static bool renders(const RenderEntry& entry) {
+        return entry.element || !entry.pieces.empty() || entry.inputOffset != kNoRenderInput;
+    }
+
+    /// The dry mode's record of a node's decision: kept when it differs from the published entry, or is wanted.
+    void decided(Node& node, RenderFate fate, const RenderCutState& before, size_t bytes = 0, TextUnits units = {},
+                 uint32_t pieces = 0) {
+        if (!m_dry) {
+            return;
+        }
+        auto found = m_published->nodes.find(&node);
+        const bool mapped = found != m_published->nodes.end();
+        bool differs;
+        if (fate == RenderFate::Rendered) {
+            differs = !mapped || bool(found->second.element) != node.isElement() || found->second.bytes != bytes ||
+                      found->second.units.units != units.units || found->second.units.complex != units.complex ||
+                      found->second.pieces.size() != pieces;
+        } else {
+            differs = mapped && renders(found->second);
+        }
+        if (differs || m_all || m_wanted->count(&node)) {
+            m_diff->nodes.push_back(RenderCutNode{&node, fate, before, bytes, units, pieces, differs});
+        }
+        m_seen.insert(&node);
+    }
+
     RenderEntry& map(Node& node, litehtml::element::ptr element) {
         if (element) {
             m_build.elements.emplace(element.get(), &node);
@@ -985,26 +1115,33 @@ private:
     /// The open elements, the root first: at most litehtml's depth cap deep.
     std::vector<Frame> m_stack;
     AtomNames m_names{m_ctx};
-    /// The render byte budget used, and the `<style>` text applied (Ruling 7).
-    size_t m_bytes = 0;
-    size_t m_cssBytes = 0;
+    /// What the walk has used of the caps, and the limits it hit (RenderCut.h); the nodes counted from the document node.
+    RenderCut m_cut;
     /// The pixels of the canvases built so far (limit.canvas-pixels).
     uint64_t m_canvasPixels = 0;
     /// The style rules and @keyframes of the sheets applied so far (limit.css-rules).
     size_t m_cssRules = 0;
     size_t m_cssKeyframes = 0;
-    /// Profile 1's text units counted, and the nodes counted from the document node on (V4 plan, Task 7).
-    TextUnits m_units;
-    size_t m_nodes = 1;
-    /// The elements and the form controls rendered (Rulings E9 and E6).
-    size_t m_elements = 0;
-    size_t m_formControls = 0;
     /// The Text entries made so far (RenderEntry::seq).
     uint32_t m_textSeq = 0;
     const bool m_keepInput;
+    /// The dry mode's: the nodes it decided or recorded; whether it rendered a root; the published build it compares
+    /// with, the wanted nodes and its answer; the prototypes of its parents' elements, made with a scratch document.
+    std::unordered_set<const Node*, std::hash<const Node*>, std::equal_to<const Node*>, JSAllocator<const Node*>> m_seen;
+    bool m_dry = false;
+    bool m_rootMade = false;
+    const RenderBuild* m_published = nullptr;
+    const std::unordered_set<const Node*>* m_wanted = nullptr;
+    RenderCutDiff* m_diff = nullptr;
+    bool m_all = false;
+    litehtml::document::ptr m_scratch;
+    std::unordered_map<std::string, litehtml::element::ptr> m_prototypes;
     /// The subtree mode's: where the roots go, the parent's depth, and whether a limit refused the subtree.
     std::vector<litehtml::element::ptr>* m_roots = nullptr;
+    /// The subtree mode's: whether it cuts at the caps as a build does instead of refusing (RenderCut.h).
+    bool m_applyCut = false;
     int m_baseDepth = 0;
+    bool m_documentElement = false;
     bool m_refused = false;
 };
 
@@ -1021,19 +1158,21 @@ void RenderBuild::swap(RenderBuild& other) noexcept {
     elements.swap(other.elements);
     input.swap(other.input);
     limits.swap(other.limits);
+    std::swap(walkLimits, other.walkLimits);
     std::swap(boxes, other.boxes);
     std::swap(naturalWidth, other.naturalWidth);
     std::swap(usesUserActionPseudo, other.usesUserActionPseudo);
     styleSheets.swap(other.styleSheets);
+    sheets.swap(other.sheets);
     std::swap(bytes, other.bytes);
     std::swap(textUnits, other.textUnits);
     std::swap(nodeCount, other.nodeCount);
     std::swap(elementCount, other.elementCount);
     std::swap(formControlCount, other.formControlCount);
     std::swap(nextSeq, other.nextSeq);
-    std::swap(refusedElements, other.refusedElements);
-    std::swap(refusedPieces, other.refusedPieces);
     std::swap(selectorSteps, other.selectorSteps);
+    std::swap(mayCutSteps, other.mayCutSteps);
+    std::swap(stepCut, other.stepCut);
 }
 
 TextUnits renderTextUnits(const String& s) {
@@ -1133,6 +1272,50 @@ bool renderUtf8AtMost(const String& s, size_t maxBytes, std::string& out) {
     return utf8AtMost(s, maxBytes, out);
 }
 
+void renderCountCssRules(JSContext* ctx, const Limits& limits, const std::string& sheet, size_t& rules, size_t& keyframes) {
+    if (!limits.stops || (!limits.cssRules && !limits.cssKeyframes)) {
+        return;
+    }
+    const CSSRuleCount count = countCssRules(sheet);
+    rules += count.rules;
+    keyframes += count.keyframes;
+    if (limits.cssRules && rules > limits.cssRules) {
+        stopForLimit(ctx, "CSS limit exceeded: " + std::to_string(rules) + " rules in the document's stylesheets (max " +
+                              std::to_string(limits.cssRules) + ")");
+    }
+    if (limits.cssKeyframes && keyframes > limits.cssKeyframes) {
+        stopForLimit(ctx, "CSS limit exceeded: " + std::to_string(keyframes) + " @keyframes in the document's stylesheets (max " +
+                              std::to_string(limits.cssKeyframes) + ")");
+    }
+}
+
+bool renderStyleSheet(JSContext* ctx, Element& style, size_t room, RenderSheet& sheet) {
+    // Its Text children's length first, so a sheet too long to apply is never copied or converted.
+    size_t units = 0;
+    for (size_t i = 0; i < style.childCount(); i++) {
+        Node* child = style.childAt(i);
+        if (child->type() == NodeType::Text) {
+            units += static_cast<CharacterData*>(child)->dataString(ctx).length();
+        }
+    }
+    sheet.length = units;
+    if (units > room) {
+        return false;
+    }
+    String text = childTextContent(ctx, style);
+    const bool fits = utf8AtMost(text, room, sheet.utf8);
+    if (!fits) {
+        return false;
+    }
+    sheet.text = renderTextUnits(text);
+    sheet.strings = renderCssStringUnits(sheet.utf8);
+    return true;
+}
+
+bool renderMentionsUserActionPseudo(const std::string& css) {
+    return mentionsUserActionPseudo(css);
+}
+
 std::string renderEscapedText(std::string_view utf8) {
     std::string out;
     appendEscaped(out, utf8, false);
@@ -1144,8 +1327,56 @@ void buildDocument(JSContext* ctx, WidgetContainer& container, RenderBuild& buil
 }
 
 bool buildRenderSubtree(JSContext* ctx, WidgetContainer& container, const RenderSubtreePlace& place, Node& node,
-                        RenderBuild& staging, RenderSubtreeTotals& totals, std::vector<litehtml::element::ptr>& roots) {
-    return Builder(ctx, container, place, staging, totals, roots).runSubtree(node, totals);
+                        RenderBuild& staging, RenderSubtreeTotals& totals, std::vector<litehtml::element::ptr>& roots,
+                        bool applyCut) {
+    return Builder(ctx, container, place, staging, totals, roots, applyCut).runSubtree(node, totals);
+}
+
+bool buildRenderRoot(JSContext* ctx, WidgetContainer& container, litehtml::document& document, RenderBuild& staging,
+                     RenderSubtreeTotals& totals, litehtml::element::ptr& root) {
+    Document& dom = DOMState::of(ctx).document();
+    RenderSubtreePlace place;
+    place.document = &document;
+    place.parent = &dom;
+    place.parentDepth = -1;
+    place.documentElement = true;
+    // Everything else goes: the limits count from the document node alone, as a build's.
+    totals = RenderSubtreeTotals{};
+    totals.nodes = 1;
+    std::vector<litehtml::element::ptr> roots;
+    if (Element* element = dom.documentElementNode()) {
+        if (!Builder(ctx, container, place, staging, totals, roots, true).runSubtree(*element, totals)) {
+            return false;
+        }
+    }
+    if (roots.empty()) {
+        // No document element, or none rendered: an empty html (Ruling 11). Nothing of the DOM maps to it.
+        totals.litehtmlElements++;
+        roots.push_back(document.create_element("html", litehtml::string_map()));
+        staging.boxes++;
+        if (container.options().keepRenderInput) {
+            staging.input.append("<html></html>");
+        }
+    }
+    root = roots.front();
+    return true;
+}
+
+RenderCutDiff renderCutDiff(JSContext* ctx, WidgetContainer& container, const RenderBuild& published,
+                            const std::unordered_set<const Node*>& wanted, bool all) {
+    RenderCutDiff diff(JS_GetRuntime(ctx));
+    RenderBuild scratch(ctx);
+    Builder(ctx, container, scratch, published, wanted, diff, all).runDry();
+    return diff;
+}
+
+bool renderParentAccepts(const litehtml::element& parent, const std::string& tag) {
+    litehtml::string_id id;
+    // A name litehtml never interned is none of the tags a parent restricts its children to.
+    if (!litehtml::_find_id(tag, id)) {
+        id = litehtml::empty_id;
+    }
+    return parent.accepts_child(id);
 }
 
 bool renderIsFormControl(const char* tag) {

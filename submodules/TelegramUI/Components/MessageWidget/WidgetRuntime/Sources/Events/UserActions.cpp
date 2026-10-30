@@ -77,10 +77,11 @@ bool isInclusiveAncestor(const Node& ancestor, const Node* node) {
     return false;
 }
 
-void noteRender(JSContext* ctx) {
+// `anchor` and its inclusive ancestors may have changed state (RenderTree::userActionStateChanged).
+void noteRender(JSContext* ctx, Element* anchor) {
     if (HostState* host = HostState::find(ctx)) {
         if (RenderTree* render = host->render()) {
-            render->userActionStateChanged();
+            render->userActionStateChanged(anchor);
         }
     }
 }
@@ -203,8 +204,10 @@ void UserActions::setHover(JSContext* ctx, Element* hover) {
     if (m_hover.get() == hover) {
         return;
     }
+    const Ref<Element> old = std::move(m_hover);
     m_hover = hover ? Ref<Element>::retain(ctx, hover) : Ref<Element>();
-    noteRender(ctx);
+    noteRender(ctx, old.get());
+    noteRender(ctx, hover);
 }
 
 void UserActions::addActive(JSContext* ctx, Element* element, uint64_t press) {
@@ -212,7 +215,7 @@ void UserActions::addActive(JSContext* ctx, Element* element, uint64_t press) {
         return;
     }
     m_active.push_back(Active{press, Ref<Element>::retain(ctx, element)});
-    noteRender(ctx);
+    noteRender(ctx, element);
 }
 
 void UserActions::removeActive(JSContext* ctx, uint64_t press) {
@@ -220,11 +223,12 @@ void UserActions::removeActive(JSContext* ctx, uint64_t press) {
     if (it == m_active.end()) {
         return;
     }
+    const Ref<Element> element = std::move(it->element);
     m_active.erase(it);
-    noteRender(ctx);
+    noteRender(ctx, element.get());
 }
 
-void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
+void UserActions::nodeRemoved(JSContext* ctx, Node& node, Node& oldParent) {
     bool changed = false;
     if (m_hover && isInclusiveAncestor(node, m_hover.get())) {
         m_hover = Ref<Element>();
@@ -236,7 +240,7 @@ void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
                    m_active.end());
     changed = changed || m_active.size() != before;
     if (changed) {
-        noteRender(ctx);
+        noteRender(ctx, oldParent.isElement() ? static_cast<Element*>(&oldParent) : nullptr);
     }
 }
 

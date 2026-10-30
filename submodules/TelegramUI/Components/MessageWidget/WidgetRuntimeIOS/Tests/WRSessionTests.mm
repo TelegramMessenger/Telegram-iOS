@@ -1,6 +1,7 @@
 // The session facade (M1d plan, Task 7): boot, steps, taps, the bridge, the stops, the source cap, the failure latch
 // and teardown, through the Objective-C surface Swift calls.
 #import <XCTest/XCTest.h>
+#import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
 #import <WidgetRuntimeIOS/WRSession.h>
 
@@ -76,6 +77,25 @@ std::vector<uint8_t> colourAt(WRTree* tree, CGFloat x, CGFloat y) {
     CGColorSpaceRelease(space);
     CGImageRelease(image);
     return pixel;
+}
+
+// A data: PNG URL of a `size` × `size` image filled with the colour (red, 0x40, 0x80).
+NSString* solidPngURL(size_t size, uint8_t red) {
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(nullptr, size, size, 8, 4 * size, space, kCGImageAlphaPremultipliedLast);
+    CGContextSetRGBFillColor(ctx, red / 255.0, 0x40 / 255.0, 0x80 / 255.0, 1);
+    CGContextFillRect(ctx, CGRectMake(0, 0, size, size));
+    CGImageRef image = CGBitmapContextCreateImage(ctx);
+    NSMutableData* data = [NSMutableData data];
+    CGImageDestinationRef destination =
+        CGImageDestinationCreateWithData((__bridge CFMutableDataRef)data, CFSTR("public.png"), 1, nullptr);
+    CGImageDestinationAddImage(destination, image, nullptr);
+    CGImageDestinationFinalize(destination);
+    CFRelease(destination);
+    CGImageRelease(image);
+    CGContextRelease(ctx);
+    CGColorSpaceRelease(space);
+    return [@"data:image/png;base64," stringByAppendingString:[data base64EncodedStringWithOptions:0]];
 }
 
 void drain(WRSession* session) {
@@ -759,6 +779,25 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     XCTAssertFalse(session.failed);
     XCTAssertEqual(session.stopReason, WRStopReasonNone);
     XCTAssertEqualObjects([session evaluateForTesting:@"String(s)"], @"44999850000");
+}
+
+/// The container's caches follow the document at every flush (Step 4d of the incremental render): an <img> whose source
+/// takes 200 different 512×512 PNGs, a flush each, keeps alive no more decoded pixels than it shows, so the last still
+/// decodes within the session's 24 MiB: it is drawn, and no load is refused.
+- (void)testCyclingImagesStayWithinTheDecodedBudget {
+    WRSession* session = [self sessionWith:[WRRecordingDelegate new]];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><body style=\"margin:0\">"
+                                            "<img id=i style=\"display:block;width:100px;height:100px\"></body></html>"]);
+    for (int n = 0; n < 200; n++) {
+        NSString* code =
+            [NSString stringWithFormat:@"document.getElementById('i').src = '%@'; 'ok'", solidPngURL(512, uint8_t(n))];
+        XCTAssertEqualObjects([session evaluateForTesting:code], @"ok");
+    }
+    XCTAssertEqual(session.refusedLoads, 0u);
+    std::vector<uint8_t> pixel = colourAt([session tree], 50, 50);
+    XCTAssertEqualWithAccuracy(pixel[0], 199, 2);
+    XCTAssertEqualWithAccuracy(pixel[1], 0x40, 2);
+    XCTAssertEqual(pixel[3], 255);
 }
 
 @end
