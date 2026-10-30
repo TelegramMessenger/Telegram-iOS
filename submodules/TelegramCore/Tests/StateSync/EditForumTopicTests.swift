@@ -54,6 +54,30 @@ final class EditForumTopicTests: StateSyncTestCase {
         return peerId
     }
 
+    /// `messageService#7a800e0a` in forum `channelId`, in topic `topicId` (`reply_to` flags.3 with `forum_topic`
+    /// flags.3 and `reply_to_msg_id` flags.4: a topic edit's thread is its reply target, StoreMessage_Telegram.swift),
+    /// with `messageActionTopicEdit#c0944820` carrying the given fields under the update's flags.
+    private func topicEditServiceMessage(id: Int32, channelId: Int64, topicId: Int32, title: String? = nil, iconEmojiId: Int64? = nil, closed: Bool? = nil) -> Api.Message {
+        var actionFlags: Int32 = 0
+        if title != nil {
+            actionFlags |= 1 << 0
+        }
+        if iconEmojiId != nil {
+            actionFlags |= 1 << 1
+        }
+        if closed != nil {
+            actionFlags |= 1 << 2
+        }
+        let replyHeader: Api.MessageReplyHeader = .messageReplyHeader(.init(flags: (1 << 3) | (1 << 4), replyToMsgId: topicId, replyToPeerId: nil, replyFrom: nil, replyMedia: nil, replyToTopId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
+        let action: Api.MessageAction = .messageActionTopicEdit(.init(flags: actionFlags, title: title, iconEmojiId: iconEmojiId, closed: closed.map { $0 ? .boolTrue : .boolFalse }, hidden: nil))
+        return .messageService(.init(flags: 1 << 3, id: id, fromId: nil, peerId: StateSyncApi.peerChannel(channelId), savedPeerId: nil, replyTo: replyHeader, date: self.baseDate + 2, action: action, reactions: nil, ttlPeriod: nil))
+    }
+
+    /// A reply target the batch's resolution asks for (the topic's root, here) is answered empty.
+    private func answerReplyTargetsEmpty() {
+        self.server.always(Name.channelsGetMessages, { _ in .result(StateSyncApi.channelMessages(pts: 50, [])) })
+    }
+
     private func push(_ update: Api.Update) {
         self.server.push(StateSyncApi.updates([update], date: self.baseDate + 2, seq: 0))
         self.drainOperationQueue()
@@ -94,6 +118,10 @@ final class EditForumTopicTests: StateSyncTestCase {
         XCTAssertEqual(data?.isHidden, false)
 
         self.push(self.updateEditForumTopic(peer: StateSyncApi.peerChannel(341), topicId: 5, closed: true, hidden: true))
+        data = self.topic(peerId: forum, threadId: 5)
+        XCTAssertEqual(data?.isClosed, true)
+        XCTAssertEqual(data?.isHidden, true)
+
         self.push(self.updateEditForumTopic(peer: StateSyncApi.peerChannel(341), topicId: 5, closed: false, hidden: false))
 
         data = self.topic(peerId: forum, threadId: 5)
@@ -135,6 +163,47 @@ final class EditForumTopicTests: StateSyncTestCase {
         XCTAssertNil(self.topic(peerId: forum, threadId: 9))
         XCTAssertEqual(self.server.requestNames, [Name.getDifference])
         XCTAssertEqual(self.isUpdating.values, [true, false])
+    }
+
+    /// A group's title, closed or hidden edit also comes as a `messageActionTopicEdit` in the topic, which edits the
+    /// stored info through the same replay as the update (`applyEditForumTopic`). The icon id 0 removes the icon there
+    /// too.
+    func testTopicEditServiceMessageEditsTheTopic() {
+        let forum = self.seedForumGroup(344)
+        self.seedTopic(peerId: forum, threadId: 5, messageId: 20)
+        self.launchIdle()
+        self.answerReplyTargetsEmpty()
+
+        self.push(StateSyncApi.updateNewChannelMessage(self.topicEditServiceMessage(id: 21, channelId: 344, topicId: 5, title: "Renamed", iconEmojiId: 0), pts: 51))
+
+        XCTAssertNotNil(self.fixture.message(self.messageId(forum, 21)), "the service message was not stored")
+        let data = self.topic(peerId: forum, threadId: 5)
+        XCTAssertEqual(data?.info.title, "Renamed")
+        XCTAssertNil(data?.info.icon)
+        XCTAssertEqual(data?.isClosed, false)
+        XCTAssertEqual(self.fixture.channelState(forum)?.pts, 51)
+    }
+
+    /// The server sends both for a group's title or closed edit, possibly in one batch: the second application finds
+    /// the info already edited and leaves it so.
+    func testServiceMessageAndUpdateInOneBatchLeaveTheSameInfo() {
+        let forum = self.seedForumGroup(345)
+        self.seedTopic(peerId: forum, threadId: 5, messageId: 20)
+        self.launchIdle()
+        self.answerReplyTargetsEmpty()
+
+        self.server.push(StateSyncApi.updates([
+            StateSyncApi.updateNewChannelMessage(self.topicEditServiceMessage(id: 21, channelId: 345, topicId: 5, title: "Renamed", closed: true), pts: 51),
+            self.updateEditForumTopic(peer: StateSyncApi.peerChannel(345), topicId: 5, title: "Renamed", closed: true)
+        ], date: self.baseDate + 2, seq: 0))
+        self.drainOperationQueue()
+
+        XCTAssertNotNil(self.fixture.message(self.messageId(forum, 21)))
+        let data = self.topic(peerId: forum, threadId: 5)
+        XCTAssertEqual(data?.info.title, "Renamed")
+        XCTAssertEqual(data?.info.icon, 777)
+        XCTAssertEqual(data?.isClosed, true)
+        XCTAssertEqual(data?.isHidden, false)
     }
 
     /// From a difference's `other_updates` as from a push.

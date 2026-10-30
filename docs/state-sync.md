@@ -273,7 +273,8 @@ date; for a difference its `other_updates` order) and hands `updatedState` and `
 handed: on the push path the snapshot with the sequencing's chats, users and state advances applied, on the difference
 path with the difference's state, chats, users and messages added. Its channel states are still the snapshot's, which is
 all `updateChannelTooLong` reads from it. `UpdateInterpreter.init` requests a hint-less poll for every
-`channelsToPollExplicitely`. `apply(_:)` has 115 case labels (one covers two constructors) and `default: break`; each
+`channelsToPollExplicitely`. `apply(_:)` has 115 compiled case labels (117 in the source, two parked; one covers two
+constructors) and `default: break`; each
 calls one method in a family: Bots 5, Calls 7, Channels 8, ChatList 9, Messages 23, Payments 11, Peers 18, ReadStates
 12, Settings 14, Stories 4, Typing 4 (`grep -c 'mutating func apply' Sources/State/Sync/UpdateInterpreter+*`, which
 also counts `applyAgentSettings` and `applyReadFeed`: those two and their labels are parked with the agent and feed

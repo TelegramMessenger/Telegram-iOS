@@ -209,7 +209,8 @@ top), so the post goes in above the first row, under the header, and the search 
 
 ## The tab without the server's feed (2026-10-23)
 
-`isNewsFeedEnabled` (the tab, Add to News) is `dev || news_feed_enabled`: dev accounts always, any other account
+`isNewsFeedEnabled` (the tab, Add to News) is `dev || news_feed_enabled` while the feed API is compiled in (parked,
+above): dev accounts always, any other account
 only when the server sends the switch true or nonzero (missing means off). The server's feed is a separate question,
 `isNewsFeedServerAvailable`: `dev == 1`, unless the same switch is false or 0 (for dev it stays a kill switch). The server grants
 `dev` per authorization and only to sessions created by the official app: a build signed with a personal team
