@@ -686,7 +686,6 @@ private enum DebugControllerSection: Int32 {
     case sticker
     case experiments
     case translation
-    case web
     case videoExperiments2
     case info
     case profiling
@@ -723,7 +722,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetCacheIndex
     case reindexCache
     case resetBiometricsData(PresentationTheme)
-    case webViewInspection(Bool)
     case resetWebViewCache(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
@@ -743,6 +741,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case insertWidgetGames
     case mediaGridLegacy(Bool)
     case sharedMediaGridLegacy(Bool)
+    case storyLegacyVideoWriter(Bool)
+    case chatLegacyVideoWriter(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
     case videoMessageCameraMode(ExperimentalUISettings.VideoMessageCameraMode)
@@ -789,15 +789,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logs.rawValue
-        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases, .removeDownloadedModels:
+        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases, .removeDownloadedModels, .resetWebViewCache:
             return DebugControllerSection.resetApp.rawValue
-        case .webViewInspection, .resetWebViewCache:
-            return DebugControllerSection.web.rawValue
         case .experimentsHeader, .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -836,8 +834,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 12
         case .crashReports:
             return 2
-        case .webViewInspection:
-            return 70
         case .resetWebViewCache:
             return 71
         case .keepChatNavigationStack:
@@ -966,6 +962,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 79
         case .sharedMediaGridLegacy:
             return 80
+        case .storyLegacyVideoWriter:
+            return 81
+        case .chatLegacyVideoWriter:
+            return 82
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1007,6 +1007,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .optimizeDatabase: return 11
         case .restorePurchases: return 12
         case .removeDownloadedModels: return 13
+        case .resetWebViewCache: return 14
         default: return self.stableId
         }
     }
@@ -1191,21 +1192,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: "All secret chats will be lost."),
-                    ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        let databasePath = context.account.basePath + "/postbox/db"
-                        let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                        exit(0)
-                    }),
-                    ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                arguments.presentController(actionSheet, nil)
+                let controller = AlertScreen(
+                    configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                    text: "All secret chats will be lost.",
+                    actions: [
+                        .init(title: "Clear Database", type: .defaultDestructive, action: {
+                            let databasePath = context.account.basePath + "/postbox/db"
+                            let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                            exit(0)
+                        }),
+                        .init(title: presentationData.strings.Common_Cancel)
+                    ],
+                    updatedPresentationData: (presentationData, arguments.sharedContext.presentationData)
+                )
+                arguments.presentController(controller, nil)
             })
         case .resetDatabaseAndCache:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Clear Database and Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1213,21 +1213,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: "All secret chats will be lost."),
-                    ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        let databasePath = context.account.basePath + "/postbox"
-                        let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                        exit(0)
-                    }),
-                    ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                arguments.presentController(actionSheet, nil)
+                let controller = AlertScreen(
+                    configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                    text: "All secret chats will be lost.",
+                    actions: [
+                        .init(title: "Clear Database", type: .defaultDestructive, action: {
+                            let databasePath = context.account.basePath + "/postbox"
+                            let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                            exit(0)
+                        }),
+                        .init(title: presentationData.strings.Common_Cancel)
+                    ],
+                    updatedPresentationData: (presentationData, arguments.sharedContext.presentationData)
+                )
+                arguments.presentController(controller, nil)
             })
         case .resetHoles:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1320,14 +1319,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
-                }).start()
-            })
-        case let .webViewInspection(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Allow Web View Inspection", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
-                    var settings = settings
-                    settings.allowWebViewInspection = value
-                    return settings
                 }).start()
             })
         case .resetWebViewCache:
@@ -1499,6 +1490,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .storyLegacyVideoWriter(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Stories: legacy video writer", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.storyLegacyVideoWriter = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .chatLegacyVideoWriter(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat videos: legacy video writer", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.chatLegacyVideoWriter = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .springSendAnimation(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: spring send animation", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1573,13 +1584,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case let .videoMessageCameraMode(value):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: "Video Message Camera", label: value.debugTitle, sectionId: self.section, style: .blocks, action: {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                var items: [ActionSheetItem] = [
-                    ActionSheetTextItem(title: "Reopen the camera to apply. VGA and HD use the Modern Video Message Pipeline and record 480×480 at 30 FPS.")
-                ]
+                var actions: [AlertScreen.Action] = []
                 for mode in ExperimentalUISettings.VideoMessageCameraMode.allCases {
-                    items.append(ActionSheetButtonItem(title: mode.debugTitle, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    actions.append(.init(title: mode.debugTitle, action: {
                         let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                             var settings = settings
                             settings.useModernVideoMessagePipeline = mode != .legacy
@@ -1588,15 +1595,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         }).start()
                     }))
                 }
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                arguments.presentController(actionSheet, nil)
+                actions.append(.init(title: presentationData.strings.Common_Cancel))
+                let controller = AlertScreen(
+                    configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                    text: "Reopen the camera to apply. VGA and HD use the Modern Video Message Pipeline and record 480×480 at 30 FPS.",
+                    actions: actions,
+                    updatedPresentationData: (presentationData, arguments.sharedContext.presentationData)
+                )
+                arguments.presentController(controller, nil)
             })
         case let .browserExperiment(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Inline UI", value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -1804,10 +1810,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                var items: [ActionSheetItem] = [
-                    ActionSheetTextItem(title: "The pts total limit sent with updates.getDifference, from the next poll on (debug builds only). A small value makes a short offline gap answer differenceTooLong, so the account goes through a real reset.", parseMarkdown: false)
-                ]
+                var actions: [AlertScreen.Action] = []
                 let options: [(title: String, value: Int32?)] = [
                     ("App config", nil),
                     ("10", 10),
@@ -1816,8 +1819,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ("No limit", 0)
                 ]
                 for option in options {
-                    items.append(ActionSheetButtonItem(title: option.title, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    actions.append(.init(title: option.title, action: {
                         let _ = updateStateSyncDebugSettings(engine: context.engine, { settings in
                             var settings = settings
                             settings.ptsTotalLimitOverride = option.value
@@ -1825,15 +1827,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         }).start()
                     }))
                 }
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                arguments.presentController(actionSheet, nil)
+                actions.append(.init(title: presentationData.strings.Common_Cancel))
+                let controller = AlertScreen(
+                    configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                    text: "The pts total limit sent with updates.getDifference, from the next poll on (debug builds only). A small value makes a short offline gap answer differenceTooLong, so the account goes through a real reset.",
+                    actions: actions,
+                    updatedPresentationData: (presentationData, arguments.sharedContext.presentationData)
+                )
+                arguments.presentController(controller, nil)
             })
         case .restorePurchases:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Restore Purchases", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1905,14 +1906,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let _ = (Logger(rootPath: logsPath, basePath: logsPath).collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                    let actionSheet = ActionSheetController(presentationData: presentationData)
-
-                    var items: [ActionSheetButtonItem] = []
+                    var actions: [AlertScreen.Action] = []
 
                     if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
-                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-
+                        actions.append(.init(title: "Via Telegram", action: {
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                             controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
@@ -1962,9 +1959,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             arguments.pushController(controller)
                         }))
                     }
-                    items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-
+                    actions.append(.init(title: "Via Email", action: {
                         let composeController = MFMailComposeViewController()
                         composeController.mailComposeDelegate = arguments.mailComposeDelegate
                         composeController.setSubject("Telegram CPU Profiles")
@@ -1976,12 +1971,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         arguments.getRootController()?.present(composeController, animated: true, completion: nil)
                     }))
 
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                    arguments.presentController(actionSheet, nil)
+                    actions.append(.init(title: presentationData.strings.Common_Cancel))
+                    let controller = AlertScreen(
+                        configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                        content: [
+                            AnyComponentWithIdentity(id: "title", component: AnyComponent(AlertTitleComponent(title: "Send Profile Logs")))
+                        ],
+                        actions: actions,
+                        updatedPresentationData: (presentationData, arguments.sharedContext.presentationData)
+                    )
+                    arguments.presentController(controller, nil)
                 })
             })
         }
@@ -2029,6 +2028,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
     if isMainApp {
         entries.append(.restorePurchases(presentationData.theme))
         entries.append(.removeDownloadedModels)
+        entries.append(.resetWebViewCache(presentationData.theme))
     }
 
     entries.append(.experimentsHeader(presentationData.theme))
@@ -2116,15 +2116,14 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.insertWidgetGames)
         entries.append(.mediaGridLegacy(experimentalSettings.mediaGridLegacy))
         entries.append(.sharedMediaGridLegacy(experimentalSettings.sharedMediaGridLegacy))
+        entries.append(.storyLegacyVideoWriter(experimentalSettings.storyLegacyVideoWriter))
+        entries.append(.chatLegacyVideoWriter(experimentalSettings.chatLegacyVideoWriter))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
     }
 
     if isMainApp {
-        entries.append(.webViewInspection(experimentalSettings.allowWebViewInspection))
-        entries.append(.resetWebViewCache(presentationData.theme))
-
         entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
         entries.append(.enableNetworkFramework(networkSettings?.useNetworkFramework ?? useBetaFeatures))
         entries.append(.enableNetworkExperiments(networkSettings?.useExperimentalDownload ?? true))
