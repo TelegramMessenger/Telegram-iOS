@@ -69,6 +69,25 @@ public enum ChatTitleLeadingIcon: Equatable {
     case peer(EnginePeer, imageOverride: AvatarNodeImageOverride?)
 }
 
+/// The wrapper a navigation transition is lent the pill's contents in (`lendGlassPillContent`). The title lays them out
+/// about its centre, and the transition gives it the size of the capsule it makes, which can come after the title's last
+/// layout (lent at the wide pill a chat header has before its right button, the capsule made at the narrow one): it keeps
+/// them on its centre whatever size it is given, instead of half a width change off the pill until the hand-over.
+private final class ChatTitleGlassPillContentWrapperView: UIView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let center = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
+        for subview in self.subviews {
+            subview.center = center
+        }
+    }
+}
+
+func makeChatTitleGlassPillContentWrapper(size: CGSize) -> UIView {
+    return ChatTitleGlassPillContentWrapperView(frame: CGRect(origin: CGPoint(), size: size))
+}
+
 public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTitleView {
     private final class ContentData: Equatable {
         let context: AccountContext
@@ -468,7 +487,7 @@ public final class ChatTitleComponent: Component {
             if let current = self.lentContentWrapper {
                 return current
             }
-            let wrapper = UIView(frame: CGRect(origin: CGPoint(), size: frame.size))
+            let wrapper = makeChatTitleGlassPillContentWrapper(size: frame.size)
             wrapper.isUserInteractionEnabled = false
             wrapper.addSubview(self.contentContainer)
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: frame.size)
