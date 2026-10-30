@@ -22,7 +22,7 @@ public extension RestrictedContentMessageAttribute {
             if rule.reason == "sensitive" {
                 continue
             }
-            if rule.platform == "all" || rule.platform == "ios" || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
+            if rule.appliesTo(platform: platform, contentSettings: contentSettings) {
                 if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                     return rule.text
                 }

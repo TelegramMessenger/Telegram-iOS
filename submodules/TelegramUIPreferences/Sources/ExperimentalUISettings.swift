@@ -84,6 +84,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var debugRipple: Bool
     public var useInputDecEngine: Bool
     public var coreListChatBackend: Bool
+    public var coreListScrollTrace: Bool
     public var chatMediaEditorLegacy: Bool
     public var mediaGridLegacy: Bool
     public var sharedMediaGridLegacy: Bool
@@ -150,6 +151,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             debugRipple: false,
             useInputDecEngine: false,
             coreListChatBackend: false,
+            coreListScrollTrace: false,
             chatMediaEditorLegacy: false,
             mediaGridLegacy: false,
             sharedMediaGridLegacy: false,
@@ -214,6 +216,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         debugRipple: Bool,
         useInputDecEngine: Bool,
         coreListChatBackend: Bool,
+        coreListScrollTrace: Bool,
         chatMediaEditorLegacy: Bool,
         mediaGridLegacy: Bool,
         sharedMediaGridLegacy: Bool,
@@ -276,6 +279,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.debugRipple = debugRipple
         self.useInputDecEngine = useInputDecEngine
         self.coreListChatBackend = coreListChatBackend
+        self.coreListScrollTrace = coreListScrollTrace
         self.chatMediaEditorLegacy = chatMediaEditorLegacy
         self.mediaGridLegacy = mediaGridLegacy
         self.sharedMediaGridLegacy = sharedMediaGridLegacy
@@ -344,6 +348,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         // decode failure here would reset every other experimental flag the user has set.
         self.useInputDecEngine = try container.decodeIfPresent(Bool.self, forKey: "useInputDecEngine") ?? false
         self.coreListChatBackend = try container.decodeIfPresent(Bool.self, forKey: "coreListChatBackend") ?? false
+        self.coreListScrollTrace = try container.decodeIfPresent(Bool.self, forKey: "coreListScrollTrace") ?? false
         self.chatMediaEditorLegacy = try container.decodeIfPresent(Bool.self, forKey: "chatMediaEditorLegacy") ?? false
         self.mediaGridLegacy = try container.decodeIfPresent(Bool.self, forKey: "mediaGridLegacy") ?? false
         self.sharedMediaGridLegacy = try container.decodeIfPresent(Bool.self, forKey: "sharedMediaGridLegacy") ?? false
@@ -410,6 +415,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.debugRipple, forKey: "debugRipple")
         try container.encodeIfPresent(self.useInputDecEngine, forKey: "useInputDecEngine")
         try container.encodeIfPresent(self.coreListChatBackend, forKey: "coreListChatBackend")
+        try container.encodeIfPresent(self.coreListScrollTrace, forKey: "coreListScrollTrace")
         try container.encodeIfPresent(self.chatMediaEditorLegacy, forKey: "chatMediaEditorLegacy")
         try container.encodeIfPresent(self.mediaGridLegacy, forKey: "mediaGridLegacy")
         try container.encodeIfPresent(self.sharedMediaGridLegacy, forKey: "sharedMediaGridLegacy")

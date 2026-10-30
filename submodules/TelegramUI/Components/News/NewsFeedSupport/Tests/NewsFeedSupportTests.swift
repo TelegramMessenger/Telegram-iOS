@@ -170,7 +170,7 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertNil(newsNewestFullyVisiblePosition(rows: rows, viewport: viewport))
     }
 
-    // MARK: dev gate and kill switch
+    // MARK: dev gate and the news_feed_enabled switch
 
     private func configuration(_ value: JSON?, dev: Double? = 1.0) -> AppConfiguration {
         var configuration = AppConfiguration.defaultValue
@@ -187,24 +187,34 @@ final class NewsFeedSupportTests: XCTestCase {
         return configuration
     }
 
-    func testNewsIsForDevOnly() {
+    func testServerFeedIsForDevOnly() {
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: AppConfiguration.defaultValue))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: nil)))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 0.0)))
+        XCTAssertTrue(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0)))
+        // The kill switch alone does not enable it.
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(.bool(true), dev: nil)))
+    }
+
+    func testNewsIsForDevOrTheSwitch() {
         XCTAssertFalse(isNewsFeedEnabled(appConfiguration: AppConfiguration.defaultValue))
         XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: nil)))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 0.0)))
         XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0)))
-        // The kill switch alone does not enable it.
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil)))
+        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(false), dev: 1.0)))
     }
 
-    func testKillSwitchFollowsABool() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(false))))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true))))
+    func testSwitchFollowsABool() {
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(false), dev: nil)))
+        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil)))
+        // For dev accounts it is the server feed's kill switch.
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(.bool(false), dev: 1.0)))
     }
 
-    func testKillSwitchParsesNumbersAndIgnoresOtherTypes() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.number(0.0))))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.number(1.0))))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.string("false"))))
+    func testSwitchParsesNumbersAndIgnoresOtherTypes() {
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.number(0.0), dev: nil)))
+        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(.number(1.0), dev: nil)))
+        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.string("true"), dev: nil)))
+        XCTAssertTrue(isNewsFeedServerAvailable(appConfiguration: self.configuration(.string("false"), dev: 1.0)))
     }
 
     // MARK: preview text

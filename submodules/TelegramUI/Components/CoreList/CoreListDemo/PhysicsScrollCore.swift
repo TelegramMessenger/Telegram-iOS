@@ -67,6 +67,8 @@ final class PhysicsScrollCore {
     var decelerationVelocityScale: CGFloat { physics.y.vScale }
     var decelerationStreakCount: Int { release.streakCount }
     var decelerationStreakReset: String { release.lastResetReason }
+    /// The repeated-flick multiplier the next release would carry (`_fastScrollMultiplier`). Diagnostic.
+    var decelerationStreakMultiplier: CGFloat { release.multiplier }
     /// The release velocity the current deceleration is running on (pts/ms). Diagnostic: it makes two
     /// hand-made gestures comparable, since expected travel is a known function of it.
     var decelerationVelocity: CGFloat { physics.y.velocity }

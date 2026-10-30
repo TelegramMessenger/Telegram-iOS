@@ -67,8 +67,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         let dateTimeFormat: PresentationDateTimeFormat
         let nameDisplayOrder: PresentationPersonNameOrder
         let content: ChatTitleContent
+        let labelsWithoutGlass: Bool
         
-        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent) {
+        init(context: AccountContext, theme: PresentationTheme, preferClearGlass: Bool, wallpaper: TelegramWallpaper, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, content: ChatTitleContent, labelsWithoutGlass: Bool) {
             self.context = context
             self.theme = theme
             self.preferClearGlass = preferClearGlass
@@ -77,6 +78,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             self.dateTimeFormat = dateTimeFormat
             self.nameDisplayOrder = nameDisplayOrder
             self.content = content
+            self.labelsWithoutGlass = labelsWithoutGlass
         }
         
         static func ==(lhs: ContentData, rhs: ContentData) -> Bool {
@@ -102,6 +104,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                 return false
             }
             if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.labelsWithoutGlass != rhs.labelsWithoutGlass {
                 return false
             }
             return true
@@ -186,6 +191,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
         dateTimeFormat: PresentationDateTimeFormat,
         nameDisplayOrder: PresentationPersonNameOrder,
         content: ChatTitleContent,
+        labelsWithoutGlass: Bool = false,
         transition: ComponentTransition,
         ignoreParentTransitionRequests: Bool = false
     ) -> Bool {
@@ -198,7 +204,8 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             strings: strings,
             dateTimeFormat: dateTimeFormat,
             nameDisplayOrder: nameDisplayOrder,
-            content: content
+            content: content,
+            labelsWithoutGlass: labelsWithoutGlass
         )
         let isUpdated = self.contentData != contentData
         self.contentData = contentData
@@ -245,6 +252,7 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
                     nameDisplayOrder: contentData.nameDisplayOrder,
                     displayBackground: displayBackground,
                     content: contentData.content,
+                    labelsWithoutGlass: contentData.labelsWithoutGlass,
                     activities: self.activities,
                     networkState: self.networkState,
                     tapped: { [weak self] in
@@ -285,6 +293,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
     }
 }
 
+
+/// How far a tap on the chat title may drift (UIKit's own tap tolerance) before it is not a tap.
+private let chatTitleTapMovement: CGFloat = 10.0
 public final class ChatTitleComponent: Component {
     public struct Activities: Equatable {
         public struct Item: Equatable {
@@ -314,6 +325,9 @@ public final class ChatTitleComponent: Component {
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let displayBackground: Bool
     public let content: ChatTitleContent
+    /// Bubble mode off: a title that is only a label (how many messages are selected, forward options…) is not a
+    /// button, so it stands without the glass a tappable title has.
+    public let labelsWithoutGlass: Bool
     public let activities: Activities?
     public let networkState: AccountNetworkState?
     public let tapped: () -> Void
@@ -328,6 +342,7 @@ public final class ChatTitleComponent: Component {
         nameDisplayOrder: PresentationPersonNameOrder,
         displayBackground: Bool,
         content: ChatTitleContent,
+        labelsWithoutGlass: Bool = false,
         activities: Activities?,
         networkState: AccountNetworkState?,
         tapped: @escaping () -> Void,
@@ -341,6 +356,7 @@ public final class ChatTitleComponent: Component {
         self.nameDisplayOrder = nameDisplayOrder
         self.displayBackground = displayBackground
         self.content = content
+        self.labelsWithoutGlass = labelsWithoutGlass
         self.activities = activities
         self.networkState = networkState
         self.tapped = tapped
@@ -369,6 +385,9 @@ public final class ChatTitleComponent: Component {
         if lhs.displayBackground != rhs.displayBackground {
             return false
         }
+        if lhs.labelsWithoutGlass != rhs.labelsWithoutGlass {
+            return false
+        }
         if lhs.content != rhs.content {
             return false
         }
@@ -381,7 +400,12 @@ public final class ChatTitleComponent: Component {
         return true
     }
     
-    public final class View: UIView {
+    public final class View: UIView, InteractiveTransitionGestureRecognizerTapTarget {
+        // A tap on the title may drift this far, and a back swipe that starts on it takes the touch only past it.
+        public var interactiveTransitionMinimumMovement: CGFloat {
+            return chatTitleTapMovement
+        }
+        
         private var backgroundView: GlassBackgroundView?
         private let contentContainer: UIView
         /// While a navigation transition draws the pill, the pill is hidden and what it shows is lent to the transition
@@ -536,6 +560,10 @@ public final class ChatTitleComponent: Component {
             recognizer.tapActionAtPoint = { _ in
                 return .waitForSingleTap
             }
+            // The title is not in a scrolling list: a tap may drift as far as UIKit's own (`chatTitleTapMovement`). With the
+            // recognizer's 2pt, and the back swipe taking a touch after 2pt to the right, a finger that moved 3pt lost the
+            // tap, and the profile opened only some of the time.
+            recognizer.maximumTapMovement = chatTitleTapMovement
             self.contentContainer.addGestureRecognizer(recognizer)
         }
         
@@ -573,6 +601,7 @@ public final class ChatTitleComponent: Component {
             var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
             var titleVerifiedIcon: ChatTitleCredibilityIcon = .none
             var titleStatusIcon: ChatTitleCredibilityIcon = .none
+            var hidesGlass = false
             var isEnabled = true
             switch component.content {
             case let .peer(peerView, customTitle, _, _, isScheduledMessages, isMuted, _, hidePeerStatus, isEnabledValue):
@@ -813,6 +842,7 @@ public final class ChatTitleComponent: Component {
                     )
                 }
                 isEnabled = enabled
+                hidesGlass = component.labelsWithoutGlass && !enabled
             }
             
             var accessibilityText = ""
@@ -1437,7 +1467,7 @@ public final class ChatTitleComponent: Component {
                     backgroundView.isHidden = self.isGlassPillDetached || self.lentExpansionLabels != nil
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
-                backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, transition: transition)
+                backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, isVisible: !hidesGlass, transition: transition)
                 // Not while a transition has it (`lendGlassPillContent`, `lendExpansionLabels`): the transition places it.
                 if self.lentContentWrapper == nil && self.lentExpansionLabels == nil {
                     transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))

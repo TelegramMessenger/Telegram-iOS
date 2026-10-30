@@ -70,7 +70,7 @@ extension ChatMediaEditorScreen.Node {
 
         if let editView = self.coverEditView {
             transition.updateFrame(view: editView, frame: CGRect(origin: .zero, size: layout.size))
-            let editLayout = chatMediaEditorCoverEditLayout(size: layout.size, safeInsets: safeInsets, titleSize: editView.titleLabel.bounds.size, cancelSize: editView.cancelButton.bounds.size)
+            let editLayout = chatMediaEditorCoverEditLayout(size: layout.size, safeInsets: safeInsets, titleSize: editView.titleLabel.bounds.size, cancelSize: editView.cancelButton.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout))
             transition.updateFrame(view: editView.titleLabel, frame: editLayout.titleFrame)
             transition.updateFrame(view: editView.cancelButton, frame: editLayout.cancelFrame)
             transition.updateFrame(view: editView.saveButton, frame: editLayout.saveFrame)

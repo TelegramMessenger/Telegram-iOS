@@ -6,6 +6,8 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ContactListUI
+import ContextUI
 import ShareController
 import AlertUI
 import PresentationDataUtils
@@ -32,11 +34,13 @@ public class ComposeControllerImpl: ViewController, ComposeController {
     private var presentationDataDisposable: Disposable?
     
     private var searchContentNode: NavigationBarSearchContentNode?
+    private let sortButton: ContactsSortButton
     
     public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.sortButton = ContactsSortButton(presentationData: self.presentationData)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -48,6 +52,15 @@ public class ComposeControllerImpl: ViewController, ComposeController {
         self.title = self.presentationData.strings.Compose_NewMessage
                 
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        // Sort on the left, the close button on the right.
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.sortButton)
+        self.navigationItem.leftBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_Sort
+        self.sortButton.addTarget(self, action: #selector(self.sortPressed), forControlEvents: .touchUpInside)
+        self.sortButton.contextAction = { [weak self] sourceNode, gesture in
+            self?.presentSortMenu(sourceView: sourceNode.view, gesture: gesture)
+        }
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Navigation/Close")?.withRenderingMode(.alwaysTemplate), style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Close
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -93,6 +106,20 @@ public class ComposeControllerImpl: ViewController, ComposeController {
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Compose_NewMessage
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.sortButton.update(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Navigation/Close")?.withRenderingMode(.alwaysTemplate), style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Close
+    }
+    
+    @objc private func sortPressed() {
+        self.sortButton.contextAction?(self.sortButton.containerNode, nil)
+    }
+    
+    private func presentSortMenu(sourceView: UIView, gesture: ContextGesture?) {
+        // The menu morphs out of the bar's capsule around the button, as the Contacts screen's does.
+        let sourceView = self.navigationBar?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView
+        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(ComposeSortReferenceContentSource(controller: self, sourceView: sourceView)), items: contactsSortMenuItems(context: self.context, presentationData: self.presentationData) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        self.presentInGlobalOverlay(contextController)
     }
     
     override public func loadDisplayNode() {
@@ -315,5 +342,19 @@ public class ComposeControllerImpl: ViewController, ComposeController {
     
     @objc private func cancelPressed() {
         (self.navigationController as? NavigationController)?.filterController(self, animated: true)
+    }
+}
+
+private final class ComposeSortReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

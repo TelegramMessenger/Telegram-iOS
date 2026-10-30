@@ -62,8 +62,11 @@ public struct ChatMessageMergeFingerprint: Equatable {
     let hasPaidStars: Bool
     let mediaMergeStyle: Int32
     let hasInlineReplyMarkup: Bool
+    /// Bubble mode off only (nil with bubbles, so nothing is scanned there): what the message's media makes it, which
+    /// the bubble-free run rule and the spacing next to it read.
+    public let bubblelessMediaKind: ChatMessageMediaKind?
 
-    public init(message: EngineRawMessage, accountPeerId: EnginePeer.Id) {
+    public init(message: EngineRawMessage, accountPeerId: EnginePeer.Id, bubbleless: Bool = false) {
         self.peerId = message.id.peerId
         self.isEphemeral = Namespaces.Message.allEphemeral.contains(message.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(message.id.namespace)
         self.isWelcomeMessage = Namespaces.Message.allWelcomeMessages.contains(message.id.namespace)
@@ -145,6 +148,12 @@ public struct ChatMessageMergeFingerprint: Equatable {
             }
         }
         self.hasInlineReplyMarkup = hasInlineReplyMarkup
+        self.bubblelessMediaKind = bubbleless ? chatMessageMediaKind(message) : nil
+    }
+    
+    /// Bubble mode off: whether the message keeps its bubble, as an outgoing message other than a service one does.
+    public var keepsBubbleWithoutBubbleMode: Bool {
+        return !self.isEffectivelyIncoming && self.bubblelessMediaKind != .service
     }
 }
 
@@ -259,4 +268,43 @@ public func chatMessageMerge(upper: ChatMessageMergeFingerprint,
     }
 
     return .none
+}
+
+/// Bubble mode off: how far apart one author's messages may be and still read as one run (the avatar header combines by
+/// the same interval).
+public let chatMessageBubblelessRunInterval: Int32 = 10 * 60
+
+/// Bubble mode off groups incoming messages the way their avatar headers combine: same author, same chat, less than
+/// `chatMessageBubblelessRunInterval` apart, whatever media they carry, because there is no bubble shape for a round
+/// video or a keyboard to break. Pairs the regular rule keeps apart only for their media merge semantically: one author
+/// header for the run, separate content.
+public func chatMessageBubblelessMerge(upper: ChatMessageMergeFingerprint,
+                                       lower: ChatMessageMergeFingerprint) -> ChatMessageMerge {
+    let merge = chatMessageMerge(upper: upper, lower: lower)
+    if merge != .none {
+        return merge
+    }
+    let upperIsService = upper.bubblelessMediaKind == .service
+    let lowerIsService = lower.bubblelessMediaKind == .service
+    // Service messages that follow each other (a group being created) read as one group, which keeps them closer
+    // together than to the messages around them.
+    if upperIsService && lowerIsService && upper.peerId == lower.peerId && !upper.isEphemeral && !lower.isEphemeral {
+        return .semanticallyMerged
+    }
+    guard upper.isEffectivelyIncoming, lower.isEffectivelyIncoming, upper.peerId == lower.peerId else {
+        return .none
+    }
+    if upper.isEphemeral || lower.isEphemeral || upperIsService || lowerIsService || upper.hasPaidStars || lower.hasPaidStars {
+        return .none
+    }
+    guard let upperAuthorId = upper.overriddenAuthorId, upperAuthorId == lower.overriddenAuthorId else {
+        return .none
+    }
+    if upper.sourceAuthorInfo != lower.sourceAuthorInfo {
+        return .none
+    }
+    if abs(upper.timestamp - lower.timestamp) >= chatMessageBubblelessRunInterval {
+        return .none
+    }
+    return .semanticallyMerged
 }

@@ -734,6 +734,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case inputDecTextBackend(Bool)
     case inputDecEngineEditor(Bool)
     case coreListChatBackend(Bool)
+    case coreListScrollTrace(Bool)
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
     case chatMediaEditorLegacy(Bool)
@@ -793,7 +794,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.resetApp.rawValue
         case .experimentsHeader, .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
+        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .coreListScrollTrace, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
         case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy, .storyLegacyVideoWriter, .chatLegacyVideoWriter:
             return DebugControllerSection.experiments.rawValue
@@ -846,6 +847,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 21
         case .coreListChatBackend:
             return 22
+        case .coreListScrollTrace:
+            // Appended right after `coreListChatBackend`, in the same section; see the ordering note at
+            // `inputDecTextBackend`.
+            return 23
         case .respectSystemMicrophone:
             return 24
         case .useModernVideoMessagePipeline:
@@ -1460,6 +1465,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .coreListScrollTrace(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: CoreList scroll trace", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.coreListScrollTrace = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .chatMediaEditorLegacy(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: legacy media editor", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -2041,6 +2056,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.debugRatingLayout(experimentalSettings.debugRatingLayout))
     }
     entries.append(.coreListChatBackend(experimentalSettings.coreListChatBackend))
+    entries.append(.coreListScrollTrace(experimentalSettings.coreListScrollTrace))
     entries.append(.respectSystemMicrophone(experimentalSettings.respectSystemMicrophone))
     let useModernVideoMessagePipeline = (experimentalSettings.useModernVideoMessagePipeline ?? (context?.getAppConfigValue("ios_killswitch_disable_neo_round_camera_v2") == nil)) && experimentalSettings.videoMessageCameraMode != .legacy
     entries.append(.useModernVideoMessagePipeline(useModernVideoMessagePipeline))

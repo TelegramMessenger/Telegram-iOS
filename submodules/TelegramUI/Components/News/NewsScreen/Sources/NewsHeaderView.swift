@@ -89,6 +89,15 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
     private var lentIslandContent: UIView?
     var transitionContentFrameUpdated: ((CGRect) -> Void)?
     private(set) var searchContentNode: NavigationBarSearchContentNode?
+    /// The search node's last layout, for re-laying it out as it folds.
+    private var searchLayout: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
+    /// The search field's frame in its node, measured while the field was whole: what the header's geometry is built
+    /// on (`newsHeaderWholeSearchField`).
+    private var wholeSearchFieldFrame: CGRect?
+    /// Holes in the edge effects for the floating avatars stuck under the header's edge (`updateEdgeHoles`).
+    private let softEdgeMask = CAShapeLayer()
+    private let gradientMask = CAShapeLayer()
+    private var edgeHoles: [CGRect] = []
     private(set) var geometry: NewsHeaderGeometry?
     private(set) var blockOffset: CGFloat = 0.0
     private var params: Params?
@@ -195,7 +204,15 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         // An active search takes the top row, so it ends left of a status island like the row's buttons (as in
         // ChatListNavigationBar).
         let searchRightInset = layout.safeInsets.right + (params.isSearchActive ? layout.navigationBarTrailingButtonsInset : 0.0)
+        self.searchLayout = (CGSize(width: width, height: navigationBarSearchContentHeight), layout.safeInsets.left, searchRightInset)
         let _ = searchContentNode.updateLayout(size: CGSize(width: width, height: navigationBarSearchContentHeight), leftInset: layout.safeInsets.left, rightInset: searchRightInset, transition: transition.containedViewLayoutTransition)
+        // A layout pass may come with the search folded (a tab switch or a pager swipe away from a scrolled list, a
+        // theme change, any container layout): the field's place is taken only from a whole field, as when the node
+        // is made (expansion 1).
+        let measuredSearchField = searchContentNode.placeholderNode.frame
+        if searchContentNode.expansionProgress > 0.9999 {
+            self.wholeSearchFieldFrame = measuredSearchField
+        }
 
         // The "…" button, laid out by the chat list's header component exactly as before (where it sits, its glass,
         // its morph into the menu).
@@ -252,7 +269,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             islandFittingWidth: self.segmentNode.fittingWidth(context: params.context, theme: theme, strings: params.strings),
             moreButtonMinX: moreButtonMinX,
             searchNodeHeight: navigationBarSearchContentHeight,
-            searchFieldFrameInNode: searchContentNode.placeholderNode.frame
+            searchFieldFrameInNode: newsHeaderWholeSearchField(measured: measuredSearchField, expansion: searchContentNode.expansionProgress, whole: self.wholeSearchFieldFrame)
         )
         self.geometry = geometry
 
@@ -449,20 +466,54 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         )
     }
 
-    /// Moves the search block for the list's scroll offset (0 at rest, positive scrolled, negative overscrolled).
+    /// Cuts the edge effects out over `circles` (in this view), the floating avatars stuck at the header's edge,
+    /// so they stay crisp; the effects lie over everything else, an avatar passing under the header included.
+    func updateEdgeHoles(_ circles: [CGRect]) {
+        guard circles != self.edgeHoles else {
+            return
+        }
+        self.edgeHoles = circles
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (view, mask) in [(self.softEdgeView, self.softEdgeMask), (self.gradientView, self.gradientMask)] {
+            guard !circles.isEmpty else {
+                view.layer.mask = nil
+                continue
+            }
+            let path = UIBezierPath(rect: CGRect(origin: CGPoint(), size: view.bounds.size))
+            for circle in circles {
+                path.append(UIBezierPath(ovalIn: self.convert(circle, to: view).insetBy(dx: -1.0, dy: -1.0)))
+            }
+            mask.frame = view.bounds
+            mask.fillRule = .evenOdd
+            mask.path = path.cgPath
+            view.layer.mask = mask
+        }
+        CATransaction.commit()
+    }
+
+    /// Folds the search block for the list's scroll offset (0 at rest, positive scrolled, negative overscrolled), as
+    /// the chat list folds its field: the field shrinks and fades while the node lifts a little.
     func applyScroll(listOffset: CGFloat, transition: ComponentTransition) {
         guard let geometry = self.geometry, let params = self.params, let searchContentNode = self.searchContentNode else {
             return
         }
         transition.setAlpha(view: self.softEdgeView, alpha: newsHeaderSoftEdgeAlpha(listOffset: listOffset, isSearchActive: params.isSearchActive))
         let frame: CGRect
+        let expansion: CGFloat
         if params.isSearchActive {
             self.blockOffset = 0.0
+            expansion = 1.0
             let statusBarHeight = params.layout.navigationBarStatusBarHeight ?? 0.0
             frame = CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight + NewsHeaderMetrics.activeSearchNodeOffset), size: geometry.searchNodeAtRest.size)
         } else {
             self.blockOffset = newsHeaderBlockOffset(listOffset: listOffset, blockHeight: geometry.blockHeight)
-            frame = geometry.searchNodeAtRest.offsetBy(dx: 0.0, dy: -newsHeaderSearchTravel(listOffset: listOffset, geometry: geometry))
+            expansion = newsHeaderSearchExpansion(listOffset: listOffset, blockHeight: geometry.blockHeight)
+            frame = geometry.searchNodeAtRest.offsetBy(dx: 0.0, dy: -newsHeaderSearchLift(listOffset: listOffset, blockHeight: geometry.blockHeight))
+        }
+        if abs(searchContentNode.expansionProgress - expansion) > 0.0001, let searchLayout = self.searchLayout {
+            searchContentNode.expansionProgress = expansion
+            let _ = searchContentNode.updateLayout(size: searchLayout.size, leftInset: searchLayout.leftInset, rightInset: searchLayout.rightInset, transition: transition.containedViewLayoutTransition)
         }
         transition.setFrameWithAdditivePosition(view: searchContentNode.view, frame: frame)
     }

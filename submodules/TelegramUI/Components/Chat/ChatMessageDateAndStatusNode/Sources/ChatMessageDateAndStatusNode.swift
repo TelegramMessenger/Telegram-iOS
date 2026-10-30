@@ -12,6 +12,7 @@ import ReactionImageComponent
 import AnimationCache
 import MultiAnimationRenderer
 import TelegramStringFormatting
+import StaticGlassBackground
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -325,6 +326,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     
     private var backgroundNode: ASImageNode?
     private var blurredBackgroundNode: NavigationBackgroundNode?
+    // Bubble mode off: the time's plate drawn from glass images (`staticGlassPlate` in the layout).
+    private var staticGlassView: StaticGlassBackgroundView?
     private var checkSentNode: ASImageNode?
     private var checkReadNode: ASImageNode?
     private var clockFrameNode: ASImageNode?
@@ -1126,7 +1129,18 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
                         
-                        if backgroundImage != nil {
+                        // Bubble mode off: the time's plate is glass drawn from images: over media the dark media glass (the
+                        // time and checks over a picture are white), under stickers and round videos the page's glass.
+                        var staticGlassPlate: (tint: StaticGlassTint, isDark: Bool)?
+                        if !arguments.presentationData.chatBubbleCorners.bubbleMode {
+                            if backgroundImage != nil {
+                                staticGlassPlate = (.media, true)
+                            } else if blurredBackgroundColor != nil {
+                                staticGlassPlate = (.panel, arguments.presentationData.theme.theme.overallDarkAppearance)
+                            }
+                        }
+                        
+                        if backgroundImage != nil && staticGlassPlate == nil {
                             if let currentBackgroundNode = currentBackgroundNode {
                                 if currentBackgroundNode.supernode == nil {
                                     strongSelf.backgroundNode = currentBackgroundNode
@@ -1146,7 +1160,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
 
-                        if let blurredBackgroundColor = blurredBackgroundColor {
+                        if let blurredBackgroundColor = blurredBackgroundColor, staticGlassPlate == nil {
                             if let blurredBackgroundNode = strongSelf.blurredBackgroundNode {
                                 blurredBackgroundNode.updateColor(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1, transition: .immediate)
                                 animation.animator.updateFrame(layer: blurredBackgroundNode.layer, frame: CGRect(origin: CGPoint(), size: layoutSize), completion: nil)
@@ -1161,6 +1175,28 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                         } else if let blurredBackgroundNode = strongSelf.blurredBackgroundNode {
                             strongSelf.blurredBackgroundNode = nil
                             blurredBackgroundNode.removeFromSupernode()
+                        }
+                        
+                        if let staticGlassPlate {
+                            let glassView: StaticGlassBackgroundView
+                            var glassAnimation = animation
+                            if let current = strongSelf.staticGlassView {
+                                glassView = current
+                            } else {
+                                glassAnimation = .None
+                                glassView = StaticGlassBackgroundView()
+                                glassView.isUserInteractionEnabled = false
+                                strongSelf.staticGlassView = glassView
+                                strongSelf.view.insertSubview(glassView, at: 0)
+                            }
+                            let plateFrame = CGRect(origin: CGPoint(), size: layoutSize)
+                            glassAnimation.animator.updateFrame(layer: glassView.layer, frame: plateFrame, completion: nil)
+                            glassView.update(size: layoutSize, cornerRadius: layoutSize.height * 0.5, isDark: staticGlassPlate.isDark, tint: staticGlassPlate.tint, updateFrame: { view, frame in
+                                glassAnimation.animator.updateFrame(layer: view.layer, frame: frame, completion: nil)
+                            })
+                        } else if let glassView = strongSelf.staticGlassView {
+                            strongSelf.staticGlassView = nil
+                            glassView.removeFromSuperview()
                         }
                         
                         let _ = dateApply()

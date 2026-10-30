@@ -51,11 +51,14 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   top already past the inset has reached it, so it stays and the widget grows downward (the user's call: the inset is
   a ceiling, never crossed); a shrink at the bottom keeps the bottom. "At the bottom" is the settled list at its newest
   end, an overscroll hold included. **While the list holds a pinned row** (the user's message while a bot streams its
-  reply, until a drag; CoreList's `holdsPinnedRowAtBottomEdge`) there is no resize target at all: every pass re-places
+  reply, until a drag or until the chat holds a jump to another message, which ends the pin: under a held jump the
+  widget's edge wins, the user's call of 2026-10-29, `testUnderAPinnedPostAHeldJumpLetsAWidgetKeepItsEdge`; CoreList's
+  `holdsPinnedRowAtBottomEdge`) there is no resize target at all: every pass re-places
   that row, so a target that moved it would see it jump back on the next pass. The pin anchors the pass and every
   widget grows away from it, a bottom anchor included (`testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop`,
   `testUnderAPinnedPostABottomAnchoredBubbleLeavesThePinInPlace`). A resize target never arms the pin
-  (`CoreListScrollTarget.pinsRow` false): aimed at a released pin's row, it would arm it again. Three rules around it,
+  (`CoreListScrollTarget.pinsRow` false): aimed at a released pin's row, it would arm it again
+  (`testAResizeDoesNotPinAReleasedPinnedPostAgain`). Three rules around it,
   also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
   message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
   space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget
@@ -207,8 +210,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   the tag whole. In its glue, though, an unknown numbering system (`en-u-nu-bogus`) makes Foundation's relative
   formatter trap, crashing the app, and an extension breaks the plural rules (widget-sandbox VENDOR.md). v0.2.3's glue
   applies what is kept on iOS 16 and later. **A glue change or a new table value must keep `WRIntlExtensionTests`
-  green**: it runs every call a widget can make with every CLDR numbering system and calendar on iOS, and a trap
-  there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
+  green**: it runs every call a widget can make with every CLDR numbering system, calendar, hour cycle and collation on
+  iOS, and a trap there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its
@@ -372,21 +375,28 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     - the app's language and stopped label, as the sent bubble has;
     - a widget only while on screen: the list's preload rows run none, a row leaving the screen stops its own, and a
       row shown again boots afresh, so a fling through many widget results runs only the visible ones. On screen is
-      anywhere in the panel above the input panel: the vertical list's top inset is only the room above its first
-      result, which rows scroll into and show in, so its visual top inset is zero (ListView's visibility otherwise ends
-      at the insets, and a widget scrolled up past the first result's resting place stopped while in view). The bottom
-      one stays the list's: the panel is given one bottom inset for the input panel and the keyboard together, and a row
-      behind the keyboard must not run;
+      anywhere in the panel but behind the keyboard: in the room above the vertical list's first result (its top
+      inset), which rows scroll up into, and under the input panel's glass (the user, 2026-10-29), which rows show
+      through. The list is CoreList, whose visible rect counts its insets as visible; `visibleRectInsets` ends it at
+      `ChatInputContextPanelNode.coveredBottomInset`, the part of the panel's bottom inset the keyboard (or the chat's
+      own input, else the home indicator's strip) covers, which the chat sets before each layout. A row wholly inside
+      the home indicator's strip with no keyboard up does not run. `ListViewItemCoreListHostTests` (the band, and
+      `ListViewImpl`'s visibility formula on the hosted node), CoreList's `VisibleRectNotificationTests`;
     - a late snapshot (a boot past the pass's wait, a new height, a failure) re-runs its pass on a later main-queue
       turn, as the bubble's relayout does, so a late boot is not left at the 160 pt placeholder;
     - a widget that failed to start is remembered and never booted again for that result, when the failure lands
       while the row is on screen (a slow parse failing after the row left is parsed again on the next show).
   - **The vertical list.** A row with the result's title and the widget at its sent bubble's width and its own height,
-    scaled down past `MessageWidgetPreviewLayout.maximumListHeight` (240 pt). The panel keeps each reported height and
-    re-lays that row out from it, without the list's crossfade. A fixed height reports nothing.
+    scaled down past `MessageWidgetPreviewLayout.maximumListHeight` (240 pt). The panel keeps each reported height, by
+    result id, and re-lays that row out from it with no animation; a row scrolled out and back in is a new view, whose
+    widget starts at that height. Ids are the bot's own, so the heights are dropped when results come from another
+    bot (the panel stays for any list-presented results). A fixed height reports nothing. The list is CoreList with the
+    chat's render-server scrolling (`.keyframe`, the user's call of 2026-10-29), its rows the `ListViewItem`s they were
+    (`ListViewItemCoreListHost`: the item's own node, `ListViewImpl`'s tap highlight and selection), a short list
+    stacked above the input panel (`stacksFromBottom`).
   - **The gallery strip.** A cell the size of an image result's widest crop, with the widget fitted inside and no peek.
-  - **Layout off main.** Both lists lay out off main, so a row's layout uses only the anchors and the height passed in,
-    and the widget boots in the item's apply. A height report arrives one main-queue turn after the pass, never inside
+  - **Layout off main.** The gallery strip lays out off main (the vertical list on main, in CoreList's pass), so a row's
+    layout uses only the anchors and the height passed in, and the widget boots in the item's apply. A height report arrives one main-queue turn after the pass, never inside
     a list's apply.
   - **Elsewhere.** With the kill switch engaged, a widget result draws as any other result. The Mini App share preview
     shows its text.

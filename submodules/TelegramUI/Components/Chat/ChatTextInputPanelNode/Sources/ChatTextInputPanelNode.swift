@@ -46,6 +46,7 @@ import TextNodeWithEntities
 import DeviceModel
 import PhotoResources
 import GlassBackgroundComponent
+import ChatOverscrollIsland
 import ComponentDisplayAdapters
 import ChatInputAccessoryPanel
 import ChatInputAutocompletePanel
@@ -196,6 +197,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public var contextPlaceholderNode: TextNode?
     public var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
     private let textInputContainerBackgroundView: GlassBackgroundView
+    // Bubble-free mode only: the "next channel" island growing out of the text field, while a topic is pulled up.
+    private var overscrollIsland: ChatOverscrollIslandHost?
     private let accessoryPanelContainer: UIView
     public let textInputNodeClippingContainer: UIView
     public let textInputSeparator: GlassBackgroundView.ContentColorView
@@ -646,6 +649,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private let accessoryButtonInset: CGFloat = 4.0
 
     private var animatingTransition = false
+    // What the latest layout wanted and where it laid Start out: a morph into the menu button that ends after the bot
+    // asked for Start again (blocked, then restarted) restores it rather than hiding it.
+    private var wantsBotStartButton = false
+    private var startButtonLayoutFrame: CGRect?
+    private var isMorphingStartIntoMenu = false
     
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
     
@@ -1514,13 +1522,28 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 
         self.menuButton.isHidden = true
         
+        // The reverse of `animateBotButtonOutToMenu`: every layer drawing the button's shape starts at the menu button's
+        // capsule and follows the frame to Start's on the same timing, and the button clips to that capsule meanwhile
+        // (the glass chrome keeps its width, see `updateShape`). Animating the background alone left the chrome,
+        // shimmer and border at Start's size from the first frame.
+        let targetButtonSize = self.startButton.frame.size
+        let targetButtonCornerRadius = self.startButton.buttonCornerRadius
+        let sourceCornerRadius = self.menuButton.frame.height * 0.5
+        self.startButton.updateShape(size: self.menuButton.frame.size, cornerRadius: sourceCornerRadius, transition: .immediate)
+        self.startButton.updateShape(size: targetButtonSize, cornerRadius: targetButtonCornerRadius, transition: transition)
+        self.startButton.clipsToBounds = true
+        self.startButton.cornerRadius = sourceCornerRadius
+        transition.updateCornerRadius(node: self.startButton, cornerRadius: targetButtonCornerRadius, completion: { [weak self] finished in
+            // Interrupted by a morph back into the menu button, which takes the clipping over and ends it.
+            guard let self, finished else {
+                return
+            }
+            self.startButton.clipsToBounds = false
+            self.startButton.cornerRadius = 0.0
+        })
         transition.animateFrame(layer: self.startButton.layer, from: self.menuButton.frame)
-        transition.animateFrame(layer: self.startButton.buttonBackgroundNode.layer, from: CGRect(origin: .zero, size: self.menuButton.frame.size))
         transition.animatePosition(node: self.startButton.titleNode, from: CGPoint(x: self.menuButton.frame.width / 2.0, y: self.menuButton.frame.height / 2.0))
         
-        let targetButtonCornerRadius = self.startButton.buttonCornerRadius
-        self.startButton.buttonBackgroundNode.cornerRadius = self.menuButton.cornerRadius
-        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: targetButtonCornerRadius)
         transition.animateTransformScale(node: self.startButton.titleNode, from: 0.4)
         self.startButton.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
@@ -1555,20 +1578,34 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         if transition.isAnimated {
             self.animatingTransition = true
+            self.isMorphingStartIntoMenu = true
             self.startButton.highlightEnabled = false
+            // It lies over the menu button until it has faded out: taps must reach the menu button, not send /start again.
+            self.startButton.isUserInteractionEnabled = false
         }
         
         let sourceButtonFrame = self.startButton.frame
         transition.updateFrame(node: self.startButton, frame: self.menuButton.frame)
-        transition.updateFrame(node: self.startButton.buttonBackgroundNode, frame: CGRect(origin: .zero, size: self.menuButton.frame.size))
         let sourceButtonTextPosition = self.startButton.titleNode.position
         transition.updatePosition(node: self.startButton.titleNode, position: CGPoint(x: self.menuButton.frame.width / 2.0, y: self.menuButton.frame.height / 2.0))
         
         let sourceButtonCornerRadius = self.startButton.buttonCornerRadius
-        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: self.menuButton.cornerRadius)
+        // The menu button draws a capsule (`menuButtonBackgroundView`), rounder than its node's clipping radius.
+        let targetCornerRadius = self.menuButton.frame.height * 0.5
+        // Every layer drawing the button's shape follows the frame on the same timing, its corner radius going from
+        // Start's to the menu button's: the shape stays one capsule throughout, with no layer keeping its own corner.
+        self.startButton.updateShape(size: self.menuButton.frame.size, cornerRadius: targetCornerRadius, transition: transition)
+        // The glass chrome keeps its width (see `updateShape`): clip the button to the same capsule.
+        self.startButton.clipsToBounds = true
+        self.startButton.cornerRadius = sourceButtonCornerRadius
+        transition.updateCornerRadius(node: self.startButton, cornerRadius: targetCornerRadius)
         transition.animateTransformScale(layer: self.startButton.titleNode.layer, from: CGPoint(x: 1.0, y: 1.0), to: CGPoint(x: 0.4, y: 0.4))
-        Queue.mainQueue().justDispatch {
-            self.startButton.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        if transition.isAnimated {
+            // Not without an animation: the completion below has already run then, and this fade, held at its end,
+            // would leave the title invisible.
+            Queue.mainQueue().justDispatch {
+                self.startButton.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
         }
         
         let menuContentDelta = (sourceButtonFrame.width - self.menuButton.frame.width) / 2.0
@@ -1585,19 +1622,50 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.glassBackgroundContainer.contentView.addSubview(menuTextSnapshotView)
         menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: self.menuButton.position.y), completion: { [weak self, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
-            self?.animatingTransition = false
+            guard let self else {
+                return
+            }
+            let completion: () -> Void = {
+                self.animatingTransition = false
+                self.isMorphingStartIntoMenu = false
+                
+                menuIconSnapshotView?.removeFromSuperview()
+                menuTextSnapshotView?.removeFromSuperview()
+                
+                self.startButton.isHidden = true
+                self.startButton.layer.removeAnimation(forKey: "opacity")
+                self.startButton.frame = sourceButtonFrame
+                self.startButton.updateShape(size: sourceButtonFrame.size, cornerRadius: sourceButtonCornerRadius, transition: .immediate)
+                self.startButton.titleNode.position = sourceButtonTextPosition
+                self.startButton.titleNode.layer.removeAllAnimations()
+                self.startButton.clipsToBounds = false
+                self.startButton.cornerRadius = 0.0
+                self.startButton.highlightEnabled = true
+                self.startButton.isUserInteractionEnabled = true
+                
+                // The bot asked for Start again while it morphed (blocked, then restarted): it morphs back out of the
+                // menu button to where the latest layout put it, instead of staying hidden until some later layout.
+                if self.wantsBotStartButton {
+                    let frame = self.startButtonLayoutFrame ?? sourceButtonFrame
+                    let _ = self.startButton.updateLayout(width: frame.width, transition: .immediate)
+                    self.startButton.frame = frame
+                    self.startButton.updateShape(size: frame.size, cornerRadius: sourceButtonCornerRadius, transition: .immediate)
+                    self.startButton.isHidden = false
+                    self.animateBotButtonInFromMenu(transition: transition.isAnimated ? .animated(duration: 0.4, curve: .spring) : .immediate)
+                }
+            }
             
-            menuIconSnapshotView?.removeFromSuperview()
-            menuTextSnapshotView?.removeFromSuperview()
-            
-            self?.menuButton.isHidden = false
-            self?.startButton.isHidden = true
-            self?.startButton.frame = sourceButtonFrame
-            self?.startButton.buttonBackgroundNode.frame = CGRect(origin: .zero, size: sourceButtonFrame.size)
-            self?.startButton.titleNode.position = sourceButtonTextPosition
-            self?.startButton.titleNode.layer.removeAllAnimations()
-            self?.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
-            self?.startButton.highlightEnabled = true
+            // The morphed button is solid, the menu button glass: reveal the menu button underneath by fading the
+            // morphed button out instead of swapping them in one frame. The snapshots carry the title until then.
+            // Not when Start is wanted again by now: it morphs straight back out of the menu button (below).
+            self.menuButton.isHidden = false
+            if transition.isAnimated && !self.wantsBotStartButton {
+                self.startButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    completion()
+                })
+            } else {
+                completion()
+            }
         })
     }
     
@@ -1854,11 +1922,24 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             hasMenuButton = false
         }
         
+        // While the Start button morphs into the menu button (`animateBotButtonOutToMenu`), its frame belongs to that
+        // animation: any layout in the meantime (the chat updates as /start is sent) would stretch it back into a
+        // full-width bar holding the menu button's title until the morph completes, and one asking for Start again
+        // would show that bar for a moment as the morph ends. Such a layout only records where Start belongs; the
+        // morph's completion applies it.
         let buttonInset: CGFloat = max(leftInset, 16.0)
         let maximumButtonWidth: CGFloat = min(430.0, width)
-        let buttonHeight = self.startButton.updateLayout(width: maximumButtonWidth - buttonInset * 2.0, transition: transition)
-        let buttonSize = CGSize(width: maximumButtonWidth - buttonInset * 2.0, height: buttonHeight)
-        self.startButton.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 6.0), size: buttonSize)
+        let startButtonWidth = maximumButtonWidth - buttonInset * 2.0
+        let startButtonMinX = leftInset + floor((width - leftInset - rightInset - startButtonWidth) / 2.0)
+        if !self.isMorphingStartIntoMenu {
+            let buttonHeight = self.startButton.updateLayout(width: startButtonWidth, transition: transition)
+            let startButtonFrame = CGRect(origin: CGPoint(x: startButtonMinX, y: 6.0), size: CGSize(width: startButtonWidth, height: buttonHeight))
+            self.startButton.frame = startButtonFrame
+            self.startButtonLayoutFrame = startButtonFrame
+        } else if let startButtonLayoutFrame = self.startButtonLayoutFrame {
+            self.startButtonLayoutFrame = CGRect(origin: CGPoint(x: startButtonMinX, y: 6.0), size: CGSize(width: startButtonWidth, height: startButtonLayoutFrame.height))
+        }
+        self.wantsBotStartButton = displayBotStartButton
         
         var hideOffset: CGPoint = .zero
         if displayBotStartButton {
@@ -2241,12 +2322,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     }
                     self.sendActionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                     if self.sendActionButtons.sendButtonHasApplyIcon {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     } else {
                         if isScheduledMessages {
-                            self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                            if self.sendActionButtons.usesSendButtonGlass(interfaceState: interfaceState) {
+                                // The glass is the button's disc: the clock alone, as the send glyph.
+                                self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
+                            } else {
+                                self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                            }
                         } else {
-                            self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
+                            self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                         }
                     }
                 }
@@ -3335,7 +3421,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else {
                 placeholderTransition = .immediate
             }
-            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + (accessoryPanel != nil ? 52.0 : 0.0)), size: placeholderSize.size))
+            // On the text's line, as the field's own placeholder (`textPlaceholderFrame`): under whatever sits above the
+            // field (a reply / edit panel), in the field's container, which already has the panel's hide offset.
+            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + textFieldTopContentOffset), size: placeholderSize.size))
             contextPlaceholderNode.view.setMonochromaticEffect(tintColor: placeholderColor)
             contextPlaceholderNode.alpha = audioRecordingItemsAlpha * placeholderColor.alpha
         }
@@ -3923,7 +4011,48 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         transition.updateFrame(view: self.glassBackgroundContainer, frame: containerFrame)
         self.glassBackgroundContainer.update(size: containerFrame.size, isDark: interfaceState.theme.overallDarkAppearance, transition: ComponentTransition(transition))
         
+        if let overscrollIsland = self.overscrollIsland, overscrollIsland.isActive {
+            let (container, anchorFrame) = self.overscrollIslandAnchor()
+            overscrollIsland.updateAnchor(container: container, anchorFrame: anchorFrame)
+        }
+        
         return contentHeight
+    }
+    
+    private func overscrollIslandAnchor() -> (container: UIView, anchorFrame: CGRect) {
+        let container = self.glassBackgroundContainer.contentView
+        return (container, self.textInputContainerBackgroundView.convert(self.textInputContainerBackgroundView.bounds, to: container))
+    }
+    
+    override public func overscrollIslandHandOver() -> ((UIView) -> Void)? {
+        guard let overscrollIsland = self.overscrollIsland, overscrollIsland.isActive else {
+            return nil
+        }
+        let panelView = self.view
+        let (container, anchorFrame) = self.overscrollIslandAnchor()
+        return { snapshotView in
+            overscrollIsland.handOver(to: snapshotView, panelView: panelView, container: container, anchorFrame: anchorFrame)
+        }
+    }
+    
+    override public func updateOverscrollIsland(_ island: ChatInputPanelOverscrollIsland?, animated: Bool) -> Bool {
+        let (container, anchorFrame) = self.overscrollIslandAnchor()
+        guard let island else {
+            self.overscrollIsland?.dismiss(anchorFrame: anchorFrame, animated: animated)
+            return true
+        }
+        guard let interfaceState = self.presentationInterfaceState else {
+            return false
+        }
+        let overscrollIsland: ChatOverscrollIslandHost
+        if let current = self.overscrollIsland {
+            overscrollIsland = current
+        } else {
+            overscrollIsland = ChatOverscrollIslandHost()
+            self.overscrollIsland = overscrollIsland
+        }
+        overscrollIsland.update(context: island.context, content: ChatOverscrollIslandContent(peer: island.peer, title: island.title, unreadCount: island.unreadCount), progress: island.progress, theme: interfaceState.theme, preferClearGlass: interfaceState.preferredGlassType == .clear, container: container, anchorFrame: anchorFrame)
+        return true
     }
     
     @objc private func slowModeButtonPressed() {
@@ -4674,6 +4803,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.sendActionButtons.updateAccessibility()
                 
                 self.sendActionButtons.animatingSendButton = true
+                self.sendActionButtons.updateSendButtonGlassVisibility(false, transition: alphaTransition)
                 alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 0.0, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.sendActionButtons.animatingSendButton = false
@@ -4716,6 +4846,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if hasText || (keepSendButtonEnabled && (sendButtonIsLaidOut || !mediaInputIsActive) && !hasSlowModeButton) {
                 if self.sendActionButtons.sendContainerNode.alpha.isZero && self.rightSlowModeInset.isZero {
                     alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 1.0)
+                    self.sendActionButtons.updateSendButtonGlassVisibility(true, transition: alphaTransition)
                     blurTransitionIn.setBlur(layer: self.sendActionButtons.sendContainerNode.layer, radius: 0.0)
                     transition.animatePositionAdditive(layer: self.sendActionButtons.sendButton.imageNode.layer, offset: CGPoint(x: -22.0, y: 18.0))
                     if let sendButtonRadialStatusNode = self.sendActionButtons.sendButtonRadialStatusNode {
@@ -4725,6 +4856,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else {
                 if !self.sendActionButtons.sendContainerNode.alpha.isZero {
                     self.sendActionButtons.animatingSendButton = true
+                    self.sendActionButtons.updateSendButtonGlassVisibility(false, transition: alphaTransition)
                     alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 0.0, completion: { [weak self] _ in
                         if let strongSelf = self {
                             strongSelf.sendActionButtons.animatingSendButton = false
@@ -4907,12 +5039,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if sendButtonHasApplyIcon != self.sendActionButtons.sendButtonHasApplyIcon {
                 self.sendActionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                 if self.sendActionButtons.sendButtonHasApplyIcon {
-                    self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
+                    self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                 } else {
                     if case .scheduledMessages = interfaceState.subject {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     } else {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     }
                 }
             }

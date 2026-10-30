@@ -185,6 +185,18 @@ public class ChatMessageBackground: ASDisplayNode {
     }
     
     public func currentCorners(bubbleCorners: PresentationChatBubbleCorners) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool)? {
+        if !bubbleCorners.bubbleMode {
+            // Bubble mode off draws bubbles without a tail (see PrincipalThemeEssentialGraphics).
+            guard var corners = self.currentCornersWithTail(bubbleCorners: bubbleCorners) else {
+                return nil
+            }
+            corners.drawTail = false
+            return corners
+        }
+        return self.currentCornersWithTail(bubbleCorners: bubbleCorners)
+    }
+    
+    private func currentCornersWithTail(bubbleCorners: PresentationChatBubbleCorners) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool)? {
         guard let type = self.type else {
             return nil
         }

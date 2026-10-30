@@ -115,13 +115,18 @@ public struct ChatMediaEditorCoverEditLayout: Equatable {
     public var saveFrame: CGRect
 }
 
-public func chatMediaEditorCoverEditLayout(size: CGSize, safeInsets: UIEdgeInsets, titleSize: CGSize, cancelSize: CGSize) -> ChatMediaEditorCoverEditLayout {
+public func chatMediaEditorCoverEditLayout(size: CGSize, safeInsets: UIEdgeInsets, titleSize: CGSize, cancelSize: CGSize, statusIsland: ChatMediaEditorStatusIslandRow? = nil) -> ChatMediaEditorCoverEditLayout {
     var topY: CGFloat = 0.0
     if safeInsets.top > 20.0 {
         topY += safeInsets.top
     }
-    let titleFrame = CGRect(x: floor((size.width - titleSize.width) / 2.0), y: topY + 26.0, width: titleSize.width, height: titleSize.height)
-    let cancelFrame = CGRect(x: safeInsets.left + chatMediaEditorCoverSideInset, y: topY + 20.0, width: cancelSize.width, height: cancelSize.height)
+    var titleFrame = CGRect(x: safeInsets.left + floor((size.width - safeInsets.left - safeInsets.right - titleSize.width) / 2.0), y: topY + 26.0, width: titleSize.width, height: titleSize.height)
+    var cancelFrame = CGRect(x: safeInsets.left + chatMediaEditorCoverSideInset, y: topY + 20.0, width: cancelSize.width, height: cancelSize.height)
+    // Beside iPhone Duo's status island the title and Cancel sit on the island's clock line, as the editor's top row.
+    if let statusIsland {
+        titleFrame.origin.y = statusIsland.clockLineY - titleSize.height / 2.0
+        cancelFrame.origin.y = statusIsland.clockLineY - cancelSize.height / 2.0
+    }
     let saveFrame = CGRect(x: chatMediaEditorCoverSideInset, y: size.height - chatMediaEditorCoverSaveButtonHeight - chatMediaEditorCoverSideInset - safeInsets.bottom, width: size.width - chatMediaEditorCoverSideInset * 2.0, height: chatMediaEditorCoverSaveButtonHeight)
     return ChatMediaEditorCoverEditLayout(titleFrame: titleFrame, cancelFrame: cancelFrame, saveFrame: saveFrame)
 }

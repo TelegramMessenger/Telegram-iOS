@@ -55,6 +55,7 @@ extension ChatControllerImpl {
                                 dateTimeFormat: self.presentationData.dateTimeFormat,
                                 nameDisplayOrder: self.presentationData.nameDisplayOrder,
                                 content: .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text("\(value)"))], subtitle: nil, isEnabled: false),
+                                labelsWithoutGlass: !self.presentationData.chatBubbleCorners.bubbleMode,
                                 transition: .immediate
                             )
                             
@@ -107,6 +108,7 @@ extension ChatControllerImpl {
                         dateTimeFormat: self.presentationData.dateTimeFormat,
                         nameDisplayOrder: self.presentationData.nameDisplayOrder,
                         content: .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(value.isEmpty ? self.presentationData.strings.Business_Links_EditLinkTitle : value))], subtitle: linkUrl, isEnabled: false),
+                        labelsWithoutGlass: !self.presentationData.chatBubbleCorners.bubbleMode,
                         transition: .immediate
                     )
                     if case let .customChatContents(customChatContents) = self.subject {

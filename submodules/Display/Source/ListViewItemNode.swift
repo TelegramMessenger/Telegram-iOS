@@ -108,6 +108,11 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     /// why `ListViewItem.neighborDescriptor` must encode everything a neighbor reads — a fact
     /// omitted there is a fact that will not trigger a relayout when it changes.
     public internal(set) final var appliedNeighbors: ListViewItemNeighbors = .none
+
+    /// How far past its top inset a rotated list's sticky header band begins for this row. A bubble-free
+    /// chat message that heads its author's run sets it so that the run's avatar sits beside the name;
+    /// every other row leaves it at zero.
+    public final var stickyHeaderBandTrim: CGFloat = 0.0
     
     public var isHighlightedInOverlay: Bool = false
     

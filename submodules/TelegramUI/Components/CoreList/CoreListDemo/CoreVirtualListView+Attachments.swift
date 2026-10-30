@@ -334,6 +334,16 @@ extension CoreVirtualListView {
         activeScrollFlight?.settledOffset ?? engine.offset
     }
 
+    /// Re-solves the attachments for a display area change (`attachmentDisplayInsets`): the solve is a pure
+    /// function of the settled window, the offset and the area, so this only moves what the area moves.
+    public func updateAttachmentDisplayInsets(_ insets: UIEdgeInsets?) {
+        guard self.attachmentDisplayInsets != insets else {
+            return
+        }
+        self.attachmentDisplayInsets = insets
+        self.renderAttachments()
+    }
+
     /// Solves every loaded attachment and writes its settled frame. Pure function of the settled
     /// window and the solve offset, so running it twice in one turn is a no-op.
     func renderAttachments() {
@@ -441,9 +451,10 @@ extension CoreVirtualListView {
             && attachment.edge == .bottom
             && attachment.endsCollectionRun
             ? attachment.measuredHeight : 0
+        let displayInsets = attachmentDisplayInsets ?? insets
         let anchor = attachment.edge == .top
-            ? insets.top
-            : logicalHeight - insets.bottom - attachment.measuredHeight
+            ? displayInsets.top
+            : logicalHeight - displayInsets.bottom - attachment.measuredHeight
         var yield: (partners: [AttachmentOffsetMap], gap: CGFloat)?
         if let declared = attachment.stackingYield {
             // The partners are the OTHER attachments tagged into the named group. Built here rather

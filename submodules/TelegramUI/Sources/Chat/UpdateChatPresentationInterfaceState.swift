@@ -526,6 +526,7 @@ func updateChatPresentationInterfaceStateImpl(
             dateTimeFormat: selfController.presentationData.dateTimeFormat,
             nameDisplayOrder: selfController.presentationData.nameDisplayOrder,
             content: chatTitleContent,
+            labelsWithoutGlass: !selfController.presentationData.chatBubbleCorners.bubbleMode,
             transition: titleTransition,
             ignoreParentTransitionRequests: true
         )

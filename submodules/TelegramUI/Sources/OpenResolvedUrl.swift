@@ -931,16 +931,15 @@ func openResolvedUrlImpl(
                     rootController.popToRoot(animated: true)
                     rootController.openContacts()
                     
+                    // Contacts is pushed over Settings: its header is there once the push has landed.
                     switch section {
                     case .search:
-                        Queue.mainQueue().after(0.1) {
-                            rootController.getContactsController()?.tabBarActivateSearch()
+                        (rootController.getContactsController() as? ContactsController)?.performWhenAppeared { controller in
+                            controller.tabBarActivateSearch()
                         }
                     case .sort:
-                        Queue.mainQueue().after(0.1) {
-                            if let contactsController = rootController.getContactsController() as? ContactsController {
-                                contactsController.sortPressed()
-                            }
+                        (rootController.getContactsController() as? ContactsController)?.performWhenAppeared { controller in
+                            controller.sortPressed()
                         }
                     case .manage:
                         presentContactAccessPicker(context: context)

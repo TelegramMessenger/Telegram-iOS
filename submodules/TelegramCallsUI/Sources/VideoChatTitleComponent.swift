@@ -133,6 +133,23 @@ final class VideoChatTitleComponent: Component {
             }
         }
         
+        /// Lays out the speaking line and returns the frame for the node. A `.center`-aligned `ChatTitleActivityNode`
+        /// lays its content out around its own x = 0 (the indicator to the left of the text), so, as in `ChatTitleView`,
+        /// the node's origin goes on the line's center: under the title, or flush left with it in landscape, where the
+        /// status line is.
+        static func layoutActivityStatusNode(_ activityStatusNode: ChatTitleActivityNode, containerWidth: CGFloat, statusMinY: CGFloat, isLandscape: Bool) -> CGRect {
+            var textWidth = containerWidth
+            var activityStatusSize = activityStatusNode.updateLayout(CGSize(width: textWidth, height: 100.0), alignment: .center)
+            // Only the text is fitted to the constrained width, and a truncated one can end short of it: narrow it by
+            // what still sticks out until the indicator fits as well.
+            for _ in 0 ..< 3 where activityStatusSize.width > containerWidth {
+                textWidth = max(1.0, textWidth - (activityStatusSize.width - containerWidth))
+                activityStatusSize = activityStatusNode.updateLayout(CGSize(width: textWidth, height: 100.0), alignment: .center)
+            }
+            let lineFrame = CGRect(origin: CGPoint(x: isLandscape ? 0.0 : floor((containerWidth - activityStatusSize.width) * 0.5), y: statusMinY - activityStatusSize.height * 0.5 + 7.0), size: activityStatusSize)
+            return lineFrame.offsetBy(dx: activityStatusSize.width * 0.5, dy: 0.0)
+        }
+        
         func updateActivityStatus(value: String?, transition: ComponentTransition) {
             if self.currentActivityStatus == value {
                 return
@@ -160,8 +177,7 @@ final class VideoChatTitleComponent: Component {
                 }
                 
                 let _ = activityStatusNode.transitionToState(.recordingVoice(NSAttributedString(string: value, font: Font.regular(13.0), textColor: UIColor(rgb: 0x34c759)), UIColor(rgb: 0x34c759)), animation: .none)
-                let activityStatusSize = activityStatusNode.updateLayout(CGSize(width: currentSize.width, height: 100.0), alignment: .center)
-                let activityStatusFrame = CGRect(origin: CGPoint(x: floor((currentSize.width - activityStatusSize.width) * 0.5), y: statusView.center.y - activityStatusSize.height * 0.5 + 7.0), size: activityStatusSize)
+                let activityStatusFrame = View.layoutActivityStatusNode(activityStatusNode, containerWidth: currentSize.width, statusMinY: statusView.center.y, isLandscape: self.component?.isLandscape ?? false)
                 
                 let activityStatusNodeView = activityStatusNode.view
                 activityStatusNodeView.center = activityStatusFrame.center
@@ -259,6 +275,11 @@ final class VideoChatTitleComponent: Component {
                 }
                 transition.setPosition(view: statusView, position: statusFrame.origin)
                 statusView.bounds = CGRect(origin: CGPoint(), size: statusFrame.size)
+            }
+            if let activityStatusNode = self.activityStatusNode {
+                let activityStatusFrame = View.layoutActivityStatusNode(activityStatusNode, containerWidth: size.width, statusMinY: statusFrame.minY, isLandscape: component.isLandscape)
+                transition.setPosition(view: activityStatusNode.view, position: activityStatusFrame.center)
+                activityStatusNode.view.bounds = CGRect(origin: CGPoint(), size: activityStatusFrame.size)
             }
             
             if component.isRecording {

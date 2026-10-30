@@ -5,6 +5,7 @@ import TelegramPresentationData
 import ComponentFlow
 import ComponentDisplayAdapters
 import AppBundle
+import GlassBackgroundComponent
 
 public final class ActionPanelComponent: Component {
     public enum Color {
@@ -15,8 +16,8 @@ public final class ActionPanelComponent: Component {
     public let theme: PresentationTheme
     public let title: String
     public let color: Color
-    /// Insets the title and the dismiss button keep from the panel's sides (iPhone Duo's side strip); the background
-    /// spans the whole width.
+    /// Insets the glass capsule keeps from the panel's sides, beyond its own margin (the safe insets, so that it lines up
+    /// with the navigation bar's header panels; iPhone Duo's side strip).
     public let sideInsets: UIEdgeInsets
     public let action: () -> Void
     public let dismissAction: () -> Void
@@ -54,8 +55,9 @@ public final class ActionPanelComponent: Component {
     }
     
     public final class View: HighlightTrackingButton {
-        private let backgroundView: BlurredBackgroundView
-        private let separatorLayer: SimpleLayer
+        private let backgroundContainer: GlassBackgroundContainerView
+        private let backgroundView: GlassBackgroundView
+        private var capsuleFrame: CGRect = CGRect()
         
         private let contentView: UIView
         private let title = ComponentView<Empty>()
@@ -66,10 +68,10 @@ public final class ActionPanelComponent: Component {
         private var component: ActionPanelComponent?
         
         public override init(frame: CGRect) {
-            self.backgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
-            self.backgroundView.isUserInteractionEnabled = false
+            self.backgroundContainer = GlassBackgroundContainerView()
+            self.backgroundContainer.isUserInteractionEnabled = false
+            self.backgroundView = GlassBackgroundView()
             
-            self.separatorLayer = SimpleLayer()
             self.contentView = UIView()
             self.contentView.isUserInteractionEnabled = false
             
@@ -78,8 +80,8 @@ public final class ActionPanelComponent: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.backgroundView)
-            self.layer.addSublayer(self.separatorLayer)
+            self.backgroundContainer.contentView.addSubview(self.backgroundView)
+            self.addSubview(self.backgroundContainer)
             self.addSubview(self.contentView)
             
             self.dismissButton.addSubview(self.dismissIconView)
@@ -130,8 +132,9 @@ public final class ActionPanelComponent: Component {
             component.dismissAction()
         }
         
-        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            return super.hitTest(point, with: event)
+        // Only the capsule takes touches: the margins around it show the list, and pass touches on to it.
+        override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            return self.capsuleFrame.contains(point)
         }
         
         func update(component: ActionPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -140,20 +143,31 @@ public final class ActionPanelComponent: Component {
             self.component = component
             
             if themeUpdated {
-                self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-                self.separatorLayer.backgroundColor = component.theme.rootController.navigationBar.separatorColor.cgColor
-                
                 self.dismissIconView.image = UIImage(bundleImageName: "Chat/Input/Accessory Panels/EncircledCloseButton")?.withRenderingMode(.alwaysTemplate)
                 self.dismissIconView.tintColor = component.theme.rootController.navigationBar.accentTextColor
             }
             
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.backgroundView.update(size: availableSize, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            // A capsule of the folder tabs' glass, with their height and margins (`HeaderPanelContainerComponent`).
+            let sideInset: CGFloat = 16.0
+            let capsuleHeight: CGFloat = 40.0
+            let capsuleFrame = CGRect(
+                x: component.sideInsets.left + sideInset,
+                y: availableSize.height - capsuleHeight,
+                width: max(0.0, availableSize.width - component.sideInsets.left - component.sideInsets.right - sideInset * 2.0),
+                height: capsuleHeight
+            )
+            self.capsuleFrame = capsuleFrame
+            
+            // The container outsets the glass so that its edge effects are not clipped.
+            let containerOutset: CGFloat = 32.0
+            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: availableSize).insetBy(dx: -containerOutset, dy: -containerOutset))
+            self.backgroundContainer.update(size: CGSize(width: availableSize.width + containerOutset * 2.0, height: availableSize.height + containerOutset * 2.0), isDark: component.theme.overallDarkAppearance, transition: transition)
+            transition.setFrame(view: self.backgroundView, frame: capsuleFrame.offsetBy(dx: containerOutset, dy: containerOutset))
+            self.backgroundView.update(size: capsuleFrame.size, cornerRadius: capsuleHeight * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: transition)
             
             transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
-            let rightInset: CGFloat = 44.0
+            let buttonWidth: CGFloat = 44.0
             
             let resolvedColor: UIColor
             switch component.color {
@@ -167,19 +181,19 @@ public final class ActionPanelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(Text(text: component.title, font: Font.regular(17.0), color: resolvedColor)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - component.sideInsets.left - component.sideInsets.right - rightInset, height: availableSize.height)
+                containerSize: CGSize(width: max(1.0, capsuleFrame.width - buttonWidth * 2.0), height: capsuleFrame.height)
             )
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
                     self.contentView.addSubview(titleView)
                 }
-                let titleFrame = CGRect(origin: CGPoint(x: component.sideInsets.left + floor((availableSize.width - component.sideInsets.left - component.sideInsets.right - titleSize.width) * 0.5), y: floor((availableSize.height - titleSize.height) * 0.5)), size: titleSize)
+                let titleFrame = CGRect(origin: CGPoint(x: capsuleFrame.minX + floor((capsuleFrame.width - titleSize.width) * 0.5), y: capsuleFrame.minY + floor((capsuleFrame.height - titleSize.height) * 0.5)), size: titleSize)
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
-            let dismissButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInsets.right - rightInset, y: 0.0), size: CGSize(width: rightInset, height: availableSize.height))
+            let dismissButtonFrame = CGRect(origin: CGPoint(x: capsuleFrame.maxX - buttonWidth, y: capsuleFrame.minY), size: CGSize(width: buttonWidth, height: capsuleFrame.height))
             transition.setFrame(view: self.dismissButton, frame: dismissButtonFrame)
             if let iconImage = self.dismissIconView.image {
                 transition.setFrame(view: self.dismissIconView, frame: CGRect(origin: CGPoint(x: floor((dismissButtonFrame.width - iconImage.size.width) * 0.5), y: floor((dismissButtonFrame.height - iconImage.size.height) * 0.5)), size: iconImage.size))

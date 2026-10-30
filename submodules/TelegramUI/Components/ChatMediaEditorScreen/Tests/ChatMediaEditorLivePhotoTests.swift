@@ -119,4 +119,32 @@ final class ChatMediaEditorLivePhotoTests: XCTestCase {
         let landscape = UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0)
         XCTAssertEqual(chatMediaEditorLivePhotoButtonFrame(size: CGSize(width: 874.0, height: 402.0), safeInsets: landscape, keyboardHeight: 0.0, buttonSize: buttonSize), CGRect(x: 75.0, y: 48.0, width: 70.0, height: 18.0))
     }
+
+    // iPhone Duo: in portrait the badge sits 18pt under the chat-name row, as in landscape on every phone (the row ends
+    // at 30 there, the badge at 48): on the unfolded screen the row is on the status island's clock line, on the folded
+    // one at the top. A phone keeps the fixed 145.
+    func testLivePhotoButtonSitsUnderTheChatNameOnTheDuo() {
+        let buttonSize = CGSize(width: 70.0, height: 18.0)
+        let arrowSize = CGSize(width: 10.0, height: 12.0)
+        let labelSize = CGSize(width: 80.0, height: 16.0)
+        // Unfolded portrait, the island's band as the top inset.
+        let unfolded = CGSize(width: 669.0, height: 951.0)
+        let unfoldedInsets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)
+        let island = ChatMediaEditorStatusIslandRow(clockLineY: 47.0, trailingInset: 134.0)
+        let unfoldedRow = chatMediaEditorRecipientLayout(size: unfolded, safeInsets: unfoldedInsets, arrowSize: arrowSize, labelSize: labelSize, statusIsland: island)
+        let unfoldedRowMaxY = max(unfoldedRow.arrowFrame.maxY, unfoldedRow.labelFrame.maxY)
+        XCTAssertEqual(chatMediaEditorLivePhotoButtonFrame(size: unfolded, safeInsets: unfoldedInsets, keyboardHeight: 0.0, buttonSize: buttonSize, titleRowMaxY: unfoldedRowMaxY).minY, unfoldedRowMaxY + 18.0)
+        // Folded portrait: no top inset, the strip on the right.
+        let folded = CGSize(width: 466.0, height: 678.0)
+        let foldedInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)
+        let foldedRow = chatMediaEditorRecipientLayout(size: folded, safeInsets: foldedInsets, arrowSize: arrowSize, labelSize: labelSize)
+        let foldedRowMaxY = max(foldedRow.arrowFrame.maxY, foldedRow.labelFrame.maxY)
+        XCTAssertEqual(foldedRowMaxY, 30.0)
+        XCTAssertEqual(chatMediaEditorLivePhotoButtonFrame(size: folded, safeInsets: foldedInsets, keyboardHeight: 0.0, buttonSize: buttonSize, titleRowMaxY: foldedRowMaxY).minY, 48.0)
+        // The same 18pt as landscape's 48 under a row ending at 30.
+        let landscapeRow = chatMediaEditorRecipientLayout(size: CGSize(width: 874.0, height: 402.0), safeInsets: UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0), arrowSize: arrowSize, labelSize: labelSize)
+        XCTAssertEqual(48.0 - max(landscapeRow.arrowFrame.maxY, landscapeRow.labelFrame.maxY), 18.0)
+        // Without a row (every other device) the phone's place.
+        XCTAssertEqual(chatMediaEditorLivePhotoButtonFrame(size: unfolded, safeInsets: unfoldedInsets, keyboardHeight: 0.0, buttonSize: buttonSize, titleRowMaxY: nil).minY, 145.0)
+    }
 }

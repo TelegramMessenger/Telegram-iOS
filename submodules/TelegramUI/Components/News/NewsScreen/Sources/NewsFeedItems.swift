@@ -1,9 +1,12 @@
 import Foundation
+import Display
 import SwiftSignalKit
 import ComponentFlow
 import AccountContext
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
+import CoreList
 import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
@@ -38,11 +41,29 @@ struct NewsFeedItemEnvironment {
     /// The list the rows are for: whether they load synchronously as they are built.
     let rowLoading: NewsFeedRowLoading
     let openPost: (EnginePeer, EngineMessage.Id) -> Void
-    /// A post row's swipe actions: For you's rows swipe, Added's and search results do not (nil). The last argument is the post's
-    /// identity (`newsPostIdentity`).
+    /// A post row's swipe actions: For you's rows swipe both ways, Added's for Expand / Collapse only, search results
+    /// not at all (nil). The last argument is the post's identity (`newsPostIdentity`).
     let postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
     /// The tab's "Post hidden" flow; nil for Added and search results.
     let feedback: NewsFeedItemFeedback?
+    /// A post row's context menu (a long press): the row, its channel, its messages and identity.
+    let postContextMenu: ((NewsFeedPostComponent.View, ContextGesture, EnginePeer, [EngineMessage], AnyHashable) -> Void)?
+    /// A row's floating avatar moved or stuck: the header's edge effects follow.
+    let floatingAvatarsChanged: (() -> Void)?
+    /// Compact rows, or the expanded posts.
+    let displayMode: NewsFeedDisplayMode
+    /// The posts a swipe switched to the other mode on their own (`NewsPostSwipeAction.expand` / `.collapse`).
+    let rowModeOverrides: Set<AnyHashable>
+    /// The content an expanded row needs, per post (its first message and its identity).
+    let expandedContent: ((EngineMessage, AnyHashable) -> NewsFeedPostExpandedContent?)?
+
+    /// The mode a post's row shows: the feed's, unless a swipe switched that row.
+    func rowDisplayMode(_ identity: AnyHashable) -> NewsFeedDisplayMode {
+        guard self.rowModeOverrides.contains(identity) else {
+            return self.displayMode
+        }
+        return self.displayMode == .compact ? .expanded : .compact
+    }
 }
 
 /// What a tab's rows read from its "Post hidden" flow (spec §3).
@@ -118,7 +139,14 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
             fading = postFading
         }
     }
-    return CoreListComponentItem(identity: identity, component: AnyComponent(NewsFeedPostComponent(
+    // An expanded row's avatar floats over a run of adjacent posts from the same channel, as a group chat's
+    // gutter avatar does: the list draws it as a run attachment, keyed by the channel.
+    var attachedItems: [AnyHashable: CoreListAttachedItem] = [:]
+    let displayMode = environment.rowDisplayMode(identity)
+    if displayMode == .expanded {
+        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading)
+    }
+    return CoreListComponentItem(identity: identity, attachedItems: attachedItems, component: AnyComponent(NewsFeedPostComponent(
         context: environment.context,
         theme: presentationData.theme,
         strings: presentationData.strings,
@@ -133,6 +161,14 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         fading: fading,
         appearTime: environment.feedback?.postAppearTimes[identity],
         swipe: isLeaving ? nil : environment.postSwipe?(peer, messageId, identity),
+        displayMode: displayMode,
+        expanded: displayMode == .expanded ? environment.expandedContent?(first, identity) : nil,
+        contextMenu: isLeaving ? nil : environment.postContextMenu.map { menu in
+            return { row, gesture in
+                menu(row, gesture, peer, resolved, identity)
+            }
+        },
+        floatingAvatarsChanged: environment.floatingAvatarsChanged,
         action: {
             if !isLeaving {
                 openPost(peer, messageId)

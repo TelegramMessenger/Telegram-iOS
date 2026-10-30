@@ -391,7 +391,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         // Nothing follows the widget (a caption carries the date itself): the date on a pill over it.
                         if incoming {
-                            statusType = .ImageIncoming
+                            statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .ImageIncoming
                         } else if item.message.flags.contains(.Failed) {
                             statusType = .ImageOutgoing(.Failed)
                         } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {

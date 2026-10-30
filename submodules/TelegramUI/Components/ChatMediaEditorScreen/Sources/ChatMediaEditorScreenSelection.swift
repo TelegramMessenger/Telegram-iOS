@@ -102,15 +102,9 @@ extension ChatMediaEditorScreen.Node {
         }
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
         let toolbarSide = self.toolbarSide(layout: layout)
-        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets, toolbarSide: toolbarSide)
+        let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets, statusIsland: chatMediaEditorStatusIslandRow(layout: layout), toolbarSide: toolbarSide)
         transition.updateFrame(view: checkButton, frame: checkFrame)
-        var counterSafeInsets = safeInsets
-        if toolbarSide == nil {
-            let counterSideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: layout.reservedCorners)
-            counterSafeInsets.left = counterSideInsets.left
-            counterSafeInsets.right = counterSideInsets.right
-        }
-        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: counterSafeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, toolbarSide: toolbarSide)
+        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, toolbarSide: toolbarSide)
         let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize, toolbarSide: toolbarSide)
         stripView.updateToolbarSide(toolbarSide)
         if stripView.frame != stripFrame {

@@ -25,7 +25,7 @@ enum ShutterButtonState: Equatable {
     case live(active: Bool, progress: Bool)
 }
 
-private let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
+let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
 
 struct CaptureControlsBottomRowPlacement: Equatable {
     var sideInset: CGFloat

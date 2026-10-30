@@ -150,6 +150,9 @@ swift_library(
     ]),
     deps = [
         ":TelegramCallsUI",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
+        "//submodules/Display:Display",
         "//submodules/TelegramAudio:TelegramAudio",
         "//submodules/TelegramUI/Components/Calls/CallScreen",
         "//submodules/TelegramCore:TelegramCore",

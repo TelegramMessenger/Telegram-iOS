@@ -61,7 +61,7 @@ enum class RelevantKeys : uint8_t { None, NumberFormat, DateTimeFormat, Relative
 /// The locale a request names (ECMA-402 ResolveLocale): the first requested tag, else the host's locale
 /// (HostState::locale(), the app's language) when it is a valid tag, else "en-US". Its unicode extension keeps only the
 /// keywords `keys` names, each with a value this client supports (kNumberingSystems and the other tables in
-/// IntlCore.cpp), sorted by key; attributes and anything else are dropped, other extensions and private use stay. The
+/// IntlCore.cpp), sorted by key; attributes, anything else, other extensions and private use are dropped. The
 /// glue builds its locale with Locale.Components (iOS 16 and later; before, it drops the extension) and applies what is
 /// left. A value it does not know is never sent: a numbering system name Foundation does not know (bogus, a bare `nu`,
 /// yes) makes its RelativeDateTimeFormatter trap, and the glue reads plural rules from a language key an extension

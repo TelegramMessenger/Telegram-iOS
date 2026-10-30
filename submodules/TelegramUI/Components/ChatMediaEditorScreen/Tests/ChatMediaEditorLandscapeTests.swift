@@ -125,7 +125,7 @@ final class ChatMediaEditorLandscapeTests: XCTestCase {
     func testLandscapeCounterCircleIsLevelWithCheckButton() {
         for side in [ChatMediaEditorToolbarSide.left, .right] {
             let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: insets, toolbarSide: side)
-            let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 0.0, hasVideoHeader: false, toolbarSide: side)
+            let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 0.0, hasVideoHeader: false, toolbarSide: side)
             XCTAssertEqual(counter.minY + chatMediaEditorCounterCircleFrame.midY, check.midY)
             let recipient = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 8.0, height: 12.0), labelSize: CGSize(width: 100.0, height: 16.0), toolbarSide: side)
             XCTAssertFalse(counter.intersects(recipient.labelFrame.union(recipient.arrowFrame)))
@@ -137,7 +137,7 @@ final class ChatMediaEditorLandscapeTests: XCTestCase {
         let safeInsets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
         let header = chatMediaEditorVideoHeaderFrame(size: size, toolbarMinY: 791.0, captionBaseHeight: 52.0, safeInsets: safeInsets)
         let mute = chatMediaEditorMuteButtonFrame(headerFrame: header, safeInsets: safeInsets)
-        let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: true)
+        let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: true)
         XCTAssertEqual(counter.minY + chatMediaEditorCounterCircleFrame.maxY, mute.maxY)
         XCTAssertEqual(mute.minX, 16.0)
     }
@@ -155,8 +155,8 @@ final class ChatMediaEditorLandscapeTests: XCTestCase {
     }
 
     func testLandscapeCameraButtonFrame() {
-        XCTAssertEqual(chatMediaEditorCameraButtonFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, hasSelection: true, toolbarSide: .left), CGRect(x: 112.0, y: 51.0, width: 44.0, height: 44.0))
-        XCTAssertEqual(chatMediaEditorCameraButtonFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: false, hasSelection: false, toolbarSide: .right), CGRect(x: 718.0, y: 1.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(chatMediaEditorCameraButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, hasSelection: true, toolbarSide: .left), CGRect(x: 112.0, y: 51.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(chatMediaEditorCameraButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: false, hasSelection: false, toolbarSide: .right), CGRect(x: 718.0, y: 1.0, width: 44.0, height: 44.0))
     }
 
     func testDuoFoldedLandscapeBottomControlsClearReservedCorner() {
