@@ -109,6 +109,25 @@ final class ChatListMarkReadTests: StateSyncTestCase {
         XCTAssertEqual(self.cloudReadState(self.user), .idBased(maxIncomingReadId: 7, maxOutgoingReadId: 0, maxKnownId: 7, count: 0, markedUnread: false))
     }
 
+    /// A channel the account is not a member of holds `nonMemberChannelReadState`, whose `maxKnownId` (`Int32.max - 1`)
+    /// is "everything", not a message: it is never read up to.
+    func testANonMemberChannelIsNeverReadToItsPlaceholderMaxKnownId() {
+        self.seedChannel(participationStatus: .left)
+        self.storeMessages(peerId: self.channel, ids: 1 ... 9)
+        self.fixture.transaction { transaction -> Void in
+            transaction.resetIncomingReadStates([self.channel: [Namespaces.Message.Cloud: nonMemberChannelReadState]])
+        }
+
+        self.markRead(peerId: self.channel)
+
+        guard case let .idBased(maxIncomingReadId, _, _, count, _)? = self.cloudReadState(self.channel) else {
+            XCTFail("no id-based read state")
+            return
+        }
+        XCTAssertLessThanOrEqual(maxIncomingReadId, 9)
+        XCTAssertEqual(count, 0)
+    }
+
     /// A read mark already past the newest stored message is never moved back.
     func testAMarkPastTheNewestStoredMessageStays() {
         self.seedChannel()

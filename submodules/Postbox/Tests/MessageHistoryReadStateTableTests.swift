@@ -122,6 +122,20 @@ final class MessageHistoryReadStateTableTests: XCTestCase {
         XCTAssertEqual(state?.states.first?.1.count, 2)
     }
 
+    /// An interactive read never moves the mark back, even past the stored top and the server's top.
+    func testAnInteractiveReadBelowTheMarkLeavesItInPlace() {
+        self.fixture.transaction { _, _ in
+            let _ = self.fixture.readStateTable.resetStates(self.peer, namespaces: [self.namespace: .idBased(maxIncomingReadId: 14, maxOutgoingReadId: 0, maxKnownId: 12, count: 1, markedUnread: false)])
+        }
+
+        let (state, _) = self.fixture.transaction { _, _ in
+            self.fixture.readStateTable.applyIncomingMaxReadId(MessageId(peerId: self.peer, namespace: self.namespace, id: 13), incomingStatsInRange: { _, _, _ in (0, false) }, topMessageId: (11, false), interactive: true)
+        }
+
+        XCTAssertNil(state)
+        XCTAssertEqual(self.storedUnreadCount(), 1)
+    }
+
     /// The server's own read past the stored top keeps subtracting what is stored, as before.
     func testAServerReadPastTheStoredTopSubtractsWhatIsStored() {
         self.setServerTopUnstored(count: 2)

@@ -278,7 +278,7 @@ final class MessageHistoryReadStateTable: Table {
                 case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                     var readsEverything = false
                     if let topMessageId = topMessageId {
-                        readsEverything = messageId.id == topMessageId.0 || topMessageId.1 || (interactive && messageId.id > topMessageId.0 && messageId.id >= maxKnownId)
+                        readsEverything = messageId.id == topMessageId.0 || topMessageId.1 || (interactive && messageId.id > topMessageId.0 && messageId.id >= maxKnownId && messageId.id >= maxIncomingReadId)
                     }
                     if maxIncomingReadId < messageId.id || (readsEverything && state.count != 0) || markedUnread {
                         var (deltaCount, holes) = incomingStatsInRange(messageId.namespace, maxIncomingReadId + 1, messageId.id)
