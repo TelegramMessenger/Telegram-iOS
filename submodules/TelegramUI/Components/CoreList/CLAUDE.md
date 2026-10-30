@@ -696,8 +696,8 @@ clock); `TestScrollEngine` has no render server.
   bounces at −1/3 pt and `ChatHistoryListNodeImpl`'s `visibleContentOffset() < -0.1` check left an invisible
   94pt view eating taps. Anything thresholding an offset is exposed.
 - **The bounce springs toward the edge the deceleration CROSSED** (`Deceleration.spring(dtMs:toward:)`), never one
-  re-derived from the offset. A release exactly on the min edge moving past it integrates to the edge in zero time
-  and is still `== min`, which `offset < min` read as the max edge: at a chat's newest end (open max = the
+  re-derived from the offset. A release on (or within rounding of) the min edge moving past it integrates to the edge
+  in ~zero time and can still be `>= min`, which `offset < min` read as the max edge: at a chat's newest end (open max = the
   10,000,000 pt sentinel) a short quick flick whose pan began and ended at `tr=0` flew the list ~800,000 pt up its
   history (issue #99). `test_flickReleasedOnTheNewestEdge_withNoTranslation_staysAtThatEdge`.
 - **Physics flights ignore Slow Animations** (accepted, unverified against `UIScrollView`): real-second

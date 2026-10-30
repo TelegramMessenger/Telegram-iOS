@@ -50,10 +50,9 @@ struct Deceleration {
             let decayE = Self.decay(dtMs: timeToBound, rate: rate)
             offset += velocity * rate * (1 - decayE) / (1 - rate) * vScale // ≈ edge (frac approximates time, per §2)
             velocity *= decayE
-            // The edge just crossed, not one re-derived from the offset: a release exactly ON the min edge
-            // moving past it (a short flick at a chat's newest end that began and ended with no translation)
-            // integrates for zero time and is still `== min` here, which `offset < min` reads as the MAX
-            // edge — an open one is 10,000,000 pt away, and the "bounce" flew the list there.
+            // The edge just crossed, not one re-derived from the offset: a release on (or within rounding of)
+            // the min edge moving past it integrates for ~zero time and can still be `>= min` here, which
+            // `offset < min` read as the MAX edge. CoreList/CLAUDE.md, "The bounce springs toward the edge".
             spring(dtMs: dtMs - timeToBound, toward: edge)
             return (settleIfNeeded(), true)
         } else {
