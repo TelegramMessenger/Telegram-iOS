@@ -50,12 +50,30 @@ final class NavigationInteractivePopTrackerTests: XCTestCase {
         XCTAssertEqual(decision.velocity, 2000.0 * 4.25, accuracy: 0.5)
     }
 
-    // Fewer than three samples: finish exactly when the average velocity points toward the pop.
+    // Fewer than three samples: finish exactly when the average velocity points toward the pop, once the finger has
+    // moved `minimumFewSampleTravel`.
     func test_fewSamples_followTheVelocity() {
-        let forward = self.drag(pointsPerSecond: 50.0, count: 2)
+        let forward = self.drag(pointsPerSecond: 50.0, count: 2, start: 12.0)
         XCTAssertTrue(forward.release(percent: 0.05, velocity: 50.0).finish)
         let backward = self.drag(pointsPerSecond: -50.0, count: 2, start: 30.0)
         XCTAssertFalse(backward.release(percent: 0.05, velocity: -50.0).finish)
+    }
+
+    // A few samples toward the pop that moved less than `minimumFewSampleTravel` do not finish.
+    func test_fewSamples_shortTravel_cancels() {
+        let tracker = self.drag(pointsPerSecond: 300.0, count: 2)
+        XCTAssertFalse(tracker.release(percent: 0.0, velocity: 300.0).finish)
+    }
+
+    // A tap drifting right behind a busy main thread: its events are handled back to back, so the change and the end
+    // are dropped as samples (the change still counts as seen) and only the first one is left. It does not navigate back.
+    func test_tapDrift_bunchedEvents_cancels() {
+        var tracker = NavigationInteractivePopTracker(totalDistance: self.width)
+        tracker.addSample(time: 0.0, translation: 0.0, velocity: 120.0, isChange: false)
+        tracker.addSample(time: 0.0004, translation: 1.0, velocity: 120.0, isChange: true)
+        tracker.addSample(time: 0.0006, translation: 1.0, velocity: 120.0, isChange: false)
+        XCTAssertEqual(tracker.sampleCount, 1)
+        XCTAssertFalse(tracker.release(percent: 0.0025, velocity: 120.0).finish)
     }
 
     // Samples closer than 10 ms are dropped unless the finger moved (and never closer than 1 ms).
