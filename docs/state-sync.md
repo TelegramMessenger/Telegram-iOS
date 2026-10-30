@@ -75,7 +75,7 @@ are the audit's.
 - A real manager end to end: `DifferenceCharacterizationTests`, `NotificationExtensionPollCharacterizationTests`,
   `PushCharacterizationTests`, `PushOrderingPinTests`, `SeqContainerEdgeTests`, `BranchMergePushTests`,
   `EventDeliveryOrderTests`, `StateBarrierCharacterizationTests`, `PollResultLossCharacterizationTests`,
-  `ChannelSyncCharacterizationTests`, `ChannelPollSiteTests`, `PinnedForumTopicsPeerTests`,
+  `ChannelSyncCharacterizationTests`, `ChannelPollSiteTests`, `PinnedForumTopicsPeerTests`, `EditForumTopicTests`,
   `NotificationExtensionPollOutcomeTests`, `PtsTotalLimit*Tests`, `Reset*Tests`, `ArchivedDialogGhostTailTests`,
   `ChatListRecentDeletionTests`, `RecentEditTests`, `ConfirmationDeletionEventTests`, `StoryUpdateEventTests`,
   `WidgetDataUpdateTests`.
@@ -273,14 +273,16 @@ date; for a difference its `other_updates` order) and hands `updatedState` and `
 handed: on the push path the snapshot with the sequencing's chats, users and state advances applied, on the difference
 path with the difference's state, chats, users and messages added. Its channel states are still the snapshot's, which is
 all `updateChannelTooLong` reads from it. `UpdateInterpreter.init` requests a hint-less poll for every
-`channelsToPollExplicitely`. `apply(_:)` has 114 case labels (one covers two constructors) and `default: break`; each
-calls one method in a family: Bots 5, Calls 7, Channels 7, ChatList 9, Messages 23, Payments 11, Peers 18, ReadStates
+`channelsToPollExplicitely`. `apply(_:)` has 115 case labels (one covers two constructors) and `default: break`; each
+calls one method in a family: Bots 5, Calls 7, Channels 8, ChatList 9, Messages 23, Payments 11, Peers 18, ReadStates
 12, Settings 14, Stories 4, Typing 4 (`grep -c 'mutating func apply' Sources/State/Sync/UpdateInterpreter+*`, which
 also counts `applyAgentSettings` and `applyReadFeed`: those two and their labels are parked with the agent and feed
 APIs, `submodules/TelegramApi/CLAUDE.md`, "Parked APIs"). Typing is kept only when `updatesDate != nil` and
-`updatesDate + 60 > serverTime`; a difference passes nil.
+`updatesDate + 60 > serverTime`; a difference passes nil. `updateEditForumTopic` (no pts) edits a stored topic's info
+through `.EditForumTopic`, which the replay applies as it applies a `messageActionTopicEdit` service message
+(`applyEditForumTopic`, `EditForumTopicTests`); a topic with no stored info keeps none.
 
-The result is an `AccountMutableState`: an ordered `operations` log of `AccountStateMutationOperation` (87 cases) plus
+The result is an `AccountMutableState`: an ordered `operations` log of `AccountStateMutationOperation` (89 cases) plus
 side tables (`peers`, `channelStates`, `storedMessages`, `namespacesWithHolesFromPreviousState`, `displayAlerts`,
 `preCachedResources`, ...). Every helper that records an operation goes through `addOperation`, whose switch (no
 default) updates the derived tables first (`mergeChats` also writes `apiChats` itself); eight helpers write their side
@@ -336,16 +338,16 @@ the latter. `replayFinalState` runs, in order:
    `applyDeleteMessages` passes `_internal_deleteMessages` an optional, hence escaping, thread-stats callback that
    writes an accumulator through `self`.
 4. `batchContentAndDeferStateOperations`: adjacent `.AddMessages` at one location merge; scheduled and quick-reply adds
-   accumulate; any of the other 80 content operations is a barrier that emits the pending batches in the fixed order
+   accumulate; any of the other 82 content operations is a barrier that emits the pending batches in the fixed order
    AddMessages, AddScheduledMessages, AddQuickReplyMessages, then itself (so their relative order within a run is not
    kept). `.UpdateState`, `.UpdateChannelState`, `.UpdateChannelInvalidationPts` and
    `.UpdateChannelSynchronizedUntilMessage` end no batch and go into `StateAdvance`, last value per kind and channel
    (`ReplayBatchingTests`).
-5. `applyContentOperations`: 87 labels, no default. `walletTonConnectEvents(operation:)` runs first for each operation;
+5. `applyContentOperations`: 89 labels, no default. `walletTonConnectEvents(operation:)` runs first for each operation;
    then a read-state operation for a stored non-member channel (not a monoforum) is skipped (invariant 30);
    `.UpdateAttachMenuBots` and `.UpdateWalletTonConnectEvent` do nothing; the four state labels are unreachable; the
-   other 81 call one family method: Messages 19, Settings 11, Payments 8, ReadStates 8, Calls 7, Peers 7, ChatList 6,
-   Threads 5, Stories 4, SecretChats 3, Typing 3.
+   other 83 call one family method: Messages 19, Settings 11, Payments 9, ReadStates 8, Calls 7, Peers 7, ChatList 6,
+   Threads 6, Stories 4, SecretChats 3, Typing 3.
 6. `applyStateAdvance`, after all content: the account state (`applyUpdateState` force-casts the stored state and keeps
    the stored date under `keepsStoredDate`), then every channel pts, every `invalidatedPts`, every
    `synchronizedUntilMessageId`. Channel writes create a missing `ChannelState` (pts 0 for the last two) and overwrite

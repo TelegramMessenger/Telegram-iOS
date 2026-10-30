@@ -305,6 +305,8 @@ struct UpdateInterpreter {
                 self.applyPinnedSavedDialogs(updatePinnedSavedDialogsData)
             case let .updatePinnedForumTopic(updatePinnedForumTopicData):
                 self.applyPinnedForumTopic(updatePinnedForumTopicData)
+            case let .updateEditForumTopic(updateEditForumTopicData):
+                self.applyEditForumTopic(updateEditForumTopicData)
             case let .updateReadMessagesContents(updateReadMessagesContentsData):
                 self.applyReadMessagesContents(updateReadMessagesContentsData)
             case let .updateChannelReadMessagesContents(updateChannelReadMessagesContentsData):

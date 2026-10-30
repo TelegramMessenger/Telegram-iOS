@@ -126,6 +126,7 @@ enum AccountStateMutationOperation {
     case UpdatePinnedSavedItemIds(AccountStateUpdatePinnedItemIdsOperation)
     case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
     case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
+    case EditForumTopic(peerId: PeerId, threadId: Int64, components: [TelegramMediaActionType.ForumTopicEditComponent])
     case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?)
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
@@ -640,6 +641,10 @@ struct AccountMutableState {
     mutating func addUpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64]) {
         self.addOperation(.UpdatePinnedTopicOrder(peerId: peerId, threadIds: threadIds))
     }
+
+    mutating func addEditForumTopic(peerId: PeerId, threadId: Int64, components: [TelegramMediaActionType.ForumTopicEditComponent]) {
+        self.addOperation(.EditForumTopic(peerId: peerId, threadId: threadId, components: components))
+    }
     
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?) {
         self.addOperation(.ReadMessageContents(peerIdsAndMessageIds: peerIdsAndMessageIds, date: date))
@@ -787,7 +792,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpsertEphemeralReplacement, .DeleteEphemeralMessages, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .AddPeerLiveTypingDraftStop, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdatePeerChatInclusion, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateMessageWidgetData, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateNewBotConnection, .UpdateWebBrowserSettings, .UpdateWebBrowserException, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateReadFeed, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo, .UpdateWalletState, .UpdateAgentSettings, .UpdateWalletTransfer, .UpdateWalletTonConnectEvent:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpsertEphemeralReplacement, .DeleteEphemeralMessages, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .AddPeerLiveTypingDraftStop, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .EditForumTopic, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdatePeerChatInclusion, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateMessageWidgetData, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateNewBotConnection, .UpdateWebBrowserSettings, .UpdateWebBrowserException, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateReadFeed, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo, .UpdateWalletState, .UpdateAgentSettings, .UpdateWalletTransfer, .UpdateWalletTonConnectEvent:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
