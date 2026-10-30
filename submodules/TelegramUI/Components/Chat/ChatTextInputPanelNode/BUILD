@@ -56,6 +56,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
         "//submodules/TelegramUI/Components/Chat/ChatRichTextEditorComposer",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatOverscrollIsland",
         "//submodules/TelegramNotices",
         "//submodules/AnimatedCountLabelNode",
         "//submodules/TelegramStringFormatting",

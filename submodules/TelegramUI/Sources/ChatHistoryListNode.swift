@@ -24,6 +24,7 @@ import ChatControllerInteraction
 import TranslateUI
 import ChatHistoryEntry
 import ChatOverscrollControl
+import ChatInputPanelNode
 import ChatBotInfoItem
 import ChatUserInfoItem
 import ChatMessageItem
@@ -751,6 +752,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     var isSelectionGestureEnabled = true
 
     private var overscrollView: ComponentHostView<Empty>?
+    // Bubble-free mode: the input panel the "next channel" island was handed to; the panel owns the island.
+    private weak var overscrollIslandPanel: ChatInputPanelNode?
     var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
     var offerNextChannelToRead: Bool = false
     var nextChannelToReadDisplayName: Bool = false
@@ -2903,6 +2906,24 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         if self.freezeOverscrollControl {
             return
         }
+        // Bubble-free mode: the next channel is an island growing out of the input panel's glass, when the panel has
+        // glass to grow it from; otherwise, and with bubbles, the control below.
+        if !self.currentPresentationData.chatBubbleCorners.bubbleMode, let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions, let inputPanelNode = chatControllerNode.inputPanelNode, self.updateOverscrollIsland(offset: offset, inputPanelNode: inputPanelNode) {
+            if let overscrollView = self.overscrollView {
+                self.overscrollView = nil
+                overscrollView.removeFromSuperview()
+            }
+            return
+        }
+        if !self.currentPresentationData.chatBubbleCorners.bubbleMode, self.overscrollIslandPanel != nil {
+            // Released or no longer offered: the island sinks back, and the hold goes with it as it does with the
+            // control's removal below (the control's branch sets its own hold if it takes over).
+            if self.overscrollView == nil, self.isDraggingForOverscrollAction, self.listView.holdsOverscrollActionDuringDrag,
+               !self.freezeOverscrollControlProgress {
+                self.listView.holdOverscrollAction(distance: 0.0, movesContent: false)
+            }
+            self.dismissOverscrollIsland(animated: true)
+        }
         if let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
             let overscrollView: ComponentHostView<Empty>
             if let current = self.overscrollView {
@@ -2986,6 +3007,70 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             self.overscrollView = nil
             overscrollView.removeFromSuperview()
         }
+    }
+    
+    /// Hands the island to the input panel at the pull's progress; false when the panel has no glass to grow it from.
+    /// The progress, the haptic at full and the hold while the finger is down are the control's (above).
+    private func updateOverscrollIsland(offset: CGFloat, inputPanelNode: ChatInputPanelNode) -> Bool {
+        let expandDistance = max(-offset - 12.0, 0.0)
+        let expandProgress: CGFloat = min(1.0, expandDistance / 94.0)
+
+        let title: String
+        if let threadData = self.nextChannelToRead?.threadData {
+            title = threadData.data.info.title
+        } else if let peer = self.nextChannelToRead?.peer {
+            title = peer.compactDisplayTitle
+        } else if self.chatLocation.threadId != nil {
+            title = self.currentPresentationData.strings.Chat_NavigationNoTopics
+        } else {
+            title = self.currentPresentationData.strings.Chat_NavigationNoChannels
+        }
+        let island = ChatInputPanelOverscrollIsland(
+            context: self.context,
+            peer: self.nextChannelToRead?.peer,
+            title: title,
+            unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
+            // Held at full while the release lands (no next channel: the island stays until the content is back).
+            progress: self.freezeOverscrollControlProgress ? 1.0 : expandProgress
+        )
+        if let previousPanel = self.overscrollIslandPanel, previousPanel !== inputPanelNode {
+            // The panel was replaced mid-pull: its island goes with it, and the new panel grows its own.
+            self.overscrollIslandPanel = nil
+            let _ = previousPanel.updateOverscrollIsland(nil, animated: false)
+        }
+        guard inputPanelNode.updateOverscrollIsland(island, animated: true) else {
+            return false
+        }
+        self.overscrollIslandPanel = inputPanelNode
+
+        if (self.currentOverscrollExpandProgress >= 1.0) != (expandProgress >= 1.0), expandProgress >= 1.0 {
+            if self.feedback == nil {
+                self.feedback = HapticFeedback()
+            }
+            if let _ = self.nextChannelToRead {
+                self.feedback?.tap()
+            } else {
+                self.feedback?.success()
+            }
+        }
+        self.currentOverscrollExpandProgress = expandProgress
+
+        if self.isDraggingForOverscrollAction, self.listView.holdsOverscrollActionDuringDrag,
+           !self.freezeOverscrollControlProgress {
+            self.listView.holdOverscrollAction(
+                distance: expandProgress >= 1.0 ? ChatHistoryListNodeImpl.overscrollActionHoldDistance : 0.0,
+                movesContent: false
+            )
+        }
+        return true
+    }
+    
+    private func dismissOverscrollIsland(animated: Bool) {
+        guard let panel = self.overscrollIslandPanel else {
+            return
+        }
+        self.overscrollIslandPanel = nil
+        let _ = panel.updateOverscrollIsland(nil, animated: animated)
     }
     
     func refreshPollActionsForVisibleMessages() {
@@ -5569,6 +5654,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
         }*/
         //self.view.addSubview(snapshotView)
+
+        // Bubble-free mode: the island stays on the input panel until the panel's outgoing snapshot is on screen and
+        // takes it (`ChatInputPanelNode.overscrollIslandHandOver`); this history no longer drives it.
+        self.overscrollIslandPanel = nil
 
         let overscrollView = self.overscrollView
         if let overscrollView = overscrollView {

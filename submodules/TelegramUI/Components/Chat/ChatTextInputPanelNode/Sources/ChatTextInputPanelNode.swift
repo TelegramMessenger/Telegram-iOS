@@ -46,6 +46,7 @@ import TextNodeWithEntities
 import DeviceModel
 import PhotoResources
 import GlassBackgroundComponent
+import ChatOverscrollIsland
 import ComponentDisplayAdapters
 import ChatInputAccessoryPanel
 import ChatInputAutocompletePanel
@@ -196,6 +197,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public var contextPlaceholderNode: TextNode?
     public var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
     private let textInputContainerBackgroundView: GlassBackgroundView
+    // Bubble-free mode only: the "next channel" island growing out of the text field, while a topic is pulled up.
+    private var overscrollIsland: ChatOverscrollIslandHost?
     private let accessoryPanelContainer: UIView
     public let textInputNodeClippingContainer: UIView
     public let textInputSeparator: GlassBackgroundView.ContentColorView
@@ -4003,7 +4006,48 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         transition.updateFrame(view: self.glassBackgroundContainer, frame: containerFrame)
         self.glassBackgroundContainer.update(size: containerFrame.size, isDark: interfaceState.theme.overallDarkAppearance, transition: ComponentTransition(transition))
         
+        if let overscrollIsland = self.overscrollIsland, overscrollIsland.isActive {
+            let (container, anchorFrame) = self.overscrollIslandAnchor()
+            overscrollIsland.updateAnchor(container: container, anchorFrame: anchorFrame)
+        }
+        
         return contentHeight
+    }
+    
+    private func overscrollIslandAnchor() -> (container: UIView, anchorFrame: CGRect) {
+        let container = self.glassBackgroundContainer.contentView
+        return (container, self.textInputContainerBackgroundView.convert(self.textInputContainerBackgroundView.bounds, to: container))
+    }
+    
+    override public func overscrollIslandHandOver() -> ((UIView) -> Void)? {
+        guard let overscrollIsland = self.overscrollIsland, overscrollIsland.isActive else {
+            return nil
+        }
+        let panelView = self.view
+        let (container, anchorFrame) = self.overscrollIslandAnchor()
+        return { snapshotView in
+            overscrollIsland.handOver(to: snapshotView, panelView: panelView, container: container, anchorFrame: anchorFrame)
+        }
+    }
+    
+    override public func updateOverscrollIsland(_ island: ChatInputPanelOverscrollIsland?, animated: Bool) -> Bool {
+        let (container, anchorFrame) = self.overscrollIslandAnchor()
+        guard let island else {
+            self.overscrollIsland?.dismiss(anchorFrame: anchorFrame, animated: animated)
+            return true
+        }
+        guard let interfaceState = self.presentationInterfaceState else {
+            return false
+        }
+        let overscrollIsland: ChatOverscrollIslandHost
+        if let current = self.overscrollIsland {
+            overscrollIsland = current
+        } else {
+            overscrollIsland = ChatOverscrollIslandHost()
+            self.overscrollIsland = overscrollIsland
+        }
+        overscrollIsland.update(context: island.context, content: ChatOverscrollIslandContent(peer: island.peer, title: island.title, unreadCount: island.unreadCount), progress: island.progress, theme: interfaceState.theme, preferClearGlass: interfaceState.preferredGlassType == .clear, container: container, anchorFrame: anchorFrame)
+        return true
     }
     
     @objc private func slowModeButtonPressed() {
