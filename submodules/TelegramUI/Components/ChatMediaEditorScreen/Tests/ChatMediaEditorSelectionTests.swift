@@ -103,6 +103,20 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0)).minY, 25.0)
     }
 
+    // iPhone Duo's unfolded screen in portrait (669x951): the 134x82 status island stands at the top right, its band the
+    // top safe inset. The check sits on the island's clock line (centre 47), left of the island, not below its band.
+    func testCheckSitsOnTheStatusIslandsClockLine() {
+        let size = CGSize(width: 669.0, height: 951.0)
+        let safeInsets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)
+        let island = ChatMediaEditorStatusIslandRow(clockLineY: 47.0, trailingInset: 134.0)
+        let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, statusIsland: island)
+        XCTAssertEqual(check.midY, 47.0)
+        XCTAssertEqual(check.maxX, chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets).maxX - 134.0)
+        XCTAssertLessThanOrEqual(check.maxX, size.width - 134.0)
+        // Without an island (every other device) the frame is the one it always was.
+        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, statusIsland: nil), chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets))
+    }
+
     func testCheckAndCounterRingsKeepTheEdgeInset() {
         let size = CGSize(width: 402.0, height: 874.0)
         for safeInsets in [UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)] {

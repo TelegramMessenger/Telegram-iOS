@@ -248,4 +248,23 @@ final class ChatMediaEditorCoverTests: XCTestCase {
             XCTAssertEqual(editLayout.titleFrame.midX, buttonFrame.midX, accuracy: 1.0)
         }
     }
+
+    // Beside iPhone Duo's status island (unfolded portrait) Edit Cover's title and Cancel sit on the island's clock line
+    // (centre 47) instead of below the island's 82pt band; elsewhere they keep their place.
+    func testCoverEditTopRowSitsOnTheStatusIslandsClockLine() {
+        let size = CGSize(width: 669.0, height: 951.0)
+        let safeInsets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)
+        let titleSize = CGSize(width: 100.0, height: 20.0)
+        let cancelSize = CGSize(width: 60.0, height: 34.0)
+        let island = ChatMediaEditorStatusIslandRow(clockLineY: 47.0, trailingInset: 134.0)
+        let editLayout = chatMediaEditorCoverEditLayout(size: size, safeInsets: safeInsets, titleSize: titleSize, cancelSize: cancelSize, statusIsland: island)
+        XCTAssertEqual(editLayout.titleFrame.midY, 47.0)
+        XCTAssertEqual(editLayout.cancelFrame.midY, 47.0)
+        XCTAssertLessThan(editLayout.titleFrame.maxX, size.width - 134.0)
+        let plain = chatMediaEditorCoverEditLayout(size: size, safeInsets: safeInsets, titleSize: titleSize, cancelSize: cancelSize)
+        XCTAssertEqual(editLayout.titleFrame.minX, plain.titleFrame.minX)
+        XCTAssertEqual(editLayout.cancelFrame.minX, plain.cancelFrame.minX)
+        XCTAssertEqual(editLayout.saveFrame, plain.saveFrame)
+        XCTAssertEqual(chatMediaEditorCoverEditLayout(size: size, safeInsets: safeInsets, titleSize: titleSize, cancelSize: cancelSize, statusIsland: nil), plain)
+    }
 }

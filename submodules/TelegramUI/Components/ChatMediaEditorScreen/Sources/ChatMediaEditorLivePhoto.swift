@@ -14,10 +14,15 @@ public func chatMediaEditorLivePhotoButtonIsVisible(hasLivePhotoButton: Bool, is
 
 public let chatMediaEditorLivePhotoButtonSize = CGSize(width: 160.0, height: 18.0)
 
-public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize) -> CGRect {
+/// `titleRowMaxY`: on iPhone Duo, the bottom of the chat-name row at the top left. In portrait the badge sits 18pt
+/// under it, as it does in landscape (where `48` is that row's bottom, 30, plus 18), wherever the row is: on the status
+/// island's clock line unfolded, at the top of the folded screen. Elsewhere it keeps a phone's fixed `145`.
+public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize, titleRowMaxY: CGFloat? = nil) -> CGRect {
     let y: CGFloat
     if size.width > size.height {
         y = 48.0
+    } else if let titleRowMaxY {
+        y = titleRowMaxY + 18.0 - keyboardHeight
     } else {
         y = 145.0 - keyboardHeight
     }
