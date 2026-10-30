@@ -1123,22 +1123,7 @@ public final class TelegramAccountConnectedBot: Codable, Equatable {
         return true
     }
     
-    fileprivate func preservingConnectionMetadata(from current: TelegramAccountConnectedBot?) -> TelegramAccountConnectedBot {
-        guard let current, current.id == self.id else {
-            return self
-        }
-        if self.device != nil || self.date != nil || self.location != nil {
-            return self
-        }
-        return TelegramAccountConnectedBot(
-            id: self.id,
-            recipients: self.recipients,
-            rights: self.rights,
-            device: current.device,
-            date: current.date,
-            location: current.location
-        )
-    }
+
 }
 
 public struct TelegramBusinessBotRights: OptionSet, Codable {
@@ -1196,10 +1181,55 @@ public struct TelegramBusinessBotRights: OptionSet, Codable {
     }
 }
 
+public enum AccountConnectedBotError {
+    case generic
+    case server(String)
+}
+
+func _internal_requestAccountConnectedBot(account: Account) -> Signal<TelegramAccountConnectedBot?, AccountConnectedBotError> {
+    return account.network.request(Api.functions.account.getConnectedBots())
+    |> mapError { AccountConnectedBotError.server($0.errorDescription) }
+    |> mapToSignal { result -> Signal<TelegramAccountConnectedBot?, AccountConnectedBotError> in
+        return account.postbox.transaction { transaction -> TelegramAccountConnectedBot? in
+            let bot: TelegramAccountConnectedBot?
+            switch result {
+            case let .connectedBots(data):
+                updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: data.users))
+                bot = data.connectedBots.first.map { apiBot in
+                    switch apiBot {
+                    case let .connectedBot(data):
+                        return TelegramAccountConnectedBot(
+                            id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(data.botId)),
+                            recipients: TelegramBusinessRecipients(apiValue: data.recipients),
+                            rights: TelegramBusinessBotRights(apiValue: data.rights),
+                            device: data.device,
+                            date: data.date,
+                            location: data.location
+                        )
+                    }
+                }
+            }
+            transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+                let current = (current as? CachedUserData) ?? CachedUserData()
+                return current.withUpdatedConnectedBot(bot)
+            })
+            return bot
+        }
+        |> castError(AccountConnectedBotError.self)
+    }
+}
+
 public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
-    let remoteApply = account.postbox.transaction { transaction -> (Peer?, [Peer], [Peer]) in
+    return _internal_updateAccountConnectedBot(account: account, bot: bot)
+    |> `catch` { _ -> Signal<TelegramAccountConnectedBot?, NoError> in .complete() }
+    |> ignoreValues
+}
+
+func _internal_updateAccountConnectedBot(account: Account, bot: TelegramAccountConnectedBot?) -> Signal<TelegramAccountConnectedBot?, AccountConnectedBotError> {
+    return account.postbox.transaction { transaction -> (Peer?, [Peer], [Peer]) in
         guard let bot else {
-            return (nil, [], [])
+            let current = (transaction.getPeerCachedData(peerId: account.peerId) as? CachedUserData)?.connectedBot
+            return (current.flatMap { transaction.getPeer($0.id) }, [], [])
         }
         return (
             transaction.getPeer(bot.id),
@@ -1207,14 +1237,17 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
             bot.recipients.excludePeers.compactMap(transaction.getPeer)
         )
     }
-    |> mapToSignal { botUser, additionalPeers, excludePeers in
+    |> castError(AccountConnectedBotError.self)
+    |> mapToSignal { botUser, additionalPeers, excludePeers -> Signal<TelegramAccountConnectedBot?, AccountConnectedBotError> in
+        guard let inputBotUser = botUser.flatMap(apiInputUser) else {
+            return bot == nil ? _internal_requestAccountConnectedBot(account: account) : .fail(.generic)
+        }
         var flags: Int32 = 0
         var mappedRights: Api.BusinessBotRights?
-        var mappedBot: Api.InputUser = .inputUserEmpty
+        let mappedBot = inputBotUser
         var mappedRecipients: Api.InputBusinessBotRecipients = .inputBusinessBotRecipients(.init(flags: 0, users: nil, excludeUsers: nil))
         
-        if let bot, let inputBotUser = botUser.flatMap(apiInputUser) {
-            mappedBot = inputBotUser
+        if let bot {
             
             flags |= 1 << 0
             
@@ -1268,27 +1301,17 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
         }
         
         return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, rights: mappedRights, bot: mappedBot, recipients: mappedRecipients))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
+        |> mapError { AccountConnectedBotError.server($0.errorDescription) }
+        |> `catch` { error -> Signal<Api.Updates, AccountConnectedBotError> in
+            return _internal_requestAccountConnectedBot(account: account)
+            |> `catch` { _ in .single(nil) }
+            |> mapToSignal { _ -> Signal<Api.Updates, AccountConnectedBotError> in .fail(error) }
         }
-        |> mapToSignal { result -> Signal<Never, NoError> in
-            if let result {
-                account.stateManager.addUpdates(result)
-            }
-            return .complete()
+        |> mapToSignal { result -> Signal<TelegramAccountConnectedBot?, AccountConnectedBotError> in
+            account.stateManager.addUpdates(result)
+            return _internal_requestAccountConnectedBot(account: account)
         }
     }
-    
-    return account.postbox.transaction { transaction in
-        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
-            var current = (current as? CachedUserData) ?? CachedUserData()
-            current = current.withUpdatedConnectedBot(bot?.preservingConnectionMetadata(from: current.connectedBot))
-            return current
-        })
-    }
-    |> ignoreValues
-    |> then(remoteApply)
 }
 
 func _internal_updatePersonalChannel(account: Account, personalChannel: TelegramPersonalChannel?) -> Signal<Never, NoError> {
