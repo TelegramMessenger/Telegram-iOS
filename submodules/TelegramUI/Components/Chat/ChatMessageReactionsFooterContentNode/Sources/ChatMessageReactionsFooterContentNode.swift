@@ -147,7 +147,13 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
             reactionColors.deselectedForeground = presentationData.theme.theme.list.itemPrimaryTextColor.argb
             let incomingColors = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
             reactionColors.selectedBackground = incomingColors.reactionActiveBackground.argb
-            reactionColors.selectedForeground = incomingColors.reactionActiveForeground.argb
+            // A clear count is cut out of a filled pill; on tinted glass nothing is filled, so it takes the page's
+            // colour, as a cut-out would show it (the monochrome look's ink pill).
+            if incomingColors.reactionActiveForeground.alpha.isZero {
+                reactionColors.selectedForeground = bubblelessPageColor(presentationData.theme.theme).argb
+            } else {
+                reactionColors.selectedForeground = incomingColors.reactionActiveForeground.argb
+            }
             reactionColors.selectedIconTintColor = 0
         }
         

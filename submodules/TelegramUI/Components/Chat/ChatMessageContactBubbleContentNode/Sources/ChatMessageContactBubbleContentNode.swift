@@ -652,7 +652,7 @@ private func contactBubblelessLayout(position: ChatMessageBubbleContentPosition,
     let buttonsHeight: CGFloat = 36.0
     var blockY = chatMessageBubblelessBlockGap * 0.5
     if case let .linear(top, _) = position, case .Neighbour(_, .header, _) = top {
-        blockY = chatMessageBubblelessHeaderBlockSpacing
+        blockY = chatMessageBubblelessHeaderContactSpacing
     }
     let avatar = CGRect(origin: CGPoint(x: lineWidth + padding, y: blockY + padding), size: avatarSize)
     let columnHeight = titleTextSpacing + textHeight

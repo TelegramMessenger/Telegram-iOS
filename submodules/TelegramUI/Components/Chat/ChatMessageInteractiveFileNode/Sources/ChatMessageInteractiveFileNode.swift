@@ -35,6 +35,7 @@ import AnimatedCountLabelNode
 import AudioWaveform
 import DeviceProximity
 import ShimmeringLinkNode
+import StaticGlassBackground
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -200,6 +201,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var presentationData: ChatPresentationData?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
+    // Bubble mode off: an incoming file's control is a glass circle (an image of it) tinted with the control's colour,
+    // under its glyph.
+    private var statusGlassView: StaticGlassBackgroundView?
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     private var viewOnceIconImage: UIImage?
@@ -1834,8 +1838,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        let backgroundNodeColor: UIColor
+        var backgroundNodeColor: UIColor
         let foregroundNodeColor: UIColor
+        var statusGlassTint: UIColor?
         if self.iconNode != nil {
             backgroundNodeColor = presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor
             foregroundNodeColor = .white
@@ -1845,9 +1850,13 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 foregroundNodeColor = .white
             } else if arguments.bubbleStyle.isBubbleless {
                 // Without bubbles a cut-out glyph would show no bubble through it: it takes the page's colour.
-                foregroundNodeColor = presentationData.theme.theme.list.plainBackgroundColor
+                foregroundNodeColor = bubblelessPageColor(presentationData.theme.theme)
             } else {
                 foregroundNodeColor = .clear
+            }
+            if incoming && arguments.bubbleStyle.isBubbleless && arguments.customTintColor == nil {
+                statusGlassTint = backgroundNodeColor
+                backgroundNodeColor = .clear
             }
         }
 
@@ -1887,6 +1896,35 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             // The glyph's colour follows the bubble mode (above); written only when it changes.
             if statusNode.foregroundNodeColor != foregroundNodeColor {
                 statusNode.foregroundNodeColor = foregroundNodeColor
+            }
+        }
+        
+        if let statusGlassTint, let statusNode = self.statusNode {
+            let glassView: StaticGlassBackgroundView
+            if let current = self.statusGlassView {
+                glassView = current
+            } else {
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.statusGlassView = glassView
+                if animated {
+                    glassView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
+            }
+            // Under the glyph, also when the control is made anew.
+            self.statusContainerNode.contentNode.view.insertSubview(glassView, belowSubview: statusNode.view)
+            let glassFrame = CGRect(origin: CGPoint(), size: progressFrame.size)
+            glassView.frame = glassFrame
+            glassView.update(size: glassFrame.size, cornerRadius: glassFrame.height * 0.5, isDark: presentationData.theme.theme.overallDarkAppearance, tint: .color(statusGlassTint))
+        } else if let glassView = self.statusGlassView {
+            self.statusGlassView = nil
+            if animated {
+                glassView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                glassView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak glassView] _ in
+                    glassView?.removeFromSuperview()
+                })
+            } else {
+                glassView.removeFromSuperview()
             }
         }
         

@@ -799,7 +799,18 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     primaryText: messageTheme.primaryTextColor,
                     secondaryText: messageTheme.secondaryTextColor
                 )
-                let tableHeaderColor = isDark || !isIncoming ? messageTheme.accentControlColor.withMultipliedAlpha(0.1) : UIColor(white: 0.0, alpha: 0.05)
+                // On a neutral surface (an incoming bubble in a light theme, or the page itself without a bubble) tables
+                // and code blocks take neutral grays; inside a dark or coloured bubble, a tint of its accent.
+                let neutralBlocks = isIncoming && (!isDark || isBubblelessPage)
+                let tableHeaderColor: UIColor
+                let tableBorderColor: UIColor
+                if neutralBlocks {
+                    tableHeaderColor = isDark ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.05)
+                    tableBorderColor = isDark ? UIColor(white: 1.0, alpha: 0.2) : UIColor(white: 0.0, alpha: 0.1)
+                } else {
+                    tableHeaderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.1)
+                    tableBorderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.25)
+                }
                 
                 let checkboxFill = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.fillColor : messageTheme.accentControlColor
                 var checkboxForeground = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.foregroundColor : item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
@@ -836,7 +847,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     panelPrimaryColor: messageTheme.primaryTextColor,
                     panelSecondaryColor: messageTheme.secondaryTextColor,
                     panelAccentColor: messageTheme.accentTextColor,
-                    tableBorderColor: isDark || !isIncoming ? messageTheme.accentControlColor.withMultipliedAlpha(0.25) : UIColor(white: 0.0, alpha: 0.1),
+                    tableBorderColor: tableBorderColor,
                     tableHeaderColor: tableHeaderColor,
                     controlColor: messageTheme.accentControlColor,
                     imageTintColor: nil,

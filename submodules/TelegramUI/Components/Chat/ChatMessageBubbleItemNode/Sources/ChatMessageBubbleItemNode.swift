@@ -630,7 +630,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     let theme = currentParams.presentationData.theme.theme
                     let rect = self.sourceNode.contentRect
-                    cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: theme.list.plainBackgroundColor)
+                    cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: bubblelessPageColor(theme))
                     cardNode.frame = rect
                     cardNode.cornerRadius = chatMessageBubblelessLiftCornerRadius(mainRadius: currentParams.presentationData.chatBubbleCorners.mainRadius, height: rect.height)
                     transition.updateAlpha(node: cardNode, alpha: 1.0)
@@ -737,7 +737,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 if case .none = backgroundType, !presentationData.chatBubbleCorners.bubbleMode {
                     // Without bubbles a selected album item gets its own plate: the page with a little accent, 8pt wider
                     // on each side, rounded like media (spec 5.8).
-                    selectionColor = presentationData.theme.theme.list.plainBackgroundColor.mixedWith(presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(1.0), alpha: chatMessageBubblelessAlbumItemPlateAccentFraction)
+                    selectionColor = bubblelessPageColor(presentationData.theme.theme).mixedWith(presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(1.0), alpha: chatMessageBubblelessAlbumItemPlateAccentFraction)
                     selectionBackgroundFrame = selectionBackgroundFrame.insetBy(dx: -8.0, dy: 0.0)
                     self.selectionBackgroundNode?.cornerRadius = presentationData.chatBubbleCorners.mainRadius
                     self.selectionBackgroundIsBubbleless = true
@@ -800,6 +800,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var bubblelessLift: ChatMessageBubblelessLift?
     private var bubblelessLiftHidesHeader = false
     private var bubblelessLiftCardNode: ASDisplayNode?
+    // Bubble mode off: your own gray message comes out for its menu on a fill as light as the menu, in its bubble's
+    // shape (`updateBubblelessContextLift`).
+    private var bubblelessContextLiftView: ChatMessageBubblelessPaneView?
     // What a lift hid of the header, so that the end of the lift restores exactly that, whatever a layout meanwhile decided.
     private var bubblelessLiftHiddenHeader: (nodes: [ASDisplayNode], layers: [CALayer])?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
@@ -1099,6 +1102,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             if self.bubblelessLift != nil || self.bubblelessLiftCardNode != nil || self.bubblelessLiftHiddenHeader != nil {
                 self.updateBubblelessLiftCard(isExtracted: isExtractedToContextPreview, item: item, transition: transition)
+            }
+            if !item.presentationData.chatBubbleCorners.bubbleMode || self.bubblelessContextLiftView != nil {
+                self.updateBubblelessContextLift(isExtracted: isExtractedToContextPreview, item: item, transition: transition)
             }
         }
         self.mainContextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
@@ -2718,7 +2724,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 nameColors = item.context.peerNameColors.get(.blue, dark: item.presentationData.theme.theme.overallDarkAppearance)
             }
             let color: UIColor
-            if incoming {
+            if incoming && isBubblelessBotAuthor(effectiveAuthor, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode) {
+                color = item.presentationData.theme.theme.chat.message.incoming.primaryTextColor
+            } else if incoming {
                 color = nameColors.main
             } else {
                 color = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
@@ -2758,7 +2766,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     nameColors = item.context.peerNameColors.get(.blue, dark: item.presentationData.theme.theme.overallDarkAppearance)
                 }
                 let color: UIColor
-                if incoming {
+                if incoming && isBubblelessBotAuthor(effectiveAuthor, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode) {
+                    color = item.presentationData.theme.theme.chat.message.incoming.primaryTextColor
+                } else if incoming {
                     color = nameColors.main
                 } else {
                     color = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
@@ -6313,6 +6323,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         // frame CHANGED, and a tear can move while the bubble does not.
         strongSelf.updateBackgroundTear(unsupportedZones, backgroundFrame: backgroundFrame, animation: animation)
         strongSelf.updateBubblelessTear(zones: bubblelessStripZones, width: params.width, theme: item.presentationData.theme.theme)
+        if strongSelf.bubblelessContextLiftView != nil {
+            strongSelf.updateBubblelessContextLiftLayout(backgroundFrame: backgroundFrame, item: item, animation: animation)
+        }
 
         // Without bubbles the pressed message lifts on a card sized to its content, from the frames laid out above (spec
         // 5.9, 6.9). Round videos, torn strips and cards lift without their header.
@@ -8215,6 +8228,68 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return mediaNodeCount > 1 ? result : nil
     }
     
+    /// The fill your own message comes out on for its menu and its shape, nil where its bubble stands out from the dimmed
+    /// chat by itself (bubble mode off).
+    private func bubblelessContextLiftShape(item: ChatMessageItem, backgroundFrame: CGRect) -> (color: UIColor, frame: CGRect, radii: ChatMessageBubblelessCornerRadii)? {
+        guard !item.presentationData.chatBubbleCorners.bubbleMode, let backgroundType = self.backgroundType, case let .outgoing(mergeType) = backgroundType else {
+            return nil
+        }
+        let theme = item.presentationData.theme.theme
+        let fill = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+        guard let color = chatMessageBubblelessContextLiftColor(bubbleIsGray: fill[fill.count / 2].hsb.s <= 0.06, dark: theme.overallDarkAppearance, pageColor: bubblelessPageColor(theme)) else {
+            return nil
+        }
+        let merge: ChatMessageBubblelessBubbleMerge
+        switch mergeType {
+        case .None, .Extracted:
+            merge = .none
+        case .Both:
+            merge = .both
+        case .Bottom:
+            merge = .bottom
+        case .Side:
+            merge = .side
+        case let .Top(side):
+            merge = .top(side: side)
+        }
+        let corners = item.presentationData.chatBubbleCorners
+        let shape = chatMessageBubblelessOutgoingBubbleShape(backgroundFrame: backgroundFrame, merge: merge, mainRadius: corners.mainRadius, smallRadius: corners.mergeBubbleCorners ? corners.auxiliaryRadius : corners.mainRadius)
+        return (color, shape.frame, shape.radii)
+    }
+    
+    private func updateBubblelessContextLift(isExtracted: Bool, item: ChatMessageItem, transition: ContainedViewLayoutTransition) {
+        if isExtracted, let shape = self.bubblelessContextLiftShape(item: item, backgroundFrame: self.backgroundNode.frame) {
+            let liftView: ChatMessageBubblelessPaneView
+            if let current = self.bubblelessContextLiftView {
+                liftView = current
+            } else {
+                liftView = ChatMessageBubblelessPaneView()
+                liftView.isUserInteractionEnabled = false
+                liftView.alpha = 0.0
+                self.bubblelessContextLiftView = liftView
+                // Over the bubble, under the message's content.
+                self.mainContextSourceNode.contentNode.view.insertSubview(liftView, aboveSubview: self.backgroundNode.view)
+            }
+            liftView.frame = shape.frame
+            liftView.update(size: shape.frame.size, radii: shape.radii, color: shape.color, transition: .immediate)
+            transition.updateAlpha(layer: liftView.layer, alpha: 1.0)
+        } else if let liftView = self.bubblelessContextLiftView {
+            self.bubblelessContextLiftView = nil
+            transition.updateAlpha(layer: liftView.layer, alpha: 0.0, completion: { [weak liftView] _ in
+                liftView?.removeFromSuperview()
+            })
+        }
+    }
+    
+    /// Keeps the fill a message came out on with it while its layout changes in the menu.
+    private func updateBubblelessContextLiftLayout(backgroundFrame: CGRect, item: ChatMessageItem, animation: ListViewItemUpdateAnimation) {
+        guard let liftView = self.bubblelessContextLiftView, let shape = self.bubblelessContextLiftShape(item: item, backgroundFrame: backgroundFrame) else {
+            return
+        }
+        animation.animator.updateFrame(layer: liftView.layer, frame: shape.frame, completion: nil)
+        liftView.update(size: shape.frame.size, radii: shape.radii, color: shape.color, transition: ComponentTransition(animation.transition))
+    }
+    
     private func updateBubblelessLiftCard(isExtracted: Bool, item: ChatMessageItem, transition: ContainedViewLayoutTransition) {
         if isExtracted, let bubblelessLift = self.bubblelessLift {
             if bubblelessLift.hasCard {
@@ -8229,7 +8304,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     self.bubblelessLiftCardNode = cardNode
                 }
                 let theme = item.presentationData.theme.theme
-                cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: theme.list.plainBackgroundColor)
+                cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: bubblelessPageColor(theme))
                 cardNode.frame = bubblelessLift.rect
                 cardNode.cornerRadius = chatMessageBubblelessLiftCornerRadius(mainRadius: item.presentationData.chatBubbleCorners.mainRadius, height: bubblelessLift.rect.height)
                 transition.updateAlpha(node: cardNode, alpha: 1.0)
@@ -8941,4 +9016,50 @@ extension ChatMessageBubbleItemNode: ChatMessageBubblelessStickySelectionCheck {
             selectionNode.updateVisibleTop(visibleTop - selectionNode.frame.minY)
         }
     }
+}
+
+/// Bubble mode off: a bot's name heads its messages in the colour of their text rather than in a colour of its own.
+private func isBubblelessBotAuthor(_ author: Peer, bubbleMode: Bool) -> Bool {
+    guard !bubbleMode, let user = author as? TelegramUser else {
+        return false
+    }
+    return user.botInfo != nil
+}
+
+/// Bubble mode off: a flat fill shaped like your own message's bubble (the fill it comes out on for its menu).
+private final class ChatMessageBubblelessPaneView: UIView {
+    override static var layerClass: AnyClass {
+        return CAShapeLayer.self
+    }
+    
+    private var shapeLayer: CAShapeLayer {
+        return self.layer as! CAShapeLayer
+    }
+    
+    func update(size: CGSize, radii: ChatMessageBubblelessCornerRadii, color: UIColor, transition: ComponentTransition) {
+        self.shapeLayer.fillColor = color.cgColor
+        transition.setShapeLayerPath(layer: self.shapeLayer, path: bubblelessPanePath(size: size, radii: radii))
+    }
+}
+
+private func bubblelessPanePath(size: CGSize, radii: ChatMessageBubblelessCornerRadii) -> CGPath {
+    let width = size.width
+    let height = size.height
+    let limit = min(width, height) * 0.5
+    let topLeft = min(radii.topLeft, limit)
+    let topRight = min(radii.topRight, limit)
+    let bottomLeft = min(radii.bottomLeft, limit)
+    let bottomRight = min(radii.bottomRight, limit)
+    let path = CGMutablePath()
+    path.move(to: CGPoint(x: topLeft, y: 0.0))
+    path.addLine(to: CGPoint(x: width - topRight, y: 0.0))
+    path.addArc(tangent1End: CGPoint(x: width, y: 0.0), tangent2End: CGPoint(x: width, y: topRight), radius: topRight)
+    path.addLine(to: CGPoint(x: width, y: height - bottomRight))
+    path.addArc(tangent1End: CGPoint(x: width, y: height), tangent2End: CGPoint(x: width - bottomRight, y: height), radius: bottomRight)
+    path.addLine(to: CGPoint(x: bottomLeft, y: height))
+    path.addArc(tangent1End: CGPoint(x: 0.0, y: height), tangent2End: CGPoint(x: 0.0, y: height - bottomLeft), radius: bottomLeft)
+    path.addLine(to: CGPoint(x: 0.0, y: topLeft))
+    path.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topLeft, y: 0.0), radius: topLeft)
+    path.closeSubpath()
+    return path
 }

@@ -54,17 +54,20 @@ public final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleCon
                 let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
 
                 let strings = UnsupportedContentPillStrings(strings: presentationData.strings)
-                // Without bubbles the banner stands on the page, outlined by the torn strip, its badge and button in
-                // the accent colour; it spans the text column, its button on the column's trailing edge.
+                // Without bubbles the banner stands on the page, outlined by the torn strip, its Telegram badge in blue
+                // glass and its button in light glass; it spans the text column, its button on the column's trailing
+                // edge.
                 let isTornStrip = item.bubbleStyle.isBubbleless
                 let colors: UnsupportedContentPillColors
                 if isTornStrip {
                     let messageTheme = presentationData.theme.theme.chat.message.incoming
+                    let isDark = presentationData.theme.theme.overallDarkAppearance
+                    let systemBlue = UIColor.systemBlue.resolvedColor(with: UITraitCollection(userInterfaceStyle: isDark ? .dark : .light))
                     colors = UnsupportedContentPillColors(
                         fill: .clear,
                         primaryText: messageTheme.primaryTextColor,
-                        isDark: presentationData.theme.theme.overallDarkAppearance,
-                        style: .outlined(secondaryText: messageTheme.secondaryTextColor, accent: messageTheme.accentControlColor, accentForeground: presentationData.theme.theme.list.itemCheckColors.foregroundColor)
+                        isDark: isDark,
+                        style: .outlined(secondaryText: messageTheme.secondaryTextColor, accent: systemBlue, accentForeground: .white)
                     )
                 } else {
                     colors = UnsupportedContentPillColors(

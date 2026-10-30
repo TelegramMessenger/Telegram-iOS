@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import AppBundle
 import TelegramPresentationData
 import WallpaperBackgroundNode
+import StaticGlassBackground
 
 /// The unsupported-content pill: a rounded card carrying a badge, a title/subtitle column and a
 /// trailing action button, over either a live wallpaper patch or a static fill.
@@ -23,6 +24,9 @@ public final class UnsupportedContentPillView: UIView {
     private var buttonTitleNode: TextNode?
 
     private let buttonNode: HighlightTrackingButton
+    // The outlined style: the badge and the button are glass (images of it).
+    private var badgeGlassView: StaticGlassBackgroundView?
+    private var buttonGlassView: StaticGlassBackgroundView?
 
     private var buttonFrame: CGRect = CGRect()
 
@@ -174,9 +178,23 @@ public final class UnsupportedContentPillView: UIView {
         )
         animation.animator.updateFrame(layer: self.badgeBackgroundView.layer, frame: badgeFrame, completion: nil)
         if let accentColors {
-            self.badgeBackgroundView.tintColor = accentColors.accent
-            self.badgeBackgroundView.alpha = 1.0
+            self.badgeBackgroundView.isHidden = true
+            let badgeGlassView: StaticGlassBackgroundView
+            if let current = self.badgeGlassView {
+                badgeGlassView = current
+                animation.animator.updateFrame(layer: badgeGlassView.layer, frame: badgeFrame, completion: nil)
+            } else {
+                badgeGlassView = StaticGlassBackgroundView()
+                badgeGlassView.isUserInteractionEnabled = false
+                self.badgeGlassView = badgeGlassView
+                self.insertSubview(badgeGlassView, belowSubview: self.badgeIconView)
+                badgeGlassView.frame = badgeFrame
+            }
+            badgeGlassView.update(size: badgeFrame.size, cornerRadius: badgeFrame.height * 0.5, isDark: colors.isDark, tint: .color(accentColors.accent))
         } else {
+            self.badgeBackgroundView.isHidden = false
+            self.badgeGlassView?.removeFromSuperview()
+            self.badgeGlassView = nil
             self.badgeBackgroundView.tintColor = UIColor(rgb: 0x000000)
             self.badgeBackgroundView.alpha = colors.isDark ? pillBadgeBackgroundAlpha.dark : pillBadgeBackgroundAlpha.light
         }
@@ -200,7 +218,26 @@ public final class UnsupportedContentPillView: UIView {
         animation.animator.updateFrame(layer: self.buttonNode.layer, frame: buttonFrame, completion: nil)
 
         self.buttonNode.layer.cornerRadius = layout.buttonSize.height * 0.5
-        self.buttonNode.backgroundColor = accentColors?.accent ?? UIColor(rgb: colors.isDark ? 0xffffff : 0x000000, alpha: 0.12)
+        if accentColors != nil {
+            // Light glass under a black label, in a dark theme too.
+            self.buttonNode.backgroundColor = .clear
+            let buttonGlassView: StaticGlassBackgroundView
+            if let current = self.buttonGlassView {
+                buttonGlassView = current
+                animation.animator.updateFrame(layer: buttonGlassView.layer, frame: buttonFrame, completion: nil)
+            } else {
+                buttonGlassView = StaticGlassBackgroundView()
+                buttonGlassView.isUserInteractionEnabled = false
+                self.buttonGlassView = buttonGlassView
+                self.insertSubview(buttonGlassView, belowSubview: self.buttonNode)
+                buttonGlassView.frame = buttonFrame
+            }
+            buttonGlassView.update(size: buttonFrame.size, cornerRadius: buttonFrame.height * 0.5, isDark: false, tint: .color(UIColor(white: 1.0, alpha: 0.8)))
+        } else {
+            self.buttonGlassView?.removeFromSuperview()
+            self.buttonGlassView = nil
+            self.buttonNode.backgroundColor = UIColor(rgb: colors.isDark ? 0xffffff : 0x000000, alpha: 0.12)
+        }
         self.buttonNode.accessibilityLabel = strings.action
 
         // From the measured layout, NOT from the node's own bounds — an applied TextNode has zero

@@ -939,8 +939,10 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     isSelected: spec.component.chosenOrder != nil
                 )
             } else {
+                // A glass reaction is filled by its glass, chosen or not (see the glass in `apply`).
+                let isGlass = spec.component.colors.isGlass && !spec.component.isTag
                 backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
-                    background: spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
+                    background: isGlass ? 0 : (spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground),
                     foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
                     extractedBackground: spec.component.colors.extractedBackground,
                     extractedForeground: spec.component.colors.extractedForeground,
@@ -1213,7 +1215,14 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 self.containerView.contentView.insertSubview(glassView, belowSubview: self.buttonNode)
             }
             glassAnimation.animator.updateFrame(layer: glassView.layer, frame: buttonFrame, completion: nil)
-            glassView.update(size: buttonFrame.size, cornerRadius: buttonFrame.height * 0.5, isDark: layout.isDark, tint: .panel, updateFrame: { view, frame in
+            // A chosen reaction is glass tinted with the chosen fill, the rest are clear glass.
+            let tint: StaticGlassTint
+            if layout.spec.component.chosenOrder != nil, layout.spec.component.colors.selectedBackground != 0 {
+                tint = .color(UIColor(argb: layout.spec.component.colors.selectedBackground))
+            } else {
+                tint = .panel
+            }
+            glassView.update(size: buttonFrame.size, cornerRadius: buttonFrame.height * 0.5, isDark: layout.isDark, tint: tint, animateImageChange: glassAnimation.isAnimated, updateFrame: { view, frame in
                 glassAnimation.animator.updateFrame(layer: view.layer, frame: frame, completion: nil)
             })
         } else if let glassView = self.glassView {

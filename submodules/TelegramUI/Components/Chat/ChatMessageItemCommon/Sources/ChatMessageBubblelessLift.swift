@@ -117,6 +117,68 @@ public func chatMessageBubblelessLiftColor(dark: Bool, pageColor: UIColor) -> UI
     return dark ? UIColor(rgb: 0x1c1c1e) : pageColor
 }
 
+/// A round video's duration text: on the dark media glass (bubble mode off) the time-over-media colour, which stays
+/// readable where the service colour would sink into the glass on a light page; otherwise the service colour.
+public func chatMessageBubblelessRoundVideoDurationTextColor(onGlass: Bool, serviceTextColor: UIColor, mediaTextColor: UIColor) -> UIColor {
+    return onGlass ? mediaTextColor : serviceTextColor
+}
+
+/// The fill your own message comes out on for its menu, or nil where its bubble stands out from the dimmed chat by
+/// itself: a light theme's gray bubble is barely lighter than the dimmed chat, so it comes out as light as the menu (the
+/// page); a dark theme's gray bubble is lighter than the menu already, and a coloured bubble keeps its colour.
+public func chatMessageBubblelessContextLiftColor(bubbleIsGray: Bool, dark: Bool, pageColor: UIColor) -> UIColor? {
+    guard bubbleIsGray, !dark else {
+        return nil
+    }
+    return pageColor
+}
+
+/// How your own message's bubble runs on into its neighbours (`ChatMessageBackgroundMergeType` without the extracted
+/// case, which is `none` here).
+public enum ChatMessageBubblelessBubbleMerge: Equatable {
+    case none
+    case both
+    case bottom
+    case side
+    case top(side: Bool)
+}
+
+public struct ChatMessageBubblelessCornerRadii: Equatable {
+    public var topLeft: CGFloat
+    public var topRight: CGFloat
+    public var bottomLeft: CGFloat
+    public var bottomRight: CGFloat
+
+    public init(topLeft: CGFloat, topRight: CGFloat, bottomLeft: CGFloat, bottomRight: CGFloat) {
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomLeft = bottomLeft
+        self.bottomRight = bottomRight
+    }
+}
+
+/// The shape a fill in place of your own message's bubble takes: the bubble image stands its body 1pt inside its frame
+/// and keeps a 6pt tail column on the right; the corners toward the messages it runs on take the smaller radius.
+public func chatMessageBubblelessOutgoingBubbleShape(backgroundFrame: CGRect, merge: ChatMessageBubblelessBubbleMerge, mainRadius: CGFloat, smallRadius: CGFloat) -> (frame: CGRect, radii: ChatMessageBubblelessCornerRadii) {
+    let main = mainRadius
+    let small = smallRadius
+    let radii: ChatMessageBubblelessCornerRadii
+    switch merge {
+    case .none:
+        radii = ChatMessageBubblelessCornerRadii(topLeft: main, topRight: main, bottomLeft: main, bottomRight: main)
+    case .both:
+        radii = ChatMessageBubblelessCornerRadii(topLeft: main, topRight: small, bottomLeft: main, bottomRight: small)
+    case .bottom:
+        radii = ChatMessageBubblelessCornerRadii(topLeft: main, topRight: small, bottomLeft: main, bottomRight: main)
+    case .side:
+        radii = ChatMessageBubblelessCornerRadii(topLeft: main, topRight: main, bottomLeft: small, bottomRight: small)
+    case let .top(side):
+        radii = ChatMessageBubblelessCornerRadii(topLeft: main, topRight: main, bottomLeft: side ? small : main, bottomRight: small)
+    }
+    let frame = CGRect(x: backgroundFrame.minX + 1.0, y: backgroundFrame.minY + 1.0, width: max(1.0, backgroundFrame.width - 8.0), height: max(1.0, backgroundFrame.height - 2.0))
+    return (frame, radii)
+}
+
 public func chatMessageBubblelessLiftCornerRadius(mainRadius: CGFloat, height: CGFloat) -> CGFloat {
     return min(mainRadius, floor(height * 0.5))
 }

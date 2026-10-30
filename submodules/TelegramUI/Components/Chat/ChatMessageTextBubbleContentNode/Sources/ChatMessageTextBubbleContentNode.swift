@@ -529,10 +529,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                // Without bubbles other people's text is set in New York; its quotes and code-block titles keep the system
-                // family (spec 5.11).
-                let bubblelessTextFonts = item.bubbleStyle.isBubbleless ? item.presentationData.bubblelessIncomingTextFonts : nil
-                let textFont = bubblelessTextFonts?.regular ?? item.presentationData.messageFont
+                // Message text in New York when it is picked in Text Size; its quotes and code-block titles keep the system
+                // family.
+                let messageBodyFonts = item.presentationData.messageBodyFonts
+                let textFont = messageBodyFonts.body.regular
                 
                 var codeHighlightSpecs: [CachedMessageSyntaxHighlight.Spec] = []
                 var cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight?
@@ -616,7 +616,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, codeBlockTitleColor: codeBlockTitleColor, codeBlockAccentColor: codeBlockAccentColor, codeBlockBackgroundColor: codeBlockBackgroundColor, codeBlockFillColor: codeBlockFillColor, baseFont: textFont, linkFont: textFont, boldFont: bubblelessTextFonts?.bold ?? item.presentationData.messageBoldFont, italicFont: bubblelessTextFonts?.italic ?? item.presentationData.messageItalicFont, boldItalicFont: bubblelessTextFonts?.boldItalic ?? item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, blockFonts: bubblelessTextFonts != nil ? item.presentationData.systemTextFonts : nil, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, codeBlockTitleColor: codeBlockTitleColor, codeBlockAccentColor: codeBlockAccentColor, codeBlockBackgroundColor: codeBlockBackgroundColor, codeBlockFillColor: codeBlockFillColor, baseFont: textFont, linkFont: textFont, boldFont: messageBodyFonts.body.bold, italicFont: messageBodyFonts.body.italic, boldItalicFont: messageBodyFonts.body.boldItalic, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, blockFonts: messageBodyFonts.blockFonts, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {

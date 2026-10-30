@@ -4,10 +4,12 @@ A capture harness for the static glass assets (`submodules/TelegramUI/Resources/
 `submodules/TelegramUI/Components/StaticGlassBackground`): the chat draws its per-message glass (bubble mode off) from
 images of the real `GlassBackgroundView`, captured here.
 
-The app lays out glass capsules (r 10–24 with a 60pt straight run), a 30pt circle and a 30×60 vertical capsule over a
-page colour and writes `Documents/manifest.json` with their frames once the glass has rendered. Launch arguments:
-`-page RRGGBB`, `-dark 0|1`, `-tint panel|RRGGBB` (a styled tint at 0.85 alpha), `-interactive 0|1`, `-label <name>`,
-`-mode static` (the shipped images, `StaticGlassBackgroundView`, at the same frames, for comparing with the glass).
+The app lays out glass capsules (r 10–24 with a 60pt straight run), 30pt and 48pt circles, a 30×60 vertical capsule
+and a 120×80 rectangle of radius 12 over a page colour and writes `Documents/manifest.json` with their frames once the
+glass has rendered. Launch arguments: `-page RRGGBB`, `-dark 0|1`, `-tint panel|media|RRGGBB` (`media` is the chat's
+dark glass over media; a colour is a styled tint at `-tintAlpha`, 0.85 by default), `-interactive 0|1`,
+`-label <name>`, `-mode static` (the shipped images, `StaticGlassBackgroundView`, at the same frames, for comparing with
+the glass).
 
 ## Regenerating the assets (a new iOS, a new shape)
 
@@ -27,7 +29,17 @@ page colour and writes `Documents/manifest.json` with their frames once the glas
    for p in 000000 202020 101010; do Tests/GlassCapture/capture.sh $OUT dark-panel-$p -page $p -dark 1; done
    ```
 
-3. Generate (Python 3 with numpy and Pillow); it prints, per asset, the error of compositing it over each captured page:
+   For the media glass and the captured tints (the generator's `MODES`), the same pages with their tint:
+
+   ```sh
+   for p in 000000 141415 808080 FFFFFF; do Tests/GlassCapture/capture.sh $OUT dark-tint-000000a30-$p -page $p -dark 1 -tint 000000 -tintAlpha 0.3; done
+   for p in FFFFFF E0E0E0 F0F0F0 F9F9FB; do Tests/GlassCapture/capture.sh $OUT light-tint-000000a100-$p -page $p -dark 0 -tint 000000 -tintAlpha 1.0; done
+   for p in 000000 202020 101010 141415; do Tests/GlassCapture/capture.sh $OUT dark-tint-FFFFFFa100-$p -page $p -dark 1 -tint FFFFFF -tintAlpha 1.0; done
+   for p in FFFFFF E0E0E0 F0F0F0 F9F9FB; do Tests/GlassCapture/capture.sh $OUT light-tint-FFFFFFa80-$p -page $p -dark 0 -tint FFFFFF -tintAlpha 0.8; done
+   ```
+
+3. Generate (Python 3 with numpy and Pillow); it prints, per asset, the error of compositing it over each captured page
+   (name shapes after the directories to write only those, keeping assets made from earlier captures):
 
    ```sh
    python3 submodules/TelegramUI/Components/StaticGlassBackground/Tools/make_static_glass.py $OUT submodules/TelegramUI/Resources/StaticGlass

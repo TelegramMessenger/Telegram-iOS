@@ -190,12 +190,13 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             return (contentProperties, nil, initialWidth + fileInsets.left + fileInsets.right, { [weak self] constrainedSize, position in
-                // Under the author header a file starts where a reply would.
+                // Under the author header a file starts as far under the name as in a bubble.
                 var fileInsets = fileInsets
+                var isUnderHeader = false
                 if isBubbleless, case let .linear(top, _) = position, case .Neighbour(_, .header, _) = top {
-                    fileInsets.top = chatMessageBubblelessHeaderBlockSpacing
+                    isUnderHeader = true
                 }
-                fileInsets.top += voiceButtonOverhang
+                fileInsets.top = chatMessageBubblelessFileTopInset(baseTop: fileInsets.top, underHeader: isUnderHeader, voiceButtonOverhang: voiceButtonOverhang)
                 let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - fileInsets.left - fileInsets.right, height: constrainedSize.height))
                 
                 return (refinedWidth + fileInsets.left + fileInsets.right, { [weak self] boundingWidth in

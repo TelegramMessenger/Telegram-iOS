@@ -2541,7 +2541,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         // No tails: the text and link preview content nodes draw no status line (views, time) then, and the row
         // shows both in its channel line instead; the bubble's shape does not matter, it draws no background.
         let corners = presentationData.chatBubbleCorners
-        let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false)
+        let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false, serifMessageText: corners.serifMessageText)
         return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: feedCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
     }
 

@@ -28,12 +28,44 @@ import ChatMessageActionButtonsNode
 import ChatMessageReactionsFooterContentNode
 import ChatSwipeToReplyRecognizer
 import ChatMessageSuggestedPostInfoNode
+import StaticGlassBackground
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 public class ChatMessageStickerItemNode: ChatMessageItemView {
+    // Bubble mode off: the reply and the forward header beside a sticker stand on glass drawn from images instead of
+    // the wallpaper's plates, and fade with the other panels in selection.
+    private var replyGlassView: StaticGlassBackgroundView?
+    private var forwardGlassView: StaticGlassBackgroundView?
+    
+    private func updateBubblelessInfoPlates(isGlass: Bool, replyFrame: CGRect?, forwardFrame: CGRect?, alpha: CGFloat, isDark: Bool) {
+        func update(_ view: inout StaticGlassBackgroundView?, frame: CGRect?) {
+            if isGlass, let frame {
+                let glassView: StaticGlassBackgroundView
+                if let current = view {
+                    glassView = current
+                } else {
+                    glassView = StaticGlassBackgroundView()
+                    glassView.isUserInteractionEnabled = false
+                    self.contextSourceNode.contentNode.view.insertSubview(glassView, at: 0)
+                    view = glassView
+                }
+                glassView.frame = frame
+                glassView.alpha = alpha
+                glassView.update(size: frame.size, cornerRadius: min(12.0, frame.height * 0.5), isDark: isDark, tint: .panel)
+            } else if let current = view {
+                view = nil
+                current.removeFromSuperview()
+            }
+        }
+        update(&self.replyGlassView, frame: replyFrame)
+        update(&self.forwardGlassView, frame: forwardFrame)
+        self.replyBackgroundContent?.isHidden = isGlass
+        self.forwardBackgroundContent?.isHidden = isGlass
+    }
+    
     public let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     public let imageNode: TransformImageNode
@@ -1410,6 +1442,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.forwardInfoNode?.alpha = panelsAlpha
                     strongSelf.replyBackgroundContent?.alpha = panelsAlpha
                     strongSelf.forwardBackgroundContent?.alpha = panelsAlpha
+                    strongSelf.updateBubblelessInfoPlates(isGlass: !item.presentationData.chatBubbleCorners.bubbleMode, replyFrame: replyBackgroundFrame, forwardFrame: forwardBackgroundFrame, alpha: panelsAlpha, isDark: item.presentationData.theme.theme.overallDarkAppearance)
                     
                     if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
@@ -1921,6 +1954,11 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         if let forwardBackgroundContent = self.forwardBackgroundContent {
             transition.updateAlpha(node: forwardBackgroundContent, alpha: panelsAlpha)
         }
+        for glassView in [self.replyGlassView, self.forwardGlassView] {
+            if let glassView {
+                transition.updateAlpha(layer: glassView.layer, alpha: panelsAlpha)
+            }
+        }
         
         if let selectionState = item.controllerInteraction.selectionState {
             let selected = selectionState.selectedIds.contains(item.message.id)
@@ -2296,6 +2334,13 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             if let forwardBackgroundContent = self.forwardBackgroundContent {
                 transition.animatePositionAdditive(layer: forwardBackgroundContent.layer, offset: offset)
                 forwardBackgroundContent.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            }
+            // Bubble mode off: the glass plates stand in for the backgrounds above.
+            for glassView in [self.replyGlassView, self.forwardGlassView] {
+                if let glassView {
+                    transition.animatePositionAdditive(layer: glassView.layer, offset: offset)
+                    glassView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                }
             }
         }
     }

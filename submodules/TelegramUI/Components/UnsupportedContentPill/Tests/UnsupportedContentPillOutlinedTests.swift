@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import Display
+import StaticGlassBackground
 @testable import UnsupportedContentPill
 
 private let testStrings = UnsupportedContentPillStrings(
@@ -35,7 +36,7 @@ private func update(_ view: UnsupportedContentPillView, colors: UnsupportedConte
 }
 
 // A chat without bubbles stands the pill in a strip it frames itself: no plate, no room of the pill's own around its
-// content, the badge and the button in the accent colour.
+// content, the badge in glass tinted with the accent and the button in light glass.
 final class UnsupportedContentPillOutlinedTests: XCTestCase {
     func testOutlinedPillHasNoRoomAroundItsContent() {
         let layout = UnsupportedContentPill.layout(strings: testStrings, colors: outlinedColors, constrainedWidth: 600.0)
@@ -50,15 +51,28 @@ final class UnsupportedContentPillOutlinedTests: XCTestCase {
         XCTAssertEqual(badge?.frame.minX, 0.0)
     }
 
-    func testOutlinedPillFillsItsBadgeAndButtonWithTheAccent() {
+    func testOutlinedPillPutsItsBadgeAndButtonOnGlass() {
         let view = UnsupportedContentPillView()
         _ = update(view, colors: outlinedColors)
         let imageViews = view.subviews.compactMap({ $0 as? UIImageView })
-        XCTAssertEqual(imageViews.first?.tintColor, accent)
-        XCTAssertEqual(imageViews.first?.alpha, 1.0)
+        // The badge's own fill gives way to glass at its frame; the glyph keeps the accent's foreground.
+        XCTAssertEqual(imageViews.first?.isHidden, true)
         XCTAssertEqual(imageViews.last?.tintColor, accentForeground)
+        let glassViews = view.subviews.compactMap({ $0 as? StaticGlassBackgroundView })
+        XCTAssertEqual(glassViews.count, 2)
+        XCTAssertEqual(glassViews.first?.frame, imageViews.first?.frame)
         let button = view.subviews.compactMap({ $0 as? HighlightTrackingButton }).first
-        XCTAssertEqual(button?.backgroundColor, accent)
+        XCTAssertEqual(button?.backgroundColor, .clear)
+        XCTAssertEqual(glassViews.last?.frame, button?.frame)
+    }
+    
+    // Back to a plate, the glass goes.
+    func testGlassGoesWithTheOutlinedStyle() {
+        let view = UnsupportedContentPillView()
+        _ = update(view, colors: outlinedColors)
+        _ = update(view, colors: plateColors)
+        XCTAssertTrue(view.subviews.compactMap({ $0 as? StaticGlassBackgroundView }).isEmpty)
+        XCTAssertEqual(view.subviews.compactMap({ $0 as? UIImageView }).first?.isHidden, false)
     }
 
     func testOutlinedPillHasNoPlate() {

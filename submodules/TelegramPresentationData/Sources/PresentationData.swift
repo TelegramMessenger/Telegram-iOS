@@ -72,13 +72,21 @@ public struct PresentationChatBubbleCorners: Equatable, Hashable {
     // Mirrors PresentationChatBubbleSettings.bubbleMode. Only the app's presentation data carries false: every other
     // constructor keeps the default, so surfaces outside the chat keep their bubbles.
     public var bubbleMode: Bool
+    // Mirrors PresentationChatBubbleSettings.serifMessageFont: message text is set in New York.
+    public var serifMessageText: Bool
     
-    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool, hasTails: Bool = true, bubbleMode: Bool = true) {
+    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool, hasTails: Bool = true, bubbleMode: Bool = true, serifMessageText: Bool = false) {
         self.mainRadius = mainRadius
         self.auxiliaryRadius = auxiliaryRadius
         self.mergeBubbleCorners = mergeBubbleCorners
         self.hasTails = hasTails
         self.bubbleMode = bubbleMode
+        self.serifMessageText = serifMessageText
+    }
+    
+    /// The corners the app's presentation data takes from the stored settings.
+    public init(settings: PresentationChatBubbleSettings) {
+        self.init(mainRadius: CGFloat(settings.mainRadius), auxiliaryRadius: CGFloat(settings.auxiliaryRadius), mergeBubbleCorners: settings.mergeBubbleCorners, bubbleMode: settings.bubbleMode, serifMessageText: settings.serifMessageFont)
     }
 }
 
@@ -435,7 +443,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
         
-        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+        let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
         
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, chatSettings: chatSettings, experimentalUISettings: experimentalUISettings)
     }
@@ -858,7 +866,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         
                         let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
                         
-                        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+                        let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
                         
                         return PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
                     }
@@ -886,7 +894,7 @@ private func bubblelessPresentationData(mediaBox: MediaBox, themeSettings: Prese
     
     let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
     
-    let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners, bubbleMode: false)
+    let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
     
     return PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: bubblelessChatWallpaper(theme: theme), chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
 }
@@ -914,7 +922,7 @@ public func defaultPresentationData() -> PresentationData {
     
     let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
     
-    let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+    let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
     
     return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: defaultPresentationTheme.chat.defaultWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
 }

@@ -15,6 +15,49 @@ final class StaticGlassBackgroundTests: XCTestCase {
         XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 120.0, height: 40.0), cornerRadius: 20.0), StaticGlassAssetChoice(shape: .capsuleR21, scale: 40.0 / 42.0))
     }
 
+    // Revision 2's plates: 20pt capsules (time plates, badges, the comments item) take the r10 capsule, round controls
+    // above 36pt the 48pt circle, a rounded rectangle (a reply plate beside a sticker) the r12 rectangle scaled to its
+    // radius; the dark glass over media has a capsule and a circle of its own.
+    func testRevisionTwoShapesPickTheirAssets() {
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 50.0, height: 20.0), cornerRadius: 10.0), StaticGlassAssetChoice(shape: .capsuleR10, scale: 1.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 40.0, height: 18.0), cornerRadius: 9.0), StaticGlassAssetChoice(shape: .capsuleR10, scale: 0.9))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 48.0, height: 48.0), cornerRadius: 24.0), StaticGlassAssetChoice(shape: .circleR24, scale: 1.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 44.0, height: 44.0), cornerRadius: 22.0), StaticGlassAssetChoice(shape: .circleR24, scale: 44.0 / 48.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 36.0, height: 36.0), cornerRadius: 18.0), StaticGlassAssetChoice(shape: .circleR15, scale: 36.0 / 30.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 160.0, height: 40.0), cornerRadius: 12.0), StaticGlassAssetChoice(shape: .rectR12, scale: 1.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 160.0, height: 40.0), cornerRadius: 9.0), StaticGlassAssetChoice(shape: .rectR12, scale: 0.75))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 50.0, height: 20.0), cornerRadius: 10.0, isMedia: true), StaticGlassAssetChoice(shape: .capsuleR10, scale: 1.0))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 60.0, height: 30.0), cornerRadius: 15.0, isMedia: true), StaticGlassAssetChoice(shape: .capsuleR10, scale: 1.5))
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 44.0, height: 44.0), cornerRadius: 22.0, isMedia: true), StaticGlassAssetChoice(shape: .circleR24, scale: 44.0 / 48.0))
+        // A downloading media badge is 38pt tall at radius 9: the media rectangle.
+        XCTAssertEqual(staticGlassAssetChoice(size: CGSize(width: 90.0, height: 38.0), cornerRadius: 9.0, isMedia: true), StaticGlassAssetChoice(shape: .rectR12, scale: 0.75))
+    }
+
+    // Tints the model does not reproduce are captured: the monochrome ink (black on light glass, white on dark) and white
+    // at 0.8 on light glass. Any other tint is modelled.
+    func testFixedTintsAreCaptured() {
+        XCTAssertEqual(staticGlassCapturedTint(color: UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0), isDark: false), "tint-000000a100-light")
+        XCTAssertEqual(staticGlassCapturedTint(color: UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), isDark: true), "tint-FFFFFFa100-dark")
+        XCTAssertEqual(staticGlassCapturedTint(color: UIColor(white: 1.0, alpha: 0.8), isDark: false), "tint-FFFFFFa80-light")
+        XCTAssertNil(staticGlassCapturedTint(color: UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0), isDark: true))
+        XCTAssertNil(staticGlassCapturedTint(color: UIColor(red: 0.0, green: 0.533, blue: 1.0, alpha: 1.0), isDark: false))
+        XCTAssertNil(staticGlassCapturedTint(color: UIColor(white: 1.0, alpha: 0.85), isDark: false))
+    }
+
+    // A shape shorter than its asset's ends along an axis it stretches on is cut along that axis: a 40pt reply plate
+    // from the 49pt rectangle across its rows, still stretched across its columns; a narrow capsule across its columns.
+    func testShapesAreCutAlongTheirShortAxes() {
+        let rect = staticGlassCutLengths(size: CGSize(width: 160.0, height: 40.0), imageScale: 3.0, assetFrame: CGRect(x: 24.0, y: 3.0, width: 147.0, height: 147.0), stretchesHorizontally: true, stretchesVertically: true, scale: 3)
+        XCTAssertNil(rect.width)
+        XCTAssertEqual(rect.height, 120)
+        let small = staticGlassCutLengths(size: CGSize(width: 40.0, height: 40.0), imageScale: 3.0, assetFrame: CGRect(x: 24.0, y: 3.0, width: 147.0, height: 147.0), stretchesHorizontally: true, stretchesVertically: true, scale: 3)
+        XCTAssertEqual(small.width, 120)
+        XCTAssertEqual(small.height, 120)
+        let capsule = staticGlassCutLengths(size: CGSize(width: 30.0, height: 30.0), imageScale: 3.0, assetFrame: CGRect(x: 9.0, y: 3.0, width: 165.0, height: 90.0), stretchesHorizontally: true, stretchesVertically: false, scale: 3)
+        XCTAssertEqual(capsule.width, 90)
+        XCTAssertNil(capsule.height)
+    }
+
     // A shape narrower than its asset's two ends is cut from them (the left end's half and the right end's half) rather
     // than squeezed, which would distort the ends.
     func testNarrowShapesAreCutFromTheEnds() {

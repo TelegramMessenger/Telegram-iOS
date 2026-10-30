@@ -98,6 +98,7 @@ swift_library(
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramPresentationData",
         "//submodules/Display",
+        "//submodules/TelegramUI/Components/Chat/ChatTextInputActionButtonsNode",
     ],
 )
 

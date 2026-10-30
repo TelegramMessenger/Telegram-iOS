@@ -41,9 +41,9 @@ public final class ChatPresentationData {
     public let messageBoldItalicFont: UIFont
     public let messageFixedFont: UIFont
     public let messageBlockQuoteFont: UIFont
-    /// Other people's text without bubbles (spec 5.11). Built here, only in the bubble-free mode: layouts read this
-    /// object from several threads, so it is not lazy, and with bubbles nothing is built.
-    public let bubblelessIncomingTextFonts: ChatMessageTextFonts?
+    /// Message text in New York, when it is picked in Text Size (both modes, every message); nil keeps the fonts above.
+    /// Built here: layouts read this object from several threads, so it is not lazy.
+    public let messageTextFonts: ChatMessageTextFonts?
 
     public init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, chatBubbleCorners: PresentationChatBubbleCorners, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
         self.theme = theme
@@ -64,21 +64,35 @@ public final class ChatPresentationData {
         self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
         self.messageFixedFont = Font.monospace(baseFontSize)
         self.messageBlockQuoteFont = Font.regular(baseFontSize - 1.0)
-        self.bubblelessIncomingTextFonts = ChatPresentationData.bubblelessIncomingTextFonts(bubbleMode: chatBubbleCorners.bubbleMode, baseFontSize: baseFontSize)
+        self.messageTextFonts = ChatPresentationData.messageTextFonts(serif: chatBubbleCorners.serifMessageText, baseFontSize: baseFontSize)
 
         self.animatedEmojiScale = animatedEmojiScale
     }
 
-    public static func bubblelessIncomingTextFonts(bubbleMode: Bool, baseFontSize: CGFloat) -> ChatMessageTextFonts? {
-        if bubbleMode {
+    public static func messageTextFonts(serif: Bool, baseFontSize: CGFloat) -> ChatMessageTextFonts? {
+        if !serif {
             return nil
         }
         return ChatMessageTextFonts.newYork(baseFontSize: baseFontSize)
     }
 
-    /// The body font of an incoming message without bubbles, which every bubble-free measurement of its first line reads.
+    /// The body font message text is drawn in (New York when picked), which every bubble-free measurement of an incoming
+    /// message's first line reads.
     public var bubblelessIncomingBodyFont: UIFont {
-        return self.bubblelessIncomingTextFonts?.regular ?? self.messageFont
+        return self.messageTextFonts?.regular ?? self.messageFont
+    }
+
+    /// The fonts message text is drawn in, for the text node and for whatever measures that text the same way: New York
+    /// when picked, its quotes and code-block titles in the system family (`blockFonts`); otherwise the system fonts.
+    public static func messageBodyFonts(messageTextFonts: ChatMessageTextFonts?, systemTextFonts: ChatMessageTextFonts) -> (body: ChatMessageTextFonts, blockFonts: ChatMessageTextFonts?) {
+        if let messageTextFonts {
+            return (messageTextFonts, systemTextFonts)
+        }
+        return (systemTextFonts, nil)
+    }
+
+    public var messageBodyFonts: (body: ChatMessageTextFonts, blockFonts: ChatMessageTextFonts?) {
+        return ChatPresentationData.messageBodyFonts(messageTextFonts: self.messageTextFonts, systemTextFonts: self.systemTextFonts)
     }
 
     /// The system family of message text, for the spans that keep it under a New York body (quotes, code-block titles).

@@ -2322,12 +2322,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     }
                     self.sendActionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                     if self.sendActionButtons.sendButtonHasApplyIcon {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     } else {
                         if isScheduledMessages {
-                            self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                            if self.sendActionButtons.usesSendButtonGlass(interfaceState: interfaceState) {
+                                // The glass is the button's disc: the clock alone, as the send glyph.
+                                self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
+                            } else {
+                                self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                            }
                         } else {
-                            self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
+                            self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                         }
                     }
                 }
@@ -4798,6 +4803,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.sendActionButtons.updateAccessibility()
                 
                 self.sendActionButtons.animatingSendButton = true
+                self.sendActionButtons.updateSendButtonGlassVisibility(false, transition: alphaTransition)
                 alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 0.0, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.sendActionButtons.animatingSendButton = false
@@ -4840,6 +4846,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if hasText || (keepSendButtonEnabled && (sendButtonIsLaidOut || !mediaInputIsActive) && !hasSlowModeButton) {
                 if self.sendActionButtons.sendContainerNode.alpha.isZero && self.rightSlowModeInset.isZero {
                     alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 1.0)
+                    self.sendActionButtons.updateSendButtonGlassVisibility(true, transition: alphaTransition)
                     blurTransitionIn.setBlur(layer: self.sendActionButtons.sendContainerNode.layer, radius: 0.0)
                     transition.animatePositionAdditive(layer: self.sendActionButtons.sendButton.imageNode.layer, offset: CGPoint(x: -22.0, y: 18.0))
                     if let sendButtonRadialStatusNode = self.sendActionButtons.sendButtonRadialStatusNode {
@@ -4849,6 +4856,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else {
                 if !self.sendActionButtons.sendContainerNode.alpha.isZero {
                     self.sendActionButtons.animatingSendButton = true
+                    self.sendActionButtons.updateSendButtonGlassVisibility(false, transition: alphaTransition)
                     alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 0.0, completion: { [weak self] _ in
                         if let strongSelf = self {
                             strongSelf.sendActionButtons.animatingSendButton = false
@@ -5031,12 +5039,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if sendButtonHasApplyIcon != self.sendActionButtons.sendButtonHasApplyIcon {
                 self.sendActionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                 if self.sendActionButtons.sendButtonHasApplyIcon {
-                    self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
+                    self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                 } else {
                     if case .scheduledMessages = interfaceState.subject {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelScheduleIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     } else {
-                        self.sendActionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
+                        self.sendActionButtons.sendButton.setImage(self.sendActionButtons.sendButtonGlassIcon(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), interfaceState: interfaceState), for: [])
                     }
                 }
             }

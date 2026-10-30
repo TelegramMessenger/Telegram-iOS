@@ -25,8 +25,8 @@ public final class StaticGlassBackgroundView: UIView {
     }
 
     /// `updateFrame` sets the frames of the image and the content as the caller animates this view's own frame (they
-    /// are set at once without it).
-    public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tint: StaticGlassTint, updateFrame: ((UIView, CGRect) -> Void)? = nil) {
+    /// are set at once without it). `animateImageChange` crossfades to a new image (a tint chosen or cleared).
+    public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tint: StaticGlassTint, animateImageChange: Bool = false, updateFrame: ((UIView, CGRect) -> Void)? = nil) {
         let setFrame: (UIView, CGRect) -> Void = updateFrame ?? { view, frame in
             view.frame = frame
         }
@@ -36,6 +36,12 @@ public final class StaticGlassBackgroundView: UIView {
             return
         }
         if self.imageView.image !== image {
+            if animateImageChange && self.imageView.image != nil {
+                let fade = CATransition()
+                fade.type = .fade
+                fade.duration = 0.2
+                self.imageView.layer.add(fade, forKey: "contents")
+            }
             self.imageView.image = image
         }
         setFrame(self.imageView, CGRect(x: -margins.left, y: -margins.top, width: size.width + margins.left + margins.right, height: size.height + margins.top + margins.bottom))
@@ -51,18 +57,30 @@ private final class StaticGlassImageCache {
         var name: String
         var tint: [Int]
         var scale: Int
-        var cutLength: Int?
+        var cutWidth: Int?
+        var cutHeight: Int?
     }
 
     private var assets: [String: StaticGlassAssetData] = [:]
     private var images: [ImageKey: (UIImage, UIEdgeInsets)] = [:]
 
-    private func asset(name: String) -> StaticGlassAssetData? {
+    private var missingAssets = Set<String>()
+
+    /// `optional` assets (a captured tint not captured for every shape) may be absent.
+    private func asset(name: String, optional: Bool = false) -> StaticGlassAssetData? {
         if let current = self.assets[name] {
             return current
         }
+        if self.missingAssets.contains(name) {
+            return nil
+        }
         guard let path = getAppBundle().path(forResource: name, ofType: "bin"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let asset = StaticGlassAssetData(data: data) else {
-            assertionFailure("StaticGlass: no asset \(name)")
+            // In the app a missing asset is a packaging error; a unit test's process has no app bundle to find it in,
+            // and draws no glass.
+            if !optional && getAppBundle().bundleURL.pathExtension == "app" {
+                assertionFailure("StaticGlass: no asset \(name)")
+            }
+            self.missingAssets.insert(name)
             return nil
         }
         self.assets[name] = asset
@@ -74,8 +92,15 @@ private final class StaticGlassImageCache {
         guard size.width > 0.0, size.height > 0.0 else {
             return nil
         }
-        let choice = staticGlassAssetChoice(size: size, cornerRadius: cornerRadius)
-        let name = "static-glass-\(choice.shape.rawValue)-\(isDark ? "dark" : "light")"
+        let isMedia = tint == .media
+        let choice = staticGlassAssetChoice(size: size, cornerRadius: cornerRadius, isMedia: isMedia)
+        var name = "static-glass-\(choice.shape.rawValue)-\(isMedia ? "media" : (isDark ? "dark" : "light"))"
+        var tint = tint
+        // A tint captured for this shape is drawn as captured, untinted.
+        if case let .color(color) = tint, let capturedTint = staticGlassCapturedTint(color: color, isDark: isDark), self.asset(name: "static-glass-\(choice.shape.rawValue)-\(capturedTint)", optional: true) != nil {
+            name = "static-glass-\(choice.shape.rawValue)-\(capturedTint)"
+            tint = .panel
+        }
         guard let asset = self.asset(name: name) else {
             return nil
         }
@@ -90,19 +115,12 @@ private final class StaticGlassImageCache {
             }
         }
 
-        // A shape shorter along its run than the asset's two ends is cut from them, across columns or rows.
-        let isVertical = asset.capInsets.top > 0.0 || asset.capInsets.bottom > 0.0
-        let isHorizontal = asset.capInsets.left > 0.0 || asset.capInsets.right > 0.0
-        var cutLength: Int?
-        if isHorizontal || isVertical {
-            let shapeLengthInAsset = (isVertical ? size.height : size.width) * imageScale
-            let assetLength = Int(isVertical ? asset.frame.height : asset.frame.width)
-            if staticGlassNeedsCutting(shapeWidth: shapeLengthInAsset / CGFloat(asset.scale), assetFrameWidth: assetLength, scale: asset.scale) {
-                cutLength = max(2, Int(shapeLengthInAsset.rounded()))
-            }
-        }
+        // A shape shorter along an axis than the asset's ends is cut from them along it, across columns or rows.
+        let stretchesVertically = asset.capInsets.top > 0.0 || asset.capInsets.bottom > 0.0
+        let stretchesHorizontally = asset.capInsets.left > 0.0 || asset.capInsets.right > 0.0
+        let cut = staticGlassCutLengths(size: size, imageScale: imageScale, assetFrame: asset.frame, stretchesHorizontally: stretchesHorizontally, stretchesVertically: stretchesVertically, scale: asset.scale)
 
-        let key = ImageKey(name: name, tint: tintComponents.flatMap { [$0.r, $0.g, $0.b, $0.a].map { Int(($0 * 255.0).rounded()) } } ?? [], scale: Int((choice.scale * 1000.0).rounded()), cutLength: cutLength)
+        let key = ImageKey(name: name, tint: tintComponents.flatMap { [$0.r, $0.g, $0.b, $0.a].map { Int(($0 * 255.0).rounded()) } } ?? [], scale: Int((choice.scale * 1000.0).rounded()), cutWidth: cut.width, cutHeight: cut.height)
         if let current = self.images[key] {
             return current
         }
@@ -111,8 +129,11 @@ private final class StaticGlassImageCache {
         var height = asset.height
         var frame = asset.frame
         var pixels = asset.pixels
-        if let cutLength {
-            (width, height, frame, pixels) = staticGlassCutPixels(pixels, width: width, height: height, frame: frame, vertical: isVertical, shapeLength: cutLength)
+        if let cutWidth = cut.width {
+            (width, height, frame, pixels) = staticGlassCutPixels(pixels, width: width, height: height, frame: frame, vertical: false, shapeLength: cutWidth)
+        }
+        if let cutHeight = cut.height {
+            (width, height, frame, pixels) = staticGlassCutPixels(pixels, width: width, height: height, frame: frame, vertical: true, shapeLength: cutHeight)
         }
         if let tintComponents {
             pixels = staticGlassTinted(pixels: pixels, width: width, height: height, frame: frame, scale: asset.scale, outset: staticGlassTintOutset(isDark: isDark), tint: tintComponents)
@@ -121,7 +142,15 @@ private final class StaticGlassImageCache {
             return nil
         }
         var image = UIImage(cgImage: cgImage, scale: imageScale, orientation: .up)
-        let capInsets = cutLength == nil ? asset.capInsets : UIEdgeInsets()
+        var capInsets = asset.capInsets
+        if cut.width != nil {
+            capInsets.left = 0.0
+            capInsets.right = 0.0
+        }
+        if cut.height != nil {
+            capInsets.top = 0.0
+            capInsets.bottom = 0.0
+        }
         if capInsets != UIEdgeInsets() {
             image = image.resizableImage(withCapInsets: UIEdgeInsets(top: capInsets.top / imageScale, left: capInsets.left / imageScale, bottom: capInsets.bottom / imageScale, right: capInsets.right / imageScale), resizingMode: .stretch)
         }

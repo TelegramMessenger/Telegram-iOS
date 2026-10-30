@@ -141,8 +141,20 @@ public func chatMessageBubblelessRhythm(style: ChatMessageBubbleStyle, incoming:
 
 // Content without a bubble (spec 5.5).
 
-/// A file or contact block's top under the author header.
-public let chatMessageBubblelessHeaderBlockSpacing: CGFloat = 7.0
+/// A file or music block's top under the author header: its icon starts as far under the name as in a bubble, so the
+/// big round icon does not crowd the name.
+public let chatMessageBubblelessHeaderFileSpacing: CGFloat = 15.0
+/// A contact block's top under the author header, as far under the name as in a bubble.
+public let chatMessageBubblelessHeaderContactSpacing: CGFloat = 11.0 + UIScreenPixel
+
+/// A file's top inset: under the author header it starts at the header's file spacing, its voice button no higher;
+/// elsewhere a voice message's button, which rides above its row, starts where a file's icon would.
+public func chatMessageBubblelessFileTopInset(baseTop: CGFloat, underHeader: Bool, voiceButtonOverhang: CGFloat) -> CGFloat {
+    if underHeader {
+        return chatMessageBubblelessHeaderFileSpacing
+    }
+    return baseTop + voiceButtonOverhang
+}
 /// Inline blocks (reply quotes, link previews, fact checks, quotes and code in text, contacts) round at this radius.
 public let chatMessageBubblelessInlineBlockCornerRadius: CGFloat = 10.0
 /// The text inset inside a card that has its own layout (a place or a live location).

@@ -5,22 +5,34 @@ public enum StaticGlassTint: Equatable {
     case panel
     /// A styled tint, with the alpha it lies over the glass at.
     case color(UIColor)
+    /// The dark glass over media (tinted black at 0.3), the same in both themes: plates and controls over a picture.
+    case media
 }
 
 public enum StaticGlassAssetShape: String {
+    case capsuleR10 = "capsule-r10"
     case capsuleR15 = "capsule-r15"
     case capsuleR21 = "capsule-r21"
     case circleR15 = "circle-r15"
+    case circleR24 = "circle-r24"
     case verticalCapsuleR15 = "vcapsule-r15"
+    /// A rounded rectangle of radius 12 that stretches both ways.
+    case rectR12 = "rect-r12"
 
     var shapeHeight: CGFloat {
         switch self {
+        case .capsuleR10:
+            return 20.0
         case .capsuleR15, .circleR15:
             return 30.0
         case .capsuleR21:
             return 42.0
+        case .circleR24:
+            return 48.0
         case .verticalCapsuleR15:
             return 60.0
+        case .rectR12:
+            return 80.0
         }
     }
 }
@@ -36,17 +48,70 @@ public struct StaticGlassAssetChoice: Equatable {
     }
 }
 
-/// The captured asset for a shape: capsules by height (30 or 42, the nearest otherwise, scaled), a 30pt circle, and the
-/// 30pt-wide vertical capsule (scaled by width otherwise).
-public func staticGlassAssetChoice(size: CGSize, cornerRadius: CGFloat) -> StaticGlassAssetChoice {
+/// The captured asset for a shape: capsules by height (20, 30 or 42, the nearest otherwise, scaled), a 30pt circle or,
+/// above 36pt, a 48pt one, the 30pt-wide vertical capsule (scaled by width otherwise), and a rounded rectangle (a radius
+/// below half the shorter side) from the r12 rectangle scaled to its radius. The dark glass over media (`isMedia`) has
+/// only the rectangle, a 20pt capsule and a 48pt circle.
+public func staticGlassAssetChoice(size: CGSize, cornerRadius: CGFloat, isMedia: Bool = false) -> StaticGlassAssetChoice {
+    let isCircle = abs(size.width - size.height) <= 0.5
+    if cornerRadius < min(size.width, size.height) * 0.5 - 0.5 {
+        return StaticGlassAssetChoice(shape: .rectR12, scale: cornerRadius / 12.0)
+    }
+    if isMedia {
+        if isCircle {
+            return StaticGlassAssetChoice(shape: .circleR24, scale: size.height / 48.0)
+        }
+        return StaticGlassAssetChoice(shape: .capsuleR10, scale: size.height / 20.0)
+    }
     if size.height > size.width + 0.5 {
         return StaticGlassAssetChoice(shape: .verticalCapsuleR15, scale: size.width / 30.0)
     }
-    if abs(size.width - size.height) <= 0.5 {
+    if isCircle {
+        if size.height > 36.0 {
+            return StaticGlassAssetChoice(shape: .circleR24, scale: size.height / 48.0)
+        }
         return StaticGlassAssetChoice(shape: .circleR15, scale: size.height / 30.0)
     }
-    let shape: StaticGlassAssetShape = abs(size.height - 30.0) <= abs(size.height - 42.0) ? .capsuleR15 : .capsuleR21
+    let shape = [StaticGlassAssetShape.capsuleR10, .capsuleR15, .capsuleR21].min(by: { abs(size.height - $0.shapeHeight) < abs(size.height - $1.shapeHeight) })!
     return StaticGlassAssetChoice(shape: shape, scale: size.height / shape.shapeHeight)
+}
+
+/// The captured set for a tint the model does not reproduce (its assets are `static-glass-<shape>-<set>`): the monochrome
+/// ink, black on light glass and white on dark, and white at 0.8 on light glass. Nil for any other tint.
+public func staticGlassCapturedTint(color: UIColor, isDark: Bool) -> String? {
+    var r: CGFloat = 0.0, g: CGFloat = 0.0, b: CGFloat = 0.0, a: CGFloat = 0.0
+    guard color.getRed(&r, green: &g, blue: &b, alpha: &a) else {
+        return nil
+    }
+    func near(_ x: CGFloat, _ y: CGFloat) -> Bool {
+        return abs(x - y) < 0.01
+    }
+    if !isDark && near(r, 0.0) && near(g, 0.0) && near(b, 0.0) && near(a, 1.0) {
+        return "tint-000000a100-light"
+    }
+    if isDark && near(r, 1.0) && near(g, 1.0) && near(b, 1.0) && near(a, 1.0) {
+        return "tint-FFFFFFa100-dark"
+    }
+    if !isDark && near(r, 1.0) && near(g, 1.0) && near(b, 1.0) && near(a, 0.8) {
+        return "tint-FFFFFFa80-light"
+    }
+    return nil
+}
+
+/// Where a shape is shorter than its asset's ends along an axis the asset stretches on, the length (asset pixels at the
+/// image's scale) it is cut to along that axis; nil where it stretches.
+public func staticGlassCutLengths(size: CGSize, imageScale: CGFloat, assetFrame: CGRect, stretchesHorizontally: Bool, stretchesVertically: Bool, scale: Int) -> (width: Int?, height: Int?) {
+    func cut(_ length: CGFloat, _ assetLength: CGFloat, _ stretches: Bool) -> Int? {
+        guard stretches else {
+            return nil
+        }
+        let lengthInAsset = length * imageScale
+        guard staticGlassNeedsCutting(shapeWidth: lengthInAsset / CGFloat(scale), assetFrameWidth: Int(assetLength), scale: scale) else {
+            return nil
+        }
+        return max(2, Int(lengthInAsset.rounded()))
+    }
+    return (cut(size.width, assetFrame.width, stretchesHorizontally), cut(size.height, assetFrame.height, stretchesVertically))
 }
 
 /// Whether a capsule is narrower than its asset's two ends (the asset frame less its 1pt middle): it is then cut from

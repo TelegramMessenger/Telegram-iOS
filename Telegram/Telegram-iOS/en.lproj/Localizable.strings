@@ -5129,6 +5129,8 @@ Sorry for the inconvenience.";
 "Appearance.TextSize.Title" = "Text Size";
 "Appearance.TextSize.UseSystem" = "User System Text Size";
 "Appearance.TextSize.Apply" = "Set";
+"Appearance.TextSize.FontDefault" = "Default";
+"Appearance.TextSize.FontSerif" = "New York";
 
 "Shortcut.SwitchAccount" = "Switch Account";
 

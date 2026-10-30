@@ -56,8 +56,8 @@ public struct UnsupportedContentPillColors: Equatable {
         case plate
         /// No plate and no room of the pill's own around its content: the host frames it (a chat without bubbles
         /// stands it in a strip torn across the chat). The title keeps `primaryText`, the text under it is
-        /// `secondaryText`, and the badge and the button are filled with `accent` under a glyph and a label in
-        /// `accentForeground`.
+        /// `secondaryText`, the badge is glass tinted with `accent` under a glyph in `accentForeground`, and the button
+        /// is light glass under a black label (images of glass).
         case outlined(secondaryText: UIColor, accent: UIColor, accentForeground: UIColor)
     }
 
@@ -160,8 +160,9 @@ func measureUnsupportedContentPill(
     case .plate:
         buttonTitleColor = colors.primaryText
         subtitleColor = colors.primaryText.withMultipliedAlpha(pillSubtitleAlpha)
-    case let .outlined(secondaryText, _, accentForeground):
-        buttonTitleColor = accentForeground
+    case let .outlined(secondaryText, _, _):
+        // The button is light glass under a black label, in a dark theme too.
+        buttonTitleColor = .black
         subtitleColor = secondaryText
     }
 

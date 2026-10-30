@@ -36,12 +36,14 @@ public final class SceneDelegate: NSObject, UIWindowSceneDelegate {
 }
 
 /// From the launch arguments: `-page RRGGBB`, `-dark 0|1`, `-tint panel|RRGGBB` (a styled tint, at 0.85 alpha as the
-/// chat's styled buttons use), `-interactive 0|1`, `-label <name>` (recorded in the manifest), `-mode static` (the
-/// captured images, StaticGlassBackgroundView, at the same frames, for comparing with the live glass).
+/// chat's styled buttons use, or at `-tintAlpha`), `-interactive 0|1`, `-label <name>` (recorded in the manifest),
+/// `-mode static` (the captured images, StaticGlassBackgroundView, at the same frames, for comparing with the live
+/// glass).
 struct CaptureParameters {
     let pageHex: String
     let isDark: Bool
     let tintHex: String
+    let tintAlpha: CGFloat
     let isInteractive: Bool
     let label: String
     let isStatic: Bool
@@ -51,6 +53,7 @@ struct CaptureParameters {
         self.isDark = defaults.bool(forKey: "dark")
         self.pageHex = defaults.string(forKey: "page") ?? (self.isDark ? "000000" : "FFFFFF")
         self.tintHex = defaults.string(forKey: "tint") ?? "panel"
+        self.tintAlpha = defaults.object(forKey: "tintAlpha") == nil ? 0.85 : CGFloat(defaults.double(forKey: "tintAlpha"))
         self.isInteractive = defaults.object(forKey: "interactive") == nil ? true : defaults.bool(forKey: "interactive")
         self.label = defaults.string(forKey: "label") ?? "capture"
         self.isStatic = defaults.string(forKey: "mode") == "static"
@@ -64,14 +67,21 @@ struct CaptureParameters {
         if self.tintHex == "panel" {
             return .init(kind: .panel)
         }
-        return .init(kind: .custom(style: .default, color: colorFromHex(self.tintHex).withAlphaComponent(0.85)))
+        if self.tintHex == "media" {
+            // The chat's dark glass over media.
+            return .init(kind: .custom(style: .default, color: UIColor(white: 0.0, alpha: 0.3)))
+        }
+        return .init(kind: .custom(style: .default, color: colorFromHex(self.tintHex).withAlphaComponent(self.tintAlpha)))
     }
 
     var staticTint: StaticGlassTint {
         if self.tintHex == "panel" {
             return .panel
         }
-        return .color(colorFromHex(self.tintHex).withAlphaComponent(0.85))
+        if self.tintHex == "media" {
+            return .media
+        }
+        return .color(colorFromHex(self.tintHex).withAlphaComponent(self.tintAlpha))
     }
 }
 
@@ -97,6 +107,10 @@ private func captureShapes() -> [CaptureShape] {
     // Narrow inline buttons: seven to a row (37x42, its radius clamped to 18.5) and five to a row (60x42).
     shapes.append(CaptureShape(name: "button-37x42", radius: 21.0, size: CGSize(width: 37.0, height: 42.0)))
     shapes.append(CaptureShape(name: "button-60x42", radius: 21.0, size: CGSize(width: 60.0, height: 42.0)))
+    // Revision 2's plates: the round controls over media and on files (44-48pt), and the reply plate beside a sticker
+    // (radius 12 at any height), stretchable both ways.
+    shapes.append(CaptureShape(name: "circle-r24", radius: 24.0, size: CGSize(width: 48.0, height: 48.0)))
+    shapes.append(CaptureShape(name: "rect-r12", radius: 12.0, size: CGSize(width: 120.0, height: 80.0)))
     return shapes
 }
 
@@ -183,6 +197,7 @@ final class CaptureViewController: UIViewController {
             "page": self.parameters.pageHex,
             "dark": self.parameters.isDark,
             "tint": self.parameters.tintHex,
+            "tintAlpha": self.parameters.tintAlpha,
             "interactive": self.parameters.isInteractive,
             "mode": self.parameters.isStatic ? "static" : "live",
             "firstLayoutMilliseconds": self.firstLayoutMilliseconds ?? 0.0,

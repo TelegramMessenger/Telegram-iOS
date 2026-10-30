@@ -287,7 +287,10 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 placeholderColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             case .standalone:
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
-                titleColor = serviceColor.primaryText
+                // Bubble mode off: the reply beside a sticker stands on glass, in the primary text colour.
+                let isBubbleless = !arguments.presentationData.chatBubbleCorners.bubbleMode
+                let primaryText = isBubbleless ? arguments.presentationData.theme.theme.list.itemPrimaryTextColor : serviceColor.primaryText
+                titleColor = primaryText
                 if dashSecondaryColor != nil {
                     secondaryColor = .clear
                 }
@@ -295,9 +298,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     tertiaryColor = .clear
                 }
                 
-                mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
+                mainColor = isBubbleless ? primaryText : serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
                 dustColor = titleColor
-                placeholderColor = serviceColor.primaryText.withAlphaComponent(0.2)
+                placeholderColor = primaryText.withAlphaComponent(0.2)
             }
             
             if let message = arguments.message {
