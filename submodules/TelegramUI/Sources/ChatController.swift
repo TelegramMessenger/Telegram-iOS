@@ -320,6 +320,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var sideListPanel: ChatSideListPanelNode?
     var sideListOpenFraction: CGFloat = 0.0
+    var sideListEdgePanHandler: ChatSideListEdgePanHandler?
+    /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
+    var sideListAppeared = false
     var sideListButtonKind: ChatSideListKind?
     
     var historyStateDisposable: Disposable?
@@ -8733,6 +8736,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.navigationButtonAction(button.action)
             }
         }
+    }
+
+    /// While the side list is open its header is the one on screen (the chat's own is off to the left, under the strip),
+    /// so a screen pushed from it morphs out of that header.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+            return sideListPanel.listController.navigationBarTransitionSource
+        }
+        return super.navigationBarTransitionSource
     }
 
     override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
