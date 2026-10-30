@@ -1317,7 +1317,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
 
         let expectedPts = CMTimeAdd(currentState.anchorPts, CMTime(value: currentState.nextSampleOffset, timescale: currentState.sampleRate))
         let inputDelta = CMTimeSubtract(pts, expectedPts).seconds
-        guard inputDelta.isFinite, abs(inputDelta) <= 2.0 / 1000.0 else {
+        // Some muxers write audio timestamps that wander by several milliseconds around the decoded
+        // sample position; keep playing back to back within this bound, re-anchor beyond it.
+        guard inputDelta.isFinite, abs(inputDelta) <= 40.0 / 1000.0 else {
             state = AudioBufferTimingState(sampleRate: sampleRate, anchorPts: pts, nextSampleOffset: sampleCountValue)
             return sampleBuffer
         }
