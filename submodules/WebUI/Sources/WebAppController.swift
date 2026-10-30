@@ -3831,7 +3831,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         if let backgroundColor = self.controllerNode.headerColor, let textColor = self.controllerNode.headerPrimaryTextColor {
             navigationBarPresentationData = NavigationBarPresentationData(
                 theme: NavigationBarTheme(
-                    overallDarkAppearance: false,
+                    overallDarkAppearance: textColor.lightness > 0.5,
                     buttonColor: textColor,
                     disabledButtonColor: textColor,
                     primaryTextColor: textColor,
