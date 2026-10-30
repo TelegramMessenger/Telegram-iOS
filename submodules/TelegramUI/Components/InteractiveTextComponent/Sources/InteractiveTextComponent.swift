@@ -841,12 +841,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
                         if lineRange.location != rangeValue.location {
-                            leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                            leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                         }
                         var rightOffset: CGFloat = line.frame.width
                         if lineRange.location + lineRange.length != rangeValue.length {
                             var secondaryOffset: CGFloat = 0.0
-                            let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                            let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                             rightOffset = ceil(rawOffset)
                             if !rawOffset.isEqual(to: secondaryOffset) {
                                 rightOffset = ceil(secondaryOffset)
@@ -906,12 +906,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                         if lineRange.length != 0 {
                             var leftOffset: CGFloat = 0.0
                             if lineRange.location != rangeValue.location {
-                                leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                                leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                             }
                             var rightOffset: CGFloat = line.frame.width
                             if lineRange.location + lineRange.length != rangeValue.length {
                                 var secondaryOffset: CGFloat = 0.0
-                                let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                                let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                                 rightOffset = ceil(rawOffset)
                                 if !rawOffset.isEqual(to: secondaryOffset) {
                                     rightOffset = ceil(secondaryOffset)
@@ -962,12 +962,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                         if lineRange.length != 0 {
                             var leftOffset: CGFloat = 0.0
                             if lineRange.location != rangeValue.location || line.isRTL {
-                                leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                                leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                             }
                             var rightOffset: CGFloat = line.frame.width
                             if lineRange.location + lineRange.length != rangeValue.length || line.isRTL {
                                 var secondaryOffset: CGFloat = 0.0
-                                let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                                let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                                 rightOffset = ceil(rawOffset)
                                 if !rawOffset.isEqual(to: secondaryOffset) {
                                     rightOffset = ceil(secondaryOffset)
@@ -1008,12 +1008,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                 if lineRange.length != 0 {
                     var leftOffset: CGFloat = 0.0
                     if lineRange.location != rangeValue.location || line.isRTL {
-                        leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                        leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                     }
                     var rightOffset: CGFloat = line.frame.width
                     if lineRange.location + lineRange.length != rangeValue.upperBound || line.isRTL {
                         var secondaryOffset: CGFloat = 0.0
-                        let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                        let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                         rightOffset = ceil(rawOffset)
                         if !rawOffset.isEqual(to: secondaryOffset) {
                             rightOffset = ceil(secondaryOffset)
@@ -1025,7 +1025,7 @@ public final class InteractiveTextNodeLayout: NSObject {
                     let width = max(0.0, abs(rightOffset - leftOffset))
                     
                     if rangeValue.contains(range.lowerBound) {
-                        let offsetX = floor(CTLineGetOffsetForStringIndex(line.line, range.lowerBound, nil))
+                        let offsetX = floor(lineOffsetForStringIndex(line, range.lowerBound, nil))
                         startEdge = TextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
                     }
                     if rangeValue.contains(range.upperBound - 1) {
@@ -1034,9 +1034,9 @@ public final class InteractiveTextNodeLayout: NSObject {
                             offsetX = lineFrame.maxX
                         } else {
                             var secondaryOffset: CGFloat = 0.0
-                            let primaryOffset = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound - 1, &secondaryOffset))
+                            let primaryOffset = floor(lineOffsetForStringIndex(line, range.upperBound - 1, &secondaryOffset))
                             secondaryOffset = floor(secondaryOffset)
-                            let nextOffet = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound, &secondaryOffset))
+                            let nextOffet = floor(lineOffsetForStringIndex(line, range.upperBound, &secondaryOffset))
                             
                             if primaryOffset != secondaryOffset {
                                 offsetX = secondaryOffset

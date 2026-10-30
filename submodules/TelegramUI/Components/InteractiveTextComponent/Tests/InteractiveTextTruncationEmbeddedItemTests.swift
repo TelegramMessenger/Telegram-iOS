@@ -34,9 +34,12 @@ final class InteractiveTextTruncationEmbeddedItemTests: XCTestCase {
     }
 
     private func assertItemsTakeTheirOwnPlace(_ items: [InteractiveTextNodeLayout.EmbeddedItem], file: StaticString = #filePath, line: UInt = #line) {
+        // Each item is one "I" wide.
+        let itemWidth = ceil(NSAttributedString(string: "I", attributes: [.font: self.font]).size().width)
         for item in items {
             XCTAssertGreaterThan(item.rect.minX, 0.0, "item \(item.value) is laid out at its line's start", file: file, line: line)
             XCTAssertGreaterThan(item.rect.width, 0.0, "item \(item.value) has no width", file: file, line: line)
+            XCTAssertLessThanOrEqual(item.rect.width, itemWidth + 2.0, "item \(item.value) is wider than its character", file: file, line: line)
         }
         for i in 0 ..< items.count {
             for j in (i + 1) ..< items.count {
@@ -79,6 +82,24 @@ final class InteractiveTextTruncationEmbeddedItemTests: XCTestCase {
 
         XCTAssertTrue(layout.segments.contains(where: { $0.hasBlockQuote && $0.visibleLineCount == 3 }))
         self.assertItemsTakeTheirOwnPlace(items)
+    }
+
+    func testHighlightOfAnAttributeAroundTheCutStaysOnItsText() {
+        let customTruncationToken: (UIFont, Bool) -> NSAttributedString? = { font, _ in
+            return NSAttributedString(string: "\u{2026} Show more", attributes: [.font: font])
+        }
+        // "word word …": about six words a line. A one-word link in the middle or at the end of the second line, before,
+        // across or after the "… Show more" cut.
+        for linkWordIndex in 8 ... 11 {
+            let string = NSMutableAttributedString(string: String(repeating: "word ", count: 30), attributes: [.font: self.font])
+            let linkRange = NSRange(location: linkWordIndex * 5, length: 4)
+            string.addAttribute(NSAttributedString.Key("TestLink"), value: "link", range: linkRange)
+            let layout = self.layout(string, maximumNumberOfLines: 2, customTruncationToken: customTruncationToken)
+
+            for (_, rect) in layout.lineAndAttributeRects(name: "TestLink", at: linkRange.location) ?? [] {
+                XCTAssertGreaterThan(rect.minX, 20.0, "the highlight of word \(linkWordIndex) starts at the line's start")
+            }
+        }
     }
 
     func testUntruncatedTextKeepsEveryItem() {
