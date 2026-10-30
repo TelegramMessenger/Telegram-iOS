@@ -1610,9 +1610,10 @@ public final class ChatTitleComponent: Component {
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, isVisible: !hidesGlass, transition: transition)
                 // Not while an expansion has it (`lendExpansionLabels`): the expansion places it. Lent to a navigation
-                // transition (`lendGlassPillContent`), whose wrapper the transition places and keeps at the pill's old
-                // size, it takes the pill's new size about the wrapper's centre: a pill that changes width while the
-                // transition draws it is neither clipped nor moved sideways, whatever the change's animation.
+                // transition (`lendGlassPillContent`), whose wrapper the transition places and may resize (the wrapper
+                // keeps it on its centre), it takes the pill's new size about the wrapper's centre: a pill that changes
+                // width while the transition draws it is neither clipped nor moved sideways, whatever the change's
+                // animation.
                 if let lentContentWrapper = self.lentContentWrapper, self.lentExpansionLabels == nil {
                     transition.setPosition(view: self.contentContainer, position: CGPoint(x: lentContentWrapper.bounds.midX, y: lentContentWrapper.bounds.midY))
                     transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: containerFrame.size))
