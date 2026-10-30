@@ -2775,6 +2775,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            // The side list's topic rows name the author before the preview, as in the design, not on a line above.
+            var sideListInlineAuthor = false
+            if item.interaction.isSideListMode, case let .chat(_, threadInfo, _, _, _, _, _, _, _) = contentData, threadInfo != nil {
+                sideListInlineAuthor = true
+                useInlineAuthorPrefix = true
+            }
+            
             // The side list's "All Messages" row names the sub-chat its latest message is in, inline.
             if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem, let message = messages.last, let threadId = message.threadId {
                 let threadPeerId = EnginePeer.Id(threadId)
@@ -3038,6 +3045,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         var previewPrefix: NSAttributedString?
                         if let inlineAuthorPrefix {
                             previewPrefix = NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor)
+                        } else if sideListInlineAuthor, !hideAuthor, !authorIsCurrentChat, let peerText {
+                            // An author that is not a user (a channel posting in the group) keeps its name too.
+                            previewPrefix = NSAttributedString(string: "\(peerText): ", font: textFont, textColor: theme.titleColor)
                         }
                         if let communitySource, case .previewPrefix = communitySource.placement {
                             let communityPrefix = NSMutableAttributedString()
@@ -3870,7 +3880,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             badgeSize = max(badgeSize, reorderInset)
             
-            if !itemTags.isEmpty {
+            if !itemTags.isEmpty || (sideListInlineAuthor && !hasDraft) {
                 authorAttributedString = nil
             }
             
