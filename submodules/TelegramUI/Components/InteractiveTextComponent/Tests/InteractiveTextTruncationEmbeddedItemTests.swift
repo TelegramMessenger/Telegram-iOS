@@ -90,6 +90,7 @@ final class InteractiveTextTruncationEmbeddedItemTests: XCTestCase {
         }
         // "word word …": about six words a line. A one-word link in the middle or at the end of the second line, before,
         // across or after the "… Show more" cut.
+        var highlightCount = 0
         for linkWordIndex in 8 ... 11 {
             let string = NSMutableAttributedString(string: String(repeating: "word ", count: 30), attributes: [.font: self.font])
             let linkRange = NSRange(location: linkWordIndex * 5, length: 4)
@@ -97,9 +98,11 @@ final class InteractiveTextTruncationEmbeddedItemTests: XCTestCase {
             let layout = self.layout(string, maximumNumberOfLines: 2, customTruncationToken: customTruncationToken)
 
             for (_, rect) in layout.lineAndAttributeRects(name: "TestLink", at: linkRange.location) ?? [] {
+                highlightCount += 1
                 XCTAssertGreaterThan(rect.minX, 20.0, "the highlight of word \(linkWordIndex) starts at the line's start")
             }
         }
+        XCTAssertGreaterThan(highlightCount, 0)
     }
 
     func testUntruncatedTextKeepsEveryItem() {
