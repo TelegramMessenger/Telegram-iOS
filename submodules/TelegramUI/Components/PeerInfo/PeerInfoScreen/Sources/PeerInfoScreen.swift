@@ -2309,7 +2309,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 switchToUpgradableGifts = true
             }
             
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, existingProfileGiftsContext: profileGiftsContext, existingProfileGiftsCollectionsContext: nil, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, sharedMediaFromForumTopic: self.sharedMediaFromForumTopic, privacySettings: self.privacySettings.get(), forceHasGifts: initialPaneKey == .gifts, switchToUpgradableGifts: switchToUpgradableGifts)
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, existingProfileGiftsContext: profileGiftsContext, existingProfileGiftsCollectionsContext: nil, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, sharedMediaFromForumTopic: self.sharedMediaFromForumTopic, privacySettings: self.privacySettings.get(), forceHasGifts: initialPaneKey == .gifts, switchToUpgradableGifts: switchToUpgradableGifts, hidesSavedMessagesChats: controller.hidesSavedMessagesChats)
                        
             var previousTimestamp: Double?
             self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
@@ -6552,6 +6552,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let callMessages: [EngineMessage]
     let isSettings: Bool
     let isMyProfile: Bool
+    /// Opened from the chat side list, which already lists Saved Messages' chats.
+    let hidesSavedMessagesChats: Bool
     private let hintGroupInCommon: EnginePeer.Id?
     private weak var requestsContext: PeerInvitationImportersContext?
     private weak var profileGiftsContext: ProfileGiftsContext?
@@ -6657,8 +6659,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         switchToGroupsInCommon: Bool = false,
         switchToStoryFolder: Int64? = nil,
         switchToMediaTarget: PeerInfoSwitchToMediaTarget? = nil,
+        hidesSavedMessagesChats: Bool = false
     ) {
         self.context = context
+        self.hidesSavedMessagesChats = hidesSavedMessagesChats
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded

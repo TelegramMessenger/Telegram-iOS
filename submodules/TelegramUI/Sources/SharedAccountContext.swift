@@ -5143,6 +5143,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var switchToGiftsTarget: PeerInfoSwitchToGiftsTarget?
         var switchToGroupsInCommon = false
         var switchToStoryFolder: Int64?
+        var hidesSavedMessagesChats = false
         
         switch mode {
         case let .calls(messages):
@@ -5181,10 +5182,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             if peer.id == context.account.peerId {
                 isMyProfile = true
             }
+        case .chatSideList:
+            hidesSavedMessagesChats = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget, hidesSavedMessagesChats: hidesSavedMessagesChats)
     } else if case .secretChat = peer {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: nil, callMessages: [], switchToMediaTarget: switchToMediaTarget)
     }

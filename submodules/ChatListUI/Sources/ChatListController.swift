@@ -152,6 +152,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     public var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)?
     /// Hosted by the chat side list: compact inline rows, an "All Messages" row, a rounded highlight.
     public let isSideList: Bool
+    /// Set by the chat side list: its header's More button opens the menu of the chat it lists (`sourceView` is where
+    /// the menu grows from).
+    public var sideListMoreAction: ((UIView, ContextGesture?) -> Void)?
     
     /// Offers a tap to `interceptPeerSelection`, resolved to the parent's thread (`chatSideListResolvedSelection`).
     private func interceptsSelection(peer: EnginePeer, threadId: Int64?, messageId: EngineMessage.Id?, isListRow: Bool) -> Bool {
@@ -7065,6 +7068,9 @@ private final class ChatListLocationContext {
                 if let mainPeer {
                     self.updateSideListAvatarButton(peer: mainPeer, isSavedMessages: isSavedMessages, theme: presentationData.theme)
                 }
+                if !isSavedMessages {
+                    self.leftButton = self.sideListMoreButton()
+                }
                 let customTitle: String? = isSavedMessages ? presentationData.strings.Conversation_SavedMessages : (mainPeer?.id != peerId ? mainPeer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) : nil)
                 self.chatTitleComponent = ChatTitleComponent(
                     context: self.context,
@@ -7570,7 +7576,7 @@ private final class ChatListLocationContext {
         
         if self.parentController?.isSideList == true, !stateAndFilterId.state.editing {
             // The side list's header: the menu on the left, the parent's avatar on the right.
-            self.leftButton = self.rightButton
+            self.leftButton = self.sideListMoreButton() ?? self.rightButton
             self.rightButton = nil
             if let peer = peerView.peers[peerId].flatMap(EnginePeer.init) {
                 self.updateSideListAvatarButton(peer: peer, isSavedMessages: false, theme: presentationData.theme)
@@ -7599,6 +7605,28 @@ private final class ChatListLocationContext {
     
     private var sideListAvatarNode: ChatListSideListAvatarButtonNode?
     
+    /// The side list header's More button, when its host chat offers a menu.
+    private func sideListMoreButton() -> NavigationBarComponent.Button? {
+        guard let parentController = self.parentController, parentController.isSideList, parentController.sideListMoreAction != nil else {
+            return nil
+        }
+        return NavigationBarComponent.Button(id: "more",
+            content: .more,
+            action: { [weak parentController] sourceView in
+                guard let parentController else {
+                    return
+                }
+                parentController.sideListMoreAction?(parentController.headerMenuSourceView(sourceView), nil)
+            },
+            contextAction: { [weak parentController] sourceView, gesture in
+                guard let parentController else {
+                    return
+                }
+                parentController.sideListMoreAction?(parentController.headerMenuSourceView(sourceView), gesture)
+            }
+        )
+    }
+    
     /// The side list header's right button: the parent's avatar, opening its profile.
     private func updateSideListAvatarButton(peer: EnginePeer, isSavedMessages: Bool, theme: PresentationTheme) {
         let avatarNode: ChatListSideListAvatarButtonNode
@@ -7620,7 +7648,7 @@ private final class ChatListLocationContext {
                 guard let self, let parentController = self.parentController, let navigationController = parentController.navigationController as? NavigationController else {
                     return
                 }
-                guard let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                guard let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: .chatSideList, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
                     return
                 }
                 navigationController.pushViewController(controller)

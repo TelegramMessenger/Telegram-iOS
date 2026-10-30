@@ -813,6 +813,8 @@ public enum PeerInfoControllerMode {
     case storyAlbum(id: Int64)
     case giftCollection(id: Int64)
     case media(kind: PeerInfoMediaKind, messageIndex: EngineMessage.Index)
+    /// From the chat side list's header: the list it opens from already shows Saved Messages' chats, so no Chats tab.
+    case chatSideList
 }
 
 public enum ContactListActionItemInlineIconPosition {

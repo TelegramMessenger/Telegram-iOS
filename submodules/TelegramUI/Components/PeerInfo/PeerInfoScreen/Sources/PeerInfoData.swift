@@ -1146,7 +1146,8 @@ func peerInfoScreenData(
     sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?,
     privacySettings: Signal<AccountPrivacySettings?, NoError>,
     forceHasGifts: Bool,
-    switchToUpgradableGifts: Bool
+    switchToUpgradableGifts: Bool,
+    hidesSavedMessagesChats: Bool
 ) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
@@ -1639,7 +1640,7 @@ func peerInfoScreenData(
                     
                     if case .peer = chatLocation {
                         if peerId == context.account.peerId {
-                            if hasSavedMessagesChats {
+                            if hasSavedMessagesChats && !hidesSavedMessagesChats {
                                 availablePanes?.insert(.savedMessagesChats, at: 0)
                             }
                         } else if hasSavedMessages && hasSavedMessagesChats {
