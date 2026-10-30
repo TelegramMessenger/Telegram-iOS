@@ -2,6 +2,7 @@ import Foundation
 import Display
 import ItemListUI
 import AccountContext
+import TelegramCore
 
 public extension ListViewItemHeaderFamily {
     static let chatList = ListViewItemHeaderFamily("chatList")
@@ -19,6 +20,16 @@ public enum ChatListSideListHighlightKey: Equatable {
     /// The "All Messages" row: highlighted when no thread is.
     case allThreads
     case location(ChatLocation)
+    /// A topic's or bot thread's row: highlighted while that thread is open (a `.replyThread` location).
+    case thread(peerId: EnginePeer.Id, threadId: Int64)
+
+    /// Whether the open chat is this thread.
+    func matchesThread(_ location: ChatLocation?) -> Bool {
+        if case let .thread(peerId, threadId) = self, case let .replyThread(message)? = location {
+            return message.peerId == peerId && message.threadId == threadId
+        }
+        return false
+    }
 }
 
 public struct ChatListItemNeighborDescriptor: Equatable, HeaderNeighborFacet, ChatListNeighborFacet {

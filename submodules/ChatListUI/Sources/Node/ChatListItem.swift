@@ -545,6 +545,10 @@ public class ChatListItem: ListViewItem {
         if case let .peer(peerData) = self.content, peerData.isSideListAllThreadsItem {
             return .allThreads
         }
+        // A topic's or bot thread's row: its chat location names only the parent, the same for every row.
+        if !self.isSideListCompactPeerRow, case let .peer(peerData) = self.content, let threadInfo = peerData.threadInfo {
+            return .thread(peerId: peerData.peer.peerId, threadId: threadInfo.id)
+        }
         return self.content.chatLocation.flatMap(ChatListSideListHighlightKey.location)
     }
 
@@ -2259,6 +2263,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     reallyHighlighted = true
                 }
             }
+            if item.sideListHighlightKey?.matchesThread(item.interaction.highlightedChatLocation?.location) == true {
+                reallyHighlighted = true
+            }
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
                 if customMessageListData.isInTransparentContainer {
                     reallyHighlighted = false
@@ -2283,6 +2290,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             nextIsHighlighted = item.interaction.highlightedChatLocation == nil
         case let .location(location):
             nextIsHighlighted = item.interaction.highlightedChatLocation?.location == location
+        case let .thread(peerId, threadId):
+            nextIsHighlighted = ChatListSideListHighlightKey.thread(peerId: peerId, threadId: threadId).matchesThread(item.interaction.highlightedChatLocation?.location)
         case .none:
             break
         }
