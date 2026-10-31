@@ -8446,6 +8446,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.view.endEditing(true)
         }
         
+        self.chatDisplayNode.historyNode.readVisibleMessagesBeforeLeaving()
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         self.saveInterfaceState()
         

@@ -93,7 +93,10 @@ previous ones.
 `//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteractionTests` covers
 `chatIsOpeningMedia`, the window in which a chat ignores further taps on its media (`isOpeningMedia`) after one opened
 it. A gallery appears only once its first item is ready (up to 2 s), so it stays blocked until the gallery reports it
-is on screen (at most 4 s); an open that reports nothing is released after 1 s, as before.
+is on screen (at most 4 s); an open that reports nothing is released after 1 s, as before. It also covers
+`chatHistoryMaxVisibleReadIndex`, the newest message a chat reads from the rows on screen: a row under the top inset
+does not count, one starting up to 100 points above it does, and in a thread (a forum topic, a reply or monoforum
+thread) a row holding a non-cloud message is left out.
 
 `//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
 the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no

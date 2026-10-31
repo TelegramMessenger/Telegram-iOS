@@ -745,6 +745,13 @@ chat reads `abs(offset) <= 0.9` as "pinned to the newest message"
   through a later pass whose transaction already reported its settled offset, and a mid-flight sample
   would move the chrome (the go-down button, the overscroll control). With nothing in flight the two
   geometries agree, or a drag is under way and the scroll path reports presented every frame anyway.
+  The landing comes when the pass's whole duration has elapsed: 1.15s for the go-down button's
+  smooth-deceleration scroll, which looks finished after about 0.4s. A chat left in between (Back to a
+  forum's topic list, about 0.75s after the tap in the report) stopped reading at `viewWillDisappear`
+  before the landing, so the topic kept its unread count. `ChatController.viewWillDisappear` therefore
+  calls `ChatHistoryListNodeImpl.readVisibleMessagesBeforeLeaving()` before it turns `canReadHistory`
+  off: the same read of the rows on screen, in presented geometry. Which rows count is
+  `chatHistoryMaxVisibleReadIndex` (`ChatControllerInteraction`, with its tests).
 
 **Why `ListViewImpl` needs no such distinction:** its model *is* its presented geometry.
 `replayOperations` writes final item-node frames immediately and animates the layers additively, so the
