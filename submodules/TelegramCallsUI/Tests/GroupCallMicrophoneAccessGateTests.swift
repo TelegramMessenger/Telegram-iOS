@@ -3,9 +3,9 @@ import XCTest
 import AccountContext
 @testable import TelegramCallsUI
 
-/// Pins when a group call's mute change waits for microphone access: an unmute (a tap, push-to-talk) without access
-/// asks for it once and leaves the call muted; a tap is carried out when access is granted, a push-to-talk that has
-/// been released by then is not. Muting always goes through.
+/// Pins when a group call's mute change waits for microphone access: an unmute without access asks for it once and
+/// leaves the call muted, and is carried out when access is granted. Push-to-talk alone never asks (the press's release
+/// does, one request per press). Muting always goes through.
 final class GroupCallMicrophoneAccessGateTests: XCTestCase {
     private let pushToTalk: PresentationGroupCallMuteAction = .muted(isPushToTalkActive: true)
     private let muted: PresentationGroupCallMuteAction = .muted(isPushToTalkActive: false)
@@ -41,20 +41,22 @@ final class GroupCallMicrophoneAccessGateTests: XCTestCase {
         XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)
     }
 
-    /// The big button sends push-to-talk on touch down and `.unmuted` on a quick release: one request, and the tap is
-    /// carried out once access is granted.
-    func testTapIsOneRequestAndUnmutesOnGrant() {
+    /// Every mic button sends push-to-talk on touch down and `.unmuted` (or a toggle) on release, which asks: one request
+    /// per press, also when a denial completes at once, before the finger lifts.
+    func testPushToTalkWithoutAccessDoesNotAsk() {
         var gate = GroupCallMicrophoneAccessGate()
-        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .requestAccess)
-        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .waitForAccess)
-        XCTAssertEqual(gate.accessRequestCompleted(isGranted: true), .unmuted)
+        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .ignore)
+        XCTAssertFalse(gate.isRequestingAccess)
+        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)
+        XCTAssertNil(gate.accessRequestCompleted(isGranted: false))
+        XCTAssertFalse(gate.isRequestingAccess)
     }
 
-    func testReleasedPushToTalkIsNotResumedOnGrant() {
+    func testPressIsOneRequestAndUnmutesOnGrant() {
         var gate = GroupCallMicrophoneAccessGate()
-        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .requestAccess)
-        XCTAssertEqual(gate.decide(action: self.muted, isAccessGranted: false), .apply)
-        XCTAssertNil(gate.accessRequestCompleted(isGranted: true))
+        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .ignore)
+        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)
+        XCTAssertEqual(gate.accessRequestCompleted(isGranted: true), .unmuted)
     }
 
     func testMuteWhileRequestingCancelsThePendingUnmute() {
@@ -65,18 +67,20 @@ final class GroupCallMicrophoneAccessGateTests: XCTestCase {
         XCTAssertNil(gate.accessRequestCompleted(isGranted: true))
     }
 
-    func testPushToTalkAloneIsNotResumedOnGrant() {
-        var gate = GroupCallMicrophoneAccessGate()
-        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .requestAccess)
-        XCTAssertNil(gate.accessRequestCompleted(isGranted: true))
-    }
-
     func testRepeatedUnmutesWhileRequestingAskOnce() {
         var gate = GroupCallMicrophoneAccessGate()
         XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)
-        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .waitForAccess)
-        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .waitForAccess)
-        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .waitForAccess)
+        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .ignore)
+        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .ignore)
+        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .ignore)
+        XCTAssertEqual(gate.accessRequestCompleted(isGranted: true), .unmuted)
+    }
+
+    /// A press of the mic button while the system prompt is up (push-to-talk, then mute on a long release) changes nothing.
+    func testPushToTalkWhileRequestingKeepsThePendingUnmute() {
+        var gate = GroupCallMicrophoneAccessGate()
+        XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)
+        XCTAssertEqual(gate.decide(action: self.pushToTalk, isAccessGranted: false), .ignore)
         XCTAssertEqual(gate.accessRequestCompleted(isGranted: true), .unmuted)
     }
 }

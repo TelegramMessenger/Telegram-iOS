@@ -1268,7 +1268,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         if joinsUnmutedAfterAccess {
-            // Once the call screen is up, so that the "denied" alert shows above it.
+            // After init, from the main queue: the call screen is presented on the same queue.
             Queue.mainQueue().async { [weak self] in
                 self?.setIsMuted(action: .unmuted)
             }
@@ -3118,7 +3118,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         case .requestAccess:
             self.requestMicrophoneAccess()
             return
-        case .waitForAccess:
+        case .ignore:
             return
         }
 
@@ -3164,7 +3164,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     /// A stream's audio input is off, so it needs no access.
-    private var isMicrophoneAccessGranted: Bool {
+    public var isMicrophoneAccessGranted: Bool {
         return self.isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true
     }
 
@@ -3178,7 +3178,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             guard let self else {
                 return
             }
-            if let action = self.microphoneAccessGate.accessRequestCompleted(isGranted: value) {
+            if let action = self.microphoneAccessGate.accessRequestCompleted(isGranted: value), !self.leaving {
                 self.setIsMuted(action: action)
             }
         })

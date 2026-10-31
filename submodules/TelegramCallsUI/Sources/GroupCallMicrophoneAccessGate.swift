@@ -3,17 +3,18 @@ import AccountContext
 
 /// Whether a group call's mute change may take effect, given the app's microphone access.
 ///
-/// Without access an unmuted call sends no audio while showing the microphone as on, so an unmute (a tap or
-/// push-to-talk) without access leaves the call muted and asks for access once (the system prompt, or the "denied"
-/// alert with its way to Settings), as voice-message recording does. A tap (`.unmuted`) made while asking is carried
-/// out once access is granted; push-to-talk is not, since its press has ended by then. Muting always applies, and
+/// Without access an unmuted call sends no audio while showing the microphone as on, so an unmute without access leaves
+/// the call muted and asks for access (the system prompt, or the "denied" alert with its way to Settings), as
+/// voice-message recording does, and is carried out once access is granted. Push-to-talk without access changes nothing
+/// and does not ask: every mic button sends it on touch down and an unmute (or a toggle) on release, which asks, so a
+/// press is one request, also when a denial completes at once, before the finger lifts. Muting always applies, and
 /// cancels a pending unmute.
 struct GroupCallMicrophoneAccessGate: Equatable {
     enum Decision: Equatable {
         case apply
         case requestAccess
-        /// A request is already showing; the call stays as it is until it completes.
-        case waitForAccess
+        /// Nothing changes: push-to-talk without access, or an unmute while a request is showing.
+        case ignore
     }
 
     private(set) var isRequestingAccess: Bool = false
@@ -30,11 +31,12 @@ struct GroupCallMicrophoneAccessGate: Equatable {
         if isAccessGranted {
             return .apply
         }
-        if case .unmuted = action {
-            self.unmutesOnGrant = true
+        guard case .unmuted = action else {
+            return .ignore
         }
+        self.unmutesOnGrant = true
         if self.isRequestingAccess {
-            return .waitForAccess
+            return .ignore
         }
         self.isRequestingAccess = true
         return .requestAccess

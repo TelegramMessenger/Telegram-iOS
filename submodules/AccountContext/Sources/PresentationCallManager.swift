@@ -482,6 +482,9 @@ public protocol PresentationGroupCall: AnyObject {
     var myAudioLevel: Signal<Float, NoError> { get }
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
+    /// Without it an unmute leaves the call muted and asks for microphone access, so a mic button must not show
+    /// push-to-talk as live.
+    var isMicrophoneAccessGranted: Bool { get }
     var isNoiseSuppressionEnabled: Signal<Bool, NoError> { get }
     
     var e2eEncryptionKeyHash: Signal<Data?, NoError> { get }
