@@ -184,11 +184,11 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             }
         }
 
-        // With a wired headset the built-in microphone is in use only because "builtin" was chosen; on a
-        // device without a receiver the sound stays in the headset, and reporting "headphones" then would
-        // leave no way back to the headset's microphone.
-        let hasWiredHeadsetInput = availableInputs.contains(where: { isWiredHeadsetInput($0, route: route) })
-        
+        // While the sound is in wired headphones but the built-in microphone is in use ("builtin" chosen on a
+        // device without a receiver), the headset's microphone stays an item of its own, as before: it is the
+        // way back, which a two-item "builtin"/"headphones" toggle would not offer.
+        let keepsWiredHeadsetInputSeparate = headphonesAreActive && route.inputs.contains(where: { $0.portType == .builtInMic })
+
         for input in availableInputs {
             var isActive = false
             for currentInput in route.inputs {
@@ -198,7 +198,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             }
 
             if input.portType == .builtInMic {
-                if isActive && (!headphonesAreActive || hasWiredHeadsetInput) {
+                if isActive && !headphonesAreActive {
                     activeOutput = .builtin
                     inner: for currentOutput in route.outputs {
                         if currentOutput.portType == .builtInSpeaker {
@@ -209,7 +209,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
                 }
                 continue
             }
-            if isWiredHeadsetInput(input, route: route) {
+            if !keepsWiredHeadsetInputSeparate && isWiredHeadsetInput(input, route: route) {
                 // The microphone of the wired headset is the "Headphones" route, not an output of its own.
                 if isActive {
                     activeOutput = .headphones

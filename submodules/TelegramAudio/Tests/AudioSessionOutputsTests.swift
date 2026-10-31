@@ -54,13 +54,13 @@ final class AudioSessionOutputsTests: XCTestCase {
         XCTAssertEqual(result.current, "headphones")
     }
 
-    /// After choosing "iPad" the built-in microphone is pinned while the sound stays in the headset (an iPad
-    /// has no receiver). The current output must say so: reading "Headphones" there, the two-item audio
-    /// button would offer "iPad" forever and the headset's microphone could never be chosen again.
-    func testIPadWithEarPodsAndBuiltInMicPinnedIsBuiltin() {
+    /// After choosing "iPad" the built-in microphone can be pinned while the sound stays in the headset (an
+    /// iPad has no receiver). The route is then classified as before the fix: the headset's microphone is its
+    /// own item, so the audio button keeps a menu with a way back to it, and "Headphones" stays current.
+    func testIPadWithEarPodsAndBuiltInMicPinnedOffersTheHeadsetMicrophone() {
         let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.iPadMic], available: [self.iPadMic, self.earPodsMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "headphones"])
-        XCTAssertEqual(result.current, "builtin")
+        XCTAssertEqual(result.available, ["builtin", "headphones", "port:EarPods Microphone:generic"])
+        XCTAssertEqual(result.current, "headphones")
         XCTAssertEqual(self.headsetInput(outputs: [self.wiredHeadphones], available: [self.iPadMic, self.earPodsMic]), self.earPodsMic)
     }
 
