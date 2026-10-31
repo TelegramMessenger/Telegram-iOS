@@ -14423,6 +14423,7 @@ Sorry for the inconvenience.";
 "PeerInfo.Topics.DisplayAsInfo" = "Choose how topics appear for all members.";
 "PeerInfo.Topics.Tabs" = "Tabs";
 "PeerInfo.Topics.List" = "List";
+"PeerInfo.Topics.Sidebar" = "Sidebar";
 
 "PeerInfo.OptionTopics.Enabled" = "Enabled";
 "PeerInfo.OptionTopics.Disabled" = "Disabled";
