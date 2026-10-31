@@ -113,6 +113,18 @@ final class AudioSessionOutputsTests: XCTestCase {
         XCTAssertEqual(result.current, "speaker")
     }
 
+    func testIPhoneWithEarPodsAndBuiltInMicPinnedOffersTheHeadsetMicrophone() {
+        let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.iPhoneMic], available: [self.iPhoneMic, self.iPhoneHeadsetMic], hasLoudspeaker: true)
+        XCTAssertEqual(result.available, ["builtin", "headphones", "speaker", "port:Headset Microphone:wired"])
+        XCTAssertEqual(result.current, "headphones")
+    }
+
+    func testEarPodsCurrentWithAirPodsAvailable() {
+        let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.iPhoneHeadsetMic], available: [self.iPhoneMic, self.iPhoneHeadsetMic, self.airPodsHFP], hasLoudspeaker: true)
+        XCTAssertEqual(result.available, ["builtin", "headphones", "speaker", "port:AirPods Pro:bluetooth"])
+        XCTAssertEqual(result.current, "headphones")
+    }
+
     // MARK: - Bluetooth, car, built-in (unchanged)
 
     func testAirPodsAreABluetoothPort() {
