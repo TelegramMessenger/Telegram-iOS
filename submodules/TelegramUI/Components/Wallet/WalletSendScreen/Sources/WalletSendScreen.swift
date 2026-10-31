@@ -1222,7 +1222,9 @@ private final class WalletSendScreenComponent: Component {
                 self.abandonRestoration()
                 self.cancelPendingSend()
                 self.isVisible = false
-                self.peerAddressResolution.state = .cancelled
+                if self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading {
+                    self.peerAddressResolution.state = .cancelled
+                }
                 self.peerAddressDisposable.set(nil)
                 if let parentController = controller.parentController() {
                     parentController.dismiss(animated: true)
