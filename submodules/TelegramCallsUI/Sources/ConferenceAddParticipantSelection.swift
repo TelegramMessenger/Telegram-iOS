@@ -9,6 +9,8 @@ struct ConferenceAddParticipantSelection {
     /// Not selectable: the account itself, everyone already in the call and everyone with a pending invitation.
     let disabledPeerIds: [EnginePeer.Id]
     let occupiedSlotCount: Int
+    // Asked for every row of the list and of search results.
+    private let disabledPeerIdSet: Set<EnginePeer.Id>
 
     /// `participantPeerIds` are the call's listed participants; `totalParticipantCount` also counts those not loaded
     /// into the list yet.
@@ -20,6 +22,7 @@ struct ConferenceAddParticipantSelection {
             }
         }
         self.disabledPeerIds = disabledPeerIds
+        self.disabledPeerIdSet = Set(disabledPeerIds)
 
         var participantCount = totalParticipantCount
         if !participantPeerIds.contains(accountPeerId) {
@@ -33,7 +36,7 @@ struct ConferenceAddParticipantSelection {
         guard case let .user(user) = peer else {
             return false
         }
-        if self.disabledPeerIds.contains(user.id) {
+        if self.disabledPeerIdSet.contains(user.id) {
             return false
         }
         if user.botInfo != nil {
@@ -48,7 +51,7 @@ struct ConferenceAddParticipantSelection {
             guard case let .peer(peerId) = selectedPeerId else {
                 continue
             }
-            if self.disabledPeerIds.contains(peerId) || result.contains(where: { $0.id == peerId }) {
+            if self.disabledPeerIdSet.contains(peerId) || result.contains(where: { $0.id == peerId }) {
                 continue
             }
             result.append((peerId, isVideo))

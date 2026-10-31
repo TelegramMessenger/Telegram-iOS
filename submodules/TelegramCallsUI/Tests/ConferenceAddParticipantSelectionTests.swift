@@ -66,7 +66,7 @@ final class ConferenceAddParticipantSelectionTests: XCTestCase {
         XCTAssertEqual(selection.occupiedSlotCount, 2)
     }
 
-    func testEverySelectedUserIsInvitedInSelectionOrderWithTheVideoOption() {
+    func testEverySelectedUserIsInvitedInTheGivenOrderWithTheVideoOption() {
         let selection = ConferenceAddParticipantSelection(accountPeerId: self.peerId(1), participantPeerIds: [self.peerId(2)], totalParticipantCount: 2, invitedPeerIds: [])
         let invites = selection.invites(selectedPeerIds: [.peer(self.peerId(7)), .peer(self.peerId(5)), .peer(self.peerId(6))], isVideo: true)
         XCTAssertEqual(invites.map(\.id), [self.peerId(7), self.peerId(5), self.peerId(6)])

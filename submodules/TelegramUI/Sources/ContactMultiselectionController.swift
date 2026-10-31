@@ -838,7 +838,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         case let .contacts(contactsNode):
             contactsNode.updateSelectionState { state in
                 if let state = state {
-                    peerIds = Array(state.selectedPeerIndices.keys)
+                    // In the order the peers were picked.
+                    peerIds = state.selectedPeerIndices.sorted(by: { $0.value < $1.value }).map(\.key)
                 }
                 return state
             }
