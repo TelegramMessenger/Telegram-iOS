@@ -194,8 +194,8 @@ public final class SparseMessageList {
         }
 
         private func resetTopSection() {
-            let count: Int
-            count = 200
+            // Honour loadMoreFromTopSection's growth; the count used to be pinned at 200, so asking for more did nothing.
+            let count = max(200, self.topSectionItemRequestCount)
             
             let location: ChatLocationInput = .peer(peerId: self.peerId, threadId: self.threadId)
             

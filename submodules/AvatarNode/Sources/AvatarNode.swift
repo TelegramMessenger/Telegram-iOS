@@ -624,7 +624,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
                 case let .editAvatarIcon(forceNone):
-                    representation = forceNone ? nil : peer?.smallProfileImage
+                    representation = forceNone ? nil : (peer?.largeProfileImage ?? peer?.smallProfileImage)
                     icon = .editAvatarIcon
                 case .deletedIcon:
                     representation = nil
@@ -640,7 +640,7 @@ public final class AvatarNode: ASDisplayNode {
                     icon = .storyIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: contentSettings) == nil {
-                representation = peer?.smallProfileImage
+                representation = (peer?.largeProfileImage ?? peer?.smallProfileImage)
             }
             
             let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.nameColor, peer?.displayLetters ?? [], representation, clipStyle, cutoutRect)
@@ -723,7 +723,7 @@ public final class AvatarNode: ASDisplayNode {
             displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
             storeUnrounded: Bool = false
         ) {
-            let smallProfileImage = peer?.smallProfileImage
+            let smallProfileImage = (peer?.largeProfileImage ?? peer?.smallProfileImage)
             let params = Params(
                 peerId: peer?.id,
                 resourceId: smallProfileImage?.resource.id.stringRepresentation,
@@ -771,7 +771,7 @@ public final class AvatarNode: ASDisplayNode {
                 self.imageNode.view.mask = nil
             }
             
-            if let imageCache = genericContext.imageCache as? DirectMediaImageCache, let peer, let smallProfileImage = peer.smallProfileImage, let peerReference = PeerReference(peer) {
+            if let imageCache = genericContext.imageCache as? DirectMediaImageCache, let peer, let smallProfileImage = (peer.largeProfileImage ?? peer.smallProfileImage), let peerReference = PeerReference(peer) {
                 if let result = imageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: peer.profileImageRepresentations.first?.immediateThumbnailData, size: Int(displayDimensions.width * UIScreenScale), synchronous: synchronousLoad) {
                     if let image = result.image {
                         self.imageNode.contents = image.cgImage
@@ -831,7 +831,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
                 case let .editAvatarIcon(forceNone):
-                    representation = forceNone ? nil : peer?.smallProfileImage
+                    representation = forceNone ? nil : (peer?.largeProfileImage ?? peer?.smallProfileImage)
                     icon = .editAvatarIcon
                 case .deletedIcon:
                     representation = nil
@@ -847,7 +847,7 @@ public final class AvatarNode: ASDisplayNode {
                     icon = .storyIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
-                representation = peer?.smallProfileImage
+                representation = (peer?.largeProfileImage ?? peer?.smallProfileImage)
             }
             
             let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.nameColor, peer?.displayLetters ?? [], representation, clipStyle, cutoutRect)

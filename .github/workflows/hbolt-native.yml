@@ -1,0 +1,92 @@
+name: HBOLT Native IPA
+
+on:
+  push:
+    branches: [ hbolt-native ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: '0'
+
+      - name: Select Xcode
+        run: |
+          set -x
+          WANTED=$(python3 -c 'import json;print(json.load(open("versions.json"))["xcode"])')
+          ls -d /Applications/Xcode*.app || true
+          if [ -d "/Applications/Xcode_$WANTED.app" ]; then
+            XCODE_APP="/Applications/Xcode_$WANTED.app"
+            echo "OVERRIDE_XCODE=" >> $GITHUB_ENV
+          else
+            # The pinned Xcode is not on this runner image; use the newest one and let Make.py skip its version check.
+            XCODE_APP=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+            echo "OVERRIDE_XCODE=--overrideXcodeVersion" >> $GITHUB_ENV
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Create canonical source directory
+        run: |
+          set -x
+          sudo mkdir -p /Users/Shared
+          sudo chown -R $(whoami) /Users/Shared
+          cp -R $GITHUB_WORKSPACE /Users/Shared/
+          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
+
+      - name: Build the App
+        run: |
+          set -x
+
+          # source code paths are included in the final binary, so we need to make them stable across builds
+          SOURCE_DIR=/Users/Shared/telegram-ios
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
+          cd $SOURCE_DIR
+
+          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+          export APP_VERSION=$(python3 -c 'import json;print(json.load(open("versions.json"))["app"])')
+          export BUILD_NUMBER="$(($(git rev-list --count HEAD)+$BUILD_NUMBER_OFFSET))"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
+            --bazelUserRoot="$BAZEL_USER_ROOT" \
+            $OVERRIDE_XCODE \
+            build \
+            --configurationPath="build-system/appstore-configuration.json" \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER"
+
+          OUTPUT_PATH="$SOURCE_DIR/build/artifacts"
+          rm -rf "$OUTPUT_PATH"
+          mkdir -p "$OUTPUT_PATH"
+          cp bazel-bin/Telegram/Telegram.ipa "$OUTPUT_PATH/HBOLT-Nicegram-Native.ipa"
+          echo "IPA_PATH=$OUTPUT_PATH/HBOLT-Nicegram-Native.ipa" >> $GITHUB_ENV
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HBOLT-Nicegram-Native
+          path: ${{ env.IPA_PATH }}
+          if-no-files-found: error
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "hbolt-${{ env.BUILD_NUMBER }}" "${{ env.IPA_PATH }}" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "HBOLT Native ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})" \
+            --notes "Unsigned (fake-codesigned) build. Re-sign with Sideloadly/AltStore before installing."

@@ -274,6 +274,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     let navigationActionDisposable = MetaDisposable()
     let enqueueMediaMessageDisposable = MetaDisposable()
     private let openSavedMusicDisposable = MetaDisposable()
+    let selectAllDisposable = MetaDisposable()
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     /// While an expansion has the profile's views they are held still: layouts wait, and the last one is applied when
@@ -2688,6 +2689,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     deinit {
         self.dataDisposable?.dispose()
+        self.selectAllDisposable.dispose()
         self.walletStickersPreloadDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.activeActionDisposable.dispose()
@@ -5868,6 +5870,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     strongSelf.context.sharedContext.makeContentReportScreen(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), forceDark: false, present: { [weak self] controller in
                         self?.controller?.push(controller)
                     }, completion: {}, requestSelectMessages: nil)
+                }, downloadMessages: { [weak self] in
+                    guard let strongSelf = self, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty, strongSelf.peerId.namespace != Namespaces.Peer.SecretChat else {
+                        return
+                    }
+                    let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                        messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
+                    ))
+                    |> deliverOnMainQueue).startStandalone(next: { messageMap in
+                        let messages = messageMap.values.compactMap { $0 }
+                        
+                        if let strongSelf = self, !messages.isEmpty {
+                            strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
+                            
+                            // The share sheet's save action downloads every selected item to the camera roll.
+                            let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages.sorted(by: { lhs, rhs in
+                                return lhs.index < rhs.index
+                            }).map({ $0._asMessage() })), preferredAction: .saveToCameraRoll, externalShare: false, updatedPresentationData: strongSelf.controller?.updatedPresentationData))
+                            strongSelf.view.endEditing(true)
+                            strongSelf.controller?.present(shareController, in: .window(.root))
+                        }
+                    })
+                }, selectAllMessages: { [weak self] in
+                    self?.selectAllMessagesInCurrentPane()
                 }, displayCopyProtectionTip: { [weak self] sourceView, save in
                     if let strongSelf = self, let peer = strongSelf.data?.peer, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty {
                         let _ = (strongSelf.context.engine.data.get(EngineDataMap(

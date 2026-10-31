@@ -184,6 +184,13 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let shareButton: GlassButtonView
     private let tagButton: GlassButtonView
     private let tagEditButton: GlassButtonView
+    private let downloadButton: GlassButtonView
+    private let selectAllButton: GlassButtonView
+    
+    /// Shared-media selection only: saves the selected items' media to the device.
+    public var downloadSelectedMessages: (() -> Void)?
+    /// Shared-media selection only: selects every item of the current media tab.
+    public var selectAllMessages: (() -> Void)?
     
     private let reactionOverlayContainer: ChatMessageSelectionInputPanelNodeViewForOverlayContent
     
@@ -240,6 +247,16 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.tagEditButton.isAccessibilityElement = true
         self.tagEditButton.accessibilityLabel = strings.VoiceOver_MessageSelectionButtonTag
         
+        self.downloadButton = GlassButtonView()
+        self.downloadButton.icon = "Chat/Context Menu/Download"
+        self.downloadButton.isAccessibilityElement = true
+        self.downloadButton.accessibilityLabel = strings.Gallery_SaveToGallery
+        
+        self.selectAllButton = GlassButtonView()
+        self.selectAllButton.icon = "Chat/Context Menu/SelectAll"
+        self.selectAllButton.isAccessibilityElement = true
+        self.selectAllButton.accessibilityLabel = strings.TextSelection_SelectAll
+        
         self.reactionOverlayContainer = ChatMessageSelectionInputPanelNodeViewForOverlayContent()
         
         super.init()
@@ -250,6 +267,10 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.view.addSubview(self.shareButton)
         self.view.addSubview(self.tagButton)
         self.view.addSubview(self.tagEditButton)
+        if peerMedia {
+            self.view.addSubview(self.downloadButton)
+            self.view.addSubview(self.selectAllButton)
+        }
         
         self.viewForOverlayContent = self.reactionOverlayContainer
         
@@ -262,6 +283,8 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.shareButton.button.addTarget(self, action: #selector(self.shareButtonPressed), for: .touchUpInside)
         self.tagButton.button.addTarget(self, action: #selector(self.tagButtonPressed), for: .touchUpInside)
         self.tagEditButton.button.addTarget(self, action: #selector(self.tagButtonPressed), for: .touchUpInside)
+        self.downloadButton.button.addTarget(self, action: #selector(self.downloadButtonPressed), for: .touchUpInside)
+        self.selectAllButton.button.addTarget(self, action: #selector(self.selectAllButtonPressed), for: .touchUpInside)
     }
     
     deinit {
@@ -324,6 +347,18 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         } else if !self.shareButton.isImplicitlyDisabled {
             self.interfaceInteraction?.shareSelectedMessages()
         }
+    }
+    
+    @objc private func downloadButtonPressed() {
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.downloadButton, true)
+        } else if !self.selectedMessages.isEmpty {
+            self.downloadSelectedMessages?()
+        }
+    }
+    
+    @objc private func selectAllButtonPressed() {
+        self.selectAllMessages?()
     }
     
     @objc private func tagButtonPressed() {
@@ -526,7 +561,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             tagButton = self.tagEditButton
         }
         
-        let buttons: [GlassButtonView]
+        var buttons: [GlassButtonView]
         if self.reportButton.isHidden {
             if let tagButton {
                 buttons = [
@@ -575,6 +610,16 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     self.shareButton,
                     self.forwardButton
                 ]
+            }
+        }
+        
+        if self.peerMedia {
+            // Shared media: Delete/Report | Download | Select All | Share | Forward
+            self.downloadButton.isEnabled = !self.selectedMessages.isEmpty
+            if let index = buttons.firstIndex(where: { $0 === self.shareButton }) {
+                buttons.insert(contentsOf: [self.downloadButton, self.selectAllButton], at: index)
+            } else {
+                buttons.append(contentsOf: [self.downloadButton, self.selectAllButton])
             }
         }
         
