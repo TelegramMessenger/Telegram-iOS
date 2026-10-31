@@ -42,6 +42,7 @@ swift_library(
     deps = [
         ":ChatControllerInteraction",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/TelegramCore:TelegramCore",
     ],
 )
 
