@@ -184,6 +184,11 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             }
         }
 
+        // With a wired headset the built-in microphone is in use only because "builtin" was chosen; on a
+        // device without a receiver the sound stays in the headset, and reporting "headphones" then would
+        // leave no way back to the headset's microphone.
+        let hasWiredHeadsetInput = availableInputs.contains(where: { isWiredHeadsetInput($0, route: route) })
+        
         for input in availableInputs {
             var isActive = false
             for currentInput in route.inputs {
@@ -193,7 +198,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             }
 
             if input.portType == .builtInMic {
-                if isActive && !headphonesAreActive {
+                if isActive && (!headphonesAreActive || hasWiredHeadsetInput) {
                     activeOutput = .builtin
                     inner: for currentOutput in route.outputs {
                         if currentOutput.portType == .builtInSpeaker {
@@ -1174,8 +1179,16 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
             return
         }
         managedAudioSessionLog("ManagedAudioSession pinning preferred input -> \(describeAudioPort(route)) for headphones")
-        let _ = try? session.overrideOutputAudioPort(.none)
-        let _ = try? session.setPreferredInput(route)
+        do {
+            try session.overrideOutputAudioPort(.none)
+        } catch let e {
+            managedAudioSessionLog("ManagedAudioSession clearing the output override for headphones failed: \(e)")
+        }
+        do {
+            try session.setPreferredInput(route)
+        } catch let e {
+            managedAudioSessionLog("ManagedAudioSession pinning the headset input failed: \(e)")
+        }
     }
     
     private func setupOutputMode(_ outputMode: AudioSessionOutputMode, type: ManagedAudioSessionType) throws {
