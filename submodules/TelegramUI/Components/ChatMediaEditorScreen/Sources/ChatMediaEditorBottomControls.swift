@@ -275,10 +275,12 @@ public func chatMediaEditorBottomControlsItems(
     }
 }
 
-public func chatMediaEditorBottomControlsAreHidden(mode: ChatMediaEditorBottomControlsMode, keyboardHeight: CGFloat, isEditingCaption: Bool, paintControlsVisible: Bool) -> Bool {
+// The row hides for a keyboard that covers it, not for caption editing as such: with a hardware keyboard (an iPad's)
+// the caption is edited with no keyboard on screen, and Send has to stay.
+public func chatMediaEditorBottomControlsAreHidden(mode: ChatMediaEditorBottomControlsMode, keyboardHeight: CGFloat, paintControlsVisible: Bool) -> Bool {
     switch mode {
     case .gallery:
-        return keyboardHeight > 0.0 || isEditingCaption
+        return keyboardHeight > 0.0
     case .paint:
         return keyboardHeight > 0.0 || !paintControlsVisible
     case .crop, .quality, .tools:

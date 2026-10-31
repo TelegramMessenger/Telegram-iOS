@@ -29,6 +29,17 @@ public func chatMediaEditorKeyboardPagerOffset(keyboardHeight: CGFloat) -> CGFlo
     return -keyboardHeight / 2.0
 }
 
+// What covers the bottom of the screen while the caption is edited: the keyboard, or the caption panel's own emoji
+// panel (which replaces the keyboard).
+public func chatMediaEditorEffectiveKeyboardHeight(inputHeight: CGFloat?, captionAdditionalInputHeight: CGFloat) -> CGFloat {
+    return max(inputHeight ?? 0.0, captionAdditionalInputHeight)
+}
+
+// The dim over the editor would cover the bottom row, so it shows only while a keyboard hides that row anyway.
+public func chatMediaEditorCaptionDimIsVisible(isEditingCaption: Bool, keyboardHeight: CGFloat) -> Bool {
+    return isEditingCaption && keyboardHeight > 0.0
+}
+
 public final class ChatMediaEditorCaptionModel {
     public let adapter: ChatMediaEditorCaptionAdapter
     public private(set) var currentId: String

@@ -382,9 +382,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             }
             self.isEditingCaption = isEditing
             self.captionEditingUpdated(isEditing)
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-            transition.updateAlpha(layer: self.captionDimView.layer, alpha: isEditing ? 1.0 : 0.0)
-            self.requestLayout(transition: transition)
+            self.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
         }
 
         func activateCaptionInput() {
@@ -598,6 +596,8 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 let bottomInset = layout.size.height - chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY + chatMediaEditorCaptionPanelSpacing
                 let _ = captionPanelView.updateContainerLayoutSize?(layout.size, safeAreaInset: safeInsets, bottomInset: bottomInset, keyboardHeight: keyboardHeight, animated: transition.isAnimated)
             }
+            let coveringKeyboardHeight = chatMediaEditorEffectiveKeyboardHeight(inputHeight: keyboardHeight, captionAdditionalInputHeight: self.captionPanelView?.additionalInputHeight ?? 0.0)
+            transition.updateAlpha(layer: self.captionDimView.layer, alpha: chatMediaEditorCaptionDimIsVisible(isEditingCaption: self.isEditingCaption, keyboardHeight: coveringKeyboardHeight) ? 1.0 : 0.0)
 
             let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout), toolbarSide: toolbarSide)
             transition.updateFrame(view: self.recipientArrowView, frame: recipientLayout.arrowFrame)
@@ -606,7 +606,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             transition.updateAlpha(layer: self.recipientArrowView.layer, alpha: recipientAlpha)
             transition.updateAlpha(layer: self.recipientLabel.layer, alpha: recipientAlpha)
 
-            self.updateToolbar(frame: editorLayout.toolbarFrame, side: toolbarSide, keyboardHeight: keyboardHeight, transition: ComponentTransition(transition))
+            self.updateToolbar(frame: editorLayout.toolbarFrame, side: toolbarSide, keyboardHeight: coveringKeyboardHeight, transition: ComponentTransition(transition))
             self.updateSelectionLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateCameraButtonLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateScrubber(layout: layout, safeInsets: safeInsets, transition: ComponentTransition(transition))
@@ -639,7 +639,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             } else {
                 mode = .gallery(activeTab: self.activeToolbarTab)
             }
-            let buttonsHidden = chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: keyboardHeight, isEditingCaption: self.isEditingCaption, paintControlsVisible: self.paintControlsVisible)
+            let buttonsHidden = chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: keyboardHeight, paintControlsVisible: self.paintControlsVisible)
             let isToolToolbar: Bool
             if case .gallery = mode {
                 isToolToolbar = false
@@ -926,6 +926,11 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             }
             self.dismissTimerTooltip()
             self.dismissMuteTooltip()
+            if self.isEditingCaption {
+                // Send stays on screen while a hardware keyboard edits the caption; the caption being typed goes too.
+                let _ = self.captionPanelView?.dismissInput()
+                self.updateIsEditingCaption(false)
+            }
             if self.isGallery {
                 guard let gallery = controller.gallery else {
                     return
