@@ -484,6 +484,11 @@ public final class TextNodeLayout: NSObject {
         self.embeddedItems = embeddedItems
     }
     
+    /// Image attachments' frames, relative to their line's origin.
+    var lineAttachmentFrames: [(range: NSRange, frame: CGRect)] {
+        return self.lines.flatMap { line in line.attachments.map { (range: $0.range, frame: $0.frame) } }
+    }
+    
     public func areLinesEqual(to other: TextNodeLayout) -> Bool {
         if self.lines.count != other.lines.count {
             return false
@@ -1224,6 +1229,16 @@ private func addEmbeddedItem(item: AnyHashable, line: TextNodeLine, ascent: CGFl
     line.embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
 }
 
+private func isRightToLeftGlyphRun(line: CTLine, stringIndex: Int) -> Bool {
+    for run in CTLineGetGlyphRuns(line) as! [CTRun] {
+        let range = CTRunGetStringRange(run)
+        if stringIndex >= range.location && stringIndex < range.location + range.length {
+            return CTRunGetStatus(run).contains(.rightToLeft)
+        }
+    }
+    return false
+}
+
 private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
     var secondaryLeftOffset: CGFloat = 0.0
     let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
@@ -1928,7 +1943,9 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                 }
                 
                 var rightOffset: CGFloat = leftOffset
-                if isAtEndOfTheLine {
+                // The logical end of the line is its right edge only when the attachment runs left to right: a
+                // right-to-left one ends on its left side, where the offset of its end index already lies.
+                if isAtEndOfTheLine && !isRightToLeftGlyphRun(line: line, stringIndex: startIndex) {
                     let rawRightOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
                     rightOffset = floor(rawRightOffset)
                 } else {
