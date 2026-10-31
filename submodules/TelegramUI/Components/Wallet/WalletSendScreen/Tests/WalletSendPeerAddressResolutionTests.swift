@@ -26,11 +26,11 @@ final class WalletSendPeerAddressResolutionTests: XCTestCase {
         XCTAssertEqual(resolution.display(recipientAddress: ""), .unavailable)
     }
 
-    func testCancelledLookupStopsLoading() {
+    func testLookupCancelledByClosingTheSheetIsNotAnError() {
         var resolution = WalletSendPeerAddressResolution()
         let _ = resolution.begin()
         resolution.state = .cancelled
-        XCTAssertEqual(resolution.display(recipientAddress: ""), .unavailable)
+        XCTAssertEqual(resolution.display(recipientAddress: ""), .loading)
     }
 
     func testResolvedLookupDisplaysTheAddress() {

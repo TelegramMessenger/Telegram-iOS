@@ -605,7 +605,9 @@ final class WalletSendRecipientComponent: Component {
                 let titleViews = [self.name.view, component.peer?.addressName?.isEmpty == false ? self.username.view : nil].compactMap { $0 as? TextView }
                 intro.updateTitle(titleViews, frames: titleViews.map { $0.frame },
                     primary: component.theme.list.itemPrimaryTextColor, secondary: component.theme.list.itemSecondaryTextColor)
-                if let addressView = self.address.view as? PlainButtonComponent.View,
+                // The intro animates an address grid; error text is not one, so it appears once the intro ends.
+                if self.displayedUnavailableText == nil,
+                   let addressView = self.address.view as? PlainButtonComponent.View,
                    let textView = addressView.contentView as? TextView {
                     intro.updateAddress(textView, frame: textView.convert(textView.bounds, to: self.contentView), loading: self.addressPhase != .ready)
                 }

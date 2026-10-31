@@ -52,15 +52,16 @@ struct WalletSendPeerAddressResolution {
     }
 
     /// What the recipient row shows for a peer: the lookup animation only while the lookup is due or running, so a
-    /// failed one, or a peer without an address, ends in a static state rather than animating forever.
+    /// failed one, or a peer without an address, ends in a static state rather than animating forever. A lookup
+    /// cancelled by closing the sheet is not an error: the row keeps its placeholder while the sheet goes away.
     func display(recipientAddress: String) -> Display {
         if !recipientAddress.isEmpty {
             return .address
         }
         switch self.state {
-        case .notRequested, .loading:
+        case .notRequested, .loading, .cancelled:
             return .loading
-        case .resolved, .failed, .errorPresented, .cancelled:
+        case .resolved, .failed, .errorPresented:
             return .unavailable
         }
     }
