@@ -310,8 +310,8 @@ private final class StoryContainerScreenComponent: Component {
         let tintLayer = SimpleGradientLayer()
         
         // Holds the item set's transitionCloneContainerView in transitionCloneMasterView at the item set's frame. The
-        // clones are laid out in the item set's coordinates, which are the container's only when the item set fills it,
-        // not for the card (iPad, unfolded iPhone Duo) nor beside iPhone Duo's side strip.
+        // clones are laid out in the item set's coordinates, which coincide with the container's only when the item set
+        // fills it: not for the card (iPad, unfolded iPhone Duo), nor beside iPhone Duo's side strip.
         let transitionCloneHostView: UIView
         
         var rotationFraction: CGFloat?
