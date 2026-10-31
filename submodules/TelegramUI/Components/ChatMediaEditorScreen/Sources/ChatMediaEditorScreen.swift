@@ -371,9 +371,20 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
         }
 
         @objc private func captionDimTapped() {
-            if self.captionPanelView?.dismissInput() ?? true {
-                self.updateIsEditingCaption(false)
+            let _ = self.endCaptionEditing()
+        }
+
+        // With a hardware keyboard the bottom row stays reachable while the caption is edited: what it starts ends the
+        // editing first, which commits the caption. False when the panel keeps the input (a caption over the limit).
+        private func endCaptionEditing() -> Bool {
+            guard self.isEditingCaption else {
+                return true
             }
+            guard self.captionPanelView?.dismissInput() ?? true else {
+                return false
+            }
+            self.updateIsEditingCaption(false)
+            return true
         }
 
         private func updateIsEditingCaption(_ isEditing: Bool) {
@@ -859,6 +870,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             guard let controller = self.controller, chatMediaEditorCanOpenTool(isToolActive: self.activeTool != nil, isSending: self.isSending, isDismissing: controller.isDismissing, isPagerMoving: self.isPagerMoving) else {
                 return
             }
+            guard self.endCaptionEditing() else {
+                return
+            }
             if tab == .qualityTab {
                 self.qualityTabPressed()
                 return
@@ -875,6 +889,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
 
         private func presentSendMenu(sourceView: UIView?) {
             guard let controller = self.controller, let sourceView, !self.isSending, !controller.isDismissing else {
+                return
+            }
+            guard self.endCaptionEditing() else {
                 return
             }
             if let gallery = controller.gallery {
@@ -924,13 +941,11 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             guard let controller = self.controller, !self.isSending, !controller.isDismissing, !self.isInvalidated else {
                 return
             }
+            guard self.endCaptionEditing() else {
+                return
+            }
             self.dismissTimerTooltip()
             self.dismissMuteTooltip()
-            if self.isEditingCaption {
-                // Send stays on screen while a hardware keyboard edits the caption; the caption being typed goes too.
-                let _ = self.captionPanelView?.dismissInput()
-                self.updateIsEditingCaption(false)
-            }
             if self.isGallery {
                 guard let gallery = controller.gallery else {
                     return
