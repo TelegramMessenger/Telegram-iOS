@@ -14,10 +14,12 @@ public struct ChatHistoryVisibleReadRow {
     }
 }
 
-// The newest message the chat reads from the rows on screen, or nil when no row counts. A row hidden under the top inset
-// does not count; one that starts up to 100 points above it does, as does a taller one holding `lastMessageId`, the
-// newest message of a history that is loaded to its end. In a thread (`isThread`: a forum topic, a reply thread, a
-// monoforum thread) the read goes up to a cloud message id, so a row holding a message of another namespace is left out.
+// The newest message the chat reads from the rows on screen, or nil when no row counts. Frames and `topInset` are in list
+// space: in the rotated chat history the list's top inset is the input panel at the bottom of the screen. A row hidden
+// under the top inset does not count; one that starts up to 100 points above it does, as does a taller one holding
+// `lastMessageId`, the newest message of a history that is loaded to its end. In a thread (`isThread`: a forum topic, a
+// reply thread, a monoforum thread) the read goes up to a cloud message id, so a row holding a message of another
+// namespace is left out.
 public func chatHistoryMaxVisibleReadIndex(rows: [ChatHistoryVisibleReadRow], topInset: CGFloat, lastMessageId: EngineMessage.Id?, isThread: Bool) -> EngineMessage.Index? {
     var maxMessage: EngineMessage.Index?
     for row in rows {

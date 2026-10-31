@@ -751,9 +751,9 @@ chat reads `abs(offset) <= 0.9` as "pinned to the newest message"
   before the landing, so the topic kept its unread count. `ChatController.viewWillDisappear` therefore
   calls `ChatHistoryListNodeImpl.readVisibleMessagesBeforeLeaving()` before it turns `canReadHistory`
   off: the same read of the rows on screen, in presented geometry. Switching in place to another chat
-  location (another topic from a forum's side list or tabs) skips `viewWillDisappear` and drops the old
-  history node, landing callback and all, so `ChatControllerNode` makes the same call on the outgoing
-  node when it swaps them. Which rows count is
+  location (another topic from a forum's side list or tabs) skips `viewWillDisappear` and removes the
+  old history node after its 0.4s slide-out, usually before its landing, so `ChatControllerNode` makes
+  the same call on the outgoing node when it swaps them. Which rows count is
   `chatHistoryMaxVisibleReadIndex` (`ChatControllerInteraction`, with its tests).
 
 **Why `ListViewImpl` needs no such distinction:** its model *is* its presented geometry.
