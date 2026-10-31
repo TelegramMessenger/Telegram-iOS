@@ -1156,7 +1156,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         endCurrentIfAny: Bool,
         unmuteByDefault: Bool
     ) -> JoinGroupCallManagerResult {
-        let begin: () -> Void = { [weak self] in
+        let createCall: (Bool) -> Void = { [weak self] unmuteByDefault in
             guard let self else {
                 return
             }
@@ -1191,6 +1191,25 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 let _ = call.invitePeer(peerId, isVideo: beginWithVideo)
             }
             self.updateCurrentGroupCall(.group(call))
+        }
+        let begin: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            // Joining with the microphone on asks for access before the call's audio starts, as startGroupCall does;
+            // without it the call still joins, muted.
+            if unmuteByDefault && DeviceAccess.isMicrophoneAccessAuthorized() != true {
+                let (presentationData, present, openSettings) = self.getDeviceAccessData()
+                DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                    present(c, a)
+                }, openSettings: {
+                    openSettings()
+                }, { value in
+                    createCall(value)
+                })
+            } else {
+                createCall(unmuteByDefault)
+            }
         }
         
         if let currentGroupCall = self.currentGroupCallValue {
