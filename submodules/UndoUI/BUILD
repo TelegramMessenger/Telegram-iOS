@@ -50,6 +50,7 @@ swift_library(
     ]),
     deps = [
         ":UndoUI",
+        "//submodules/Display:Display",
     ],
 )
 

@@ -136,6 +136,8 @@ private final class StoryStealthModeSheetContentComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if remainingCooldownSeconds > 0, self.showCooldownToast {
+                // Narrower on a regular-width layout, centred.
+                let toastBand = toastFrame(CGRect(x: sideInset, y: 0.0, width: availableSize.width - sideInset * 2.0, height: 0.0), metrics: environment.metrics)
                 let toast: ComponentView<Empty>
                 var toastTransition = transition
                 if let current = self.toast {
@@ -161,7 +163,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                         ))
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                    containerSize: CGSize(width: toastBand.width, height: availableSize.height)
                 )
                 if let toastView = toast.view {
                     if toastView.superview == nil {
@@ -172,7 +174,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                             iconView.playOnce()
                         }
                     }
-                    toastTransition.setFrame(view: toastView, frame: CGRect(origin: CGPoint(x: sideInset, y: -sideInset - toastSize.height), size: toastSize))
+                    toastTransition.setFrame(view: toastView, frame: CGRect(origin: CGPoint(x: toastBand.minX, y: -sideInset - toastSize.height), size: toastSize))
                 }
             } else {
                 if let toast = self.toast {
