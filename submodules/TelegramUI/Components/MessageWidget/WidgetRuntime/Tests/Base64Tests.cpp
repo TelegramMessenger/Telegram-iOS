@@ -32,13 +32,3 @@ WR_TEST(testAtobIsForgiving) {
                          "DOMException:InvalidCharacterError,DOMException:InvalidCharacterError"));
 }
 
-/// Review Focus 1: the scan is charged before it runs, and a long input round-trips.
-WR_TEST(testAHugeInputIsCharged) {
-    HostEnv env;
-    env.eval("window.s = 'a'.repeat(4000000); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.eval("window.b = btoa(s); 1");
-    CHECK(JS_GetWorkUnits(rt) - before >= 4000000 / 8);
-    CHECK_EQ(env.eval("atob(b).length"), std::string("4000000"));
-}

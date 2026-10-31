@@ -4,7 +4,6 @@
 #include "Sources/Host/Encoding.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -29,7 +28,6 @@ void appendHexEscape(Text16& out, uint32_t c) {
 /// stays as it is, which is what the code point rule gives).
 JSValue escapeIdentifier(JSContext* ctx, const String& ident) {
     const uint32_t length = ident.length();
-    chargeScan(ctx, length);
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     out.reserve(length);
     const char16_t first = length ? ident.at(0) : 0;

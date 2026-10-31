@@ -13,7 +13,6 @@
 #include "Sources/Host/ICU.h"
 #include "Sources/Host/Intl.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::intl {
 
@@ -259,9 +258,8 @@ void closeIterator(JSContext* ctx, JSValueConst iterator) {
     }
 }
 
-/// The strings of `list` through its iterator (the well-known @@iterator), each item charged as it is read, as a JSON
-/// array into `json`: at most kMaxListItems items and kMaxIntlString units in all. Throws TypeError and RangeError after
-/// closing the iterator.
+/// The strings of `list` through its iterator (the well-known @@iterator), as a JSON array into `json`: at most
+/// kMaxListItems items and kMaxIntlString units in all. Throws TypeError and RangeError after closing the iterator.
 void readStringList(JSContext* ctx, JSValueConst list, JSText& json) {
     const char* const what = "Intl.ListFormat.prototype.format";
     Value method = Value::adopt(ctx, checked(ctx, JS_GetProperty(ctx, list, Runtime::from(ctx).iteratorSymbol())));
@@ -275,7 +273,6 @@ void readStringList(JSContext* ctx, JSValueConst list, JSText& json) {
     Value next = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, iterator.get(), "next")));
     size_t items = 0, units = 0;
     for (;;) {
-        charge(ctx, work::kNodeVisit);
         Value result = Value::adopt(ctx, checked(ctx, JS_Call(ctx, next.get(), iterator.get(), 0, nullptr)));
         if (!JS_IsObject(result.get())) {
             throw TypeError{std::string(what) + ": the iterator result is not an object."};
@@ -298,8 +295,6 @@ void readStringList(JSContext* ctx, JSValueConst list, JSText& json) {
             closeIterator(ctx, iterator.get());
             throw RangeError{std::string(what) + ": the list is too long."};
         }
-        chargeScan(ctx, item.length());
-        charge(ctx, work::kIntlListItem);
         json += items ? "," : "";
         appendJSONString(json, item.utf8ForParse());
         units += item.length();
@@ -489,9 +484,8 @@ bool hasOwnCaseRules(std::string_view language) {
 }
 
 /// String.prototype.toLocaleUpperCase (magic 1) and toLocaleLowerCase (0), ECMA-402 TransformCase: the first requested
-/// locale, else the host's; in a language with case rules of its own, ICU's mapping for that language, charged
-/// work::kCaseMapEightUnits per eight units on top of the copy's scan; otherwise the root's mapping, which is the
-/// engine's own toUpperCase or toLowerCase (data[0], kept at install; QuickJS charges it).
+/// locale, else the host's; in a language with case rules of its own, ICU's mapping for that language; otherwise the
+/// root's mapping, which is the engine's own toUpperCase or toLowerCase (data[0], kept at install).
 JSValue transformCase(JSContext* ctx, JSValueConst thisVal, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     const bool upper = magic != 0;
     return glue(ctx, [&]() -> JSValue {
@@ -510,10 +504,6 @@ JSValue transformCase(JSContext* ctx, JSValueConst thisVal, int argc, JSValueCon
             return checked(ctx, mapped);
         }
         const uint32_t length = s.length();
-        chargeScan(ctx, length);
-        if (length >= 8) {
-            charge(ctx, length / 8 * work::kCaseMapEightUnits);
-        }
         Text16 units{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
         const JSStringView view = s.view();
         if (view.utf16) {

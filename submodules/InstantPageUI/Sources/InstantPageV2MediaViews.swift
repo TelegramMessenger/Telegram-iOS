@@ -249,6 +249,9 @@ final class InstantPageV2MediaImageView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
@@ -417,6 +420,9 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
@@ -795,6 +801,10 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
             // messageMediaFileStatus signal — which keys progress off the fetch manager's
             // `hasEntry` — surfaces .Fetching, letting the overlay show the animated ring.
             let _ = messageMediaFileInteractiveFetched(fetchManager: fetchContext.fetchManager, messageId: messageId, messageReference: message, file: file, userInitiated: true, priority: .userInitiated).startStandalone()
+        }
+        self.audioNode.cancelFetch = {
+            guard case let .file(file) = fetchMedia.media, let messageId = fetchMessage?.id else { return }
+            messageMediaFileCancelInteractiveFetch(context: fetchContext, messageId: messageId, file: file)
         }
 
         let mediaForPlayback = item.media

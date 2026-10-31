@@ -1146,7 +1146,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                     switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
-                            statusType = .BubbleIncoming
+                            statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .BubbleIncoming
                         } else {
                             if message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
@@ -1331,7 +1331,8 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let statusSpacing: CGFloat = 33.0
                     let optionsButtonSpacing: CGFloat = 12.0
-                    resultSize.height += 44.0
+                    // Without a time under it (without bubbles) the summary line keeps the poll's even margins.
+                    resultSize.height += item.bubbleStyle.hidesIncomingStatus ? 40.0 : 44.0
                     
                     var statusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> Void)?
                     if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {

@@ -13,6 +13,14 @@ namespace litehtml
         pixel_t                     m_border_spacing_x;
         pixel_t                     m_border_spacing_y;
 
+      public:
+        // Telegram (VENDOR.md edit 74): the cells this table's grids were granted, every init's (a flex wrapper inits its
+        // item twice, and a build counts both); a replaced table gives them back.
+        int cells_taken() const { return m_cells_taken; }
+        int m_cells_taken = 0;
+
+      protected:
+
         rendered_width _render(pixel_t x, pixel_t y, const containing_block_context& containing_block_size,
                                formatting_context* fmt_ctx, bool second_pass) override;
         void           add_children_ink(uint32_t generation, paint_ink& ink) override;

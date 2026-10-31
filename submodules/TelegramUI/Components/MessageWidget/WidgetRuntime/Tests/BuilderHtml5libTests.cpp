@@ -46,6 +46,9 @@ int main(int argc, char** argv) {
     wr::installDOM(ctx, wr::Document::createHTML(ctx));
     int parsed = 0;
     auto treeOf = [&](const gumbo_test::Case& c) {
+        // Each case is a parse of its own, as a widget's boot is: a batch of its own (limit.batch, widget-sandbox v0.3.0),
+        // or the run's cases add up past 10,000 operations and every later one throws.
+        runtime->startBatch();
         std::string tree = ourTree(ctx, c);
         // A parsed tree is cycles (a child's reference to its parent, a template's to its contents and back), which only
         // the collector frees: collect as the run goes, so its heap stays small.

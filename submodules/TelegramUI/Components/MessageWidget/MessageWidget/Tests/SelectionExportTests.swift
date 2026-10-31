@@ -13,12 +13,6 @@ final class SelectionExportTests: MessageWidgetTestCase {
         + "<script>window.clicks = 0; document.getElementById('b').addEventListener('click', () => { window.clicks++; });</script>"
         + "</body></html>"
 
-    override func tearDown() {
-        MessageWidgetCore.selectionBudgetForTesting = nil
-        MessageWidgetCore.budgetsForTesting = nil
-        super.tearDown()
-    }
-
     private func applied(_ instance: MessageWidgetInstance, _ kind: WidgetSnapshot.Kind) -> Int {
         return instance.appliedForTesting[kind] ?? 0
     }
@@ -60,23 +54,6 @@ final class SelectionExportTests: MessageWidgetTestCase {
             self.pump(0.3)
             XCTAssertEqual(instance.queuedForTesting[.selection]?.unwaited ?? 0, queued)
             XCTAssertNil(view.selectableText)
-        }
-    }
-
-    func testAnExportPastItsBudgetLeavesTheWidgetAlone() {
-        MessageWidgetCore.selectionBudgetForTesting = 10
-        let (instance, view) = self.booted(SelectionExportTests.selection)
-        withExtendedLifetime(instance) {
-            view.setExtracted(true)
-            XCTAssertTrue(self.pump(until: { self.applied(instance, .selection) > 0 }))
-            XCTAssertNil(view.selectableText)
-            XCTAssertNil(instance.deadReason)
-            XCTAssertFalse(instance.demoted)
-            view.setExtracted(false)
-            view.handleTouch(phase: .began, at: CGPoint(x: 100.0, y: 70.0))
-            view.handleTouch(phase: .ended, at: CGPoint(x: 100.0, y: 70.0))
-            self.pump(0.05)
-            XCTAssertEqual(instance.evaluateForTesting("String(window.clicks)"), "1")
         }
     }
 
@@ -136,7 +113,6 @@ final class SelectionExportTests: MessageWidgetTestCase {
     }
 
     func testAStopClearsTheSelectableText() {
-        MessageWidgetCore.budgetsForTesting = (parse: MessageWidgetCore.parseWorkUnits, boot: MessageWidgetCore.bootWorkUnits, task: 1_000_000)
         let (instance, view) = self.booted("<!doctype html><p style=\"user-select:text\">kept</p><script>"
             + "setTimeout(() => { for (;;) {} }, 300);</script>")
         withExtendedLifetime(instance) {

@@ -6,6 +6,8 @@ import XCTest
 /// frozen widget, the theme and the hidden widget's wakes.
 final class NativeCoreTests: MessageWidgetTestCase {
     private static let page = "<!doctype html><html><head><style>body{margin:0}</style></head><body>"
+    /// The product's slice with both windows lifted, so a boot's slice of JS defers nothing after it.
+    private static let lifted = MessageWidgetCpuLimits(cpuLimitMs: 500.0, cpuQuotaMs: 1_000_000.0, cpuQuotaWindowMs: 1000.0, cpuKillAfterMs: 0.0, mainThreadQuotaMs: 1_000_000.0)
 
     private func number(_ instance: MessageWidgetInstance, _ code: String) -> Int {
         return Int(instance.evaluateForTesting(code) ?? "") ?? -1
@@ -66,7 +68,9 @@ final class NativeCoreTests: MessageWidgetTestCase {
         let before = instance.layout(width: 300.0)
         XCTAssertEqual(before.height, 100.0)
         XCTAssertTrue(self.pump(until: { instance.deadReason != nil }))
-        XCTAssertTrue(instance.deadReason?.contains("Work limit exceeded") ?? false, instance.deadReason ?? "nil")
+        // widget-sandbox's words: the timer's slice is what the JS quota left it (the boot spent a little).
+        XCTAssertTrue(instance.deadReason?.hasPrefix("CPU limit exceeded: more than ") ?? false, instance.deadReason ?? "nil")
+        XCTAssertTrue(instance.deadReason?.contains("of continuous execution (timer") ?? false, instance.deadReason ?? "nil")
         XCTAssertEqual(instance.layout(width: 300.0), before)
         let image = self.render(view)
         // The badge's left padding, inside its rounded end, over the red box (the page has no margin):
@@ -204,34 +208,224 @@ final class NativeCoreTests: MessageWidgetTestCase {
         XCTAssertEqual(instance.evaluateForTesting("window.order.join(',')"), "0,10,20")
     }
 
-    /// Task 8 review I1: a widget that keeps a task runnable (an unhandledrejection handler that rejects again, each
-    /// pass ~4M units) is not run 256 times in one core task: a drain stops once it has spent a task's budget, and the
-    /// rest runs on later wakes, so the widget's queue never holds a pool thread for long.
-    func testADrainStopsAtOneTaskBudget() {
+    /// Task 8 review I1, on the CPU limits: a widget that keeps a task runnable (an unhandledrejection handler that
+    /// rejects again, each pass spinning 40 ms of a timer's kind) holds no pool thread for long: past the JS quota
+    /// (300 ms a second) its passes are deferred, each drain ends there, and the rest runs on later wakes.
+    func testAWidgetThatKeepsATaskRunnableIsThrottled() {
+        self.useWallTimeAsCpu()
         let (instance, _) = self.booted(NativeCoreTests.page + "<p id=n>0</p><script>window.n = 0;"
-            + "window.addEventListener('unhandledrejection', e => { e.preventDefault(); var s = 0;"
-            + " for (var i = 0; i < 2000000; i++) s = (s + i) | 0; window.n++; Promise.reject(1); });"
+            + "window.addEventListener('unhandledrejection', e => { e.preventDefault(); \(MessageWidgetTestCase.spin(40))"
+            + " window.n++; Promise.reject(1); });"
             + "setTimeout(() => Promise.reject(1), 10);</script></body></html>")
-        XCTAssertTrue(self.pump(until: { instance.largestTaskWorkForTesting > 0 }, timeout: 20.0))
-        self.pump(0.3)
+        XCTAssertTrue(self.pump(until: { instance.throttledStepsForTesting > 0 }, timeout: 10.0), "never throttled")
+        let first = self.number(instance, "String(window.n)")
+        XCTAssertLessThanOrEqual(first, 16, "at most two windows' worth of the quota before the first deferral was seen")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") > first }, timeout: 5.0), "the deferred passes never ran")
         XCTAssertNil(instance.deadReason)
-        XCTAssertLessThan(instance.largestTaskWorkForTesting, 2 * MessageWidgetCore.taskWorkUnits)
-        XCTAssertGreaterThan(self.number(instance, "String(window.n)"), 7)
         instance.destroy()
     }
 
-    /// Task 8 review I2: a width or theme change rebuilds on a budget of its own, not on what the previous step left.
-    func testAWidthChangeAfterAHeavyStepHasItsOwnBudget() {
-        MessageWidgetCore.budgetsForTesting = (parse: MessageWidgetCore.parseWorkUnits, boot: MessageWidgetCore.bootWorkUnits, task: 2_000_000)
-        defer {
-            MessageWidgetCore.budgetsForTesting = nil
+    /// The final review's I1: the same chain rooted in a boot script, so every pass is a boot follow-up, a kind the JS
+    /// quota never defers, holds no pool thread for long either: a core task's drain ends once its steps have spent one
+    /// slice of CPU (500 ms), and the rest runs on later wakes. Without that, one drain ran 256 passes (10 s here).
+    func testABootRootedChainHoldsNoThreadForLong() {
+        self.useWallTimeAsCpu()
+        let (instance, _) = self.booted(NativeCoreTests.page + "<p id=n>0</p><script>window.n = 0;"
+            + "window.addEventListener('unhandledrejection', e => { e.preventDefault(); \(MessageWidgetTestCase.spin(40))"
+            + " window.n++; Promise.reject(1); });"
+            + "Promise.reject(1);</script></body></html>")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") > 40 }, timeout: 30.0), "the chain stalled")
+        for kind: WidgetSnapshot.Kind in [.boot, .wake, .timer, .event] {
+            let cpu = instance.largestTaskCpuMillisecondsForTesting(kind)
+            XCTAssertLessThan(cpu, 1500.0, "a \(kind) task held its thread for \(cpu) ms")
         }
-        // The timer leaves ~60,000 of its 2,000,000 units; rebuilding the heavy markup takes ~700,000.
-        let source = LimitsTests.heavyMarkup.replacingOccurrences(of: "</body>", with: "<script>setTimeout(() => { var s = 0;"
-            + " for (var i = 0; i < 970000; i++) s = (s + i) | 0; TelegramWidget.ready(); }, 10);</script></body>")
+        XCTAssertNil(instance.deadReason)
+        instance.destroy()
+    }
+
+    /// The task that stops a widget after its first publish is measured too: the stop drops the session, so its CPU is read
+    /// before that (the attack scan's largest tasks, the snapshot's demotion input).
+    func testTheTaskThatStopsAWidgetRecordsItsCpu() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(NativeCoreTests.page + "<script>for (;;) {}</script></body></html>")
+        _ = instance.layout(width: 360.0)
+        XCTAssertTrue(self.pump(until: { instance.deadReason != nil }, timeout: 10.0), "the spin was never stopped")
+        let cpu = instance.largestTaskCpuMillisecondsForTesting(.boot)
+        XCTAssertGreaterThanOrEqual(cpu, 450.0, "the stopping boot task recorded \(cpu) ms")
+        instance.destroy()
+    }
+
+    /// The fix wave's review I-A: the boot's own loop is bounded the same way. A chain that doubles at every boot script
+    /// (each toBlob callback asks for two more, and a boot link runs only after what the one before it queued) ran 2^10
+    /// passes inside the boot task before its load.
+    func testABootChainThatDoublesHoldsNoThreadForLong() {
+        self.useWallTimeAsCpu()
+        let empties = String(repeating: "<script></script>", count: 10)
+        let (instance, _) = self.booted(NativeCoreTests.page + "<script>window.n = 0; const c = document.createElement('canvas');"
+            + "function f() { \(MessageWidgetTestCase.spin(5)) window.n++; c.toBlob(f); c.toBlob(f); } f();</script>" + empties
+            + "</body></html>")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") > 300 }, timeout: 30.0), "the chain stalled")
+        for kind: WidgetSnapshot.Kind in [.boot, .wake] {
+            let cpu = instance.largestTaskCpuMillisecondsForTesting(kind)
+            XCTAssertLessThan(cpu, 1500.0, "a \(kind) task held its thread for \(cpu) ms")
+        }
+        instance.destroy()
+    }
+
+    /// The fix waves' review I-B: a press whose down task cannot run within the touch's bounded drains (more than a
+    /// slice of runnable steps before it, about 2.5 s here) is unanswered, as when main's wait ends first: never the
+    /// claim of the press before it, and the touch holds its thread no longer than its drains' slices. The down is the
+    /// widget's later, in its turn.
+    func testAPressBehindABacklogIsUnanswered() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(NativeCoreTests.page + "<div style=\"width:300px;height:100px;touch-action:none\"></div>"
+            + "<script>window.downs = 0; addEventListener('pointerdown', () => window.downs++); const c = document.createElement('canvas');"
+            + "for (let i = 0; i < 20; i++) c.toBlob(() => { \(MessageWidgetTestCase.spin(150)) });</script></body></html>")
+        let size = instance.layout(width: 360.0)
+        instance.view.frame = CGRect(origin: .zero, size: size)
+        // Main's run loop has not run since the boot, so no wake has: the boot task's slice ran 3 or 4 of the callbacks,
+        // and the rest (2.5 s) are ahead of the down, past the touch's two drains (a slice each).
+        let press = instance.touch(action: 0, at: CGPoint(x: 150.0, y: 50.0), pointer: 0, primary: true)
+        XCTAssertEqual(press, .unanswered)
+        let cpu = instance.largestTaskCpuMillisecondsForTesting(.touch)
+        XCTAssertLessThan(cpu, 1500.0, "a touch task held its thread for \(cpu) ms")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.downs)") == 1 }, timeout: 10.0), "the down never ran")
+        instance.touch(action: 3, at: CGPoint(x: 150.0, y: 50.0), pointer: 0, primary: true)
+        instance.destroy()
+    }
+
+    /// The fix waves' review: a boot past one slice of CPU finishes on wakes, which are the boot's work, not the widget's
+    /// timers: they never demote it (three scripts spinning 250 ms each, 250 ms inside the two slices' exemption).
+    func testABootThatFinishesOnWakesIsNotDemoted() {
+        self.useWallTimeAsCpu()
+        let script = "<script>\(MessageWidgetTestCase.spin(250)) window.n = (window.n || 0) + 1;</script>"
+        let instance = self.make(NativeCoreTests.page + String(repeating: script, count: 3) + "</body></html>")
+        _ = instance.layout(width: 360.0)
+        XCTAssertEqual(self.number(instance, "String(window.n)"), 2, "the boot task did not stop at its slice")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") == 3 }, timeout: 5.0))
+        XCTAssertFalse(instance.demoted)
+        instance.destroy()
+    }
+
+    /// The parse's async scripts are the boot's too (a link each, as its other scripts): one that runs on a wake past
+    /// the boot task's slice does not demote the widget.
+    func testABootsAsyncScriptsOnWakesAreNotDemoted() {
+        self.useWallTimeAsCpu()
+        let classic = "<script>\(MessageWidgetTestCase.spin(250)) window.n = (window.n || 0) + 1;</script>"
+        let module = "<script type=module async>\(MessageWidgetTestCase.spin(250)) window.n = (window.n || 0) + 1;</script>"
+        let instance = self.make(NativeCoreTests.page + classic + module + module + "</body></html>")
+        _ = instance.layout(width: 360.0)
+        XCTAssertEqual(self.number(instance, "String(window.n)"), 2, "the boot task did not stop at its slice")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") == 3 }, timeout: 5.0))
+        XCTAssertFalse(instance.demoted)
+        instance.destroy()
+    }
+
+    /// Demotion exempts a wake's boot links by their CPU, not the wake: a wake that runs the boot's last script and 30 ms
+    /// of a timer beside it is demoted. The windows are lifted, or the boot's slice of JS would defer the timer to a wake
+    /// of its own.
+    func testAWakesWorkBesideTheBootsLinksDemotes() {
+        self.useWallTimeAsCpu()
+        let instance = self.make(NativeCoreTests.page + "<script>\(MessageWidgetTestCase.spin(300))</script>"
+            + "<script>\(MessageWidgetTestCase.spin(300)) setTimeout(() => { \(MessageWidgetTestCase.spin(30)) window.timer = 1; }, 0);</script>"
+            + "<script>\(MessageWidgetTestCase.spin(50)) window.last = 1;</script></body></html>", cpuLimits: NativeCoreTests.lifted)
+        _ = instance.layout(width: 360.0)
+        XCTAssertEqual(instance.evaluateForTesting("String(window.last)"), "undefined", "the boot task did not stop at its slice")
+        XCTAssertTrue(self.pump(until: { instance.evaluateForTesting("String(window.last + window.timer)") == "2" }, timeout: 5.0))
+        XCTAssertTrue(instance.demoted)
+        instance.destroy()
+    }
+
+    /// Only the boot's links are exempt, never a frame while the boot is incomplete: a 30 ms frame between its links
+    /// demotes. The windows are lifted, or the boot's slice of JS would defer the frame past the load.
+    func testAHeavyFrameDuringTheBootDemotes() {
+        self.useWallTimeAsCpu()
+        let script = "<script>\(MessageWidgetTestCase.spin(250)) window.n = (window.n || 0) + 1;</script>"
+        let instance = self.make(NativeCoreTests.page + "<script>requestAnimationFrame(() => { \(MessageWidgetTestCase.spin(30))"
+            + " window.frameState = document.readyState; });</script>" + String(repeating: script, count: 3) + "</body></html>", cpuLimits: NativeCoreTests.lifted)
+        let size = instance.layout(width: 360.0)
+        instance.view.frame = CGRect(origin: .zero, size: size)
+        XCTAssertEqual(self.number(instance, "String(window.n)"), 2, "the boot task did not stop at its slice")
+        // Queued before main's run loop runs the wake that finishes the boot.
+        self.deliverFrame(instance)
+        XCTAssertEqual(instance.evaluateForTesting("window.frameState"), "loading")
+        XCTAssertTrue(instance.demoted)
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") == 3 }, timeout: 5.0))
+        instance.destroy()
+    }
+
+    /// The plan's Review Focus 2, through the core: frames that spend the JS quota are deferred (main is asked for no
+    /// frames meanwhile), and the core's wake at the retry releases them, so main's display-link frames resume.
+    func testAThrottledAnimationResumesThroughTheCore() {
+        self.useWallTimeAsCpu()
+        let (instance, _) = self.booted(NativeCoreTests.page + "<div>t</div><script>window.n = 0;"
+            + "function f() { \(MessageWidgetTestCase.spin(40)) window.n++; requestAnimationFrame(f); } requestAnimationFrame(f);"
+            + "</script></body></html>")
+        func tick(until condition: () -> Bool, timeout: TimeInterval) -> Bool {
+            let deadline = Date(timeIntervalSinceNow: timeout)
+            while !condition() {
+                if Date() >= deadline {
+                    return false
+                }
+                self.deliverFrame(instance)
+                self.pump(0.016)
+            }
+            return true
+        }
+        XCTAssertTrue(tick(until: { instance.throttledStepsForTesting > 0 }, timeout: 5.0), "never throttled")
+        let throttledAt = self.number(instance, "String(window.n)")
+        XCTAssertLessThanOrEqual(throttledAt, 16)
+        XCTAssertTrue(tick(until: { self.number(instance, "String(window.n)") >= throttledAt + 3 }, timeout: 5.0), "the frames never resumed")
+        XCTAssertNil(instance.deadReason)
+        instance.destroy()
+    }
+
+    /// The third fix-wave review: only the boot's own links (its scripts and its load) are exempt from demotion, never
+    /// what else a task runs while the document is incomplete. A chain that keeps the load from ever running (it
+    /// doubles at every boot script) is demoted, as are its frames, so main stops waiting for them.
+    func testABootChainThatKeepsTheLoadAwayIsDemoted() {
+        self.useWallTimeAsCpu()
+        let empties = String(repeating: "<script></script>", count: 10)
+        let (instance, _) = self.booted(NativeCoreTests.page + "<script>window.n = 0; const c = document.createElement('canvas');"
+            + "function f() { \(MessageWidgetTestCase.spin(5)) window.n++; c.toBlob(f); c.toBlob(f); } f();</script>" + empties
+            + "</body></html>")
+        XCTAssertTrue(self.pump(until: { instance.demoted }, timeout: 10.0), "never demoted")
+        instance.destroy()
+    }
+
+    /// The fourth fix-wave review: the boot's own steps are exempt for its first two slices of CPU only, so a run of
+    /// heavy parser scripts (each a boot link, 2.4 s in all here) cannot keep main waiting for its wakes for as long as
+    /// the scripts last: past the exemption the widget is demoted.
+    func testARunOfHeavyBootScriptsIsDemotedPastTheExemption() {
+        self.useWallTimeAsCpu()
+        let script = "<script>\(MessageWidgetTestCase.spin(300)) window.n = (window.n || 0) + 1;</script>"
+        let (instance, _) = self.booted(NativeCoreTests.page + String(repeating: script, count: 8) + "</body></html>")
+        XCTAssertTrue(self.pump(until: { self.number(instance, "String(window.n)") == 8 }, timeout: 10.0))
+        XCTAssertTrue(instance.demoted)
+        instance.destroy()
+    }
+
+    /// The fix waves' review: a press whose own pointerdown handler stops the widget (past its slice) is the bubble's: no
+    /// claim, no hold from a widget that is now a picture.
+    func testAPressThatStopsTheWidgetIsTheBubbles() {
+        self.useWallTimeAsCpu()
+        let (instance, _) = self.booted(NativeCoreTests.page + "<div id=d style=\"width:300px;height:100px;touch-action:none\"></div>"
+            + "<script>document.getElementById('d').addEventListener('pointerdown', () => { \(MessageWidgetTestCase.spin(700)) });</script>"
+            + "</body></html>")
+        let press = instance.touch(action: 0, at: CGPoint(x: 150.0, y: 50.0), pointer: 0, primary: true)
+        XCTAssertNotNil(instance.deadReason)
+        XCTAssertEqual(press, .none)
+        instance.destroy()
+    }
+
+    /// Task 8 review I2: a width or theme change after a heavy step is a step of its own, on a slice of its own.
+    func testAWidthChangeAfterAHeavyStepHasItsOwnSlice() {
+        self.useWallTimeAsCpu()
+        let source = LimitsTests.heavyMarkup.replacingOccurrences(of: "</body>", with: "<script>setTimeout(() => { \(MessageWidgetTestCase.spin(200))"
+            + " TelegramWidget.ready(); }, 10);</script></body>")
         let instance = self.make(source)
         _ = instance.layout(width: 360.0)
-        // Observed without running anything in the widget (an evaluation would be a step with a budget of its own).
+        // Observed without running anything in the widget (an evaluation would be a step with a slice of its own).
         XCTAssertTrue(self.pump(until: { instance.diagnostics.contains { $0.kind == "bridge-ignored" && $0.detail == "ready" } }, timeout: 10.0))
         XCTAssertNil(instance.deadReason)
         _ = instance.layout(width: 300.0)

@@ -6,7 +6,6 @@
 #include <string>
 
 #include "quickjs.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -23,16 +22,16 @@ struct TypeError {
 struct RangeError {
     std::string message;
 };
-/// An uncatchable stop: the work limit, out of memory, or an internal C++ failure latched the runtime
-/// (Runtime::stopReason). It unwinds every native frame up to the step boundary. Where it crosses back into a script
-/// that called in (a binding), rethrowAsJS turns it into QuickJS's uncatchable "interrupted", and the latch has stopped
-/// QuickJS's runtime (quickjs-ng change 10), so no try/catch can swallow it on the way out, even as the bare null
-/// QuickJS throws when it cannot build that error.
+/// An uncatchable stop: a CPU or layout-query limit, a counted cap, out of memory, or an internal C++ failure latched
+/// the runtime (Runtime::stopReason). It unwinds every native frame up to the step boundary. Where it crosses back into
+/// a script that called in (a binding), rethrowAsJS turns it into QuickJS's uncatchable "interrupted", and the latch
+/// has stopped QuickJS's runtime (quickjs-ng change 10), so no try/catch can swallow it on the way out, even as the
+/// bare null QuickJS throws when it cannot build that error.
 struct Aborted {};
 
 /// Makes the C++ exception being handled the pending JS exception, and returns JS_EXCEPTION. Call it only inside a
-/// catch block. Thrown leaves the exception already pending as it is (it may be the budget's uncatchable interrupt; on
-/// a stopped runtime nothing pending can be caught, quickjs-ng change 10);
+/// catch block. Thrown leaves the exception already pending as it is (it may be the uncatchable interrupt of a stop
+/// latched at a poll; on a stopped runtime nothing pending can be caught, quickjs-ng change 10);
 /// DOMError becomes a DOMException, TypeError and RangeError their JS errors. Aborted, std::bad_alloc and any other
 /// C++ exception stop the runtime for good (Memory for bad_alloc, Internal for the rest) and become an uncatchable
 /// error. Every place C++ hands control back to QuickJS maps through this one function.
@@ -57,13 +56,12 @@ private:
     bool m_left = false;
 };
 
-/// Runs a binding's body: charges the call, counts it as a native frame, and maps every C++ exception to a JS one.
+/// Runs a binding's body: counts it as a native frame, and maps every C++ exception to a JS one.
 /// Nothing escapes. The native-exit work (scripts the body inserted) runs before the result goes back to JS.
 template <class F>
 JSValue glue(JSContext* ctx, F&& body) noexcept {
     try {
         NativeFrame frame(ctx);
-        charge(ctx, work::kBindingCall);
         JSValue result = body();
         if (JS_IsException(result)) {
             // The body returned with a JS exception pending: leave on the unwinding path (the destructor). Queued

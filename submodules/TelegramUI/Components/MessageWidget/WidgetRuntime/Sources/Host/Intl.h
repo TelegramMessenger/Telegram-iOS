@@ -51,9 +51,8 @@ struct IntlState {
 IntlState& intlState(JSContext* ctx);
 
 /// ECMA-402 CanonicalizeLocaleList: the canonical BCP 47 tags of `locales` (UTS 35's case: language and extensions in
-/// lower case, a script in title case, a region in upper case), deduplicated, in order. Charges work::kNodeVisit per index
-/// read. Throws TypeError (an entry neither a string nor an object), RangeError (not a structurally valid tag, or longer
-/// than kMaxLocaleTag) and Thrown.
+/// lower case, a script in title case, a region in upper case), deduplicated, in order. Throws TypeError (an entry
+/// neither a string nor an object), RangeError (not a structurally valid tag, or longer than kMaxLocaleTag) and Thrown.
 std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst locales);
 /// ECMA-402's [[RelevantExtensionKeys]] of the constructor a locale is resolved for: NumberFormat and RelativeTimeFormat
 /// read nu; DateTimeFormat ca, hc and nu; Collator co, kf and kn; PluralRules and ListFormat none.
@@ -115,16 +114,13 @@ public:
     IntlRequest& number(const char* name, double value);
     /// `json` as it is: the given options, a list.
     IntlRequest& raw(const char* name, std::string_view json);
-    /// Asks the host: work::kIntlRequest (work::kIntlDateRequest for a date's kinds, with work::kIntlDateParts for
-    /// dateParts), and work::kIntlByte per byte of the request, charged before; per byte of the answer, after. Throws
-    /// RangeError for an answer longer than kMaxIntlAnswer, and Thrown.
+    /// Asks the host. Throws RangeError for an answer longer than kMaxIntlAnswer, and Thrown.
     std::string send();
 
 private:
     void name(const char* name);
     JSContext* m_ctx;
     JSText m_json;
-    uint64_t m_charge;
 };
 
 /// Appends `utf8` to `out` as a JSON string.
@@ -223,7 +219,7 @@ void defineBool(JSContext* ctx, JSValueConst object, const char* name, bool valu
 /// UTS 35's type (3*8alphanum) *("-" (3*8alphanum)): calendar, collation and numbering system values.
 bool isUnicodeType(std::string_view type);
 
-/// `string`'s UTF-16 units, in the JS heap; a RangeError past kMaxIntlString units, the copy charged as a scan.
+/// `string`'s UTF-16 units, in the JS heap; a RangeError past kMaxIntlString units.
 Text16 utf16Of(JSContext* ctx, const String& string);
 
 // ───────────── NumberFormat (IntlNumberFormat.cpp)

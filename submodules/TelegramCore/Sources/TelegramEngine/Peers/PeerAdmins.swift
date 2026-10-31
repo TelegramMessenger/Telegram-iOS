@@ -124,6 +124,10 @@ public enum UpdateChannelAdminRightsError {
     case generic
     case addMemberError(AddChannelMemberError)
     case adminsTooMuch
+    /// The user is not a member, and the account may not invite them (CHAT_ADMIN_INVITE_REQUIRED).
+    case notMemberCannotInvite
+    /// USER_BLOCKED.
+    case userBlocked
 }
 
 // Maps a channels.editAdmin refusal to the case the admin editor can explain; only unknown errors stay .generic.
@@ -141,8 +145,12 @@ func updateChannelAdminRightsError(errorDescription: String) -> UpdateChannelAdm
         return .addMemberError(.tooMuchBots)
     case "BOT_GROUPS_BLOCKED":
         return .addMemberError(.botDoesntSupportGroups)
-    case "USER_KICKED":
+    case "USER_KICKED", "CHAT_ADMIN_BAN_REQUIRED":
         return .addMemberError(.kicked)
+    case "CHAT_ADMIN_INVITE_REQUIRED":
+        return .notMemberCannotInvite
+    case "USER_BLOCKED":
+        return .userBlocked
     case "ADMINS_TOO_MUCH":
         return .adminsTooMuch
     default:

@@ -276,7 +276,11 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             let dismissalOffset = scrollView.contentSize.height - scrollView.contentInset.top  + scrollView.contentSize.height
             let delta = dismissalOffset - contentOffset
             
-            let initialVelocity = !delta.isZero ? velocity.y / delta : 0.0
+            // UIKit reports the release velocity in points per millisecond, positive while the content moves up. The
+            // dismissal reads it as a pan gesture's (points per second, positive down), as AttachmentContainer's does:
+            // a fling down dismisses, and the dismissal starts at the finger's speed.
+            let downwardVelocity = -velocity.y * 1000.0
+            let initialVelocity = !delta.isZero ? max(0.0, downwardVelocity) / delta : 0.0
             
             let currentContentOffset = scrollView.contentOffset
             // Scrolled within a sheet taller than the screen, resting on its top: it decelerates, no further down than
@@ -286,7 +290,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             targetContentOffset.pointee = currentContentOffset
             if scrollsWithinSheet {
                 targetContentOffset.pointee = CGPoint(x: proposedContentOffset.x, y: max(0.0, proposedContentOffset.y))
-            } else if velocity.y > 300.0 {
+            } else if downwardVelocity > 300.0 && contentOffset > 0.0 {
                 self.component?.willDismiss()
                 self.animateOut(initialVelocity: initialVelocity, completion: {
                     self.dismiss?(false)
@@ -599,7 +603,13 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             let restingOffset = sheetRestingScrollOffset(contentHeight: contentSize.height, containerHeight: availableSize.height, keepsBottomVisible: sheetEnvironment.isCentered || sheetEnvironment.hasInputHeight || !component.isScrollEnabled)
             self.currentRestsOnTop = restingOffset < contentSize.height - availableSize.height
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
+                // The scroll extents depend on the container's height (a rotation, a fold): without them the drag to
+                // dismiss kept measuring against the previous height, and after portrait to landscape a sheet could
+                // hardly be dragged away. Nothing here is a drag, so the dismissal check sits out.
+                self.ignoreScrolling = true
+                updateContentSize()
                 self.scrollView.contentOffset = CGPoint(x: 0.0, y: restingOffset)
+                self.ignoreScrolling = false
             } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {
                 transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: restingOffset), size: availableSize), completion: { _ in
                     updateContentSize()

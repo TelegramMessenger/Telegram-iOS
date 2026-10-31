@@ -12,7 +12,7 @@
 - (CGFloat)widthOfHalfViewportAt:(CGFloat)viewportWidth
 {
     NSString *html = @"<html><body style='margin:0'><div id=a style='width:50vw;height:4px'></div></body></html>";
-    LHDocument *doc = [[LHDocument alloc] initWithHTML:html css:nil previous:nil viewportSize:CGSizeMake(viewportWidth, 0)];
+    LHDocument *doc = [[LHDocument alloc] initWithHTML:html css:nil viewportSize:CGSizeMake(viewportWidth, 0)];
     [doc layoutWithMaxWidth:viewportWidth];
     return [doc boundsOfElementsMatching:@"#a"].size.width;
 }

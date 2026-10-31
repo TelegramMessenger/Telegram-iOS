@@ -62,6 +62,15 @@ namespace litehtml
     bool      is_raw_declaration(string_id name);
     using props_map = std::map<string_id, property_value>;
 
+    // Telegram (VENDOR.md edit 79): what a declaration's parse read of the container's environment, which a change of it
+    // makes stale: a viewport unit folded to pixels (fold_math), and the colour scheme (edit 80).
+    constexpr int environment_viewport = 1;
+    constexpr int environment_scheme   = 2;
+    // Marks the declaration being parsed (style::add_property) as reading `bits` of the environment.
+    void note_environment(int bits);
+    // Whether a declaration's text may hold a viewport unit (edit 11's conservative scan).
+    bool text_may_hold_viewport_unit(const std::string& text);
+
     // represents a style block, eg. "color: black; display: inline"
     class style
     {
@@ -72,6 +81,7 @@ namespace litehtml
       private:
         props_map                              m_properties;
         int                                    m_counter = 0;
+        int                                    m_environment = 0; // Telegram (VENDOR.md edit 79)
         static std::map<string_id, css_values>& m_valid_values;
 
       public:
@@ -136,14 +146,21 @@ namespace litehtml
         void clear()
         {
             m_properties.clear();
+            m_environment = 0;
         }
+        // Telegram (VENDOR.md edit 79): the environment its declarations' parses read (environment_* bits), its own and
+        // what combine brought.
+        int environment() const { return m_environment; }
+        // Telegram (VENDOR.md edit 80): marks it as reading `bits` of the environment outside a declaration's parse (an
+        // element's paint attribute that resolves light-dark() at draw).
+        void add_environment(int bits) { m_environment |= bits; }
 
         void subst_vars(const html_tag* el);
         // Telegram (VENDOR.md edit 33): replaces each revert with `master(name)`, the master sheet's value (nullptr:
         // none, so it is unset), keeping the reverting declaration's importance and order. `admit` is asked for the
         // heap a copy holds before it is made; refused, the property is unset.
         void resolve_reverts(const std::function<const property_value*(string_id, bool)>& master,
-                             const std::function<bool(size_t)>&                            admit);
+                             const std::function<bool(string_id, size_t)>&                 admit);
 
       private:
         void inherit_property(string_id name, bool important);

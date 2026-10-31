@@ -48,7 +48,7 @@ using CSSKeyframesRule = Vector<CSSKeyframe>;
 /// Rules by name; a later rule of a name replaces an earlier one.
 using CSSKeyframesRules = std::unordered_map<std::string, std::shared_ptr<const CSSKeyframesRule>>;
 
-/// Adds every `@keyframes` (and `@-webkit-keyframes`) rule of `sheet` to `into`. Charged work::kCssByte per byte read.
+/// Adds every `@keyframes` (and `@-webkit-keyframes`) rule of `sheet` to `into`.
 /// The V5e keyframe caps apply: 10,000 keyframes, 512 properties per keyframe, 4,096-byte values (longer ones dropped).
 void parseKeyframesRules(JSContext* ctx, std::string_view sheet, CSSKeyframesRules& into);
 
@@ -71,7 +71,6 @@ struct CSSAnimationSpec {
 
 /// The element's animations: the `animation` shorthand's entries, then each longhand's list over them (cycling, and
 /// making the entries when there is no shorthand); entries named `none` or nothing dropped; at most kMaxCSSListEntries.
-/// Charged work::kCssByte per byte read.
 std::vector<CSSAnimationSpec> animationSpecs(JSContext* ctx, const DeclaredLookup& declared);
 
 /// One entry of an element's `transition` list.
@@ -89,7 +88,7 @@ struct CSSTransitionSpec {
 std::vector<CSSTransitionSpec> transitionSpecs(JSContext* ctx, const DeclaredLookup& declared);
 
 /// The keyframes an animation of `rule` runs (V5f plan, Task 4): each keyframe's own easing, else `animationEasing`
-/// (CSS Animations 2: animation-timing-function applies between keyframes). Charged a node visit per value.
+/// (CSS Animations 2: animation-timing-function applies between keyframes).
 Vector<Keyframe> keyframesFor(JSContext* ctx, const CSSKeyframesRule& rule, const std::shared_ptr<const Easing>& animationEasing);
 /// A CSS animation's effect timing: its delay, duration (never negative), iteration count (a negative one is 1),
 /// direction and fill, and a linear easing (the timing function is the keyframes').

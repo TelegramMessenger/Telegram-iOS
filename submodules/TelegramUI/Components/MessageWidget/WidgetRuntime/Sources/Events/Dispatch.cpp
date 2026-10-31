@@ -55,7 +55,6 @@ struct OriginalTypeScope {
 bool innerInvoke(JSContext* ctx, Event& event, EventTarget& current, const Vector<ListenerRef>& listeners, ListenerPhase phase) {
     bool found = false;
     for (const ListenerRef& ref : listeners) {
-        charge(ctx, work::kNodeVisit);
         EventListener& listener = *ref;
         if (listener.removed || listener.type.atom != event.typeAtom()) {
             continue;
@@ -103,9 +102,8 @@ void invoke(JSContext* ctx, Event& event, size_t index, ListenerPhase phase) {
     if (!list || list->empty()) {
         return;
     }
-    // The clone, charged before it is made: a listener added from here on waits for the next dispatch, and one removed
-    // is skipped by its removed flag.
-    charge(ctx, work::kNodeVisit * uint64_t(list->size()));
+    // The clone: a listener added from here on waits for the next dispatch, and one removed is skipped by its removed
+    // flag.
     Vector<ListenerRef> listeners(*list);
     bool found = innerInvoke(ctx, event, *current, listeners, phase);
     if (found || !event.isTrusted(ctx)) {
@@ -137,7 +135,6 @@ bool dispatch(JSContext* ctx, Event& event, EventTarget& target, bool legacyTarg
     if (event.dispatching()) {
         throw DOMError{"InvalidStateError", "The event is already being dispatched."};
     }
-    charge(ctx, work::kNodeVisit);
     event.setDispatching(true);
     Ref<EventTarget> activationTarget;
     try {
@@ -149,8 +146,8 @@ bool dispatch(JSContext* ctx, Event& event, EventTarget& target, bool legacyTarg
                 targetOverride = &state->document();
             }
         }
-        // The path: the target, then each get-the-parent, charged as each parent is visited. No shadow trees, so only
-        // the first entry has a shadow-adjusted target (the target override). No script runs until it is complete.
+        // The path: the target, then each get-the-parent. No shadow trees, so only the first entry has a
+        // shadow-adjusted target (the target override). No script runs until it is complete.
         event.clearPath(JS_GetRuntime(ctx));
         event.appendToPath(ctx, target);
         bool isActivationEvent = event.isActivationClick(ctx);
@@ -158,7 +155,6 @@ bool dispatch(JSContext* ctx, Event& event, EventTarget& target, bool legacyTarg
             activationTarget = Ref<EventTarget>::retain(ctx, &target);
         }
         for (EventTarget* parent = target.getTheParent(ctx, event); parent; parent = parent->getTheParent(ctx, event)) {
-            charge(ctx, work::kNodeVisit);
             if (isActivationEvent && event.bubbles(ctx) && !activationTarget && parent->hasActivationBehavior(ctx)) {
                 activationTarget = Ref<EventTarget>::retain(ctx, parent);
             }
@@ -168,14 +164,11 @@ bool dispatch(JSContext* ctx, Event& event, EventTarget& target, bool legacyTarg
         if (activationTarget) {
             activationTarget->legacyPreActivationBehavior(ctx);
         }
-        // Each pass walks the whole path: charged before it starts.
         size_t size = event.pathSize();
-        charge(ctx, work::kNodeVisit * uint64_t(size));
         for (size_t i = size; i-- > 0;) {
             event.setPhase(i == 0 ? Event::AtTarget : Event::Capturing);
             invoke(ctx, event, i, ListenerPhase::Capturing);
         }
-        charge(ctx, work::kNodeVisit * uint64_t(size));
         for (size_t i = 0; i < size; i++) {
             if (i == 0) {
                 event.setPhase(Event::AtTarget);

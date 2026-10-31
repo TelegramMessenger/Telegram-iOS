@@ -42,6 +42,8 @@ plist_fragment(
     <string>1</string>
     <key>UILaunchScreen</key>
     <dict/>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
@@ -106,6 +108,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageShareButton",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidgetStress",
         "//submodules/TelegramUI/Components/UnsupportedContentPill",
         "//submodules/TextSelectionNode",
         "//submodules/UndoUI",
@@ -130,6 +133,7 @@ ios_application(
         "//submodules/LegacyComponents:LegacyComponentsAssets",
         "//third-party/widget-sandbox:WidgetConformanceBundle",
         "//third-party/widget-sandbox:WidgetCorpusBundle",
+        "//third-party/widget-sandbox:WidgetStressBundle",
         ":WidgetHarnessFixtures",
         ":WidgetHarnessConformanceBaseline",
     ],
@@ -154,10 +158,14 @@ swift_library(
         # The app's widget theme, for the conformance runner's tests.
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
+        # The date over a widget, for the safe area tests.
+        "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
         # AccountContext, in MessageWidgetNetwork's signatures, for the network tests.
         "//submodules/AccountContext",
         # MessageWidgetKillSwitch and MessageWidgetView, for the availability tests.
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
+        # The stress kit's runner, for its smoke test.
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidgetStress",
         # TextSelectionNodeView and its node, for the selection tests.
         "//submodules/AsyncDisplayKit",
         # TapLongTapOrDoubleTapGestureRecognizer's long-tap policy, for the gesture tests.

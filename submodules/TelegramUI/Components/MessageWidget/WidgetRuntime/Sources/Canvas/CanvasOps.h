@@ -71,15 +71,12 @@ struct Paint {
 /// save() shares the chain, so neither copies the clips before it.
 struct ClipNode {
     ClipNode(RetainedGeometry path, bool evenodd, std::shared_ptr<const ClipNode> parent)
-        : path(std::move(path)), evenodd(evenodd), parent(std::move(parent)), depth(this->parent ? this->parent->depth + 1 : 1),
-          floats((this->parent ? this->parent->floats : 0) + this->path.points.size()) {}
+        : path(std::move(path)), evenodd(evenodd), parent(std::move(parent)), depth(this->parent ? this->parent->depth + 1 : 1) {}
     RetainedGeometry path;
     bool evenodd;
     std::shared_ptr<const ClipNode> parent;
     /// The chain's length up to and including this node.
     size_t depth;
-    /// The point coordinates of the chain up to and including this node: what applying it to an op costs.
-    size_t floats;
 };
 
 struct CanvasOp {
@@ -109,9 +106,6 @@ struct CanvasOp {
     float miterLimit = 10;
     std::vector<float> dashes;
     float dashOffset = 0;
-    /// How many dashes and gaps the stroke makes (its length over the pattern's, times the pattern's entries): what
-    /// CoreGraphics builds an outline of each of. 0 when not dashed.
-    uint64_t dashSegments = 0;
     /// The dash was dropped: more than CanvasInterpreter::kMaxDashSegments, so the stroke is solid.
     bool dashDropped = false;
 
@@ -119,8 +113,6 @@ struct CanvasOp {
     std::shared_ptr<const HostFont> font;
     std::string text;
     float x = 0, y = 0, scaleX = 1, textDx = 0;
-    /// The text's advance and its font's ascent and descent, in user space: its box, for the charge.
-    float textWidth = 0, textAscent = 0, textDescent = 0;
     bool strokeText = false;
 
     // Image. The source rect lies inside the source (the interpreter clipped it, as HTML says).

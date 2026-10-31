@@ -79,9 +79,9 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
     return formContext.generateImage()!
 }
 
-public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false, tail: Bool = true) -> UIImage {
     let bubbleColors = incoming ? theme.message.incoming : theme.message.outgoing
-    return messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: incoming, fillColor: fillColor, strokeColor: strokeColor, neighbors: neighbors, shadow: bubbleColors.bubble.withWallpaper.shadow, wallpaper: wallpaper, knockout: knockoutValue, mask: mask, extendedEdges: extendedEdges, onlyOutline: onlyOutline, onlyShadow: onlyShadow, alwaysFillColor: alwaysFillColor)
+    return messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: incoming, fillColor: fillColor, strokeColor: strokeColor, neighbors: neighbors, shadow: bubbleColors.bubble.withWallpaper.shadow, wallpaper: wallpaper, knockout: knockoutValue, mask: mask, extendedEdges: extendedEdges, onlyOutline: onlyOutline, onlyShadow: onlyShadow, alwaysFillColor: alwaysFillColor, tail: tail)
 }
 
 public func messageBubbleArguments(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, neighbors: MessageBubbleImageNeighbors) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool) {
@@ -143,12 +143,12 @@ public func messageBubbleArguments(maxCornerRadius: CGFloat, minCornerRadius: CG
     return (topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, drawTail)
 }
 
-public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false, tail: Bool = true) -> UIImage {
     let topLeftRadius: CGFloat
     let topRightRadius: CGFloat
     let bottomLeftRadius: CGFloat
     let bottomRightRadius: CGFloat
-    let drawTail: Bool
+    var drawTail: Bool
     
     switch neighbors {
     case .none:
@@ -186,6 +186,10 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         topRightRadius = maxCornerRadius
         bottomLeftRadius = maxCornerRadius
         bottomRightRadius = maxCornerRadius
+        drawTail = false
+    }
+    // `tail: false` (bubble mode off) keeps the neighbor corner shapes and the tail's reserved column, and draws no tail.
+    if !tail {
         drawTail = false
     }
     

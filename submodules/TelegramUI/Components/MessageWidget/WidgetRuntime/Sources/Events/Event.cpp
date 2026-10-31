@@ -49,7 +49,6 @@ EventTarget* Event::currentTarget(JSContext*) {
 
 std::vector<EventTarget*> Event::composedPath(JSContext* ctx) {
     // Without shadow trees the composed path is the whole path, the target first; empty when not dispatching.
-    charge(ctx, uint64_t(m_path.size()) * work::kNodeVisit);
     std::vector<EventTarget*> out;
     out.reserve(m_path.size());
     for (size_t i = 0; i < m_path.size(); i++) {

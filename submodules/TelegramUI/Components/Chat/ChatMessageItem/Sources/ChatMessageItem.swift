@@ -48,6 +48,22 @@ public enum ChatMessageItemContent: Sequence {
         }
     }
     
+    /// Whether the chat was in selection when this item was made (its messages are selectable).
+    public var isInSelection: Bool {
+        func isSelectable(_ selection: ChatHistoryMessageSelection) -> Bool {
+            if case .selectable = selection {
+                return true
+            }
+            return false
+        }
+        switch self {
+        case let .message(_, _, selection, _, _):
+            return isSelectable(selection)
+        case let .group(messages):
+            return messages.contains(where: { isSelectable($0.2) })
+        }
+    }
+    
     public var firstMessageAttributes: ChatMessageEntryAttributes {
         switch self {
             case let .message(_, _, _, attributes, _):
@@ -92,10 +108,24 @@ public enum ChatMessageItemAdditionalContent {
 public struct ChatMessageHeaderSpec: Equatable {
     public var hasDate: Bool
     public var hasTopic: Bool
+    /// Bubble mode off: whether the message right above this one, with no date between them, keeps its bubble (see
+    /// `ChatMessageMergeFingerprint.keepsBubbleWithoutBubbleMode`). Always false with bubbles.
+    public var hasBubbleAbove: Bool
+    /// The same for the message right below this one.
+    public var hasBubbleBelow: Bool
+    /// Bubble mode off: whether the message right above this one is selected, with no date or topic header between them
+    /// (its selection band joins this one's). Always false with bubbles.
+    public var selectedAbove: Bool
+    /// The same for the message right below this one.
+    public var selectedBelow: Bool
     
-    public init(hasDate: Bool, hasTopic: Bool) {
+    public init(hasDate: Bool, hasTopic: Bool, hasBubbleAbove: Bool = false, hasBubbleBelow: Bool = false, selectedAbove: Bool = false, selectedBelow: Bool = false) {
         self.hasDate = hasDate
         self.hasTopic = hasTopic
+        self.hasBubbleAbove = hasBubbleAbove
+        self.hasBubbleBelow = hasBubbleBelow
+        self.selectedAbove = selectedAbove
+        self.selectedBelow = selectedBelow
     }
 }
 
@@ -137,6 +167,9 @@ public protocol ChatMessageItem: ListViewItem, ChatHistoryItemWithHeaders {
     var unsent: Bool { get }
     var sending: Bool { get }
     var failed: Bool { get }
+    /// How the message is drawn (a bubble, or the bubble-free mode's flat message, card or service message), decided
+    /// once when the item is made (`chatMessageBubbleStyle`).
+    var bubbleStyle: ChatMessageBubbleStyle { get }
     
     func merged(with neighbors: ChatHistoryItemNeighbors, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec)
 }

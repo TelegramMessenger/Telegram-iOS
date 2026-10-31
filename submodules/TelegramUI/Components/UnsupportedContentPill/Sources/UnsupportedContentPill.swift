@@ -51,14 +51,35 @@ public struct UnsupportedContentPillStrings: Equatable {
 /// `fill` is used ONLY when the host supplies no wallpaper node; with one, the wallpaper shows
 /// through instead. `isDark` drives the badge's background alpha and the button's fill polarity.
 public struct UnsupportedContentPillColors: Equatable {
+    public enum Style: Equatable {
+        /// A plate over the wallpaper, or of `fill` without one.
+        case plate
+        /// No plate and no room of the pill's own around its content: the host frames it (a chat without bubbles
+        /// stands it in a strip torn across the chat). The title keeps `primaryText`, the text under it is
+        /// `secondaryText`, the badge is glass tinted with `accent` under a glyph in `accentForeground`, and the button
+        /// is light glass under a black label (images of glass).
+        case outlined(secondaryText: UIColor, accent: UIColor, accentForeground: UIColor)
+    }
+
     public let fill: UIColor
     public let primaryText: UIColor
     public let isDark: Bool
+    public let style: Style
 
-    public init(fill: UIColor, primaryText: UIColor, isDark: Bool) {
+    public init(fill: UIColor, primaryText: UIColor, isDark: Bool, style: Style = .plate) {
         self.fill = fill
         self.primaryText = primaryText
         self.isDark = isDark
+        self.style = style
+    }
+
+    var contentInsets: UIEdgeInsets {
+        switch self.style {
+        case .plate:
+            return pillContentInsets
+        case .outlined:
+            return UIEdgeInsets()
+        }
     }
 }
 
@@ -84,6 +105,7 @@ public struct UnsupportedContentPillLayout: Equatable {
     /// tappable with no visible text.
     let buttonTitleSize: CGSize
     let textColumnSize: CGSize
+    let contentInsets: UIEdgeInsets
 }
 
 public extension UnsupportedContentPillLayout {
@@ -100,7 +122,7 @@ public extension UnsupportedContentPillLayout {
     func actionFrame(in size: CGSize) -> CGRect {
         return CGRect(
             origin: CGPoint(
-                x: size.width - pillContentInsets.right - self.buttonSize.width,
+                x: size.width - self.contentInsets.right - self.buttonSize.width,
                 y: floorToScreenPixels((size.height - self.buttonSize.height) / 2.0)
             ),
             size: self.buttonSize
@@ -131,12 +153,25 @@ func measureUnsupportedContentPill(
     let makeSubtitleLayout = TextNode.asyncLayout(subtitleNode)
     let makeButtonTitleLayout = TextNode.asyncLayout(buttonTitleNode)
 
+    let contentInsets = colors.contentInsets
+    let buttonTitleColor: UIColor
+    let subtitleColor: UIColor
+    switch colors.style {
+    case .plate:
+        buttonTitleColor = colors.primaryText
+        subtitleColor = colors.primaryText.withMultipliedAlpha(pillSubtitleAlpha)
+    case let .outlined(secondaryText, _, _):
+        // The button is light glass under a black label, in a dark theme too.
+        buttonTitleColor = .black
+        subtitleColor = secondaryText
+    }
+
     // The button is sized by its own label, so measure it first: whatever it takes is
     // subtracted from the width the title and subtitle get to wrap within.
     let buttonTitleString = NSAttributedString(
         string: strings.action,
         font: Font.semibold(15.0),
-        textColor: colors.primaryText
+        textColor: buttonTitleColor
     )
     let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(
         attributedString: buttonTitleString,
@@ -153,7 +188,7 @@ func measureUnsupportedContentPill(
         height: buttonTitleLayout.size.height + pillButtonVerticalPadding * 2.0
     )
 
-    let fixedWidth = pillContentInsets.left + pillBadgeDiameter + pillBadgeTextSpacing + pillTextButtonSpacing + buttonSize.width + pillContentInsets.right
+    let fixedWidth = contentInsets.left + pillBadgeDiameter + pillBadgeTextSpacing + pillTextButtonSpacing + buttonSize.width + contentInsets.right
     let maximumTextWidth = max(1.0, constrainedWidth - fixedWidth)
 
     let titleString = NSAttributedString(
@@ -175,7 +210,7 @@ func measureUnsupportedContentPill(
     let subtitleString = NSAttributedString(
         string: strings.text,
         font: Font.regular(13.0),
-        textColor: colors.primaryText.withMultipliedAlpha(pillSubtitleAlpha)
+        textColor: subtitleColor
     )
     let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(
         attributedString: subtitleString,
@@ -192,7 +227,7 @@ func measureUnsupportedContentPill(
     let textColumnHeight = titleLayout.size.height + pillTitleSubtitleSpacing + subtitleLayout.size.height
 
     let width = fixedWidth + textColumnWidth
-    let height = pillContentInsets.top + max(pillBadgeDiameter, max(textColumnHeight, buttonSize.height)) + pillContentInsets.bottom
+    let height = contentInsets.top + max(pillBadgeDiameter, max(textColumnHeight, buttonSize.height)) + contentInsets.bottom
 
     let layout = UnsupportedContentPillLayout(
         size: CGSize(width: width, height: height),
@@ -201,7 +236,8 @@ func measureUnsupportedContentPill(
         subtitleSize: subtitleLayout.size,
         buttonSize: buttonSize,
         buttonTitleSize: buttonTitleLayout.size,
-        textColumnSize: CGSize(width: textColumnWidth, height: textColumnHeight)
+        textColumnSize: CGSize(width: textColumnWidth, height: textColumnHeight),
+        contentInsets: contentInsets
     )
     let apply = UnsupportedContentPillTextApply(title: titleApply, subtitle: subtitleApply, buttonTitle: buttonTitleApply)
     return (layout, apply)

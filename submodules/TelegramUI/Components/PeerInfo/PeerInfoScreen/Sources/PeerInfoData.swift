@@ -1173,7 +1173,8 @@ func peerInfoScreenData(
     sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?,
     privacySettings: Signal<AccountPrivacySettings?, NoError>,
     forceHasGifts: Bool,
-    switchToUpgradableGifts: Bool
+    switchToUpgradableGifts: Bool,
+    hidesSavedMessagesChats: Bool
 ) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
@@ -1481,7 +1482,9 @@ func peerInfoScreenData(
             let webAppPermissions: Signal<WebAppPermissionsState?, NoError>
             var agentSettingsContext: AgentSettingsContext?
             let agentState: Signal<AgentSettingsContext.State?, NoError>
-            if case .bot = kind, peerInfoIsAgentBot(context: context, peerId: userPeerId) {
+            // The provider rows run on the agent API, parked while `agentApiIsAvailable` is false (its requests would all
+            // fail); the agent chat's own composer does not need it.
+            if case .bot = kind, agentApiIsAvailable, isAgentBotPeer(appConfiguration: context.currentAppConfiguration.with({ $0 }), peerId: userPeerId) {
                 let agentSettingsContextValue = context.engine.agent.settingsContext()
                 agentSettingsContext = agentSettingsContextValue
                 agentState = agentSettingsContextValue.state
@@ -1666,7 +1669,7 @@ func peerInfoScreenData(
                     
                     if case .peer = chatLocation {
                         if peerId == context.account.peerId {
-                            if hasSavedMessagesChats {
+                            if hasSavedMessagesChats && !hidesSavedMessagesChats {
                                 availablePanes?.insert(.savedMessagesChats, at: 0)
                             }
                         } else if hasSavedMessages && hasSavedMessagesChats {
@@ -2518,23 +2521,6 @@ func peerInfoScreenData(
 /// of the profile. A profile opened from a channel's direct messages lists that channel's thread,
 /// not the private chat, so it follows the direct-messages channel's own protection (which cannot
 /// be enabled today) and never the private chat's.
-/// A bot whose profile manages the user's AI provider keys: one of `appConfig.agent_bot_ids`.
-func peerInfoIsAgentBot(context: AccountContext, peerId: EnginePeer.Id) -> Bool {
-    guard peerId.namespace == Namespaces.Peer.CloudUser, let data = context.currentAppConfiguration.with({ $0 }).data, let botIds = data["agent_bot_ids"] as? [Any] else {
-        return false
-    }
-    let id = peerId.id._internalGetInt64Value()
-    return botIds.contains(where: { value in
-        if let value = value as? NSNumber {
-            return value.int64Value == id
-        } else if let value = value as? String {
-            return Int64(value) == id
-        } else {
-            return false
-        }
-    })
-}
-
 func peerInfoIsCopyProtected(data: PeerInfoScreenData, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> Bool {
     if sharedMediaFromForumTopic != nil {
         return data.sharedMediaPeer?.isCopyProtectionEnabled ?? false

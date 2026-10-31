@@ -20,6 +20,10 @@ struct Attribute {
     HeldAtom prefix;
     Held value;
     Held node;
+    /// The batch of this attribute's last counted change (Node::countsChange; limit.batch).
+    uint64_t opBatch = 0;
+    /// The batch it was added in (limit.batch: an inline style added in the current batch goes whole, as one change).
+    uint64_t addedBatch = 0;
 };
 
 /// The parts of a qualified attribute name, validated (DOM "validate and extract" for an attribute).
@@ -55,8 +59,7 @@ public:
     bool hasHTMLName(JSAtom name) const { return m_ns == Namespace::HTML && m_localName.atom == name; }
 
     // The attribute list (https://dom.spec.whatwg.org/#concept-element-attributes). Views: an entry is valid until the
-    // list next changes. Every walk over the list charges work::kNodeVisit per attribute it visits (Global
-    // Constraints, "Work"): script controls how many there are.
+    // list next changes.
     size_t attributeCount() const { return m_attributes.size(); }
     const Attribute& attributeAt(size_t i) const { return m_attributes[i]; }
     /// The index of the attribute `localName` in namespace `ns` (`otherNamespace` for Other), or -1.

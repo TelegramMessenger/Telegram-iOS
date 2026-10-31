@@ -1,5 +1,7 @@
 #include "Sources/Runtime/Runtime.h"
 
+#include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <optional>
 #include <stdexcept>
@@ -68,7 +70,11 @@ void defineInstanceMembers(JSContext* ctx, JSValueConst object, uint16_t iface) 
     }
 }
 
-Runtime::Runtime(const Options& options) : m_table(options.interfaces), m_host(options.host ? options.host : &g_refusingHost) {}
+Runtime::Runtime(const Options& options)
+    : m_table(options.interfaces), m_host(options.host ? options.host : &g_refusingHost), m_limits(options.limits) {
+    m_cpu = options.cpu;
+    m_clock = options.clock;
+}
 
 std::unique_ptr<Runtime> Runtime::create(const Options& options) {
     if (!options.interfaces) {
@@ -86,7 +92,8 @@ std::unique_ptr<Runtime> Runtime::create(const Options& options) {
     JS_SetMaxStackSize(r->m_rt, options.maxStackBytes);
     JS_SetHostAutoInitFunc(r->m_rt, &Runtime::hostAutoInit);
     JS_SetClassProtoInitFunc(r->m_rt, &Runtime::classProtoInit);
-    // The work limit and the latch: every interrupt poll and every native charge asks (quickjs-ng changes 1 and 2).
+    // The latch, the slice's clocks and its layout-query time: every interrupt QuickJS makes asks (as upstream's
+    // quickjs_context.cpp).
     JS_SetInterruptHandler(r->m_rt, &Runtime::interrupt, r.get());
     // Date.now() and new Date() read the host's wall clock (quickjs-ng change 7).
     JS_SetWallClockFunc(r->m_rt, &Runtime::wallClock, r.get());
@@ -351,7 +358,7 @@ std::string Runtime::evaluateToString(std::string_view code, const char* filenam
     }
     JS_FreeCString(m_ctx, text);
     JS_FreeValue(m_ctx, result);
-    // The conversion runs a toString, which the budget can stop too.
+    // The conversion runs a toString, whose polls can stop the widget too.
     this->throwIfStopped();
     // An Aborted from the cleanup hook (the checkpoint stopped the widget) propagates: HostEnv::eval reads it.
     this->runCleanupIfOutermost(m_ctx);
@@ -404,32 +411,171 @@ JSValue Runtime::classProtoInit(JSContext* ctx, JSClassID classId) {
     return JS_DupValue(ctx, runtime.m_prototypes[iface]);
 }
 
-void Runtime::setWorkObserver(std::function<void(uint64_t total)> observer, uint64_t everyUnits) {
-    m_workObserver = std::move(observer);
-    m_workObserverEvery = everyUnits;
-    m_workObserverLast = JS_GetWorkUnits(m_rt);
+namespace {
+
+/// twidget::CpuBudget::kQueryBudgetMs: a task's layout queries may block the renderer for this long.
+constexpr double kQueryBudgetMs = 100;
+/// The wall-clock backstop: max(10 x slice, 5 s) (upstream's kWallBackstopFactor, kWallBackstopMinMs).
+constexpr double kWallBackstopFactor = 10;
+constexpr double kWallBackstopMinMs = 5000;
+
+std::string wholeMs(double ms) {
+    return std::to_string(static_cast<long long>(ms));
 }
+
+} // namespace
 
 int Runtime::interrupt(JSRuntime* rt, void* opaque) {
     auto* runtime = static_cast<Runtime*>(opaque);
     if (runtime->m_stopReason != StopReason::None) {
         return 1;
     }
-    if (runtime->m_workObserver) {
-        const uint64_t units = JS_GetWorkUnits(rt);
-        if (units - runtime->m_workObserverLast >= runtime->m_workObserverEvery) {
-            runtime->m_workObserverLast = units;
-            try {
-                runtime->m_workObserver(units);
-            } catch (...) {
-            }
+    // Inside our renderer the time is not the widget's, and the deadlines move by it only when the scope ends: no slice
+    // check there. Script reaches a poll there only through a path no ScriptScope covers; the wall-clock backstop,
+    // counted from the scope's start, still ends it (the final review's C1).
+    if (runtime->m_sliceActive && runtime->m_renderDepth > 0) {
+        if (runtime->m_clock.pace) {
+            runtime->m_clock.pace(CpuClock::Pace::Interrupt);
+        }
+        if (runtime->m_clock.wallMs() - runtime->m_renderWallStart > std::max(kWallBackstopFactor * runtime->m_sliceMs, kWallBackstopMinMs)) {
+            runtime->stopForCpu();
+            return 1;
+        }
+        return 0;
+    }
+    if (runtime->m_sliceActive) {
+        if (runtime->m_clock.pace) {
+            runtime->m_clock.pace(CpuClock::Pace::Interrupt);
+        }
+        // Both clocks at every call, as upstream's interrupt handler reads them (quickjs_context.cpp).
+        if (runtime->queryBudgetSpent()) {
+            runtime->stopForLayoutQueries();
+            return 1;
+        }
+        if (runtime->m_clock.cpuMs() > runtime->m_cpuDeadline || runtime->m_clock.wallMs() > runtime->m_wallDeadline) {
+            runtime->stopForCpu();
+            return 1;
         }
     }
-    if (JS_GetWorkUnits(rt) >= runtime->m_workLimit) {
-        runtime->stop(StopReason::Budget);
-        return 1;
-    }
     return 0;
+}
+
+void Runtime::beginSlice(std::string_view kind, double sliceMs, std::string_view where) {
+    m_sliceActive = true;
+    m_sliceKind = std::string(kind);
+    m_sliceWhere = std::string(where.empty() ? kind : where);
+    m_sliceMs = sliceMs;
+    m_renderMs = 0;
+    m_queryMs = 0;
+    m_sliceCpuStart = m_clock.cpuMs();
+    m_cpuDeadline = m_sliceCpuStart + sliceMs;
+    m_wallDeadline = m_clock.wallMs() + std::max(kWallBackstopFactor * sliceMs, kWallBackstopMinMs);
+}
+
+Runtime::SliceUsage Runtime::endSlice() {
+    SliceUsage usage;
+    if (!m_sliceActive) {
+        return usage;
+    }
+    m_sliceActive = false;
+    usage.renderMs = m_renderMs;
+    usage.queryMs = m_queryMs;
+    usage.jsMs = std::max(0.0, m_clock.cpuMs() - m_sliceCpuStart - m_renderMs);
+    return usage;
+}
+
+bool Runtime::queryBudgetSpent() const {
+    return m_sliceActive && m_queryMs > kQueryBudgetMs;
+}
+
+void Runtime::stopForLayoutQueries() {
+    if (m_stopReason == StopReason::None) {
+        m_stopDetail = "Layout query limit exceeded: host queries blocked the renderer for more than " + wholeMs(kQueryBudgetMs) +
+                       " ms in one " + m_sliceKind + " task (" + m_sliceWhere + ")";
+        this->stop(StopReason::LayoutQuery);
+    }
+}
+
+void Runtime::stopForThrottling(double throttledForMs) {
+    if (m_stopReason != StopReason::None) {
+        return;
+    }
+    char text[160];
+    snprintf(text, sizeof text, "CPU quota: throttled for %.1f s (%d ms per %d ms, cpuKillAfterMs=%d)", throttledForMs / 1000,
+             int(m_cpu.cpuQuotaMs), int(m_cpu.cpuQuotaWindowMs), int(m_cpu.cpuKillAfterMs));
+    m_stopDetail = text;
+    this->stop(StopReason::Cpu);
+}
+
+void Runtime::stopForCpu() {
+    if (m_stopReason != StopReason::None) {
+        return;
+    }
+    // The slice is cpuLimitMs unless the quota shrank it; say so, the fix differs (an infinite loop, or a widget already
+    // over its quota), as upstream's handleError does.
+    std::string quota;
+    if (m_sliceMs < m_cpu.cpuLimitMs) {
+        const double left = m_quotaLeft ? m_quotaLeft() : m_cpu.cpuQuotaMs;
+        quota = "; CPU quota: " + wholeMs(std::max(0.0, left)) + " ms of " + wholeMs(m_cpu.cpuQuotaMs) + " ms per " +
+                wholeMs(m_cpu.cpuQuotaWindowMs) + " ms left, so this " + m_sliceKind + " task got " + wholeMs(m_sliceMs) + " ms";
+    }
+    m_stopDetail = "CPU limit exceeded: more than " + wholeMs(m_sliceMs) + " ms of continuous execution (" + m_sliceWhere + quota + ")";
+    this->stop(StopReason::Cpu);
+}
+
+void Runtime::foldRenderTime() {
+    const double cpuNow = m_clock.cpuMs();
+    const double wallNow = m_clock.wallMs();
+    const double cpu = std::max(0.0, cpuNow - m_renderCpuStart);
+    const double wall = std::max(0.0, wallNow - m_renderWallStart);
+    m_renderCpuStart = cpuNow;
+    m_renderWallStart = wallNow;
+    if (m_sliceActive) {
+        m_cpuDeadline += cpu;
+        m_wallDeadline += wall;
+        m_renderMs += cpu;
+        if (m_renderQuery) {
+            m_queryMs += cpu;
+        }
+    }
+}
+
+Runtime::RenderScope::RenderScope(Runtime& runtime, bool query) : m_runtime(runtime), m_outermost(runtime.m_renderDepth++ == 0) {
+    if (m_outermost) {
+        runtime.m_renderQuery = query;
+        runtime.m_renderCpuStart = runtime.m_clock.cpuMs();
+        runtime.m_renderWallStart = runtime.m_clock.wallMs();
+    }
+}
+
+Runtime::RenderScope::~RenderScope() {
+    m_runtime.m_renderDepth--;
+    if (!m_outermost) {
+        return;
+    }
+    if (m_runtime.m_clock.pace) {
+        m_runtime.m_clock.pace(CpuClock::Pace::Render);
+    }
+    m_runtime.foldRenderTime();
+}
+
+Runtime::ScriptScope::ScriptScope(Runtime& runtime)
+    : m_runtime(runtime), m_renderDepth(runtime.m_renderDepth), m_renderQuery(runtime.m_renderQuery) {
+    if (m_renderDepth > 0) {
+        runtime.foldRenderTime();
+        runtime.m_renderDepth = 0;
+    }
+}
+
+Runtime::ScriptScope::~ScriptScope() {
+    if (m_renderDepth > 0) {
+        // A render scope the script opened (a layout query's flush) has ended and booked itself; the one suspended
+        // resumes with fresh clocks.
+        m_runtime.m_renderDepth = m_renderDepth;
+        m_runtime.m_renderQuery = m_renderQuery;
+        m_runtime.m_renderCpuStart = m_runtime.m_clock.cpuMs();
+        m_runtime.m_renderWallStart = m_runtime.m_clock.wallMs();
+    }
 }
 
 char* Runtime::refuseModule(JSContext* ctx, const char* baseName, const char* name, void* opaque) noexcept {
@@ -444,6 +590,20 @@ void Runtime::memoryLimitRefused(JSRuntime* rt, void* opaque) noexcept {
 
 double Runtime::wallClock(void* opaque) noexcept {
     return static_cast<Runtime*>(opaque)->host().wallClockNow();
+}
+
+void Runtime::addOps(uint64_t count) {
+    if (m_quietOps) {
+        return;
+    }
+    m_batchOps += count;
+    m_totalOps += count;
+    m_maxBatchOps = std::max(m_maxBatchOps, m_batchOps);
+    if (m_stopReason == StopReason::None && m_limits.stops && m_limits.opsPerBatch && m_batchOps > m_limits.opsPerBatch) {
+        this->stopForLimit("Ops limit exceeded: " + std::to_string(m_batchOps) + " operations in one batch (max " +
+                           std::to_string(m_limits.opsPerBatch) + ")");
+        throw Aborted{};
+    }
 }
 
 void Runtime::throwIfStopped() const {
@@ -489,8 +649,8 @@ StopReason Runtime::classifyFatal(JSContext* ctx, JSValueConst exception) const 
     if (!JS_IsUncatchableError(exception)) {
         return StopReason::None;
     }
-    // The budget's interrupt has normally latched Budget already; an uncatchable error with work left is ours.
-    return JS_GetWorkUnits(m_rt) >= m_workLimit ? StopReason::Budget : StopReason::Internal;
+    // A CPU or layout-query stop latched its reason at the interrupt already; an uncatchable error without one is ours.
+    return StopReason::Internal;
 }
 
 void Runtime::throwIfFatal(JSContext* ctx, JSValueConst exception) {
@@ -504,7 +664,7 @@ void Runtime::throwIfFatal(JSContext* ctx, JSValueConst exception) {
 void Runtime::abortWithPendingException(JSContext* ctx) {
     Value exception = Value::adopt(ctx, JS_GetException(ctx));
     StopReason reason = this->classifyFatal(ctx, exception.get());
-    // A stop comes here (a failed charge: the interrupt latched Budget), and so does a Thrown that
+    // A stop comes here (the interrupt latched its reason), and so does a Thrown that
     // abortForCaughtException caught on a path that may only abort. A catchable exception there is a failure of our
     // own: Internal.
     this->stop(reason == StopReason::None ? StopReason::Internal : reason);
@@ -568,12 +728,6 @@ bool Runtime::runScript(std::string_view source, const char* filename, bool isMo
     // Ruling 6: the script starts at native depth 0, so its binding calls are outermost again.
     ScriptBoundary boundary(*this);
     this->throwIfStopped();
-    try {
-        charge(ctx, work::kBindingCall);
-        chargeScan(ctx, source.size());
-    } catch (const Thrown&) {
-        this->abortWithPendingException(ctx);
-    }
     std::string text;
     try {
         text.assign(source);
@@ -640,13 +794,8 @@ void Runtime::logUncaughtException(JSContext* ctx, JSValue exception) {
     // inside it), and a stop it hits still stops the widget. Only the diagnostic's 4,000 bytes are converted to UTF-8.
     std::optional<String> text;
     try {
-        JSStringView view{nullptr, nullptr, 0};
-        if (JS_IsString(owned.get()) && !JS_GetStringView(owned.get(), &view)) {
-            // A thrown rope: JS_ToString flattens it, a copy of all of it that QuickJS would notice only at its next
-            // poll, so it is charged first. (A rope an object's toString returns is flattened inside JS_ToString, as in
-            // every conversion: QuickJS counts that allocation itself.)
-            chargeScan(ctx, JS_GetStringLength(owned.get()));
-        }
+        // A thrown rope: JS_ToString flattens it, a copy of all of it, which QuickJS counts toward the memory limit as
+        // it allocates (as it does a rope an object's toString returns, in every conversion).
         ConversionScope conversion(*this);
         text = String::adopt(ctx, checked(ctx, JS_ToString(ctx, owned.get())));
     } catch (const Thrown&) {

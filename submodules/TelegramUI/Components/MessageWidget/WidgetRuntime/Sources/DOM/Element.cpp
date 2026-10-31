@@ -54,7 +54,13 @@ static void releaseAttribute(JSRuntime* rt, Attribute& a) {
 
 /// DOM "handle attribute changes": the document's listeners (M1b's mutation records, M1c's render tree), then the DOM
 /// state's attribute listeners, which hear every document's (HTML's event handler content attributes).
-static void noteAttributeChange(JSContext* ctx, Element& element, JSAtom localName, Namespace ns) {
+static void noteAttributeChange(JSContext* ctx, Element& element, JSAtom localName, Namespace ns, uint64_t& stamp) {
+    // limit.batch (widget-sandbox v0.3.0): one operation per attribute per batch once the element was inserted in an
+    // earlier one (Node::countsChange); before, its attributes travel with its making, as upstream's shim sends them.
+    Runtime& runtime = Runtime::from(ctx);
+    if (element.countsChange(runtime.batchSerial(), stamp)) {
+        runtime.addOps(1);
+    }
     Document& document = element.nodeDocument();
     document.noteMutation();
     document.forEachMutationListener([&](MutationListener& listener) { listener.attributeChanged(element, localName, ns); });
@@ -63,7 +69,6 @@ static void noteAttributeChange(JSContext* ctx, Element& element, JSAtom localNa
 
 int Element::findByNamespace(JSContext* ctx, Namespace ns, JSAtom otherNamespace, JSAtom localName) const {
     for (size_t i = 0; i < m_attributes.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         const Attribute& a = m_attributes[i];
         if (a.localName.atom == localName && a.ns == ns && (ns != Namespace::Other || a.otherNamespace.atom == otherNamespace)) {
             return int(i);
@@ -81,9 +86,7 @@ int Element::findQualified(JSContext* ctx, const String& qualifiedName) const {
         scanned++;
     }
     bool hasColon = scanned < v.length;
-    chargeScan(ctx, scanned);
     for (size_t i = 0; i < m_attributes.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         const Attribute& a = m_attributes[i];
         if (a.prefix.atom == JS_ATOM_NULL ? a.localName.atom == asAtom.get() : hasColon && qualifiedNameIs(ctx, a.prefix.atom, a.localName.atom, qualifiedName)) {
             return int(i);
@@ -105,7 +108,6 @@ int Element::indexOfAttr(JSContext* ctx, const Attr& attr) const {
         return -1;
     }
     for (size_t i = 0; i < m_attributes.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         if (attrOf(m_attributes[i]) == &attr) {
             return int(i);
         }
@@ -159,11 +161,10 @@ Attr* Element::attrAt(JSContext* ctx, size_t index) {
 
 void Element::changeAttribute(JSContext* ctx, size_t index, const String& value) {
     m_attributes[index].value.set(JS_GetRuntime(ctx), value.toJS(ctx));
-    noteAttributeChange(ctx, *this, m_attributes[index].localName.atom, m_attributes[index].ns);
+    noteAttributeChange(ctx, *this, m_attributes[index].localName.atom, m_attributes[index].ns, m_attributes[index].opBatch);
 }
 
 void Element::appendAttribute(JSContext* ctx, Namespace ns, JSAtom otherNamespace, JSAtom prefix, JSAtom localName, const String& value, Attr* node) {
-    charge(ctx, work::kNodeVisit);
     // The entry first: growing the list can fail at the memory limit (JSAllocator throws bad_alloc), and then nothing
     // is held yet. The references are taken once it is in.
     m_attributes.emplace_back();
@@ -177,11 +178,12 @@ void Element::appendAttribute(JSContext* ctx, Namespace ns, JSAtom otherNamespac
         a.prefix.atom = JS_DupAtom(ctx, prefix);
     }
     a.value.value = value.toJS(ctx);
+    a.addedBatch = Runtime::from(ctx).batchSerial();
     if (node) {
         a.node.value = JS_DupValue(ctx, node->object());
         node->attachTo(ctx, *this);
     }
-    noteAttributeChange(ctx, *this, localName, ns);
+    noteAttributeChange(ctx, *this, localName, ns, a.opBatch);
 }
 
 namespace {
@@ -198,7 +200,6 @@ struct RemovedAttribute {
 void Element::removeAttributeAt(JSContext* ctx, size_t index) {
     JSRuntime* rt = JS_GetRuntime(ctx);
     // The later entries move up one.
-    charge(ctx, work::kNodeVisit * (m_attributes.size() - index));
     RemovedAttribute removed{rt, m_attributes[index]};
     m_attributes.erase(m_attributes.begin() + ptrdiff_t(index));
     if (Attr* attr = attrOf(removed.entry)) {
@@ -206,7 +207,7 @@ void Element::removeAttributeAt(JSContext* ctx, size_t index) {
         attr->detach(rt, removed.entry.value.value);
         removed.entry.value.value = JS_UNDEFINED;
     }
-    noteAttributeChange(ctx, *this, removed.entry.localName.atom, removed.entry.ns);
+    noteAttributeChange(ctx, *this, removed.entry.localName.atom, removed.entry.ns, removed.entry.opBatch);
 }
 
 void Element::replaceAttributeAt(JSContext* ctx, size_t index, Attr& attr) {
@@ -223,7 +224,7 @@ void Element::replaceAttributeAt(JSContext* ctx, size_t index, Attr& attr) {
     // Releases the old Attr: the caller holds it.
     a.node.set(rt, JS_DupValue(ctx, attr.object()));
     attr.attachTo(ctx, *this);
-    noteAttributeChange(ctx, *this, a.localName.atom, a.ns);
+    noteAttributeChange(ctx, *this, a.localName.atom, a.ns, a.opBatch);
 }
 
 void Element::trace(JSRuntime* rt, JS_MarkFunc* mark) const {
@@ -254,7 +255,6 @@ void Element::dispose(JSRuntime* rt) {
 
 void Element::adoptedInto(JSContext* ctx, Document& document) {
     for (Attribute& a : m_attributes) {
-        charge(ctx, work::kNodeVisit);
         if (Attr* attr = attrOf(a)) {
             attr->setNodeDocument(ctx, document);
         }
@@ -342,7 +342,6 @@ std::vector<String> Element::getAttributeNames(JSContext* ctx) {
     std::vector<String> names;
     names.reserve(m_attributes.size());
     for (const Attribute& a : m_attributes) {
-        charge(ctx, work::kNodeVisit);
         names.push_back(this->qualifiedNameOf(ctx, a));
     }
     return names;
@@ -399,8 +398,7 @@ AttributeName validateAndExtractAttributeName(JSContext* ctx, const std::optiona
     Namespace ns = namespaceOf(uri);
     std::optional<String> prefix;
     String localName = qualifiedName;
-    // The colon is looked for once: charged for the whole name, which the checks below read again.
-    chargeScan(ctx, qualifiedName.length());
+    // The colon is looked for once.
     for (uint32_t i = 0; i < qualifiedName.length(); i++) {
         if (qualifiedName.at(i) == ':') {
             prefix = qualifiedName.substring(ctx, 0, i);

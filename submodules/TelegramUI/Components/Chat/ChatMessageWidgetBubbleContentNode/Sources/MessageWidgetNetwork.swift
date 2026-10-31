@@ -4,13 +4,14 @@ import TelegramCore
 import AccountContext
 import MessageWidget
 
-/// The bubble's two network paths for a widget (widget-sandbox v0.2, W2; design §4.A): its requests to the bot and the
+/// The bubble's two network paths for a widget (widget-sandbox v0.2, W2; design §4.A): its queries to the bot and the
 /// polling of a shared widget's state. Both go only to Telegram's server through the engine; the widget harness replaces
 /// them in its tests. Main thread only.
 public enum MessageWidgetNetwork {
-    /// A request the widget's gate admitted, for the message `messageId`: the answer's `result`, or why there is none.
-    public static var requestAnswer: (AccountContext, EngineMessage.Id, Data) -> Signal<Data?, BotWidgetQueryError> = { context, messageId, data in
-        return context.engine.messages.requestBotWidgetQueryAnswer(messageId: messageId, data: data)
+    /// A query to the bot of the message `messageId`: a request the widget's gate admitted (`.data`, with the wallet when
+    /// it asked for it), or a wallet call's outcome (v0.5.0); the answer's `result`, or why there is none.
+    public static var requestAnswer: (AccountContext, EngineMessage.Id, BotWidgetQueryType, Data) -> Signal<Data?, BotWidgetQueryError> = { context, messageId, queryType, data in
+        return context.engine.messages.requestBotWidgetQueryAnswer(messageId: messageId, queryType: queryType, data: data)
     }
     /// Polls the shared state of the widget `widgetId` while subscribed, with `messageId` as a carrier.
     public static var pollPublicData: (AccountContext, EngineMessage.Id, Int64) -> Signal<Never, NoError> = { context, messageId, widgetId in

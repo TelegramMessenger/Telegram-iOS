@@ -1,3 +1,4 @@
+#include <cstring>
 #include <unordered_map>
 #include <algorithm>
 #include <cstdint>
@@ -15,6 +16,8 @@
 #include "render_item.h"
 #include "stylesheet.h"
 #include "table.h"
+#include "el_anchor.h"
+#include "el_before_after.h"
 
 namespace litehtml
 {
@@ -200,6 +203,16 @@ namespace litehtml
         thread_local int64_t     g_selector_limit    = kSelectorStepBudget;
 
         thread_local uint64_t    g_apply_pass        = 0;
+    } // namespace
+
+    // Telegram (VENDOR.md edit 78).
+    bool counter_lookup_step()
+    {
+        return !(g_apply_depth > 0 && ++g_selector_steps > g_selector_limit);
+    }
+
+    namespace
+    {
 
         bool prune_enabled()
         {
@@ -266,6 +279,25 @@ namespace litehtml
     void set_selector_step_session(selector_step_session* session)
     {
         g_step_session = session;
+    }
+
+    // Telegram (VENDOR.md edit 81): apply_scope's bookkeeping for a pass with no element, over `doc`.
+    counted_selection::counted_selection(const document* doc)
+    {
+        if(g_apply_depth++ == 0)
+        {
+            g_pass_session   = g_step_session && g_step_session->owner == doc ? g_step_session : nullptr;
+            g_selector_steps = g_pass_session ? g_pass_session->used : 0;
+            g_selector_limit = g_pass_session ? g_pass_session->limit : kSelectorStepBudget;
+            g_apply_pass++;
+            g_sibling_indexes.clear();
+        }
+    }
+
+    counted_selection::~counted_selection()
+    {
+        if(--g_apply_depth == 0 && g_pass_session)
+            g_pass_session->used = g_selector_steps;
     }
 
     namespace
@@ -516,6 +548,68 @@ namespace litehtml
         m_match_memos.push_back(std::move(memo));
     }
 
+    // Telegram (VENDOR.md edit 78): apply_stylesheet on this element alone: its children stay where they are (a counter's
+    // lookups read the siblings before an element), and the pass does not recurse into them.
+    void litehtml::html_tag::apply_matching_pass(const litehtml::css& stylesheet, int sheet, bool parse)
+    {
+        if(sheet == 1 && parse)
+            parse_own_attributes();
+        style_charge_scope charge(get_document().get(), sheet);
+        apply_scope scope(this);
+        // el_anchor::apply_stylesheet's addition, once per sheet.
+        if(dynamic_cast<el_anchor*>(this) && get_attr("href"))
+            m_pseudo_classes.push_back(_link_);
+        for(const auto& sel : stylesheet.selectors())
+            apply_selector(sel);
+    }
+
+    // Telegram (VENDOR.md edit 84).
+    void litehtml::html_tag::parse_own_attributes()
+    {
+        // parse_attributes recurses into the children: they are set aside for it, and what it makes joins them.
+        elements_list children;
+        children.swap(m_children);
+        parse_attributes();
+        for(const auto& made : m_children)
+            children.push_back(made);
+        m_children.swap(children);
+    }
+
+    void litehtml::html_tag::adopt_matched(html_tag& other)
+    {
+        std::swap(m_style, other.m_style);
+        std::swap(m_style_base, other.m_style_base);
+        std::swap(m_has_style_base, other.m_has_style_base);
+        std::swap(m_used_styles, other.m_used_styles);
+        std::swap(m_style_charged, other.m_style_charged);
+        std::swap(m_splice_charges, other.m_splice_charges);
+        std::swap(m_counter_values, other.m_counter_values);
+    }
+
+    std::vector<std::pair<const litehtml::css_selector*, bool>> litehtml::html_tag::used_rules() const
+    {
+        std::vector<std::pair<const css_selector*, bool>> rules;
+        rules.reserve(m_used_styles.size());
+        for(const auto& used : m_used_styles)
+            rules.emplace_back(used->m_selector.get(), used->m_used);
+        std::sort(rules.begin(), rules.end());
+        return rules;
+    }
+
+    // Telegram (VENDOR.md edit 78).
+    void litehtml::html_tag::apply_matching_pass_generated(const litehtml::css& stylesheet, bool after)
+    {
+        const elements_list children = m_children; // apply_stylesheet can make an element's pseudo-elements, never ours
+        for(const auto& child : children)
+        {
+            const bool is_after = child->tag() == __tag_after_;
+            const bool generated = child->tag() == __tag_before_ || is_after ||
+                                   (child->get_tagName() && !std::strncmp(child->get_tagName(), "lh-", 3));
+            if(generated && is_after == after && child->css().get_display() != display_inline_text)
+                child->apply_stylesheet(stylesheet);
+        }
+    }
+
     void litehtml::html_tag::apply_selector(const css_selector::ptr& sel)
     {
         {
@@ -582,6 +676,7 @@ namespace litehtml
                                 el->add_style(*sel->m_style);
                             } else
                             {
+                                get_document()->release_style_charges(el); // Telegram (VENDOR.md edit 21): it leaves the tree
                                 el->parent()->removeChild(el);
                             }
                         } else
@@ -732,7 +827,14 @@ namespace litehtml
     void html_tag::resolve_reverts()
     {
         m_style.resolve_reverts([this](string_id name, bool layer) { return master_value(name, layer); },
-                                [this](size_t bytes) { return bytes == 0 || charge_splice(bytes); });
+                                [this](string_id name, size_t bytes) {
+                                    if(bytes == 0)
+                                        return true;
+                                    begin_splice(name);
+                                    const bool admitted = charge_splice(bytes);
+                                    end_splice();
+                                    return admitted;
+                                });
     }
 
     bool html_tag::charge_inherited(size_t bytes) const
@@ -760,11 +862,37 @@ namespace litehtml
 
     bool html_tag::charge_splice(size_t bytes) const
     {
+        // Telegram (VENDOR.md edit 21): the property's last splice is given back before it is charged again.
+        splice_charge* at = nullptr;
+        if(m_splice_property != empty_id)
+        {
+            at = &m_splice_charges[m_splice_property];
+            if(at->round != m_splice_round)
+            {
+                get_document()->style_refund(at->bytes);
+                at->bytes = 0;
+                at->round = m_splice_round;
+            }
+        }
         size_t charged = 0;
         if(!get_document()->style_splice(bytes, charged))
             return false;
-        m_style_charged += charged;
+        (at ? at->bytes : m_style_charged) += charged;
         return true;
+    }
+
+    void html_tag::begin_splice(string_id property) const
+    {
+        m_splice_property = property;
+        m_splice_round++;
+    }
+
+    void html_tag::refund_splices() const
+    {
+        const auto doc = get_document();
+        for(const auto& entry : m_splice_charges)
+            doc->style_refund(entry.second.bytes);
+        m_splice_charges.clear();
     }
 
     bool html_tag::get_custom_property(string_id name, css_token_vector& result) const
@@ -832,6 +960,18 @@ namespace litehtml
             m_style.combine(*root);
     }
 
+    // Telegram (VENDOR.md edit 80): an SVG paint attribute naming light-dark() resolves it at draw (el_svg.cpp
+    // svg_paint): the element's style reads the scheme.
+    void html_tag::note_paint_attributes()
+    {
+        for(const char* name : {"fill", "stroke"})
+        {
+            const char* value = get_attr(name);
+            if(value && lowcase(value).find("light-dark") != std::string::npos)
+                m_style.add_environment(environment_scheme);
+        }
+    }
+
     // Telegram (VENDOR.md edit 27).
     void html_tag::add_animated_style()
     {
@@ -861,8 +1001,11 @@ namespace litehtml
             m_style.add(style, "", doc->container());
         }
         add_animated_style();    // Telegram (VENDOR.md edit 27)
+        note_paint_attributes(); // Telegram (VENDOR.md edit 80)
         add_root_declarations(); // Telegram (VENDOR.md edit 26)
         resolve_reverts();       // Telegram (VENDOR.md edit 33)
+        if(m_style.has_var_property())
+            note_reads_var(true); // Telegram (VENDOR.md edit 17)
         m_style.subst_vars(this);
         m_css.compute_background_color(this);
         m_css.set_shared_id(doc->next_share_id());
@@ -932,8 +1075,11 @@ namespace litehtml
                 m_style.add(style, "", doc->container());
             }
             add_animated_style();    // Telegram (VENDOR.md edit 27)
+        note_paint_attributes(); // Telegram (VENDOR.md edit 80)
             add_root_declarations(); // Telegram (VENDOR.md edit 26)
             resolve_reverts();       // Telegram (VENDOR.md edit 33)
+            if(m_style.has_var_property())
+                note_reads_var(true); // Telegram (VENDOR.md edit 17)
             m_style.subst_vars(this);
             m_css.compute(this, doc);
             m_css.set_shared_id(doc->next_share_id());
@@ -2296,12 +2442,59 @@ namespace litehtml
         }
     }
 
+    void litehtml::html_tag::release_style_charges() const
+    {
+        get_document()->style_refund(m_style_charged);
+        m_style_charged = 0;
+        refund_splices();
+        refund_inherited(); // edit 60
+        note_reads_var(false); // edit 17: it leaves the tree
+    }
+
+    void litehtml::html_tag::note_reads_var(bool reads) const
+    {
+        if(m_reads_var == reads)
+            return;
+        m_reads_var = reads;
+        get_document()->note_var_reader(reads);
+    }
+
+    // Telegram (VENDOR.md edit 78).
+    bool litehtml::html_tag::counted() const
+    {
+        if(!m_counter_values.empty() || m_style.get_property(_counter_reset_).is<string_vector>() ||
+           m_style.get_property(_counter_increment_).is<string_vector>())
+            return true;
+        // A ::before or ::after that reads a counter, or counts itself.
+        for(const auto& child : m_children)
+        {
+            const auto* pseudo = dynamic_cast<const el_before_after_base*>(child.get());
+            if(pseudo && (pseudo->reads_counters() || pseudo->counted()))
+                return true;
+        }
+        return false;
+    }
+
+    bool litehtml::html_tag::declares_custom_properties() const
+    {
+        if(m_style.declares_custom_property())
+            return true;
+        for(const char* name : {"style", animated_style_attribute})
+        {
+            const char* text = get_attr(name);
+            if(text && std::strstr(text, "--"))
+                return true;
+        }
+        return false;
+    }
+
     void litehtml::html_tag::forget_matched_styles()
     {
         for(auto it = m_children.begin(); it != m_children.end();)
         {
             if((*it)->tag() == __tag_before_ || (*it)->tag() == __tag_after_)
             {
+                get_document()->release_style_charges(*it); // Telegram (VENDOR.md edit 21): it leaves the tree
                 (*it)->parent(nullptr);
                 it = m_children.erase(it);
             } else
@@ -2312,6 +2505,8 @@ namespace litehtml
         m_style.clear();
         get_document()->style_refund(m_style_charged); // Telegram (VENDOR.md edit 21)
         m_style_charged  = 0;
+        refund_splices();      // Telegram (VENDOR.md edit 21)
+        note_reads_var(false); // Telegram (VENDOR.md edit 17): the next compute says again
         m_style_base     = style();
         m_has_style_base = false;
         m_used_styles.clear();
@@ -2333,6 +2528,7 @@ namespace litehtml
         const auto doc = get_document();
         doc->style_refund(m_style_charged);
         m_style_charged = 0;
+        refund_splices();
 
         for(auto& usel : m_used_styles)
         {
@@ -2404,6 +2600,7 @@ namespace litehtml
         m_has_style_base = false;
         m_style.clear();
         m_style_charged = 0;
+        m_splice_charges.clear(); // the document charges again from zero
         for(auto& el : m_children)
         {
             if(el->css().get_display() != display_inline_text)

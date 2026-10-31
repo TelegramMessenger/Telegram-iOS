@@ -33,7 +33,6 @@ public:
     }
 
     String finish() {
-        this->chargeVisit(0);
         return String::fromUTF16(m_ctx, m_out.data(), m_out.size());
     }
 
@@ -93,7 +92,6 @@ private:
         switch (node.type()) {
         case NodeType::Element: {
             auto& element = static_cast<Element&>(node);
-            this->chargeVisit(work::kNodeVisit * (1 + element.attributeCount()));
             this->unit('<');
             this->tagName(element);
             for (size_t i = 0; i < element.attributeCount(); i++) {
@@ -108,7 +106,6 @@ private:
             return !this->serializesAsVoid(element);
         }
         case NodeType::Text: {
-            this->chargeVisit(work::kNodeVisit);
             const String data = static_cast<CharacterData&>(node).dataString(m_ctx);
             if (rawTextParent) {
                 this->append(data);
@@ -118,20 +115,17 @@ private:
             return false;
         }
         case NodeType::Comment:
-            this->chargeVisit(work::kNodeVisit);
             this->ascii("<!--");
             this->append(static_cast<CharacterData&>(node).dataString(m_ctx));
             this->ascii("-->");
             return false;
         case NodeType::DocumentType:
-            this->chargeVisit(work::kNodeVisit);
             this->ascii("<!DOCTYPE ");
             this->append(static_cast<DocumentType&>(node).name(m_ctx));
             this->unit('>');
             return false;
         default:
             // This DOM makes no ProcessingInstruction or CDATASection nodes, and the rest are never children.
-            this->chargeVisit(work::kNodeVisit);
             return false;
         }
     }
@@ -180,15 +174,6 @@ private:
             break;
         }
         this->atom(attribute.localName.atom);
-    }
-
-    /// Charges `visitUnits`, and work::kSerializeFourBytes per four units written since the last charge, so a long
-    /// serialization is charged as it goes, one node's output behind at most. Fewer than four units carry over to the
-    /// next charge: the whole costs floor(length / 4), however many nodes wrote it.
-    void chargeVisit(uint64_t visitUnits) {
-        size_t fours = (m_out.size() - m_charged) / 4;
-        m_charged += fours * 4;
-        charge(m_ctx, visitUnits + uint64_t(fours) * work::kSerializeFourBytes);
     }
 
     void unit(char16_t c) { m_out.push_back(c); }
@@ -258,8 +243,6 @@ private:
     JSContext* m_ctx;
     DOMState& m_state;
     Vector<char16_t> m_out;
-    /// How much of m_out has been charged for: a multiple of four.
-    size_t m_charged = 0;
     Vector<Frame> m_stack;
 };
 

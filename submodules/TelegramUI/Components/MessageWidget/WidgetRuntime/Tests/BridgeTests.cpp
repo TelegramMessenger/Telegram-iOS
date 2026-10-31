@@ -35,13 +35,15 @@ WR_TEST(testOnThemeRunsOnAThemeChange) {
                   "TelegramWidget.onTheme(t => seen.push(t + ':' + TelegramWidget.theme));</script></body></html>");
     CHECK_EQ(env.env().eval("TelegramWidget.theme"), std::string("light"));
     const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
     wr::HostState::of(env.ctx()).themeChanged(env.ctx(), wr::Theme::Dark);
     env.env().drain();
     // onTheme calls back at once (SDK v1 §2.1), then on the change.
     CHECK_EQ(env.env().eval("seen.join()"), std::string("light:light,dark:dark"));
     CHECK_EQ(env.env().eval("TelegramWidget.theme"), std::string("dark"));
-    // The task's flush rebuilt the document in the dark scheme.
-    CHECK(env.render().buildCount() > builds);
+    // The task's flush patched the document into the dark scheme (twidget edit 80).
+    CHECK(env.render().patchCount() > patches);
+    CHECK_EQ(env.render().buildCount(), builds);
     // The same theme again changes nothing and runs no callback.
     wr::HostState::of(env.ctx()).themeChanged(env.ctx(), wr::Theme::Dark);
     env.env().drain();

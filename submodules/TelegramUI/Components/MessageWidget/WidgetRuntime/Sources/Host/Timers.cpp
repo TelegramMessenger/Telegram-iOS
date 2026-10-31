@@ -8,7 +8,6 @@
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -31,7 +30,6 @@ void Timers::release(ActiveTimer& timer) {
 
 Timers::ActiveTimer* Timers::find(JSContext* ctx, int32_t id) {
     for (ActiveTimer& timer : m_active) {
-        charge(ctx, work::kNodeVisit);
         if (timer.id == id) {
             return &timer;
         }
@@ -40,7 +38,7 @@ Timers::ActiveTimer* Timers::find(JSContext* ctx, int32_t id) {
 }
 
 int32_t Timers::start(JSContext* ctx, std::variant<String, Callback> handler, int32_t timeout, std::vector<Value> arguments, bool repeat) {
-    if (EventLoop::of(ctx).liveCallbackCount() >= kMaxLive) {
+    if (this->liveCount() >= Runtime::from(ctx).limits().timers) {
         throw RangeError{"too many timers"};
     }
     // Step 2.
@@ -56,16 +54,15 @@ int32_t Timers::start(JSContext* ctx, std::variant<String, Callback> handler, in
             timer.source.value = std::get<String>(handler).toJS(ctx);
         }
         for (Value& argument : arguments) {
-            charge(ctx, work::kNodeVisit);
             timer.arguments.emplace_back();
             timer.arguments.back().value = argument.release();
         }
         this->schedule(ctx, id, timeout);
         return id;
     } catch (...) {
-        // Never scheduled, so no task will fire it: drop it, whether the failure stops the widget (a charge, an
-        // allocation refused at the memory limit: quickjs-ng changes 9 and 10 make either uncatchable) or the script
-        // can catch it. No JS ran since the emplace: the entry is the last.
+        // Never scheduled, so no task will fire it: drop it, whether the failure stops the widget (an allocation
+        // refused at the memory limit: quickjs-ng changes 9 and 10 make it uncatchable) or the script can catch it. No
+        // JS ran since the emplace: the entry is the last.
         this->release(m_active.back());
         m_active.pop_back();
         throw;
@@ -101,14 +98,14 @@ void Timers::schedule(JSContext* ctx, int32_t id, int32_t requested) {
     int taskNesting = nesting + 1;
     timer->scheduled = loop.queueTaskAt(loop.currentTime() + double(timeout), TaskSource::Timer, makeTask(ctx, [id, handle, taskNesting](JSContext* ctx) {
         EventLoop::of(ctx).timers().fire(ctx, id, handle, taskNesting);
-    }));
+    }), TaskKind::Timer);
 }
 
 void Timers::fire(JSContext* ctx, int32_t id, uint64_t handle, int taskNesting) {
-    // What escapes this task normally stops the widget: a failed charge, std::bad_alloc or a stop in the callback or
-    // the script already has; a js_malloc refused at the memory limit latched Memory as it failed (quickjs-ng change
-    // 9). A stopped widget's table is only released: an entry left behind is still held once, and freed with the table.
-    // A failed re-arm is dropped all the same (below).
+    // What escapes this task normally stops the widget: std::bad_alloc or a stop in the callback or the script already
+    // has; a js_malloc refused at the memory limit latched Memory as it failed (quickjs-ng change 9). A stopped
+    // widget's table is only released: an entry left behind is still held once, and freed with the table. A failed
+    // re-arm is dropped all the same (below).
     ActiveTimer* timer = this->find(ctx, id);
     if (!timer || timer->handle != handle) {
         return;
@@ -123,9 +120,7 @@ void Timers::fire(JSContext* ctx, int32_t id, uint64_t handle, int taskNesting) 
     loop.setTimerNestingLevel(taskNesting);
     Value global = Value::adopt(ctx, JS_GetGlobalObject(ctx));
     if (!JS_IsUndefined(timer->function.value)) {
-        // The callback may clear this timer, which frees the entry: call through references of our own. The copies
-        // are charged first.
-        charge(ctx, work::kNodeVisit * uint64_t(timer->arguments.size()));
+        // The callback may clear this timer, which frees the entry: call through references of our own.
         Value fn = Value::dup(ctx, timer->function.value);
         Vector<Value> arguments{JSAllocator<Value>(m_rt)};
         Vector<JSValueConst> argv{JSAllocator<JSValueConst>(m_rt)};
@@ -139,10 +134,8 @@ void Timers::fire(JSContext* ctx, int32_t id, uint64_t handle, int taskNesting) 
     } else {
         // HTML: create a classic script from the string and run it (its exception is reported by runScript).
         String source = String::adopt(ctx, JS_DupValue(ctx, timer->source.value));
-        chargeScan(ctx, source.length());
         std::string code = source.utf8();
         String url = DOMState::of(ctx).document().URL(ctx);
-        chargeScan(ctx, url.length());
         std::string filename = url.utf8();
         Runtime::from(ctx).runScript(code, filename.c_str(), false);
     }
@@ -180,7 +173,6 @@ void Timers::clear(JSContext* ctx, int32_t id) {
 
 void Timers::erase(JSContext* ctx, int32_t id) {
     for (size_t i = 0; i < m_active.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         if (m_active[i].id == id) {
             this->removeAt(i);
             return;

@@ -201,8 +201,8 @@ size_t longestGumboTagName() {
 }
 
 /// gumbo's tag for an element's local name. Only an ASCII name no longer than gumbo's longest can be one of its tags,
-/// so any other is unknown without being read past that length: a local name can be megabytes long, and this lookup
-/// is charged nothing (Task 18, fix round 1).
+/// so any other is unknown without being read past that length: a local name can be megabytes long (Task 18, fix
+/// round 1).
 GumboTag tagOfLocalName(JSContext* ctx, JSAtom localName) {
     String name = String::fromAtom(ctx, localName);
     JSStringView v = name.view();
@@ -331,8 +331,7 @@ ParseOutcome parseDocumentInto(JSContext* ctx, Document& document, std::string_v
     return ParseOutcome{output->stopped_at_node_limit, output->stopped_at_attribute_limit};
 }
 
-Ref<DocumentFragment> parseFragment(JSContext* ctx, Element& context, std::string_view html, const ParseLimits& limits, uint64_t prechargedBytes) {
-    charge(ctx, (uint64_t(html.size()) - std::min<uint64_t>(prechargedBytes, html.size())) * work::kParseByte);
+Ref<DocumentFragment> parseFragment(JSContext* ctx, Element& context, std::string_view html, const ParseLimits& limits) {
     GumboOptions options = optionsFor(limits);
     options.fragment_context = contextTag(ctx, context);
     options.fragment_namespace = context.ns() == Namespace::SVG ? GUMBO_NAMESPACE_SVG : context.ns() == Namespace::MathML ? GUMBO_NAMESPACE_MATHML : GUMBO_NAMESPACE_HTML;

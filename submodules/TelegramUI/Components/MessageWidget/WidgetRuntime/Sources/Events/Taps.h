@@ -84,6 +84,9 @@ public:
     /// a disabled control, a drag claim or a canceled pointerdown or touchstart. The client takes a tap there at once,
     /// as it does a message button's; anywhere else it waits for a double tap, the bubble's (sdk-v1 §5.5).
     bool takesTaps() const { return m_takesTaps; }
+    /// A press whose down task is queued and has not run yet (the newest): claim() and takesTaps() still answer the one
+    /// before it.
+    bool downPending() const { return m_downsRun < m_downsQueued; }
 
 private:
     /// The host side of a pointer, between its down and its up or cancel.
@@ -100,7 +103,7 @@ private:
         /// Its explicit capture: pending (set by script) and current (reported to script).
         Ref<EventTarget> pendingCapture;
         Ref<EventTarget> capture;
-        /// Its number (HostState::beginPress), active while its pointer and mouse events dispatch.
+        /// Its number (HostState::beginPress), active while its pointer and mouse events dispatch, but its contextmenu.
         uint64_t number = 0;
         /// The last position delivered (a move's movementX/Y is from it).
         double lastX = 0;
@@ -146,6 +149,9 @@ private:
     std::vector<std::unique_ptr<Press>> m_presses;
     GestureClaim m_claim;
     bool m_takesTaps = false;
+    /// Down tasks queued, and the serial of the newest that has run (a task dropped by a stop leaves the next to settle).
+    uint64_t m_downsQueued = 0;
+    uint64_t m_downsRun = 0;
 };
 
 } // namespace wr

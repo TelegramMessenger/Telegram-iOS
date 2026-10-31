@@ -34,6 +34,7 @@ import SettingsUI
 import TextNodeWithEntities
 import ChatControllerInteraction
 import ChatMessageItemCommon
+import ChatMessageDateAndStatusNode
 import ChatMessageItemView
 import ChatMessageBubbleItemNode
 import AdsInfoScreen
@@ -2236,7 +2237,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     readStats = MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:])
                 }
 
-                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, isEdit: false, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
+                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, info: nil, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                         if let stats, stats.peers.isEmpty {
                             c.dismiss(completion: {
@@ -2332,11 +2333,43 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        // Bubble mode off: a message shows no time of its own (the first of a run has it next to the name) and a post no
+        // signature, so an incoming message's menu starts with them, in one block with the other rows about the message
+        // (spec 5.9).
+        var isMessageOptions = false
+        if case .messageOptions = chatPresentationInterfaceState.subject {
+            isMessageOptions = true
+        }
+        let showsBubblelessInfoRows = !chatPresentationInterfaceState.bubbleCorners.bubbleMode && chatMessageBubblelessMenuShowsInfoRows(bubbleMode: false, isMessageOptions: isMessageOptions, incoming: message.effectivelyIncoming(context.account.peerId), isAd: message.adAttribute != nil, isService: chatMessageMediaKind(message) == .service)
+        
         if isEdited {
             if !actions.isEmpty {
                 actions.insert(.separator, at: 0)
             }
-            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
+            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, info: .edited, usesInfoRowMetrics: showsBubblelessInfoRows, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
+        }
+        
+        if showsBubblelessInfoRows {
+            let noStats = MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:])
+            var authorTitle = messageTimestampStatusAuthorTitle(context: context, message: EngineMessage(message), strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
+            if authorTitle?.isEmpty == true {
+                authorTitle = nil
+            }
+            // The "Edited" row shows when the message was sent where the server asks for it (`infoText()`).
+            let editedRowShowsSentTime = isEdited && (context.getAppConfigValue("message_primary_edited_date") as? Bool ?? false)
+            let infoRows: [ContextMenuItem] = chatMessageBubblelessMenuInfoRows(hasAuthor: authorTitle != nil, editedRowShowsSentTime: editedRowShowsSentTime).map { row in
+                switch row {
+                case .sent:
+                    return .custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, info: .sent, usesInfoRowMetrics: true, stats: noStats, action: nil), false)
+                case .author:
+                    return .custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, info: .author(authorTitle ?? ""), usesInfoRowMetrics: true, stats: noStats, action: nil), false)
+                }
+            }
+            if let first = actions.first, case let .custom(firstItem, _) = first, firstItem is ChatReadReportContextItem {
+            } else if !actions.isEmpty && !infoRows.isEmpty {
+                actions.insert(.separator, at: 0)
+            }
+            actions.insert(contentsOf: infoRows, at: editedRowShowsSentTime ? 1 : 0)
         }
         
         if !actions.isEmpty, case .separator = actions[0] {
@@ -3304,18 +3337,31 @@ private final class ChatMessageAuthorContextItemNode: ASDisplayNode, ContextMenu
 }
 
 final class ChatReadReportContextItem: ContextMenuCustomItem {
+    /// A row about the message itself rather than about who read it or reacted to it.
+    enum Info {
+        case edited
+        /// Bubble mode off: when the message was sent, since only the first message of a run shows its time.
+        case sent
+        /// Bubble mode off: who signed a post, since its header shows just the time.
+        case author(String)
+    }
+    
     fileprivate let context: AccountContext
     fileprivate let message: EngineRawMessage
     fileprivate let hasReadReports: Bool
-    fileprivate let isEdit: Bool
+    fileprivate let info: Info?
+    /// The compact row (private chats' metrics): the bubble-free info rows, and the "Edited" row among them. Groups and
+    /// channels otherwise keep master's.
+    fileprivate let usesInfoRowMetrics: Bool
     fileprivate let stats: MessageReadStats?
     fileprivate let action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?
 
-    init(context: AccountContext, message: EngineRawMessage, hasReadReports: Bool, isEdit: Bool, stats: MessageReadStats?, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?) {
+    init(context: AccountContext, message: EngineRawMessage, hasReadReports: Bool, info: Info?, usesInfoRowMetrics: Bool = false, stats: MessageReadStats?, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?) {
         self.context = context
         self.message = message
         self.hasReadReports = hasReadReports
-        self.isEdit = isEdit
+        self.info = info
+        self.usesInfoRowMetrics = usesInfoRowMetrics
         self.stats = stats
         self.action = action
     }
@@ -3389,11 +3435,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
 
         self.iconNode = ASImageNode()
-        if self.item.isEdit {
-            if let useEditedTimestamp = self.item.context.getAppConfigValue("message_primary_edited_date") as? Bool, useEditedTimestamp {
+        if let info = self.item.info {
+            switch info {
+            case .edited:
+                if let useEditedTimestamp = self.item.context.getAppConfigValue("message_primary_edited_date") as? Bool, useEditedTimestamp {
+                    self.iconNode.image = generateScaledImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Time"), color: presentationData.theme.contextMenu.primaryColor), size: CGSize(width: 20.0, height: 20.0), opaque: false)
+                } else {
+                    self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuEditIcon"), color: presentationData.theme.contextMenu.primaryColor)
+                }
+            case .sent:
                 self.iconNode.image = generateScaledImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Time"), color: presentationData.theme.contextMenu.primaryColor), size: CGSize(width: 20.0, height: 20.0), opaque: false)
-            } else {
-                self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuEditIcon"), color: presentationData.theme.contextMenu.primaryColor)
+            case .author:
+                self.iconNode.image = generateScaledImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: presentationData.theme.contextMenu.primaryColor), size: CGSize(width: 20.0, height: 20.0), opaque: false)
             }
         } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: presentationData.theme.contextMenu.primaryColor)
@@ -3431,7 +3484,15 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             }
         }
         
-        if !customEmojiFiles.isEmpty {
+        var isBubblelessInfoRow = false
+        switch item.info {
+        case .sent, .author:
+            // The bubble-free info rows offer no reaction tips.
+            isBubblelessInfoRow = true
+        case .edited, nil:
+            break
+        }
+        if !customEmojiFiles.isEmpty, !isBubblelessInfoRow {
             self.customEmojiPacksDisposable = (item.context.engine.stickers.resolveInlineStickers(fileIds: Array(customEmojiFiles))
             |> mapToSignal { customEmoji -> Signal<([StickerPackCollectionInfo], TelegramMediaFile?), NoError> in
                 var stickerPackSignals: [Signal<StickerPackCollectionInfo?, NoError>] = []
@@ -3500,7 +3561,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             })
         }
         
-        if !self.item.isEdit {
+        if self.item.info == nil {
             item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
         }
     }
@@ -3520,6 +3581,50 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
 
+    private func timestampText(_ timestamp: Int32, today: @escaping (String) -> String, yesterday: @escaping (String) -> String, date: @escaping (String) -> String) -> String {
+        return humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+            dateFormatString: { value in
+                return PresentationStrings.FormattedString(string: date(value), ranges: [])
+            },
+            tomorrowFormatString: { value in
+                return PresentationStrings.FormattedString(string: today(value), ranges: [])
+            },
+            todayFormatString: { value in
+                return PresentationStrings.FormattedString(string: today(value), ranges: [])
+            },
+            yesterdayFormatString: { value in
+                return PresentationStrings.FormattedString(string: yesterday(value), ranges: [])
+            }
+        )).string
+    }
+    
+    private func sentTimestampText(_ timestamp: Int32) -> String {
+        let strings = self.presentationData.strings
+        return self.timestampText(timestamp, today: { strings.Chat_PrivateMessageSentTimestamp_TodayAt($0).string }, yesterday: { strings.Chat_PrivateMessageSentTimestamp_YesterdayAt($0).string }, date: { strings.Chat_PrivateMessageSentTimestamp_Date($0).string })
+    }
+    
+    /// The line of a row about the message itself, if this is one.
+    private func infoText() -> String? {
+        guard let info = self.item.info else {
+            return nil
+        }
+        switch info {
+        case .edited:
+            guard let editedTime = self.item.message.editedTime, editedTime != 0 else {
+                return nil
+            }
+            if let useEditedTimestamp = self.item.context.getAppConfigValue("message_primary_edited_date") as? Bool, useEditedTimestamp {
+                return self.sentTimestampText(self.item.message.timestamp)
+            }
+            let strings = self.presentationData.strings
+            return self.timestampText(editedTime, today: { strings.Chat_PrivateMessageEditTimestamp_TodayAt($0).string }, yesterday: { strings.Chat_PrivateMessageEditTimestamp_YesterdayAt($0).string }, date: { strings.Chat_PrivateMessageEditTimestamp_Date($0).string })
+        case .sent:
+            return self.sentTimestampText(self.item.message.timestamp)
+        case let .author(title):
+            return title
+        }
+    }
+    
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
         if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
             self.buttonNode.isUserInteractionEnabled = self.item.action != nil && stats.peers.isEmpty
@@ -3542,7 +3647,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         let verticalInset: CGFloat
         let rightTextInset: CGFloat
         
-        if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        if chatReadReportRowUsesCompactMetrics(isCloudUserChat: self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser, isBubblelessInfoRow: self.item.usesInfoRowMetrics) {
             verticalInset = 7.0
             rightTextInset = 8.0
         } else {
@@ -3568,41 +3673,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             reactionCount = currentStats.reactionCount
             
             if currentStats.peers.isEmpty {
-                if self.item.isEdit, let editedTime = self.item.message.editedTime, editedTime != 0 {
-                    let dateText: String
-                    if let useEditedTimestamp = self.item.context.getAppConfigValue("message_primary_edited_date") as? Bool, useEditedTimestamp {
-                        dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: self.item.message.timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
-                            dateFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSentTimestamp_Date(value).string, ranges: [])
-                            },
-                            tomorrowFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSentTimestamp_TodayAt(value).string, ranges: [])
-                            },
-                            todayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSentTimestamp_TodayAt(value).string, ranges: [])
-                            },
-                            yesterdayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSentTimestamp_YesterdayAt(value).string, ranges: [])
-                            }
-                        )).string
-                    } else {
-                        dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: editedTime, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
-                            dateFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_Date(value).string, ranges: [])
-                            },
-                            tomorrowFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
-                            },
-                            todayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
-                            },
-                            yesterdayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_YesterdayAt(value).string, ranges: [])
-                            }
-                        )).string
-                    }
-                    
-                    self.textNode.attributedText = NSAttributedString(string: dateText, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                if let infoText = self.infoText() {
+                    self.textNode.attributedText = NSAttributedString(string: infoText, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                     let text = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadAvailablePrefix, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
                     if self.textNode.attributedText != text {
@@ -3771,7 +3843,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
             if !iconSize.width.isZero {
                 var iconFrame = CGRect(origin: CGPoint(x: sideInset + 6.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-                if self.item.isEdit {
+                if self.item.info != nil {
                     iconFrame.origin.x += 1.0
                 }
                 transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
@@ -3781,7 +3853,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
 
             var avatarsPeers: [EnginePeer] = []
-            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser || self.item.isEdit {
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser || self.item.info != nil {
             } else if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
                 for recentPeer in recentPeers {
                     if let peer = self.item.message.peers[recentPeer.peerId] {
@@ -3866,7 +3938,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         if self.item.action == nil {
             return false
         }
-        if self.item.isEdit {
+        if self.item.info != nil {
             return false
         }
         if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {

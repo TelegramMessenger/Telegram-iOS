@@ -17,7 +17,6 @@ static bool looksLikeCustomElementName(JSContext* ctx, JSAtom name) {
     while (i < s.length() && s.at(i) != '-') {
         i++;
     }
-    chargeScan(ctx, i);
     return i < s.length();
 }
 

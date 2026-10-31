@@ -101,6 +101,10 @@ struct RenderOptions {
     /// which the root element takes after its own style attribute (twidget edit 26). installRender sets them from the
     /// HostState's theme; HostState keeps them current.
     std::string rootDeclarations;
+    /// SDK v1 §2.17 (widget-sandbox v0.4.0): the six --tg-content-safe-area-* declarations, each !important, which the
+    /// root takes after the theme's. installRender sets them from the HostState's content safe area (0px until the host
+    /// says); HostState keeps them current. Apart from the theme's, so either changes alone.
+    std::string contentSafeAreaDeclarations;
     /// The spec renderer's root CSS (widget-sandbox v0.1.1, `packages/core/src/host/shadow-renderer.ts`), without its
     /// `:where()`: in the master sheet the author's rules win over it whatever their specificity. The body's margin is
     /// the UA layer's (the padding token), which ranks above this sheet (twidget edit 41).
@@ -116,6 +120,21 @@ struct RenderOptions {
     /// prefers-reduced-motion (twidget edit 29.5): reduce when true, the system's Reduce Motion (HostState::setReducedMotion,
     /// WRSession's setReducedMotion:); no preference until the host says.
     bool reducedMotion = false;
+    /// Ruling E19: whether the boot's build cuts its matching at litehtml's 4,000,000 selector steps (a hostile boot);
+    /// every patch is held to kPatchSelectorSteps (RenderTree.h). Off in the tests' fresh trees, which stand for what a
+    /// patched document must equal.
+    bool selectorStepCut = true;
 };
+
+/// What the root takes after its own style (twidget edit 26): the theme's declarations, then the content safe area's.
+inline std::string rootDeclarationsOf(const RenderOptions& options) {
+    if (options.contentSafeAreaDeclarations.empty()) {
+        return options.rootDeclarations;
+    }
+    if (options.rootDeclarations.empty()) {
+        return options.contentSafeAreaDeclarations;
+    }
+    return options.rootDeclarations + ";" + options.contentSafeAreaDeclarations;
+}
 
 } // namespace wr

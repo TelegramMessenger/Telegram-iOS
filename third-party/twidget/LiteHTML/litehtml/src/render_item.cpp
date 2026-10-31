@@ -1670,8 +1670,13 @@ void litehtml::render_item::draw_children(uint_ptr hdc, pixel_t x, pixel_t y, co
                     }
                 } else
                 {
+                    // Telegram (VENDOR.md edit 86): an inline-flex or inline-grid paints its children in its own context
+                    // (draw_inlines above), as an inline-block does; this pass reaching them again painted its
+                    // blockified items twice.
                     if(el->src_el()->css().get_float() == float_none &&
-                       el->src_el()->css().get_display() != display_inline_block && !el->src_el()->is_positioned())
+                       el->src_el()->css().get_display() != display_inline_block &&
+                       el->src_el()->css().get_display() != display_inline_flex &&
+                       el->src_el()->css().get_display() != display_inline_grid && !el->src_el()->is_positioned())
                     {
                         el->draw_children(hdc, pos.x, pos.y, clip, flag, zindex);
                     }

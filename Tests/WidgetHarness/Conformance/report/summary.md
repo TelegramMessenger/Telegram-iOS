@@ -1,14 +1,14 @@
 # Conformance results
 
-Generated 2026-10-27 10:10 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ 88285a3b; policy strict, features webAnimations).
+Generated 2026-10-30 10:10 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ 9a27e70; policy strict, features webAnimations).
 
 Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail, ⏳ expected to fail (not implemented yet: D23, the profile in the validator, …), ❗ passes although expected to fail, – not applicable here, · not tested. For **out** features "pass" means *neutralised as the profile says*. The native columns are a plain browser engine without the pipeline: a reference for the tests, not an expectation.
 
 ## Totals
 
-| Renderer | in (188) ✅ / ◐ / ❌ / ⏳ | out (79) neutralised ✅ / not yet ⏳ / ❌ | auto runs loaded | errors |
+| Renderer | in (199) ✅ / ◐ / ❌ / ⏳ | out (78) neutralised ✅ / not yet ⏳ / ❌ | auto runs loaded | errors |
 |---|---|---|---|---|
-| ios telegram-native | 171 / 2 / 0 / 0 | 75 / 0 / 0 | 53 / 53 | 0 |
+| ios telegram-native | 179 / 2 / 0 / 0 | 74 / 0 / 0 | 62 / 62 | 0 |
 
 ## In the profile
 
@@ -93,6 +93,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `css.value.custom-properties` | ✅ | ✅ |
 | `css.value.keywords` | ✅ | ✅ |
 | `css.value.content` | ✅ | ✅ |
+| `css.value.env` | ✅ | ✅ |
 | `sel.basic` | ✅ | ✅ |
 | `sel.structural` | ✅ | ✅ |
 | `sel.is-where` | ✅ | ✅ |
@@ -156,6 +157,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `tw.events` | ✅ | – |
 | `tw.is-active` | ✅ | – |
 | `tw.resize-anchor` | ✅ | – |
+| `tw.content-safe-area` | ✅ | ✅ |
 | `tw.bot-data` | ✅ | – |
 | `tw.context` | ✅ | – |
 | `tw.request` | ✅ | – |
@@ -182,6 +184,14 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `limit.cpu` | · | · |
 | `limit.memory` | · | · |
 | `limit.storage` | ✅ | – |
+| `limit.attribute` | ✅ | ✅ |
+| `limit.batch` | ✅ | – |
+| `limit.css-rules` | ✅ | – |
+| `limit.canvas-commands` | ✅ | – |
+| `limit.animations` | · | · |
+| `limit.main-thread` | · | · |
+| `limit.canvas-pixels` | ✅ | – |
+| `limit.image-pixels` | ✅ | ✅ |
 | `limit.url-length` | ✅ | – |
 | `limit.event-handlers` | ✅ | – |
 | `limit.haptic-rate` | ✅ | – |
@@ -196,6 +206,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `behaviour.storage-forward` | · | · |
 | `behaviour.message-edit` | · | · |
 | `behaviour.resize-anchor` | · | · |
+| `behaviour.time-corner` | · | · |
 | `behaviour.data-edit` | · | · |
 | `behaviour.forward-copy` | · | · |
 | `behaviour.preview` | · | · |
@@ -247,7 +258,6 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `css.clip-path` | ✅ | · |
 | `css.mask` | ✅ | · |
 | `css.value.vh` | ✅ | ❌ |
-| `css.value.env` | ✅ | ❌ |
 | `sel.has` | ✅ | ❌ |
 | `sel.first-letter-line` | ✅ | ❌ |
 | `sel.focus` | ✅ | ❌ |
@@ -320,6 +330,7 @@ For people (the test channel): judged by eye. Runners only check that each widge
 | visual/14-unstyled-document | ✅ |
 | visual/15-body-background | ✅ |
 | visual/16-selection | ✅ |
+| visual/17-time-corner | ✅ |
 | visual/sdk/01-link-external | ✅ |
 | visual/sdk/02-link-telegram | ✅ |
 | visual/sdk/03-link-rejected | ✅ |

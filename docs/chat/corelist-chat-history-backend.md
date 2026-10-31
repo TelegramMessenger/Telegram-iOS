@@ -27,6 +27,24 @@ drifted when the default moved and the Debug Settings switch stopped being the w
 See the "ChatHistoryListNode composition" section of `submodules/TelegramUI/Sources/CLAUDE.md` for the backend seam
 (`ChatHistoryListViewBackend`) this conforms to.
 
+## Scroll trace
+
+Debug Settings ▸ "Chat: CoreList scroll trace" (`ExperimentalUISettings.coreListScrollTrace`) switches CoreList's
+`FlightTrace` on for the app whenever a chat's list is made (`makeCoreListChatHistoryBackend(rotated:scrollTrace:)`), so
+reopen the chat after toggling it. Lines go to the app's log (tag `CoreListScroll`, so they arrive with Send Logs) and
+to `Documents/flight-trace.txt` in the app's own container (moved to `flight-trace.1.txt` past 8 MB), each starting with
+the media time, the clock touch timestamps share:
+
+- the engine: `TOUCH-DOWN`, every `PAN` event, `RELEASE` (the velocity it decelerates at, the repeated-flick multiplier
+  and streak), the flight (`launch`, `CATCH`, `shift`, `REBAKE`, `FINALIZE`), and each programmatic offset write
+  (`SET-OFFSET`, `HALT`, `REANCHOR-DRAG`) with the functions that called it (mangled: `xcrun swift-demangle`);
+- the backend: each `TX` with what the chat asked for (scroll target, stationary range, options in hex) and its `TX-END`,
+  `RANGE` changes, overscroll holds, each with the offset, the displayed range and the timestamps of the messages at
+  its two ends, which is what tells a jump from a scroll.
+
+From a device: `xcrun devicectl device copy from --device <id> --domain-type appDataContainer --domain-identifier
+ph.telegra.Telegraph --source Documents/flight-trace.txt --destination <file>`.
+
 ## Scope
 
 The backend targets **display / scroll / load-more only**. Every `ChatHistoryListViewBackend` member
@@ -727,6 +745,16 @@ chat reads `abs(offset) <= 0.9` as "pinned to the newest message"
   through a later pass whose transaction already reported its settled offset, and a mid-flight sample
   would move the chrome (the go-down button, the overscroll control). With nothing in flight the two
   geometries agree, or a drag is under way and the scroll path reports presented every frame anyway.
+  The landing comes when the pass's whole duration has elapsed: 1.15s for the go-down button's
+  smooth-deceleration scroll, which looks finished after about 0.4s. A chat left in between (Back to a
+  forum's topic list, about 0.75s after the tap in the report) stopped reading at `viewWillDisappear`
+  before the landing, so the topic kept its unread count. `ChatController.viewWillDisappear` therefore
+  calls `ChatHistoryListNodeImpl.readVisibleMessagesBeforeLeaving()` before it turns `canReadHistory`
+  off: the same read of the rows on screen, in presented geometry. Switching in place to another chat
+  location (another topic from a forum's side list or tabs) skips `viewWillDisappear` and removes the
+  old history node after its 0.4s slide-out, usually before its landing, so `ChatControllerNode` makes
+  the same call on the outgoing node when it swaps them. Which rows count is
+  `chatHistoryMaxVisibleReadIndex` (`ChatControllerInteraction`, with its tests).
 
 **Why `ListViewImpl` needs no such distinction:** its model *is* its presented geometry.
 `replayOperations` writes final item-node frames immediately and animates the layers additively, so the

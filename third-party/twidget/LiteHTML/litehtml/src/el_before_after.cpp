@@ -50,6 +50,9 @@ void litehtml::el_before_after_base::add_style(const style& style)
 
     auto children = m_children;
     m_children.clear();
+    // Telegram (VENDOR.md edit 84): the content made before stays alive, and counted, while this one is made.
+    if(const auto doc = get_document())
+        doc->note_generated_transient(int(children.size()));
 
     const auto& content_property = style.get_property(_content_);
     if(content_property.is<std::string>() && !content_property.get<std::string>().empty())
@@ -122,6 +125,7 @@ void litehtml::el_before_after_base::add_style(const style& style)
 
 void litehtml::el_before_after_base::add_text(const std::string& txt)
 {
+    const document::generated_scope generated(get_document().get()); // Telegram (VENDOR.md edit 84)
     std::string word;
     std::string esc;
     // Telegram (VENDOR.md edit 10): content is made again on every restyle, for every element it matches, so it
@@ -213,11 +217,13 @@ void litehtml::el_before_after_base::add_function(const std::string& fnc, const 
         break;
     // counter
     case 1:
+        m_reads_counters = true; // Telegram (VENDOR.md edit 78)
         add_text(get_counter_value(params));
         break;
     // counters
     case 2:
         {
+            m_reads_counters = true; // Telegram (VENDOR.md edit 78)
             string_vector tokens;
             split_string(params, tokens, ",");
             for(auto& str : tokens)

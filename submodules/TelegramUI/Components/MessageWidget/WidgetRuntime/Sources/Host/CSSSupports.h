@@ -11,8 +11,8 @@
 
 namespace wr::css {
 
-/// Whether the profile keeps `property: value` (policy::supported of CSSPolicy.h's verdict): `loweredProperty` trimmed and ASCII-lowercased,
-/// `value` its component values. Charges work::kNodeVisit per value walked. Throws Thrown (a stop).
+/// Whether the profile keeps `property: value` (policy::supported of CSSPolicy.h's verdict): `loweredProperty` trimmed
+/// and ASCII-lowercased, `value` its component values.
 bool supportsDeclaration(JSContext* ctx, std::string_view loweredProperty, std::span<const litehtml::css_token> value);
 /// CSS.supports(property, value): the property trimmed and ASCII-lowercased, the value componentized (false past the
 /// caps). Throws Thrown.

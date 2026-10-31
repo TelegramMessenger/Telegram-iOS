@@ -9,9 +9,9 @@
 #include "Sources/Canvas/ImageElement.h"
 #include "Sources/Host/HostState.h"
 #include "Sources/Render/RenderTree.h"
+#include "Sources/Runtime/LimitStops.h"
 #include "Sources/Host/Sequences.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -45,13 +45,6 @@ bool evenodd(JSContext* ctx, const Value& v, const char* member, int index) {
 }
 
 Path2D* asPath(JSContext* ctx, const Value& v) { return unwrap<Path2D>(ctx, v.get(), idl::kPath2D); }
-
-/// A path's data, charged before a call copies it (`flattened`: hit tests, which make 16 segments of each curve; V5d
-/// final review, I1).
-void chargePath(JSContext* ctx, const canvas::PathData& path, bool flattened) {
-    const uint64_t floats = path.geometry.points.size() + path.geometry.verbs.size() * (flattened ? 32 : 1);
-    charge(ctx, floats / 8 * work::kScanEightUnits);
-}
 
 /// A gradient's data, in the JS heap with its stops (V5d final review, C3).
 std::shared_ptr<canvas::GradientData> newGradient(JSContext* ctx) {
@@ -161,7 +154,7 @@ void CanvasRenderingContext2D::resetState(JSContext* ctx, bool clearBitmap) {
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.reset(clearBitmap ? &ops : nullptr);
     if (m_bitmap) {
-        // Charged as any op (V5d final review, I1); a canvas with no bitmap has nothing to clear.
+        // A canvas with no bitmap has nothing to clear.
         run(ctx, ops);
     }
 }
@@ -185,6 +178,9 @@ Value CanvasRenderingContext2D::getContextAttributes(JSContext* ctx) {
 }
 
 void CanvasRenderingContext2D::save(JSContext* ctx) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (m_stack.size() >= canvas::CanvasInterpreter::kMaxStack) {
         m_overflowedSaves++;
     } else {
@@ -196,6 +192,9 @@ void CanvasRenderingContext2D::save(JSContext* ctx) {
 }
 
 void CanvasRenderingContext2D::restore(JSContext* ctx) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_interpreter.restore();
     if (m_overflowedSaves > 0) {
         m_overflowedSaves--;
@@ -210,7 +209,12 @@ void CanvasRenderingContext2D::restore(JSContext* ctx) {
     m_fontValue.reset();
 }
 
-void CanvasRenderingContext2D::reset(JSContext* ctx) { resetState(ctx, true); }
+void CanvasRenderingContext2D::reset(JSContext* ctx) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    resetState(ctx, true);
+}
 
 void CanvasRenderingContext2D::dimensionsChanged(JSContext* ctx) {
     // HTML: the bitmap becomes transparent at the new size and the context goes back to its defaults. The old bitmap
@@ -234,23 +238,11 @@ void CanvasRenderingContext2D::run(JSContext* ctx, std::vector<canvas::CanvasOp>
     if (ops.empty()) {
         return;
     }
-    // The area an op may touch, the clip chain it applies and, for an image, the source pixels it resamples (V5d final
-    // review, I1).
-    double pixels = 0;
-    uint64_t floats = 0, dashes = 0;
     for (const canvas::CanvasOp& op : ops) {
-        pixels += m_interpreter.deviceArea(op);
-        floats += op.clip ? op.clip->floats : 0;
-        if (op.kind == canvas::CanvasOp::Kind::Image) {
-            pixels += double(op.sw) * double(op.sh);
-        }
-        // Each dash is an outline of its own (V5d fix-wave review, C-B).
-        dashes += op.dashSegments;
         if (op.dashDropped) {
             canvas::CanvasState::of(ctx).reportLimit("canvas-dashes");
         }
     }
-    charge(ctx, uint64_t(pixels / 64) * work::kCanvasSixtyFourPixels + floats / 8 * work::kScanEightUnits + dashes);
     if (!m_bitmap) {
         m_bitmap = canvas::CanvasState::of(ctx).allocate(m_interpreter.width(), m_interpreter.height());
         if (!m_bitmap) {
@@ -271,17 +263,38 @@ void CanvasRenderingContext2D::painted(JSContext* ctx) {
 
 // Transforms.
 
-void CanvasRenderingContext2D::scale(JSContext*, Unrestricted x, Unrestricted y) { m_interpreter.scale(x.value, y.value); }
-void CanvasRenderingContext2D::rotate(JSContext*, Unrestricted angle) { m_interpreter.rotate(angle.value); }
-void CanvasRenderingContext2D::translate(JSContext*, Unrestricted x, Unrestricted y) { m_interpreter.translate(x.value, y.value); }
-void CanvasRenderingContext2D::transform(JSContext*, Unrestricted a, Unrestricted b, Unrestricted c, Unrestricted d,
+void CanvasRenderingContext2D::scale(JSContext* ctx, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    m_interpreter.scale(x.value, y.value);
+}
+void CanvasRenderingContext2D::rotate(JSContext* ctx, Unrestricted angle) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    m_interpreter.rotate(angle.value);
+}
+void CanvasRenderingContext2D::translate(JSContext* ctx, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    m_interpreter.translate(x.value, y.value);
+}
+void CanvasRenderingContext2D::transform(JSContext* ctx, Unrestricted a, Unrestricted b, Unrestricted c, Unrestricted d,
                                          Unrestricted e, Unrestricted f) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_interpreter.transform(a.value, b.value, c.value, d.value, e.value, f.value);
 }
 
 Ref<DOMMatrix> CanvasRenderingContext2D::getTransform(JSContext* ctx) { return DOMMatrix::fromMatrix(ctx, m_interpreter.matrix()); }
 
 void CanvasRenderingContext2D::setTransform(JSContext* ctx, std::vector<Value> args) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (args.size() == 6) {
         double v[6];
         for (int i = 0; i < 6; i++) {
@@ -299,18 +312,29 @@ void CanvasRenderingContext2D::setTransform(JSContext* ctx, std::vector<Value> a
     m_interpreter.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
 }
 
-void CanvasRenderingContext2D::resetTransform(JSContext*) { m_interpreter.resetTransform(); }
+void CanvasRenderingContext2D::resetTransform(JSContext* ctx) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    m_interpreter.resetTransform();
+}
 
 // Compositing, smoothing, shadows, filters.
 
-void CanvasRenderingContext2D::setGlobalAlpha(JSContext*, Unrestricted alpha) {
+void CanvasRenderingContext2D::setGlobalAlpha(JSContext* ctx, Unrestricted alpha) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(alpha.value) && alpha.value >= 0 && alpha.value <= 1) {
         m_state.globalAlpha = alpha.value;
         m_interpreter.setGlobalAlpha(alpha.value);
     }
 }
 
-void CanvasRenderingContext2D::setGlobalCompositeOperation(JSContext*, String value) {
+void CanvasRenderingContext2D::setGlobalCompositeOperation(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     // Profile 1: read back, never applied.
     std::string op = value.utf8Prefix(32, nullptr);
     if (isCompositeOperation(op)) {
@@ -318,36 +342,54 @@ void CanvasRenderingContext2D::setGlobalCompositeOperation(JSContext*, String va
     }
 }
 
-void CanvasRenderingContext2D::setImageSmoothingEnabled(JSContext*, bool enabled) {
+void CanvasRenderingContext2D::setImageSmoothingEnabled(JSContext* ctx, bool enabled) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.smoothing = enabled;
     m_interpreter.setImageSmoothing(enabled);
 }
 
-void CanvasRenderingContext2D::setShadowOffsetX(JSContext*, Unrestricted v) {
+void CanvasRenderingContext2D::setShadowOffsetX(JSContext* ctx, Unrestricted v) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(v.value)) {
         m_state.shadowOffsetX = v.value;
     }
 }
 
-void CanvasRenderingContext2D::setShadowOffsetY(JSContext*, Unrestricted v) {
+void CanvasRenderingContext2D::setShadowOffsetY(JSContext* ctx, Unrestricted v) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(v.value)) {
         m_state.shadowOffsetY = v.value;
     }
 }
 
-void CanvasRenderingContext2D::setShadowBlur(JSContext*, Unrestricted v) {
+void CanvasRenderingContext2D::setShadowBlur(JSContext* ctx, Unrestricted v) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(v.value) && v.value >= 0) {
         m_state.shadowBlur = v.value;
     }
 }
 
 void CanvasRenderingContext2D::setShadowColor(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::optional<canvas::Color> color = canvas::parseColor(ctx, value)) {
         m_state.shadowColor = *color;
     }
 }
 
 void CanvasRenderingContext2D::setFilter(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     // Profile 1: read back, never applied. A CSS filter list is not validated here (the out feature's whole effect).
     m_state.filter = makeSharedText(JS_GetRuntime(ctx), value.utf8Prefix(1024, nullptr));
 }
@@ -362,6 +404,9 @@ Value CanvasRenderingContext2D::styleValue(JSContext* ctx, const Style& style) c
 }
 
 void CanvasRenderingContext2D::setStyle(JSContext* ctx, const Value& value, bool fill) {
+    if (!this->command(ctx)) {
+        return;
+    }
     Style& style = fill ? m_state.fill : m_state.stroke;
     JSRuntime* rt = JS_GetRuntime(ctx);
     if (JS_IsString(value.get())) {
@@ -396,6 +441,7 @@ void CanvasRenderingContext2D::setStyle(JSContext* ctx, const Value& value, bool
 }
 
 Ref<CanvasGradient> CanvasRenderingContext2D::createLinearGradient(JSContext* ctx, double x0, double y0, double x1, double y1) {
+    this->command(ctx);
     auto data = newGradient(ctx);
     data->kind = canvas::GradientData::Kind::Linear;
     const double args[] = {x0, y0, x1, y1};
@@ -405,6 +451,7 @@ Ref<CanvasGradient> CanvasRenderingContext2D::createLinearGradient(JSContext* ct
 
 Ref<CanvasGradient> CanvasRenderingContext2D::createRadialGradient(JSContext* ctx, double x0, double y0, double r0, double x1,
                                                                    double y1, double r1) {
+    this->command(ctx);
     if (r0 < 0 || r1 < 0) {
         throw DOMError{"IndexSizeError", "CanvasRenderingContext2D.createRadialGradient: a radius is negative."};
     }
@@ -416,11 +463,13 @@ Ref<CanvasGradient> CanvasRenderingContext2D::createRadialGradient(JSContext* ct
 }
 
 Ref<CanvasGradient> CanvasRenderingContext2D::createConicGradient(JSContext* ctx, double, double, double) {
+    this->command(ctx);
     // Profile 1: a conic gradient paints nothing.
     return create<CanvasGradient>(ctx, idl::kCanvasGradient, newGradient(ctx));
 }
 
 Value CanvasRenderingContext2D::createPattern(JSContext* ctx, Value image, String repetition) {
+    this->command(ctx);
     // HTML: a bad image (not fully decodable) gives null, before the repetition is checked (v0.2.3 review, M2).
     if (!canvasImageSource(ctx, image, "createPattern").usable) {
         return Value::adopt(ctx, JS_NULL);
@@ -436,18 +485,27 @@ Value CanvasRenderingContext2D::createPattern(JSContext* ctx, Value image, Strin
 // Rects.
 
 void CanvasRenderingContext2D::clearRect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h) {
+    if (!this->command(ctx)) {
+        return;
+    }
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.clearRect(x.value, y.value, w.value, h.value, ops);
     run(ctx, ops);
 }
 
 void CanvasRenderingContext2D::fillRect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h) {
+    if (!this->command(ctx)) {
+        return;
+    }
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.fillRect(x.value, y.value, w.value, h.value, ops);
     run(ctx, ops);
 }
 
 void CanvasRenderingContext2D::strokeRect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h) {
+    if (!this->command(ctx)) {
+        return;
+    }
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.strokeRect(x.value, y.value, w.value, h.value, ops);
     run(ctx, ops);
@@ -470,14 +528,19 @@ std::pair<const canvas::PathData*, bool> CanvasRenderingContext2D::pathAndRule(J
 }
 
 void CanvasRenderingContext2D::fill(JSContext* ctx, std::optional<Value> pathOrFillRule, std::optional<Value> fillRule) {
+    if (!this->command(ctx)) {
+        return;
+    }
     auto [path, rule] = pathAndRule(ctx, pathOrFillRule, fillRule, "fill");
-    chargePath(ctx, path ? *path : m_interpreter.currentPath(), false);
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.fill(path, rule, ops);
     run(ctx, ops);
 }
 
 void CanvasRenderingContext2D::stroke(JSContext* ctx, std::optional<Value> path) {
+    if (!this->command(ctx)) {
+        return;
+    }
     const canvas::PathData* data = nullptr;
     if (path) {
         Path2D* p = asPath(ctx, *path);
@@ -486,15 +549,16 @@ void CanvasRenderingContext2D::stroke(JSContext* ctx, std::optional<Value> path)
         }
         data = &p->data();
     }
-    chargePath(ctx, data ? *data : m_interpreter.currentPath(), false);
     std::vector<canvas::CanvasOp> ops;
     m_interpreter.stroke(data, ops);
     run(ctx, ops);
 }
 
 void CanvasRenderingContext2D::clip(JSContext* ctx, std::optional<Value> pathOrFillRule, std::optional<Value> fillRule) {
+    if (!this->command(ctx)) {
+        return;
+    }
     auto [path, rule] = pathAndRule(ctx, pathOrFillRule, fillRule, "clip");
-    chargePath(ctx, path ? *path : m_interpreter.currentPath(), false);
     if (!m_interpreter.clip(path, rule)) {
         canvas::CanvasState::of(ctx).reportLimit("canvas-clips");
     }
@@ -507,12 +571,10 @@ bool CanvasRenderingContext2D::isPointInPath(JSContext* ctx, Value pathOrX, Valu
         }
         const double x = number(ctx, xOrY, "isPointInPath", 1), y = number(ctx, rest[0], "isPointInPath", 2);
         const bool rule = rest.size() > 1 && !JS_IsUndefined(rest[1].get()) ? evenodd(ctx, rest[1], "isPointInPath", 3) : false;
-        chargePath(ctx, path->data(), true);
         return m_interpreter.isPointInPath(&path->data(), x, y, rule);
     }
     const double x = number(ctx, pathOrX, "isPointInPath", 0), y = number(ctx, xOrY, "isPointInPath", 1);
     const bool rule = !rest.empty() && !JS_IsUndefined(rest[0].get()) ? evenodd(ctx, rest[0], "isPointInPath", 2) : false;
-    chargePath(ctx, m_interpreter.currentPath(), true);
     return m_interpreter.isPointInPath(nullptr, x, y, rule);
 }
 
@@ -522,71 +584,113 @@ bool CanvasRenderingContext2D::isPointInStroke(JSContext* ctx, Value pathOrX, Va
             throw TypeError{"CanvasRenderingContext2D.isPointInStroke: a Path2D needs x and y."};
         }
         const double px = number(ctx, xOrY, "isPointInStroke", 1), py = number(ctx, *y, "isPointInStroke", 2);
-        chargePath(ctx, path->data(), true);
         return m_interpreter.isPointInStroke(&path->data(), px, py);
     }
     const double px = number(ctx, pathOrX, "isPointInStroke", 0), py = number(ctx, xOrY, "isPointInStroke", 1);
-    chargePath(ctx, m_interpreter.currentPath(), true);
     return m_interpreter.isPointInStroke(nullptr, px, py);
 }
 
-void CanvasRenderingContext2D::closePath(JSContext*) { canvas::path::closePath(m_interpreter.currentPath()); }
-void CanvasRenderingContext2D::moveTo(JSContext*, Unrestricted x, Unrestricted y) {
+void CanvasRenderingContext2D::closePath(JSContext* ctx) {
+    if (!this->command(ctx)) {
+        return;
+    }
+    canvas::path::closePath(m_interpreter.currentPath());
+}
+void CanvasRenderingContext2D::moveTo(JSContext* ctx, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
     canvas::path::moveTo(m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value);
 }
-void CanvasRenderingContext2D::lineTo(JSContext*, Unrestricted x, Unrestricted y) {
+void CanvasRenderingContext2D::lineTo(JSContext* ctx, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
     canvas::path::lineTo(m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value);
 }
-void CanvasRenderingContext2D::quadraticCurveTo(JSContext*, Unrestricted cpx, Unrestricted cpy, Unrestricted x, Unrestricted y) {
+void CanvasRenderingContext2D::quadraticCurveTo(JSContext* ctx, Unrestricted cpx, Unrestricted cpy, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
     canvas::path::quadraticCurveTo(m_interpreter.currentPath(), m_interpreter.matrix(), cpx.value, cpy.value, x.value, y.value);
 }
-void CanvasRenderingContext2D::bezierCurveTo(JSContext*, Unrestricted cp1x, Unrestricted cp1y, Unrestricted cp2x,
+void CanvasRenderingContext2D::bezierCurveTo(JSContext* ctx, Unrestricted cp1x, Unrestricted cp1y, Unrestricted cp2x,
                                              Unrestricted cp2y, Unrestricted x, Unrestricted y) {
+    if (!this->command(ctx)) {
+        return;
+    }
     canvas::path::bezierCurveTo(m_interpreter.currentPath(), m_interpreter.matrix(), cp1x.value, cp1y.value, cp2x.value,
                                 cp2y.value, x.value, y.value);
 }
-void CanvasRenderingContext2D::arcTo(JSContext*, Unrestricted x1, Unrestricted y1, Unrestricted x2, Unrestricted y2,
+void CanvasRenderingContext2D::arcTo(JSContext* ctx, Unrestricted x1, Unrestricted y1, Unrestricted x2, Unrestricted y2,
                                      Unrestricted radius) {
+    if (!this->command(ctx)) {
+        return;
+    }
     pathcalls::arcTo(m_interpreter.currentPath(), m_interpreter.matrix(), x1.value, y1.value, x2.value, y2.value, radius.value);
 }
-void CanvasRenderingContext2D::rect(JSContext*, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h) {
+void CanvasRenderingContext2D::rect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h) {
+    if (!this->command(ctx)) {
+        return;
+    }
     canvas::path::rect(m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value, w.value, h.value);
 }
 void CanvasRenderingContext2D::roundRect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h,
                                          std::optional<Value> radii) {
+    if (!this->command(ctx)) {
+        return;
+    }
     pathcalls::roundRect(ctx, m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value, w.value, h.value, radii);
 }
-void CanvasRenderingContext2D::arc(JSContext*, Unrestricted x, Unrestricted y, Unrestricted radius, Unrestricted start,
+void CanvasRenderingContext2D::arc(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted radius, Unrestricted start,
                                    Unrestricted end, bool counterclockwise) {
+    if (!this->command(ctx)) {
+        return;
+    }
     pathcalls::arc(m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value, radius.value, start.value, end.value,
                    counterclockwise);
 }
-void CanvasRenderingContext2D::ellipse(JSContext*, Unrestricted x, Unrestricted y, Unrestricted rx, Unrestricted ry,
+void CanvasRenderingContext2D::ellipse(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted rx, Unrestricted ry,
                                        Unrestricted rotation, Unrestricted start, Unrestricted end, bool counterclockwise) {
+    if (!this->command(ctx)) {
+        return;
+    }
     pathcalls::ellipse(m_interpreter.currentPath(), m_interpreter.matrix(), x.value, y.value, rx.value, ry.value, rotation.value,
                        start.value, end.value, counterclockwise);
 }
 
 // Line styles.
 
-void CanvasRenderingContext2D::setLineWidth(JSContext*, Unrestricted width) {
+void CanvasRenderingContext2D::setLineWidth(JSContext* ctx, Unrestricted width) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(width.value) && width.value > 0) {
         m_state.lineWidth = width.value;
         m_interpreter.setLineWidth(width.value);
     }
 }
 
-void CanvasRenderingContext2D::setLineCap(JSContext*, String cap) {
+void CanvasRenderingContext2D::setLineCap(JSContext* ctx, String cap) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.lineCap = cap.utf8();
     m_interpreter.setLineCap(m_state.lineCap == "round" ? 1 : m_state.lineCap == "square" ? 2 : 0);
 }
 
-void CanvasRenderingContext2D::setLineJoin(JSContext*, String join) {
+void CanvasRenderingContext2D::setLineJoin(JSContext* ctx, String join) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.lineJoin = join.utf8();
     m_interpreter.setLineJoin(m_state.lineJoin == "round" ? 1 : m_state.lineJoin == "bevel" ? 2 : 0);
 }
 
-void CanvasRenderingContext2D::setMiterLimit(JSContext*, Unrestricted limit) {
+void CanvasRenderingContext2D::setMiterLimit(JSContext* ctx, Unrestricted limit) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(limit.value) && limit.value > 0) {
         m_state.miterLimit = limit.value;
         m_interpreter.setMiterLimit(limit.value);
@@ -594,6 +698,9 @@ void CanvasRenderingContext2D::setMiterLimit(JSContext*, Unrestricted limit) {
 }
 
 void CanvasRenderingContext2D::setLineDash(JSContext* ctx, Value segments) {
+    if (!this->command(ctx)) {
+        return;
+    }
     // A sequence<unrestricted double>: read one past the cap, so a longer one is ignored without being read whole.
     std::optional<std::vector<Value>> items =
         JS_IsObject(segments.get()) ? sequenceValues(ctx, segments.get(), "CanvasRenderingContext2D.setLineDash",
@@ -617,7 +724,10 @@ std::vector<Unrestricted> CanvasRenderingContext2D::getLineDash(JSContext*) cons
     return out;
 }
 
-void CanvasRenderingContext2D::setLineDashOffset(JSContext*, Unrestricted offset) {
+void CanvasRenderingContext2D::setLineDashOffset(JSContext* ctx, Unrestricted offset) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::isfinite(offset.value)) {
         m_state.lineDashOffset = offset.value;
         m_interpreter.setLineDashOffset(offset.value);
@@ -627,6 +737,9 @@ void CanvasRenderingContext2D::setLineDashOffset(JSContext*, Unrestricted offset
 // Text styles.
 
 void CanvasRenderingContext2D::setFont(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     std::optional<canvas::FontValue> parsed = canvas::parseFont(ctx, value);
     if (!parsed) {
         return;
@@ -636,22 +749,34 @@ void CanvasRenderingContext2D::setFont(JSContext* ctx, String value) {
     m_fontValue = std::move(parsed);
 }
 
-void CanvasRenderingContext2D::setTextAlign(JSContext*, String value) {
+void CanvasRenderingContext2D::setTextAlign(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.textAlign = value.utf8();
     m_interpreter.setTextAlign(alignOf(m_state.textAlign));
 }
 
-void CanvasRenderingContext2D::setTextBaseline(JSContext*, String value) {
+void CanvasRenderingContext2D::setTextBaseline(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.textBaseline = value.utf8();
     m_interpreter.setTextBaseline(baselineOf(m_state.textBaseline));
 }
 
-void CanvasRenderingContext2D::setDirection(JSContext*, String value) {
+void CanvasRenderingContext2D::setDirection(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     m_state.direction = value.utf8();
     m_interpreter.setRightToLeft(m_state.direction == "rtl");
 }
 
 void CanvasRenderingContext2D::setLetterSpacing(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     // Profile 1: read back, never applied; HTML keeps only a CSS length.
     if (std::optional<std::string> length = canvas::serializedLength(ctx, value)) {
         m_state.letterSpacing = std::move(*length);
@@ -659,6 +784,9 @@ void CanvasRenderingContext2D::setLetterSpacing(JSContext* ctx, String value) {
 }
 
 void CanvasRenderingContext2D::setWordSpacing(JSContext* ctx, String value) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (std::optional<std::string> length = canvas::serializedLength(ctx, value)) {
         m_state.wordSpacing = std::move(*length);
     }
@@ -676,15 +804,42 @@ std::optional<canvas::CanvasHost::Font> CanvasRenderingContext2D::font(std::stri
     return canvas::CanvasState::of(m_ctx).font(*m_fontValue);
 }
 
+bool CanvasRenderingContext2D::command(JSContext* ctx) {
+    Runtime& runtime = Runtime::from(ctx);
+    if (m_commandBatch != runtime.batchSerial()) {
+        m_commandBatch = runtime.batchSerial();
+        m_commands = 0;
+        runtime.addOps(1);
+    }
+    const Limits& limits = runtime.limits();
+    if (m_commands >= limits.canvasCommands) {
+        if (limits.stops) {
+            throw RangeError{"Canvas limit exceeded: more than " + std::to_string(limits.canvasCommands) +
+                             " commands for one canvas in one task (max " + std::to_string(limits.canvasCommands) + ")"};
+        }
+        return false;
+    }
+    m_commands++;
+    runtime.noteCanvasCommand();
+    return true;
+}
+
+void CanvasRenderingContext2D::stopPastTextValue(JSContext* ctx, const String& text) {
+    // limit.text-node (widget-sandbox v0.3.0): a canvas string is a text value; past the cap the widget stops.
+    const Limits& limits = Runtime::from(ctx).limits();
+    if (limits.stops && text.length() > limits.textValueUnits) {
+        stopForTextValue(ctx, text.length());
+    }
+}
+
 double CanvasRenderingContext2D::textWidth(const HostFont& font, std::string_view utf8) {
     return canvas::CanvasState::of(m_ctx).textWidth(font, utf8);
 }
 
 void CanvasRenderingContext2D::text(JSContext* ctx, const String& text, double x, double y, std::optional<Unrestricted> maxWidth,
                                     bool stroke) {
+    stopPastTextValue(ctx, text);
     const std::string utf8 = text.utf8Prefix(canvas::CanvasInterpreter::kMaxTextBytes, nullptr);
-    // Measured and shaped whatever area it covers (V5d final review, I1).
-    charge(ctx, uint64_t(utf8.size()) * work::kCssByte);
     std::vector<canvas::CanvasOp> ops;
     std::optional<double> max = maxWidth ? std::optional<double>(maxWidth->value) : std::nullopt;
     if (stroke) {
@@ -697,22 +852,27 @@ void CanvasRenderingContext2D::text(JSContext* ctx, const String& text, double x
 
 void CanvasRenderingContext2D::fillText(JSContext* ctx, String text, Unrestricted x, Unrestricted y,
                                         std::optional<Unrestricted> maxWidth) {
+    if (!this->command(ctx)) {
+        return;
+    }
     this->text(ctx, text, x.value, y.value, maxWidth, false);
 }
 
 void CanvasRenderingContext2D::strokeText(JSContext* ctx, String text, Unrestricted x, Unrestricted y,
                                           std::optional<Unrestricted> maxWidth) {
+    if (!this->command(ctx)) {
+        return;
+    }
     this->text(ctx, text, x.value, y.value, maxWidth, true);
 }
 
 Ref<TextMetrics> CanvasRenderingContext2D::measureText(JSContext* ctx, String text) {
+    stopPastTextValue(ctx, text);
     TextMetrics::Values v;
     std::optional<Font> font = this->font(textOr(m_state.font, canvas::kDefaultFont));
     if (font && font->font) {
-        // At most kMaxMeasuredBytes, the reference's canvas string cap, converted and charged before it is measured.
-        chargeScan(ctx, std::min<uint32_t>(text.length(), uint32_t(kMaxMeasuredBytes)));
+        // At most kMaxMeasuredBytes, the reference's canvas string cap, converted before it is measured.
         const std::string utf8 = text.utf8Prefix(kMaxMeasuredBytes, nullptr);
-        charge(ctx, uint64_t(utf8.size()) * work::kCssByte);
         v.width = textWidth(*font->font, utf8);
         // The line the text's baseline is placed against, above the alphabetic baseline (positive up).
         const std::string& b = m_state.textBaseline;
@@ -735,6 +895,9 @@ Ref<TextMetrics> CanvasRenderingContext2D::measureText(JSContext* ctx, String te
 // Images.
 
 void CanvasRenderingContext2D::drawImage(JSContext* ctx, Value image, Value a, Value b, std::vector<Value> rest) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (rest.size() != 0 && rest.size() != 2 && rest.size() != 6) {
         throw TypeError{"CanvasRenderingContext2D.drawImage: takes 3, 5 or 9 arguments."};
     }
@@ -751,7 +914,6 @@ void CanvasRenderingContext2D::drawImage(JSContext* ctx, Value image, Value a, V
     if (unwrap<HTMLCanvasElement>(ctx, image.get(), idl::kHTMLCanvasElement) == m_element) {
         // Onto itself: the draw writes to the bitmap its snapshot shares, so the whole bitmap is copied whatever the
         // source rect (V5d fix-wave review, I-D).
-        charge(ctx, uint64_t(source.width * source.height / 64) * work::kCanvasSixtyFourPixels);
     }
     double sx = 0, sy = 0, sw = source.width, sh = source.height, dx, dy, dw = source.width, dh = source.height;
     if (rest.size() == 6) {
@@ -786,6 +948,9 @@ Ref<ImageData> CanvasRenderingContext2D::getImageData(JSContext* ctx, int32_t, i
 }
 
 void CanvasRenderingContext2D::putImageData(JSContext* ctx, Value imageData, Value dx, Value dy, std::vector<Value> dirty) {
+    if (!this->command(ctx)) {
+        return;
+    }
     if (!unwrap<ImageData>(ctx, imageData.get(), idl::kImageData)) {
         throw TypeError{argumentMessage(ArgInfo{kInterface, "putImageData", 0}, "is not an ImageData.")};
     }

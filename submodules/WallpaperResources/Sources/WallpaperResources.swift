@@ -1477,7 +1477,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 }
                 // As soft as the chat draws them (see `bubblelessPresentationTheme`).
                 outgoingColors = bubblelessOutgoingBubbleColors(outgoingColors, dark: theme.overallDarkAppearance)
-                return .single(((theme.list.plainBackgroundColor, nil, []), [theme.chat.message.incoming.primaryTextColor.withMultipliedAlpha(0.22)], outgoingColors, nil, true, false, 1.0, nil))
+                return .single(((bubblelessPageColor(theme), nil, []), [theme.chat.message.incoming.primaryTextColor.withMultipliedAlpha(0.22)], outgoingColors, nil, true, false, 1.0, nil))
             }
             let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
             switch wallpaper {

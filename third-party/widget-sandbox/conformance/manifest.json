@@ -23,9 +23,9 @@
   }
  },
  "coverage": {
-  "auto": 253,
-  "visual": 126,
-  "catalogue": 267,
+  "auto": 260,
+  "visual": 129,
+  "catalogue": 277,
   "external": {
    "limit.nodes": "corpus/attacks (pnpm test:attacks): node flood",
    "limit.cpu": "corpus/attacks and tests/lifecycle.spec.ts: CPU quota, deferral, kill",
@@ -41,9 +41,13 @@
    "behaviour.preview": "visual/sdk/23-preview and auto/26-context-preview in the inline results (client behaviour)",
    "behaviour.network-marker": "visual/sdk/21-network-marker (client behaviour)",
    "behaviour.resize-anchor": "visual/sdk/18-resize-anchor (client behaviour)",
-   "behaviour.size-hint": "visual/sdk/17-size-hint (client behaviour)"
+   "behaviour.size-hint": "visual/sdk/17-size-hint (client behaviour)",
+   "behaviour.time-corner": "visual/17-time-corner, sent without a caption (client behaviour)"
   },
-  "notInAuto": [],
+  "notInAuto": [
+   "limit.animations",
+   "limit.main-thread"
+  ],
   "outNotInAuto": []
  },
  "tests": [
@@ -772,8 +776,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/02-attributes-images-b/raster.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "svgimg",
@@ -796,8 +799,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/02-attributes-images-b/svgimg.chromium.png"
-     },
-     "nativeVsTemplate": 0.9853
+     }
     }
    ],
    "bytes": 10242,
@@ -972,8 +974,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/03-layout-a/flex.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "grid",
@@ -996,8 +997,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/03-layout-a/grid.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     }
    ],
    "bytes": 10072,
@@ -1640,15 +1640,15 @@
     },
     {
      "id": "css.value.env",
-     "name": "env() resolves to its fallback or is dropped",
+     "name": "env(safe-area-inset-left, 31px) is the client's",
      "native": {
-      "chromium": "fail"
+      "chromium": "pass"
      }
     }
    ],
    "stages": [],
-   "bytes": 9391,
-   "zlib": 3732
+   "bytes": 9428,
+   "zlib": 3736
   },
   {
    "id": "auto/05-colour-backgrounds-a",
@@ -1749,8 +1749,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/basic.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "modern",
@@ -1773,8 +1772,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/modern.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "mix",
@@ -1797,8 +1795,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-a/mix.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "light-dark",
@@ -1946,8 +1943,7 @@
      ],
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/clip-text.chromium.png"
-     },
-     "nativeVsTemplate": 0.5997
+     }
     },
     {
      "name": "linear",
@@ -2085,8 +2081,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/object-fit.chromium.png"
-     },
-     "nativeVsTemplate": 0.0143
+     }
     }
    ],
    "bytes": 8321,
@@ -2550,8 +2545,7 @@
      ],
      "refs": {
       "chromium": "refs/auto/06-text-fonts-c/text-shadow.chromium.png"
-     },
-     "nativeVsTemplate": 0.3521
+     }
     },
     {
      "name": "emoji",
@@ -3276,8 +3270,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/transform-3d.chromium.png"
-     },
-     "nativeVsTemplate": 0.411
+     }
     },
     {
      "name": "blur",
@@ -3347,8 +3340,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/filter-other.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "filter-url",
@@ -3371,8 +3363,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-a/filter-url.chromium.png"
-     },
-     "nativeVsTemplate": 0.3036
+     }
     }
    ],
    "bytes": 9784,
@@ -3476,8 +3467,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/blend.chromium.png"
-     },
-     "nativeVsTemplate": 0.1199
+     }
     },
     {
      "name": "clip-path",
@@ -3500,8 +3490,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/clip-path.chromium.png"
-     },
-     "nativeVsTemplate": 0.5156
+     }
     },
     {
      "name": "mask",
@@ -3524,8 +3513,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/09-transforms-effects-b/mask.chromium.png"
-     },
-     "nativeVsTemplate": 0.7492
+     }
     },
     {
      "name": "opacity",
@@ -3684,8 +3672,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/keyframes.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "alternate",
@@ -3708,8 +3695,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/alternate.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "steps",
@@ -3732,8 +3718,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/steps.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "colour",
@@ -3779,8 +3764,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/fill-forwards.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "transition",
@@ -3803,8 +3787,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/10-css-animations/transition.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     }
    ],
    "bytes": 9205,
@@ -3962,8 +3945,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/animate.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "css-control",
@@ -3986,8 +3968,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/css-control.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "offsets",
@@ -4010,8 +3991,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/offsets.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "easing",
@@ -4034,8 +4014,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/11-web-animations/easing.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     }
    ],
    "bytes": 9372,
@@ -4806,8 +4785,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/clip-mask.chromium.png"
-     },
-     "nativeVsTemplate": 0.5746
+     }
     },
     {
      "name": "filters",
@@ -4831,8 +4809,7 @@
      "maxDiff": 0.1,
      "refs": {
       "chromium": "refs/auto/13-svg-b/filters.chromium.png"
-     },
-     "nativeVsTemplate": 0.2697
+     }
     },
     {
      "name": "smil",
@@ -4855,8 +4832,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/smil.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "image",
@@ -4879,8 +4855,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/image.chromium.png"
-     },
-     "nativeVsTemplate": 0.9915
+     }
     },
     {
      "name": "foreign-object",
@@ -4903,8 +4878,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/auto/13-svg-b/foreign-object.chromium.png"
-     },
-     "nativeVsTemplate": 0.641
+     }
     }
    ],
    "bytes": 5531,
@@ -5216,7 +5190,7 @@
    "id": "auto/15-js-runtime-a",
    "set": "auto",
    "file": "auto/15-js-runtime-a.html",
-   "title": "JS runtime: timers, frames, microtasks, storage (16 KB quota)",
+   "title": "JS runtime: timers, frames, microtasks, storage (4 KB quota)",
    "kind": [
     "self"
    ],
@@ -5297,14 +5271,14 @@
     },
     {
      "id": "js.storage.local",
-     "name": "10 KB fits",
+     "name": "3 KB fits",
      "native": {
       "chromium": "pass"
      }
     },
     {
      "id": "limit.storage",
-     "name": "over 16 KB per message: setItem throws QuotaExceededError",
+     "name": "over 4 KB per message: setItem throws QuotaExceededError",
      "native": {
       "chromium": "skip"
      }
@@ -5318,7 +5292,7 @@
     },
     {
      "id": "limit.storage",
-     "name": "sessionStorage has the same 16 KB quota",
+     "name": "sessionStorage has the same 4 KB quota",
      "native": {
       "chromium": "skip"
      }
@@ -5332,8 +5306,8 @@
     }
    ],
    "stages": [],
-   "bytes": 7159,
-   "zlib": 3053
+   "bytes": 7151,
+   "zlib": 3052
   },
   {
    "id": "auto/15-js-runtime-b",
@@ -6319,8 +6293,7 @@
      "maxDiff": 0.3,
      "refs": {
       "chromium": "refs/auto/17-drag-hover/no-selection.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     }
    ],
    "bytes": 8832,
@@ -6494,12 +6467,15 @@
    "id": "auto/19-limits",
    "set": "auto",
    "file": "auto/19-limits.html",
-   "title": "Strict limits: 64 KB text values, the complex-script budget, the 256-timer cap, budgets over data-* attributes, attr() under strict",
+   "title": "Strict limits: a 30 K text value and a 6 K data-* attribute render, the complex-script budget, the 64-timer cap, 10 000 canvas commands per canvas and task, a data: image up to 1024 × 1024 pixels, attr() under strict (past a counted limit the widget stops: auto/31–35)",
    "kind": [
     "self"
    ],
    "covers": [
     "behaviour.policy-strict",
+    "limit.attribute",
+    "limit.canvas-commands",
+    "limit.image-pixels",
     "limit.text-budget",
     "limit.text-node",
     "limit.timers"
@@ -6516,17 +6492,24 @@
    "host": [],
    "checks": [
     {
-     "id": "limit.text-node",
-     "name": "a 60 KB text node renders",
+     "id": "limit.image-pixels",
+     "name": "a 1024 × 1024 data: image decodes",
      "native": {
       "chromium": "pass"
      }
     },
     {
-     "id": "limit.text-node",
-     "name": "a text node over 64 KB is refused",
+     "id": "limit.image-pixels",
+     "name": "a 1025 × 1024 data: image is the 48 px placeholder",
      "native": {
       "chromium": "skip"
+     }
+    },
+    {
+     "id": "limit.text-node",
+     "name": "a 30 K text node renders",
+     "native": {
+      "chromium": "pass"
      }
     },
     {
@@ -6544,10 +6527,10 @@
      }
     },
     {
-     "id": "behaviour.policy-strict",
-     "name": "a 300 KB data-* attribute does not reach the renderer",
+     "id": "limit.attribute",
+     "name": "a 6 K data-* attribute reaches the renderer",
      "native": {
-      "chromium": "skip"
+      "chromium": "pass"
      }
     },
     {
@@ -6566,15 +6549,22 @@
     },
     {
      "id": "limit.timers",
-     "name": "the 257th live timer throws RangeError",
+     "name": "the 65th live timer throws RangeError",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "limit.canvas-commands",
+     "name": "the 10 001st command for one canvas in one task throws RangeError",
      "native": {
       "chromium": "skip"
      }
     }
    ],
    "stages": [],
-   "bytes": 6014,
-   "zlib": 2803
+   "bytes": 8035,
+   "zlib": 3606
   },
   {
    "id": "auto/20-client-behaviour",
@@ -7192,8 +7182,8 @@
     }
    ],
    "stages": [],
-   "bytes": 6738,
-   "zlib": 2928
+   "bytes": 6773,
+   "zlib": 2944
   },
   {
    "id": "auto/24-resize-anchor",
@@ -7857,6 +7847,610 @@
    "zlib": 2182
   },
   {
+   "id": "auto/28-grid-percent-fill",
+   "set": "auto",
+   "file": "auto/28-grid-percent-fill.html",
+   "title": "A grid row with a percentage fill (a poll's options): a <button> grid 52px 1fr auto, a bar across columns 2–3 whose fill a width transition takes to 100 %",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "anim.transition",
+    "css.box.size",
+    "css.display.grid"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "css.box.size",
+     "name": "at load: every row is as wide as its container (width: 100%)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "at load: each count ends at the row's end (the auto column fits the count)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.box.size",
+     "name": "at 100 %: every row is as wide as its container (width: 100%)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "at 100 %: each count ends at the row's end (the auto column fits the count)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "the bar spans columns 2–3, from 52 px to the row's end (grid-column: 2/4)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.box.size",
+     "name": "no fill runs past its bar's right edge",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "anim.transition",
+     "name": "after the width transition each fill is its percentage of the bar",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 7932,
+   "zlib": 3629
+  },
+  {
+   "id": "auto/29-grid-svg-marks",
+   "set": "auto",
+   "file": "auto/29-grid-svg-marks.html",
+   "title": "A 3×3 board with SVG marks (a game board): nine <button>s in a grid on an aspect-ratio box, an SVG mark at 58 % put into a cell by innerHTML after load",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "css.box.aspect-ratio",
+    "css.box.size",
+    "css.display.grid"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "css.box.aspect-ratio",
+     "name": "the board is square at its max-width (aspect-ratio: 1, max-width: 264px)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "nine buttons take equal thirds of the board (grid-template: repeat(3,1fr)/repeat(3,1fr))",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "after a mark in cell 4: the cells keep equal thirds",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "after marks in cells 4 and 5: the cells keep equal thirds",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.display.grid",
+     "name": "each mark is centred in its own cell (place-items: center)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.box.size",
+     "name": "each mark is 58 % of its cell (width/height: 58% of the button)",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 7300,
+   "zlib": 3468
+  },
+  {
+   "id": "auto/30-svg-fill-box",
+   "set": "auto",
+   "file": "auto/30-svg-fill-box.html",
+   "title": "transform-box: fill-box on an SVG circle (a chart's end dot): scale(3) and a running pulse about its centre, before and after cx/cy move, measured and drawn (stages)",
+   "kind": [
+    "self",
+    "pixel"
+   ],
+   "covers": [
+    "anim.keyframes",
+    "css.transform.2d",
+    "svg.shapes",
+    "svg.structure"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "svg.structure",
+     "name": "the dot sits at its cx/cy (a viewBox the element's width, preserveAspectRatio none)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "the running pulse (scale 1 → 3) stays centred on the dot",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "svg.shapes",
+     "name": "after cx/cy move: the dot sits at its cx/cy",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "after cx/cy move: scale(3) with transform-box: fill-box, transform-origin: center: centred on the dot, 3× its size",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "after cx/cy move: the running pulse (scale 1 → 3) stays centred on the dot",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [
+    {
+     "name": "scale",
+     "rect": [
+      8,
+      8,
+      80,
+      60
+     ],
+     "size": [
+      80,
+      60
+     ],
+     "covers": [
+      "css.transform.2d"
+     ],
+     "themes": [
+      "light"
+     ],
+     "reftest": true,
+     "refs": {
+      "chromium": "refs/auto/30-svg-fill-box/scale.chromium.png"
+     }
+    },
+    {
+     "name": "animated",
+     "rect": [
+      96,
+      8,
+      80,
+      60
+     ],
+     "size": [
+      80,
+      60
+     ],
+     "covers": [
+      "css.transform.2d",
+      "anim.keyframes"
+     ],
+     "themes": [
+      "light"
+     ],
+     "reftest": true,
+     "refs": {
+      "chromium": "refs/auto/30-svg-fill-box/animated.chromium.png"
+     }
+    },
+    {
+     "name": "moved",
+     "rect": [
+      184,
+      8,
+      80,
+      60
+     ],
+     "size": [
+      80,
+      60
+     ],
+     "covers": [
+      "css.transform.2d",
+      "anim.keyframes"
+     ],
+     "themes": [
+      "light"
+     ],
+     "reftest": true,
+     "refs": {
+      "chromium": "refs/auto/30-svg-fill-box/moved.chromium.png"
+     }
+    }
+   ],
+   "bytes": 8867,
+   "zlib": 3615
+  },
+  {
+   "id": "auto/31-stop-text",
+   "set": "auto",
+   "file": "auto/31-stop-text.html",
+   "title": "Strict limits: a text value over 32 K characters stops the widget",
+   "hint": "The host must stop this widget: it passes a counted limit on purpose (strict). A browser has no such limit, so natively the check is skipped.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.text-node"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "limit.text-node",
+     "name": "a 40 000-character text node stops the widget (the reason starts with “Text limit exceeded”)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3868,
+   "zlib": 2053,
+   "stops": "Text limit exceeded"
+  },
+  {
+   "id": "auto/32-stop-attribute",
+   "set": "auto",
+   "file": "auto/32-stop-attribute.html",
+   "title": "Strict limits: an attribute over 8 K characters stops the widget",
+   "hint": "The host must stop this widget: it passes a counted limit on purpose (strict). A browser has no such limit, so natively the check is skipped.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.attribute"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "limit.attribute",
+     "name": "a 9000-character data-* attribute stops the widget (“Attribute limit exceeded”)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3871,
+   "zlib": 2046,
+   "stops": "Attribute limit exceeded"
+  },
+  {
+   "id": "auto/33-stop-batch",
+   "set": "auto",
+   "file": "auto/33-stop-batch.html",
+   "title": "Strict limits: more than 10 000 DOM changes in one task stop the widget",
+   "hint": "The host must stop this widget: it passes a counted limit on purpose (strict). A browser has no such limit, so natively the check is skipped.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.batch"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "limit.batch",
+     "name": "5001 elements appended in one task (10 002 operations) stop the widget (“Ops limit exceeded”)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3948,
+   "zlib": 2109,
+   "stops": "Ops limit exceeded"
+  },
+  {
+   "id": "auto/34-stop-css-rules",
+   "set": "auto",
+   "file": "auto/34-stop-css-rules.html",
+   "title": "Strict limits: more than 400 CSS rules in the document's stylesheets stop the widget",
+   "hint": "The host must stop this widget: it passes a counted limit on purpose (strict). A browser has no such limit, so natively the check is skipped.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.css-rules"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "limit.css-rules",
+     "name": "400 more rules on top of the harness stylesheet stop the widget (“CSS limit exceeded”)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4001,
+   "zlib": 2122,
+   "stops": "CSS limit exceeded"
+  },
+  {
+   "id": "auto/35-stop-canvas-pixels",
+   "set": "auto",
+   "file": "auto/35-stop-canvas-pixels.html",
+   "title": "Strict limits: canvases over 2048 × 2048 pixels together stop the widget",
+   "hint": "The host must stop this widget: it passes a counted limit on purpose (strict). A browser has no such limit, so natively the check is skipped.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.canvas-pixels"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "limit.canvas-pixels",
+     "name": "a second canvas of 2048 × 2048 next to one of 1024 × 1024 stops the widget (the reason starts with “Canvas limit exceeded”)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4080,
+   "zlib": 2143,
+   "stops": "Canvas limit exceeded: canvases of"
+  },
+  {
+   "id": "auto/36-safe-area",
+   "set": "auto",
+   "file": "auto/36-safe-area.html",
+   "title": "The client's time over a widget with no caption below it: env(safe-area-inset-*) with and without a fallback, other env() names, CSS.supports, the --tg-content-safe-area-* variables and TelegramWidget.contentSafeAreaInset agree, the corner on its side",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "css.value.env",
+    "tw.content-safe-area"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.content-safe-area",
+     "name": "contentSafeAreaInset: a frozen object of six numbers, the same object on every read",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.content-safe-area",
+     "name": "only the bottom band: top, left and right are 0; the band 0–64, a corner 0–200",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "tw.content-safe-area",
+     "name": "one corner at most, on one side, and only with a band",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "tw.content-safe-area",
+     "name": "the root variables are its values",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.content-safe-area",
+     "name": "body: the band as bottom padding (the UA layer)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "env(safe-area-inset-bottom) is the band",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "env(safe-area-inset-bottom, 77px) is the band, not the fallback",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "env(safe-area-inset-top, 77px) is 0",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "calc(10px + env(safe-area-inset-bottom, 0px))",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "another name: env(keyboard-inset-height, 13px) is its fallback",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "another name without a fallback: the declaration is dropped (the one before it stands)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "var(--tg-content-safe-area-inset-bottom) is the band",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "the corner's side: left: var(--…-corner-left); right: var(--…-corner-right) leaves it free",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.env",
+     "name": "CSS.supports: true for env(safe-area-inset-bottom), false for another name",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 7471,
+   "zlib": 3052,
+   "safeArea": {
+    "bottom": 24,
+    "cornerLeft": 64
+   }
+  },
+  {
    "id": "visual/01-boxes",
    "set": "visual",
    "file": "visual/01-boxes.html",
@@ -8068,8 +8662,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/02-colours-gradients/functions.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "background",
@@ -8222,8 +8815,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/03-text-b/ellipsis.chromium.png"
-     },
-     "nativeVsTemplate": 0.2212
+     }
     },
     {
      "name": "scripts",
@@ -8255,8 +8847,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/03-text-b/text-shadow.chromium.png"
-     },
-     "nativeVsTemplate": 0.3382
+     }
     }
    ],
    "bytes": 5297,
@@ -8375,8 +8966,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/04-layout/float-columns.chromium.png"
-     },
-     "nativeVsTemplate": 0.1246
+     }
     }
    ],
    "bytes": 6322,
@@ -8442,8 +9032,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/05-transforms-effects-a/transform-3d.chromium.png"
-     },
-     "nativeVsTemplate": 0.4329
+     }
     },
     {
      "name": "filters",
@@ -8527,8 +9116,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/05-transforms-effects-b/filters-other.chromium.png"
-     },
-     "nativeVsTemplate": 1
+     }
     },
     {
      "name": "backdrop",
@@ -8560,8 +9148,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/05-transforms-effects-b/blend-clip-mask.chromium.png"
-     },
-     "nativeVsTemplate": 0.4332
+     }
     }
    ],
    "bytes": 5653,
@@ -8626,8 +9213,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/slide.chromium.png"
-     },
-     "nativeVsTemplate": 0.6184
+     }
     },
     {
      "name": "spin-pulse",
@@ -8643,8 +9229,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/spin-pulse.chromium.png"
-     },
-     "nativeVsTemplate": 0.8319
+     }
     },
     {
      "name": "steps",
@@ -8660,8 +9245,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/steps.chromium.png"
-     },
-     "nativeVsTemplate": 0.5037
+     }
     },
     {
      "name": "frozen",
@@ -8693,8 +9277,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/06-css-animations/transition.chromium.png"
-     },
-     "nativeVsTemplate": 0.9824
+     }
     }
    ],
    "bytes": 8140,
@@ -8748,8 +9331,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/bounce.chromium.png"
-     },
-     "nativeVsTemplate": 0.0132
+     }
     },
     {
      "name": "seek",
@@ -8765,8 +9347,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/seek.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "offsets",
@@ -8782,8 +9363,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/offsets.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "css-control",
@@ -8799,8 +9379,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/07-web-animations/css-control.chromium.png"
-     },
-     "nativeVsTemplate": 0.0154
+     }
     }
    ],
    "bytes": 7470,
@@ -9126,8 +9705,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/09-svg-b/clip-filter.chromium.png"
-     },
-     "nativeVsTemplate": 0.3951
+     }
     },
     {
      "name": "smil",
@@ -9143,8 +9721,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/09-svg-b/smil.chromium.png"
-     },
-     "nativeVsTemplate": 0.7179
+     }
     }
    ],
    "bytes": 5218,
@@ -9212,8 +9789,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/10-images/svg-image.chromium.png"
-     },
-     "nativeVsTemplate": 0.8973
+     }
     },
     {
      "name": "refused",
@@ -9229,8 +9805,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/10-images/refused.chromium.png"
-     },
-     "nativeVsTemplate": 0.7602
+     }
     },
     {
      "name": "object-fit",
@@ -9445,8 +10020,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/forms.chromium.png"
-     },
-     "nativeVsTemplate": 0.6196
+     }
     },
     {
      "name": "scroll-sticky",
@@ -9462,8 +10036,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/scroll-sticky.chromium.png"
-     },
-     "nativeVsTemplate": 0
+     }
     },
     {
      "name": "fonts",
@@ -9479,8 +10052,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/fonts.chromium.png"
-     },
-     "nativeVsTemplate": 0.3802
+     }
     },
     {
      "name": "three-d",
@@ -9496,8 +10068,7 @@
      "reftest": true,
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/three-d.chromium.png"
-     },
-     "nativeVsTemplate": 0.436
+     }
     }
    ],
    "bytes": 6752,
@@ -9608,6 +10179,41 @@
     "light": "refs/visual/16-selection.png"
    },
    "height": 190
+  },
+  {
+   "id": "visual/17-time-corner",
+   "set": "visual",
+   "file": "visual/17-time-corner.html",
+   "title": "The client's time over the bottom corner of a widget with no caption below it: the widget keeps clear of it with env(safe-area-inset-bottom) and --tg-content-safe-area-corner-*",
+   "hint": "No caption below this widget (none, or one above it): the time with its ticks sits over the bottom right corner (bottom left in a right-to-left interface) on a dark backing, inside the lighter corner box. The blue footer reaches the bubble's bottom edge; its last line runs beside the time, never under it. A tap on the time does nothing in the widget.",
+   "kind": [],
+   "covers": [
+    "behaviour.time-corner",
+    "css.value.env",
+    "tw.content-safe-area"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 5167,
+   "zlib": 2423,
+   "refImages": {
+    "light": "refs/visual/17-time-corner.png"
+   },
+   "height": 288,
+   "safeArea": {
+    "bottom": 24,
+    "cornerRight": 64
+   }
   },
   {
    "id": "visual/sdk/01-link-external",
@@ -9985,8 +10591,8 @@
    "id": "visual/sdk/10-storage-quota",
    "set": "visual",
    "file": "visual/sdk/10-storage-quota.html",
-   "title": "QuotaExceededError at 16 KB",
-   "hint": "Tap Fill: it writes 1 KB values until the client refuses; the line must say QuotaExceededError at 16 KB, for local and for session.",
+   "title": "QuotaExceededError at 4 KB",
+   "hint": "Tap Fill: it writes 1 KB values until the client refuses; the line must say QuotaExceededError at 4 KB, for local and for session.",
    "kind": [
     "self",
     "interactive"
@@ -10028,14 +10634,14 @@
     }
    ],
    "stages": [],
-   "bytes": 3357,
-   "zlib": 1653,
+   "bytes": 3351,
+   "zlib": 1652,
    "refImages": {
     "light": "refs/visual/sdk/10-storage-quota.png"
    },
    "height": 121,
    "group": "sdk",
-   "expect": "16384 bytes of keys and values per area; the refused setItem throws a DOMException named QuotaExceededError and stores nothing.",
+   "expect": "4096 bytes of keys and values per area; the refused setItem throws a DOMException named QuotaExceededError and stores nothing.",
    "contract": "docs/sdk-v1.md §2.8"
   },
   {

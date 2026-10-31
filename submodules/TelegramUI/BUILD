@@ -9,6 +9,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# The static glass assets alone (they are also in TelegramUIResources), for hosts that need only them.
+filegroup(
+    name = "StaticGlassResources",
+    srcs = glob(["Resources/StaticGlass/*.bin"]),
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "TelegramUIAssets",
     srcs = glob(["Images.xcassets/**"]),
@@ -52,6 +59,8 @@ swift_library(
         "//third-party/widget-sandbox:debug_build": [
             "//third-party/widget-sandbox:WidgetConformanceBundle",
             "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
+            # The renderer stress kit, for Debug Settings' "Run widget stress kit" (widget-sandbox v0.3.0).
+            "//third-party/widget-sandbox:WidgetStressBundle",
         ],
         "//conditions:default": [],
     }),
@@ -523,6 +532,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PostSuggestionsSettingsScreen",
         "//submodules/TelegramUI/Components/ForumSettingsScreen",
         "//submodules/TelegramUI/Components/Chat/ChatSideTopicsPanel",
+        "//submodules/TelegramUI/Components/Chat/ChatSideListPanel",
         "//submodules/TelegramUI/Components/GifVideoLayer",
         "//submodules/TelegramUI/Components/BatchVideoRendering",
         "//submodules/TelegramUI/Components/ComposeTodoScreen",

@@ -3,6 +3,8 @@
 // through the test container. It counts every call that matters to a test and every font and image alive.
 #pragma once
 
+#include <functional>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -58,6 +60,8 @@ public:
     size_t shapeCalls = 0;
     /// The textWidth calls so far (the layout's measure, which the iOS host caches; canvas text must not use it).
     size_t textWidthCalls = 0;
+    /// Called at every textWidth, before it measures (a test that makes the layout take time on the fake clock).
+    std::function<void()> onTextWidth;
 
     /// The HostFont and HostImage objects alive now, made by any FakeRenderHost. Each is self-contained, so it
     /// stays alive (and counted) after the host that made it is gone.

@@ -16,7 +16,11 @@ css-tree, recursed deeply; a widget's own script can too).
 
 Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/quickjs` shows them.
 
-1. **The interrupt poll every 100 operations** (2026-10-14, the message-widgets final review's R1).
+1. **The interrupt poll every 100 operations** (2026-10-14, the message-widgets final review's R1). **Reverted
+   2026-10-30** (the CPU-clock limits plan, Task 2): the widget's limits are widget-sandbox's, on the thread CPU clock,
+   read in the interrupt handler at QuickJS's stock 10,000 polls, as upstream's clients read it; `BUILD` no longer
+   sets the define. The `#ifndef` guard stays (harmless). The record below is history; `:QuickJSSmokeTests` now pins
+   the stock rate (a 100,000-iteration loop asks the handler 5 to 99 times).
    - What changed:
      - `quickjs/quickjs.c:556` (upstream's line) now sits inside `#ifndef JS_INTERRUPT_COUNTER_INIT … #endif`.
        That guard is the whole source change.
@@ -46,152 +50,16 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
      - `MessageWidgetTests`' `LimitsTests.testRepeatLoopIsStoppedAtTheBudget` and
        `testStringifyLoopIsStoppedAtTheBudget`, in both executor modes.
 
-2. **The work counter** (2026-10-15).
-   Every limit on a widget's JavaScript is a count of work, never elapsed time; this is the count.
-   - What changed (`git grep -n "local edit 2" third-party/quickjs-ng` lists every site):
-     - `include/quickjs.h`: `JS_GetWorkUnits`, `JS_ChargeWork` and the rate macros `JS_WORK_ALLOC_SHIFT`,
-       `JS_WORK_SCAN_SHIFT`, `JS_WORK_REGEX_UNITS`, `JS_WORK_CHECK_PERIOD` (each `#ifndef`-guarded).
-     - `quickjs.c`: three `JSRuntime` fields (`work_units`, `work_alloc_bytes`, `work_next_check`); the two
-       functions, after `JS_ThrowInterrupted`; `__js_poll_interrupts` charges `JS_INTERRUPT_COUNTER_INIT` per
-       handler call (one unit per poll); `js_calloc_rt`, `js_malloc_rt` and `js_realloc_rt` charge the bytes they
-       are asked for (there, not in the pluggable `JSMallocFunctions`, which allocations up to
-       `JS_ARENA_MAX_SMALL_SIZE` never reach); `lre_check_timeout` charges `JS_WORK_REGEX_UNITS` per call (one
-       every 10,000 regex steps).
-     - Work that the interpreter does not see is charged where it happens, in elements visited
-       (`JS_WORK_SCAN_SHIFT`): string search (`string_indexof`, which now takes the context, and the
-       `indexOf`/`lastIndexOf`/`includes`/`startsWith`/`endsWith` loops, charged per character compared, so they
-       stop partway), array `includes`/`indexOf`/`lastIndexOf` fast paths (per element), and up front for
-       `fill`, `copyWithin`, `reverse`, typed-array `fill`/`set`/`reverse`/`indexOf`/`sort` (len·log2 len),
-       `ArrayBuffer.slice`, BigInt multiplication (limb product), `JSON.parse` (input), `localeCompare`, relational
-       string comparison, the sort comparator (one per comparison plus the strings compared) and every
-       evaluation of source (`__JS_EvalInternal`). Where no exception can be raised — `===`/`==` on strings
-       (`js_strict_eq2`), atoms made from strings (`JS_NewAtomStr`) and allocation — the charge makes every
-       context's next poll ask the handler (`js_request_work_check`), counting the polls made so far
-       (`JSContext.work_poll_reset`), so a forced poll does not double-count.
-     - Added by the final review (2026-10-15), each a path that let one line of script run for hours once no clock
-       backstopped the budget: `trim`/`trimStart`/`trimEnd` and `isWellFormed` (by length, up front);
-       `JS_ToCStringLen2` (by length, deferred: an ASCII string comes back uncopied, so `Number()`/`parseInt`/
-       `parseFloat` skipped 4 MB of spaces for free); `map_hash_key` (by the key's length, ropes included, deferred:
-       every lookup, insertion, rehash and set operation); prototype walks (`js_charge_hop`: a unit per object past
-       the first `JS_WORK_FREE_HOPS` = 16, deferred, in `JS_GetPropertyInternal`, `JS_HasProperty`,
-       `JS_SetPropertyInternal2`, `JS_OrdinaryIsInstanceOf`, `JS_SetPrototypeInternal`'s cycle check and the three
-       interpreter inline lookups); BigInt division and remainder (limb product) and decimal conversion both ways
-       (limbs squared), up front; generic element loops (`JS_WORK_ELEMENT_UNITS` = 4 per index: `join`,
-       `JS_CopySubArray` behind `shift`/`unshift`/`splice`, `slice` and `splice`'s deletions, `sort`'s collection,
-       spreadable `concat`, `flat`, `Array.from` and `TypedArray.from` of an array-like, typed-array construction from
-       one, `String.raw`, `JSON.stringify` of an array and of a replacer array).
-     - libregexp gained two user callbacks (`libregexp.h`): `lre_charge_steps` — an exec charges, when it returns, the
-       steps it made since its last `lre_check_timeout`, which comes only every `LRE_STEP_PERIOD` (10,000) steps, so a
-       short exec had been free (`r.exec` on 4,500 characters ran 302× the reference) — and `lre_charge_work`, which
-       charges a character class's merges as they happen (each atom merges into every range so far: 80,000 ranges took
-       5.7 s in one call) and fails the compile with `LRE_INTERRUPTED_MESSAGE`, which `js_compile_regexp` turns into the
-       uncatchable interrupt rather than a `SyntaxError`.
-     - Added by the native-path sweep (2026-10-15, below): `Array.prototype.fill` on a generic receiver is charged and
-       checked per element, not once up front (a typed array converts the value on every set, a 1 MB string each time:
-       12 s past its budget); `replace`/`replaceAll` charge each match what it builds and stop on a failed append (an
-       empty pattern matches at every position: a 1 MB replacement over a 1 MB string never returned); every step of an
-       iterator driven from C (`JS_IteratorNext2`: `Array.from`, `new Map`/`Set`, `Object.fromEntries`, the iterator
-       helpers, `Promise.all`, `Math.sumPrecise` — 36 ms of a 4M typed array for 59 units) is an element; each step of a
-       Set method's loop is `JS_WORK_SET_ELEMENT_UNITS` = 24 (an iterator step, a lookup and a call of a set-like's
-       `has` from C, ~200 ns); generic `reverse` charges two elements per pair and typed-array `set` from an array-like
-       one per element, each checked in the loop (the up-front scan charge stays the fast paths'); `localeCompare`
-       charges three units per character and `normalize` two (lone surrogates, normalized one at a time, ran 3-4x the
-       reference); and a string search charges the compare that matched, not only the ones that failed (`indexOf`,
-       `includes`, `startsWith`, `split` of a 1 MB string by an equal one charged 5 units for 0.7 ms).
-     - Two leaks the interrupt made reachable are fixed: `js_relational_slow` freed neither operand when its charge
-       stopped it (a page-sized string leaked per kill), and `js_bigint_pow` dropped its partial result when a charged
-       multiply failed.
-     - The counter is runtime state, not part of the bytecode format: the `.qbc` files are unaffected.
-   - Calibration (`tests/quickjs_work_cost_test.c`, `:QuickJSWorkCostTests`, run with `-c opt`; each attack has 20 s
-     to reach its budget, so an uncharged path fails rather than hangs the suite): every attack runs
-     its setup unbudgeted, then to 4,000,000 units; it fails past 2× the reference row's time per unit, or past 2.5×
-     the time the budget is worth at the reference rate (an operation that works on past its budget without a check).
-     The rates that pass: `JS_WORK_ALLOC_SHIFT` 2 (a builder like `repeat` writes about 2.6 ns per output byte),
-     `JS_WORK_SCAN_SHIFT` 3, `JS_WORK_REGEX_UNITS` 6000, a unit per token in both parsers and per `split` piece, one
-     per element for `Array.prototype.fill` (it sets through the generic property path; charged and checked per element),
-     four per proxy trap. On
-     Apple M5 Max, optimized, 2026-10-15 (rows from "trim" on added by the final review):
-
-     attack                            units         ms    ns/unit  × budget
-     reference: arithmetic loop      4000155       37.5       9.38       1.00
-     calls                           4000150       28.8       7.20       0.77
-     repeat 4 MB                     4195080       32.1       7.66       0.86
-     padStart 4 MB                   4195101       21.6       5.14       0.57
-     concat                          4000139        6.0       1.51       0.16
-     join                            4000202        4.4       1.11       0.12
-     split                           4000190        4.8       1.20       0.13
-     spread                          7466665        5.3       0.71       0.14
-     stringify                       4360922        6.9       1.59       0.18
-     parse                           5197116        5.4       1.04       0.14
-     indexOf pathological            4000198       22.5       5.63       0.60
-     string equality                 4194963        0.7       0.16       0.02
-     localeCompare                   8913595       10.2       1.15       0.27
-     array indexOf                   4000156       15.7       3.91       0.42
-     array fill                      4194945        7.9       1.88       0.21
-     sort strings                    4002001        6.1       1.52       0.16
-     sort comparator                 4491852       10.4       2.31       0.28
-     typed fill                      4195001        0.2       0.05       0.01
-     typed indexOf                   4195008        0.5       0.11       0.01
-     typed sort                      4358807        2.8       0.64       0.07
-     typed set                       4195042        0.4       0.09       0.01
-     bigint mul                      4270743       21.5       5.04       0.57
-     regex backtracking              4005127       33.8       8.44       0.90
-     Function source                 4000399        4.7       1.18       0.13
-     long property keys              4064066        1.0       0.24       0.03
-     deep recursion                  4000380       44.4      11.10       1.18
-     gc pressure                     4000237        2.9       0.72       0.08
-     proxy traps                     4000188       17.3       4.33       0.46
-     trim                            4194968       20.5       4.89       0.55
-     isWellFormed                    4194983       14.6       3.49       0.39
-     Number of spaces                4194912       20.5       4.88       0.55
-     parseFloat of spaces            4194912       19.2       4.58       0.51
-     Map long key                    4195016       31.3       7.45       0.83
-     Map rope key                    4195021       31.3       7.46       0.83
-     prototype chain get             4100035       18.4       4.50       0.49
-     prototype chain in              4100075       25.9       6.32       0.69
-     prototype chain instanceof      4000225       16.6       4.15       0.44
-     short regex exec                4001229       13.5       3.38       0.36
-     short regex test                4004025       13.4       3.34       0.36
-     bigint div                      4434523       29.6       6.66       0.79
-     bigint mod                      4420771       29.6       6.68       0.79
-     bigint toString                 4663355       45.9       9.84       1.22
-     BigInt from string              5063746        7.4       1.47       0.20
-     generic join                    4000169        6.9       1.72       0.18
-     generic shift                   4000247       17.7       4.43       0.47
-     generic slice                   4000199       13.6       3.40       0.36
-     generic sort                    4000176       13.4       3.35       0.36
-     spreadable concat               4000149       14.5       3.61       0.39
-     sparse flat                     4000209       23.5       5.87       0.63
-     sparse stringify                4197176       11.1       2.63       0.29
-     typed from array-like           4000216        5.8       1.46       0.16
-     regex class compile             4000359        1.9       0.47       0.05
-     reference 9.38 ns/unit = 106620 units/ms
-   - The hosts set their budgets against that reference (a sandbox widget's boot 48,000,000 ≈ 480 ms and each later
-     task 28,000,000, with the parse of its markup not charged but under a 400,000,000 ceiling; a bundled library's
-     first install 4,000,000: the root
-     `CLAUDE.md`, "Message widgets") and charge their own work, which this suite cannot reach: a base per host
-     call, the argument bytes, a query's bytes, the documents the renderer builds. Their calibration is the same rule
-     (at most 2× the reference row's time per unit), run in the iOS test bundles against this same loop. The counter
-     carries no reference rate of its own: the hosts' DEBUG tripwires measure this loop in the build they run in.
-   - **The native-path sweep** (`tests/quickjs_native_sweep_test.c` + `tests/native_sweep.js`, `:QuickJSNativeSweep`,
-     manual, optimized: `./build-input/bazel-9.2.0-darwin-arm64 test -c opt //third-party/quickjs-ng:QuickJSNativeSweep
-     --test_output=all`, or the binary with `k/n` for a shard and `--confirm i,j,…`). Instead of guessing which
-     natives escape the counter, it calls every function reachable from the global object (statics, prototype methods
-     with string and symbol keys, getters, iterator prototypes, the constructors called and constructed: 659 methods)
-     with every receiver and argument list from a set of large values (1 MB strings, lone surrogates, a 2 MB rope,
-     128K-element and holey and sparse arrays, 2^40-length array-likes, 4M typed arrays, 64K Maps and Sets, a 100K
-     prototype chain, big BigInts, a 4K-range regex class): 1,040,760 calls, each to a 5M-unit budget, each method in a
-     forked child with a 3 s alarm, so a call that never returns is reported and the sweep goes on. A call of at least
-     0.2 ms past 4x the reference per unit, or a hang, is reported; reports are rerun three times in one child (one-time
-     costs, GC pauses and scheduling noise drop out) before they count. Its runs on 2026-10-15 confirmed 16 natives,
-     all fixed above with a cost-suite row each (`normalize` was found beside `localeCompare`, by reading); the first
-     run's 2 ms floor missed the sub-millisecond ones (the matched compare). After the fixes it confirms nothing: 599
-     calls flagged in screening, all cleared by the reruns. Rerun it after a QuickJS upgrade or a new native, and on a
-     quiet machine: it measures wall time.
-   - Pinned by `tests/quickjs_work_test.c` (`:QuickJSWorkTests`): the same script spends the same units twice,
-     allocation and regex steps are charged, a loop or catastrophic regex is stopped at its budget, and each
-     charged builtin, called once with a budget under its work, is stopped (26 cases).
-
+2. **The work counter** (2026-10-15). **Removed 2026-10-30** (the CPU-clock limits plan, Task 7; the user: "exact
+   upstream parity here"). The widget's limits are widget-sandbox's, on the thread CPU clock, read in the interrupt
+   handler at QuickJS's stock 10,000 polls (`wr::Runtime`), as upstream's clients read them. The counter
+   (`JS_GetWorkUnits`, `JS_ChargeWork`, the `JS_WORK_*` rates, the charges in the interpreter, the allocator and the
+   builtins, libregexp's `lre_charge_steps` and `lre_charge_work`) is gone with its suites (`:QuickJSWorkTests`,
+   `:QuickJSWorkCostTests`, `:QuickJSNativeSweep`); `quickjs.c`, `libregexp.c` and `libregexp.h` are upstream's but
+   for the changes below. What it took away: a builtin that does not poll (a `trim` of 4 MB, BigInt division, a
+   generic `join` of `{length: 2**40}`) runs to its end, as in upstream, and the slice's stop lands at the next poll
+   after it. `git show 2eb055b3ba:third-party/quickjs-ng/VENDOR.md` has the record, its calibration and the
+   native-path sweep's findings.
 3. **Host auto-init properties** (2026-10-16, the native runtime's interface objects, `docs/message-widgets-native-runtime.md`).
    - What: `JS_DefineHostAutoInitProperty` defines a property in QuickJS's own auto-init state with a fifth kind,
      `JS_AUTOINIT_ID_HOST`, whose value the runtime's `JSHostAutoInitFunc` makes on first read.
@@ -241,7 +109,7 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
      - `ctx->hash_seed`, which is derived from the state at context creation, is left alone. Changing it would break
        every existing Map and Set, and XOR with a constant keeps every bucket collision, so nothing observable
        depends on it.
-   - Why: in the native runtime's test mode a whole widget run (time, randomness, budgets) must repeat exactly. The
+   - Why: in the native runtime's test mode a whole widget run (time, randomness) must repeat exactly. The
      runtime gives `Date` the host's clock and seeds `Math.random` from its options (`wr::Runtime::create`).
    - Pinned by `tests/quickjs_host_test.c`, `test_wall_clock_and_random_seed`.
 8. **An uncatchable error through a Promise executor** (2026-10-17, the native runtime's stop latch, M1b plan Global
@@ -249,7 +117,7 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
    - What: `js_promise_constructor` returns the exception, still pending, when the executor ends with an uncatchable
      error, instead of rejecting the new promise with it. That is what `js_async_function_resume` and
      `promise_reaction_job` already do. A catchable exception still rejects, as the standard says.
-   - Why: the host stops a widget with QuickJS's uncatchable "interrupted" (local edit 2's interrupt handler). The
+   - Why: the host stops a widget with QuickJS's uncatchable "interrupted" (its interrupt handler). The
      constructor caught it like any exception, so `new Promise(() => { for (;;) {} }); after()` ran `after()` after
      the stop, and `JS_Eval` returned success on a stopped runtime.
    - Left alone: other places that turn an exception from user code into a rejection keep upstream's behaviour. They
@@ -273,9 +141,9 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
        compares requests with the limit, while the usage it counts is each block's usable size plus `MALLOC_OVERHEAD`,
        so the usage can pass the limit by a block's slack. That is a refusal at the limit like any other, so it is not
        gated on `size > old_size`.
-     - After the hook, every context's next interrupt poll asks the handler at once (`js_request_work_check`, local
-       edit 2's forced poll, with its unit accounting), not up to `JS_INTERRUPT_COUNTER_INIT` operations later, so a stop
-       the hook latched lands at the next poll site. Only when a hook is set.
+     - After the hook, every context's next interrupt poll asks the handler at once (`js_request_poll`), not up to
+       `JS_INTERRUPT_COUNTER_INIT` operations later, so a stop the hook latched lands at the next poll site. Only when a
+       hook is set.
      - Contract: there is no context. It runs inside the allocation, from the middle of any engine operation (a GC, a
        parse, building an error), so it must not allocate, run JS, throw or call into QuickJS.
      - Unset (the default; NULL removes it) the allocator is upstream's: the field is read only on the refusal path.
@@ -334,9 +202,8 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
       answers for the value alone. Nothing in the engine asks it about the pending exception any more, and the native
       runtime's classifier reads its own latch before it (`wr::Runtime::classifyFatal`).
     - Every poll site throws once stopped: `JS_SetStopped` itself, and on a stopped runtime `JS_ThrowInterrupted` (the
-      interrupt's throw from a poll, a charge, a regex step check or a regex compile), make every context's next poll
-      ask the handler at once (`js_request_work_check`, local edit 2's forced poll with its accounting: each such poll
-      counts one unit). `JS_ThrowInterrupted` requests it before it builds its error, because building an error can call
+      interrupt's throw from a poll or a regex step check), make every context's next poll ask the handler at once
+      (`js_request_poll`). `JS_ThrowInterrupted` requests it before it builds its error, because building an error can call
       `Error.prepareStackTrace`, which is JS: that call's first poll throws too. The host's handler says stop at every
       poll, so from the stop on every poll site throws, the interrupt error's own `prepareStackTrace` call included,
       whatever absorbed the previous throw, and whether the stop was set from a poll or outside one (a host's native,
@@ -376,8 +243,8 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
       `Promise.try`, an async generator body, a thenable's `then` getter, `Promise.all`'s iteration, two looping
       disposers and a for-of's looping `return()`, with memory to spare and with none): every loop ended within 2 polls
       of the stop, after at most one more iteration.
-    - Why: the host stops a widget for good (its budget, its memory, an internal failure) and from then on nothing may
-      run on. QuickJS's own interrupt error is uncatchable, but only as an object: when a refusal at the memory limit
+    - Why: the host stops a widget for good (its CPU limits, its memory, a count cap, an internal failure) and from then
+      on nothing may run on. QuickJS's own interrupt error is uncatchable, but only as an object: when a refusal at the memory limit
       leaves too little to build it, QuickJS throws bare `null`, which a script's `try` caught at every poll (change 9's
       residual; the same with a budget stop that finds memory full). An out-of-memory error, caught once, let a script
       decide what to do after the stop. With the flag, the stop decides, not the value. A script's own `throw null`
@@ -397,62 +264,16 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
       no stop's throw runs an iteration of it. `test_stopped_disposal`:
       a native disposer that stops the runtime on its 1,000th (100th) call and throws, in a stack of 100,000 `defer`s
       disposed by `dispose()` and by `{ using t = s; }`, and in a scope of 1,000 `using` declarations: no disposer runs
-      after it, at most one poll asks the handler, under 1,000 units are spent past the stop, and nothing leaks
+      after it, at most one poll asks the handler, and nothing leaks
       (`JS_FreeRuntime`'s object-list assertion). Each site was mutated in turn (the flag a no-op, each test back to the
       value alone, each disposal check and the forced poll removed): every mutation fails the suite. The native
-      runtime's `RuntimeHookTests` (`testAStopIsNotCaughtWhenItsErrorCannotBeBuilt`, `testABudgetStopIsNotCaught`,
+      runtime's `RuntimeHookTests` (`testAStopIsNotCaughtWhenItsErrorCannotBeBuilt`, `testACpuStopIsNotCaught`,
       `testOutOfMemoryCannotBeCaught`, `testDisposalEndsAtTheStop`) and `TimerTests`
       (`testATimerThatCouldNotBeScheduledIsNotKept`) pin it end to end.
-11. **The walks of a context's loaded modules are charged** (2026-10-17, the native runtime's module scripts, M1b plan
-    Global Constraints "Work"; Task 13 fix round 2, ruling J1).
-    - What: `JSContext.loaded_module_count` counts the modules in `ctx->loaded_modules`. It goes up where a module joins
-      the list (`js_new_module_def`) and down where one leaves it (`js_free_module_def`, the one `list_del` of a
-      module's link). `js_free_modules` goes through it, and so do the failures that unlink a module: a parse, a
-      function creation or a resolution that fails (`__JS_EvalInternal`'s `fail1`) and a failed `JS_ReadModule`. A
-      module whose body throws stays listed, with its `eval_exception` set. Every walk of the list that script reaches
-      is charged `count × JS_WORK_ELEMENT_UNITS` (4: local edit 2's generic element visit) before it starts, through
-      `JS_ChargeWork` (`js_charge_loaded_modules`):
-      - `js_find_loaded_module_by_name`, which `import.meta` runs on every evaluation (`js_import_meta`, upstream's
-        "XXX: inefficient" lookup by name). A refused charge returns NULL with the interrupt pending, and `js_import_meta`
-        propagates it (`JS_HasException`) instead of throwing its catchable "import.meta not supported in this context";
-      - `js_find_loaded_module`, an import's lookup (static `import` through `js_resolve_module`, `import()` through
-        `JS_LoadModuleInternal`). Module bytecode a host reads (`JS_ReadObject`, through `JS_ReadModule`) reaches the
-        same lookup when the host resolves its imports (`JS_ResolveModule`): a host route, not a script one, charged
-        alike. Its one caller, `js_host_resolve_imported_module`, already propagates a NULL with an exception pending
-        (`JS_HasException`, the path upstream uses for `js_module_attributes_equal`'s failure);
-      - `js_free_modules` when it frees the unresolved modules after a failed resolution (`JS_FREE_MODULE_NOT_RESOLVED`:
-        `import()` with a module loader, and the host's `JS_ResolveModule`). It is void, so it charges deferred
-        (`js_charge_loaded_modules_deferred`, `js_charge_work_deferred`: the next poll decides). The context's teardown
-        (`JS_FREE_MODULE_ALL`, from `JS_FreeContext`) is not charged.
-    - The list's walks audited (`list_for_each…(&ctx->loaded_modules)`, five sites):
-      - `js_find_loaded_module_by_name` and `js_find_loaded_module`: reachable from script; charged (above);
-      - `js_free_modules`: reachable from script only through `import()` with a module loader that returns a module
-        whose resolution then fails; charged when it frees unresolved modules (above);
-      - `JS_MarkContext`, the collector's mark of every module: reachable from script only as garbage collection, which
-        the fork charges nowhere per object (each module was paid for as allocated bytes, local edit 2); unchanged;
-      - `JS_ComputeMemoryUsage`: a host API, not reachable from script; unchanged.
-    - Why: a module stays in the list for the context's life once it is evaluated, so the list grows by one per module
-      script (the native runtime runs each through `JS_Eval`). `import.meta` walked it from the head, uncharged, at
-      every evaluation, so the same budget bought one more list step per module per iteration. Measured (Task 13 fix
-      round 1): `for (;;) import.meta` under 400,000 units took 3 ms after 16 module scripts and 3.25 s after 2,000; with
-      20,000 and 4,000,000 units it ran past 10 minutes. The native runtime's module normalize hook (`wr::Runtime::
-      refuseModule`, Task 13 fix round 1) refuses every import before `js_find_loaded_module`, but nothing stands before
-      `import.meta`'s walk.
-    - Deterministic: the charge is a count, not a time. The walks themselves and every lookup's result are upstream's;
-      only the charge (and, at a refusal, the interrupt in place of the lookup's outcome) is new. A runtime that never
-      sets an interrupt handler sees only the work counter move.
-    - Pinned by `tests/quickjs_host_test.c`, `test_loaded_module_walks`:
-      - under one budget an `import.meta` loop's iteration costs 4 units more per module loaded (7,936 more after 2,000
-        modules than after 16, within 5%);
-      - 2,000 modules refused at their `import` (freed again) are not charged for: the loop runs exactly as many
-        iterations as with none;
-      - a charge refused inside `import.meta` throws the uncatchable interrupt: the `catch` around it does not run. A
-        charge refused inside a static import's lookup throws the interrupt too, not the catchable
-        "could not load module".
-      Each site was mutated in turn (the decrement, the increment, the two charges, `js_import_meta`'s propagation):
-      every mutation fails the test. `js_free_modules`' deferred charge is not separately pinned: its only script route
-      needs a module loader. The native runtime's `testImportMetaIsChargedPerLoadedModule` (`ScriptTests`) pins it end
-      to end.
+11. **The walks of a context's loaded modules are charged** (2026-10-17). **Removed 2026-10-30** with change 2, whose
+    counter it charged (`JSContext.loaded_module_count`, `js_charge_loaded_modules`): `import.meta`'s walk of the
+    loaded modules is upstream's again, and its time is the slice's like any other. The native runtime's module
+    normalize hook still refuses every import before `js_find_loaded_module` (`wr::Runtime::refuseModule`).
 12. **No dumps without an explicit opt-in** (2026-10-17, the M1b final review's I1; M1b plan Global Constraints
     "Work").
     - What: upstream's `#ifndef NDEBUG` / `#define ENABLE_DUMPS` (`quickjs/quickjs.c:84`, upstream's line) now reads
@@ -461,13 +282,12 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
       `quickjs_copts` turns the dumps back on for debugging, with the cost below.
     - Why: `ENABLE_DUMPS` does not only compile the dump code in. It adds a list link to every string
       (`JSString.link`) and a list of them to the runtime (`JSRuntime.string_list`), so every string and atom
-      allocation is larger. The work counter charges allocated bytes (local edit 2), and the memory limit and the GC
-      thresholds count them, so a build without `NDEBUG` (Bazel's default configuration, the app's debug builds) spent
-      more units on the same script than `-c opt`, reached the memory limit and ran the collector at other points, and
-      took other in-place concatenation decisions (`JS_ConcatString2` compares the block's usable size with
-      `sizeof(*p1)`). A widget would have been stopped at different points in the app's debug and release builds.
-      Measured with the native runtime's WPT runner (`:WidgetRuntimeWPTTests`, which prints every page's units): before
-      the change, all 331 pages' units differed between the default build and `-c opt` (the default build's median page
+      allocation is larger. The memory limit and the GC thresholds count them (and so did the work counter, change 2,
+      while it was there), so a build without `NDEBUG` (Bazel's default configuration, the app's debug builds) reached
+      the memory limit and ran the collector at other points than `-c opt`, and took other in-place concatenation
+      decisions (`JS_ConcatString2` compares the block's usable size with `sizeof(*p1)`). A widget would have been
+      stopped at different points in the app's debug and release builds. Measured with the native runtime's WPT runner
+      (`:WidgetRuntimeWPTTests`, which printed every page's units then): before the change, all 331 pages' units differed between the default build and `-c opt` (the default build's median page
       35,668 units, 3.8%, more); after it, all 331 are equal, and equal under `-c dbg` too (all three of Bazel's
       compilation modes, measured on the M1b final fix's tree).
     - Left alone: `assert` still follows `NDEBUG`. `-DNDEBUG` is not added to `quickjs_copts`: it would also remove
@@ -475,6 +295,4 @@ Re-apply these after upgrading; `git diff 55b3934a98 -- third-party/quickjs-ng/q
     - The string layout is runtime state, not part of the bytecode format: the `.qbc` files are unaffected.
     - Pinned by `tests/quickjs_host_test.c`, `test_dumps_never_follow_ndebug`: in the suite's default build (no
       `NDEBUG`) `JS_SetDumpFlags(rt, ~0)` keeps nothing and `JS_GetDumpFlags` answers 0, which is what both do with the
-      dumps compiled out. Before the change it answered the 24 bits of the flags field (the RED run). End to end, the
-      WPT runner's per-page units compared between the two configurations (above) are the check; nothing runs that
-      comparison automatically.
+      dumps compiled out. Before the change it answered the 24 bits of the flags field (the RED run).

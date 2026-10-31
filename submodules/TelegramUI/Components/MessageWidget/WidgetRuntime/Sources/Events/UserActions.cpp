@@ -16,7 +16,6 @@
 #include "Sources/Host/TelegramWidget.h"
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -55,7 +54,6 @@ std::string keyword(JSContext* ctx, const Element& element, std::string_view nam
         return std::string();
     }
     std::string text = value->utf8();
-    chargeScan(ctx, text.size());
     size_t begin = text.find_first_not_of(" \t\n\f\r");
     size_t end = text.find_last_not_of(" \t\n\f\r");
     if (begin == std::string::npos) {
@@ -79,10 +77,11 @@ bool isInclusiveAncestor(const Node& ancestor, const Node* node) {
     return false;
 }
 
-void noteRender(JSContext* ctx) {
+// `anchor` and its inclusive ancestors may have changed state (RenderTree::userActionStateChanged).
+void noteRender(JSContext* ctx, Element* anchor) {
     if (HostState* host = HostState::find(ctx)) {
         if (RenderTree* render = host->render()) {
-            render->userActionStateChanged();
+            render->userActionStateChanged(anchor);
         }
     }
 }
@@ -112,7 +111,6 @@ void forEachInGroup(JSContext* ctx, Element& radio, F visit) {
         root = parent;
     }
     for (Node* n = root; n; n = n->nextInTreeOrder(root)) {
-        charge(ctx, work::kNodeVisit);
         if (!n->isElement() || n == &radio) {
             continue;
         }
@@ -206,8 +204,10 @@ void UserActions::setHover(JSContext* ctx, Element* hover) {
     if (m_hover.get() == hover) {
         return;
     }
+    const Ref<Element> old = std::move(m_hover);
     m_hover = hover ? Ref<Element>::retain(ctx, hover) : Ref<Element>();
-    noteRender(ctx);
+    noteRender(ctx, old.get());
+    noteRender(ctx, hover);
 }
 
 void UserActions::addActive(JSContext* ctx, Element* element, uint64_t press) {
@@ -215,7 +215,7 @@ void UserActions::addActive(JSContext* ctx, Element* element, uint64_t press) {
         return;
     }
     m_active.push_back(Active{press, Ref<Element>::retain(ctx, element)});
-    noteRender(ctx);
+    noteRender(ctx, element);
 }
 
 void UserActions::removeActive(JSContext* ctx, uint64_t press) {
@@ -223,11 +223,12 @@ void UserActions::removeActive(JSContext* ctx, uint64_t press) {
     if (it == m_active.end()) {
         return;
     }
+    const Ref<Element> element = std::move(it->element);
     m_active.erase(it);
-    noteRender(ctx);
+    noteRender(ctx, element.get());
 }
 
-void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
+void UserActions::nodeRemoved(JSContext* ctx, Node& node, Node& oldParent) {
     bool changed = false;
     if (m_hover && isInclusiveAncestor(node, m_hover.get())) {
         m_hover = Ref<Element>();
@@ -239,7 +240,7 @@ void UserActions::nodeRemoved(JSContext* ctx, Node& node) {
                    m_active.end());
     changed = changed || m_active.size() != before;
     if (changed) {
-        noteRender(ctx);
+        noteRender(ctx, oldParent.isElement() ? static_cast<Element*>(&oldParent) : nullptr);
     }
 }
 
@@ -356,7 +357,6 @@ void runActivation(JSContext* ctx, HTMLElement& element, Event& event) {
         if (!href) {
             return;
         }
-        chargeScan(ctx, href->length());
         // SDK v1 §2.5: by host to openTelegramLink or openLink, as the press allows; a fragment does nothing.
         followAnchor(ctx, *href);
         return;
@@ -370,7 +370,6 @@ void runActivation(JSContext* ctx, HTMLElement& element, Event& event) {
             }
         } else {
             for (Node* n = element.firstChildNode(); n; n = n->nextInTreeOrder(&element)) {
-                charge(ctx, work::kNodeVisit);
                 if (n->isElement() && isLabelable(ctx, static_cast<Element&>(*n))) {
                     control = static_cast<Element*>(n);
                     break;

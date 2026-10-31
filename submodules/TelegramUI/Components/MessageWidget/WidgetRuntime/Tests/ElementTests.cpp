@@ -235,69 +235,6 @@ WR_TEST(testAttributesInPositionsCloningAndAdoption) {
     CHECK_JS(env, "(c => c !== a && c.name === 'a' && c.value === '1' && c.ownerElement === null && c.isEqualNode(a) && !c.isEqualNode(b))(a.cloneNode())");
 }
 
-namespace {
-
-/// The work of one evaluation of `code`, after a first one (which makes the interfaces and atoms it uses).
-uint64_t workOf(DOMEnv& env, const std::string& code) {
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval(code);
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval(code);
-    return JS_GetWorkUnits(rt) - before;
-}
-
-} // namespace
-
-// The walks over an element's attribute list are charged per attribute (Global Constraints, "Work"): a read among
-// 5,000 attributes costs at least their visits, where an uncharged one would cost a binding call.
-WR_TEST(testAttributeWalksAreCharged) {
-    DOMEnv env;
-    env.eval("var e = document.createElement('div'); for (let i = 0; i < 5000; i++) e.setAttribute('a' + i, 'v'); e.setAttribute('data-last', 'x'); var last = e.getAttributeNode('data-last');"
-             "var u = document.createElementNS('http://www.w3.org/2000/svg', 'g'); for (let i = 0; i < 5000; i++) u.setAttributeNS('urn:x', 'p:a' + i, 'v');");
-    // 4,500 visits, under the 5,000 walked: the margin is for nothing else (the uncharged walk costs ~100 units).
-    uint64_t floor = 4500 * wr::work::kNodeVisit;
-    for (const char* code : {"e.getAttribute('data-last')", "e.hasAttribute('data-last')", "e.getAttributeNS(null, 'data-last')",
-                             "e.hasAttributeNS(null, 'data-last')", "e.getAttributeNode('data-last')", "e.attributes.getNamedItem('data-last')",
-                             "e.removeAttribute('nope')", "e.toggleAttribute('data-last', true)", "e.getAttributeNames()", "e.title", "e.hidden",
-                             "e.id", "e.dataset.last", "'nope' in e.dataset", "Object.keys(e.dataset)", "last.value", "last.textContent",
-                             "e.classList.length", "e.isEqualNode(e)", "u.getAttribute('p:a4999')", "u.getAttributeNS('urn:x', 'a4999')"}) {
-        uint64_t units = workOf(env, code);
-        if (units < floor) {
-            std::printf("  %s: %llu units\n", code, (unsigned long long)units);
-        }
-        CHECK(units >= floor);
-    }
-    // A token list of 5,000 classes: a lookup and a parse visit every token.
-    env.eval("var c = document.createElement('div'); c.className = Array.from({length: 5000}, (_, i) => 'c' + i).join(' ')");
-    CHECK(workOf(env, "c.classList.contains('c4999')") >= floor);
-    CHECK(workOf(env, "c.className += ' '; c.classList.length") >= floor);
-}
-
-// The string work behind attributes, token lists and datasets is charged at QuickJS's scan rate, work::kScanEightUnits
-// per eight UTF-16 units, as its own `===` and searches are: each pass over a long name or value costs its length.
-// Values are built flat (repeat, padStart): a rope would be flattened by the call, and the copy charged instead.
-WR_TEST(testStringScansAreCharged) {
-    DOMEnv env;
-    const uint64_t n = uint64_t(4) << 20;
-    const uint64_t pass = n / 8 * wr::work::kScanEightUnits;
-    env.eval("var n = 4 << 20; var A = 'a'.repeat(n), B = 'b'.repeat(n), Ax = 'x'.padStart(n, 'a'); var e = document.createElement('div'); var c = e.classList; e.className = A; c.length");
-    // Re-parsing the class attribute reads every unit, twice here.
-    CHECK(workOf(env, "e.className = B; c.length; e.className = A; c.length") >= 2 * pass);
-    // contains compares a token of the same length in full; toggle validates its token, then compares it.
-    CHECK(workOf(env, "c.contains(Ax)") >= pass);
-    CHECK(workOf(env, "c.toggle(A, true)") >= 2 * pass);
-    // An attribute name: validated, lowercased and looked for a colon, each a pass (its atom's hashing is QuickJS's).
-    env.eval("var name = 'a'.repeat(n)");
-    CHECK(workOf(env, "e.toggleAttribute(name, true)") >= 3 * pass);
-    // A dataset name with '-' before a lower alpha names no pair: found by a scan of all of it.
-    env.eval("var key = '-a'.padStart(n + 2, 'x')");
-    CHECK(workOf(env, "e.dataset[key]") >= 2 * pass);
-    // Equal nodes compare their data.
-    env.eval("var t1 = document.createTextNode(A), t2 = document.createTextNode(Ax)");
-    CHECK(workOf(env, "t1.isEqualNode(t2)") >= pass);
-    CHECK_JS(env, "c.length === 1 && c.contains(A) && !c.contains(Ax) && e.hasAttribute(name) && e.dataset[key] === undefined && !t1.isEqualNode(t2)");
-}
-
 // A refused name is quoted in its error's message, at most 160 bytes of it cut at a character boundary and then '…'
 // (Task 18): the whole name was converted to UTF-8, uncharged, for a message QuickJS cuts to 255 bytes, which could
 // split a character and drop the message's own text.

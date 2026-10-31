@@ -121,7 +121,6 @@ JSValue Runtime::pairForEach(JSContext* ctx, JSValueConst thisVal, int argc, JSV
         }
         // WebIDL: the length is read again before every step.
         for (uint32_t i = 0; i < iteration.length(ctx, thisVal); i++) {
-            charge(ctx, work::kNodeVisit);
             JSValue key = JS_UNDEFINED, value = JS_UNDEFINED;
             iteration.pair(ctx, thisVal, i, &key, &value);
             Value k = Value::adopt(ctx, key), v = Value::adopt(ctx, value);

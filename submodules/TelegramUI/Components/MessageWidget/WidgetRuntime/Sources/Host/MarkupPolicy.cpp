@@ -204,7 +204,8 @@ RenderAttributeDecision renderAttribute(ElementNamespace ns, std::string_view re
         if (judged.verdict == css::policy::Verdict::Drop) {
             return {};
         }
-        return kept(canonical, value);
+        // sdk-v1 §2.17: env() as the policy rewrote it.
+        return kept(canonical, judged.verdict == css::policy::Verdict::Keep ? std::string(value) : litehtml::get_repr(judged.value));
     }
     if (name == "font-family") {
         return kept(canonical, css::policy::reduceFontFamilyText(value));

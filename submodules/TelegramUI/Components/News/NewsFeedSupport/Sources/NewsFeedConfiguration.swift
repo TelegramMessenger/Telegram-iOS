@@ -26,15 +26,25 @@ private func newsFeedSwitch(appConfiguration: AppConfiguration) -> Bool? {
     return nil
 }
 
-/// Whether the server's feed (`feed.getFeed`, `feed.getForYou`) is available to this account: for dev accounts only,
-/// and then unless `news_feed_enabled` is false or 0 (a kill switch there: missing or unparseable means on).
-public func isNewsFeedServerAvailable(appConfiguration: AppConfiguration) -> Bool {
+/// Whether the server's feed (`feed.getFeed`, `feed.getForYou`) is available to this account. Never while the feed API
+/// is parked (`newsFeedApiIsAvailable`); then for dev accounts only, unless `news_feed_enabled` is false or 0 (a kill
+/// switch there: missing or unparseable means on). `apiIsAvailable` is a parameter only so tests can pin the
+/// app-config rule in either build.
+public func isNewsFeedServerAvailable(appConfiguration: AppConfiguration, apiIsAvailable: Bool = newsFeedApiIsAvailable) -> Bool {
+    guard apiIsAvailable else {
+        return false
+    }
     return isDevAccount(appConfiguration: appConfiguration) && newsFeedSwitch(appConfiguration: appConfiguration) != false
 }
 
-/// Whether News is shown (the tab, Add to News): for dev accounts, and for any account the server turns it on for
-/// with `news_feed_enabled` true or nonzero (missing or unparseable means off). Without the server's feed the Added
-/// page is built on the device from the subscribed channels' posts (`AddedFeedSource.localChannels`).
-public func isNewsFeedEnabled(appConfiguration: AppConfiguration) -> Bool {
+/// Whether News is shown (the tab, Add to News). Never while the feed API is parked (`newsFeedApiIsAvailable`), the
+/// device-built Added feed included; then for dev accounts, and for any account the server turns it on for with
+/// `news_feed_enabled` true or nonzero (missing or unparseable means off). Without the server's feed the Added page is
+/// built on the device from the subscribed channels' posts (`AddedFeedSource.localChannels`). `apiIsAvailable` is a
+/// parameter only so tests can pin the app-config rule in either build.
+public func isNewsFeedEnabled(appConfiguration: AppConfiguration, apiIsAvailable: Bool = newsFeedApiIsAvailable) -> Bool {
+    guard apiIsAvailable else {
+        return false
+    }
     return isDevAccount(appConfiguration: appConfiguration) || newsFeedSwitch(appConfiguration: appConfiguration) == true
 }

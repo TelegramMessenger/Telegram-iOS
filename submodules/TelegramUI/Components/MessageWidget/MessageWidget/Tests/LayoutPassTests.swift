@@ -2,12 +2,12 @@ import QuartzCore
 import XCTest
 @testable import MessageWidget
 
-/// Spec 2026-10-15 D5: the layout pass waits for a boot or a new width within the turn's allowance and cap; until it
+/// Spec 2026-10-15 D5: the layout pass waits for a boot or a new width within the turn's cap; until it
 /// finishes it answers the placeholder or the previous size, and the bubble lays out again when it lands.
 class LayoutPassTests: MessageWidgetTestCase {
     /// A cap that ends a gated task's wait at once in test time. Only tests whose task is held use a cap (planning
-    /// ruling 8); a test of the units uses `cap: nil`.
-    private let capped = MessageWidgetWaitPolicy(cap: 0.05, allowance: nil)
+    /// ruling 8).
+    private let capped = MessageWidgetWaitPolicy(cap: 0.05)
     private static let tall = "<!doctype html><body style='margin:0;padding:0'><div style='height:300px;background:#f00'></div></body>"
     private static let paragraph = "<!doctype html><body style='margin:0'><p style='margin:0;font:16px/20px sans-serif'>\(String(repeating: "word ", count: 80))</p></body>"
 
@@ -108,13 +108,11 @@ class LayoutPassTests: MessageWidgetTestCase {
         instance.destroy()
     }
 
-    /// Review Focus 4. Fails first on the placeholder. A ported chat message's parse is uncharged units (~0.8M on
-    /// WidgetRuntime, ~20M on the old runtime): main's wait ends when they cross the allowance (no cap here: planning
-    /// ruling 8), and the widget goes on to boot.
-    func testAHeavyParseEndsTheWaitOnItsUnits() {
-        let instance = self.make(LimitsTests.heavyMarkup, policy: MessageWidgetWaitPolicy(cap: nil, allowance: 100_000))
+    /// Review Focus 4. Fails first on the placeholder. A ported chat message's parse takes longer than a 1 ms cap: main's
+    /// wait ends at the cap (the only bound since the CPU-clock limits), and the widget goes on to boot.
+    func testAHeavyParseEndsTheWaitAtTheCap() {
+        let instance = self.make(LimitsTests.heavyMarkup, policy: MessageWidgetWaitPolicy(cap: 0.001))
         XCTAssertEqual(instance.layout(width: 360.0), CGSize(width: 360.0, height: MessageWidgetInstance.placeholderHeight))
-        XCTAssertGreaterThanOrEqual(self.turn.unitsWaited, 100_000, "the wait ended at the allowance, by units")
         XCTAssertNil(instance.appliedForTesting[.boot])
         XCTAssertTrue(self.pump(until: { instance.appliedForTesting[.boot] == 1 }, timeout: 60.0))
         XCTAssertNil(instance.deadReason)
@@ -125,7 +123,7 @@ class LayoutPassTests: MessageWidgetTestCase {
 
     /// Fails first: a start failure applied after its wait moved nothing, so the block stayed a placeholder.
     func testALateStartFailureDrawsAsCodeOnTheRelayout() {
-        self.lowerTheParseCeiling()
+        self.failUnstartableSources()
         let pool = self.pool!, turn = self.turn!, capped = self.capped
         var gate: MessageWidgetInstance.TaskGate?
         let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _, _, _ in

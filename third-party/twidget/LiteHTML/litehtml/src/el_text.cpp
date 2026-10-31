@@ -16,14 +16,26 @@ litehtml::el_text::el_text(const char* text, const document::ptr& doc) :
     css_w().set_display(display_inline_text);
     // Telegram (VENDOR.md edit 10).
     if(doc)
+    {
         doc->note_text_element(1);
+        // Telegram (VENDOR.md edit 84): generated content's pieces are counted apart from the document's own text.
+        if(doc->making_generated())
+        {
+            m_generated = true;
+            doc->note_generated_piece(1);
+        }
+    }
 }
 
 // Telegram (VENDOR.md edit 10). A document being destroyed is no longer reachable here, and needs no count.
 litehtml::el_text::~el_text()
 {
     if(auto doc = get_document())
+    {
         doc->note_text_element(-1);
+        if(m_generated)
+            doc->note_generated_piece(-1); // Telegram (VENDOR.md edit 84)
+    }
 }
 
 void litehtml::el_text::get_content_size(size& sz, pixel_t /*max_width*/)

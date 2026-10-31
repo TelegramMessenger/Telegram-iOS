@@ -1,5 +1,6 @@
 // Timers (M1b plan, Task 10): HTML's timer initialization steps on the host-driven loop.
 #include <cstdint>
+#include <cstdio>
 #include <string>
 
 #include "Sources/DOM/DOM.h"
@@ -69,9 +70,10 @@ WR_TEST(testEqualDeadlinesRunInCreationOrder) {
     CHECK_JS_EQ(env, "log.join()", "first,second");
 }
 
-// Review Focus 2: a chain of zero-delay timers is clamped to 4 ms past nesting level 5, keeps its order, and a chain
-// that never ends stops at the work limit.
-WR_TEST(testZeroDelayChainsAreOrderedAndBounded) {
+// Review Focus 2: a chain of zero-delay timers is clamped to 4 ms past nesting level 5 and keeps its order. A chain that
+// never ends runs at the clamp and is not stopped: each timer is a task with a slice of its own, as upstream's (the JS
+// quota throttles a chain whose callbacks spend CPU).
+WR_TEST(testZeroDelayChainsAreOrderedAndClamped) {
     {
         wr_test::HostEnv env;
         env.eval("var times = []; function f() { times.push(performance.now()); if (times.length < 10) setTimeout(f, 0); } setTimeout(f, 0);");
@@ -80,12 +82,15 @@ WR_TEST(testZeroDelayChainsAreOrderedAndBounded) {
     }
     {
         wr_test::HostEnv env;
-        env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 3000000);
         env.eval("var n = 0; (function f() { n++; setTimeout(f, 0); })();");
-        env.advance(1e9);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(globalNumber(env.ctx(), "n") > 50);
-        CHECK(env.step() == wr::StepResult::Stopped);
+        env.advance(1000);
+        // Five unclamped runs at 0, then one every 4 ms: 250 in the second.
+        CHECK(env.runtime().stopReason() == wr::StopReason::None);
+        const double n = globalNumber(env.ctx(), "n");
+        if (n < 250 || n > 260) {
+            std::printf("  %g runs in a second\n", n);
+        }
+        CHECK(n >= 250 && n <= 260);
     }
 }
 
@@ -145,9 +150,10 @@ WR_TEST(testTimeoutConversion) {
     CHECK_JS_EQ(env, "r.join()", "neg,wrap,nan,str");
 }
 
+// widget-sandbox v0.3.0 (strict): at most 64 live timers (compat: 256).
 WR_TEST(testTooManyTimers) {
     wr_test::HostEnv env;
-    env.eval("var ids = []; for (let i = 0; i < 256; i++) ids.push(setTimeout(() => {}, 1000));");
+    env.eval("var ids = []; for (let i = 0; i < 64; i++) ids.push(setTimeout(() => {}, 1000));");
     CHECK_THROWS(env, "setTimeout(() => {}, 1000)", "RangeError");
     CHECK_JS_EQ(env, "(() => { try { setInterval(() => {}, 1000); } catch (e) { return e.message; } })()", "too many timers");
     env.eval("clearTimeout(ids[0])");
@@ -155,6 +161,13 @@ WR_TEST(testTooManyTimers) {
     // A timer that ran gives its slot back.
     env.advance(1000);
     CHECK_JS(env, "setTimeout(() => {}, 1000) > 0");
+}
+
+WR_TEST(testCompatKeepsTwoHundredFiftySixTimers) {
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    wr_test::HostEnv env;
+    env.eval("var ids = []; for (let i = 0; i < 256; i++) ids.push(setTimeout(() => {}, 1000));");
+    CHECK_THROWS(env, "setTimeout(() => {}, 1000)", "RangeError");
 }
 
 // Review Focus 4: a cleared timer, a timer that ran once and an interval cleared from its own callback release what
@@ -186,6 +199,8 @@ WR_TEST(testClearedTimersReleaseTheirCallbacks) {
 // A timer whose task could not be made is not kept. The refused allocation stops the widget (quickjs-ng change 9), and
 // from then on no exception can be caught (change 10): the script's catch does not run.
 WR_TEST(testATimerThatCouldNotBeScheduledIsNotKept) {
+    // 255 live timers at once: past the strict cap (64), which this is not about.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     wr_test::HostEnv env;
     JSContext* ctx = env.ctx();
     env.runtime().setGlobal("squeezeMemory", JS_NewCFunction(ctx, squeezeMemory, "squeezeMemory", 0));
@@ -235,15 +250,16 @@ WR_TEST(testAStringHandlerExceptionIsReported) {
     CHECK(env.runtime().stopReason() == wr::StopReason::None);
 }
 
-// Fix round 1, M3: a string handler that never ends stops the widget at the work limit. The stop leaves the task
+// Fix round 1, M3: a string handler that never ends stops the widget at its CPU slice. The stop leaves the task
 // (Aborted) with the nesting level restored, and nothing runs after it.
 WR_TEST(testAStringHandlerThatNeverEndsStopsTheWidget) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
     JSContext* ctx = env.ctx();
     env.eval("var ran = 0; setTimeout('for (;;);', 0); setTimeout(() => { ran = 1; }, 0);");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 100000);
+    wr_test::stopAfter(env.runtime());
     CHECK(env.step() == wr::StepResult::Stopped);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK_EQ(wr::EventLoop::of(ctx).timerNestingLevel(), 0);
     CHECK(env.step() == wr::StepResult::Stopped);
     CHECK_EQ(globalNumber(ctx, "ran"), 0.0);

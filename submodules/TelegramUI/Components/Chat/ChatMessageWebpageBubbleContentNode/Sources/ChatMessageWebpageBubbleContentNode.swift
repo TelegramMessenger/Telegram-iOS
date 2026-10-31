@@ -194,6 +194,13 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         fatalError("init(coder:) has not been implemented")
     }
     
+    override public func bubblelessLiftParts() -> [ChatMessageBubblelessLiftPart] {
+        if let inlineBlockFrame = self.contentNode.inlineBlockFrame {
+            return [.block(inlineBlockFrame.offsetBy(dx: self.contentNode.frame.minX, dy: self.contentNode.frame.minY))]
+        }
+        return super.bubblelessLiftParts()
+    }
+    
     /// A suspicious sender's link preview opens nothing, as their links do not
     /// (`ChatMessageItemAssociatedData.isSuspiciousPeer`).
     private func isFromSuspiciousSender(_ item: ChatMessageBubbleContentItem) -> Bool {

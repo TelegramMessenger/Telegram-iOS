@@ -114,8 +114,8 @@ final class QrStudioScreenComponent: Component {
         private var rawSettings: QrStudioLookSettings?
         private var customEmojiFiles: [Int64: TelegramMediaFile] = [:]
         private var isLookModified = false
-        private let codeMenuCooldown = QrStudioMenuCooldown()
-        private let shareMenuCooldown = QrStudioMenuCooldown()
+        private let codeMenuCooldown = ContextMenuCooldown()
+        private let shareMenuCooldown = ContextMenuCooldown()
         private var syncedServerLook: QrStudioServerLook?
         private var pendingServerLook: QrStudioServerLook?
         private var shareThemeDisposable: Disposable?
@@ -2501,56 +2501,6 @@ private func qrStudioRemoveFeeParts(_ strings: PresentationStrings) -> (prefix: 
     let prefix = string.substring(to: range.location).trimmingCharacters(in: .whitespaces)
     let suffix = string.substring(from: range.location + range.length).trimmingCharacters(in: .whitespaces)
     return (prefix, suffix)
-}
-
-private final class QrStudioMenuCooldown {
-    static var interval: Double {
-        if #available(iOS 27.0, *) {
-            return 1.0
-        } else if #available(iOS 26.0, *) {
-            return 1.2
-        } else {
-            return 0.0
-        }
-    }
-
-    private var openedAt: Double = 0.0
-    private var closedAt: Double = 0.0
-    private var pending: DispatchWorkItem?
-
-    var dismissDelay: Double {
-        return max(0.0, QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.openedAt))
-    }
-
-    func markOpened() {
-        self.openedAt = CACurrentMediaTime()
-    }
-
-    func markClosed() {
-        self.closedAt = CACurrentMediaTime()
-    }
-
-    func perform(_ action: @escaping () -> Void) {
-        let remaining = QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.closedAt)
-        guard remaining > 0.0 else {
-            action()
-            return
-        }
-        guard self.pending == nil else {
-            return
-        }
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.pending = nil
-            action()
-        }
-        self.pending = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + remaining, execute: workItem)
-    }
-
-    func cancel() {
-        self.pending?.cancel()
-        self.pending = nil
-    }
 }
 
 public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeScreen {

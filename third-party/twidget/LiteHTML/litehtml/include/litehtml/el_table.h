@@ -11,6 +11,9 @@ namespace litehtml
         explicit el_table(const std::shared_ptr<litehtml::document>& doc);
 
         bool appendChild(const litehtml::element::ptr& el) override;
+        // Telegram (VENDOR.md edit 83)
+        bool accepts_child(string_id tag) const override;
+        bool accepts_text() const override { return false; }
         void parse_attributes() override;
     };
 } // namespace litehtml

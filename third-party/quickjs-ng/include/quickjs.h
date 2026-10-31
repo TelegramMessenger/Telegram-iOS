@@ -1259,24 +1259,6 @@ JS_EXTERN void JS_SetHostPromiseRejectionTracker(JSRuntime *rt, JSHostPromiseRej
 /* return != 0 if the JS code needs to be interrupted */
 typedef int JSInterruptHandler(JSRuntime *rt, void *opaque);
 JS_EXTERN void JS_SetInterruptHandler(JSRuntime *rt, JSInterruptHandler *cb, void *opaque);
-/* Telegram (VENDOR.md local edit 2): a deterministic count of the work a runtime did — interpreter polls, allocated
-   bytes, regex steps and scanning builtins — and a way for the host to charge its own. JS_ChargeWork asks the
-   interrupt handler every JS_WORK_CHECK_PERIOD units, as a poll does: -1 means it said stop, and an uncatchable
-   "interrupted" error is pending. The rates are calibrated by tests/quickjs_work_cost_test.c. */
-#ifndef JS_WORK_ALLOC_SHIFT
-#define JS_WORK_ALLOC_SHIFT 2        /* one unit per 4 bytes allocated or requested from realloc */
-#endif
-#ifndef JS_WORK_SCAN_SHIFT
-#define JS_WORK_SCAN_SHIFT 3         /* one unit per 8 elements a scanning builtin visits */
-#endif
-#ifndef JS_WORK_REGEX_UNITS
-#define JS_WORK_REGEX_UNITS 6000     /* per lre_check_timeout call, which comes every 10,000 regex steps */
-#endif
-#ifndef JS_WORK_CHECK_PERIOD
-#define JS_WORK_CHECK_PERIOD 100     /* JS_ChargeWork asks the handler every this many units */
-#endif
-JS_EXTERN uint64_t JS_GetWorkUnits(JSRuntime *rt);
-JS_EXTERN int JS_ChargeWork(JSContext *ctx, uint64_t units);
 /* if can_block is true, Atomics.wait() can be used */
 JS_EXTERN void JS_SetCanBlock(JSRuntime *rt, bool can_block);
 /* set the [IsHTMLDDA] internal slot */

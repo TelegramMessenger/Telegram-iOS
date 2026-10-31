@@ -3,7 +3,7 @@ import UIKit
 import Display
 
 private let mediaCropControlSize: CGFloat = 44.0
-private let mediaCropControlHitInset: CGFloat = 16.0
+let mediaCropControlHitInset: CGFloat = 16.0
 private let mediaCropGridThickness: CGFloat = 0.5
 private let mediaCropGridFadeDuration: Double = 0.2
 

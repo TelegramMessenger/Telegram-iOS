@@ -12,8 +12,11 @@ namespace litehtml
 
         void add_style(const style& style) override;
         ~el_before_after_base() override; // Telegram (VENDOR.md edit 19)
+        // Telegram (VENDOR.md edit 78): whether its content holds counter() or counters().
+        bool reads_counters() const { return m_reads_counters; }
 
       private:
+        bool               m_reads_counters = false;
         void               add_text(const std::string& txt);
         void               add_function(const std::string& fnc, const std::string& params);
         static std::string convert_escape(const char* txt);

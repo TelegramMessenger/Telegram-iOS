@@ -6,7 +6,6 @@
 #include "Sources/Animation/Timeline.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Render/RenderTree.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -301,7 +300,6 @@ void CSSAnimationState::stylesResolved(JSContext* ctx, RenderTree& render, const
         // its effect.
         uint64_t hash = 14695981039346656037ull;
         for (const std::string& sheet : render.styleSheets()) {
-            chargeScan(ctx, sheet.size());
             for (unsigned char c : sheet) {
                 hash = (hash ^ c) * 1099511628211ull;
             }
@@ -318,7 +316,6 @@ void CSSAnimationState::stylesResolved(JSContext* ctx, RenderTree& render, const
     }
     // An element that left the document has no style: its animations are cancelled. Cancelling can run script (a
     // promise's `then` getter), so each entry leaves the map before its animations are cancelled.
-    charge(ctx, uint64_t(m_elements.size()) * work::kNodeVisit);
     std::vector<const Element*> gone;
     for (const auto& [element, entry] : m_elements) {
         if (!entry.element->connected(ctx)) {
@@ -338,7 +335,6 @@ void CSSAnimationState::stylesResolved(JSContext* ctx, RenderTree& render, const
         while (!stack.empty()) {
             Node* node = stack.back();
             stack.pop_back();
-            charge(ctx, work::kNodeVisit);
             if (node->type() == NodeType::Element) {
                 elements.push_back(Ref<Element>::retain(ctx, static_cast<Element*>(node)));
             }
@@ -386,7 +382,6 @@ void CSSAnimationState::update(JSContext* ctx, RenderTree& render, Element& elem
     // CSS Animations 2: an animation keeps its object while its name stays in the list (matched in list order).
     std::vector<bool> used(previous.size(), false);
     for (const CSSAnimationSpec& spec : specs) {
-        charge(ctx, work::kNodeVisit);
         auto rule = m_rules.find(spec.name);
         size_t match = previous.size();
         for (size_t i = 0; i < previous.size(); i++) {
@@ -431,7 +426,6 @@ void CSSAnimationState::updateTransitions(JSContext* ctx, Element& element, Elem
     }
     DeclaredValues after;
     for (std::string_view property : kWatchedProperties) {
-        charge(ctx, work::kNodeVisit);
         std::string value = watchedValue(declared, property);
         if (!value.empty()) {
             after.emplace_back(std::string(property), std::move(value));
@@ -442,7 +436,6 @@ void CSSAnimationState::updateTransitions(JSContext* ctx, Element& element, Elem
     if (previous) {
         const std::vector<CSSTransitionSpec> specs = declaresTransitions ? transitionSpecs(ctx, declared) : std::vector<CSSTransitionSpec>{};
         for (std::string_view property : kWatchedProperties) {
-            charge(ctx, work::kNodeVisit);
             // An undeclared value, before or after, is the property's initial one (a transition from or back to
             // unset); a property without one in the table does not transition.
             const std::string_view initial = initialValue(property);

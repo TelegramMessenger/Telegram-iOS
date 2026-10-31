@@ -62,12 +62,13 @@ WR_TEST(testDriveEndsWhenDoneHolds) {
 }
 
 WR_TEST(testDriveReportsTheStopLatch) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 2000000);
+    wr_test::stopAfter(env.runtime());
     env.eval("setTimeout(function spin() { for (;;) {} }, 1);");
     wr_test::DriveEnd end = wr_test::driveVirtualTime(env, 1000, {}, 100000);
     CHECK(end == wr_test::DriveEnd::Stopped);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
 }
 
 WR_TEST(testDriveIsBoundedBySteps) {

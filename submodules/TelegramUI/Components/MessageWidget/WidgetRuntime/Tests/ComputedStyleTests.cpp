@@ -9,7 +9,6 @@
 #include "Sources/Render/ComputedStyle.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 #include "Tests/JSHarness.h"
 #include "Tests/RenderHarness.h"
@@ -75,28 +74,6 @@ WR_TEST(testAnUnknownCustomPropertyDoesNotGrowTheIdTable) {
     CHECK_JS_EQ(env.env(), "(() => { let s = ''; for (let i = 0; i < 100; i++) s += getComputedStyle(a).getPropertyValue('--never-declared-' + i); return s; })()", "");
     litehtml::string_id id;
     CHECK(!litehtml::_find_id("--never-declared-7", id));
-}
-
-/// The fix-wave review's I-3: a computed value's serialization counts against the query budget by its length, and
-/// `cursor` drops the space litehtml puts before each comma in one pass (it was quadratic).
-WR_TEST(testAComputedValueIsChargedByItsLength) {
-    std::string longCursor = "a";
-    for (int i = 0; i < 3000; i++) {
-        longCursor += ",a";
-    }
-    RenderEnv shortEnv("<!doctype html><html><head><style>:root { cursor: a, b }</style></head><body></body></html>");
-    RenderEnv longEnv("<!doctype html><html><head><style>:root { cursor: " + longCursor + " }</style></head><body></body></html>");
-    CHECK_EQ(shortEnv.env().eval("getComputedStyle(document.documentElement).cursor"), std::string("a, b"));
-    auto queries = [](RenderEnv& env) {
-        const uint64_t before = env.env().runtime().layoutQueryUnits();
-        env.env().eval("getComputedStyle(document.documentElement).cursor");
-        return env.env().runtime().layoutQueryUnits() - before;
-    };
-    const uint64_t shortQueries = queries(shortEnv);
-    const uint64_t longQueries = queries(longEnv);
-    CHECK(longQueries >= shortQueries + uint64_t(longCursor.size()) / 8 * wr::work::kScanEightUnits);
-    CHECK_EQ(longEnv.env().eval("(v => !v.includes(' ,') && v.split(',').length)(getComputedStyle(document.documentElement).cursor)"),
-             std::string("3001"));
 }
 
 /// widget-sandbox v0.1.1 (D18, css.text.selection; auto/06-text-fonts-c): the UA layer makes the root `none`; an
@@ -281,9 +258,9 @@ WR_TEST(testTheFidelityProperties) {
                   " #pan{touch-action:pan-x pan-y}</style></head><body>"
                   "<div id=f style='width:10px;height:10px;filter:blur(2px) brightness(1.5) drop-shadow(1px 1px 0 red)'></div>"
                   "<div id=n>n</div><div id=ta>t</div><div id=pan>p</div><div id=in><span id=ch>c</span></div>"
-                  "<div id=bg style='width:20px;height:20px;background:url(data:image/png;base64,AAAA) 1px 2px/10px 12px no-repeat'>"
-                  "</div><div id=cv style='background:#00f'></div><div id=two style='background:url(data:image/png;base64,AA) 0 0/cover,"
-                  "url(data:image/gif;base64,BB) 50% 100%/auto repeat-x'></div>"
+                  "<div id=bg style='width:20px;height:20px;background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==) 1px 2px/10px 12px no-repeat'>"
+                  "</div><div id=cv style='background:#00f'></div><div id=two style='background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==) 0 0/cover,"
+                  "url(data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==) 50% 100%/auto repeat-x'></div>"
                   "<svg width=40 height=40><rect id=r class=sv width=10 height=10></rect><circle id=c r=4></circle>"
                   "<g fill=#0f0><rect id=gr width=4 height=4></rect></g><rect id=cur style='color:#f00;fill:currentcolor'"
                   " width=4 height=4></rect><rect id=none fill=none width=4 height=4></rect></svg>"
@@ -303,7 +280,7 @@ WR_TEST(testTheFidelityProperties) {
     CHECK_JS_EQ(env.env(), "getComputedStyle(gr).fill", "rgb(0, 255, 0)");
     CHECK_JS_EQ(env.env(), "getComputedStyle(cur).fill", "rgb(255, 0, 0)");
     CHECK_JS_EQ(env.env(), "getComputedStyle(none).fill", "none");
-    CHECK_JS_EQ(env.env(), "getComputedStyle(bg).backgroundImage", "url(\"data:image/png;base64,AAAA\")");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(bg).backgroundImage", "url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==\")");
     CHECK_JS_EQ(env.env(), "getComputedStyle(bg).backgroundSize", "10px 12px");
     CHECK_JS_EQ(env.env(), "getComputedStyle(bg).backgroundPosition", "1px 2px");
     CHECK_JS_EQ(env.env(), "getComputedStyle(bg).backgroundRepeat", "no-repeat");
@@ -312,7 +289,7 @@ WR_TEST(testTheFidelityProperties) {
     CHECK_JS_EQ(env.env(), "getComputedStyle(cv).backgroundPosition", "0% 0%");
     CHECK_JS_EQ(env.env(), "getComputedStyle(cv).backgroundRepeat", "repeat");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundImage",
-                "url(\"data:image/png;base64,AA\"), url(\"data:image/gif;base64,BB\")");
+                "url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==\"), url(\"data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==\")");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundSize", "cover, auto");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundPosition", "0px 0px, 50% 100%");
     CHECK_JS_EQ(env.env(), "getComputedStyle(two).backgroundRepeat", "repeat, repeat-x");

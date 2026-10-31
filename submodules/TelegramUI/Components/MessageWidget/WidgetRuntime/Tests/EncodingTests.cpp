@@ -63,16 +63,6 @@ WR_TEST(testLabels) {
              std::string("RangeError,RangeError,RangeError"));
 }
 
-/// Review Focus 1: the scan is charged before it runs.
-WR_TEST(testAHugeEncodeIsCharged) {
-    HostEnv env;
-    env.eval("window.s = 'a'.repeat(4000000); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    CHECK_EQ(env.eval("new TextEncoder().encode(s).length"), std::string("4000000"));
-    CHECK(JS_GetWorkUnits(rt) - before >= 4000000 / 8);
-}
-
 /// The final review's C1: the options are read before the input's bytes are taken, so a `stream` getter that resizes
 /// or transfers the buffer cannot leave the decoder reading freed or moved memory.
 WR_TEST(testAnOptionsGetterCannotPullTheBufferAway) {

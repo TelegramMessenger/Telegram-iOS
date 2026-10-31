@@ -82,9 +82,8 @@
 #endif
 
 /* Telegram fork change 12 (VENDOR.md): upstream's `#ifndef NDEBUG` turned the dumps on in every build without NDEBUG,
-   and with them a list link in every string (JSString.link, JSRuntime.string_list): the work counter's allocation
-   charge, the memory limit's trip point and the GC thresholds moved with the build configuration. Only an explicit
-   opt-in turns them on. */
+   and with them a list link in every string (JSString.link, JSRuntime.string_list): the memory limit's trip point
+   and the GC thresholds moved with the build configuration. Only an explicit opt-in turns them on. */
 #ifdef TELEGRAM_QJS_ENABLE_DUMPS
 #define ENABLE_DUMPS
 #endif
@@ -365,10 +364,6 @@ struct JSRuntime {
     struct list_head tmp_obj_list; /* used during GC */
     JSGCPhaseEnum gc_phase : 8;
     size_t malloc_gc_threshold;
-    /* Telegram (VENDOR.md local edit 2): the work counter (JS_GetWorkUnits). */
-    uint64_t work_units;        /* polls, regex steps, scanning builtins, host charges */
-    uint64_t work_alloc_bytes;  /* bytes allocated, or requested from realloc */
-    uint64_t work_next_check;   /* JS_ChargeWork asks the interrupt handler once the total passes this */
 #ifdef ENABLE_DUMPS // JS_DUMP_LEAKS
     struct list_head string_list; /* list of JSString.link */
 #endif
@@ -570,7 +565,7 @@ enum {
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
-#ifndef JS_INTERRUPT_COUNTER_INIT /* Telegram: set in BUILD (VENDOR.md, local edit 1) */
+#ifndef JS_INTERRUPT_COUNTER_INIT /* Telegram: VENDOR.md, change 1 (reverted: nothing sets it, the stock rate holds) */
 #define JS_INTERRUPT_COUNTER_INIT 10000
 #endif
 
@@ -625,10 +620,8 @@ struct JSContext {
 
     /* when the counter reaches zero, JSRutime.interrupt_handler is called */
     int interrupt_counter;
-    int work_poll_reset; /* Telegram (VENDOR.md local edit 2): the value interrupt_counter was last set to */
 
     struct list_head loaded_modules; /* list of JSModuleDef.link */
-    uint32_t loaded_module_count; /* Telegram fork change 11 (VENDOR.md): the modules in loaded_modules */
 
     /* if NULL, RegExp compilation is not supported */
     JSValue (*compile_regexp)(JSContext *ctx, JSValueConst pattern,
@@ -1997,42 +1990,16 @@ static void js_arena_free_all(JSRuntime *rt)
     }
 }
 
-/* Telegram (VENDOR.md local edit 2): the work counter's total (JS_GetWorkUnits). */
-static inline uint64_t js_work_total(JSRuntime *rt)
-{
-    return rt->work_units + (rt->work_alloc_bytes >> JS_WORK_ALLOC_SHIFT);
-}
-
-/* Telegram (VENDOR.md local edit 2): units for `n` elements a native visits. */
-static inline uint64_t js_scan_units(uint64_t n)
-{
-    return n >> JS_WORK_SCAN_SHIFT;
-}
-
-static void js_charge_work_deferred(JSContext *ctx, uint64_t units);
-
-/* Telegram (VENDOR.md local edit 2): a prototype walk, a unit per object visited past the first JS_WORK_FREE_HOPS, deferred:
-   a deep chain is built once and then walked by every lookup, `in`, `instanceof` and assignment. */
-#define JS_WORK_FREE_HOPS 16
-static inline void js_charge_hop(JSContext *ctx, uint32_t *hops)
-{
-    if (unlikely(++*hops > JS_WORK_FREE_HOPS))
-        js_charge_work_deferred(ctx, 1);
-}
-
-/* Telegram (VENDOR.md local edit 2): makes every context's next poll ask the interrupt handler, at once rather than up
-   to JS_INTERRUPT_COUNTER_INIT polls later, counting the polls made since its counter was last set. For work charged
-   where no exception can be raised (an allocation, an equality): the next poll decides. */
-static void js_request_work_check(JSRuntime *rt)
+/* Telegram fork changes 9 and 10 (VENDOR.md): makes every context's next poll call the interrupt handler, at once
+   rather than up to JS_INTERRUPT_COUNTER_INIT polls later, so a stop latched outside a poll (at the memory limit, or by
+   the host) lands at the next poll site. */
+static void js_request_poll(JSRuntime *rt)
 {
     struct list_head *el;
     list_for_each(el, &rt->context_list) {
         JSContext *ctx = list_entry(el, JSContext, link);
-        if (ctx->interrupt_counter > 1) {
-            rt->work_units += ctx->work_poll_reset - ctx->interrupt_counter;
+        if (ctx->interrupt_counter > 1)
             ctx->interrupt_counter = 1;
-            ctx->work_poll_reset = 1;
-        }
     }
 }
 
@@ -2042,7 +2009,7 @@ static void js_memory_limit_refused(JSRuntime *rt)
 {
     if (rt->memory_limit_func) {
         rt->memory_limit_func(rt, rt->memory_limit_opaque);
-        js_request_work_check(rt);
+        js_request_poll(rt);
     }
 }
 
@@ -2064,9 +2031,6 @@ void *js_calloc_rt(JSRuntime *rt, size_t count, size_t size)
         js_memory_limit_refused(rt); /* Telegram fork change 9 (VENDOR.md) */
         return NULL;
     }
-    rt->work_alloc_bytes += count * size; /* Telegram (VENDOR.md local edit 2) */
-    if (unlikely(js_work_total(rt) >= rt->work_next_check))
-        js_request_work_check(rt);
 
     ptr = js_arena_calloc(rt, count, size);
     if (!ptr)
@@ -2092,9 +2056,6 @@ void *js_malloc_rt(JSRuntime *rt, size_t size)
         js_memory_limit_refused(rt); /* Telegram fork change 9 (VENDOR.md) */
         return NULL;
     }
-    rt->work_alloc_bytes += size; /* Telegram (VENDOR.md local edit 2) */
-    if (unlikely(js_work_total(rt) >= rt->work_next_check))
-        js_request_work_check(rt);
 
     ptr = js_arena_malloc(rt, size);
     if (!ptr)
@@ -2144,9 +2105,6 @@ void *js_realloc_rt(JSRuntime *rt, void *ptr, size_t size)
         js_memory_limit_refused(rt); /* Telegram fork change 9 (VENDOR.md) */
         return NULL;
     }
-    rt->work_alloc_bytes += size; /* Telegram (VENDOR.md local edit 2) */
-    if (unlikely(js_work_total(rt) >= rt->work_next_check))
-        js_request_work_check(rt);
 
     ptr = js_arena_realloc(rt, ptr, size);
     if (!ptr)
@@ -3081,7 +3039,7 @@ void JS_SetMemoryLimitFunc(JSRuntime *rt, JSMemoryLimitFunc *func, void *opaque)
 void JS_SetStopped(JSRuntime *rt)
 {
     rt->stopped = true;
-    js_request_work_check(rt);
+    js_request_poll(rt);
 }
 
 JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id)
@@ -3102,16 +3060,10 @@ typedef enum JSFreeModuleEnum {
     JS_FREE_MODULE_NOT_RESOLVED,
 } JSFreeModuleEnum;
 
-static void js_charge_loaded_modules_deferred(JSContext *ctx);
-
 /* XXX: would be more efficient with separate module lists */
 static void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
 {
     struct list_head *el, *el1;
-    /* Telegram fork change 11 (VENDOR.md): after a failed resolution (dynamic import(), JS_ResolveModule) the walk is
-       charged; the context's own teardown is not. */
-    if (flag == JS_FREE_MODULE_NOT_RESOLVED)
-        js_charge_loaded_modules_deferred(ctx);
     list_for_each_safe(el, el1, &ctx->loaded_modules) {
         JSModuleDef *m = list_entry(el, JSModuleDef, link);
         if (flag == JS_FREE_MODULE_ALL ||
@@ -3849,7 +3801,6 @@ static JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p)
 {
     JSRuntime *rt = ctx->rt;
     uint32_t n;
-    js_charge_work_deferred(ctx, js_scan_units(p->len)); /* Telegram (VENDOR.md local edit 2): hashed, compared */
     if (is_num_string(&n, p)) {
         if (n <= JS_ATOM_MAX_INT) {
             js_free_string(rt, p);
@@ -5028,10 +4979,6 @@ const char *JS_ToCStringLen2(JSContext *ctx, size_t *plen, JSValueConst val1,
         goto fail;
     str = JS_VALUE_GET_STRING(val);
     len = str->len;
-    /* Telegram (VENDOR.md local edit 2): the conversion scans the string, and an ASCII one comes back uncopied, so
-       its callers' own scans (Number(), parseInt, parseFloat skip the whitespace) cost no allocation: charged here,
-       deferred so no caller sees a new exception. */
-    js_charge_work_deferred(ctx, js_scan_units(len));
     if (!str->is_wide_char) {
         const uint8_t *src = str8(str);
         int count;
@@ -8881,7 +8828,7 @@ static void JS_ThrowInterrupted(JSContext *ctx)
        once, so a place that absorbs this exception is stopped at the next poll site. Requested before the error is
        built: building it can run JS (Error.prepareStackTrace), whose first poll then throws. */
     if (ctx->rt->stopped)
-        js_request_work_check(ctx->rt);
+        js_request_poll(ctx->rt);
     JS_ThrowInternalError(ctx, "interrupted");
     JS_SetUncatchableError(ctx, ctx->rt->current_exception);
 }
@@ -8889,85 +8836,12 @@ static void JS_ThrowInterrupted(JSContext *ctx)
 static no_inline __exception int __js_poll_interrupts(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
-    /* Telegram (VENDOR.md local edit 2): the polls since the counter was last set, and the next check. */
-    rt->work_units += ctx->work_poll_reset > 0 ? ctx->work_poll_reset : 1;
-    ctx->work_poll_reset = JS_INTERRUPT_COUNTER_INIT;
-    rt->work_next_check = js_work_total(rt) + JS_WORK_CHECK_PERIOD;
     ctx->interrupt_counter = JS_INTERRUPT_COUNTER_INIT;
     if (rt->interrupt_handler) {
         if (rt->interrupt_handler(rt, rt->interrupt_opaque)) {
             JS_ThrowInterrupted(ctx);
             return -1;
         }
-    }
-    return 0;
-}
-
-/* Telegram (VENDOR.md local edit 2): the work counter. */
-uint64_t JS_GetWorkUnits(JSRuntime *rt)
-{
-    return js_work_total(rt);
-}
-
-int JS_ChargeWork(JSContext *ctx, uint64_t units)
-{
-    JSRuntime *rt = ctx->rt;
-    uint64_t total;
-    rt->work_units += units;
-    total = js_work_total(rt);
-    if (total >= rt->work_next_check) {
-        rt->work_next_check = total + JS_WORK_CHECK_PERIOD;
-        if (rt->interrupt_handler && rt->interrupt_handler(rt, rt->interrupt_opaque)) {
-            JS_ThrowInterrupted(ctx);
-            return -1;
-        }
-    }
-    return 0;
-}
-
-/* Telegram (VENDOR.md local edit 2): what a generic element loop is charged per index it visits (an array-like's
-   property: a lookup, a hole on a sparse object), where the loop has no poll and its length is the caller's. */
-#define JS_WORK_ELEMENT_UNITS 4
-
-/* Telegram (VENDOR.md local edit 2): a step of a Set method's loop (union, difference and the rest): an iterator step,
-   a record lookup or insert and, for a set-like, a call of its `has` from C, none of which polls. Measured at ~200 ns
-   a step (the native-path sweep: 20x the reference per unit at one unit a step). */
-#define JS_WORK_SET_ELEMENT_UNITS 24
-
-/* Telegram (VENDOR.md local edit 2): work where no exception can be raised (an equality, an atom): the next poll
-   decides. */
-static void js_charge_work_deferred(JSContext *ctx, uint64_t units)
-{
-    JSRuntime *rt = ctx->rt;
-    rt->work_units += units;
-    if (js_work_total(rt) >= rt->work_next_check)
-        js_request_work_check(rt);
-}
-
-/* Telegram fork change 11 (VENDOR.md): a walk of the context's loaded modules that script reaches, charged before it
-   starts: a generic element visit (JS_WORK_ELEMENT_UNITS) per module in the list. -1 when the interrupt handler said
-   stop (the interrupt is pending). */
-static int js_charge_loaded_modules(JSContext *ctx)
-{
-    return JS_ChargeWork(ctx, (uint64_t)ctx->loaded_module_count * JS_WORK_ELEMENT_UNITS);
-}
-
-/* Telegram fork change 11 (VENDOR.md): the same where no exception can be raised (js_free_modules): the next poll
-   decides. */
-static void js_charge_loaded_modules_deferred(JSContext *ctx)
-{
-    js_charge_work_deferred(ctx, (uint64_t)ctx->loaded_module_count * JS_WORK_ELEMENT_UNITS);
-}
-
-/* Telegram (VENDOR.md local edit 2): a native loop's scan, charged as it goes: every 1 << JS_WORK_SCAN_SHIFT elements
-   visited (accumulated in *pending) charge a unit; -1 when the interrupt handler said stop. */
-static int js_scan_charge(JSContext *ctx, uint64_t *pending, uint64_t visited)
-{
-    *pending += visited;
-    if (*pending >> JS_WORK_SCAN_SHIFT) {
-        uint64_t units = *pending >> JS_WORK_SCAN_SHIFT;
-        *pending &= ((uint64_t)1 << JS_WORK_SCAN_SHIFT) - 1;
-        return JS_ChargeWork(ctx, units);
     }
     return 0;
 }
@@ -8987,7 +8861,6 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
 {
     JSObject *proto, *p, *p1;
     JSShape *sh;
-    uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
     if (throw_flag) {
         if (JS_VALUE_GET_TAG(obj) == JS_TAG_NULL ||
@@ -9045,8 +8918,6 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
                 }
             }
             /* Note: for Proxy objects, proto is NULL */
-            js_charge_hop(ctx, &hops);
-
             p1 = p1->shape->proto;
         } while (p1 != NULL);
         js_dup(proto_val);
@@ -9118,7 +8989,6 @@ JSValue JS_GetPrototype(JSContext *ctx, JSValueConst obj)
         if (unlikely(p->class_id == JS_CLASS_PROXY)) {
             val = js_proxy_getPrototypeOf(ctx, obj);
         } else {
-
             p = p->shape->proto;
             if (!p)
                 val = JS_NULL;
@@ -9155,7 +9025,6 @@ static int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
     JSObject *proto;
     const JSObject *p, *proto1;
     int ret;
-    uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
     if (!JS_IsFunction(ctx, obj))
         return false;
@@ -9178,8 +9047,6 @@ static int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
     proto = JS_VALUE_GET_OBJ(obj_proto);
     p = JS_VALUE_GET_OBJ(val);
     for(;;) {
-        js_charge_hop(ctx, &hops);
-
         proto1 = p->shape->proto;
         if (!proto1) {
             /* slow case if proxy in the prototype chain */
@@ -9437,7 +9304,6 @@ static JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
     JSProperty *pr;
     JSShapeProperty *prs;
     uint32_t tag;
-    uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
     tag = JS_VALUE_GET_TAG(obj);
     if (unlikely(tag != JS_TAG_OBJECT)) {
@@ -9575,8 +9441,6 @@ static JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                 }
             }
         }
-        js_charge_hop(ctx, &hops);
-
         p = p->shape->proto;
         if (!p)
             break;
@@ -10215,7 +10079,6 @@ int JS_HasProperty(JSContext *ctx, JSValueConst obj, JSAtom prop)
     JSObject *p;
     int ret;
     JSValue obj1;
-    uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
     if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
         return false;
@@ -10245,8 +10108,6 @@ int JS_HasProperty(JSContext *ctx, JSValueConst obj, JSAtom prop)
                 return false;
             }
         }
-        js_charge_hop(ctx, &hops);
-
         p = p->shape->proto;
         if (!p)
             break;
@@ -10885,7 +10746,6 @@ static int JS_SetPropertyInternal2(JSContext *ctx, JSValueConst obj, JSAtom prop
     JSPropertyDescriptor desc;
     int desc_flags;
     int ret;
-    uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
     switch(JS_VALUE_GET_TAG(this_obj)) {
     case JS_TAG_NULL:
@@ -11036,8 +10896,6 @@ retry:
                 }
             }
         }
-        js_charge_hop(ctx, &hops);
-
         p1 = p1->shape->proto;
     prototype_lookup:
         if (!p1)
@@ -13250,9 +13108,6 @@ static JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
 {
     JSBigInt *r;
 
-    /* Telegram (VENDOR.md local edit 2): one limb product each. */
-    if (JS_ChargeWork(ctx, js_scan_units((uint64_t)a->len * b->len)))
-        return NULL;
     r = js_bigint_new(ctx, a->len + b->len);
     if (!r)
         return NULL;
@@ -13284,9 +13139,6 @@ static JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
     b_sign = js_bigint_sign(b);
     na = a->len;
     nb = b->len;
-    /* Telegram (VENDOR.md local edit 2): schoolbook division, a limb product each, charged before it runs. */
-    if (JS_ChargeWork(ctx, js_scan_units((uint64_t)na * nb)))
-        return NULL;
 
     r = js_bigint_new(ctx, na + 2);
     if (!r)
@@ -13561,18 +13413,14 @@ static JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b)
     memcpy(r->tab, a->tab, a->len * sizeof(a->tab[0]));
     for(i = n_bits - 2; i >= 0; i--) {
         r1 = js_bigint_mul(ctx, r, r);
-        if (!r1) {
-            js_free(ctx, r); /* Telegram (VENDOR.md local edit 2): a charge can fail the multiply */
+        if (!r1)
             return NULL;
-        }
         js_free(ctx, r);
         r = r1;
         if ((e >> i) & 1) {
             r1 = js_bigint_mul(ctx, r, a);
-            if (!r1) {
-                js_free(ctx, r); /* Telegram (VENDOR.md local edit 2) */
+            if (!r1)
                 return NULL;
-            }
             js_free(ctx, r);
             r = r1;
         }
@@ -13858,10 +13706,6 @@ static JSBigInt *js_bigint_from_string(JSContext *ctx,
     }
     /* we add one extra bit for the sign */
     n_limbs = max_int(1, n_bits / JS_LIMB_BITS + 1);
-    /* Telegram (VENDOR.md local edit 2): decimal digits multiply into every limb built so far, quadratic in the
-       limbs; a power-of-two radix is linear. Charged before it runs. */
-    if (radix == 10 && JS_ChargeWork(ctx, js_scan_units((uint64_t)n_limbs * n_limbs)))
-        return NULL;
     r = js_bigint_new(ctx, n_limbs);
     if (!r)
         return NULL;
@@ -14017,10 +13861,6 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
             return js_new_string8_len(ctx, "0", 1);
         }
         is_binary_radix = ((radix & (radix - 1)) == 0);
-        /* Telegram (VENDOR.md local edit 2): a radix that is not a power of two divides every remaining limb for each
-           limb of digits, quadratic in the limbs. Charged before it runs. */
-        if (!is_binary_radix && JS_ChargeWork(ctx, js_scan_units((uint64_t)r->len * r->len)))
-            return JS_EXCEPTION;
         is_neg = js_bigint_sign(r);
         if (is_neg) {
             tmp = js_bigint_neg(ctx, r);
@@ -16338,13 +16178,6 @@ static no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
     tag2 = JS_VALUE_GET_NORM_TAG(op2);
 
     if (tag_is_string(tag1) && tag_is_string(tag2)) {
-        /* Telegram (VENDOR.md local edit 2) */
-        uint32_t len1 = string_rope_get_len(op1), len2 = string_rope_get_len(op2);
-        if (JS_ChargeWork(ctx, js_scan_units(len1 < len2 ? len1 : len2))) {
-            JS_FreeValue(ctx, op1);
-            JS_FreeValue(ctx, op2);
-            goto exception;
-        }
         if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
             res = js_string_compare(JS_VALUE_GET_STRING(op1),
                                     JS_VALUE_GET_STRING(op2));
@@ -16649,17 +16482,11 @@ static bool js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
         {
             if (!tag_is_string(tag2)) {
                 res = false;
+            } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
+                res = js_string_eq(JS_VALUE_GET_STRING(op1),
+                                   JS_VALUE_GET_STRING(op2));
             } else {
-                /* Telegram (VENDOR.md local edit 2): equal lengths are compared character by character. */
-                uint32_t len1 = string_rope_get_len(op1);
-                if (len1 == string_rope_get_len(op2))
-                    js_charge_work_deferred(ctx, js_scan_units(len1));
-                if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
-                    res = js_string_eq(JS_VALUE_GET_STRING(op1),
-                                       JS_VALUE_GET_STRING(op2));
-                } else {
-                    res = (js_string_rope_compare(op1, op2, true) == 0);
-                }
+                res = (js_string_rope_compare(op1, op2, true) == 0);
             }
         }
         break;
@@ -17373,15 +17200,6 @@ static JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
                                 int argc, JSValueConst *argv, int *pdone)
 {
     JSValue obj;
-
-    /* Telegram (VENDOR.md local edit 2): a step of an iterator driven from C (Array.from, new Map, Math.sumPrecise,
-       the Set methods, Promise.all, the iterator helpers) is charged as an element and checked. A built-in iterator's
-       step runs no bytecode, so no poll counted it: Math.sumPrecise over a 4M typed array was 36 ms for 59 units. The
-       interpreter's for-of does not come through here. */
-    if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) {
-        *pdone = false;
-        return JS_EXCEPTION;
-    }
 
     /* fast path for the built-in iterators (avoid creating the
        intermediate result object) */
@@ -18621,7 +18439,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSObject *p;
                 JSProperty *pr;
                 JSShapeProperty *prs;
-                uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
                 atom = JS_ATOM_length;
 
@@ -18641,8 +18458,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                             obj = JS_MKPTR(JS_TAG_OBJECT, p);
                             goto get_length_slow_path;
                         }
-                        js_charge_hop(ctx, &hops);
-
                         p = p->shape->proto;
                         if (!p) {
                             val = JS_UNDEFINED;
@@ -19952,7 +19767,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSObject *p;
                 JSProperty *pr;
                 JSShapeProperty *prs;
-                uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
                 atom = get_u32(pc);
                 pc += 4;
@@ -19976,8 +19790,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                             obj = JS_MKPTR(JS_TAG_OBJECT, p);
                             goto get_field_slow_path;
                         }
-                        js_charge_hop(ctx, &hops);
-
                         p = p->shape->proto;
                         if (!p) {
                             val = JS_UNDEFINED;
@@ -20003,7 +19815,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSObject *p;
                 JSProperty *pr;
                 JSShapeProperty *prs;
-                uint32_t hops = 0; /* Telegram (VENDOR.md local edit 2) */
 
                 atom = get_u32(pc);
                 pc += 4;
@@ -20027,8 +19838,6 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                             obj = JS_MKPTR(JS_TAG_OBJECT, p);
                             goto get_field2_slow_path;
                         }
-                        js_charge_hop(ctx, &hops);
-
                         p = p->shape->proto;
                         if (!p) {
                             val = JS_UNDEFINED;
@@ -23506,9 +23315,6 @@ static __exception int next_token(JSParseState *s)
         JS_ThrowStackOverflow(s->ctx);
         return -1;
     }
-    /* Telegram (VENDOR.md local edit 2): a unit per token, so a parse can be stopped partway. */
-    if (JS_ChargeWork(s->ctx, 1))
-        return -1;
 
     free_token(s, &s->token);
 
@@ -24160,9 +23966,6 @@ static __exception int json_next_token(JSParseState *s)
         JS_ThrowStackOverflow(s->ctx);
         return -1;
     }
-    /* Telegram (VENDOR.md local edit 2): a unit per token, so a parse can be stopped partway. */
-    if (JS_ChargeWork(s->ctx, 1))
-        return -1;
 
     json_free_token(s, &s->token);
 
@@ -30736,7 +30539,6 @@ static JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
     m->private_value = JS_UNDEFINED;
     m->attributes = JS_UNDEFINED;
     list_add_tail(&m->link, &ctx->loaded_modules);
-    ctx->loaded_module_count++; /* Telegram fork change 11 (VENDOR.md) */
     return m;
 }
 
@@ -30810,7 +30612,6 @@ static void js_free_module_def(JSContext *ctx, JSModuleDef *m)
     JS_FreeValue(ctx, m->private_value);
     JS_FreeValue(ctx, m->attributes);
     list_del(&m->link);
-    ctx->loaded_module_count--; /* Telegram fork change 11 (VENDOR.md) */
     js_free(ctx, m);
 }
 
@@ -31154,10 +30955,6 @@ static JSModuleDef *js_find_loaded_module(JSContext *ctx, JSAtom name,
     JSModuleDef *m;
     int eq;
 
-    /* Telegram fork change 11 (VENDOR.md): the walk is charged first; a refusal returns NULL with the interrupt
-       pending, which the caller's JS_HasException check propagates. */
-    if (js_charge_loaded_modules(ctx) < 0)
-        return NULL;
     /* first look at the loaded modules */
     list_for_each(el, &ctx->loaded_modules) {
         m = list_entry(el, JSModuleDef, link);
@@ -31177,10 +30974,6 @@ static JSModuleDef *js_find_loaded_module_by_name(JSContext *ctx, JSAtom name)
     struct list_head *el;
     JSModuleDef *m;
 
-    /* Telegram fork change 11 (VENDOR.md): the walk is charged first (import.meta runs it on every evaluation); a
-       refusal returns NULL with the interrupt pending. */
-    if (js_charge_loaded_modules(ctx) < 0)
-        return NULL;
     list_for_each(el, &ctx->loaded_modules) {
         m = list_entry(el, JSModuleDef, link);
         if (m->module_name == name)
@@ -32220,9 +32013,6 @@ static JSValue js_import_meta(JSContext *ctx)
     m = js_find_loaded_module_by_name(ctx, filename);
     JS_FreeAtom(ctx, filename);
     if (!m) {
-        /* Telegram fork change 11 (VENDOR.md): a refused charge left the interrupt pending: it propagates. */
-        if (JS_HasException(ctx))
-            return JS_EXCEPTION;
     fail:
         JS_ThrowTypeError(ctx, "import.meta not supported in this context");
         return JS_EXCEPTION;
@@ -38604,9 +38394,6 @@ static JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     JSModuleDef *m;
     bool is_strict_mode;
 
-    /* Telegram (VENDOR.md local edit 2): the source is tokenized and compiled. */
-    if (JS_ChargeWork(ctx, js_scan_units(input_len)))
-        return JS_EXCEPTION;
     js_parse_init(ctx, s, input, input_len, filename, line);
     skip_shebang(&s->buf_ptr, s->buf_end);
 
@@ -43486,8 +43273,6 @@ static int JS_CopySubArray(JSContext *ctx,
             }
             i += l;
         } else {
-            if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             fromPresent = JS_TryGetPropertyInt64(ctx, obj, from, &val);
             if (fromPresent < 0)
                 goto exception;
@@ -43614,8 +43399,6 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(r))
             goto exception;
         for(k = 0; k < len; k++) {
-            if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             v = JS_GetPropertyInt64(ctx, arrayLike, k);
             if (JS_IsException(v))
                 goto exception;
@@ -43881,8 +43664,6 @@ static JSValue js_array_concat(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             }
             for (k = 0; k < len; k++, n++) {
-                if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                    goto exception;
                 res = JS_TryGetPropertyInt64(ctx, e, k, &val);
                 if (res < 0)
                     goto exception;
@@ -44235,12 +44016,7 @@ static JSValue js_array_fill(JSContext *ctx, JSValueConst this_val,
     }
 
     /* XXX: should special case fast arrays */
-    /* Telegram (VENDOR.md local edit 2): one per element, each set through the generic property path, charged (and so
-       checked) per element: a set can do work of its own (a typed array converts the value on every set, a 1 MB string
-       each time), which a charge taken once up front never checks. */
     while (start < end) {
-        if (JS_ChargeWork(ctx, 1))
-            goto exception;
         if (JS_SetPropertyInt64(ctx, obj, start, js_dup(argv[0])) < 0)
             goto exception;
         start++;
@@ -44273,11 +44049,7 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
         if (js_get_fast_array(ctx, obj, &arrp, &count)) {
-            uint64_t pending = 0; /* Telegram (VENDOR.md local edit 2) */
             for (; n < count; n++) {
-                /* 4 per element: a unit per two strict comparisons */
-                if (js_scan_charge(ctx, &pending, 4))
-                    goto exception;
                 if (js_strict_eq2(ctx, argv[0], arrp[n],
                                   JS_EQ_SAME_VALUE_ZERO)) {
                     goto done;
@@ -44326,11 +44098,7 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
         if (js_get_fast_array(ctx, obj, &arrp, &count)) {
-            uint64_t pending = 0; /* Telegram (VENDOR.md local edit 2) */
             for (; n < count; n++) {
-                /* 4 per element: a unit per two strict comparisons */
-                if (js_scan_charge(ctx, &pending, 4))
-                    goto exception;
                 if (js_strict_eq2(ctx, argv[0], arrp[n], JS_EQ_STRICT)) {
                     goto done;
                 }
@@ -44381,11 +44149,7 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
                 goto exception;
         }
         if (js_get_fast_array(ctx, obj, &arrp, &count) && count == len) {
-            uint64_t pending = 0; /* Telegram (VENDOR.md local edit 2) */
             for (; n >= 0; n--) {
-                /* 4 per element: a unit per two strict comparisons */
-                if (js_scan_charge(ctx, &pending, 4))
-                    goto exception;
                 if (js_strict_eq2(ctx, argv[0], arrp[n],
                                   JS_EQ_STRICT)) {
                     goto done;
@@ -44547,8 +44311,6 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
     string_buffer_init(ctx, b, 0);
 
     for(i = 0; i < n; i++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto fail;
         if (i > 0) {
             if (c >= 0) {
                 string_buffer_putc8(b, c);
@@ -44711,9 +44473,6 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
     obj = JS_ToObject(ctx, this_val);
     if (js_get_length64(ctx, &len, obj))
         goto exception;
-    /* Telegram (VENDOR.md local edit 2) */
-    if (len > 1 && JS_ChargeWork(ctx, js_scan_units((uint64_t)len)))
-        goto exception;
 
     /* Special case fast arrays */
     if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
@@ -44730,11 +44489,6 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
     }
 
     for (l = 0, h = len - 1; l < h; l++, h--) {
-        /* Telegram (VENDOR.md local edit 2): the generic path reads both indices of a pair through the property path
-           (a hole walks the prototype chain), ~100 ns a pair: two elements, charged and checked per pair. The scan
-           charge above is the fast path's. */
-        if (JS_ChargeWork(ctx, 2 * JS_WORK_ELEMENT_UNITS))
-            goto exception;
         l_present = JS_TryGetPropertyInt64(ctx, obj, l, &lval);
         if (l_present < 0)
             goto exception;
@@ -44889,8 +44643,6 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
     }
     /* Copy the remaining elements if any (handle case of inherited properties) */
     for (; k < final; k++, n++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         kPresent = JS_TryGetPropertyInt64(ctx, obj, k, &val);
         if (kPresent < 0)
             goto exception;
@@ -44911,8 +44663,6 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
                 goto exception;
 
             for (k = len; k-- > new_len; ) {
-                if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                    goto exception;
                 if (JS_DeletePropertyInt64(ctx, obj, k, JS_PROP_THROW) < 0)
                     goto exception;
             }
@@ -45034,9 +44784,6 @@ static JSValue js_array_copyWithin(JSContext *ctx, JSValueConst this_val,
     }
 
     count = min_int64(final - from, len - to);
-    /* Telegram (VENDOR.md local edit 2) */
-    if (count > 0 && JS_ChargeWork(ctx, js_scan_units((uint64_t)count)))
-        goto exception;
 
     if (JS_CopySubArray(ctx, obj, to, from, count,
                         (from < to && to < from + count) ? -1 : +1))
@@ -45065,8 +44812,6 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
     }
 
     for (sourceIndex = 0; sourceIndex < sourceLen; sourceIndex++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            return -1;
         present = JS_TryGetPropertyInt64(ctx, source, sourceIndex, &element);
         if (present < 0)
             return -1;
@@ -45185,8 +44930,6 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
 
     if (psc->exception)
         return 0;
-    if (JS_ChargeWork(ctx, 1)) /* Telegram (VENDOR.md local edit 2): one per comparison */
-        goto exception;
 
     if (psc->has_method) {
         argv[0] = ap->val;
@@ -45219,9 +44962,6 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
                 goto exception;
             bp->str = JS_VALUE_GET_STRING(str);
         }
-        /* Telegram (VENDOR.md local edit 2) */
-        if (JS_ChargeWork(ctx, js_scan_units(ap->str->len < bp->str->len ? ap->str->len : bp->str->len)))
-            goto exception;
         cmp = js_string_compare(ap->str, bp->str);
     }
     if (cmp != 0)
@@ -45255,8 +44995,6 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
 
     /* XXX: should special case fast arrays */
     for (i = 0; i < len; i++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         if (pos >= array_size) {
             size_t new_size;
             ValueSlot *new_array;
@@ -47535,8 +47273,6 @@ static JSValue js_string_raw(JSContext *ctx, JSValueConst this_val,
         goto exception;
 
     for (i = 0; i < n; i++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         val = JS_ToStringFree(ctx, JS_GetPropertyInt64(ctx, raw, i));
         if (JS_IsException(val))
             goto exception;
@@ -47770,41 +47506,17 @@ static int string_indexof_char(JSString *p, int c, int from)
     return -1;
 }
 
-/* string_cmp, also telling how many characters it compared (Telegram, VENDOR.md local edit 2). */
-static int string_cmp_n(JSString *p1, JSString *p2, int x1, int x2, int len, int *compared)
-{
-    int i, c1, c2;
-    for (i = 0; i < len; i++) {
-        if ((c1 = string_get(p1, x1 + i)) != (c2 = string_get(p2, x2 + i))) {
-            *compared = i + 1;
-            return c1 - c2;
-        }
-    }
-    *compared = len;
-    return 0;
-}
-
-/* Telegram (VENDOR.md local edit 2): charges the characters it scans and compares; -2 when the interrupt handler said
-   stop (an uncatchable "interrupted" error is pending). */
-static int string_indexof(JSContext *ctx, JSString *p1, JSString *p2, int from)
+static int string_indexof(JSString *p1, JSString *p2, int from)
 {
     /* assuming 0 <= from <= p1->len */
-    int c, c2, i, j, n, len1 = p1->len, len2 = p2->len;
-    uint64_t pending = 0;
+    int c, i, j, len1 = p1->len, len2 = p2->len;
     if (len2 == 0)
         return from;
     for (i = from, c = string_get(p2, 0); i + len2 <= len1; i = j + 1) {
         j = string_indexof_char(p1, c, i);
-        if (js_scan_charge(ctx, &pending, (uint64_t)((j < 0 ? len1 : j) - i + 1)))
-            return -2;
         if (j < 0 || j + len2 > len1)
             break;
-        /* Telegram (VENDOR.md local edit 2): the compare is charged whether it matched or not: a match is the whole
-           needle compared, and a 1 MB needle found was free. */
-        c2 = string_cmp_n(p1, p2, j + 1, 1, len2 - 1, &n);
-        if (js_scan_charge(ctx, &pending, (uint64_t)n))
-            return -2;
-        if (!c2)
+        if (!string_cmp(p1, p2, j + 1, 1, len2 - 1))
             return j;
     }
     return -1;
@@ -47838,11 +47550,6 @@ static JSValue js_string_isWellFormed(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(str);
     if (!p->is_wide_char || p->len == 0)
         goto done; // by definition well-formed
-    /* Telegram (VENDOR.md local edit 2): the scan, charged before it runs. */
-    if (JS_ChargeWork(ctx, js_scan_units(p->len))) {
-        JS_FreeValue(ctx, str);
-        return JS_EXCEPTION;
-    }
 
     for (i = 0, n = p->len; i < n; i++) {
         c = str16(p)[i];
@@ -47948,14 +47655,8 @@ static JSValue js_string_indexOf(JSContext *ctx, JSValueConst this_val,
     }
     ret = -1;
     if (len >= v_len && inc * (stop - start) >= 0) {
-        uint64_t pending = 0; /* Telegram (VENDOR.md local edit 2) */
-        int compared;
         for (i = start;; i += inc) {
-            /* Telegram (VENDOR.md local edit 2): charged whether it matched or not (a match is the whole needle). */
-            int cmp = string_cmp_n(p, p1, i, 0, v_len, &compared);
-            if (js_scan_charge(ctx, &pending, (uint64_t)compared + 1))
-                goto fail;
-            if (!cmp) {
+            if (!string_cmp(p, p1, i, 0, v_len)) {
                 ret = i;
                 break;
             }
@@ -48020,14 +47721,8 @@ static JSValue js_string_includes(JSContext *ctx, JSValueConst this_val,
         start = stop = pos;
     }
     if (start >= 0 && start <= stop) {
-        uint64_t pending = 0; /* Telegram (VENDOR.md local edit 2) */
-        int compared;
         for (i = start;; i++) {
-            /* Telegram (VENDOR.md local edit 2): charged whether it matched or not (a match is the whole needle). */
-            int cmp = string_cmp_n(p, p1, i, 0, v_len, &compared);
-            if (js_scan_charge(ctx, &pending, (uint64_t)compared + 1))
-                goto fail;
-            if (!cmp) {
+            if (!string_cmp(p, p1, i, 0, v_len)) {
                 ret = 1;
                 break;
             }
@@ -48296,9 +47991,7 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             else
                 pos = endOfLastMatch + 1;
         } else {
-            pos = string_indexof(ctx, sp, searchp, endOfLastMatch);
-            if (pos == -2)
-                goto exception;
+            pos = string_indexof(sp, searchp, endOfLastMatch);
         }
         if (pos < 0) {
             if (is_first) {
@@ -48327,20 +48020,8 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(repl_str))
             goto exception;
 
-        /* Telegram (VENDOR.md local edit 2): each match is charged what it builds (its substitution, and the text
-           before it) and checked, and a failed append ends the call. An empty pattern matches at every position, so a
-           1 MB replacement over a 1 MB string ran the substitution a million times with no poll, past the point where
-           the result could no longer grow. */
-        if (JS_ChargeWork(ctx, 1 + js_scan_units((uint64_t)JS_VALUE_GET_STRING(repl_str)->len + (uint64_t)(pos - endOfLastMatch)))) {
-            JS_FreeValue(ctx, repl_str);
-            goto exception;
-        }
-        if (string_buffer_concat(b, sp, endOfLastMatch, pos)) {
-            JS_FreeValue(ctx, repl_str);
-            goto exception;
-        }
-        if (string_buffer_concat_value_free(b, repl_str))
-            goto exception;
+        string_buffer_concat(b, sp, endOfLastMatch, pos);
+        string_buffer_concat_value_free(b, repl_str);
         endOfLastMatch = pos + searchp->len;
         is_first = false;
         if (!is_replaceAll)
@@ -48421,12 +48102,7 @@ static JSValue js_string_split(JSContext *ctx, JSValueConst this_val,
     }
     q = p;
     for (q = p; (q += !r) <= s - r - !r; q = p = e + r) {
-        /* Telegram (VENDOR.md local edit 2): a unit per piece, so a split can be stopped partway. */
-        if (JS_ChargeWork(ctx, 1))
-            goto exception;
-        e = string_indexof(ctx, sp, rp, q);
-        if (e == -2)
-            goto exception;
+        e = string_indexof(sp, rp, q);
         if (e < 0)
             break;
         T = js_sub_string(ctx, sp, p, e);
@@ -48673,11 +48349,6 @@ static JSValue js_string_trim(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(str);
     a = 0;
     b = len = p->len;
-    /* Telegram (VENDOR.md local edit 2): the scan, charged before it runs (an all-space string allocates nothing). */
-    if (JS_ChargeWork(ctx, js_scan_units(len))) {
-        JS_FreeValue(ctx, str);
-        return JS_EXCEPTION;
-    }
     if (magic & 1) {
         while (a < len && lre_is_space(string_get(p, a)))
             a++;
@@ -48776,10 +48447,6 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
 
     b = JS_ToString(ctx, argv[0]);
     if (JS_IsException(b))
-        goto exception;
-    /* Telegram (VENDOR.md local edit 2): both strings are converted, normalized and compared: three units per character
-       (a quarter-unit was 4x the reference per unit on lone surrogates, which NFC handles one at a time; two 1.9x). */
-    if (JS_ChargeWork(ctx, 3 * ((uint64_t)JS_VALUE_GET_STRING(a)->len + JS_VALUE_GET_STRING(b)->len)))
         goto exception;
 
     an = to_utf32_buf(ctx, JS_VALUE_GET_STRING(a), &as);
@@ -48941,12 +48608,6 @@ static JSValue js_string_normalize(JSContext *ctx, JSValueConst this_val,
         JS_FreeCString(ctx, form);
     }
 
-    /* Telegram (VENDOR.md local edit 2): two units per character normalized, beside the buffers' allocation (lone
-       surrogates ran 3x the reference per unit on the allocation alone, 1.8x with one unit). */
-    if (JS_ChargeWork(ctx, 2 * (uint64_t)buf_len)) {
-        js_free(ctx, buf);
-        return JS_EXCEPTION;
-    }
     out_len = unicode_normalize(&out_buf, buf, buf_len, n_type,
                                 ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
     js_free(ctx, buf);
@@ -49818,11 +49479,7 @@ static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
                                   sizeof(error_msg), str, len, re_flags, ctx);
     JS_FreeCString(ctx, str);
     if (!re_bytecode_buf) {
-        /* Telegram (VENDOR.md local edit 2): stopped by the work counter (lre_charge_work), not a syntax error. */
-        if (!strcmp(error_msg, LRE_INTERRUPTED_MESSAGE))
-            JS_ThrowInterrupted(ctx);
-        else
-            JS_ThrowSyntaxError(ctx, "%s", error_msg);
+        JS_ThrowSyntaxError(ctx, "%s", error_msg);
         return JS_EXCEPTION;
     }
 
@@ -50206,31 +49863,8 @@ int lre_check_timeout(void *opaque)
 {
     JSContext *ctx = opaque;
     JSRuntime *rt = ctx->rt;
-    rt->work_units += JS_WORK_REGEX_UNITS; /* Telegram (VENDOR.md local edit 2) */
     return (rt->interrupt_handler &&
             rt->interrupt_handler(rt, rt->interrupt_opaque));
-}
-
-/* Telegram (VENDOR.md local edit 2): compilation work (a character class's merges): asks the interrupt handler as
-   JS_ChargeWork does, without raising; js_compile_regexp turns the failure into the uncatchable interrupt. */
-int lre_charge_work(void *opaque, unsigned units)
-{
-    JSContext *ctx = opaque;
-    JSRuntime *rt = ctx->rt;
-    rt->work_units += units;
-    if (js_work_total(rt) < rt->work_next_check)
-        return 0;
-    rt->work_next_check = js_work_total(rt) + JS_WORK_CHECK_PERIOD;
-    return rt->interrupt_handler && rt->interrupt_handler(rt, rt->interrupt_opaque);
-}
-
-/* Telegram (VENDOR.md local edit 2): the steps an exec made since its last lre_check_timeout, at the same rate,
-   deferred (the exec has returned). */
-void lre_charge_steps(void *opaque, int steps)
-{
-    JSContext *ctx = opaque;
-    if (steps > 0)
-        js_charge_work_deferred(ctx, (uint64_t)steps * JS_WORK_REGEX_UNITS / LRE_STEP_PERIOD);
 }
 
 void *lre_realloc(void *opaque, void *ptr, size_t size)
@@ -51947,11 +51581,6 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
     str = JS_ToCStringLen(ctx, &len, argv[0]);
     if (!str)
         return JS_EXCEPTION;
-    /* Telegram (VENDOR.md local edit 2) */
-    if (JS_ChargeWork(ctx, js_scan_units(len))) {
-        JS_FreeCString(ctx, str);
-        return JS_EXCEPTION;
-    }
     if (argc > 1 && JS_IsFunction(ctx, argv[1])) {
         JSONParseRecord pr_s, *pr = &pr_s, *pr1;
         JSValue root;
@@ -52200,8 +51829,6 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 goto exception;
             string_buffer_putc8(jsc->b, '[');
             for(i = 0; i < len; i++) {
-                if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                    goto exception;
                 if (i > 0)
                     string_buffer_putc8(jsc->b, ',');
                 string_buffer_concat_value(jsc->b, sep);
@@ -52357,8 +51984,6 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                 goto exception;
             for (i = j = 0; i < n; i++) {
                 JSValue present;
-                if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                    goto exception;
                 v = JS_GetPropertyInt64(ctx, replacer, i);
                 if (JS_IsException(v))
                     goto exception;
@@ -52699,10 +52324,6 @@ static JSProxyData *get_proxy_method(JSContext *ctx, JSValue *pmethod,
         JS_ThrowStackOverflow(ctx);
         return NULL;
     }
-    /* Telegram (VENDOR.md local edit 2): a trap's own machinery (the handler lookup, the invariant checks) costs
-       several polls' worth around the call it makes. */
-    if (JS_ChargeWork(ctx, 4))
-        return NULL;
 
     /* 's' should never be NULL */
     if (s->is_revoked) {
@@ -53983,14 +53604,10 @@ static uint32_t map_hash_key(JSContext *ctx, JSValueConst key)
         h = JS_VALUE_GET_INT(key);
         break;
     case JS_TAG_STRING:
+        h = hash_string(JS_VALUE_GET_STRING(key), 0);
+        break;
     case JS_TAG_STRING_ROPE:
-        /* Telegram (VENDOR.md local edit 2): every hash reads the whole key (lookups, insertions, a resize's rehash,
-           the set operations): charged by its length, deferred, as equality and atoms are. */
-        js_charge_work_deferred(ctx, js_scan_units(string_rope_get_len(key)));
-        if (tag == JS_TAG_STRING)
-            h = hash_string(JS_VALUE_GET_STRING(key), 0);
-        else
-            h = hash_string_rope(key, 0);
+        h = hash_string_rope(key, 0);
         break;
     case JS_TAG_OBJECT:
     case JS_TAG_SYMBOL:
@@ -54806,8 +54423,6 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             goto exception;
         found = false;
         for (;;) {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
@@ -54828,8 +54443,6 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             goto exception;
         found = false;
         do {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = js_map_iterator_next(ctx, iter, 0, NULL, &done, MAGIC_SET);
             if (JS_IsException(item))
                 goto exception;
@@ -54879,8 +54492,6 @@ static JSValue js_set_isSubsetOf(JSContext *ctx, JSValueConst this_val,
         goto exception;
     found = true;
     do {
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         item = js_map_iterator_next(ctx, iter, 0, NULL, &done, MAGIC_SET);
         if (JS_IsException(item))
             goto exception;
@@ -54933,8 +54544,6 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
         goto exception;
     found = true;
     for (;;) {
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
@@ -54990,8 +54599,6 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
@@ -55019,8 +54626,6 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = js_map_iterator_next(ctx, iter, 0, NULL, &done, MAGIC_SET);
             if (JS_IsException(item))
                 goto exception;
@@ -55090,8 +54695,6 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
@@ -55112,8 +54715,6 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-                goto exception;
             item = js_map_iterator_next(ctx, iter, 0, NULL, &done, MAGIC_SET);
             if (JS_IsException(item))
                 goto exception;
@@ -55180,8 +54781,6 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
     // test262 mandates we don't call the .add method
     list_for_each(el, &s->records) {
         mr = list_entry(el, JSMapRecord, link);
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         if (mr->empty)
             continue;
         mr = map_add_record(ctx, t, mr->key);
@@ -55196,8 +54795,6 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(next))
         goto exception;
     for (;;) {
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
@@ -55266,8 +54863,6 @@ static JSValue js_set_union(JSContext *ctx, JSValueConst this_val,
     t = JS_GetOpaque(newset, JS_CLASS_SET);
     list_for_each(el, &s->records) {
         mr = list_entry(el, JSMapRecord, link);
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         if (mr->empty)
             continue;
         mr = map_add_record(ctx, t, mr->key);
@@ -55282,8 +54877,6 @@ static JSValue js_set_union(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(next))
         goto exception;
     for (;;) {
-        if (JS_ChargeWork(ctx, JS_WORK_SET_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
@@ -60370,9 +59963,6 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
             return JS_EXCEPTION;
     }
     new_len = max_int64(end - start, 0);
-    /* Telegram (VENDOR.md local edit 2) */
-    if (new_len > 0 && JS_ChargeWork(ctx, js_scan_units((uint64_t)new_len)))
-        return JS_EXCEPTION;
     // note: difference between slice and sliceToImmutable is that the
     // latter does not have this step:
     //        1. Let _ctor_ be ? SpeciesConstructor(_O_, %ArrayBuffer%)
@@ -60713,9 +60303,6 @@ static JSValue js_typed_array_set_internal(JSContext *ctx,
         src_len = src_p->u.array.count;
         if (offset > dst_len - src_len)
             goto range_error;
-        /* Telegram (VENDOR.md local edit 2) */
-        if (src_len > 0 && JS_ChargeWork(ctx, js_scan_units((uint64_t)src_len)))
-            goto fail;
 
         /* copying between typed objects */
         if (src_p->class_id == p->class_id) {
@@ -60739,15 +60326,8 @@ static JSValue js_typed_array_set_internal(JSContext *ctx,
             JS_ThrowRangeError(ctx, "invalid array length");
             goto fail;
         }
-        /* Telegram (VENDOR.md local edit 2) */
-        if (src_len > 0 && JS_ChargeWork(ctx, js_scan_units((uint64_t)src_len)))
-            goto fail;
     }
     for(i = 0; i < src_len; i++) {
-        /* Telegram (VENDOR.md local edit 2): a generic get and a converting set per element, charged and checked per
-           element (the scan charge above is a typed source's copy): a holey or string source is ~30 ns an element. */
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS))
-            goto fail;
         val = JS_GetPropertyUint32(ctx, src_obj, i);
         if (JS_IsException(val))
             goto fail;
@@ -61060,8 +60640,6 @@ static JSValue js_typed_array_from(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(r))
         goto exception;
     for(k = 0; k < len; k++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto exception;
         v = JS_GetPropertyInt64(ctx, arr, k);
         if (JS_IsException(v))
             goto exception;
@@ -61170,9 +60748,6 @@ static JSValue js_typed_array_fill(JSContext *ctx, JSValueConst this_val,
     if (typed_array_is_oob(p))
         return JS_ThrowTypeErrorArrayBufferOOB(ctx);
     len = p->u.array.count;
-    /* Telegram (VENDOR.md local edit 2) */
-    if (len > 0 && JS_ChargeWork(ctx, js_scan_units((uint64_t)len)))
-        return JS_EXCEPTION;
 
     if (p->class_id == JS_CLASS_UINT8C_ARRAY) {
         int32_t v;
@@ -61393,9 +60968,6 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
     else
         k = min_int(k, len);
     stop = min_int(stop, len);
-    /* Telegram (VENDOR.md local edit 2): the range searched. */
-    if (JS_ChargeWork(ctx, js_scan_units((uint64_t)(stop > k ? stop - k : k - stop))))
-        return JS_EXCEPTION;
 
     is_bigint = 0;
     is_int = 0; /* avoid warning */
@@ -61716,9 +61288,6 @@ static JSValue js_typed_array_reverse(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_OBJ(this_val);
     if (typed_array_is_immutable(p))
         return JS_ThrowTypeErrorImmutableArrayBuffer(ctx);
-    /* Telegram (VENDOR.md local edit 2) */
-    if (len > 1 && JS_ChargeWork(ctx, js_scan_units((uint64_t)len)))
-        return JS_EXCEPTION;
     if (len > 0) {
         switch (typed_array_size_log2(p->class_id)) {
         case 0:
@@ -62114,9 +61683,6 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
 
     len = p->u.array.count;
-    /* Telegram (VENDOR.md local edit 2): about len·log2(len) comparisons. */
-    if (len > 1 && JS_ChargeWork(ctx, js_scan_units((uint64_t)len * (uint64_t)(32 - clz32((uint32_t)len)))))
-        return JS_EXCEPTION;
     if (len > 1) {
         switch (p->class_id) {
         case JS_CLASS_INT8_ARRAY:
@@ -62429,8 +61995,6 @@ static JSValue js_typed_array_constructor_obj(JSContext *ctx,
         goto fail;
 
     for(i = 0; i < len; i++) {
-        if (JS_ChargeWork(ctx, JS_WORK_ELEMENT_UNITS)) /* Telegram (VENDOR.md local edit 2) */
-            goto fail;
         val = JS_GetPropertyUint32(ctx, arr, i);
         if (JS_IsException(val))
             goto fail;

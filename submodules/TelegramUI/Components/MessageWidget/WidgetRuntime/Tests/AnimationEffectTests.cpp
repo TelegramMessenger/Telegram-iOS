@@ -9,7 +9,6 @@
 #include "Sources/Animation/Easing.h"
 #include "Sources/Animation/Timing.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 
 using namespace wr::animation;
@@ -254,24 +253,3 @@ WR_TEST(testWPTInvalidEasings) {
               "");
 }
 
-/// Final review I4: copying an effect and reading its keyframes are charged per value, not per keyframe (measured at
-/// ~8 and ~33 units a value, through the JS-heap allocations and the property definitions).
-WR_TEST(testCopiesAndReadsAreChargedPerValue) {
-    HostEnv env;
-    env.eval("const f = []; for (let k = 0; k < 10; k++) { const o = {}; for (let v = 0; v < 400; v++) o['--p' + v] = 'x'; f.push(o); }"
-             " window.src = new KeyframeEffect(null, f, 1000); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t values = 10 * 400;
-    uint64_t before = JS_GetWorkUnits(rt);
-    env.eval("window.copy = new KeyframeEffect(src); 1");
-    const uint64_t copy = JS_GetWorkUnits(rt) - before;
-    before = JS_GetWorkUnits(rt);
-    env.eval("window.read = src.getKeyframes(); 1");
-    const uint64_t read = JS_GetWorkUnits(rt) - before;
-    if (copy < values * wr::work::kNodeVisit || read < values * wr::work::kNodeVisit) {
-        std::printf("  copy %llu units, read %llu units, for %llu values\n", (unsigned long long)copy, (unsigned long long)read,
-                    (unsigned long long)values);
-    }
-    CHECK(copy >= values * wr::work::kNodeVisit);
-    CHECK(read >= values * wr::work::kNodeVisit);
-}

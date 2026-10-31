@@ -15,7 +15,6 @@
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -124,7 +123,6 @@ Ref<IntersectionObserver> IntersectionObserver::construct(JSContext* ctx, Callba
     if (cut) {
         throw DOMError{"SyntaxError", "rootMargin must be one to four lengths in px or %."};
     }
-    charge(ctx, work::kCssByte * uint64_t(margin.size() + 1));
     std::vector<std::string> tokens;
     for (size_t i = 0; i < margin.size() && tokens.size() <= 4;) {
         while (i < margin.size() && isSpace(margin[i])) {
@@ -185,7 +183,6 @@ Ref<IntersectionObserver> IntersectionObserver::construct(JSContext* ctx, Callba
             throw Thrown{};
         }
         for (uint32_t i = 0; double(i) < length; i++) {
-            charge(ctx, work::kNodeVisit);
             Value item = Value::adopt(ctx, JS_GetPropertyUint32(ctx, thresholdValue, i));
             if (JS_IsException(item.get())) {
                 throw Thrown{};
@@ -195,7 +192,6 @@ Ref<IntersectionObserver> IntersectionObserver::construct(JSContext* ctx, Callba
     } else {
         thresholds.push_back(toNumber(thresholdValue));
     }
-    charge(ctx, work::kNodeVisit * uint64_t(thresholds.size() + 1));
     if (thresholds.empty()) {
         thresholds.push_back(0);
     }
@@ -249,7 +245,6 @@ Value IntersectionObserver::thresholds(JSContext* ctx) {
 }
 
 void IntersectionObserver::observe(JSContext* ctx, Element* target) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size() + 1));
     for (const Observation& observation : m_observations) {
         if (payloadOfKnown(observation.target.value) == target) {
             return;
@@ -265,7 +260,6 @@ void IntersectionObserver::observe(JSContext* ctx, Element* target) {
 }
 
 void IntersectionObserver::unobserve(JSContext* ctx, Element* target) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size() + 1));
     for (size_t i = 0; i < m_observations.size(); i++) {
         if (payloadOfKnown(m_observations[i].target.value) == target) {
             m_observations[i].target.clear(JS_GetRuntime(ctx));
@@ -282,7 +276,6 @@ void IntersectionObserver::disconnect(JSContext* ctx) {
     if (m_observations.empty()) {
         return;
     }
-    charge(ctx, work::kNodeVisit * uint64_t(m_observations.size()));
     for (Observation& observation : m_observations) {
         observation.target.clear(JS_GetRuntime(ctx));
     }
@@ -315,7 +308,6 @@ Value IntersectionObserver::queuedArray(JSContext* ctx) {
 }
 
 Value IntersectionObserver::takeRecords(JSContext* ctx) {
-    charge(ctx, work::kNodeVisit * uint64_t(m_queue.size() + 1));
     return this->queuedArray(ctx);
 }
 
@@ -340,7 +332,6 @@ bool IntersectionObserver::update(JSContext* ctx, const RenderTree& render, doub
     }
     bool queued = false;
     for (Observation& observation : m_observations) {
-        charge(ctx, work::kLayoutBox);
         Element& target = *static_cast<Element*>(payloadOfKnown(observation.target.value));
         std::optional<RenderBox> targetRect = render.visualBorderBox(target);
         bool isIntersecting = false;
@@ -350,7 +341,6 @@ bool IntersectionObserver::update(JSContext* ctx, const RenderTree& render, doub
             bool adjacent = true;
             for (Element* ancestor = target.parentElementNode(); ancestor && ancestor != explicitRoot && adjacent;
                  ancestor = ancestor->parentElementNode()) {
-                charge(ctx, work::kNodeVisit);
                 if (std::optional<RenderBox> clip = render.visualBox(*ancestor, render.overflowClip(*ancestor))) {
                     rect = intersect(rect, *clip, adjacent);
                 }

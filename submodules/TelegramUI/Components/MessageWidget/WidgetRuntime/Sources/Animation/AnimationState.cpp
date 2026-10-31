@@ -23,7 +23,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::animation {
 
@@ -62,7 +61,6 @@ void AnimationState::track(JSContext* ctx, Animation& animation) {
     if (animation.isTracked()) {
         return;
     }
-    charge(ctx, work::kNodeVisit);
     m_animations.push_back(Ref<Animation>::retain(ctx, &animation));
     animation.setTracked(true);
 }
@@ -73,7 +71,6 @@ void AnimationState::updateAnimations(JSContext* ctx, double timestamp) {
     Vector<Ref<Animation>> visit(m_animations);
     // Which animations moved until now, read before the time moves: one that finishes in this frame stops moving here,
     // and its target must be sampled once more.
-    charge(ctx, uint64_t(visit.size()) * work::kNodeVisit);
     std::vector<bool> wasMoving(visit.size());
     for (size_t i = 0; i < visit.size(); i++) {
         wasMoving[i] = visit[i]->wantsFrame();
@@ -82,7 +79,6 @@ void AnimationState::updateAnimations(JSContext* ctx, double timestamp) {
     bool wants = false;
     for (size_t i = 0; i < visit.size(); i++) {
         const Ref<Animation>& animation = visit[i];
-        charge(ctx, work::kBindingCall);
         animation->update(ctx);
         animation->afterUpdate(ctx);
         const bool moving = animation->wantsFrame();
@@ -99,7 +95,6 @@ void AnimationState::updateAnimations(JSContext* ctx, double timestamp) {
 }
 
 void AnimationState::removeReplaced(JSContext* ctx) {
-    charge(ctx, uint64_t(m_animations.size()) * work::kNodeVisit);
     // Level 1's replaceable animations: active or persisted, so a persisted one covers those below it too.
     std::vector<Animation*> candidates;
     for (const Ref<Animation>& animation : m_animations) {
@@ -124,7 +119,6 @@ void AnimationState::removeReplaced(JSContext* ctx) {
         KeyframeEffect* effect = animation->keyframeEffect();
         Vector<std::string_view> names{JSAllocator<std::string_view>(rt)};
         for (const Keyframe& frame : effect->keyframes()) {
-            charge(ctx, uint64_t(frame.values.size()) * work::kNodeVisit);
             for (const auto& [name, value] : frame.values) {
                 names.emplace_back(*name);
             }
@@ -134,7 +128,6 @@ void AnimationState::removeReplaced(JSContext* ctx) {
         auto [entry, inserted] =
             covered.try_emplace({effect->targetElement(), effect->pseudoElementText()}, JSAllocator<std::string_view>(rt));
         Vector<std::string_view>& cover = entry->second;
-        charge(ctx, uint64_t(names.size() + cover.size()) * work::kNodeVisit);
         // Only an active animation whose target is in the document is removed.
         const bool replaced = animation->replace() == Animation::ReplaceState::Active && effect->targetElement()->connected(ctx) &&
                               !names.empty() && std::includes(cover.begin(), cover.end(), names.begin(), names.end());
@@ -153,7 +146,6 @@ void AnimationState::queueEvent(JSContext* ctx, Animation& animation, const char
     if (m_events.size() >= kMaxQueuedEvents) {
         return;
     }
-    charge(ctx, work::kNodeVisit);
     // A NaN time (a start time of -Infinity, from a rate so small that end / rate overflows) is unresolved: the sort's
     // comparator needs a strict weak ordering, which NaN breaks (final review C1).
     if (scheduledTime && std::isnan(*scheduledTime)) {
@@ -168,7 +160,6 @@ void AnimationState::queueCSSEvent(JSContext* ctx, Animation& animation, Element
     if (m_events.size() >= kMaxQueuedEvents) {
         return;
     }
-    charge(ctx, work::kNodeVisit);
     if (scheduledTime && std::isnan(*scheduledTime)) {
         scheduledTime.reset();
     }
@@ -186,7 +177,6 @@ void AnimationState::dispatchEvents(JSContext* ctx) {
     }
     Vector<QueuedEvent> events(JSAllocator<QueuedEvent>(JS_GetRuntime(ctx)));
     events.swap(m_events);
-    charge(ctx, uint64_t(events.size()) * work::kNodeVisit);
     std::sort(events.begin(), events.end(), [](const QueuedEvent& a, const QueuedEvent& b) {
         if (a.scheduledTime.has_value() != b.scheduledTime.has_value()) {
             return !a.scheduledTime.has_value();
@@ -219,7 +209,6 @@ void AnimationState::dispatchEvents(JSContext* ctx) {
 }
 
 void AnimationState::release(JSContext* ctx) {
-    charge(ctx, uint64_t(m_animations.size() + m_events.size()) * work::kNodeVisit);
     std::unordered_set<const Animation*> awaitingEvents;
     for (const QueuedEvent& queued : m_events) {
         awaitingEvents.insert(queued.animation.get());
@@ -240,7 +229,6 @@ void AnimationState::release(JSContext* ctx) {
 }
 
 std::vector<Ref<Animation>> AnimationState::animationsOf(JSContext* ctx, Element& element, bool subtree) {
-    charge(ctx, uint64_t(m_animations.size()) * work::kNodeVisit);
     std::vector<Ref<Animation>> out;
     for (const Ref<Animation>& animation : m_animations) {
         KeyframeEffect* effect = animation->keyframeEffect();
@@ -257,7 +245,6 @@ std::vector<Ref<Animation>> AnimationState::animationsOf(JSContext* ctx, Element
 }
 
 std::vector<Ref<Animation>> AnimationState::documentAnimations(JSContext* ctx) {
-    charge(ctx, uint64_t(m_animations.size()) * work::kNodeVisit);
     std::vector<Ref<Animation>> out;
     for (const Ref<Animation>& animation : m_animations) {
         KeyframeEffect* effect = animation->keyframeEffect();
@@ -328,7 +315,6 @@ void AnimationState::noteTarget(Element* element) {
 }
 
 void AnimationState::stylesResolved(JSContext* ctx, RenderTree& render, const StyleChange& change) {
-    // The visits were charged by RenderTree::pendingStyleChange, before the publish.
     if (m_styleObserver) {
         m_styleObserver(change);
     }
@@ -358,22 +344,34 @@ void AnimationState::styleAttributeChanged(Element& element) {
 
 std::unordered_map<const Element*, std::vector<Animation*>> AnimationState::renderedAnimations(
     JSContext* ctx, const std::unordered_set<const Element*>& targets) {
-    charge(ctx, uint64_t(m_animations.size()) * work::kNodeVisit);
     std::unordered_map<const Element*, std::vector<Animation*>> out;
-    size_t rendered = 0;
+    // widget-sandbox v0.3.0's limit.animations caps the live script animations (Limits::renderedAnimations; upstream's
+    // validator counts its shim's animation records); CSS animations and transitions are the renderer's own. All of them
+    // together stay within the runtime's own bound, kMaxRenderedAnimations.
+    const size_t cap = Runtime::from(ctx).limits().renderedAnimations;
+    size_t rendered = 0, scripted = 0;
+    auto note = [&](size_t count, const char* what) {
+        if (!m_notedAnimationLimit) {
+            m_notedAnimationLimit = true;
+            Runtime::from(ctx).host().diagnostic("animation-limit", "more than " + std::to_string(count) + what +
+                                                                        "; further ones are not rendered");
+        }
+    };
     for (const Ref<Animation>& animation : m_animations) {
         KeyframeEffect* effect = animation->keyframeEffect();
         Element* target = effect ? effect->targetElement() : nullptr;
         if (!target) {
             continue;
         }
-        if (rendered++ >= kMaxRenderedAnimations) {
-            if (!m_notedAnimationLimit) {
-                m_notedAnimationLimit = true;
-                Runtime::from(ctx).host().diagnostic("animation-limit", "more than 1024 live script animations; further ones are not rendered");
-            }
+        if (animation->compositeClass() == 2 && scripted++ >= cap) {
+            note(cap, " live script animations");
+            continue;
+        }
+        if (rendered >= kMaxRenderedAnimations) {
+            note(kMaxRenderedAnimations, " live animations");
             break;
         }
+        rendered++;
         if (targets.count(target)) {
             out[target].push_back(animation.get());
         }
@@ -441,7 +439,6 @@ std::vector<std::pair<std::string, std::string>> AnimationState::sample(JSContex
         for (size_t k = 0; k < frameCount; k++) {
             const Keyframe& frame = keyframes[k];
             const size_t count = std::min(frame.values.size(), kMaxRenderedProperties);
-            charge(ctx, uint64_t(count) * work::kNodeVisit);
             for (size_t v = 0; v < count; v++) {
                 const std::string_view name = *frame.values[v].first;
                 auto [it, added] = propertyIndex.emplace(name, properties.size());
@@ -460,7 +457,6 @@ std::vector<std::pair<std::string, std::string>> AnimationState::sample(JSContex
             }
         }
         for (const Property& property : properties) {
-            charge(ctx, work::kBindingCall + uint64_t(frameCount) * work::kNodeVisit);
             if (property.frames.empty()) {
                 continue;
             }
@@ -489,7 +485,6 @@ void AnimationState::collectRenderChanges(JSContext* ctx, RenderTree& render) {
     marked.swap(m_marked);
     const std::unordered_set<const Element*> targets = std::move(m_markedSet);
     m_markedSet.clear();
-    charge(ctx, uint64_t(marked.size()) * work::kNodeVisit);
     const std::unordered_map<const Element*, std::vector<Animation*>> byTarget = this->renderedAnimations(ctx, targets);
     static const std::vector<Animation*> kNone;
     for (const Ref<Element>& element : marked) {
@@ -511,7 +506,6 @@ void AnimationState::collectRenderChanges(JSContext* ctx, RenderTree& render) {
             text += value;
             text += "; ";
         }
-        chargeScan(ctx, text.size());
         auto it = m_styles.find(element.get());
         bool changed = false;
         if (text.empty()) {
@@ -563,7 +557,6 @@ std::vector<std::pair<std::string, std::string>> AnimationState::valuesUpTo(JSCo
     std::unordered_set<std::string_view> own;
     if (const KeyframeEffect* effect = animation.keyframeEffect()) {
         for (const Keyframe& frame : effect->keyframes()) {
-            charge(ctx, uint64_t(frame.values.size()) * work::kNodeVisit);
             for (const auto& [name, value] : frame.values) {
                 own.insert(std::string_view(*name));
             }

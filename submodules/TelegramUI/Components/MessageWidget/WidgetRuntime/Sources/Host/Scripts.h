@@ -37,7 +37,7 @@ public:
     bool hasPending() const { return !m_pending.empty(); }
 
     // MutationListener: collect only, and run no script. The pending list's growth and the attribute steps' connected
-    // check are the only work; a failure in it (the memory limit, the budget) latches the stop and throws Aborted, so a
+    // check are the only work; a failure in it (the memory limit) latches the stop and throws Aborted, so a
     // half-notified mutation is never observed (as EventHandlerAttributes does).
     void nodeInserted(Node& node) override;
     void childrenChanged(Node& parent) override;

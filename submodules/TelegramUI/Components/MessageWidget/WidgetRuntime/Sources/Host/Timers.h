@@ -16,7 +16,8 @@ namespace wr {
 
 class Timers {
 public:
-    /// Live timers and animation frame callbacks together (M1b plan, Ruling 8): EventLoop::liveCallbackCount.
+    /// Live animation frame callbacks (M1b plan, Ruling 8's table bound). Live timers are the runtime's
+    /// Limits::timers (widget-sandbox v0.3.0: 64 under strict, 256 under compat).
     static constexpr size_t kMaxLive = 256;
 
     explicit Timers(JSContext* ctx);
@@ -25,7 +26,7 @@ public:
     Timers& operator=(const Timers&) = delete;
 
     /// setTimeout (repeat false) and setInterval (repeat true): an id > 0. Throws RangeError past kMaxLive. A timer it
-    /// could not schedule (a charge or an allocation failed) is not kept.
+    /// could not schedule (an allocation failed) is not kept.
     int32_t start(JSContext* ctx, std::variant<String, Callback> handler, int32_t timeout, std::vector<Value> arguments, bool repeat);
     /// clearTimeout and clearInterval (the ids are shared): removes the entry, releasing what it holds.
     void clear(JSContext* ctx, int32_t id);
@@ -52,15 +53,14 @@ private:
         Vector<Held> arguments;
     };
     /// HTML step 2: an id > 0 not already in the map, from the counter, which wraps from INT32_MAX to 1. At most
-    /// kMaxLive ids are in use, so at most kMaxLive + 1 are tried, each lookup charged as find's.
+    /// kMaxLive ids are in use, so at most kMaxLive + 1 are tried.
     int32_t takeId(JSContext* ctx);
     /// HTML steps 3–14 for the entry `id`, which exists: clamps, takes a new unique handle, schedules the task.
     void schedule(JSContext* ctx, int32_t id, int32_t requested);
-    /// The entry, or nullptr. Charges work::kNodeVisit per entry visited.
+    /// The entry, or nullptr.
     ActiveTimer* find(JSContext* ctx, int32_t id);
     void erase(JSContext* ctx, int32_t id);
-    /// Releases the entry at `index` and removes it. Uncharged: erase charged its scan, and a rollback may be unwinding
-    /// from the budget; the table holds at most kMaxLive entries.
+    /// Releases the entry at `index` and removes it.
     void removeAt(size_t index);
     void release(ActiveTimer& timer);
 

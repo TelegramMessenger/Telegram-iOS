@@ -44,3 +44,17 @@ ios_unit_test(
     runner = ":WalletCardStickersTestRunner",
     deps = [":WalletCardStickersTestsLib"],
 )
+
+swift_library(
+    name = "WalletWidgetCallsTestsLib",
+    testonly = True,
+    srcs = ["Tests/WalletWidgetCallsTests.swift"],
+    deps = [":WalletContext", "//submodules/TelegramCore", "//third-party/wallet-engine:WalletEngineFFI"],
+)
+
+ios_unit_test(
+    name = "WalletWidgetCallsTests",
+    minimum_os_version = "15.0",
+    runner = ":WalletCardStickersTestRunner",
+    deps = [":WalletWidgetCallsTestsLib"],
+)

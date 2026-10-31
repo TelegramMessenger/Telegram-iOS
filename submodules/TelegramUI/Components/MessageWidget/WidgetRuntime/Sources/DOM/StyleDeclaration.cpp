@@ -1,14 +1,16 @@
 #include "Sources/DOM/StyleDeclaration.h"
 
 #include <algorithm>
+#include <functional>
 #include <map>
+#include <optional>
 
 #include "Generated/Bindings.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/Window.h"
 #include "Sources/Render/RenderTree.h"
+#include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -187,8 +189,6 @@ bool CSSStyleDeclaration::isSupported(std::string_view name) {
 }
 
 std::vector<CSSStyleDeclaration::Declaration> CSSStyleDeclaration::parse(JSContext* ctx, std::string_view text) {
-    // The split, the comment pass and the copies: a few passes over the text.
-    chargeScan(ctx, 4 * uint64_t(text.size()));
     std::vector<Declaration> found;
     // Each kept name's place in `found`, so a parse is O(n log n) in its declarations whatever their names (an ordered
     // map: a hash table's buckets can be flooded with names chosen offline, as libc++'s string hash has no seed); a
@@ -199,7 +199,6 @@ std::vector<CSSStyleDeclaration::Declaration> CSSStyleDeclaration::parse(JSConte
         if (!readDeclaration(raw, d)) {
             return;
         }
-        charge(ctx, work::kNodeVisit);
         auto earlier = placeOf.find(d.name);
         if (earlier != placeOf.end()) {
             // The later wins, at its place, unless only the earlier is important (the cascade inside a block).
@@ -255,7 +254,6 @@ std::string CSSStyleDeclaration::serialize(JSContext* ctx, const std::vector<Dec
         }
         out.push_back(';');
     }
-    chargeScan(ctx, out.size());
     return out;
 }
 
@@ -267,14 +265,38 @@ std::vector<CSSStyleDeclaration::Declaration> CSSStyleDeclaration::declarations(
     return parse(ctx, text->utf8ForParse());
 }
 
-void CSSStyleDeclaration::write(JSContext* ctx, const std::vector<Declaration>& declarations) {
+void CSSStyleDeclaration::write(JSContext* ctx, const std::vector<Declaration>& declarations, bool quietly) {
     const std::string text = serialize(ctx, declarations);
+    std::optional<Runtime::QuietOps> quiet;
+    if (quietly) {
+        quiet.emplace(Runtime::from(ctx));
+    }
     m_element->setAttributeValue(ctx, DOMState::of(ctx).name(Name::style), String::fromUTF8(ctx, text));
+}
+
+bool CSSStyleDeclaration::styleSentBefore(JSContext* ctx) {
+    const int index = m_element->findByNamespace(ctx, Namespace::None, JS_ATOM_NULL, DOMState::of(ctx).name(Name::style));
+    return index >= 0 && m_element->attributeAt(size_t(index)).addedBatch != Runtime::from(ctx).batchSerial();
+}
+
+void CSSStyleDeclaration::countPropertyChange(JSContext* ctx, const std::string& name) {
+    Runtime& runtime = Runtime::from(ctx);
+    const uint64_t batch = runtime.batchSerial();
+    if (m_opsBatch != batch) {
+        m_opsBatch = batch;
+        m_opsCounted.clear();
+    }
+    uint64_t stamp = 0;
+    if (!m_element->countsChange(batch, stamp)) {
+        return;
+    }
+    if (m_opsCounted.insert(std::hash<std::string>{}(name)).second) {
+        runtime.addOps(1);
+    }
 }
 
 void CSSStyleDeclaration::set(JSContext* ctx, std::string name, const String& value, bool important) {
     std::string text = trimmed(withoutComments(value.utf8ForParse()));
-    chargeScan(ctx, text.size());
     if (text.empty() || !isValidValue(text)) {
         return;
     }
@@ -287,9 +309,13 @@ void CSSStyleDeclaration::set(JSContext* ctx, std::string name, const String& va
         existing->value = std::move(text);
         existing->important = important;
     } else {
-        list.push_back(Declaration{std::move(name), std::move(text), important});
+        list.push_back(Declaration{name, std::move(text), important});
     }
-    this->write(ctx, list);
+    const bool perProperty = this->styleSentBefore(ctx);
+    if (perProperty) {
+        this->countPropertyChange(ctx, name);
+    }
+    this->write(ctx, list, perProperty);
 }
 
 std::string CSSStyleDeclaration::remove(JSContext* ctx, const std::string& name) {
@@ -306,7 +332,11 @@ std::string CSSStyleDeclaration::remove(JSContext* ctx, const std::string& name)
         return removed;
     }
     list.erase(it, list.end());
-    this->write(ctx, list);
+    const bool perProperty = this->styleSentBefore(ctx);
+    if (perProperty) {
+        this->countPropertyChange(ctx, name);
+    }
+    this->write(ctx, list, perProperty);
     return removed;
 }
 
@@ -320,14 +350,7 @@ namespace {
 
 std::optional<std::string> CSSStyleDeclaration::computedValue(JSContext* ctx, const std::string& name) {
     RenderTree* render = layoutForQuery(ctx);
-    uint64_t walked = 0;
-    std::optional<std::string> value = render ? render->computedStyleValue(*m_element, name, m_pseudo, &walked) : std::nullopt;
-    // The serialization counts against the query budget by its length (the fix-wave review's I-3), and the walks and
-    // scans behind it by their elements and bytes (the computed-style final review's I4).
-    if (value) {
-        chargeQueryRead(ctx, (uint64_t(value->size()) / 8 + 1) * work::kScanEightUnits + walked);
-    }
-    return value;
+    return render ? render->computedStyleValue(*m_element, name, m_pseudo) : std::nullopt;
 }
 
 String CSSStyleDeclaration::cssText(JSContext* ctx) {

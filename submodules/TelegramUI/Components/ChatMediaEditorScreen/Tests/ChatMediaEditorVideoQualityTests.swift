@@ -128,7 +128,7 @@ final class ChatMediaEditorVideoQualityTests: XCTestCase {
         let size = CGSize(width: 393.0, height: 852.0)
         let header = chatMediaEditorVideoHeaderFrame(size: size, toolbarMinY: 803.0, captionBaseHeight: 40.0)
         let frame = chatMediaEditorMuteButtonFrame(headerFrame: header, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0))
-        XCTAssertEqual(frame, CGRect(x: 5.0, y: 663.0, width: 40.0, height: 40.0))
+        XCTAssertEqual(frame, CGRect(x: 16.0, y: 655.0, width: 40.0, height: 40.0))
     }
 
     func testQualityDisabledWhenMuted() {
@@ -218,5 +218,26 @@ final class ChatMediaEditorVideoQualityTests: XCTestCase {
         XCTAssertEqual(lowered.qualityPreset, .compressedMedium)
         XCTAssertEqual(defaults.integer(forKey: "TG_preferredVideoPreset_v0"), 3)
         XCTAssertTrue(chatMediaEditorValuesAreEdited(lowered, baselineQualityPreset: baseline))
+    }
+
+    func testQualityPanelFramePortraitMatchesToday() {
+        let size = CGSize(width: 402.0, height: 874.0)
+        let insets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
+        let toolbarMinY = chatMediaEditorBottomPanelFrame(size: size, safeInsets: insets, toolbarHeight: 49.0).minY
+        let expected = CGRect(x: 0.0, y: toolbarMinY - 75.0 + 7.0, width: size.width, height: 68.0)
+        XCTAssertEqual(chatMediaEditorQualityPanelFrame(size: size, safeInsets: insets, toolbarSide: nil), expected)
+        XCTAssertEqual(expected, CGRect(x: 0.0, y: 723.0, width: 402.0, height: 68.0))
+    }
+
+    func testQualityPanelFrameLandscapeLeft() {
+        let size = CGSize(width: 874.0, height: 402.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        XCTAssertEqual(chatMediaEditorQualityPanelFrame(size: size, safeInsets: insets, toolbarSide: .left), CGRect(x: 111.0, y: 0.0, width: 75.0, height: 382.0))
+    }
+
+    func testQualityPanelFrameLandscapeRight() {
+        let size = CGSize(width: 874.0, height: 402.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        XCTAssertEqual(chatMediaEditorQualityPanelFrame(size: size, safeInsets: insets, toolbarSide: .right), CGRect(x: 688.0, y: 0.0, width: 75.0, height: 382.0))
     }
 }

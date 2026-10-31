@@ -62,8 +62,8 @@ class MessageWidgetTestCase: XCTestCase {
         return result!
     }
 
-    func make(_ source: String, theme: MessageWidgetInstance.Theme = .light, scale: CGFloat = 1.0, policy: MessageWidgetWaitPolicy = .unbounded, storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty) -> MessageWidgetInstance {
-        guard let instance = MessageWidgetInstance(source: source, theme: theme, stoppedLabel: "Widget stopped", maxMessageLength: 4096, storage: storage, context: context, state: state, pool: self.pool, waitPolicy: policy, turn: self.turn, scale: scale) else {
+    func make(_ source: String, theme: MessageWidgetInstance.Theme = .light, scale: CGFloat = 1.0, policy: MessageWidgetWaitPolicy = .unbounded, storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty, cpuLimits: MessageWidgetCpuLimits = .product) -> MessageWidgetInstance {
+        guard let instance = MessageWidgetInstance(source: source, theme: theme, stoppedLabel: "Widget stopped", maxMessageLength: 4096, storage: storage, context: context, state: state, pool: self.pool, waitPolicy: policy, turn: self.turn, scale: scale, cpuLimits: cpuLimits) else {
             XCTFail("instance not created")
             fatalError()
         }
@@ -131,17 +131,34 @@ class MessageWidgetTestCase: XCTestCase {
         return instance.deadReason != nil && (instance.onCoreForTesting { $0.renderer?.frozenLabel } ?? nil) == "Widget stopped" && !instance.currentFrame.tiles.isEmpty
     }
 
-    /// A source no widget can start from once `lowerTheParseCeiling()` has run: its parse passes the ceiling.
+    /// A source no widget can start from once `failUnstartableSources()` has run.
     func unstartableSource(_ markup: String) -> String {
-        return markup + "<!--" + String(repeating: "x", count: 64 * 1024) + "-->"
+        return markup + MessageWidgetTestCase.unstartableMark
     }
 
-    /// Lowers the parse ceiling to 1,000 units until the test ends, so a parse past it fails the widget's start.
-    func lowerTheParseCeiling() {
-        MessageWidgetCore.budgetsForTesting = (parse: 1_000, boot: MessageWidgetCore.bootWorkUnits, task: MessageWidgetCore.taskWorkUnits)
+    private static let unstartableMark = "<!--unstartable-->"
+
+    /// Until the test ends, a widget whose source `unstartableSource` made fails to start (`.failedToStart`, the pill).
+    func failUnstartableSources() {
+        MessageWidgetCore.startFailureForTesting = { $0.hasSuffix(MessageWidgetTestCase.unstartableMark) }
         self.addTeardownBlock {
-            MessageWidgetCore.budgetsForTesting = nil
+            MessageWidgetCore.startFailureForTesting = nil
         }
+    }
+
+    /// Until the test ends, every session's "CPU" clock is the wall clock (CACurrentMediaTime): a script spinning on
+    /// `performance.now()` for N ms spends N ms of it, whatever else the machine is doing.
+    func useWallTimeAsCpu() {
+        let now: () -> Double = { CACurrentMediaTime() * 1000.0 }
+        MessageWidgetCore.cpuClockForTesting = (cpu: now, wall: now)
+        self.addTeardownBlock {
+            MessageWidgetCore.cpuClockForTesting = nil
+        }
+    }
+
+    /// A script statement spinning `ms` milliseconds on `performance.now()`.
+    static func spin(_ ms: Int) -> String {
+        return "{ const t0 = performance.now(); while (performance.now() - t0 < \(ms)) {} }"
     }
 
     /// The renderer's own image of `rect` (document coordinates), drawn where the widget's work runs.

@@ -1,5 +1,5 @@
 // The render build (M1c plan, Task 5): the whole litehtml document built from the runtime's DOM, laid out, recorded
-// and published atomically. What is not rendered (Ruling 4), the render limits (Ruling 7), the charges (Ruling 9), a
+// and published atomically. What is not rendered (Ruling 4), the render limits (Ruling 7), a
 // stop in the middle of a build (Review Focus 2) and hostile sizes (Review Focus 4).
 #include <algorithm>
 #include <cstdint>
@@ -179,16 +179,6 @@ size_t heapInUse() {
     return stats.size_in_use;
 }
 
-// Rebuilds, and answers whether it threw Aborted.
-bool rebuildAborts(RenderEnv& env) {
-    try {
-        env.rebuild();
-    } catch (const wr::Aborted&) {
-        return true;
-    }
-    return false;
-}
-
 // The largest single operator-new allocation while tracking is on (testLongNamesAreChargedBeforeConversion). A
 // conversion that is freed when the stop unwinds leaves no heap growth behind, but its allocation is seen here.
 std::atomic<bool> gTrackAllocations{false};
@@ -237,11 +227,6 @@ WR_TEST(testBuildMirrorsTheDom) {
     CHECK(tree && findText(*tree, "Hi") != nullptr);
     // The first publish has no previous tree: everything changed.
     CHECK(!env.render().changedRects().has_value());
-    // A second build of the same DOM paints the same: no changed rect.
-    env.rebuild();
-    CHECK_EQ(env.render().buildCount(), uint64_t(2));
-    CHECK(env.render().changedRects().has_value() && env.render().changedRects()->empty());
-    CHECK(env.render().layerTree() != tree);
     if (!tags.empty() && tags != expected) {
         std::printf("  layoutDump:\n%s", env.render().layoutDump().c_str());
     }
@@ -269,7 +254,6 @@ WR_TEST(testBuildPathParity) {
     };
     for (const char* fixture : fixtures) {
         RenderEnv env(fixture);
-        env.rebuild();
         const std::string ours = env.render().layoutDump();
         // A second container over the same host, laid out from renderInput through litehtml's own parser. The
         // document goes before its container.
@@ -280,7 +264,7 @@ WR_TEST(testBuildPathParity) {
             // the root: the UA layer's values read them.
             litehtml::document::ptr parsed = litehtml::document::createFromString(
                 litehtml::estring(env.render().renderInput()), &container, wr::masterWithHostCSS(env.render().options().hostCSS),
-                "html{" + env.render().options().rootDeclarations + "}");
+                "html{" + wr::rootDeclarationsOf(env.render().options()) + "}");
             parsed->render(litehtml::pixel_t(float(env.render().options().width)));
             theirs = wr::dumpLayout(*parsed);
         }
@@ -319,7 +303,7 @@ WR_TEST(testUnrenderedContent) {
               "const tpl = document.createElement('template'); tpl.innerHTML = '<i>T</i>'; document.body.appendChild(tpl);"
               "const p = document.createElement('p'); p.textContent = 'after'; document.body.appendChild(p); 'ok'";
     CHECK_EQ(env.env().eval(script), std::string("ok"));
-    env.rebuild();
+    env.flush();
     const std::string input = env.render().renderInput();
     CHECK(input.find('X') == std::string::npos);
     CHECK(input.find('T') == std::string::npos);
@@ -345,7 +329,6 @@ WR_TEST(testUnrenderedContent) {
 WR_TEST(testAnUnknownElementIsASpan) {
     RenderEnv env("<!doctype html><style>my-card{display:block;height:10px}</style>"
                   "<my-card class=x data-lh-id=7>c</my-card>");
-    env.rebuild();
     const std::string dump = env.render().layoutDump();
     CHECK(lineFor(dump, "my-card").empty());
     // The my-card rule (display:block; height:10px) matches nothing: the span is laid out as an inline span.
@@ -369,7 +352,7 @@ WR_TEST(testStyleTextIsItsTextChildren) {
                             "s.appendChild(document.createComment('q{color:#000002}'));"
                             "s.appendChild(document.createTextNode(' i{color:#000003}')); s.childNodes.length"),
              std::string("3"));
-    env.rebuild();
+    env.flush();
     litehtml::document& document = *env.render().document();
     CHECK(hasColor(findElement(document, "p"), 0, 0, 1));
     CHECK(!hasColor(findElement(document, "q"), 0, 0, 2));
@@ -379,6 +362,8 @@ WR_TEST(testStyleTextIsItsTextChildren) {
 }
 
 WR_TEST(testCssCaps) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     auto sheet = [](const std::string& rule, size_t bytes) {
         std::string text = rule + "/*";
         text.append(bytes - text.size() - 2, 'x');
@@ -415,6 +400,8 @@ WR_TEST(testCssCaps) {
 }
 
 WR_TEST(testRenderByteBudget) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // Profile 1 caps one text at 65,536 units and the document's at 262,144 (V4 plan, Task 7), so the bytes are taken by an
     // attribute the text budgets do not count.
     const std::string a(1000 * 1000, 'a');
@@ -430,7 +417,7 @@ WR_TEST(testRenderByteBudget) {
     CHECK_EQ(diagnosticCount(env, "render-limit", "bytes"), size_t(1));
     CHECK_EQ(count(env.render().layoutDump(), "    p "), size_t(2));
     // Each build posts its limits again, once.
-    env.rebuild();
+    env.buildAfresh();
     CHECK_EQ(diagnosticCount(env, "render-limit", "bytes"), size_t(2));
 }
 
@@ -444,7 +431,9 @@ struct HostileCase {
 
 } // namespace
 
-WR_TEST(testHostileSizesAreBoundedAndCharged) {
+WR_TEST(testHostileSizesAreBounded) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     // RenderTree.h's memory bound: each hostile single build's heap growth stays under 160 MB.
     const size_t kCeiling = size_t(160) * 1000 * 1000;
     const HostileCase cases[] = {
@@ -523,7 +512,7 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
         bool built = false;
         onSmallStack(rt, [&] {
             try {
-                env.rebuild();
+                env.buildAfresh();
                 built = true;
             } catch (...) {
             }
@@ -540,22 +529,25 @@ WR_TEST(testHostileSizesAreBoundedAndCharged) {
         CHECK(growth < kCeiling);
         hostile.check(env);
 
-        // The same build under a budget: it stops inside the build, and the published state is the one before.
-        litehtml::document* document = env.render().document();
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string dump = env.render().layoutDump();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + 1000);
-        bool aborted = false;
-        onSmallStack(rt, [&] { aborted = rebuildAborts(env); });
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-        CHECK_EQ(env.render().layoutDump(), dump);
-        // Stops are final: a stopped runtime builds nothing.
-        CHECK(rebuildAborts(env));
-        CHECK(env.render().layerTree() == tree);
     }
+}
+
+// Twidget edit 83: only what renders counts. A <div> a <table>'s own append refuses counts toward no cap and no budget,
+// and nothing under it is walked; the table's whitespace asks litehtml's piece cap nothing.
+WR_TEST(testRefusedChildrenCountNothing) {
+    const char* page = "<!doctype html><body><table id=t> <tbody><tr><td>c</td></tr></tbody> </table></body>";
+    RenderEnv with(page);
+    CHECK_EQ(with.env().eval("const d = document.createElement('div'); d.className = 'x'.repeat(4000);"
+                             " d.innerHTML = '<p>x</p>'; const t = document.getElementById('t');"
+                             " t.insertBefore(d, t.firstChild); 'ok'"),
+             std::string("ok"));
+    with.flush();
+    RenderEnv without(page);
+    CHECK_EQ(with.render().renderBytes(), without.render().renderBytes());
+    CHECK_EQ(with.render().renderedElements(), without.render().renderedElements());
+    CHECK_EQ(with.render().document()->build_elements(), without.render().document()->build_elements());
+    RenderEnv tight("<!doctype html><body><table id=t><tbody><tr><td>c</td></tr></tbody></table></body>");
+    CHECK_EQ(without.render().document()->text_elements(), tight.render().document()->text_elements());
 }
 
 WR_TEST(testFormControlLimit) {
@@ -571,7 +563,7 @@ WR_TEST(testFormControlLimit) {
                             "document.body.appendChild(document.createElement('button')).textContent = 'over';"
                             "document.body.appendChild(document.createElement('p')).textContent = 'after'; 'ok'"),
              std::string("ok"));
-    env.rebuild();
+    env.flush();
     const std::string input = env.render().renderInput();
     CHECK_EQ(count(input, "<button>"), size_t(256));
     CHECK(input.find("<button>last</button>") != std::string::npos);
@@ -583,51 +575,19 @@ WR_TEST(testFormControlLimit) {
     CHECK_EQ(diagnosticCount(env, "render-limit", "form-controls"), size_t(1));
     CHECK(!lineFor(env.render().layoutDump(), "p").empty());
     // Each build posts it again, once.
-    env.rebuild();
+    env.buildAfresh();
     CHECK_EQ(diagnosticCount(env, "render-limit", "form-controls"), size_t(2));
-}
-
-// I1: the DOM bounds no name's length, so a name is charged before it is converted. A 1,000,000-character tag name, or
-// attribute name, stops the widget under a budget of 1,000 units with no allocation the size of the name.
-WR_TEST(testLongNamesAreChargedBeforeConversion) {
-    const char* const scripts[] = {
-        "{ const e = document.createElement('a'.repeat(1000000)); e.setAttribute('b'.repeat(1000000), 'v');"
-        " document.body.appendChild(e); }",
-        "{ const e = document.createElement('div'); e.setAttribute('b'.repeat(1000000), 'v');"
-        " document.body.appendChild(e); }",
-    };
-    for (const char* script : scripts) {
-        RenderEnv env(kEmpty);
-        CHECK_EQ(env.env().eval(std::string(script) + " 'ok'"), std::string("ok"));
-        litehtml::document* published = env.render().document();
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + 1000);
-        const size_t heapBefore = heapInUse();
-        gLargestAllocation = 0;
-        gTrackAllocations = true;
-        const bool aborted = rebuildAborts(env);
-        gTrackAllocations = false;
-        const size_t heapAfter = heapInUse();
-        const size_t growth = heapAfter > heapBefore ? heapAfter - heapBefore : 0;
-        CHECK(aborted);
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == published);
-        CHECK(growth < 256 * 1024);
-        CHECK(gLargestAllocation.load() < 256 * 1024);
-        std::printf("  long names: heap growth %zu B, largest allocation %zu B\n", growth, gLargestAllocation.load());
-    }
 }
 
 WR_TEST(testRenderInputIsKeptOnlyWhenAsked) {
     CHECK(!wr::RenderOptions().keepRenderInput);
     RenderEnv env("<!doctype html><p class=a>Hi <b>x</b></p>");
-    env.rebuild();
     CHECK(!env.render().renderInput().empty());
     // Production's options: the same build, without the oracle.
     wr::RenderOptions production = env.render().options();
     production.keepRenderInput = false;
     wr::RenderTree tree(env.ctx(), env.host(), production);
-    tree.rebuild(env.ctx());
+    tree.build(env.ctx());
     CHECK_EQ(tree.renderInput(), std::string());
     CHECK_EQ(tree.layoutDump(), env.render().layoutDump());
     CHECK(tree.layerTree() && tree.layerTree()->dump() == env.render().layerTree()->dump());
@@ -638,7 +598,7 @@ WR_TEST(testNoDocumentElement) {
     CHECK_EQ(env.env().eval("document.removeChild(document.documentElement); "
                             "document.childNodes.length + ':' + document.firstChild.nodeType"),
              std::string("2:8"));
-    env.rebuild();
+    env.flush();
     CHECK_EQ(env.render().renderInput(), std::string("<!doctype html><html></html>"));
     const auto tags = dumpTags(env.render().layoutDump());
     CHECK(tags.size() == 1 && tags[0].second == "html");
@@ -649,7 +609,7 @@ WR_TEST(testNonHtmlDocumentElement) {
     CHECK_EQ(env.env().eval("const d = document.createElement('div'); d.textContent = 'x';"
                             "document.replaceChild(d, document.documentElement); document.documentElement.localName"),
              std::string("div"));
-    env.rebuild();
+    env.flush();
     const auto tags = dumpTags(env.render().layoutDump());
     const bool asItIs = !tags.empty() && tags[0] == std::make_pair(size_t(0), std::string("div"));
     const bool wrapped = tags.size() >= 2 && tags[0] == std::make_pair(size_t(0), std::string("html")) &&
@@ -668,76 +628,20 @@ WR_TEST(testLoadsGoThroughTheContainer) {
     CHECK(env.host().decodedMimeTypes == std::vector<std::string>{"image/svg+xml"});
     // A tree asks for nothing until it builds.
     wr::RenderTree fresh(env.ctx(), env.host(), env.render().options());
-    fresh.rebuild(env.ctx());
+    fresh.build(env.ctx());
     CHECK_EQ(fresh.refusedLoads(), uint64_t(0));
     CHECK_EQ(env.host().decodedMimeTypes.size(), size_t(2));
 }
 
-namespace {
-
-// A build whose charges are mostly in its layout pre-charge: 2,000 elements and a 65,536-byte word (profile 1's cap on
-// one text, V4 plan, Task 7).
-std::string atomicFixture(char letter) {
-    std::string html = "<!doctype html><html><head></head><body>";
-    for (int i = 0; i < 2000; i++) {
-        html += "<div></div>";
-    }
-    // One word kept whole (the UA layer's `overflow-wrap: break-word` would cut it into fragments).
-    return html + "<p id=t style='overflow-wrap:normal'>" + std::string(65536, letter) + "</p></body></html>";
-}
-
-} // namespace
-
-WR_TEST(testRebuildIsAtomic) {
-    // The units one build of the fixture takes: charges do not depend on anything but the DOM.
-    uint64_t units = 0;
-    {
-        RenderEnv env(atomicFixture('a'));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.rebuild();
-        units = JS_GetWorkUnits(rt) - before;
-    }
-    CHECK(units > 30000);
-    // Inside the build (a third of the way), then inside the layout pre-charge (it is the last charge before
-    // render(), and holds the 65,536-byte word's 8,192 units).
-    const uint64_t limits[] = {units / 3, units - 1000};
-    for (uint64_t limit : limits) {
-        RenderEnv env(atomicFixture('a'));
-        env.rebuild();
-        litehtml::document* document = env.render().document();
-        std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
-        const std::string input = env.render().renderInput();
-        const std::string dump = env.render().layoutDump();
-        const uint64_t builds = env.render().buildCount();
-        // The same length, so the next build charges the same.
-        CHECK_EQ(env.env().eval("const t = document.getElementById('t').firstChild; t.data = 'b'.repeat(t.data.length);"
-                                "t.data.length"),
-                 std::string("65536"));
-        JSRuntime* rt = env.env().runtime().jsRuntime();
-        env.env().runtime().setWorkLimit(JS_GetWorkUnits(rt) + limit);
-        CHECK(rebuildAborts(env));
-        CHECK(env.env().runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(env.render().document() == document);
-        CHECK(env.render().layerTree() == tree);
-        CHECK_EQ(env.render().renderInput(), input);
-        CHECK_EQ(env.render().layoutDump(), dump);
-        CHECK_EQ(env.render().buildCount(), builds);
-        CHECK(input.find("bbbb") == std::string::npos);
-        CHECK(tree && findText(*tree, std::string(65536, 'a')) != nullptr);
-    }
-}
-
-WR_TEST(testRebuildReleasesNodes) {
+WR_TEST(testAPatchReleasesNodes) {
     RenderEnv env(kEmpty);
-    env.rebuild();
     env.env().eval("gc()");
     const size_t before = env.env().runtime().liveObjects();
     // Nothing here makes a platform object that outlives the script but the nodes (childNodes would: a [SameObject]).
     CHECK_EQ(env.env().eval("for (let i = 0; i < 100; i++) document.body.appendChild(document.createElement('div'))"
                             ".textContent = 't' + i; document.body.childElementCount"),
              std::string("100"));
-    env.rebuild();
+    env.flush();
     CHECK(env.render().renderInput().find("<div>t99</div>") != std::string::npos);
     CHECK_EQ(env.env().eval("while (document.body.firstChild) document.body.firstChild.remove(); "
                             "document.body.childElementCount"),
@@ -745,15 +649,16 @@ WR_TEST(testRebuildReleasesNodes) {
     // Removed and unreachable from script, the 200 nodes are still held by the published build's maps.
     env.env().eval("gc()");
     CHECK_EQ(env.env().runtime().liveObjects(), before + 200);
-    env.rebuild();
+    // The patch that removes them releases them.
+    env.flush();
     env.env().eval("gc()");
     CHECK_EQ(env.env().runtime().liveObjects(), before);
 }
 
 WR_TEST(testCacheWindowFollowsTheBuildOrder) {
     // Images asked for in layout and painting (get_image_size, draw_image), fonts made while styling and laying out,
-    // and form controls: each build runs beginBuild, the build, finalize, render() and record(), then endBuild
-    // (Ruling E10). In this fork nothing is asked for first during render() or record(): a font is made only by
+    // and form controls: each build runs beginBuild, the build, finalize, render() and record(), then the container's
+    // prune (Ruling E10). In this fork nothing is asked for first during render() or record(): a font is made only by
     // css_properties::compute and an image loaded only by compute (backgrounds, list-style-image) and el_image's
     // compute_styles, all inside finalize. Probed shapes that ask nothing new in layout or painting: img, background,
     // list-style-image, ::before content url() and font, form controls (input, placeholder, textarea, select, button,
@@ -766,14 +671,124 @@ WR_TEST(testCacheWindowFollowsTheBuildOrder) {
                   "#bg')\">bg</div><ul class=marked><li>item</li></ul><p style='font-family:serif'>serif <b>bold</b></p>"
                   "<input value=v><select><option>o</option></select><button>b</button>",
                   options);
-    env.rebuild();
     const size_t fonts = env.host().fontsCreated;
     const size_t images = env.host().decodedMimeTypes.size();
     CHECK(fonts > 0);
     CHECK_EQ(images, size_t(3));
+    // A patch asks for nothing the published build has.
     for (int i = 0; i < 3; i++) {
-        env.rebuild();
+        CHECK_EQ(env.env().eval("document.querySelector('p').classList.toggle('x'); 'ok'"), std::string("ok"));
+        env.flush();
         CHECK_EQ(env.host().fontsCreated, fonts);
         CHECK_EQ(env.host().decodedMimeTypes.size(), images);
     }
+}
+
+namespace {
+
+/// 1,000 elements and one word kept whole (the UA layer's `overflow-wrap: break-word` would cut it into fragments) of
+/// `length` letters.
+std::string atomicFixture(char letter, size_t length) {
+    std::string html = "<!doctype html><html><head></head><body>";
+    for (int i = 0; i < 1000; i++) {
+        html += "<div></div>";
+    }
+    return html + "<p id=t style='overflow-wrap:normal'>" + std::string(length, letter) + "</p></body></html>";
+}
+
+/// What a rebuild must leave as it was when it stops partway.
+struct Published {
+    litehtml::document* document;
+    std::shared_ptr<const wr::LayerTree> tree;
+    std::string input;
+    std::string dump;
+    uint64_t builds;
+};
+
+Published publishedOf(RenderEnv& env) {
+    return {env.render().document(), env.render().layerTree(), env.render().renderInput(), env.render().layoutDump(), env.render().buildCount()};
+}
+
+void checkUnchanged(RenderEnv& env, const Published& was, char letter, size_t length) {
+    CHECK(env.render().document() == was.document);
+    CHECK(env.render().layerTree() == was.tree);
+    CHECK_EQ(env.render().renderInput(), was.input);
+    CHECK_EQ(env.render().layoutDump(), was.dump);
+    CHECK_EQ(env.render().buildCount(), was.builds);
+    CHECK(was.tree && findText(*was.tree, std::string(length, letter)) != nullptr);
+}
+
+} // namespace
+
+/// The final review's I2: a build stopped partway leaves the published document, maps, render input and tree as they
+/// were. Two stops still land inside a build: a strict cap, judged in tree order (here a text past 32,768 units after a
+/// thousand elements), and an allocation of the build's maps or input refused at the memory limit (swept over the
+/// build, each refusal latching Memory).
+WR_TEST(testABuildStoppedPartwayIsAtomic) {
+    {
+        RenderEnv env(atomicFixture('a', 30000));
+        env.buildAfresh();
+        const Published was = publishedOf(env);
+        CHECK_EQ(env.env().eval("document.getElementById('t').firstChild.data = 'b'.repeat(40000); 1"), std::string("1"));
+        bool aborted = false;
+        try {
+            env.buildAfresh();
+        } catch (const wr::Aborted&) {
+            aborted = true;
+        }
+        CHECK(aborted);
+        CHECK(env.env().runtime().stopReason() == wr::StopReason::Limit);
+        checkUnchanged(env, was, 'a', 30000);
+    }
+    // Past the strict caps, which would stop the widget first: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
+    // A build under a memory limit `slack` bytes above what the runtime holds before it: whether it stopped, checked
+    // either way (stopped: Memory, everything as it was; completed: the new text in the render input).
+    const auto rebuildWithSlack = [](size_t slack) {
+        RenderEnv env(atomicFixture('a', 65536));
+        env.buildAfresh();
+        const Published was = publishedOf(env);
+        // The same length, so the build allocates as much as the last.
+        CHECK_EQ(env.env().eval("const t = document.getElementById('t').firstChild; t.data = 'b'.repeat(t.data.length); 1"),
+                 std::string("1"));
+        JSRuntime* rt = env.env().runtime().jsRuntime();
+        JSMemoryUsage usage;
+        JS_ComputeMemoryUsage(rt, &usage);
+        JS_SetMemoryLimit(rt, size_t(usage.malloc_size) + slack);
+        bool stopped = false;
+        try {
+            env.buildAfresh();
+        } catch (const wr::Aborted&) {
+            stopped = true;
+        }
+        JS_SetMemoryLimit(rt, wr::Runtime::Options().memoryLimitBytes);
+        if (stopped) {
+            CHECK(env.env().runtime().stopReason() == wr::StopReason::Memory);
+            checkUnchanged(env, was, 'a', 65536);
+        } else {
+            CHECK(env.env().runtime().stopReason() == wr::StopReason::None);
+            CHECK(env.render().renderInput().find("bbbb") != std::string::npos);
+        }
+        return stopped;
+    };
+    // The least slack the build completes with, to 256 bytes (a search that assumes a larger slack never fails where a
+    // smaller one completes); then 64 refusals spread evenly below it, each at the allocation that crosses its point,
+    // about 1/64 of the build apart, so a small allocation between two points is never the refused one (the fix
+    // waves' M-5: eight coarse points before).
+    size_t refused = 0;
+    size_t completes = size_t(8) << 20;
+    CHECK(!rebuildWithSlack(completes));
+    while (completes - refused > 256) {
+        const size_t mid = refused + (completes - refused) / 2;
+        (rebuildWithSlack(mid) ? refused : completes) = mid;
+    }
+    int stopped = 0;
+    constexpr int kSweep = 64;
+    for (int i = 0; i < kSweep; i++) {
+        stopped += rebuildWithSlack(refused * size_t(i) / kSweep);
+    }
+    if (stopped < kSweep / 2) {
+        std::printf("  %d of %d rebuilds below %zu bytes of slack stopped\n", stopped, kSweep, completes);
+    }
+    CHECK(stopped >= kSweep / 2);
 }

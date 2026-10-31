@@ -91,7 +91,7 @@ html 0 0 360 521.5
               button 298 458.4 24 16.2
 
 == paint
-root 360x521.5 items=116
+root 360x521.5 items=110
   solid-fill bounds=(0,0,360,522) layer=(border=(0,0,360,522),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,522),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
   set-clip bounds=(0,0,360,521.5) pos=(0,0,360,521.5) radius=(0,0,0,0,0,0,0,0)
   borders bounds=(16,51,76,53) borders=(left=(1.5,4,#00000014),top=(1.5,4,#00000014),right=(1.5,4,#00000014),bottom=(1.5,4,#00000014),radius=(8,8,8,8,8,8,8,8)) pos=(16,51,76,53) root=0
@@ -179,12 +179,6 @@ root 360x521.5 items=116
     solid-fill bounds=(291,264,20,20) layer=(border=(291,264,20,20),radius=(10,10,10,10,10,10,10,10),clip=(291,264,20,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
   del-clip bounds=(0,0,0,0)
   solid-fill bounds=(16,354,328,154) layer=(border=(16,354,328,154),radius=(16,16,16,16,16,16,16,16),clip=(16,354,328,154),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
-  set-clip bounds=(16,353.5,328,154) pos=(16,353.5,328,154) radius=(16,16,16,16,16,16,16,16)
-  box-shadow bounds=(166,446,64,41) box=(172,452,52,29) radius=(8,8,8,8,8,8,8,8) shadow=(0,1,3,0,#0000001a,0)
-  solid-fill bounds=(172,452,52,29) layer=(border=(172,452,52,29),radius=(8,8,8,8,8,8,8,8),clip=(172,452,52,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
-  solid-fill bounds=(230,452,52,29) layer=(border=(230,452,52,29),radius=(8,8,8,8,8,8,8,8),clip=(230,452,52,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
-  solid-fill bounds=(288,452,44,29) layer=(border=(288,452,44,29),radius=(8,8,8,8,8,8,8,8),clip=(288,452,44,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
-  del-clip bounds=(0,0,0,0)
   set-clip bounds=(16,353.5,328,154) pos=(16,353.5,328,154) radius=(16,16,16,16,16,16,16,16)
   text bounds=(164,380,96,32) pos=(172,388,80,16) color=#0a0a0aff text="Thermostat" font=f6 glyphs=10 advance=80
   group opacity=0.5113 matrix=(1,0,0,1,0,0) backface=0 bounds=(170,413,11,11) exact=1

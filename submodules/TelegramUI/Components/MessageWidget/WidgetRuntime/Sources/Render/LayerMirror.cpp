@@ -9,6 +9,7 @@
 
 #include <litehtml.h>
 #include <litehtml/render_inline_context.h>
+#include <litehtml/el_svg.h>
 #include <litehtml/render_table.h>
 
 #include "Sources/Render/LayerDiff.h"
@@ -42,10 +43,6 @@ struct LayerMirror::ItemInfo {
     /// before it, and nothing reports the move (an inline item has no box of its own), so re-capturing this inline
     /// context's runs does not place it.
     bool subContexts = false;
-    /// Its own paint was visited more than once (litehtml's block pass enters an inline-flex or inline-grid, which
-    /// then paints its own content again in its context): the mirror does not update what it paints.
-    bool multi = false;
-    int visits = 0;
 };
 
 /// A published node, and where it is.
@@ -54,13 +51,9 @@ struct LayerMirror::NodeInfo {
     /// The item it mirrors: a Box's or a Context's item, an Inline's inline context.
     const litehtml::render_item* item = nullptr;
     std::shared_ptr<const MirrorNode> node;
-    /// Its place in its pass: its item's tree order (a run's: its first item's).
+    /// Its place in its pass: its item's tree order (a run's: its first item's, which the runs replay keeps current).
     uint64_t order = 0;
     const litehtml::render_item* first = nullptr;
-    /// A Context in which a table caption that follows its table's rows in the tree paints. render_item_table's
-    /// draw_children paints every caption before any row, so this context's children are not in tree order, and the
-    /// placement rule cannot place a node in it (Ruling E39).
-    bool captioned = false;
 };
 
 namespace {
@@ -181,6 +174,39 @@ LayerId nextId(LayerId& counter) {
 
 } // namespace
 
+// The mirror's tree order: the render tree's pre-order, a table's captions before its other children (render_item_table's
+// draw_children paints every caption before any row), so a context's children stay in this order.
+std::unordered_map<const render_item*, uint64_t> treeOrder(litehtml::document& document) {
+    std::unordered_map<const render_item*, uint64_t> out;
+    uint64_t order = 0;
+    std::vector<const render_item*> stack;
+    if (document.root_render()) {
+        stack.push_back(document.root_render().get());
+    }
+    std::vector<const render_item*> kids;
+    while (!stack.empty()) {
+        const render_item* item = stack.back();
+        stack.pop_back();
+        out[item] = order++;
+        kids.clear();
+        const bool table = dynamic_cast<const litehtml::render_item_table*>(item) != nullptr;
+        for (const auto& child : const_cast<render_item*>(item)->children()) {
+            if (table && child->src_el()->css().get_display() == litehtml::display_table_caption) {
+                kids.push_back(child.get());
+            }
+        }
+        for (const auto& child : const_cast<render_item*>(item)->children()) {
+            if (!table || child->src_el()->css().get_display() != litehtml::display_table_caption) {
+                kids.push_back(child.get());
+            }
+        }
+        for (auto it = kids.rbegin(); it != kids.rend(); ++it) {
+            stack.push_back(*it);
+        }
+    }
+    return out;
+}
+
 // ---- The walk: build, and the replays the updates use. ----
 
 class LayerMirror::Walker final : public litehtml::paint_visitor, public WalkListener {
@@ -196,39 +222,24 @@ public:
 
     Walker(LayerMirror& mirror, WidgetContainer& container, Mode mode) : m(mirror), m_container(container), m_mode(mode) {}
 
+    // A re-placement's build walk (Update::replace): every context, pass, origin and clip as a build has them, but
+    // nothing captured outside `items` (their Boxes) and `runs` (inline contexts whose runs are rebuilt), so nothing
+    // else gets a node with content.
+    void captureOnly(const std::unordered_set<const render_item*>* items, const std::unordered_set<const render_item*>* runs) {
+        m_captureItems = items;
+        m_captureRuns = runs;
+    }
+
     // Build: the root context, frozen.
     std::shared_ptr<MirrorNode> root;
-    // Runs: the runs found, relative to `runOrigin` (the inline context's content origin, where the replay paints).
+    // Runs: the runs found, relative to `runOrigin` (the inline context's content origin, where the replay paints), and
+    // the piece each starts with (NodeInfo::first).
     std::vector<std::shared_ptr<Layer>> runs;
+    std::vector<const render_item*> runFirsts;
     litehtml::pointF runOrigin;
     // Params: the group found.
     std::shared_ptr<MirrorGroup> group;
     bool lost = false;
-    // Build: the contexts in which a table caption that follows its rows paints (NodeInfo::captioned).
-    std::vector<LayerId> captioned;
-
-    // Whether `item` is a table caption that follows something else of its table in the tree: the table paints it
-    // before its rows all the same (render_item_table::init collects its captions from its own children), so its
-    // context's children are not in tree order (NodeInfo::captioned).
-    static bool captionFollowsARow(const render_item& item) {
-        if (item.src_el()->css().get_display() != litehtml::display_table_caption) {
-            return false;
-        }
-        const std::shared_ptr<render_item> table = item.parent();
-        if (!table) {
-            return true;
-        }
-        for (const auto& child : table->children()) {
-            if (child.get() == &item) {
-                return false;
-            }
-            if (child->src_el()->css().get_display() != litehtml::display_table_caption) {
-                return true;
-            }
-        }
-        return true;
-    }
-
     // litehtml::paint_visitor
 
     void open_context(const std::shared_ptr<render_item>& item, litehtml::paint_context kind) override {
@@ -408,6 +419,7 @@ public:
             if (!m_run) {
                 m_run = newContent();
                 runs.push_back(m_run);
+                runFirsts.push_back(item.get());
             }
             captureInto(m_container, *m_run, runOrigin, paint);
             return;
@@ -415,12 +427,6 @@ public:
         flushPending();
         ItemInfo& info = itemInfo(item);
         info.background = dynamic_cast<const litehtml::render_item_table_row*>(item.get()) != nullptr;
-        if (!m_contexts.empty() && captionFollowsARow(*item)) {
-            captioned.push_back(m_contexts.back().node->id);
-        }
-        if (++info.visits > 1) {
-            info.multi = true;
-        }
         m_paintAt.emplace(item.get(), std::make_pair(x, y));
         if (m_contexts.empty()) {
             // The root's own paint, before its context opens.
@@ -432,7 +438,7 @@ public:
             pending.x = x;
             pending.y = y;
             pending.pass = MirrorPass::Own;
-            std::shared_ptr<Layer> box = captureBox(m_container, item, info.background, x, y);
+            std::shared_ptr<Layer> box = boxOf(item, info.background, x, y);
             if (!box->entries.empty()) {
                 pending.box = std::move(box);
             }
@@ -445,7 +451,7 @@ public:
             frame.origin = childrenOrigin(*item, x, y);
             frame.node->origin =
                 m_contexts.size() > 1 ? minus(frame.origin, m_contexts[m_contexts.size() - 2].origin) : frame.origin;
-            std::shared_ptr<Layer> box = captureBox(m_container, item, info.background, x, y);
+            std::shared_ptr<Layer> box = boxOf(item, info.background, x, y);
             if (!box->entries.empty()) {
                 addOwnBox(frame, item, box, ownOrigin(*item, x, y));
             }
@@ -459,7 +465,7 @@ public:
             pending.pass = pass == litehtml::draw_root ? MirrorPass::Own : where;
             pending.zindex = pass == litehtml::draw_positioned ? frame.zindex : 0;
             pending.clips = chain(m_contexts.size() - 1);
-            std::shared_ptr<Layer> box = captureBox(m_container, item, info.background, x, y);
+            std::shared_ptr<Layer> box = boxOf(item, info.background, x, y);
             if (!box->entries.empty()) {
                 pending.box = std::move(box);
             }
@@ -479,7 +485,9 @@ public:
             }
             info.runOf = context;
             info.context = frame.node->id;
-            captureInto(m_container, *frame.runContent, frame.runOrigin, paint);
+            if (capturesRuns(context)) {
+                captureInto(m_container, *frame.runContent, frame.runOrigin, paint);
+            }
             return;
         }
         // A Box.
@@ -487,7 +495,7 @@ public:
         info.context = frame.node->id;
         info.pass = where;
         info.zindex = pass == litehtml::draw_positioned ? frame.zindex : 0;
-        std::shared_ptr<Layer> content = captureBox(m_container, item, info.background, x, y);
+        std::shared_ptr<Layer> content = boxOf(item, info.background, x, y);
         if (content->entries.empty()) {
             return;
         }
@@ -588,23 +596,12 @@ public:
     // After a build walk: the side tables, the tree order and the root.
     void finish() {
         flushPending();
-        // The render tree's pre-order.
-        uint64_t order = 0;
-        std::vector<const render_item*> stack;
-        if (m.m_document && m.m_document->root_render()) {
-            stack.push_back(m.m_document->root_render().get());
+        if (m.m_document) {
+            m_order = treeOrder(*m.m_document);
         }
-        while (!stack.empty()) {
-            const render_item* item = stack.back();
-            stack.pop_back();
-            auto found = m.m_items.find(item);
-            if (found != m.m_items.end()) {
-                found->second->order = order;
-            }
-            m_order[item] = order++;
-            const auto& kids = const_cast<render_item*>(item)->children();
-            for (auto it = kids.rbegin(); it != kids.rend(); ++it) {
-                stack.push_back(it->get());
+        for (auto& [item, found] : m.m_items) {
+            if (auto it = m_order.find(item); it != m_order.end()) {
+                found->order = it->second;
             }
         }
         for (auto& [id, node] : m.m_nodes) {
@@ -774,6 +771,15 @@ private:
     bool m_escape = false;
     std::unordered_map<const render_item*, std::pair<pixel_t, pixel_t>> m_paintAt;
     std::unordered_map<const render_item*, uint64_t> m_order;
+    const std::unordered_set<const render_item*>* m_captureItems = nullptr;
+    const std::unordered_set<const render_item*>* m_captureRuns = nullptr;
+    bool captures(const render_item* item) const { return !m_captureItems || m_captureItems->count(item); }
+    bool capturesRuns(const render_item* context) const {
+        return !m_captureItems || m_captureItems->count(context) || (m_captureRuns && m_captureRuns->count(context));
+    }
+    std::shared_ptr<Layer> boxOf(const std::shared_ptr<render_item>& item, bool background, pixel_t x, pixel_t y) {
+        return captures(item.get()) ? captureBox(m_container, item, background, x, y) : newContent();
+    }
     // Runs replay.
     std::shared_ptr<Layer> m_run;
     int m_skip = 0;
@@ -789,37 +795,100 @@ class LayerMirror::Update {
 public:
     explicit Update(LayerMirror& mirror) : m(mirror), m_container(*mirror.m_container) {}
 
-    std::optional<Publish> run() {
-        if (!collect() || m_unpainted) {
-            return std::nullopt;
+    Publish run() {
+        gatherReplacements();
+        if (!collect()) {
+            inconsistent("an update the mirror cannot place");
         }
+        std::vector<const render_item*> inPlace;
         for (const render_item* item : m_paintOrder) {
-            if (!paintOrder(item)) {
-                return std::nullopt;
+            if (!m_oldItems.count(item) && !m_freshItems.count(item) && !paintOrder(item, inPlace)) {
+                inconsistent("an update the mirror cannot place");
             }
+        }
+        // A line holding an inline paint group (ItemInfo::subContexts) whose runs change is placed again whole: the group
+        // moves with the text before it, which nothing reports. So is a line whose runs an inline table splits
+        // (ItemInfo::runsSplit), which the runs replay cannot rebuild. The runs a resized inline item's Box asks for
+        // included.
+        std::vector<const render_item*> lines(m_runs.list.begin(), m_runs.list.end());
+        for (const render_item* item : m_boxes.list) {
+            if (const ItemInfo* found = info(item); found && found->runOf) {
+                lines.push_back(found->runOf);
+            }
+        }
+        for (const render_item* context : lines) {
+            const ItemInfo* found = info(context);
+            if (found && (found->subContexts || found->runsSplit) && !m_oldItems.count(context) &&
+                !m_freshItems.count(context)) {
+                if (std::shared_ptr<render_item> locked = found->item.lock()) {
+                    m_placeAgain.push_back(std::move(locked));
+                }
+            }
+        }
+        // The re-placement builds what its walk sees, so a block's group changes in place first, unless it is under a
+        // subtree placed again, which builds it as it is. Then one re-placement: what the fork replaced, and the
+        // subtrees paint order places again.
+        std::vector<std::shared_ptr<render_item>> roots = m_freshRoots;
+        std::unordered_set<const render_item*> under;
+        placedAgain(roots, under);
+        for (const render_item* item : inPlace) {
+            if (!under.count(item) && !changeGroup(item)) {
+                inconsistent("an update the mirror cannot place");
+            }
+        }
+        under.insert(m_oldItems.begin(), m_oldItems.end());
+        if ((!roots.empty() || !under.empty()) && !replace(std::move(under), std::move(roots), {})) {
+            inconsistent("an update the mirror cannot place");
         }
         for (const render_item* item : m_boxes.list) {
             if (!recaptureBox(item)) {
-                return std::nullopt;
+                inconsistent("an update the mirror cannot place");
             }
         }
         for (const render_item* item : m_runs.list) {
             if (!recaptureRuns(item)) {
-                return std::nullopt;
+                inconsistent("an update the mirror cannot place");
             }
         }
         for (const render_item* item : m_moved) {
             if (!moved(item)) {
-                return std::nullopt;
+                inconsistent("an update the mirror cannot place");
             }
         }
         for (const render_item* item : m_clippers) {
             if (!clipped(item)) {
-                return std::nullopt;
+                inconsistent("an update the mirror cannot place");
             }
         }
         if (!groups()) {
-            return std::nullopt;
+            inconsistent("an update the mirror cannot place");
+        }
+        // The lines whose runs could not be replayed (recaptureRuns), placed again whole, last: every update before
+        // this one (a group's, a move's) reaches their old nodes before they go. Each outermost once.
+        if (!m_lateAgain.empty()) {
+            std::unordered_set<const render_item*> listed;
+            for (const auto& root : m_lateAgain) {
+                listed.insert(root.get());
+            }
+            std::vector<std::shared_ptr<render_item>> roots;
+            std::unordered_set<const render_item*> old;
+            for (const auto& root : m_lateAgain) {
+                bool inside = m_freshItems.count(root.get()) != 0 || old.count(root.get()) != 0;
+                for (auto parent = root->parent(); parent && !inside; parent = parent->parent()) {
+                    inside = listed.count(parent.get()) != 0;
+                }
+                if (inside) {
+                    continue;
+                }
+                roots.push_back(root);
+                // Everything under it goes, what the first re-placement built under it included.
+                for (const render_item* at : subtree(root.get())) {
+                    old.insert(at);
+                }
+            }
+            if (!roots.empty() && !replace(std::move(old), std::move(roots), {})) {
+                inconsistent("an update the mirror cannot place");
+            }
         }
         return freeze();
     }
@@ -946,13 +1015,8 @@ private:
         return true;
     }
 
-    // Where a node of (pass, z, order) goes among `context`'s children: before the first that sorts after it. nullopt
-    // in a context whose children are not in that order (NodeInfo::captioned): the caller declines (lose()).
-    std::optional<std::pair<size_t, LayerId>> placement(LayerId context, MirrorPass pass, int zindex,
-                                                        uint64_t order) const {
-        if (m.m_nodes.at(context)->captioned) {
-            return std::nullopt;
-        }
+    // Where a node of (pass, z, order) goes among `context`'s children: before the first that sorts after it.
+    std::pair<size_t, LayerId> placement(LayerId context, MirrorPass pass, int zindex, uint64_t order) const {
         const MirrorNode& parent = current(context);
         size_t index = 0;
         for (; index < parent.children.size(); index++) {
@@ -978,27 +1042,21 @@ private:
     }
 
     // Moves `id` under `context` by the placement rule (or at `at`), with its origin and clips set; Move, Frame and
-    // Clip. false where the rule cannot place it: the caller declines (lose()), which discards this update.
-    [[nodiscard]] bool moveTo(LayerId id, LayerId context, const litehtml::pointF& origin, std::vector<MirrorClip> clips,
-                              std::optional<size_t> at = std::nullopt) {
+    // Clip.
+    void moveTo(LayerId id, LayerId context, const litehtml::pointF& origin, std::vector<MirrorClip> clips,
+                std::optional<size_t> at = std::nullopt) {
         detachChild(id);
         MirrorNode& moving = edit(id);
         moving.origin = origin;
         moving.clips = std::move(clips);
-        const std::optional<std::pair<size_t, LayerId>> place =
-            at ? std::make_pair(*at, *at == 0 ? LayerId(0) : current(context).children[*at - 1]->id)
-               : placement(context, moving.pass, moving.zindex, node(id).order);
-        if (!place) {
-            return false;
-        }
-        const auto [index, after] = *place;
+        const auto [index, after] = at ? std::make_pair(*at, *at == 0 ? LayerId(0) : current(context).children[*at - 1]->id)
+                                       : placement(context, moving.pass, moving.zindex, node(id).order);
         MirrorNode& parent = edit(context);
         parent.children.insert(parent.children.begin() + ptrdiff_t(index), m_work.at(id));
         node(id).parent = context;
         emit(LayerOp::Move, id, context, after);
         emit(LayerOp::Frame, id);
         emit(LayerOp::Clip, id);
-        return true;
     }
 
     void removeNode(LayerId id) {
@@ -1007,48 +1065,68 @@ private:
         m_removed.push_back(id);
     }
 
-    bool lose() { return false; }
+    // What the mirror's tables and litehtml's tree disagree on: the widget stops (RenderTree::stopInternally).
+    [[noreturn]] static void inconsistent(const char* why) { throw LayerMirror::Inconsistent(why); }
 
     // ---- The reports. ----
 
     bool collect() {
-        if (m.m_treeRebuilt || m.m_lost || !m.m_document) {
-            return false;
+        if (!m.m_document) {
+            inconsistent("a publish without a render tree it observed");
+        }
+        if (m.m_lost) {
+            inconsistent("the build's walk is lost");
         }
         std::unordered_set<const render_item*> texts(m.m_texts.begin(), m.m_texts.end());
+        // What a re-placement removes or builds again needs nothing else (Update::replace).
+        const auto replaced = [this](const render_item* item) { return m_oldItems.count(item) || m_freshItems.count(item); };
         for (const render_item* item : m.m_removed) {
+            if (replaced(item)) {
+                continue;
+            }
             ItemInfo* found = info(item);
             if (!found) {
                 continue;
             }
             if (found->box || found->own || !found->runs.empty()) {
-                return lose();
+                inconsistent("a replaced text piece has nodes of its own");
             }
             m.m_items.erase(item);
         }
         for (const auto& weak : m.m_added) {
             const auto item = weak.lock();
-            if (!item) {
+            if (!item || replaced(item.get())) {
                 continue;
             }
             const auto parent = item->parent();
             if (!parent || !texts.count(parent.get()) || !item->src_el()->is_inline() || isInlineBox(*item)) {
-                return lose();
+                inconsistent("a piece added outside a text run");
             }
         }
         for (const render_item* text : m.m_texts) {
+            if (replaced(text)) {
+                continue;
+            }
             // Replaced text (twidget edit 16) re-captures its inline context's runs: the context itself, or for an inline
             // element's text the context it paints in (ItemInfo::runOf). An inline element that opens a context of its own
-            // (a paint group) has none, its run being that context's, which is not placed here.
+            // (a paint group) has none, its run being that context's: it is placed again whole, with the line it sits in
+            // (run()). Text in what paints nothing draws nothing either way.
             const ItemInfo* found = info(text);
-            const render_item* context = isInlineContext(text) ? text : (found ? found->runOf : nullptr);
-            if (!found || !context) {
-                return lose();
+            if (!found) {
+                continue;
+            }
+            const render_item* context = isInlineContext(text) ? text : found->runOf;
+            if (!context) {
+                if (std::shared_ptr<render_item> locked = found->item.lock()) {
+                    m_placeAgain.push_back(std::move(locked));
+                }
+                continue;
             }
             m_runs.add(context);
+            m_textContexts.insert(context);
         }
         for (const auto& [item, what] : m.m_geometry) {
-            if (!info(item)) {
+            if (!info(item) || replaced(item)) {
                 continue;
             }
             if (what & litehtml::render_observer::moved) {
@@ -1082,6 +1160,9 @@ private:
         m_clippers = m_clipperSet.list;
         for (const auto& [el, order] : m.m_restyled) {
             restyled(el, order);
+        }
+        if (m_svgRestyled) {
+            svgsAgain(m_freshItems);
         }
         return true;
     }
@@ -1128,10 +1209,12 @@ private:
     void restyled(const litehtml::element* el, bool order) {
         std::vector<const litehtml::element*> stack{el};
         bool body = false;
+        bool svg = false;
         while (!stack.empty()) {
             const litehtml::element* at = stack.back();
             stack.pop_back();
             body = body || at->is_body();
+            svg = svg || dynamic_cast<const litehtml::el_svg*>(at) != nullptr;
             paintedBy(*at);
             for (const auto& child : at->children()) {
                 stack.push_back(child.get());
@@ -1141,15 +1224,345 @@ private:
         if (body && m.m_document->root_render()) {
             m_boxes.add(m.m_document->root_render().get());
         }
+        // An <svg>, what one holds or what holds one: every <svg> is captured again, once a publish (collect()).
+        if (m.m_document->has_svg() && !m_svgRestyled) {
+            for (auto parent = el->parent(); parent && !svg; parent = parent->parent()) {
+                svg = dynamic_cast<const litehtml::el_svg*>(parent.get()) != nullptr;
+            }
+            m_svgRestyled = svg;
+        }
         if (order) {
             for (const render_item* item : painting(*el)) {
                 m_paintOrder.push_back(item);
             }
-            bool rendered = false;
-            el->for_each_render_item([&](const std::shared_ptr<render_item>&) { rendered = true; });
-            if (painting(*el).empty() && rendered) {
-                m_unpainted = true;   // rendered but never painted (invisible): the change may show it
+            // Rendered but never painted (invisible): the change may show it.
+            if (painting(*el).empty()) {
+                el->for_each_render_item([this](const std::shared_ptr<render_item>& item) { m_placeAgain.push_back(item); });
             }
+        }
+    }
+
+    // ---- Re-placement: what the fork replaced, removed and built again. ----
+
+    // The fork's replacements of this publish (LayerMirror::Replaced): their old items, and the new subtrees still in the
+    // tree, the outermost of them.
+    void gatherReplacements() {
+        std::vector<std::shared_ptr<render_item>> roots;
+        const render_item* top = m.m_document ? m.m_document->root_render().get() : nullptr;
+        for (const auto& r : m.m_replaced) {
+            m_oldItems.insert(r.old.begin(), r.old.end());
+            if (r.rootGone) {
+                // The root gone: every item mirrored goes, and the root Context stays, empty.
+                m_rootGone = true;
+                for (const auto& [item, known] : m.m_items) {
+                    m_oldItems.insert(item);
+                }
+            } else if (auto fresh = r.fresh.lock()) {
+                // The root made again: every item mirrored goes, the ones a replacement earlier in the commit took out
+                // of the old root's subtree (which the fork then reports with the root's alone) included.
+                if (fresh.get() == top) {
+                    for (const auto& [item, known] : m.m_items) {
+                        m_oldItems.insert(item);
+                    }
+                }
+                roots.push_back(std::move(fresh));
+            }
+        }
+        for (const auto& root : roots) {
+            const render_item* at = root.get();
+            while (at->parent()) {
+                at = at->parent().get();
+            }
+            if (at == top) {
+                for (const render_item* item : subtree(root.get())) {
+                    m_freshItems.insert(item);
+                }
+            }
+        }
+        for (const auto& root : roots) {
+            const auto parent = root->parent();
+            if (m_freshItems.count(root.get()) && !(parent && m_freshItems.count(parent.get()))) {
+                m_freshRoots.push_back(root);
+            }
+        }
+    }
+
+    // Removes the nodes of `old` (each item's Box, own Context and runs) and of the runs of `runsOf`, and builds again
+    // the nodes of every item under `roots` and those runs, from a build walk that captures nothing else, each placed in
+    // its context by the placement rule. Inline contexts outside `roots` whose lines a removed or built item paints in
+    // have their runs built again too, and one whose line holds an inline paint group is built again whole. What it
+    // builds joins m_freshItems.
+    bool replace(std::unordered_set<const render_item*> old, std::vector<std::shared_ptr<render_item>> roots,
+                 std::unordered_set<const render_item*> runsOf) {
+        std::unordered_set<const render_item*> fresh;
+        for (const auto& root : roots) {
+            for (const render_item* item : subtree(root.get())) {
+                fresh.insert(item);
+            }
+        }
+        // A context whose text this publish replaced: its runs still name their old first pieces, by which the renumbering
+        // below would order them (NodeInfo::first), so they are built again here instead of by their replay.
+        for (const render_item* context : m_textContexts) {
+            if (!m_runsDone.count(context)) {
+                runsOf.insert(context);
+            }
+        }
+        // The inline contexts whose lines a removed or built item paints in. A line that holds an inline paint group
+        // (ItemInfo::subContexts) moves the group when its runs change, which nothing reports: that context is built
+        // again whole, which can reach the inline context it paints in, in turn.
+        for (bool grew = true; grew;) {
+            grew = false;
+            for (const render_item* item : old) {
+                if (const ItemInfo* at = info(item); at && at->runOf) {
+                    runsOf.insert(at->runOf);
+                }
+            }
+            for (const render_item* item : fresh) {
+                if (!item->src_el()->is_inline()) {
+                    continue;
+                }
+                for (auto parent = item->parent(); parent; parent = parent->parent()) {
+                    if (fresh.count(parent.get())) {
+                        break;
+                    }
+                    if (isInlineContext(parent.get())) {
+                        runsOf.insert(parent.get());
+                        break;
+                    }
+                }
+            }
+            for (auto it = runsOf.begin(); it != runsOf.end();) {
+                const ItemInfo* at = info(*it);
+                std::shared_ptr<render_item> whole = at && at->subContexts && !fresh.count(*it) ? at->item.lock() : nullptr;
+                if (!whole) {
+                    ++it;
+                    continue;
+                }
+                for (const render_item* item : subtree(whole.get())) {
+                    fresh.insert(item);
+                    old.insert(item);
+                }
+                roots.push_back(std::move(whole));
+                it = runsOf.erase(it);
+                grew = true;
+            }
+        }
+        for (auto it = runsOf.begin(); it != runsOf.end();) {
+            it = fresh.count(*it) || old.count(*it) ? runsOf.erase(it) : std::next(it);
+        }
+        // The root's replacement keeps the root Context (its id is the tree's): what it holds goes and is built again.
+        const bool rootReplaced =
+            m_rootGone || std::any_of(roots.begin(), roots.end(), [](const auto& root) { return !root->parent(); });
+        m_rootGone = false;
+        // The old nodes go, the outermost of them.
+        std::unordered_set<LayerId> going;
+        for (const render_item* item : old) {
+            if (const ItemInfo* at = info(item)) {
+                for (LayerId id : {at->box, at->own}) {
+                    if (id) {
+                        going.insert(id);
+                    }
+                }
+                going.insert(at->runs.begin(), at->runs.end());
+            }
+        }
+        for (const render_item* context : runsOf) {
+            if (const ItemInfo* at = info(context)) {
+                going.insert(at->runs.begin(), at->runs.end());
+            }
+        }
+        if (rootReplaced) {
+            going.erase(m.m_root);
+        }
+        std::vector<LayerId> outermost;
+        for (LayerId id : going) {
+            if (!m.m_nodes.count(id)) {
+                continue;
+            }
+            bool inside = false;
+            for (LayerId at = node(id).parent; at && !inside && m.m_nodes.count(at); at = node(at).parent) {
+                inside = going.count(at) != 0;
+            }
+            if (!inside) {
+                outermost.push_back(id);
+            }
+        }
+        std::sort(outermost.begin(), outermost.end());
+        for (LayerId id : outermost) {
+            removeNode(id);
+        }
+        for (const render_item* item : old) {
+            m.m_items.erase(item);
+        }
+        for (auto& [el, items] : m.m_byElement) {
+            items.erase(std::remove_if(items.begin(), items.end(), [&old](const render_item* item) { return old.count(item) != 0; }),
+                        items.end());
+        }
+        // The walk: a build's, into a mirror of its own, capturing only what is built again.
+        LayerMirror scratch(m.m_keyOf, m.m_nextId);
+        scratch.m_document = m.m_document;
+        scratch.m_container = &m_container;
+        Walker walker(scratch, m_container, Walker::Mode::Build);
+        walker.captureOnly(&fresh, &runsOf);
+        {
+            struct EndWalk {
+                WidgetContainer& container;
+                ~EndWalk() { container.endWalk(); }
+            } endWalk{m_container};
+            m_container.beginWalk(walker);
+            litehtml::walk_paint_order(*m.m_document, walker, 0, pixel_t(0), pixel_t(0));
+        }
+        walker.finish();
+        // With no root item (`display: none` on the document element) the walk opens no context, as a build's does not.
+        if (walker.lost || (!walker.root && m.m_document->root_render())) {
+            inconsistent("a re-placement's walk is lost");
+        }
+        // Each context the walk opened for an item not built again stands for the mirror's own.
+        std::unordered_map<LayerId, LayerId> hosts;
+        if (walker.root) {
+            hosts[walker.root->id] = m.m_root;
+        }
+        for (const auto& [id, at] : scratch.m_nodes) {
+            if (at->node->kind != MirrorNode::Kind::Context || fresh.count(at->item)) {
+                continue;
+            }
+            const ItemInfo* real = info(at->item);
+            if (!real || !real->own) {
+                inconsistent("a host context the mirror does not know");
+            }
+            hosts[id] = real->own;
+        }
+        // The clippers not built again keep their ids.
+        std::unordered_map<LayerId, LayerId> clippers;
+        for (const auto& [item, at] : scratch.m_items) {
+            if (fresh.count(item) || !at->clipper) {
+                continue;
+            }
+            ItemInfo* real = info(item);
+            if (!real) {
+                inconsistent("a clipper the mirror does not know");
+            }
+            if (!real->clipper) {
+                real->clipper = at->clipper;
+            }
+            clippers[at->clipper] = real->clipper;
+        }
+        // The nodes built again join the tables; those under a host context are placed below.
+        std::vector<LayerId> tops;
+        for (auto& [id, at] : scratch.m_nodes) {
+            const MirrorNode& n = *at->node;
+            if (!fresh.count(at->item) && !(n.kind == MirrorNode::Kind::Inline && runsOf.count(at->item))) {
+                continue;
+            }
+            if (walker.root && id == walker.root->id) {
+                continue;   // the mirror's own root stands for it (hosts)
+            }
+            for (MirrorClip& clip : const_cast<MirrorNode&>(n).clips) {
+                if (auto it = clippers.find(clip.clipper); it != clippers.end()) {
+                    clip.clipper = it->second;
+                }
+            }
+            auto moved = std::make_unique<NodeInfo>(*at);
+            if (auto host = hosts.find(at->parent); host != hosts.end()) {
+                moved->parent = host->second;
+                tops.push_back(id);
+            }
+            m.m_nodes[id] = std::move(moved);
+        }
+        for (const auto& [item, at] : scratch.m_items) {
+            if (fresh.count(item)) {
+                auto copy = std::make_unique<ItemInfo>(*at);
+                if (auto host = hosts.find(copy->context); host != hosts.end()) {
+                    copy->context = host->second;
+                }
+                if (auto host = hosts.find(copy->own); host != hosts.end()) {
+                    copy->own = host->second;   // the new root item's Context is the mirror's root
+                }
+                m.m_items[item] = std::move(copy);
+            } else if (runsOf.count(item)) {
+                if (ItemInfo* real = info(item)) {
+                    real->runs = at->runs;
+                    real->subContexts = at->subContexts;
+                    real->runsSplit = at->runsSplit;
+                }
+            }
+        }
+        for (const auto& [el, items] : scratch.m_byElement) {
+            for (const render_item* item : items) {
+                if (fresh.count(item)) {
+                    m.m_byElement[el].push_back(item);
+                }
+            }
+        }
+        // The root Context now stands for the new root item, with its group (a clip path on the root) as the walk found it.
+        if (rootReplaced) {
+            NodeInfo& at = node(m.m_root);
+            at.item = m.m_document->root_render().get();
+            at.first = nullptr;
+            std::shared_ptr<const MirrorGroup> group = walker.root ? walker.root->group : nullptr;
+            if (!sameMirrorGroup(current(m.m_root).group.get(), group.get())) {
+                edit(m.m_root).group = std::move(group);
+                emit(LayerOp::Group, m.m_root);
+            }
+        }
+        // Tree order as it is now, then the placement rule.
+        const std::unordered_map<const render_item*, uint64_t> order = treeOrder(*m.m_document);
+        for (auto& [item, at] : m.m_items) {
+            if (auto it = order.find(item); it != order.end()) {
+                at->order = it->second;
+            }
+        }
+        for (auto& [id, at] : m.m_nodes) {
+            const render_item* first = at->first ? at->first : at->item;
+            if (auto it = order.find(first); it != order.end()) {
+                at->order = it->second;
+            }
+        }
+        std::sort(tops.begin(), tops.end());
+        for (LayerId id : tops) {
+            NodeInfo& at = node(id);
+            const auto [index, after] = placement(at.parent, at.node->pass, at.node->zindex, at.order);
+            auto object = std::const_pointer_cast<MirrorNode>(at.node);
+            MirrorNode& parent = edit(at.parent);
+            parent.children.insert(parent.children.begin() + ptrdiff_t(index), object);
+            m_work[id] = object;
+            inserted(id, at.parent, after);
+        }
+        // What the walk built is current: no replay re-captures it.
+        m_runsDone.insert(runsOf.begin(), runsOf.end());
+        m_runsDone.insert(fresh.begin(), fresh.end());
+        m_freshItems.insert(fresh.begin(), fresh.end());
+        // What changed can be drawn by an <svg> outside it.
+        if (m.m_document->has_svg()) {
+            svgsAgain(fresh);
+        }
+        // The root paints the body's background when it has none of its own (as restyled() says).
+        const render_item* root = m.m_document->root_render().get();
+        if (root && !fresh.count(root) &&
+            std::any_of(fresh.begin(), fresh.end(), [](const render_item* item) { return item->src_el()->is_body(); })) {
+            m_boxes.add(root);
+        }
+        return true;
+    }
+
+    // A <use> or a url(#…) paint draws by id from anywhere in the document (litehtml's svg_element_by_id): every <svg>'s
+    // Box but those of `built` is captured again.
+    void svgsAgain(const std::unordered_set<const render_item*>& built) {
+        for (const auto& [item, at] : m.m_items) {
+            if (at->box && !built.count(item) && dynamic_cast<const litehtml::el_svg*>(item->src_el().get())) {
+                m_boxes.add(item);
+            }
+        }
+    }
+
+    // Insert for `id` and its subtree, as LayerOp::Insert says: its children follow as their own Inserts.
+    void inserted(LayerId id, LayerId parent, LayerId after) {
+        emit(LayerOp::Insert, id, parent, after);
+        m_inserted.insert(id);
+        LayerId previous = 0;
+        for (const auto& child : current(id).children) {
+            inserted(child->id, id, previous);
+            previous = child->id;
         }
     }
 
@@ -1198,22 +1611,27 @@ private:
                !isTableInternal(&item) && item.parent();
     }
 
-    bool paintOrder(const render_item* item) {
+    // A restyle that may change paint order: its group's parameters computed again, a plain in-flow block that becomes
+    // or stops being a group moved in place (`inPlace`, changeGroup), or anything else placed again (m_placeAgain): a
+    // change of visibility, a group that appears or goes off anything else, a group holding groups or what the fork
+    // replaced (whose items are gone: leaveGroup reads the items of what it moves out) that stops being one.
+    bool paintOrder(const render_item* item, std::vector<const render_item*>& inPlace) {
         ItemInfo* found = info(item);
         const std::shared_ptr<render_item> locked = found ? found->item.lock() : nullptr;
-        if (!found || !locked || !locked->is_visible()) {
-            return lose();
+        if (!found || !locked) {
+            inconsistent("a restyled item is gone");
         }
         // draw_children draws a paint group through draw_group; a table draws its cells, captions and rows itself and
         // never so, and the root is one only for a clip path (document::draw).
         const auto parent = locked->parent();
         if (!parent) {
-            return lose();
+            inconsistent("a restyled item has no parent");
         }
-        const bool wasGroup = found->own && current(found->own).context == MirrorNode::ContextKind::Group;
+        const bool wasGroup = isGroupNode(found->own);
         const bool isGroup = locked->src_el()->css().is_paint_group() && !isTableInternal(parent.get());
-        if (!visibilityHolds(item)) {
-            return lose();
+        if (!locked->is_visible() || !visibilityHolds(item)) {
+            m_placeAgain.push_back(locked);
+            return true;
         }
         if (wasGroup && isGroup) {
             m_groupItems.add(item);
@@ -1222,10 +1640,63 @@ private:
         if (!wasGroup && !isGroup) {
             return true;
         }
-        if (!inFlowBlock(*locked) || !plainSubtree(item)) {
-            return lose();
+        if (inFlowBlock(*locked) && plainSubtree(item) &&
+            (isGroup || (!holdsContexts(found->own) && !holdsReplaced(found->own)))) {
+            inPlace.push_back(item);
+        } else {
+            m_placeAgain.push_back(locked);
         }
-        return isGroup ? becomeGroup(item, *found, locked) : leaveGroup(item, *found);
+        return true;
+    }
+
+    bool isGroupNode(LayerId id) const { return id && current(id).context == MirrorNode::ContextKind::Group; }
+
+    bool holdsContexts(LayerId id) const {
+        const auto& children = current(id).children;
+        return std::any_of(children.begin(), children.end(),
+                           [](const auto& child) { return child->kind == MirrorNode::Kind::Context; });
+    }
+
+    // Whether a Context holds a node of an item the fork replaced in this publish (the pointer compared, never read).
+    bool holdsReplaced(LayerId id) const {
+        const auto& children = current(id).children;
+        return std::any_of(children.begin(), children.end(),
+                           [this](const auto& child) { return m_oldItems.count(m.m_nodes.at(child->id)->item) != 0; });
+    }
+
+    // A plain in-flow block that becomes or stops being a group (paintOrder).
+    bool changeGroup(const render_item* item) {
+        ItemInfo* found = info(item);
+        const std::shared_ptr<render_item> locked = found ? found->item.lock() : nullptr;
+        if (!found || !locked) {
+            inconsistent("a restyled item is gone");
+        }
+        return isGroupNode(found->own) ? leaveGroup(item, *found) : becomeGroup(item, *found, locked);
+    }
+
+    // The subtrees paintOrder and restyled() could not place in place, which replace() removes and builds again: the
+    // outermost of them, none under what the fork replaced, appended to `roots`, and every item under them to `under`.
+    void placedAgain(std::vector<std::shared_ptr<render_item>>& roots, std::unordered_set<const render_item*>& under) const {
+        std::unordered_set<const render_item*> listed;
+        for (const auto& root : m_placeAgain) {
+            listed.insert(root.get());
+        }
+        for (const auto& root : m_placeAgain) {
+            if (m_freshItems.count(root.get()) || under.count(root.get())) {
+                continue;
+            }
+            bool inside = false;
+            for (auto parent = root->parent(); parent && !inside; parent = parent->parent()) {
+                inside = listed.count(parent.get()) != 0;
+            }
+            if (inside) {
+                continue;
+            }
+            roots.push_back(root);
+            for (const render_item* item : subtree(root.get())) {
+                under.insert(item);
+            }
+        }
     }
 
     // What paints under `root` is what painted: an item paints when it and every ancestor up to `root` is visible
@@ -1254,12 +1725,12 @@ private:
     bool becomeGroup(const render_item* item, ItemInfo& found, const std::shared_ptr<render_item>& locked) {
         const LayerId context = found.context;
         if (!context || !m.m_nodes.count(context)) {
-            return lose();
+            inconsistent("a new group's context is gone");
         }
         // The group's parameters, from litehtml's draw_group.
         std::shared_ptr<MirrorGroup> group = params(locked);
         if (!group) {
-            return lose();
+            inconsistent("a group's parameters cannot be computed");
         }
         auto created = std::make_shared<MirrorNode>();
         created->kind = MirrorNode::Kind::Context;
@@ -1269,7 +1740,7 @@ private:
         created->pass = found.pass;
         created->zindex = found.zindex;
         if (!chainFor(locked->parent().get(), context, created->clips)) {
-            return lose();
+            inconsistent("a new group's clips cannot be chained");
         }
         created->origin = contentOrigin(*locked, context);
         created->group = std::move(group);
@@ -1281,12 +1752,7 @@ private:
         m.m_nodes[id] = std::move(infoNode);
         m_work[id] = created;
         m_inserted.insert(id);
-        const std::optional<std::pair<size_t, LayerId>> place =
-            placement(context, created->pass, created->zindex, found.order);
-        if (!place) {
-            return lose();
-        }
-        const auto [index, after] = *place;
+        const auto [index, after] = placement(context, created->pass, created->zindex, found.order);
         MirrorNode& parent = edit(context);
         parent.children.insert(parent.children.begin() + ptrdiff_t(index), created);
         emit(LayerOp::Insert, id, context, after);
@@ -1296,19 +1762,15 @@ private:
             MirrorNode& box = edit(found.box);
             box.pass = MirrorPass::Own;
             box.zindex = 0;
-            if (!moveTo(found.box, id, boxOrigin(*locked, id), {}, size_t(0))) {
-                return lose();
-            }
+            moveTo(found.box, id, boxOrigin(*locked, id), {}, size_t(0));
         }
         // Its own inline content, which its passes paint inside its clip.
         for (LayerId run : found.runs) {
             std::vector<MirrorClip> clips;
             if (!chainFor(item, id, clips)) {
-                return lose();
+                inconsistent("content cannot move into a new group");
             }
-            if (!moveTo(run, id, contentOrigin(*locked, id), std::move(clips))) {
-                return lose();
-            }
+            moveTo(run, id, contentOrigin(*locked, id), std::move(clips));
         }
         for (const render_item* inner : descendants(item)) {
             ItemInfo* at = info(inner);
@@ -1318,21 +1780,17 @@ private:
             if (at->box) {
                 std::vector<MirrorClip> clips;
                 if (!chainFor(inner->parent().get(), id, clips)) {
-                    return lose();
+                    inconsistent("content cannot move into a new group");
                 }
-                if (!moveTo(at->box, id, boxOrigin(*inner, id), std::move(clips))) {
-                    return lose();
-                }
+                moveTo(at->box, id, boxOrigin(*inner, id), std::move(clips));
                 at->context = id;
             }
             for (LayerId run : at->runs) {
                 std::vector<MirrorClip> clips;
                 if (!chainFor(inner, id, clips)) {
-                    return lose();
+                    inconsistent("content cannot move into a new group");
                 }
-                if (!moveTo(run, id, contentOrigin(*inner, id), std::move(clips))) {
-                    return lose();
-                }
+                moveTo(run, id, contentOrigin(*inner, id), std::move(clips));
             }
             if (at->runOf || (!at->box && at->runs.empty())) {
                 at->context = id;
@@ -1346,16 +1804,7 @@ private:
         const LayerId context = node(own).parent;
         const std::shared_ptr<render_item> locked = found.item.lock();
         if (!context || !locked) {
-            return lose();
-        }
-        // Its children go back one by one by the placement rule, which needs them in tree order (NodeInfo::captioned).
-        if (node(own).captioned) {
-            return lose();
-        }
-        for (const auto& child : current(own).children) {
-            if (child->kind == MirrorNode::Kind::Context) {
-                return lose();
-            }
+            inconsistent("an item that stops being a group is gone");
         }
         // Everything it holds goes back to its context by the placement rule, its own Box first.
         const std::vector<std::shared_ptr<const MirrorNode>> held = current(own).children;
@@ -1368,30 +1817,24 @@ private:
                 box.pass = found.pass;
                 box.zindex = found.zindex;
                 if (!chainFor(locked->parent().get(), context, clips)) {
-                    return lose();
+                    inconsistent("content cannot move out of a group");
                 }
-                if (!moveTo(id, context, boxOrigin(*locked, context), std::move(clips))) {
-                    return lose();
-                }
+                moveTo(id, context, boxOrigin(*locked, context), std::move(clips));
                 continue;
             }
             if (child->kind == MirrorNode::Kind::Box) {
                 if (!chainFor(owner->parent().get(), context, clips)) {
-                    return lose();
+                    inconsistent("content cannot move out of a group");
                 }
-                if (!moveTo(id, context, boxOrigin(*owner, context), std::move(clips))) {
-                    return lose();
-                }
+                moveTo(id, context, boxOrigin(*owner, context), std::move(clips));
                 if (ItemInfo* at = info(owner)) {
                     at->context = context;
                 }
             } else {
                 if (!chainFor(owner, context, clips)) {
-                    return lose();
+                    inconsistent("content cannot move out of a group");
                 }
-                if (!moveTo(id, context, contentOrigin(*owner, context), std::move(clips))) {
-                    return lose();
-                }
+                moveTo(id, context, contentOrigin(*owner, context), std::move(clips));
             }
         }
         for (const render_item* inner : descendants(item)) {
@@ -1414,10 +1857,7 @@ private:
             return true;
         }
         if (!locked) {
-            return lose();   // an expired item is a change the mirror cannot place
-        }
-        if (found->multi) {
-            return lose();
+            inconsistent("a recaptured item is gone");   // an expired item is a change the mirror cannot place
         }
         if (found->runOf) {
             m_runs.add(found->runOf);
@@ -1455,7 +1895,7 @@ private:
         created->origin = boxOrigin(*locked, context);
         created->content = std::move(content);
         if (!found->own && !chainFor(locked->parent().get(), context, created->clips)) {
-            return lose();
+            inconsistent("a recaptured box's clips cannot be chained");
         }
         const LayerId id = created->id;
         auto infoNode = std::make_unique<NodeInfo>();
@@ -1465,13 +1905,8 @@ private:
         m.m_nodes[id] = std::move(infoNode);
         m_work[id] = created;
         m_inserted.insert(id);
-        const std::optional<std::pair<size_t, LayerId>> place =
-            found->own ? std::make_pair(size_t(0), LayerId(0))
-                       : placement(context, created->pass, created->zindex, found->order);
-        if (!place) {
-            return lose();
-        }
-        const auto [index, after] = *place;
+        const auto [index, after] = found->own ? std::make_pair(size_t(0), LayerId(0))
+                                               : placement(context, created->pass, created->zindex, found->order);
         MirrorNode& parent = edit(context);
         parent.children.insert(parent.children.begin() + ptrdiff_t(index), created);
         emit(LayerOp::Insert, id, context, after);
@@ -1483,15 +1918,27 @@ private:
         if (!m_runsDone.insert(item).second) {
             return true;
         }
+        // A context placed again in this publish was built from its walk: nothing to replay.
+        if (m_freshItems.count(item)) {
+            return true;
+        }
         ItemInfo* found = info(item);
         const std::shared_ptr<render_item> locked = found ? found->item.lock() : nullptr;
         if (!found || !locked || found->runs.empty()) {
             return true;
         }
         // A line that changed (text, a restyle, a reflow) moves an inline paint group in it, whose run is its own
-        // context's: not placed by re-capturing this one's (ItemInfo::subContexts). A line that moved whole did not.
-        if (found->runsSplit || found->multi || (found->subContexts && !m_moving)) {
-            return lose();
+        // context's, or has runs an inline table splits: run() places such a line again whole, so only one that moved
+        // whole is replayed here; another is a route run() did not foresee. A line an inline table splits is placed
+        // again whatever the route (a move by a fraction of a pixel recaptures the runs under it), after every other
+        // update (run()), so nothing updates its old nodes once they are gone.
+        if (found->runsSplit) {
+            m_lateAgain.push_back(locked);
+            return true;
+        }
+        if (found->subContexts && !m_moving) {
+            m_lateAgain.push_back(locked);
+            return true;
         }
         Walker walker(m, m_container, Walker::Mode::Runs);
         {
@@ -1508,7 +1955,8 @@ private:
                                          [&] { locked->draw_children(0, x, y, nullptr, litehtml::draw_inlines, 0); });
         }
         if (walker.lost || walker.runs.size() != found->runs.size()) {
-            return lose();
+            m_lateAgain.push_back(locked);
+            return true;
         }
         const LayerId context = node(found->runs.front()).parent;
         const litehtml::pointF origin = contentOrigin(*locked, context);
@@ -1516,6 +1964,8 @@ private:
             MirrorNode& run = edit(found->runs[k]);
             run.content = std::move(walker.runs[k]);
             run.origin = origin;
+            // Replaced text took the old pieces with it: a re-placement renumbers the run by its new first one.
+            node(found->runs[k]).first = walker.runFirsts[k];
             emit(LayerOp::Content, found->runs[k]);
         }
         return true;
@@ -1592,9 +2042,6 @@ private:
             if (!found) {
                 continue;
             }
-            if (found->multi) {
-                return lose();
-            }
             if (found->own) {
                 groupsUnder(found->own);
                 const LayerId parent = node(found->own).parent;
@@ -1619,7 +2066,7 @@ private:
                 affected = affected || clippers.count(clip.clipper);
             }
             if (affected && !reclip(id)) {
-                return lose();
+                inconsistent("a clip cannot be applied again");
             }
         }
         if (fractional) {
@@ -1688,7 +2135,7 @@ private:
                     affected = affected || clip.clipper == found->clipper;
                 }
                 if (affected && !reclip(id)) {
-                    return lose();
+                    inconsistent("a clip cannot be applied again");
                 }
             }
         }
@@ -1741,11 +2188,11 @@ private:
             }
             const std::shared_ptr<render_item> item = locked(node(id).item);
             if (!item) {
-                return lose();
+                inconsistent("a group's item is gone");
             }
             std::shared_ptr<MirrorGroup> group = params(item);
             if (!group) {
-                return lose();
+                inconsistent("a group's parameters cannot be computed");
             }
             edit(id).group = std::move(group);
             emit(LayerOp::Group, id);
@@ -1804,9 +2251,12 @@ private:
         return true;
     }
 
-    std::optional<Publish> freeze() {
+    Publish freeze() {
         Publish published;
-        if (m_ops.empty() && m_work.empty()) {
+        // Nothing placed again and the document's size as published (a width change can leave every layer as it was):
+        // the tree stays.
+        if (m_ops.empty() && m_work.empty() && m.m_tree && m.m_tree->width() == double(m.m_document->width().value()) &&
+            m.m_tree->height() == double(m.m_document->height().value())) {
             published.tree = m.m_tree;
             published.changedRects = std::vector<litehtml::position>();
             return published;
@@ -1906,17 +2356,28 @@ private:
     Ordered<const render_item*> m_boxes, m_runs, m_movedSet, m_clipperSet, m_groupItems;
     Ordered<LayerId> m_groupNodes;
     std::vector<const render_item*> m_moved, m_clippers, m_paintOrder;
-    bool m_unpainted = false;
+    std::vector<std::shared_ptr<render_item>> m_placeAgain;
+    /// Lines an inline table splits whose runs a route after the re-placement asked to replay (recaptureRuns): placed
+    /// again whole, last.
+    std::vector<std::shared_ptr<render_item>> m_lateAgain;
+    bool m_svgRestyled = false;
+    std::unordered_set<const render_item*> m_oldItems, m_freshItems, m_textContexts;
+    std::vector<std::shared_ptr<render_item>> m_freshRoots;
+    // A replacement took the root and made none (gatherReplacements); the next re-placement keeps the root Context.
+    bool m_rootGone = false;
 };
 
-std::optional<LayerMirror::Publish> LayerMirror::publish() {
-    std::optional<Publish> published;
-    {
-        Update update(*this);
-        published = update.run();
+LayerMirror::Publish LayerMirror::publish() {
+    struct Cleared {
+        LayerMirror& mirror;
+        ~Cleared() { mirror.clearReports(); }
+    } cleared{*this};
+    // A report the observer could not keep (it never throws into litehtml): out of memory.
+    if (m_reportFailed) {
+        throw std::bad_alloc();
     }
-    clearReports();
-    return published;
+    Update update(*this);
+    return update.run();
 }
 
 // ---- The mirror. ----
@@ -1935,13 +2396,15 @@ void LayerMirror::detach() {
 }
 
 void LayerMirror::clearReports() {
-    m_treeRebuilt = false;
     m_lost = false;
+    m_reportFailed = false;
     m_removed.clear();
     m_added.clear();
     m_texts.clear();
     m_restyled.clear();
     m_geometry.clear();
+    m_replaced.clear();
+    m_replacements = 0;
 }
 
 std::shared_ptr<const LayerTree> LayerMirror::build(litehtml::document& document, WidgetContainer& container,
@@ -1977,11 +2440,6 @@ std::shared_ptr<const LayerTree> LayerMirror::build(litehtml::document& document
     info->node = root;
     info->item = document.root_render().get();
     m_nodes[root->id] = std::move(info);
-    for (LayerId id : walker.captioned) {
-        if (auto it = m_nodes.find(id); it != m_nodes.end()) {
-            it->second->captioned = true;
-        }
-    }
     m_lost = walker.lost;
     m_tree = std::make_shared<const LayerTree>(m_width, m_height, std::shared_ptr<const MirrorNode>(root), canvasColor(document));
     if (observe) {
@@ -1997,7 +2455,7 @@ void LayerMirror::item_added(const std::shared_ptr<litehtml::render_item>& item)
     try {
         m_added.push_back(item);
     } catch (...) {
-        m_lost = true;
+        m_reportFailed = true;
     }
 }
 
@@ -2005,7 +2463,7 @@ void LayerMirror::item_removed(const litehtml::render_item* item) {
     try {
         m_removed.push_back(item);
     } catch (...) {
-        m_lost = true;
+        m_reportFailed = true;
     }
 }
 
@@ -2013,7 +2471,7 @@ void LayerMirror::item_geometry_changed(const litehtml::render_item* item, unsig
     try {
         m_geometry.emplace_back(item, what);
     } catch (...) {
-        m_lost = true;
+        m_reportFailed = true;
     }
 }
 
@@ -2021,7 +2479,7 @@ void LayerMirror::element_restyled(const litehtml::element* el, bool paint_order
     try {
         m_restyled.emplace_back(el, paint_order);
     } catch (...) {
-        m_lost = true;
+        m_reportFailed = true;
     }
 }
 
@@ -2029,12 +2487,63 @@ void LayerMirror::text_replaced(const litehtml::render_item* inline_context) {
     try {
         m_texts.push_back(inline_context);
     } catch (...) {
-        m_lost = true;
+        m_reportFailed = true;
     }
 }
 
-void LayerMirror::tree_rebuilt() {
-    m_treeRebuilt = true;
+namespace {
+
+// `top` and every item under it.
+std::unordered_set<const litehtml::render_item*> subtreeItems(const litehtml::render_item* top) {
+    std::unordered_set<const litehtml::render_item*> out;
+    std::vector<const litehtml::render_item*> stack;
+    if (top) {
+        stack.push_back(top);
+    }
+    while (!stack.empty()) {
+        const litehtml::render_item* item = stack.back();
+        stack.pop_back();
+        out.insert(item);
+        for (const auto& child : const_cast<litehtml::render_item*>(item)->children()) {
+            stack.push_back(child.get());
+        }
+    }
+    return out;
+}
+
+} // namespace
+
+void LayerMirror::subtree_replaced(const litehtml::render_item* old_item, const std::shared_ptr<litehtml::render_item>& new_item) {
+    try {
+        Replaced replaced;
+        replaced.old = subtreeItems(old_item);
+        replaced.fresh = new_item;
+        replaced.rootGone = !new_item;
+        m_replaced.push_back(std::move(replaced));
+        m_replacements++;
+    } catch (...) {
+        m_reportFailed = true;
+    }
+}
+
+void LayerMirror::subtree_linked(const std::shared_ptr<litehtml::render_item>& item) {
+    try {
+        Replaced linked;
+        linked.fresh = item;
+        m_replaced.push_back(std::move(linked));
+    } catch (...) {
+        m_reportFailed = true;
+    }
+}
+
+void LayerMirror::subtree_unlinked(const litehtml::render_item* item) {
+    try {
+        Replaced unlinked;
+        unlinked.old = subtreeItems(item);
+        m_replaced.push_back(std::move(unlinked));
+    } catch (...) {
+        m_reportFailed = true;
+    }
 }
 
 } // namespace wr

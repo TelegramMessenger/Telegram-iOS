@@ -37,6 +37,9 @@ JSValue runGC(JSContext* ctx, JSValueConst, int, JSValueConst*) {
 
 void HostEnv::install(uint64_t randomSeed) {
     wr::Runtime::Options options;
+    options.limits = testLimits();
+    options.cpu = testCpuLimits();
+    options.clock = testClock().clock();
     options.interfaces = &wr::idl::kTable;
     options.host = &m_host;
     options.randomSeed = randomSeed;
@@ -80,6 +83,9 @@ std::string HostEnv::eval(std::string_view code) {
         return "STOPPED";
     }
     wr::EventLoop::of(this->ctx()).advanceTime(m_host.now);
+    // A script of its own, as a task is: it starts an operations batch (limit.batch) and runs in a slice.
+    m_runtime->startBatch();
+    EvalSlice slice(*m_runtime);
     bool threw = false;
     std::string out;
     try {
@@ -130,6 +136,73 @@ void HostEnv::frame(double ms) {
     this->advance(ms);
     wr::EventLoop::of(this->ctx()).runAnimationFrame(m_host.now);
     this->drain();
+}
+
+namespace {
+
+JSValue burnNative(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
+    double ms = 0;
+    JS_ToFloat64(ctx, &ms, argv[0]);
+    testClock().advance(ms);
+    return JS_UNDEFINED;
+}
+
+JSValue renderNative(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
+    double ms = 0;
+    JS_ToFloat64(ctx, &ms, argv[0]);
+    wr::Runtime::RenderScope scope(wr::Runtime::from(ctx), false);
+    testClock().advance(ms);
+    return JS_UNDEFINED;
+}
+
+JSValue queryNative(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
+    double ms = 0;
+    JS_ToFloat64(ctx, &ms, argv[0]);
+    wr::Runtime::RenderScope scope(wr::Runtime::from(ctx), true);
+    testClock().advance(ms);
+    return JS_UNDEFINED;
+}
+
+/// elapse(ms): the host's clock moves `ms` (a task that took that long on the wall), the CPU clock not.
+JSValue elapseNative(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
+    double ms = 0;
+    JS_ToFloat64(ctx, &ms, argv[0]);
+    static_cast<TestHost&>(wr::Runtime::from(ctx).host()).now += ms;
+    return JS_UNDEFINED;
+}
+
+/// renderAround(ms, fn, script): a render scope of `ms` before and after a call of `fn` inside it, made in a ScriptScope
+/// when `script`, as our renderer calls script.
+JSValue renderAroundNative(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
+    double ms = 0;
+    JS_ToFloat64(ctx, &ms, argv[0]);
+    const bool script = JS_ToBool(ctx, argv[2]);
+    wr::Runtime::RenderScope scope(wr::Runtime::from(ctx), false);
+    testClock().advance(ms);
+    JSValue result;
+    {
+        std::optional<wr::Runtime::ScriptScope> scriptScope;
+        if (script) {
+            scriptScope.emplace(wr::Runtime::from(ctx));
+        }
+        result = JS_Call(ctx, argv[1], JS_UNDEFINED, 0, nullptr);
+    }
+    if (JS_IsException(result)) {
+        return result;
+    }
+    JS_FreeValue(ctx, result);
+    testClock().advance(ms);
+    return JS_UNDEFINED;
+}
+
+} // namespace
+
+void installClockNatives(HostEnv& env) {
+    env.runtime().setGlobal("burn", JS_NewCFunction(env.ctx(), burnNative, "burn", 1));
+    env.runtime().setGlobal("render", JS_NewCFunction(env.ctx(), renderNative, "render", 1));
+    env.runtime().setGlobal("query", JS_NewCFunction(env.ctx(), queryNative, "query", 1));
+    env.runtime().setGlobal("renderAround", JS_NewCFunction(env.ctx(), renderAroundNative, "renderAround", 3));
+    env.runtime().setGlobal("elapse", JS_NewCFunction(env.ctx(), elapseNative, "elapse", 1));
 }
 
 std::string echoIntl(std::string_view request) {

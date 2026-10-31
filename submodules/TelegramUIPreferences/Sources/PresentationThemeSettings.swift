@@ -573,16 +573,19 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
     public var bubbleMode: Bool
     public var bubblelessTheme: PresentationThemeReference?
     public var bubblelessAutomaticTheme: PresentationThemeReference?
+    // Message text in New York instead of the system font, picked in Text Size (both modes).
+    public var serifMessageFont: Bool
     
     public static var `default`: PresentationChatBubbleSettings = PresentationChatBubbleSettings(mainRadius: 16, auxiliaryRadius: 8, mergeBubbleCorners: true)
     
-    public init(mainRadius: Int32, auxiliaryRadius: Int32, mergeBubbleCorners: Bool, bubbleMode: Bool = true, bubblelessTheme: PresentationThemeReference? = nil, bubblelessAutomaticTheme: PresentationThemeReference? = nil) {
+    public init(mainRadius: Int32, auxiliaryRadius: Int32, mergeBubbleCorners: Bool, bubbleMode: Bool = true, bubblelessTheme: PresentationThemeReference? = nil, bubblelessAutomaticTheme: PresentationThemeReference? = nil, serifMessageFont: Bool = false) {
         self.mainRadius = mainRadius
         self.auxiliaryRadius = auxiliaryRadius
         self.mergeBubbleCorners = mergeBubbleCorners
         self.bubbleMode = bubbleMode
         self.bubblelessTheme = bubblelessTheme
         self.bubblelessAutomaticTheme = bubblelessAutomaticTheme
+        self.serifMessageFont = serifMessageFont
     }
     
     public init(from decoder: Decoder) throws {
@@ -602,6 +605,7 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
         } else {
             self.bubblelessAutomaticTheme = nil
         }
+        self.serifMessageFont = (try container.decodeIfPresent(Int32.self, forKey: "smf") ?? 0) != 0
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -620,6 +624,9 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
         }
         if let bubblelessAutomaticTheme = self.bubblelessAutomaticTheme {
             try container.encode(EnginePostboxEncoder().encodeObjectToRawData(bubblelessAutomaticTheme), forKey: "bubblelessAutoTheme")
+        }
+        if self.serifMessageFont {
+            try container.encode(1 as Int32, forKey: "smf")
         }
     }
 }

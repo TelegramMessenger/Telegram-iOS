@@ -11,11 +11,10 @@ class EventTarget;
 /// Dispatches `event` to `target`: the path first (held by the event as counted references), then the capture and
 /// bubble passes, then the activation behaviour. `legacyTargetOverride` makes the window's associated document the
 /// event's target (HTML fires `load` at the window that way). Returns false when the event was canceled. The caller
-/// holds `event` and `target` for the call. Every walk is charged before it runs: the path per parent, each pass per
-/// path entry, each target's listener list before it is cloned and per listener visited.
+/// holds `event` and `target` for the call.
 /// A listener's exception is reported and dispatch goes on. A stop inside a listener's call throws Aborted; dispatch's
-/// own native work throws Thrown (a charge the budget refused: the interrupt is pending) or std::bad_alloc, as every
-/// DOM native does. Either way the event is left reset: no path, phase or current target, not dispatching, its
+/// own native work throws at the memory limit as every DOM native does (std::bad_alloc, or Thrown when QuickJS refuses
+/// an allocation). Either way the event is left reset: no path, phase or current target, not dispatching, its
 /// propagation flags clear, its own type back and not in a passive listener. An event already being dispatched is
 /// refused with DOMError InvalidStateError, as dispatchEvent refuses it, and left as the dispatch under way has it.
 bool dispatch(JSContext* ctx, Event& event, EventTarget& target, bool legacyTargetOverride = false);

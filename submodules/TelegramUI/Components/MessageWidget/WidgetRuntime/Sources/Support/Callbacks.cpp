@@ -25,25 +25,11 @@ std::optional<LegacyCallback> Converter<std::optional<LegacyCallback>>::from(JSC
     return LegacyCallback(Value::dup(ctx, v));
 }
 
-namespace {
-
-/// The binding-call charge of a call into JS. A budget stop there aborts like one inside the call.
-void chargeCall(JSContext* ctx, Runtime& runtime) {
-    try {
-        charge(ctx, work::kBindingCall);
-    } catch (const Thrown&) {
-        runtime.abortWithPendingException(ctx);
-    }
-}
-
-} // namespace
-
 CallResult callFunction(JSContext* ctx, JSValueConst fn, JSValueConst thisArg, int argc, JSValueConst* argv) {
     Runtime& runtime = Runtime::from(ctx);
     // Ruling 6: the JS this runs starts at native depth 0, so its binding calls are outermost again.
     Runtime::ScriptBoundary boundary(runtime);
     runtime.throwIfStopped();
-    chargeCall(ctx, runtime);
     runtime.enterScript();
     JSValue result = JS_Call(ctx, fn, thisArg, argc, argv);
     return runtime.leaveScript(ctx, result);
@@ -55,7 +41,6 @@ CallResult callInterface(JSContext* ctx, JSValueConst object, const char* name, 
     // runs at native depth 0).
     Runtime::ScriptBoundary boundary(runtime);
     runtime.throwIfStopped();
-    chargeCall(ctx, runtime);
     runtime.enterScript();
     if (JS_IsFunction(ctx, object)) {
         return runtime.leaveScript(ctx, JS_Call(ctx, object, thisArg, argc, argv));

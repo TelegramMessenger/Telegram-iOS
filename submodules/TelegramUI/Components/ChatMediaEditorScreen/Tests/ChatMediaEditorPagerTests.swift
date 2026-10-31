@@ -5,7 +5,8 @@ import XCTest
 import TelegramCore
 import MediaEditor
 import ChatMediaSend
-import ChatMediaEditorScreen
+import Display
+@testable import ChatMediaEditorScreen
 
 private final class IdentifiedStubAsset: PHAsset {
     private let stubIdentifier: String
@@ -280,5 +281,90 @@ final class ChatMediaEditorPagerTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorSwipeDownDismissDirection(translation: 140.0, velocity: -900.0), -1.0)
         XCTAssertEqual(chatMediaEditorSwipeDownDismissDirection(translation: 140.0, velocity: -300.0), 1.0)
         XCTAssertEqual(chatMediaEditorSwipeDownDismissDirection(translation: -140.0, velocity: 0.0), -1.0)
+    }
+
+    func testPagerKeepsIndexAcrossWidthChange() {
+        XCTAssertEqual(chatMediaEditorPagerOffset(index: 0, width: 390.0), 0.0)
+        XCTAssertEqual(chatMediaEditorPagerOffset(index: 3, width: 390.0), 3.0 * (390.0 + chatMediaEditorPagerPageSpacing))
+        XCTAssertEqual(chatMediaEditorPagerOffset(index: 3, width: 844.0), 3.0 * (844.0 + chatMediaEditorPagerPageSpacing))
+        for width in [CGFloat(390.0), 844.0, 932.0] {
+            XCTAssertEqual(chatMediaEditorPagerSettledIndex(offset: chatMediaEditorPagerOffset(index: 3, width: width), width: width, count: 5), 3)
+        }
+
+        let pager = ChatMediaEditorPagerView(frame: .zero)
+        pager.update(size: CGSize(width: 390.0, height: 844.0), count: 5, currentIndex: 3)
+        XCTAssertEqual(pager.scrollView.contentOffset.x, chatMediaEditorPagerOffset(index: 3, width: 390.0))
+        pager.update(size: CGSize(width: 844.0, height: 390.0), count: 5, currentIndex: 3)
+        XCTAssertEqual(pager.currentIndex, 3)
+        XCTAssertEqual(pager.scrollView.contentOffset.x, chatMediaEditorPagerOffset(index: 3, width: 844.0))
+        XCTAssertEqual(pager.page(at: 3)?.frame.minX, chatMediaEditorPagerOffset(index: 3, width: 844.0) + chatMediaEditorPagerPageSpacing / 2.0)
+        XCTAssertEqual(pager.page(at: 3)?.frame.width, 844.0)
+    }
+
+    func testPagerReleasesTrackingAfterScrollingAnimation() {
+        let pager = ChatMediaEditorPagerView(frame: .zero)
+        pager.update(size: CGSize(width: 390.0, height: 844.0), count: 5, currentIndex: 0)
+        var tracking = ChatMediaEditorTrackingSet()
+        pager.trackingUpdated = { source, isTracking in
+            tracking.update(isTracking, source: source)
+        }
+        pager.scrollViewWillBeginDragging(pager.scrollView)
+        XCTAssertTrue(tracking.isTracking)
+        pager.scrollViewDidEndDragging(pager.scrollView, willDecelerate: true)
+        XCTAssertTrue(tracking.isTracking)
+        pager.scrollViewDidEndScrollingAnimation(pager.scrollView)
+        XCTAssertFalse(tracking.isTracking)
+    }
+
+    func testPagerReleasesTrackingOnProgrammaticScroll() {
+        for animated in [false, true] {
+            let pager = ChatMediaEditorPagerView(frame: .zero)
+            pager.update(size: CGSize(width: 390.0, height: 844.0), count: 5, currentIndex: 0)
+            var tracking = ChatMediaEditorTrackingSet()
+            pager.trackingUpdated = { source, isTracking in
+                tracking.update(isTracking, source: source)
+            }
+            pager.scrollViewWillBeginDragging(pager.scrollView)
+            pager.scrollViewDidEndDragging(pager.scrollView, willDecelerate: true)
+            XCTAssertTrue(tracking.isTracking)
+            pager.scrollToPage(2, animated: animated)
+            XCTAssertFalse(tracking.isTracking)
+        }
+    }
+
+    func testRestingPreviewFramePortraitUnchanged() {
+        let size = CGSize(width: 390.0, height: 844.0)
+        let safeInsets = UIEdgeInsets(top: 47.0, left: 0.0, bottom: 34.0, right: 0.0)
+        let mediaSize = CGSize(width: 3000.0, height: 4000.0)
+        let expected = chatMediaEditorLayout(size: size, safeInsets: safeInsets, mediaSize: mediaSize, toolbarHeight: chatMediaEditorToolbarHeight, captionPanelHeight: 60.0, keyboardHeight: 0.0).previewFrame
+        XCTAssertEqual(chatMediaEditorRestingPreviewFrame(size: size, safeInsets: safeInsets, mediaSize: mediaSize, captionPanelHeight: 60.0), expected)
+
+        let duoInsets = UIEdgeInsets(top: 47.0, left: 0.0, bottom: 34.0, right: 84.0)
+        let band = chatMediaEditorLayout(size: size, safeInsets: UIEdgeInsets(top: 47.0, left: 0.0, bottom: 34.0, right: 0.0), mediaSize: mediaSize, toolbarHeight: chatMediaEditorToolbarHeight, captionPanelHeight: 60.0, keyboardHeight: 0.0).previewFrame
+        XCTAssertEqual(chatMediaEditorRestingPreviewFrame(size: size, safeInsets: duoInsets, mediaSize: mediaSize, captionPanelHeight: 60.0), band)
+        let kept = chatMediaEditorLayout(size: size, safeInsets: duoInsets, mediaSize: mediaSize, toolbarHeight: chatMediaEditorToolbarHeight, captionPanelHeight: 60.0, keyboardHeight: 0.0).previewFrame
+        XCTAssertEqual(chatMediaEditorRestingPreviewFrame(size: size, safeInsets: duoInsets, mediaSize: mediaSize, captionPanelHeight: 60.0, keepsToBand: true), kept)
+    }
+
+    func testRestingPreviewFrameLandscapeSitsBesideColumn() {
+        let size = CGSize(width: 844.0, height: 390.0)
+        let safeInsets = UIEdgeInsets(top: 0.0, left: 47.0, bottom: 21.0, right: 47.0)
+        let mediaSize = CGSize(width: 4000.0, height: 3000.0)
+        for side in [ChatMediaEditorToolbarSide.left, .right] {
+            let frame = chatMediaEditorRestingPreviewFrame(size: size, safeInsets: safeInsets, mediaSize: mediaSize, captionPanelHeight: 60.0, toolbarSide: side)
+            let expected = chatMediaEditorLayout(size: size, safeInsets: safeInsets, mediaSize: mediaSize, toolbarHeight: chatMediaEditorToolbarHeight, captionPanelHeight: 60.0, keyboardHeight: 0.0, toolbarSide: side).previewFrame
+            XCTAssertEqual(frame, expected)
+            let column = chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: safeInsets, side: side)
+            XCTAssertFalse(frame.intersects(column))
+            XCTAssertEqual(frame.minY, 0.0, accuracy: 0.001)
+            XCTAssertEqual(frame.height, 369.0, accuracy: 0.001)
+        }
+
+        let duoInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 21.0, right: 84.0)
+        let corners = ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0))
+        let duo = chatMediaEditorRestingPreviewFrame(size: size, safeInsets: duoInsets, mediaSize: mediaSize, captionPanelHeight: 60.0, toolbarSide: .right, reservedCorners: corners)
+        let duoColumn = chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: duoInsets, side: .right, reservedCorners: corners)
+        XCTAssertFalse(duo.intersects(duoColumn))
+        XCTAssertLessThanOrEqual(duo.maxX, size.width - 84.0 - chatMediaEditorLandscapeColumnWidth + 0.001)
     }
 }

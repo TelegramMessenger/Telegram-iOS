@@ -670,6 +670,10 @@ private func channelAdminRightsErrorText(strings: PresentationStrings, error: Up
         return strings.Login_UnknownError
     case .adminsTooMuch:
         return isBroadcast ? strings.Channel_ErrorAdminsTooMuch : strings.Group_ErrorAdminsTooMuch
+    case .notMemberCannotInvite:
+        return strings.Channel_Members_AddAdminErrorNotAMember
+    case .userBlocked:
+        return isBroadcast ? strings.Channel_ErrorAddBlocked : strings.Group_ErrorAddBlocked
     case let .addMemberError(addMemberError):
         switch addMemberError {
         case .restricted:
@@ -1796,6 +1800,10 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                 }
                             case .adminsTooMuch:
                                 text = presentationData.strings.Group_ErrorAdminsTooMuch
+                            case .notMemberCannotInvite:
+                                text = presentationData.strings.Channel_Members_AddAdminErrorNotAMember
+                            case .userBlocked:
+                                text = presentationData.strings.Group_ErrorAddBlocked
                             }
                             presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {

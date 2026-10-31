@@ -16,6 +16,7 @@ import EmojiTextAttachmentView
 import TextFormat
 import AppBundle
 import AnimatedTextComponent
+import StaticGlassBackground
 
 private let tagImage: UIImage? = {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReactionTagBackground"), color: .white)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 15)
@@ -938,8 +939,10 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     isSelected: spec.component.chosenOrder != nil
                 )
             } else {
+                // A glass reaction is filled by its glass, chosen or not (see the glass in `apply`).
+                let isGlass = spec.component.colors.isGlass && !spec.component.isTag
                 backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
-                    background: spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
+                    background: isGlass ? 0 : (spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground),
                     foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
                     extractedBackground: spec.component.colors.extractedBackground,
                     extractedForeground: spec.component.colors.extractedForeground,
@@ -983,6 +986,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     public let containerView: ContextExtractedContentContainingView
     private let buttonNode: ContainerButtonNode
     private var starsEffectLayer: StarsButtonEffectLayer?
+    private var glassView: StaticGlassBackgroundView?
     public var iconView: ReactionIconView?
     private var avatarsView: AnimatedAvatarSetView?
     
@@ -1196,6 +1200,36 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         animation.animator.updatePosition(layer: self.buttonNode.layer, position: buttonFrame.center, completion: nil)
         animation.animator.updateBounds(layer: self.buttonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
         
+        // The button stands on an image captured from glass (bubble mode off).
+        let isGlass = layout.spec.component.colors.isGlass && !layout.spec.component.isTag
+        if isGlass {
+            let glassView: StaticGlassBackgroundView
+            var glassAnimation = animation
+            if let current = self.glassView {
+                glassView = current
+            } else {
+                glassAnimation = .None
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.glassView = glassView
+                self.containerView.contentView.insertSubview(glassView, belowSubview: self.buttonNode)
+            }
+            glassAnimation.animator.updateFrame(layer: glassView.layer, frame: buttonFrame, completion: nil)
+            // A chosen reaction is glass tinted with the chosen fill, the rest are clear glass.
+            let tint: StaticGlassTint
+            if layout.spec.component.chosenOrder != nil, layout.spec.component.colors.selectedBackground != 0 {
+                tint = .color(UIColor(argb: layout.spec.component.colors.selectedBackground))
+            } else {
+                tint = .panel
+            }
+            glassView.update(size: buttonFrame.size, cornerRadius: buttonFrame.height * 0.5, isDark: layout.isDark, tint: tint, animateImageChange: glassAnimation.isAnimated, updateFrame: { view, frame in
+                glassAnimation.animator.updateFrame(layer: view.layer, frame: frame, completion: nil)
+            })
+        } else if let glassView = self.glassView {
+            self.glassView = nil
+            glassView.removeFromSuperview()
+        }
+        
         if case .stars = layout.spec.component.reaction.value {
             let starsEffectLayer: StarsButtonEffectLayer
             if let current = self.starsEffectLayer {
@@ -1378,6 +1412,8 @@ public final class ReactionButtonComponent: Equatable {
         public var deselectedMediaPlaceholder: UInt32
         public var selectedMediaPlaceholder: UInt32
         public var isDark: Bool
+        /// Draws the button on a glass capsule; a deselected button's own background is then usually clear.
+        public var isGlass: Bool
         
         public init(
             deselectedBackground: UInt32,
@@ -1394,7 +1430,8 @@ public final class ReactionButtonComponent: Equatable {
             extractedSelectedForeground: UInt32,
             deselectedMediaPlaceholder: UInt32,
             selectedMediaPlaceholder: UInt32,
-            isDark: Bool
+            isDark: Bool,
+            isGlass: Bool = false
         ) {
             self.deselectedBackground = deselectedBackground
             self.selectedBackground = selectedBackground
@@ -1411,6 +1448,7 @@ public final class ReactionButtonComponent: Equatable {
             self.deselectedMediaPlaceholder = deselectedMediaPlaceholder
             self.selectedMediaPlaceholder = selectedMediaPlaceholder
             self.isDark = isDark
+            self.isGlass = isGlass
         }
     }
     

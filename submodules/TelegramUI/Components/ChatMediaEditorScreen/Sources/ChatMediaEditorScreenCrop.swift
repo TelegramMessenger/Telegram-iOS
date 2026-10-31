@@ -92,13 +92,38 @@ public struct ChatMediaEditorCropControlsLayout: Equatable {
     public let rotationDial: CGRect
     public let rotationDialScale: CGFloat
     public let resetButton: CGRect
+    public let rotationDialAxis: MediaCropDialAxis
 }
 
 private let chatMediaEditorCropResetButtonHeight: CGFloat = 24.0
 private let chatMediaEditorCropDialResetSpacing: CGFloat = 14.0
 
-public func chatMediaEditorCropControlsLayout(size: CGSize, safeInsets: UIEdgeInsets, toolbarHeight: CGFloat, hasRotationWheel: Bool, hasPerspective: Bool = false, resetButtonWidth: CGFloat) -> ChatMediaEditorCropControlsLayout {
-    let container = chatMediaEditorCropContainerFrame(size: size, safeInsets: safeInsets, toolbarHeight: toolbarHeight, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective)
+public func chatMediaEditorCropControlsLayout(size: CGSize, safeInsets: UIEdgeInsets, toolbarHeight: CGFloat, hasRotationWheel: Bool, hasPerspective: Bool = false, resetButtonWidth: CGFloat, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> ChatMediaEditorCropControlsLayout {
+    let container = chatMediaEditorCropContainerFrame(size: size, safeInsets: safeInsets, toolbarHeight: toolbarHeight, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective, toolbarSide: toolbarSide)
+    if let toolbarSide {
+        let column = chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let resetStripMinX: CGFloat
+        let dialMinX: CGFloat
+        let selectorMinX: CGFloat
+        switch toolbarSide {
+        case .left:
+            resetStripMinX = column.maxX
+            dialMinX = resetStripMinX + chatMediaEditorCropLandscapeResetStripWidth
+            selectorMinX = dialMinX + chatMediaEditorCropLandscapeDialStripWidth + chatMediaEditorCropSelectorDialSpacing
+        case .right:
+            resetStripMinX = column.minX - chatMediaEditorCropLandscapeResetStripWidth
+            dialMinX = resetStripMinX - chatMediaEditorCropLandscapeDialStripWidth
+            selectorMinX = dialMinX - chatMediaEditorCropSelectorDialSpacing - mediaCropAdjustmentSelectorHeight
+        }
+        let showsSelector = hasRotationWheel && hasPerspective
+        return ChatMediaEditorCropControlsLayout(
+            selector: showsSelector ? CGRect(x: selectorMinX, y: container.minY, width: mediaCropAdjustmentSelectorHeight, height: container.height) : .zero,
+            rotationDial: hasRotationWheel ? CGRect(x: dialMinX, y: container.minY, width: chatMediaEditorCropLandscapeDialStripWidth, height: container.height) : .zero,
+            rotationDialScale: 1.0,
+            resetButton: CGRect(x: resetStripMinX + floor((chatMediaEditorCropLandscapeResetStripWidth - resetButtonWidth) / 2.0), y: container.minY + floor((container.height - chatMediaEditorCropResetButtonHeight) / 2.0), width: resetButtonWidth, height: chatMediaEditorCropResetButtonHeight),
+            rotationDialAxis: .vertical(clockwise: toolbarSide == .left)
+        )
+    }
     let areaBottom = mediaCropAvailableArea(container: container).maxY
     let panelTop = size.height - safeInsets.bottom - toolbarHeight
     let showsSelector = hasRotationWheel && hasPerspective
@@ -119,7 +144,8 @@ public func chatMediaEditorCropControlsLayout(size: CGSize, safeInsets: UIEdgeIn
         selector: showsSelector ? CGRect(x: controlsMinX, y: top, width: controlsWidth, height: mediaCropAdjustmentSelectorHeight) : .zero,
         rotationDial: CGRect(x: controlsMinX, y: top + selectorBlockHeight, width: controlsWidth, height: mediaCropRotationDialHeight),
         rotationDialScale: rotationDialScale,
-        resetButton: CGRect(x: floor((size.width - resetButtonWidth) / 2.0), y: top + selectorBlockHeight + dialBlockHeight, width: resetButtonWidth, height: chatMediaEditorCropResetButtonHeight)
+        resetButton: CGRect(x: floor((size.width - resetButtonWidth) / 2.0), y: top + selectorBlockHeight + dialBlockHeight, width: resetButtonWidth, height: chatMediaEditorCropResetButtonHeight),
+        rotationDialAxis: .horizontal
     )
 }
 
@@ -268,22 +294,43 @@ extension ChatMediaEditorScreen.Node {
     }
 
     func cropContainerFrame(layout: ContainerViewLayout) -> CGRect {
-        return chatMediaEditorCropContainerFrame(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarHeight: chatMediaEditorToolbarHeight, hasRotationWheel: !self.subject.isVideo, hasPerspective: !self.subject.isVideo)
+        return chatMediaEditorCropContainerFrame(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarHeight: chatMediaEditorToolbarHeight, hasRotationWheel: !self.subject.isVideo, hasPerspective: !self.subject.isVideo, toolbarSide: self.toolbarSide(layout: layout))
     }
 
     func cropControlsLayout(layout: ContainerViewLayout, resetButtonWidth: CGFloat) -> ChatMediaEditorCropControlsLayout {
-        return chatMediaEditorCropControlsLayout(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarHeight: chatMediaEditorToolbarHeight, hasRotationWheel: !self.subject.isVideo, hasPerspective: !self.subject.isVideo, resetButtonWidth: resetButtonWidth)
+        return chatMediaEditorCropControlsLayout(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarHeight: chatMediaEditorToolbarHeight, hasRotationWheel: !self.subject.isVideo, hasPerspective: !self.subject.isVideo, resetButtonWidth: resetButtonWidth, toolbarSide: self.toolbarSide(layout: layout))
     }
 
     func updateCropLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let controlsLayout = self.cropControlsLayout(layout: layout, resetButtonWidth: self.cropResetButton?.bounds.width ?? 0.0)
         if let cropView = self.cropView {
             cropView.frame = CGRect(origin: .zero, size: layout.size)
-            cropView.update(containerFrame: self.cropContainerFrame(layout: layout), rotationDialFrame: controlsLayout.rotationDial, rotationDialScale: controlsLayout.rotationDialScale, selectorFrame: controlsLayout.selector, transition: ComponentTransition(transition))
+            cropView.update(containerFrame: self.cropContainerFrame(layout: layout), rotationDialFrame: controlsLayout.rotationDial, rotationDialScale: controlsLayout.rotationDialScale, rotationDialAxis: controlsLayout.rotationDialAxis, selectorFrame: controlsLayout.selector, transition: ComponentTransition(transition))
         }
         if let resetButton = self.cropResetButton {
-            transition.updateFrame(view: resetButton, frame: controlsLayout.resetButton)
+            self.applyCropResetButtonLayout(resetButton, controlsLayout: controlsLayout, transition: transition)
         }
+    }
+
+    private func applyCropResetButtonLayout(_ resetButton: UIView, controlsLayout: ChatMediaEditorCropControlsLayout, transition: ContainedViewLayoutTransition) {
+        let frame = controlsLayout.resetButton
+        var rotation: CGFloat = 0.0
+        if case let .vertical(clockwise) = controlsLayout.rotationDialAxis, frame.width > chatMediaEditorCropLandscapeResetStripWidth {
+            rotation = clockwise ? CGFloat.pi / 2.0 : -CGFloat.pi / 2.0
+        }
+        if rotation == 0.0 && resetButton.transform.isIdentity {
+            transition.updateFrame(view: resetButton, frame: frame)
+            return
+        }
+        let targetTransform = CGAffineTransform(rotationAngle: rotation)
+        if resetButton.transform != targetTransform {
+            resetButton.transform = targetTransform
+            resetButton.bounds = CGRect(origin: .zero, size: frame.size)
+            resetButton.center = CGPoint(x: frame.midX, y: frame.midY)
+            return
+        }
+        transition.updateBounds(layer: resetButton.layer, bounds: CGRect(origin: .zero, size: frame.size))
+        transition.updatePosition(layer: resetButton.layer, position: CGPoint(x: frame.midX, y: frame.midY))
     }
 
     private func cropSourceImage() -> UIImage? {
@@ -336,12 +383,18 @@ extension ChatMediaEditorScreen.Node {
         cropView.stateUpdated = { [weak self] state in
             self?.cropStateUpdated(state)
         }
+        cropView.interactionBegan = { [weak self] in
+            self?.setInteractionTracking(true, source: "crop")
+        }
+        cropView.interactionEnded = { [weak self] in
+            self?.setInteractionTracking(false, source: "crop")
+        }
         cropView.alpha = 0.0
         cropView.layer.allowsGroupOpacity = true
         self.view.insertSubview(cropView, aboveSubview: self.pagerView)
         cropView.frame = CGRect(origin: .zero, size: layout.size)
         let initialControlsLayout = self.cropControlsLayout(layout: layout, resetButtonWidth: 0.0)
-        cropView.update(containerFrame: self.cropContainerFrame(layout: layout), rotationDialFrame: initialControlsLayout.rotationDial, rotationDialScale: initialControlsLayout.rotationDialScale, selectorFrame: initialControlsLayout.selector, transition: .immediate)
+        cropView.update(containerFrame: self.cropContainerFrame(layout: layout), rotationDialFrame: initialControlsLayout.rotationDial, rotationDialScale: initialControlsLayout.rotationDialScale, rotationDialAxis: initialControlsLayout.rotationDialAxis, selectorFrame: initialControlsLayout.selector, transition: .immediate)
         self.cropView = cropView
         self.cropSession = ChatMediaEditorCropSession(entry: entry)
         self.cropPreviewFrame = cropView.cropFrameInSelf
@@ -352,7 +405,7 @@ extension ChatMediaEditorScreen.Node {
         resetButton.setTitleColor(.white, for: .normal)
         resetButton.setTitle(self.context.sharedContext.currentPresentationData.with { $0 }.strings.PhotoEditor_CropReset, for: .normal)
         resetButton.sizeToFit()
-        resetButton.frame = self.cropControlsLayout(layout: layout, resetButtonWidth: ceil(resetButton.bounds.width)).resetButton
+        self.applyCropResetButtonLayout(resetButton, controlsLayout: self.cropControlsLayout(layout: layout, resetButtonWidth: ceil(resetButton.bounds.width)), transition: .immediate)
         resetButton.addTarget(self, action: #selector(self.cropResetPressed), for: .touchUpInside)
         resetButton.alpha = 0.0
         self.view.insertSubview(resetButton, aboveSubview: cropView)
@@ -530,6 +583,9 @@ extension ChatMediaEditorScreen.Node {
         self.cropView = nil
         self.cropSession = nil
         self.cropPreviewFrame = nil
+        cropView.interactionBegan = nil
+        cropView.interactionEnded = nil
+        self.setInteractionTracking(false, source: "crop")
         let resetButton = self.cropResetButton
         self.cropResetButton = nil
         self.activeTool = nil

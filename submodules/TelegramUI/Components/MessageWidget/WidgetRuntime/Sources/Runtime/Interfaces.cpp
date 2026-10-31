@@ -164,15 +164,11 @@ void Runtime::defineMember(JSValueConst object, uint16_t iface, uint16_t member,
 void Runtime::defineUnforgeableMembers(JSValueConst object, uint16_t iface) {
     for (int i = iface; i >= 0; i = m_table->interfaces[i].parent) {
         const InterfaceInfo& info = m_table->interfaces[i];
-        // Every new instance comes here, so the work is charged before it is done: each member looked at as a visit,
-        // each one defined (an atom, a property, its functions made once) as a binding call.
-        charge(m_ctx, uint64_t(info.memberCount) * work::kNodeVisit);
         for (uint16_t m = 0; m < info.memberCount; m++) {
             const MemberDef& def = info.members[m];
             if (!def.unforgeable || def.isStatic || def.kind == MemberKind::Constant) {
                 continue;
             }
-            charge(m_ctx, work::kBindingCall);
             // WebIDL: an unforgeable attribute is an enumerable, non-configurable accessor; an unforgeable operation
             // an enumerable, non-writable, non-configurable data property.
             this->defineMember(object, uint16_t(i), m, JS_PROP_ENUMERABLE);
@@ -192,7 +188,7 @@ void Runtime::installGlobalMembers(uint16_t iface) {
     // QuickJS gives the global its own @@toStringTag ("global"). It gives way too: the global's tag is its
     // interface's, from the prototype (Object.prototype.toString.call(window) is "[object Window]").
     check(ctx, JS_DeleteProperty(ctx, global.get(), m_toStringTag, 0));
-    // Once, at setup, over the static table: not charged (defineUnforgeableMembers, below, charges its own).
+    // Once, at setup, over the static table.
     for (uint16_t m = 0; m < info.memberCount; m++) {
         const MemberDef& def = info.members[m];
         if (def.kind == MemberKind::Constant || def.isStatic) {

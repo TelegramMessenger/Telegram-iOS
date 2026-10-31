@@ -41,9 +41,9 @@ private:
         Held callback;
     };
     /// A handle > 0 not already in the list, from the counter, which wraps from UINT32_MAX to 1. At most
-    /// Timers::kMaxLive handles are in use, so at most that many + 1 are tried, each lookup charged per entry visited.
+    /// Timers::kMaxLive handles are in use, so at most that many + 1 are tried.
     uint32_t takeHandle(JSContext* ctx);
-    /// Whether an entry has `handle`. Charges work::kNodeVisit per entry visited.
+    /// Whether an entry has `handle`.
     bool contains(JSContext* ctx, uint32_t handle);
 
     JSRuntime* m_rt;

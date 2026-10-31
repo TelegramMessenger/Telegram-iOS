@@ -99,10 +99,13 @@ final class InstantPageV2InlineImageView: UIView {
                                                               fileReference: fileReference,
                                                               fetched: true))
             } else {
-                // Video / animated file: render a single still frame. No play overlay.
-                self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox,
-                                                          userLocation: userLocation,
-                                                          videoReference: fileReference))
+                // Video / animated file: render a single still frame. No play overlay. `autoFetchFullSizeThumbnail`
+                // as in InstantPageImageNode: without it a file that has a stripped `immediateThumbnailData` never
+                // fetches its preview representation and stays blurred.
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox,
+                                                               userLocation: userLocation,
+                                                               videoReference: fileReference,
+                                                               autoFetchFullSizeThumbnail: true))
             }
         default:
             // RichText.image's MediaId resolves to .image or .file in practice; other

@@ -11,7 +11,6 @@
 
 #include "Sources/Host/Intl.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::intl {
 
@@ -235,7 +234,6 @@ Numeric toIntlMathematicalValue(JSContext* ctx, JSValueConst x) {
         if (length > kMaxIntlString) {
             throw RangeError{"Intl.NumberFormat: the BigInt is too long."};
         }
-        chargeScan(ctx, length);
         n.isBigInt = true;
         n.digits.assign(text, length);
         return n;

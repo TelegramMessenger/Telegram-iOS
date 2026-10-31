@@ -10,6 +10,10 @@ final class UpdateChannelAdminRightsErrorTests: XCTestCase {
             return "generic"
         case .adminsTooMuch:
             return "adminsTooMuch"
+        case .notMemberCannotInvite:
+            return "notMemberCannotInvite"
+        case .userBlocked:
+            return "userBlocked"
         case let .addMemberError(addMemberError):
             switch addMemberError {
             case .generic:
@@ -56,10 +60,15 @@ final class UpdateChannelAdminRightsErrorTests: XCTestCase {
 
     func testRemovedUserIsNotGeneric() {
         XCTAssertEqual(self.mapped("USER_KICKED"), "addMember.kicked")
+        XCTAssertEqual(self.mapped("CHAT_ADMIN_BAN_REQUIRED"), "addMember.kicked")
+    }
+
+    func testNonMemberAndBlockedUserAreNotGeneric() {
+        XCTAssertEqual(self.mapped("CHAT_ADMIN_INVITE_REQUIRED"), "notMemberCannotInvite")
+        XCTAssertEqual(self.mapped("USER_BLOCKED"), "userBlocked")
     }
 
     func testUnknownErrorIsGeneric() {
-        XCTAssertEqual(self.mapped("CHAT_ADMIN_INVITE_REQUIRED"), "generic")
         XCTAssertEqual(self.mapped("FLOOD_WAIT_30"), "generic")
         XCTAssertEqual(self.mapped(""), "generic")
     }

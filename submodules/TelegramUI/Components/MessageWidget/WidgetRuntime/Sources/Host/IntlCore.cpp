@@ -13,7 +13,6 @@
 #include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::intl {
 
@@ -182,7 +181,6 @@ std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst loc
         throw Thrown{};
     }
     for (int64_t k = 0; k < length; k++) {
-        charge(ctx, work::kNodeVisit);
         if (k > int64_t(UINT32_MAX)) {
             throw RangeError{"Intl: the locale list is too long."};
         }
@@ -446,8 +444,6 @@ void appendJSONString(JSText& out, std::string_view utf8) {
 IntlRequest::IntlRequest(JSContext* ctx, const char* kind) : m_ctx(ctx), m_json(JSAllocator<char>(JS_GetRuntime(ctx))) {
     m_json += "{\"kind\":";
     appendJSONString(m_json, kind);
-    const std::string_view k(kind);
-    m_charge = k.rfind("date", 0) == 0 ? work::kIntlDateRequest + (k == "dateParts" ? work::kIntlDateParts : 0) : work::kIntlRequest;
 }
 
 void IntlRequest::name(const char* name) {
@@ -466,7 +462,6 @@ IntlRequest& IntlRequest::string(const char* name, const String& value) {
     if (value.length() > kMaxIntlString) {
         throw RangeError{"Intl: the string is too long."};
     }
-    chargeScan(m_ctx, value.length());
     return this->string(name, value.utf8ForParse());
 }
 
@@ -489,12 +484,10 @@ IntlRequest& IntlRequest::raw(const char* name, std::string_view json) {
 
 std::string IntlRequest::send() {
     m_json += '}';
-    charge(m_ctx, m_charge + m_json.size() * work::kIntlByte);
     std::string answer = Runtime::from(m_ctx).host().intl(std::string_view(m_json.data(), m_json.size()));
     if (answer.size() > kMaxIntlAnswer) {
         throw RangeError{"Intl: the result is too long."};
     }
-    charge(m_ctx, answer.size() * work::kIntlByte);
     return answer;
 }
 
@@ -666,7 +659,6 @@ Text16 utf16Of(JSContext* ctx, const String& string) {
     if (length > kMaxIntlString) {
         throw RangeError{"Intl: the string is too long."};
     }
-    chargeScan(ctx, length);
     Text16 out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     const JSStringView view = string.view();
     if (view.utf16) {

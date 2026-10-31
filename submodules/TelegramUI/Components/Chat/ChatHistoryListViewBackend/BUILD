@@ -21,6 +21,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
+        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

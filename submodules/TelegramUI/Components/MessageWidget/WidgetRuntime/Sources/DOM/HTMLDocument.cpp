@@ -1,5 +1,5 @@
-// The HTML standard's Document members (https://html.spec.whatwg.org/#dom-tree-accessors). Every walk charges
-// work::kNodeVisit per node it visits. Every element in the HTML namespace is an HTMLElement (createElementNode).
+// The HTML standard's Document members (https://html.spec.whatwg.org/#dom-tree-accessors). Every element in the HTML
+// namespace is an HTMLElement (createElementNode).
 // Not in M1a: the SVG document's title (a document whose element is an SVG svg element).
 #include "Generated/Bindings.h"
 #include "Sources/Host/HostState.h"
@@ -19,7 +19,6 @@ static Element* firstHTMLChild(JSContext* ctx, Element* parent, JSAtom a, JSAtom
         return nullptr;
     }
     for (size_t i = 0; i < parent->childCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         Node* c = parent->childAt(i);
         if (c->isElement() && (static_cast<Element*>(c)->hasHTMLName(a) || static_cast<Element*>(c)->hasHTMLName(b))) {
             return static_cast<Element*>(c);
@@ -75,7 +74,6 @@ void Document::setBody(JSContext* ctx, OrNull<HTMLElement> value) {
 static Element* titleElement(Document& document, JSContext* ctx) {
     JSAtom title = DOMState::of(ctx).name(Name::title);
     for (Node* n = document.nextInTreeOrder(&document); n; n = n->nextInTreeOrder(&document)) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement() && static_cast<Element*>(n)->hasHTMLName(title)) {
             return static_cast<Element*>(n);
         }
@@ -91,7 +89,6 @@ String Document::title(JSContext* ctx) {
     // The title element's child text content: its Text children's data only.
     Vector<char16_t> text{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     for (size_t i = 0; i < element->childCount(); i++) {
-        charge(ctx, work::kNodeVisit);
         Node* c = element->childAt(i);
         if (c->type() == NodeType::Text) {
             appendCodeUnits(text, static_cast<Text*>(c)->dataString(ctx));

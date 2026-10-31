@@ -1,6 +1,6 @@
 import XCTest
-import UIKit
-@testable import ReactionSelectionNode
+import CoreGraphics
+import ReactionContextGeometry
 
 final class ReactionContextBackgroundBoundsTests: XCTestCase {
     private let largeCircleSize: CGFloat = 16.0
@@ -10,7 +10,7 @@ final class ReactionContextBackgroundBoundsTests: XCTestCase {
     private func contentBounds(panelSize: CGSize, cloudSourcePoint: CGFloat, displayTail: Bool) -> CGRect {
         let largeCircleFrame = CGRect(origin: CGPoint(x: cloudSourcePoint - floor(self.largeCircleSize / 2.0), y: panelSize.height - self.largeCircleSize / 2.0), size: CGSize(width: self.largeCircleSize, height: self.largeCircleSize))
         let smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - self.smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: self.smallCircleSize, height: self.smallCircleSize))
-        return ReactionContextBackgroundNode.contentBounds(backgroundFrame: CGRect(origin: CGPoint(), size: panelSize), largeCircleFrame: largeCircleFrame, smallCircleFrame: smallCircleFrame, displayTail: displayTail)
+        return reactionContextBackgroundContentBounds(backgroundFrame: CGRect(origin: CGPoint(), size: panelSize), largeCircleFrame: largeCircleFrame, smallCircleFrame: smallCircleFrame, displayTail: displayTail)
     }
 
     // iPhone Duo, unfolded landscape: the story's 324pt card centres the 300pt picker at x 12, while the hidden tail is

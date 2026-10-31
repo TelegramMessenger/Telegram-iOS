@@ -29,7 +29,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var holdsMenu: Bool = false
     /// `-harness-copy-protected on`: the chat forbids copying.
     public var copyProtected: Bool = false
-    /// `-harness-can-query on`: every widget message has the server's can_query, so its bubble shows the network marker.
+    /// `-harness-can-query on`: every widget message has the server's can_query.
     public var canQuery: Bool = false
     /// `-harness-background-query on`: every widget message also has the server's background_query (requests without
     /// a tap, as in the private chat with the bot).

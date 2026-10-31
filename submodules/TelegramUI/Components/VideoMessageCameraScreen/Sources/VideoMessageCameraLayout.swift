@@ -43,3 +43,20 @@ func videoMessageCameraPassesTouchToInputPanel(y: CGFloat, layoutHeight: CGFloat
     }
     return false
 }
+
+/// Whether the round preview takes a touch at `point`, in the preview's coordinates (`bounds` is its square). It claims
+/// its whole square, though only the inscribed circle shows, except over the chat's input panel (`overInputPanel`):
+/// there the square's lower corners lie over the panel's trash and send, so only the circle is the preview's. Above a
+/// tall bot keyboard the square reached into the panel's rows on every phone, and those taps opened the preview.
+func videoMessageCameraPreviewClaimsTouch(point: CGPoint, bounds: CGRect, overInputPanel: Bool) -> Bool {
+    if !bounds.contains(point) {
+        return false
+    }
+    if !overInputPanel {
+        return true
+    }
+    let radius = min(bounds.width, bounds.height) / 2.0
+    let dx = point.x - bounds.midX
+    let dy = point.y - bounds.midY
+    return dx * dx + dy * dy <= radius * radius
+}

@@ -27,6 +27,16 @@ final class StateTests: MessageWidgetTestCase {
         instance.pointer(.up, at: CGPoint(x: 20.0, y: 20.0))
     }
 
+    /// The private chat's context with Gram Wallet for the user (widget-sandbox v0.5.0, sdk-v1 §2.18).
+    private var walletContext: MessageWidgetContext {
+        var context = self.privateContext
+        context.wallet = true
+        return context
+    }
+
+    /// A user-friendly destination and a transaction to it, as a widget writes them.
+    private let transaction = "{ messages: [{ address: 'EQ' + 'a'.repeat(46), amount: '1500000000', payload: 'te6/Aw==' }], valid_until: 1900000000 }"
+
     func testTheWidgetStartsWithItsContextAndState() {
         let instance = self.make("<!doctype html><p>x</p>", context: self.privateContext, state: self.state("c", "p"))
         _ = instance.layout(width: 300.0)
@@ -63,9 +73,56 @@ final class StateTests: MessageWidgetTestCase {
         _ = instance.layout(width: 300.0)
         self.tap(instance)
         XCTAssertTrue(self.pump(until: { !calls.isEmpty }))
-        XCTAssertEqual(calls, [.request(id: 1, data: Data("vote".utf8))])
+        XCTAssertEqual(calls, [.request(id: 1, data: Data("vote".utf8), wallet: false)])
         instance.completeRequest(id: 1, outcome: .answered(Data("ok".utf8)))
         XCTAssertTrue(self.pump(until: { instance.documentElementAttribute("data-log") == "ok" }))
+        instance.destroy()
+    }
+
+    /// sdk-v1 §2.18: the widget has `TelegramWidget.wallet` only with the context's wallet.
+    func testTheContextsWalletGivesTheWidgetTheWallet() {
+        for (context, expected) in [(self.walletContext, "object"), (self.privateContext, "null")] {
+            let instance = self.make("<!doctype html><p>x</p>", context: context)
+            _ = instance.layout(width: 300.0)
+            XCTAssertEqual(instance.evaluateForTesting("TelegramWidget.wallet === null ? 'null' : typeof TelegramWidget.wallet"), expected)
+            instance.destroy()
+        }
+    }
+
+    /// A request for the wallet carries the flag; a wallet call comes out with its checked transaction in TON Connect's
+    /// JSON and its label, and goes back in with the wallet's own codes.
+    func testAWalletCallRoundTrips() {
+        let instance = self.make(self.page("b.onclick = () => TelegramWidget.request('pay', { wallet: true }).then(() => TelegramWidget.wallet.sendTransaction(\(self.transaction), 'paid'))"
+            + ".then(a => document.documentElement.dataset.log = a.result, e => document.documentElement.dataset.log = e.code);"), context: self.walletContext)
+        var calls: [MessageWidgetInstance.BridgeCall] = []
+        instance.onBridge = { calls.append($0) }
+        _ = instance.layout(width: 300.0)
+        self.tap(instance)
+        XCTAssertTrue(self.pump(until: { !calls.isEmpty }))
+        XCTAssertEqual(calls, [.request(id: 1, data: Data("pay".utf8), wallet: true)])
+        instance.completeRequest(id: 1, outcome: .answered(nil))
+        XCTAssertTrue(self.pump(until: { calls.count == 2 }))
+        let address = "EQ" + String(repeating: "a", count: 46)
+        XCTAssertEqual(calls.last, .wallet(id: 2, call: .sendTransaction(json: "{\"messages\":[{\"address\":\"\(address)\",\"amount\":\"1500000000\",\"payload\":\"te6/Aw==\"}],\"valid_until\":1900000000}", data: Data("paid".utf8))))
+        instance.completeRequest(id: 2, outcome: .rejected)
+        XCTAssertTrue(self.pump(until: { instance.documentElementAttribute("data-log") == "REJECTED" }))
+        instance.destroy()
+    }
+
+    /// A request's outcome has no wallet codes: `.rejected` and `.badRequest` are FAILED there.
+    func testARequestsWalletOutcomeIsFailed() {
+        let instance = self.make(self.page("b.onclick = () => TelegramWidget.request('vote').catch(e => document.documentElement.dataset.log = (document.documentElement.dataset.log || '') + e.code + ',');"), context: self.privateContext)
+        var calls: [MessageWidgetInstance.BridgeCall] = []
+        instance.onBridge = { calls.append($0) }
+        _ = instance.layout(width: 300.0)
+        self.tap(instance)
+        XCTAssertTrue(self.pump(until: { calls.count == 1 }))
+        instance.completeRequest(id: 1, outcome: .rejected)
+        XCTAssertTrue(self.pump(until: { instance.documentElementAttribute("data-log") == "FAILED," }))
+        self.tap(instance)
+        XCTAssertTrue(self.pump(until: { calls.count == 2 }))
+        instance.completeRequest(id: 2, outcome: .badRequest)
+        XCTAssertTrue(self.pump(until: { instance.documentElementAttribute("data-log") == "FAILED,FAILED," }))
         instance.destroy()
     }
 

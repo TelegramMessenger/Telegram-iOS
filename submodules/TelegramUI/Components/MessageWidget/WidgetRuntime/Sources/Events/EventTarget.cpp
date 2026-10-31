@@ -59,12 +59,6 @@ EventHandlerMap& EventTarget::ensureEventHandlers(JSContext* ctx) {
     return *m_eventHandlers;
 }
 
-void EventTarget::chargeListWalk(JSContext* ctx) const {
-    if (m_listeners) {
-        charge(ctx, uint64_t(m_listeners->size()) * work::kNodeVisit);
-    }
-}
-
 void EventTarget::addEventListener(JSContext* ctx, String type, std::optional<CallbackInterface> callback, std::variant<idl::AddEventListenerOptions, bool> options) {
     // DOM "flatten more".
     bool capture = false;
@@ -97,7 +91,6 @@ void EventTarget::removeEventListener(JSContext* ctx, String type, std::optional
 void EventTarget::addListener(JSContext* ctx, JSAtom type, JSValueConst callback, bool capture, std::optional<bool> passive, bool once) {
     bool isPassive = passive ? *passive : this->defaultPassive(ctx, type);
     Vector<ListenerRef>& list = this->ensureListeners(ctx);
-    this->chargeListWalk(ctx);
     for (const ListenerRef& l : list) {
         if (matches(*l, type, callback, capture)) {
             return;
@@ -127,7 +120,6 @@ void EventTarget::removeListener(JSContext* ctx, JSAtom type, JSValueConst callb
     if (!m_listeners) {
         return;
     }
-    this->chargeListWalk(ctx);
     for (size_t i = 0; i < m_listeners->size(); i++) {
         if (matches(*(*m_listeners)[i], type, callback, capture)) {
             this->removeListenerEntry(ctx, *(*m_listeners)[i]);
@@ -137,8 +129,6 @@ void EventTarget::removeListener(JSContext* ctx, JSAtom type, JSValueConst callb
 }
 
 void EventTarget::removeListenerEntry(JSContext* ctx, EventListener& listener) {
-    // Charged before the flag is set, so a budget stop leaves the listener neither flagged nor removed.
-    this->chargeListWalk(ctx);
     listener.removed = true;
     if (!m_listeners) {
         return;
@@ -165,7 +155,6 @@ bool EventTarget::hasListenersFor(JSContext* ctx, JSAtom type) const {
     if (!m_listeners) {
         return false;
     }
-    this->chargeListWalk(ctx);
     for (const ListenerRef& l : *m_listeners) {
         if (l->type.atom == type) {
             return true;

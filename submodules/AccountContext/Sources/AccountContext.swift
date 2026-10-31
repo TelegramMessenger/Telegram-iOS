@@ -813,6 +813,8 @@ public enum PeerInfoControllerMode {
     case storyAlbum(id: Int64)
     case giftCollection(id: Int64)
     case media(kind: PeerInfoMediaKind, messageIndex: EngineMessage.Index)
+    /// Saved Messages' profile where the chat side list shows its chats (the list's header, the chat's header): no Chats tab.
+    case chatSideList
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -1705,7 +1707,9 @@ public protocol SharedAccountContext: AnyObject {
     func makeWalletInfoScreen(context: AccountContext, mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
     func makeWalletInfoScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
     func makeWalletConnectScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectRequest, cancelled: @escaping () -> Void, connect: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
-    func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
+    /// The TON Connect window. `requester`: a Telegram peer that asks instead of a dApp (a message widget's bot), its
+    /// avatar in the header; `ignoresTouchesFor`: seconds after it loads that it takes no touch (0 for a dApp).
+    func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, ignoresTouchesFor: Double, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
@@ -1857,6 +1861,21 @@ public enum ChatSendMessageActionSheetControllerSendMode {
 
 public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisplayNode {
     func makeCustomContents() -> UIView?
+    /// The tint of a send button drawn as glass (bubble mode off), so the send menu's copy of it is the same glass; nil
+    /// for a flat one.
+    var sendButtonGlassTintColor: UIColor? { get }
+    /// Where that glass is, in the node's own coordinates, so the copy keeps its size and place.
+    var sendButtonGlassFrame: CGRect? { get }
+}
+
+public extension ChatSendMessageActionSheetControllerSourceSendButtonNode {
+    var sendButtonGlassTintColor: UIColor? {
+        return nil
+    }
+    
+    var sendButtonGlassFrame: CGRect? {
+        return nil
+    }
 }
 
 public protocol ChatSendMessageActionSheetController: ViewController {

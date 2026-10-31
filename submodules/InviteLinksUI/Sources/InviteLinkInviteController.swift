@@ -298,6 +298,9 @@ public final class InviteLinkInviteController: ViewController {
         
         private let dimNode: ASDisplayNode
         private let contentNode: ASDisplayNode
+        /// Holds the sheet: spans the screen on a phone; on a wide layout (`presentsFloatingPanels`) clips it to a
+        /// centered card, scrolled to the sheet's top (its header).
+        private let cardNode: ASDisplayNode
         private let headerNode: ASDisplayNode
         private let headerBackgroundNode: ASDisplayNode
         private let titleNode: ImmediateTextNode
@@ -311,6 +314,8 @@ public final class InviteLinkInviteController: ViewController {
         private var enqueuedTransitions: [InviteLinkInviteTransaction] = []
         
         private var validLayout: ContainerViewLayout?
+        /// Where the card's bottom rests on a wide layout, kept while the list is dragged or springs back.
+        private var cardRestingMaxY: CGFloat?
         
         private var revokeDisposable = MetaDisposable()
         
@@ -332,6 +337,8 @@ public final class InviteLinkInviteController: ViewController {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
             
             self.contentNode = ASDisplayNode()
+            
+            self.cardNode = ASDisplayNode()
             
             self.headerNode = ASDisplayNode()
             self.headerNode.clipsToBounds = false
@@ -706,12 +713,16 @@ public final class InviteLinkInviteController: ViewController {
                     strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                 }
             }
+            self.listNode.didEndScrolling = { [weak self] _ in
+                self?.updateCardFrame(transition: .animated(duration: 0.3, curve: .spring), isResting: true)
+            }
             
             self.addSubnode(self.dimNode)
             self.addSubnode(self.contentNode)
-            self.contentNode.addSubnode(self.historyBackgroundNode)
-            self.contentNode.addSubnode(self.listNode)
-            self.contentNode.addSubnode(self.headerNode)
+            self.contentNode.addSubnode(self.cardNode)
+            self.cardNode.addSubnode(self.historyBackgroundNode)
+            self.cardNode.addSubnode(self.listNode)
+            self.cardNode.addSubnode(self.headerNode)
             
             self.headerNode.addSubnode(self.headerBackgroundNode)
             self.headerNode.addSubnode(self.doneButton)
@@ -807,16 +818,63 @@ public final class InviteLinkInviteController: ViewController {
             self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
+        /// The box the sheet lays out in: the screen on a phone, with the sheet at its bottom; on a wide layout the
+        /// tallest centered card, without the screen's insets, which `updateCardFrame` clips to the sheet.
+        private func sheetGeometry(layout: ContainerViewLayout) -> (size: CGSize, topInset: CGFloat, insets: UIEdgeInsets, isCard: Bool) {
+            if layout.presentsFloatingPanels {
+                let maxCardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: .greatestFiniteMagnitude)
+                return (maxCardFrame.size, 0.0, UIEdgeInsets(), true)
+            } else {
+                let topInset = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+                return (layout.size, topInset, UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), false)
+            }
+        }
+        
+        /// On a wide layout, centers the card on the screen around the sheet: from its header, wherever the list
+        /// puts it, to the bottom of its box. While the list is dragged or springs back the card keeps its bottom
+        /// where it rests and only its top follows the header, as the sheet's does on a phone; `isResting` once the
+        /// list has stopped, wherever it did.
+        private func updateCardFrame(transition: ContainedViewLayoutTransition, isResting: Bool = false) {
+            guard let layout = self.validLayout else {
+                return
+            }
+            let geometry = self.sheetGeometry(layout: layout)
+            guard geometry.isCard else {
+                return
+            }
+            let sheetMinY = self.headerNode.frame.minY
+            let sheetHeight = geometry.size.height - sheetMinY
+            let scroller = self.listNode.scroller
+            let cardFrame: CGRect
+            if !isResting, let cardRestingMaxY = self.cardRestingMaxY, scroller.isTracking || scroller.isDecelerating {
+                cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight, maxY: cardRestingMaxY)
+            } else {
+                cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight)
+                self.cardRestingMaxY = cardFrame.maxY
+            }
+            transition.updateBounds(node: self.cardNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: sheetMinY), size: cardFrame.size), beginWithCurrentState: true)
+            transition.updatePosition(node: self.cardNode, position: CGPoint(x: cardFrame.midX, y: cardFrame.midY), beginWithCurrentState: true)
+        }
+        
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+            if self.validLayout?.size != layout.size {
+                self.cardRestingMaxY = nil
+            }
             self.validLayout = layout
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
-            var insets = UIEdgeInsets()
-            insets.left = layout.safeInsets.left
-            insets.right = layout.safeInsets.right
-            insets.bottom = layout.intrinsicInsets.bottom
+            let geometry = self.sheetGeometry(layout: layout)
+            let sheetSize = geometry.size
+            
+            self.cardNode.clipsToBounds = geometry.isCard
+            self.cardNode.cornerRadius = geometry.isCard ? 16.0 : 0.0
+            if !geometry.isCard {
+                transition.updateFrameAsPositionAndBounds(node: self.cardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            }
+            
+            var insets = geometry.insets
                     
             let headerHeight: CGFloat = 54.0
             var visibleItemsHeight: CGFloat = 409.0
@@ -824,10 +882,10 @@ public final class InviteLinkInviteController: ViewController {
                 visibleItemsHeight += 80.0
             }
         
-            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+            let layoutTopInset: CGFloat = geometry.topInset
             
             let listTopInset = layoutTopInset + headerHeight
-            let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset)
+            let listNodeSize = CGSize(width: sheetSize.width, height: sheetSize.height - listTopInset)
             
             insets.top = max(0.0, listNodeSize.height - visibleItemsHeight - insets.bottom)
                         
@@ -837,18 +895,20 @@ public final class InviteLinkInviteController: ViewController {
             
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listNodeSize))
             
-            transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 36.0))
+            transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: sheetSize.width, height: 36.0))
             
-            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
-            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
+            let titleSize = self.titleNode.updateLayout(CGSize(width: sheetSize.width, height: headerHeight))
+            let titleFrame = CGRect(origin: CGPoint(x: floor((sheetSize.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             if let image = self.doneButtonIconNode.image {
                 let doneSize = CGSize(width: 62.0, height: 56.0)
-                let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - doneSize.width, y: 13.0), size: doneSize)
+                let doneFrame = CGRect(origin: CGPoint(x: sheetSize.width - insets.right - doneSize.width, y: 13.0), size: doneSize)
                 transition.updateFrame(node: self.doneButton, frame: doneFrame)
                 transition.updateFrame(node: self.doneButtonIconNode, frame: CGRect(origin: CGPoint(x: floor((doneFrame.width - image.size.width) / 2.0), y: floor((doneFrame.height - image.size.height) / 2.0)), size: image.size))
             }
+            
+            self.updateCardFrame(transition: transition)
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -863,7 +923,11 @@ public final class InviteLinkInviteController: ViewController {
             if !self.bounds.contains(point) {
                 return nil
             }
-            if point.y < self.headerNode.frame.minY {
+            if let layout = self.validLayout, self.sheetGeometry(layout: layout).isCard {
+                if !self.cardNode.bounds.contains(self.view.convert(point, to: self.cardNode.view)) {
+                    return self.dimNode.view
+                }
+            } else if point.y < self.headerNode.frame.minY {
                 return self.dimNode.view
             }
             return result
@@ -955,7 +1019,8 @@ public final class InviteLinkInviteController: ViewController {
             
             self.floatingHeaderOffset = offset
             
-            let layoutTopInset: CGFloat = max(validLayout.statusBarHeight ?? 0.0, validLayout.safeInsets.top)
+            let geometry = self.sheetGeometry(layout: validLayout)
+            let layoutTopInset: CGFloat = geometry.topInset
             
             let controlsHeight: CGFloat = 44.0
             
@@ -963,7 +1028,7 @@ public final class InviteLinkInviteController: ViewController {
             
             let rawControlsOffset = offset + listTopInset - controlsHeight
             let controlsOffset = max(layoutTopInset, rawControlsOffset)
-            let controlsFrame = CGRect(origin: CGPoint(x: 0.0, y: controlsOffset), size: CGSize(width: validLayout.size.width, height: controlsHeight))
+            let controlsFrame = CGRect(origin: CGPoint(x: 0.0, y: controlsOffset), size: CGSize(width: geometry.size.width, height: controlsHeight))
             
             let previousFrame = self.headerNode.frame
             
@@ -977,7 +1042,7 @@ public final class InviteLinkInviteController: ViewController {
             
 //            transition.updateAlpha(node: self.headerNode.separatorNode, alpha: isOverscrolling ? 1.0 : 0.0)
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: controlsFrame.maxY - 10.0), size: CGSize(width: validLayout.size.width, height: validLayout.size.height))
+            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: controlsFrame.maxY - 10.0), size: CGSize(width: geometry.size.width, height: geometry.size.height))
             
             let previousBackgroundFrame = self.historyBackgroundNode.frame
             
@@ -989,6 +1054,8 @@ public final class InviteLinkInviteController: ViewController {
                 
                 transition.animateOffsetAdditive(node: self.historyBackgroundNode, offset: positionDelta.y)
             }
+
+            self.updateCardFrame(transition: transition)
         }
     }
 }

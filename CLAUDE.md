@@ -67,11 +67,13 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//submodules/TelegramUI/Components/Chat/EditableTokenListNode:EditableTokenListNodeTests`,
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
 `//submodules/UndoUI:UndoUITests`, `//submodules/ContactsPeerItem:ContactsPeerItemTests`,
-`//submodules/ReactionSelectionNode:ReactionSelectionNodeTests`,
+`//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteractionTests`,
+`//submodules/ReactionSelectionNode:ReactionContextGeometryTests`,
 `//submodules/PasswordSetupUI:PasswordSetupUITests`,
 `//submodules/ItemListUI:ItemListUITests`,
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,
 `//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests`,
+`//submodules/TelegramUI/Components/InteractiveTextComponent:InteractiveTextComponentTests`,
 `//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests`,
 `//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests`,
 `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests`,
@@ -187,7 +189,8 @@ subsystem from elsewhere.
   `RichTextInputDecObjC/` (edit them here; their own tests are in `RichTextEditor/Host/Engine/`). Guides there and in
   `Sources/RichTextEngineEditor/` (the "Input V3" editor) and `Sources/RichTextEditorUIKit/InputBackend/`.
 - **TelegramApi** (generated from `swift_scheme.tl`): `submodules/TelegramApi/CLAUDE.md`. Only TelegramCore may
-  `import TelegramApi`; elsewhere it would still compile.
+  `import TelegramApi`; elsewhere it would still compile. The news feed and agent APIs are parked behind `#if` there
+  ("Parked APIs"); News and an agent bot's provider rows are off while they are.
 - **Chat history list, send animation, a non-contact's unaccepted chat**: `submodules/TelegramUI/Sources/CLAUDE.md`;
   the CoreList backend: `submodules/TelegramUI/Components/CoreList/CLAUDE.md`,
   [`docs/chat/corelist-chat-history-backend.md`](docs/chat/corelist-chat-history-backend.md).

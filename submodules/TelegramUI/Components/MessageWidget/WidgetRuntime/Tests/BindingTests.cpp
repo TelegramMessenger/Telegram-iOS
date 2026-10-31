@@ -137,73 +137,8 @@ WR_TEST(testTamperedGlobalsKeepPrototypes) {
     CHECK_JS(env, "(() => { const s = makeList(1)[0]; Object.setPrototypeOf(s, null); return describe.call(s, 'k') === 'k:item0'; })()");
 }
 
-WR_TEST(testEveryCallChargesWork) {
-    Env env;
-    env.eval("var s = new TestSample()");
-    uint64_t before = JS_GetWorkUnits(env.runtime().jsRuntime());
-    env.eval("for (let i = 0; i < 100; i++) s.count");
-    uint64_t spent = JS_GetWorkUnits(env.runtime().jsRuntime()) - before;
-    CHECK(spent >= 100 * wr::work::kBindingCall);
-}
-
-// Task 10 fix round 1, M4: a rest argument list is converted one argument at a time, charged before any conversion.
-// Called natively, so neither the JS call's own argument pushes nor an allocation pays for it (TestSample.add does
-// nothing per item).
-WR_TEST(testRestArgumentsAreChargedBeforeTheirConversion) {
-    Env env;
-    JSContext* ctx = env.ctx();
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval("var s = new TestSample(); s.add()");
-    JSValue global = JS_GetGlobalObject(ctx);
-    JSValue s = JS_GetPropertyStr(ctx, global, "s");
-    JSValue add = JS_GetPropertyStr(ctx, s, "add");
-    JSValue item = JS_NewString(ctx, "x");
-    std::vector<JSValueConst> argv(10000, item);
-    uint64_t before = JS_GetWorkUnits(rt);
-    JSValue result = JS_Call(ctx, add, s, int(argv.size()), argv.data());
-    uint64_t spent = JS_GetWorkUnits(rt) - before;
-    CHECK(JS_IsUndefined(result));
-    CHECK(spent >= 10000 * wr::work::kNodeVisit);
-    JS_FreeValue(ctx, item);
-    JS_FreeValue(ctx, add);
-    JS_FreeValue(ctx, s);
-    JS_FreeValue(ctx, global);
-    CHECK_JS(env, "s.count === 10000");
-}
-
-WR_TEST(testIndexedReadsAreBindingCalls) {
-    // An exotic read or listing of indices is a binding call, as l.item(0) is: each charges kBindingCall.
-    Env env;
-    JSContext* ctx = env.ctx();
-    JSRuntime* rt = env.runtime().jsRuntime();
-    wr::Ref<wr::testidl::TestList> list = wr::testidl::TestList::make(ctx, 3);
-
-    uint64_t before = JS_GetWorkUnits(rt);
-    JSValue item = JS_GetPropertyUint32(ctx, list->object(), 0);
-    uint64_t read = JS_GetWorkUnits(rt) - before;
-    CHECK(JS_IsObject(item));
-    JS_FreeValue(ctx, item);
-    CHECK(read >= wr::work::kBindingCall);
-
-    JSAtom one = JS_NewAtomUInt32(ctx, 1);
-    before = JS_GetWorkUnits(rt);
-    CHECK_EQ(JS_HasProperty(ctx, list->object(), one), 1);
-    uint64_t tested = JS_GetWorkUnits(rt) - before;
-    JS_FreeAtom(ctx, one);
-    CHECK(tested >= wr::work::kBindingCall);
-
-    JSPropertyEnum* names = nullptr;
-    uint32_t count = 0;
-    before = JS_GetWorkUnits(rt);
-    CHECK_EQ(JS_GetOwnPropertyNames(ctx, &names, &count, list->object(), JS_GPN_STRING_MASK), 0);
-    uint64_t listed = JS_GetWorkUnits(rt) - before;
-    JS_FreePropertyEnum(ctx, names, count);
-    CHECK_EQ(count, uint32_t(3));
-    CHECK(listed >= wr::work::kBindingCall);
-}
-
 WR_TEST(testIndexedReadsLeaveAnUncatchableErrorAlone) {
-    // The budget stops a widget with an uncatchable error. An exotic read whose impl hits it must hand it on as it is,
+    // A stop leaves an uncatchable error pending. An exotic read whose impl hits it must hand it on as it is,
     // as glue does for the length attribute, not replace it with an error script can catch.
     Env env;
     env.eval("var bad = makeInterruptingList(3)");

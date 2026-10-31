@@ -4,7 +4,6 @@
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Host/Timers.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -18,7 +17,6 @@ AnimationFrames::~AnimationFrames() {
 
 bool AnimationFrames::contains(JSContext* ctx, uint32_t handle) {
     for (const Entry& entry : m_entries) {
-        charge(ctx, work::kNodeVisit);
         if (entry.handle == handle) {
             return true;
         }
@@ -38,10 +36,9 @@ uint32_t AnimationFrames::takeHandle(JSContext* ctx) {
 }
 
 uint32_t AnimationFrames::request(JSContext* ctx, Callback callback) {
-    if (EventLoop::of(ctx).liveCallbackCount() >= Timers::kMaxLive) {
+    if (this->liveCount() >= Timers::kMaxLive) {
         throw RangeError{"too many animation frame callbacks"};
     }
-    // Before the entry is made: a charge the lookup refuses leaves the list as it was.
     uint32_t handle = this->takeHandle(ctx);
     m_entries.emplace_back();
     Entry& entry = m_entries.back();
@@ -53,7 +50,6 @@ uint32_t AnimationFrames::request(JSContext* ctx, Callback callback) {
 
 void AnimationFrames::cancel(JSContext* ctx, uint32_t handle) {
     for (size_t i = 0; i < m_entries.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         if (m_entries[i].handle == handle) {
             m_entries[i].callback.clear(m_rt);
             m_entries.erase(m_entries.begin() + long(i));
@@ -70,14 +66,12 @@ bool AnimationFrames::run(JSContext* ctx, double timestamp) {
     // handle of one an earlier callback canceled.
     Vector<uint64_t> present{JSAllocator<uint64_t>(m_rt)};
     for (const Entry& entry : m_entries) {
-        charge(ctx, work::kNodeVisit);
         present.push_back(entry.sequence);
     }
     Value now = Value::adopt(ctx, JS_NewFloat64(ctx, timestamp));
     for (uint64_t sequence : present) {
         Value callback;
         for (size_t i = 0; i < m_entries.size(); i++) {
-            charge(ctx, work::kNodeVisit);
             if (m_entries[i].sequence == sequence) {
                 callback = Value::adopt(ctx, m_entries[i].callback.value);   // takes the entry's reference
                 m_entries[i].callback.value = JS_UNDEFINED;

@@ -3,6 +3,7 @@
 // values are --tg-theme-* custom properties on the root, with --tg-color-scheme, which no widget rule replaces; a theme
 // change updates all of it in the task before themeChanged and onTheme run.
 #include <cmath>
+#include <cstdio>
 #include <optional>
 #include <string>
 
@@ -208,4 +209,51 @@ WR_TEST(testTextTokensDriveTheRootAndTheBody) {
     state.themeChanged(env.ctx(), wr::Theme::Dark);
     env.env().drain();
     CHECK_EQ(env.env().eval(read), std::string("17px,1.3,6px 11px,17px,22.1px,6px,11px,2"));
+}
+
+/// Twidget edit 80: a theme switch whose colours reach the page through var(--tg-theme-*), light-dark() in a sheet and an
+/// inline light-dark() patches, equal to a fresh build each way, and keeps litehtml's render tree (only paint changed).
+WR_TEST(testAThemeSwitchKeepsTheTree) {
+    RenderEnv env("<!doctype html><html><head><style>p{color:var(--tg-theme-text-color)} .s{color:light-dark(#000001,#000002)}"
+                  "</style></head><body><p>themed</p><div class=s>sheet</div>"
+                  "<div style=\"color:light-dark(#000003,#000004)\">inline</div></body></html>");
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t patches = env.render().patchCount();
+    wr::HostState& state = wr::HostState::of(env.ctx());
+    uint64_t switches = 0;
+    for (const wr::Theme theme : {wr::Theme::Dark, wr::Theme::Light}) {
+        state.themeChanged(env.ctx(), theme);
+        env.env().drain();
+        env.flush();
+        switches++;
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().patchCount(), patches + switches);
+        CHECK(env.render().document() && env.render().document()->rebuild_reason().empty());
+        auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
+        CHECK_EQ(env.render().layoutDump(), layout);
+        CHECK(env.render().layerTree() && env.render().layerTree()->dump() == rebuilt);
+    }
+}
+
+/// Twidget edit 80 (final review I2): light-dark() in what is kept as tokens and resolved later (a box-shadow at
+/// compute, an SVG paint at draw, from a rule or a presentation attribute) follows a theme switch, as a fresh build.
+WR_TEST(testAThemeSwitchRepaintsTokenColours) {
+    RenderEnv env("<!doctype html><html><head><style>body{margin:0} .s{width:20px;height:20px;"
+                  "box-shadow:0 2px 3px light-dark(#000001,#000002)} rect{fill:light-dark(#000003,#000004)}</style></head>"
+                  "<body><div class=s></div><svg width=40 height=20><circle cx=10 cy=10 r=5"
+                  " fill='light-dark(#000005,#000006)'></circle><rect x=20 y=5 width=10 height=10></rect></svg></body></html>");
+    const uint64_t builds = env.render().buildCount();
+    wr::HostState& state = wr::HostState::of(env.ctx());
+    for (const wr::Theme theme : {wr::Theme::Dark, wr::Theme::Light}) {
+        state.themeChanged(env.ctx(), theme);
+        env.env().drain();
+        env.flush();
+        CHECK_EQ(env.render().buildCount(), builds);
+        auto [layout, input, rebuilt] = wr_test::rebuildDump(env);
+        if (!env.render().layerTree() || env.render().layerTree()->dump() != rebuilt) {
+            std::printf("  patched:\n%s---\n  rebuilt:\n%s", env.render().layerTree() ? env.render().layerTree()->dump().c_str() : "",
+                        rebuilt.c_str());
+        }
+        CHECK(env.render().layerTree() && env.render().layerTree()->dump() == rebuilt);
+    }
 }

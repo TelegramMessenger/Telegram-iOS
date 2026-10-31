@@ -3,6 +3,7 @@ import UIKit
 import XCTest
 import LegacyComponents
 import ComponentFlow
+import Display
 @testable import ChatMediaEditorScreen
 
 final class ChatMediaEditorBottomControlsLayoutTests: XCTestCase {
@@ -63,6 +64,68 @@ final class ChatMediaEditorBottomControlsLayoutTests: XCTestCase {
         let layout = chatMediaEditorBottomControlsLayout(size: size, safeInsets: insets, middleItemWidths: [], rightWidth: 44.0)
         XCTAssertNil(layout.middleFrame)
         XCTAssertEqual(layout.itemFrames, [])
+    }
+
+    func testLandscapeLayoutSendTopCancelBottom() {
+        let landscapeSize = CGSize(width: 874.0, height: 402.0)
+        let landscapeInsets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        let layout = chatMediaEditorBottomControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, middleItemWidths: [44.0, 44.0, 44.0, 44.0], rightWidth: chatMediaEditorBottomControlsRightWidth(.send), side: .left)
+        XCTAssertEqual(layout.panelFrame, CGRect(x: 62.0, y: 26.0, width: 49.0, height: 350.0))
+        let right = screenFrame(layout.rightFrame, layout)
+        let left = screenFrame(layout.leftFrame, layout)
+        XCTAssertEqual(right.minY, 26.0)
+        XCTAssertEqual(right.height, 44.0)
+        XCTAssertEqual(left.maxY, 376.0)
+        XCTAssertEqual(left.height, 44.0)
+        XCTAssertEqual(right.minX, 62.0 + floorToScreenPixels(1.5))
+        XCTAssertEqual(left.minX, 62.0 + floorToScreenPixels(2.5))
+        XCTAssertEqual(layout.itemFrames.map { $0.midY }, [94.0, 148.0, 202.0, 256.0])
+        XCTAssertEqual(layout.itemFrames.map { $0.minX }, Array(repeating: floorToScreenPixels(2.5), count: 4))
+        XCTAssertEqual(layout.itemFrames.map { $0.size }, Array(repeating: CGSize(width: 44.0, height: 44.0), count: 4))
+        XCTAssertEqual(layout.middleFrame, CGRect(x: floorToScreenPixels(2.5), y: 72.0, width: 44.0, height: 206.0))
+    }
+
+    func testLandscapeLayoutRightSideUsesRightColumn() {
+        let landscapeSize = CGSize(width: 874.0, height: 402.0)
+        let landscapeInsets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        let layout = chatMediaEditorBottomControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, middleItemWidths: [44.0, 44.0, 44.0], rightWidth: 44.0, side: .right)
+        XCTAssertEqual(layout.panelFrame, CGRect(x: 763.0, y: 26.0, width: 49.0, height: 350.0))
+        XCTAssertEqual(screenFrame(layout.rightFrame, layout).minX, 763.0 + floorToScreenPixels(2.5))
+        XCTAssertEqual(layout.itemFrames.map { $0.midY }, [121.0, 175.0, 229.0])
+    }
+
+    func testLandscapeLayoutEmptyMiddleHasNoCapsule() {
+        let layout = chatMediaEditorBottomControlsLayout(size: CGSize(width: 874.0, height: 402.0), safeInsets: UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0), middleItemWidths: [], rightWidth: 44.0, side: .left)
+        XCTAssertNil(layout.middleFrame)
+        XCTAssertEqual(layout.itemFrames, [])
+    }
+
+    func testLandscapeColumnKeepsClearOfReservedCorner() {
+        let duoSize = CGSize(width: 678.0, height: 466.0)
+        let duoInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)
+        let corners = ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: CGSize(width: 84.0, height: 82.0), bottomRight: nil)
+        let layout = chatMediaEditorBottomControlsLayout(size: duoSize, safeInsets: duoInsets, middleItemWidths: [44.0], rightWidth: 44.0, side: .left, reservedCorners: corners)
+        XCTAssertEqual(layout.panelFrame, chatMediaEditorLandscapeColumnFrame(size: duoSize, safeInsets: duoInsets, side: .left, reservedCorners: corners))
+        XCTAssertEqual(screenFrame(layout.leftFrame, layout).maxY, 384.0)
+    }
+
+    func testPortraitBottomControlsUnchanged() {
+        let fixtures: [([CGFloat], CGFloat, CGFloat)] = [
+            ([44.0, 44.0, 44.0, 44.0], chatMediaEditorBottomControlsMiddleSpacing, 46.0),
+            ([44.0, 44.0, 44.0], chatMediaEditorBottomControlsMiddleSpacing, 44.0),
+            ([60.0, 70.0, 50.0], chatMediaEditorBottomControlsMiddleSpacing, 44.0),
+            ([68.0, 81.0, 64.0], chatMediaEditorBottomControlsPaintSpacing, 44.0),
+            ([], chatMediaEditorBottomControlsMiddleSpacing, 44.0)
+        ]
+        for (widths, spacing, rightWidth) in fixtures {
+            XCTAssertEqual(
+                chatMediaEditorBottomControlsLayout(size: size, safeInsets: insets, middleItemWidths: widths, middleSpacing: spacing, rightWidth: rightWidth, side: nil),
+                chatMediaEditorBottomControlsLayout(size: size, safeInsets: insets, middleItemWidths: widths, middleSpacing: spacing, rightWidth: rightWidth)
+            )
+        }
+        let layout = chatMediaEditorBottomControlsLayout(size: size, safeInsets: insets, middleItemWidths: [44.0, 44.0, 44.0, 44.0], rightWidth: 46.0, side: nil)
+        XCTAssertEqual(layout.panelFrame, CGRect(x: 0.0, y: 874.0 - 20.0 - 49.0, width: 402.0, height: 49.0))
+        XCTAssertEqual(layout.middleFrame, CGRect(x: 98.0, y: 0.0, width: 206.0, height: 44.0))
     }
 }
 
@@ -342,6 +405,38 @@ final class ChatMediaEditorBottomControlsComponentTests: XCTestCase {
         return x
     }
 
+    func testLandscapeColumnLaysTheGlassOutVertically() {
+        let view = ComponentView<Empty>()
+        let columnSize = CGSize(width: 49.0, height: 382.0)
+        let _ = view.update(
+            transition: .immediate,
+            component: AnyComponent(ChatMediaEditorBottomControlsComponent(
+                items: makeItems(.gallery(activeTab: [])),
+                isHidden: false,
+                isMiddleEnabled: true,
+                areSideButtonsEnabled: true,
+                isRightEnabled: true,
+                infoString: nil,
+                paintModeTitle: { _ in "Draw" },
+                leftPressed: {},
+                rightPressed: {},
+                rightLongPressed: { _ in },
+                middlePressed: { _ in },
+                side: .left
+            )),
+            environment: {},
+            forceUpdate: true,
+            containerSize: columnSize
+        )
+        let controls = view.view as! ChatMediaEditorBottomControlsComponent.View
+        let ids = [TGPhotoEditorTab.cropTab, .paintTab, .toolsTab, .qualityTab].map(chatMediaEditorBottomControlsTabId)
+        XCTAssertEqual(ids.compactMap { controls.middleItemFrame(id: $0, in: controls)?.midY }, [110.0, 164.0, 218.0, 272.0])
+        XCTAssertEqual(ids.compactMap { controls.middleItemFrame(id: $0, in: controls)?.minX }, Array(repeating: floorToScreenPixels(2.5), count: 4))
+        XCTAssertEqual(controls.rightButtonFrame(in: controls), CGRect(x: floorToScreenPixels(1.5), y: 0.0, width: 46.0, height: 44.0))
+        XCTAssertEqual(controls.leftButtonView.map { $0.convert($0.bounds, to: controls) }, CGRect(x: floorToScreenPixels(2.5), y: 338.0, width: 44.0, height: 44.0))
+        XCTAssertEqual(controls.middleCapsuleView.bounds.size, CGSize(width: 44.0, height: 206.0))
+    }
+
     func testGalleryFramesMatchLegacy() {
         let view = ComponentView<Empty>()
         let controls = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
@@ -389,37 +484,40 @@ final class ChatMediaEditorBottomControlsComponentTests: XCTestCase {
         XCTAssertTrue(controls.rightButtonSourceView === sourceView)
     }
 
-    func testQualityScalesTheMiddleCapsuleOutAndGalleryBringsItBack() {
+    func testQualityFadesTheMiddleCapsuleOutAndGalleryBringsItBack() {
         let view = ComponentView<Empty>()
-        let _ = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
+        let gallery = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
+        let galleryWidth = gallery.middleCapsuleView.bounds.width
         var controls = update(view, makeItems(.quality), transition: .immediate)
-        XCTAssertEqual(controls.middleCapsuleView.bounds.width, 8.0)
-        XCTAssertEqual(controls.middleCapsuleView.center.x, 201.0)
-        XCTAssertEqual(controls.middleCapsuleView.alpha, 0.0)
+        XCTAssertEqual(controls.middleCapsuleView.bounds.width, galleryWidth)
+        XCTAssertTrue(controls.middleItemViews.isEmpty)
         controls = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
         XCTAssertEqual(controls.middleCapsuleView.transform.a, 1.0)
         XCTAssertEqual(controls.middleCapsuleView.alpha, 1.0)
         XCTAssertEqual(controls.middleItemFrame(id: chatMediaEditorBottomControlsTabId(.cropTab), in: controls)?.minX, 98.0)
     }
 
-    func testMiddleCapsuleCollapsesWithItsGlassInsteadOfScaling() {
+    func testMiddleCapsuleHidesItsGlassInPlaceInsteadOfCollapsing() {
         let view = ComponentView<Empty>()
-        let _ = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
+        let gallery = update(view, makeItems(.gallery(activeTab: [])), transition: .immediate)
+        let galleryWidth = gallery.middleCapsuleView.bounds.width
+        let galleryCenter = gallery.middleCapsuleView.center
         let controls = update(view, makeItems(.quality), transition: .easeInOut(duration: 0.3))
         XCTAssertEqual(controls.middleCapsuleView.transform.a, 1.0)
         XCTAssertEqual(controls.middleCapsuleView.alpha, 1.0)
-        XCTAssertEqual(controls.middleCapsuleView.bounds.width, 8.0)
-        XCTAssertEqual(controls.middleCapsuleView.center.x, 201.0)
+        XCTAssertEqual(controls.middleCapsuleView.bounds.width, galleryWidth)
+        XCTAssertEqual(controls.middleCapsuleView.center, galleryCenter)
     }
 
-    func testMiddleCapsuleScalesInAtItsFinalFrame() {
+    func testMiddleCapsuleAppearsAtItsFinalFrameWithoutScaling() {
         let view = ComponentView<Empty>()
         let _ = update(view, makeItems(.quality), transition: .immediate)
         let controls = update(view, makeItems(.gallery(activeTab: [])), transition: .easeInOut(duration: 0.3))
         XCTAssertEqual(controls.middleCapsuleView.frame.width, 206.0, accuracy: 0.01)
         XCTAssertEqual(controls.middleCapsuleView.center.x, 201.0, accuracy: 0.01)
         XCTAssertNil(controls.middleCapsuleView.layer.animation(forKey: "position"))
-        XCTAssertNotNil(controls.middleCapsuleView.layer.animationKeys()?.first(where: { $0.contains("transform") }))
+        XCTAssertNil(controls.middleCapsuleView.layer.animationKeys()?.first(where: { $0.contains("transform") }))
+        XCTAssertEqual(controls.middleCapsuleView.alpha, 1.0)
     }
 
     func testSelectionPillSitsBehindTheActiveTool() {

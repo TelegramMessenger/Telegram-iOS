@@ -154,17 +154,65 @@ WR_TEST(testBackgroundRequestsFollowVisibility) {
     CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
     CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"3\",\"c\"]"}));
     complete(env, 3, answer("ok"));
+    // widget-sandbox v0.3.0: one made off screen is held, and is the request of the widget's next appearance.
     host.setVisible(env.ctx(), false);
     env.env().drain();
     env.env().eval("ask('d'); 1");
     env.env().drain();
-    CHECK_EQ(env.env().eval("log[3]"), std::string("WidgetRequestError:NOT_ALLOWED"));
+    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("3"));
     host.setVisible(env.ctx(), true);
     env.env().drain();
+    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(3));
+    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"4\",\"d\"]"}));
+    complete(env, 4, answer("ok"));
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("4"));
+    // It was this appearance's: the next one waits the 5 s.
     env.env().eval("ask('e'); 1");
     env.env().drain();
-    CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(3));
-    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"5\",\"e\"]"}));
+    CHECK_EQ(env.env().eval("log[4]"), std::string("WidgetRequestError:RATE_LIMITED"));
+    env.env().advance(5000);
+    env.env().eval("ask('f'); 1");
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls.back() == (std::pair<std::string, std::string>{"request", "[\"6\",\"f\"]"}));
+}
+
+/// widget-sandbox v0.3.0, sdk-v1 §2.14: a background request made while the widget is hidden (the clients make the host
+/// off screen, so a widget's first lines run hidden) waits for it to appear, holding the one-in-flight slot: a second is
+/// BUSY, a task later; a tap's request while it waits is BUSY too.
+WR_TEST(testABackgroundRequestOffScreenWaitsForTheWidgetToAppear) {
+    RenderEnv env(page(std::string(kLogRequest) + "t.onclick = () => ask('tap');"));
+    pass(env, context(true, true));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.setVisible(env.ctx(), false);
+    env.env().drain();
+    env.env().eval("ask('boot'); ask('again'); 1");
+    CHECK_EQ(env.env().eval("String(log.length)"), std::string("0"));
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("WidgetRequestError:BUSY"));
+    CHECK(env.env().host().bridgeCalls.empty());
+    host.setVisible(env.ctx(), true);
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls == (Calls{{"request", "[\"1\",\"boot\"]"}}));
+    tap(env);
+    CHECK_EQ(env.env().eval("log[1]"), std::string("WidgetRequestError:BUSY"));
+    complete(env, 1, answer("fresh"));
+    CHECK_EQ(env.env().eval("log[2]"), std::string("{\"result\":\"fresh\"}true"));
+}
+
+/// A widget that stops before it appears never sends its held request.
+WR_TEST(testAHeldRequestIsNeverSentAfterAStop) {
+    RenderEnv env(page(kLogRequest));
+    pass(env, context(true, true));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.setVisible(env.ctx(), false);
+    env.env().drain();
+    env.env().eval("ask('boot'); 1");
+    env.env().drain();
+    env.env().runtime().stop(wr::StopReason::Internal);
+    host.setVisible(env.ctx(), true);
+    env.env().drain();
+    CHECK(env.env().host().bridgeCalls.empty());
 }
 
 WR_TEST(testFailuresRejectWithTheirCodes) {
@@ -184,6 +232,73 @@ WR_TEST(testFailuresRejectWithTheirCodes) {
     // Each outcome freed the gate: the next tap's request goes out.
     tap(env);
     CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(5));
+}
+
+/// Upstream's shim words each rejection (globals.ts, requestError: `request: ` and the words for the refusal's reason or
+/// the code), and makes it as `new Error(message)` does: the message the error's own and not enumerable.
+WR_TEST(testErrorsCarryTheShimsWords) {
+    constexpr const char* kLogMessage = "const say = p => p.then(a => log.push('ok'), e => log.push(e.message));";
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => say(T.request('a'));"));
+        pass(env, context(false, false));
+        tap(env);
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: requests are off for this message (the bot did not allow them here)"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, true, true));
+        env.env().eval("say(T.request('a')); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: a preview (an inline result not sent yet) cannot ask the bot"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, false));
+        env.env().eval("say(T.request('a')); say(T.request('b', { wallet: true })); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("request: it needs a tap on the widget and runs in that tap's handler, one call per tap; background requests only "
+                             "where the client allows them (the private chat with the bot)|"
+                             "request: the client has no wallet for this user (TelegramWidget.wallet is null)"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, true));
+        env.env().eval("say(T.request('a')); say(T.request('b')); 1");
+        env.env().drain();
+        complete(env, 1, answer("ok"));
+        env.env().eval("say(T.request('c')); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: a request is already in flight; wait for its answer|ok|"
+                                                              "request: too many requests (background requests at most once per 5 s); try again later"));
+    }
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => say(T.request('a'));"));
+        pass(env, context(true, false));
+        tap(env);
+        complete(env, 1, failure(twidget::WidgetRequestFailure::Timeout));
+        tap(env);
+        complete(env, 2, failure(twidget::WidgetRequestFailure::RateLimited));
+        tap(env);
+        complete(env, 3, failure(twidget::WidgetRequestFailure::Failed));
+        tap(env);
+        complete(env, 4, failure(twidget::WidgetRequestFailure::Rejected));
+        tap(env);
+        complete(env, 5, answer(std::string(1025, 'a')));
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("request: the bot did not answer in time|"
+                             "request: too many requests (background requests at most once per 5 s); try again later|"
+                             "request: the client could not deliver the request|request: the client could not deliver the request|"
+                             "request: the bot's answer broke the limits (a result over 1024 bytes, or not text)"));
+    }
+    {
+        RenderEnv env(page("t.onclick = () => T.request('a').catch(e => { window.e = e; });"));
+        pass(env, context(false, false));
+        tap(env);
+        CHECK_EQ(env.env().eval("[e instanceof Error, Object.keys(e).join(), Object.getOwnPropertyDescriptor(e, 'message').enumerable, e.name, e.code,"
+                                " String(e).startsWith('WidgetRequestError: request: ')].join()"),
+                 std::string("true,name,code,false,WidgetRequestError,NOT_ALLOWED,true"));
+    }
 }
 
 WR_TEST(testAnAnswerForAnUnknownIdIsIgnored) {

@@ -23,6 +23,12 @@ final class WidgetHarnessSizingTests: XCTestCase {
     private func load(_ options: WidgetHarnessLaunchOptions, until ready: ([String]) -> Bool) throws -> [String] {
         let root = try self.root()
         root.reload(options: options)
+        return try self.bubbleLines(until: ready)
+    }
+
+    /// The readout's bubble lines once `ready` holds for them, or after 20 s.
+    private func bubbleLines(until ready: ([String]) -> Bool) throws -> [String] {
+        let root = try self.root()
         let deadline = Date(timeIntervalSinceNow: 20.0)
         var lines: [String] = []
         while Date() < deadline {
@@ -227,16 +233,20 @@ final class WidgetHarnessSizingTests: XCTestCase {
         var options = WidgetHarnessLaunchOptions()
         options.set = .conformance
         let root = try self.root()
+        // The channel ends with widget-sandbox v0.3.0's auto/28–35, so auto/27 is off screen at load: go to it first.
+        _ = try self.load(options, until: { lines in !lines.isEmpty })
+        let host = try XCTUnwrap(root.listHost)
+        host.scrollTo(messageIndex: try XCTUnwrap(host.messageIndices(pathContaining: "auto/27-haptics-no-touch").first))
         // Its boot has reported a height (until then the bubble is the 160 pt placeholder).
-        let first = try self.load(options, until: { lines in lines.contains { $0.contains("auto/27-haptics-no-touch") && $0.contains(" widget") && !$0.contains("x160 ") } })
+        let first = try self.bubbleLines(until: { lines in lines.contains { $0.contains("auto/27-haptics-no-touch") && $0.contains(" widget") && !$0.contains("x160 ") } })
         let before = try XCTUnwrap(first.first { $0.contains("auto/27-haptics-no-touch") }.map(self.parse), first.joined(separator: "\n"))
         XCTAssertNotEqual(before.height, 160)
-        let host = try XCTUnwrap(root.listHost)
         host.scrollTo(messageIndex: 0)
         root.view.layoutIfNeeded()
         let farAway = root.readoutLines().filter { $0.hasPrefix("bubble ") }
         XCTAssertFalse(farAway.contains { $0.contains("auto/27-haptics-no-touch") }, "still on screen: \(farAway)")
-        host.scrollTo(messageIndex: Int.max)
+        // Back to the post itself: the channel's newest posts are no longer it (widget-sandbox v0.3.0 added auto/28–35).
+        host.scrollTo(messageIndex: try XCTUnwrap(host.messageIndices(pathContaining: "auto/27-haptics-no-touch").first))
         root.view.layoutIfNeeded()
         let back = root.readoutLines().filter { $0.hasPrefix("bubble ") }
         let after = try XCTUnwrap(back.first { $0.contains("auto/27-haptics-no-touch") }.map(self.parse), back.joined(separator: "\n"))

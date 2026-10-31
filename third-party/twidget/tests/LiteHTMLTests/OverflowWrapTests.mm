@@ -138,25 +138,6 @@ namespace
     }
 }
 
-- (void)testPatchedTextAndWidthMatchFreshLayoutAndPaint
-{
-    LHDocument *previous = nil;
-    for(NSString *width in @[@"200", @"80", @"240", @"120"])
-    {
-        NSString *html = [NSString stringWithFormat:@"<style>body{margin:0;font:16px/24px Courier}#field{overflow-wrap:break-word}</style><div id='field' style='width:%@px'>%@%@</div><div>Below</div>", width, Word, width];
-        LHDocument *patched = [[LHDocument alloc] initWithHTML:html css:nil previous:previous];
-        LHDocument *fresh = [[LHDocument alloc] initWithHTML:html css:nil];
-        XCTAssertEqualObjects(Pixels(patched), Pixels(fresh));
-        if(previous)
-        {
-            XCTAssertTrue(patched.reusedPrevious);
-            LHDocument *restored = [[LHDocument alloc] initWithHTML:previous.html css:nil];
-            XCTAssertEqualObjects(Pixels(previous), Pixels(restored));
-        }
-        previous = patched;
-    }
-}
-
 - (void)testWrappingUsesTheWidthBesideFloats
 {
     LHDocument *document = Make([NSString stringWithFormat:@"<div style='width:200px;overflow-wrap:break-word'><div style='float:left;width:80px;height:60px'></div>%@</div>", Word]);
@@ -189,20 +170,6 @@ namespace
     XCTAssertEqual(painter.runs.front().first, std::string("ABCDEFGHIJKL"));
     XCTAssertEqual(painter.runs.back().second.x.value(), 80);
     XCTAssertEqual([[document boundsByAttribute:@"id"][@"field"] rectValue].size.height, 48);
-}
-
-- (void)testPaddedFlexMinimumTracksFontAndTextChanges
-{
-    LHDocument *previous = nil;
-    for(NSNumber *font in @[@16, @24, @12, @16])
-    {
-        NSString *html = [NSString stringWithFormat:@"<style>body{margin:0;font:%@px/24px Courier}.row{display:flex;width:100px}.text{padding:8px;border:1px solid red;overflow-wrap:anywhere}</style><div class='row'><div class='text' id='field'>%@%@</div></div>", font, Word, font];
-        LHDocument *patched = [[LHDocument alloc] initWithHTML:html css:nil previous:previous];
-        LHDocument *fresh = [[LHDocument alloc] initWithHTML:html css:nil];
-        XCTAssertEqualObjects(Pixels(patched), Pixels(fresh));
-        XCTAssertEqual([[patched boundsByAttribute:@"id"][@"field"] rectValue].size.width, 100);
-        previous = patched;
-    }
 }
 
 - (void)testTextareaHasScrollableContentIncludingTrailingEmptyLines

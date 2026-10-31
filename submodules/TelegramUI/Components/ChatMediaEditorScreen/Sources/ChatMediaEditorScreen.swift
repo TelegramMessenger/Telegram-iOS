@@ -100,6 +100,25 @@ enum ChatMediaEditorActiveTool: Equatable {
 }
 
 let chatMediaEditorCaptionPanelSpacing: CGFloat = 10.0
+
+public func chatMediaEditorRestingPreviewFrame(size: CGSize, safeInsets: UIEdgeInsets, mediaSize: CGSize, captionPanelHeight: CGFloat, keepsToBand: Bool = false, toolbarSide: ChatMediaEditorToolbarSide? = nil, reservedCorners: ContainerViewLayoutCorners = .none) -> CGRect {
+    var safeInsets = safeInsets
+    if toolbarSide == nil && !keepsToBand && safeInsets.left != safeInsets.right {
+        safeInsets.left = 0.0
+        safeInsets.right = 0.0
+    }
+    return chatMediaEditorLayout(
+        size: size,
+        safeInsets: safeInsets,
+        mediaSize: mediaSize,
+        toolbarHeight: chatMediaEditorToolbarHeight,
+        captionPanelHeight: captionPanelHeight,
+        keyboardHeight: 0.0,
+        toolbarSide: toolbarSide,
+        reservedCorners: reservedCorners
+    ).previewFrame
+}
+
 let chatMediaEditorScheduleWhenOnlineTimestamp: Int32 = 0x7ffffffe
 
 public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryController {
@@ -128,6 +147,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
         var scrubber = ComponentView<Empty>()
         var playerState: MediaEditorPlayerState?
         var playerStateDisposable: Disposable?
+        var playerStateFramesCount: Int?
         var sourceLoadStateDisposable: Disposable?
         let gifConversionDisposable = MetaDisposable()
         var sourceIndicatorState: ChatMediaEditorSourceIndicatorState = .hidden
@@ -141,6 +161,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
 
         private(set) var isCaptionAbove = false
         private(set) var isEditingCaption = false
+        var interactionTracking = ChatMediaEditorTrackingSet()
         var swipeOffset: CGFloat = 0.0
         private(set) var isSending = false
         private var isGallerySendInProgress = false
@@ -156,6 +177,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 }
                 if (oldValue == nil) != (self.activeTool == nil) {
                     self.blurChromeForTool(isHiding: self.activeTool != nil)
+                }
+                if oldValue != self.activeTool {
+                    self.updatePortraitLock()
                 }
             }
         }
@@ -282,6 +306,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             self.view.addSubview(self.pagerView)
             self.previewContainerView.addSubview(self.playButtonView)
             self.setupPager()
+            self.pagerView.trackingUpdated = { [weak self] source, isTracking in
+                self?.setInteractionTracking(isTracking, source: source)
+            }
             self.setupPaintGestures()
             self.setupVideo()
             self.installCurrentItem(values: self.pageModel.restore().values)
@@ -361,6 +388,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
         }
 
         func activateCaptionInput() {
+            if let layout = self.validLayout, self.toolbarSide(layout: layout) != nil {
+                return
+            }
             self.captionPanelView?.activateInput()
         }
 
@@ -523,6 +553,14 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             self.validLayout = layout
             self.coveredContent.apply()
 
+            let toolbarSide = self.toolbarSide(layout: layout)
+            if toolbarSide != nil, self.isEditingCaption {
+                let _ = self.captionPanelView?.dismissInput()
+                if self.isEditingCaption {
+                    self.view.endEditing(true)
+                }
+            }
+
             let keyboardHeight = layout.inputHeight ?? 0.0
             let safeInsets = self.editorSafeInsets(layout: layout)
             let captionPanelHeight = (self.captionPanelView?.baseHeight() ?? 0.0) + chatMediaEditorCaptionPanelSpacing
@@ -532,7 +570,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 mediaSize: self.previewMediaSize,
                 toolbarHeight: chatMediaEditorToolbarHeight,
                 captionPanelHeight: captionPanelHeight,
-                keyboardHeight: keyboardHeight
+                keyboardHeight: keyboardHeight,
+                toolbarSide: toolbarSide,
+                reservedCorners: layout.reservedCorners
             )
 
             self.updatePagerLayout(layout: layout, transition: transition)
@@ -549,22 +589,24 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             let isInterfaceHidden = self.isInterfaceHiddenBySwipe
             if let captionPanelView = self.captionPanelView {
                 let containerFrame = CGRect(origin: .zero, size: layout.size)
+                let isCaptionVisible = chatMediaEditorCaptionIsVisible(toolbarSide: toolbarSide, isToolActive: isToolActive, isInterfaceHidden: isInterfaceHidden)
+                let isCaptionInteractive = chatMediaEditorCaptionIsVisible(toolbarSide: toolbarSide, isToolActive: isToolActive, isInterfaceHidden: false) && !self.isSending
                 transition.updateFrame(view: self.captionContainerView, frame: containerFrame)
                 transition.updateFrame(view: captionPanelView.view, frame: containerFrame)
-                transition.updateAlpha(layer: captionPanelView.view.layer, alpha: isToolActive || isInterfaceHidden ? 0.0 : 1.0)
-                self.captionContainerView.isUserInteractionEnabled = !isToolActive && !self.isSending
-                let bottomInset = layout.size.height - editorLayout.toolbarFrame.minY + chatMediaEditorCaptionPanelSpacing
+                transition.updateAlpha(layer: captionPanelView.view.layer, alpha: isCaptionVisible ? 1.0 : 0.0)
+                self.captionContainerView.isUserInteractionEnabled = isCaptionInteractive
+                let bottomInset = layout.size.height - chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY + chatMediaEditorCaptionPanelSpacing
                 let _ = captionPanelView.updateContainerLayoutSize?(layout.size, safeAreaInset: safeInsets, bottomInset: bottomInset, keyboardHeight: keyboardHeight, animated: transition.isAnimated)
             }
 
-            let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size)
+            let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout), toolbarSide: toolbarSide)
             transition.updateFrame(view: self.recipientArrowView, frame: recipientLayout.arrowFrame)
             transition.updateFrame(view: self.recipientLabel, frame: recipientLayout.labelFrame)
             let recipientAlpha: CGFloat = isToolActive || isInterfaceHidden || self.isEditingCaption || keyboardHeight > 0.0 ? 0.0 : 0.6
             transition.updateAlpha(layer: self.recipientArrowView.layer, alpha: recipientAlpha)
             transition.updateAlpha(layer: self.recipientLabel.layer, alpha: recipientAlpha)
 
-            self.updateToolbar(frame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: ComponentTransition(transition))
+            self.updateToolbar(frame: editorLayout.toolbarFrame, side: toolbarSide, keyboardHeight: keyboardHeight, transition: ComponentTransition(transition))
             self.updateSelectionLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateCameraButtonLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateScrubber(layout: layout, safeInsets: safeInsets, transition: ComponentTransition(transition))
@@ -575,10 +617,11 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             self.updateQualityLayout(layout: layout, transition: transition)
             self.updatePlayButton(transition: transition)
             self.updatePagerInteraction()
+            self.updateToolsLayoutStyle(layout: layout)
             self.updateEmbeddedToolLayout(layout: layout, transition: transition)
         }
 
-        private func updateToolbar(frame: CGRect, keyboardHeight: CGFloat, transition: ComponentTransition) {
+        private func updateToolbar(frame: CGRect, side: ChatMediaEditorToolbarSide?, keyboardHeight: CGFloat, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -697,7 +740,8 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                                 self.selectPaintMode(tab)
                             }
                         },
-                        accessibilityStrings: strings
+                        accessibilityStrings: strings,
+                        side: side
                     )
                 ),
                 environment: {},
@@ -734,26 +778,22 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 case .cover:
                     return self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo, keepsToBand: true)
                 }
-                return chatMediaEditorToolPreviewFrame(kind: kind, size: layout.size, safeInsets: safeInsets, mediaSize: self.previewMediaSize, toolbarHeight: chatMediaEditorToolbarHeight)
+                return chatMediaEditorToolPreviewFrame(kind: kind, size: layout.size, safeInsets: safeInsets, mediaSize: self.previewMediaSize, toolbarHeight: chatMediaEditorToolbarHeight, toolbarSide: kind == .chatTools || kind == .quality ? self.toolbarSide(layout: layout) : nil)
             }
             return self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo)
         }
 
         func restingPreviewFrame(layout: ContainerViewLayout, mediaSize: CGSize, isVideo: Bool, keepsToBand: Bool = false) -> CGRect {
             let captionPanelHeight = (self.captionPanelView?.baseHeight() ?? 0.0) + chatMediaEditorCaptionPanelSpacing
-            var safeInsets = self.editorSafeInsets(layout: layout)
-            if !keepsToBand && safeInsets.left != safeInsets.right {
-                safeInsets.left = 0.0
-                safeInsets.right = 0.0
-            }
-            return chatMediaEditorLayout(
+            return chatMediaEditorRestingPreviewFrame(
                 size: layout.size,
-                safeInsets: safeInsets,
+                safeInsets: self.editorSafeInsets(layout: layout),
                 mediaSize: mediaSize,
-                toolbarHeight: chatMediaEditorToolbarHeight,
                 captionPanelHeight: captionPanelHeight,
-                keyboardHeight: 0.0
-            ).previewFrame
+                keepsToBand: keepsToBand,
+                toolbarSide: self.toolbarSide(layout: layout),
+                reservedCorners: layout.reservedCorners
+            )
         }
 
         func editorSafeInsets(layout: ContainerViewLayout) -> UIEdgeInsets {
@@ -1072,7 +1112,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
 
     private func setupController() {
         self.statusBar.statusBarStyle = .White
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        self.supportedOrientations = chatMediaEditorSupportedOrientations(locksPortrait: false)
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true
     }

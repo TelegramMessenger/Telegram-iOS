@@ -85,7 +85,7 @@ public final class WidgetHarnessListHost {
     public var holdsMenu = false
     /// `-harness-copy-protected on`: the chat forbids copying (`isCopyProtectionEnabled`). Set before `load`.
     public var copyProtected = false
-    /// `-harness-can-query on`: every widget message has the server's can_query (the network marker). Set before `load`.
+    /// `-harness-can-query on`: every widget message has the server's can_query. Set before `load`.
     public var canQuery = false
     /// `-harness-background-query on`: every widget message also has the server's background_query. Set before `load`.
     public var backgroundQuery = false
@@ -165,6 +165,17 @@ public final class WidgetHarnessListHost {
         self.requestUpdate(id)
     }
 
+    /// Replaces the caption of the post at `path`, its text and whether it shows above the widget
+    /// (`InvertMediaMessageAttribute`, widget-sandbox v0.4.0; every other attribute goes, and no "edited" is added), and
+    /// updates its bubble as the chat does a message's edit.
+    public func replaceCaption(path: String, text: String, captionAbove: Bool) {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let index = self.messages.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        self.messages[index] = self.messages[index].withUpdatedText(text).withUpdatedAttributes(captionAbove ? [InvertMediaMessageAttribute()] : [])
+        self.requestUpdate(id)
+    }
+
     public func load(posts: [WidgetHarnessPost], incoming: Bool = false) {
         self.pinnedToTop = []
         let accountPeer = TelegramUser(
@@ -181,7 +192,7 @@ public final class WidgetHarnessListHost {
         var paths: [EngineMessage.Id: String] = [:]
         var timestamp = Int32(Date().timeIntervalSince1970) - 10_000
         var takenIds = Set<Int32>()
-        func append(text: String, media: EngineRawMedia, path: String) {
+        func append(text: String, media: EngineRawMedia, path: String, captionAbove: Bool = false) {
             let stableId = WidgetHarnessListHost.nextStableId
             WidgetHarnessListHost.nextStableId += 1
             // The message id is the post's, the same in every load as a real message's is (a widget's storage is kept
@@ -193,7 +204,7 @@ public final class WidgetHarnessListHost {
             takenIds.insert(messageId)
             let id = EngineMessage.Id(peerId: WidgetHarnessListHost.chatPeer.id, namespace: Namespaces.Message.Cloud, id: messageId)
             timestamp += 1
-            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: incoming ? [.Incoming] : [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: incoming ? self.otherPeer : accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
+            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: incoming ? [.Incoming] : [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: incoming ? self.otherPeer : accountPeer, text: text, attributes: captionAbove ? [InvertMediaMessageAttribute()] : [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
             paths[id] = path
         }
         for post in posts {
@@ -201,7 +212,7 @@ public final class WidgetHarnessListHost {
                 continue
             }
             let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: false, canQuery: self.canQuery, backgroundQuery: self.backgroundQuery, chatData: nil, publicData: nil, widgetId: nil)
-            append(text: post.caption, media: widget, path: post.path)
+            append(text: post.caption, media: widget, path: post.path, captionAbove: post.captionAbove)
             for photo in post.photos {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: 1 ... Int64.max), size: Int64(photo.png.count))
                 self.context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: photo.png, synchronous: true)
@@ -332,20 +343,6 @@ public final class WidgetHarnessListHost {
     /// The message id of the post at `path`.
     public func messageId(path: String) -> EngineMessage.Id? {
         return self.paths.first(where: { $0.value == path })?.key
-    }
-
-    /// The network marker of the post at `path`'s bubble, while it shows one (widget-sandbox v0.2).
-    public func networkMarker(path: String) -> MessageWidgetNetworkMarkerView? {
-        guard let id = self.paths.first(where: { $0.value == path })?.key, let node = self.bubbleNode(for: id) else {
-            return nil
-        }
-        func find(_ view: UIView) -> MessageWidgetNetworkMarkerView? {
-            if let view = view as? MessageWidgetNetworkMarkerView {
-                return view
-            }
-            return view.subviews.lazy.compactMap(find).first
-        }
-        return find(node.view)
     }
 
     /// What the widget content node of the post at `path` answers the bubble at `point` (its own coordinates), as the
@@ -563,13 +560,6 @@ public final class WidgetHarnessListHost {
             let caption = node.contentNodes.count > 1 ? " +caption" : ""
             // The chat's share button beside the bubble.
             let share = (node.subnodes ?? []).contains { $0 is ChatMessageShareButton && !$0.isHidden } ? " +share" : ""
-            // widget-sandbox v0.2: the network marker the bubble shows where the message has can_query, at its centre in
-            // the window's coordinates.
-            var marker = ""
-            if let markerView = widgetNode.view.subviews.first(where: { $0 is MessageWidgetNetworkMarkerView && !$0.isHidden }) {
-                let centre = markerView.convert(CGPoint(x: markerView.bounds.midX, y: markerView.bounds.midY), to: nil)
-                marker = " +marker@\(Int(centre.x.rounded())),\(Int(centre.y.rounded()))"
-            }
             // The bubble's context gesture shrinks its content while it waits for a long press (ContextControllerSourceNode).
             // A Tier 2 query does not return while synthesized fingers play, so how long a press lasted is an event.
             let isPressed = node.mainContextSourceNode.contentNode.layer.sublayerTransform.m11 < 0.999
@@ -580,12 +570,25 @@ public final class WidgetHarnessListHost {
                 self.events.append("pressed \(path) " + String(format: "%.1f", CACurrentMediaTime() - since))
             }
             bubbles.append((frame.minY, { index in
-                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)\(marker)\(share)\(pressed)"
+                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)\(share)\(pressed)"
             }))
         }
         bubbles.sort { $0.y < $1.y }
         logs.sort { $0.y < $1.y }
         return bubbles.enumerated().map { $0.element.line($0.offset) } + logs.map(\.line) + self.events
+    }
+
+    /// Each laid-out widget bubble's widget content node, by its post's path.
+    public func widgetContentNodes() -> [(path: String, node: ChatMessageWidgetBubbleContentNode)] {
+        var out: [(path: String, node: ChatMessageWidgetBubbleContentNode)] = []
+        self.listView.forEachItemNode { node in
+            guard let node = node as? ChatMessageBubbleItemNode, let message = node.item?.message, let path = self.paths[message.id],
+                  let widgetNode = node.contentNodes.first(where: { $0 is ChatMessageWidgetBubbleContentNode }) as? ChatMessageWidgetBubbleContentNode else {
+                return
+            }
+            out.append((path, widgetNode))
+        }
+        return out
     }
 
     /// Each laid-out widget bubble's widget area (the clip view, or the pill) and its content node's bounds, in `view`'s

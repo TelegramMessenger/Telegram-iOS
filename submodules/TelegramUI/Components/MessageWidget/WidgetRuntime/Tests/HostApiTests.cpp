@@ -85,22 +85,3 @@ WR_TEST(testTheAuthorsMarginWinsOverTheHostSheet) {
     CHECK(margined && std::fabs(margined->height - 56) < 0.5);
 }
 
-WR_TEST(testWorkObserverFiresDuringALoop) {
-    HostEnv env;
-    std::vector<uint64_t> totals;
-    env.runtime().setWorkObserver([&](uint64_t total) { totals.push_back(total); }, 10000);
-    const uint64_t start = JS_GetWorkUnits(env.runtime().jsRuntime());
-    CHECK_EQ(env.eval("let s = 0; for (let i = 0; i < 1000000; i++) { s += i; } 1"), std::string("1"));
-    const uint64_t spent = JS_GetWorkUnits(env.runtime().jsRuntime()) - start;
-    // At least 100 observations, and about one per 10,000 units spent (the poll comes every few hundred).
-    CHECK(spent / 10000 >= 100);
-    CHECK(totals.size() * 10 >= spent / 10000 * 8);
-    bool increasing = true;
-    for (size_t i = 1; i < totals.size(); i++) {
-        increasing = increasing && totals[i] >= totals[i - 1] + 10000;
-    }
-    CHECK(increasing);
-    // An observer that throws is ignored, and the script still finishes.
-    env.runtime().setWorkObserver([](uint64_t) { throw 1; }, 10000);
-    CHECK_EQ(env.eval("let t = 0; for (let i = 0; i < 100000; i++) { t += i; } 2"), std::string("2"));
-}

@@ -17,6 +17,7 @@ import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatMessageItemImpl
+import ChatMessageItemCommon
 
 public final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
@@ -67,6 +68,13 @@ public final class ChatLoadingPlaceholderMessageContainer {
     public let bubbleNode: ASImageNode
     public let bubbleBorderNode: ASImageNode
     
+    private let isBubbleless: Bool
+    private var bubblelessSkeletonKey: (size: CGSize, bubbleWidth: CGFloat)?
+    // Bubble mode off: the bars as a path, drawn white into the mask, with no bitmap per row.
+    private var bubblelessBarsLayer: SimpleShapeLayer?
+    /// Bubble mode off: the bubble this row would have had, which `frame` (the column) no longer gives.
+    public private(set) var bubblelessMessageSize: CGSize?
+    
     public var parentView: UIView? {
         return self.bubbleNode.supernode?.view
     }
@@ -75,7 +83,8 @@ public final class ChatLoadingPlaceholderMessageContainer {
         return self.bubbleNode.frame
     }
         
-    public init(bubbleImage: UIImage?, bubbleBorderImage: UIImage?) {
+    public init(bubbleImage: UIImage?, bubbleBorderImage: UIImage?, isBubbleless: Bool = false) {
+        self.isBubbleless = isBubbleless
         self.bubbleNode = ASImageNode()
         self.bubbleNode.displaysAsynchronously = false
         self.bubbleNode.image = bubbleImage
@@ -108,7 +117,7 @@ public final class ChatLoadingPlaceholderMessageContainer {
         }
     }
         
-    public func update(size: CGSize, isSidebarOpen: Bool, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, isSidebarOpen: Bool, hasAvatar: Bool, rect: CGRect, rightInset: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
         var avatarOffset: CGFloat = 0.0
         
         if hasAvatar && self.avatarNode == nil {
@@ -123,6 +132,11 @@ public final class ChatLoadingPlaceholderMessageContainer {
             avatarBorderNode.image = avatarBorderImage
             self.bubbleBorderNode.supernode?.addSubnode(avatarBorderNode)
             self.avatarBorderNode = avatarBorderNode
+        }
+        
+        if self.isBubbleless {
+            self.updateBubbleless(size: size, isSidebarOpen: isSidebarOpen, hasAvatar: hasAvatar, rect: rect, rightInset: rightInset, transition: transition)
+            return
         }
         
         if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
@@ -150,6 +164,38 @@ public final class ChatLoadingPlaceholderMessageContainer {
         transition.updateFrame(node: self.bubbleNode, frame: bubbleFrame)
         transition.updateFrame(node: self.bubbleBorderNode, frame: bubbleFrame)
     }
+    
+    // Bubble mode off: `rect` is the bubble the message would have had; on the column, its height picks how many lines
+    // the bars have and its width how long they run. No outline: the bars are drawn only by the fill.
+    private func updateBubbleless(size: CGSize, isSidebarOpen: Bool, hasAvatar: Bool, rect: CGRect, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let (avatarFrame, columnFrame) = chatLoadingBubblelessSkeletonColumn(rect: rect, containerWidth: size.width, rightInset: rightInset, showsAvatar: hasAvatar && !isSidebarOpen)
+        if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
+            avatarBorderNode.isHidden = true
+            transition.updateFrame(node: avatarNode, frame: avatarFrame ?? CGRect(x: rect.minX + 8.0, y: rect.minY + 1.0, width: 34.0, height: 34.0))
+            transition.updateAlpha(node: avatarNode, alpha: avatarFrame != nil ? 1.0 : 0.0)
+        }
+        self.bubblelessMessageSize = rect.size
+        let barsLayer: SimpleShapeLayer
+        if let current = self.bubblelessBarsLayer {
+            barsLayer = current
+        } else {
+            barsLayer = SimpleShapeLayer()
+            barsLayer.fillColor = UIColor.white.cgColor
+            self.bubblelessBarsLayer = barsLayer
+            self.bubbleNode.layer.addSublayer(barsLayer)
+        }
+        if self.bubblelessSkeletonKey?.size != columnFrame.size || self.bubblelessSkeletonKey?.bubbleWidth != rect.width {
+            self.bubblelessSkeletonKey = (columnFrame.size, rect.width)
+            let path = CGMutablePath()
+            for bar in chatLoadingBubblelessSkeletonBars(columnSize: columnFrame.size, bubbleWidth: rect.width) {
+                path.addRoundedRect(in: bar, cornerWidth: bar.height * 0.5, cornerHeight: bar.height * 0.5)
+            }
+            barsLayer.path = path
+            barsLayer.frame = CGRect(origin: CGPoint(), size: columnFrame.size)
+        }
+        transition.updateFrame(node: self.bubbleNode, frame: columnFrame)
+        transition.updateFrame(node: self.bubbleBorderNode, frame: columnFrame)
+    }
 }
 
 public final class ChatLoadingPlaceholderNode: ASDisplayNode {
@@ -174,9 +220,15 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var validLayout: (CGSize, Bool, UIEdgeInsets, LayoutMetrics)?
     
+    // Bubble mode off: the messages load as gray bars on the plain page rather than as bubbles.
+    private let isBubbleless: Bool
+    // Without bubbles a chat with a person (a Saved Messages thread) has the avatar column its rows have.
+    private var bubblelessPersonChatHasAvatar: Bool = false
+    
     public init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
         self.context = context
         self.backgroundNode = backgroundNode
+        self.isBubbleless = !bubbleCorners.bubbleMode
         
         self.maskNode = ASDisplayNode()
         self.borderMaskNode = ASDisplayNode()
@@ -186,7 +238,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         var messageContainers: [ChatLoadingPlaceholderMessageContainer] = []
         for _ in 0 ..< 14 {
-            let container = ChatLoadingPlaceholderMessageContainer(bubbleImage: bubbleImage, bubbleBorderImage: bubbleBorderImage)
+            let container = ChatLoadingPlaceholderMessageContainer(bubbleImage: self.isBubbleless ? nil : bubbleImage, bubbleBorderImage: self.isBubbleless ? nil : bubbleBorderImage, isBubbleless: self.isBubbleless)
             container.setup(maskNode: self.maskNode, borderMaskNode: self.borderMaskNode)
             messageContainers.append(container)
         }
@@ -196,7 +248,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderNode = ASDisplayNode()
         
         self.backgroundColorNode = ASDisplayNode()
-        self.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper)
+        self.backgroundColorNode.backgroundColor = self.isBubbleless ? theme.list.mediaPlaceholderColor : selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper)
         
         self.effectNode = ShimmerEffectForegroundNode()
         self.effectNode.layer.compositingFilter = "screenBlendMode"
@@ -309,7 +361,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
     private var didAnimateOut = false
     public func animateOut(_ historyNode: ChatHistoryListNode, completion: @escaping () -> Void = {}) {
-        guard let (size, isSidebarOpen, _, _) = self.validLayout else {
+        guard let (size, isSidebarOpen, insets, _) = self.validLayout else {
             return
         }
         let listNode = historyNode
@@ -388,9 +440,10 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
             var offset = lastFrame.minY
             for k in index ..< self.messageContainers.count {
                 let messageContainer = self.messageContainers[k]
-                let messageSize = messageContainer.frame.size
+                // Without bubbles a row's frame is its column; it is laid out again from the bubble it stands for.
+                let messageSize = messageContainer.bubblelessMessageSize ?? messageContainer.frame.size
                 
-                messageContainer.update(size: size, isSidebarOpen: isSidebarOpen, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, isSidebarOpen: isSidebarOpen, hasAvatar: self.messagesHaveAvatars, rect: CGRect(origin: CGPoint(x: self.isBubbleless ? insets.left : 0.0, y: offset - messageSize.height), size: messageSize), rightInset: insets.right, transition: transition)
                 offset -= messageSize.height
             }
         }
@@ -417,6 +470,14 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         case channel
     }
     private var chatType: ChatType = .channel
+    
+    private var messagesHaveAvatars: Bool {
+        if self.isBubbleless {
+            return self.chatType == .group || self.chatType == .generic || (self.chatType == .user && self.bubblelessPersonChatHasAvatar)
+        }
+        return self.chatType != .channel && self.chatType != .user
+    }
+    
     public func updatePresentationInterfaceState(renderedPeer: EngineRenderedPeer?, chatLocation: ChatLocation) {
         var chatType: ChatType = .channel
         if let peer = renderedPeer?.peer {
@@ -445,8 +506,14 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
             }
         }
         
-        if self.chatType != chatType {
+        var bubblelessPersonChatHasAvatar = false
+        if self.isBubbleless, case let .user(user)? = renderedPeer?.peer {
+            bubblelessPersonChatHasAvatar = user.botInfo == nil
+        }
+        
+        if self.chatType != chatType || self.bubblelessPersonChatHasAvatar != bubblelessPersonChatHasAvatar {
             self.chatType = chatType
+            self.bubblelessPersonChatHasAvatar = bubblelessPersonChatHasAvatar
             if let (size, isSidebarOpen, insets, metrics) = self.validLayout {
                 self.updateLayout(size: size, isSidebarOpen: isSidebarOpen, insets: insets, metrics: metrics, transition: .immediate)
             }
@@ -508,7 +575,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 14]
-            messageContainer.update(size: bounds.size, isSidebarOpen: isSidebarOpen, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: insets.left, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, isSidebarOpen: isSidebarOpen, hasAvatar: self.messagesHaveAvatars, rect: CGRect(origin: CGPoint(x: insets.left, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), rightInset: insets.right, transition: transition)
             offset += messageSize.height
             index += 1
         }
@@ -518,8 +585,12 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         } else {
             self.backgroundColorNode.isHidden = true
         }
+        if self.isBubbleless {
+            // The bars are the plain fill: no wallpaper behind them.
+            self.backgroundColorNode.isHidden = false
+        }
         
-        if let backgroundNode = self.backgroundNode, let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {
+        if !self.isBubbleless, let backgroundNode = self.backgroundNode, let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {
             if self.backgroundContent == nil {
                 self.backgroundContent = backgroundContent
                 self.containerNode.insertSubnode(backgroundContent, at: 0)

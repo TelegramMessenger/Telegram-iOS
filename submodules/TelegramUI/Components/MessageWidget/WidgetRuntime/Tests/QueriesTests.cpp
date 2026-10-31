@@ -6,7 +6,6 @@
 #include <string>
 
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -111,220 +110,19 @@ WR_TEST(testDevicePixelRatioIsTheDrawingScale) {
     CHECK_EQ(three.env().eval("devicePixelRatio"), std::string("3"));
 }
 
+/// widget-sandbox's layout queries per task: a loop of style writes and queries in one task stops once its queries took
+/// 100 ms (each flush 1 ms on the fake clock), with upstream's message.
 WR_TEST(testAQueryLoopStopsAtTheLayoutQueryLimit) {
+    // Each query's flush takes 1 ms; the loop's own JS nothing.
+    wr_test::ScopedFakeClock clock(0.0);
+    clock->renderStepMs = 1.0;
     RenderEnv env("<!doctype html><div id=a style=\"height:20px\">x</div>"
                   "<script>window.a = document.getElementById('a');</script>");
+    env.env().runtime().beginSlice("timer", 500);
     std::string result = env.env().eval("var i = 0; for (;;) { a.style.width = (i++ % 300) + 'px'; a.offsetHeight; }");
     CHECK(result == "ABORTED" || result == "STOPPED");
     CHECK(env.env().runtime().stopReason() == wr::StopReason::LayoutQuery);
+    CHECK_EQ(env.env().runtime().stopDetail(), std::string("Layout query limit exceeded: host queries blocked the renderer for more than "
+                                                           "100 ms in one timer task (timer)"));
 }
 
-namespace {
-
-/// The work units one evaluation of `code` cost, and what it added to the step's layout-query count.
-std::pair<uint64_t, uint64_t> costOf(RenderEnv& env, const char* code) {
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t units = JS_GetWorkUnits(rt), queries = env.env().runtime().layoutQueryUnits();
-    env.env().eval(code);
-    return {JS_GetWorkUnits(rt) - units, env.env().runtime().layoutQueryUnits() - queries};
-}
-
-std::string manyBlocks(int count) {
-    std::string html = "<!doctype html><body>";
-    for (int i = 0; i < count; i++) {
-        html += "<div style=\"height:2px\"></div>";
-    }
-    return html + "<span id=s>x</span><script>window.s = document.getElementById('s');</script></body>";
-}
-
-} // namespace
-
-/// The final review's I1: a query's read is charged by the work it does and counted against the query budget, so a
-/// read-only loop (no style writes, so no flush to pay for) is bounded by its document's size, not only by the 100
-/// units a query costs. elementFromPoint hit-tests the whole render tree; getClientRects walks the element's lines.
-WR_TEST(testAReadIsChargedByTheDocumentItWalks) {
-    RenderEnv small(manyBlocks(1));
-    RenderEnv large(manyBlocks(2000));
-    costOf(small, "document.elementFromPoint(1, 1)");
-    costOf(large, "document.elementFromPoint(1, 1)");
-    const auto [smallUnits, smallQueries] = costOf(small, "document.elementFromPoint(1, 1)");
-    const auto [largeUnits, largeQueries] = costOf(large, "document.elementFromPoint(1, 1)");
-    // The large document has 1999 more blocks.
-    CHECK(largeUnits >= smallUnits + 1999 * wr::work::kLayoutBox);
-    CHECK(largeQueries >= smallQueries + 1999 * wr::work::kLayoutBox);
-}
-
-WR_TEST(testClientRectsAreChargedByTheLinesTheyWalk) {
-    const std::string oneLine = "<!doctype html><body><span id=s>x</span><script>window.s = document.getElementById('s');</script></body>";
-    std::string manyLines = "<!doctype html><body style=\"width:20px\"><span id=s>";
-    for (int i = 0; i < 400; i++) {
-        manyLines += "word ";
-    }
-    manyLines += "</span><script>window.s = document.getElementById('s');</script></body>";
-    RenderEnv one(oneLine);
-    RenderEnv many(manyLines);
-    costOf(one, "s.getClientRects().length");
-    costOf(many, "s.getClientRects().length");
-    CHECK_EQ(many.env().eval("s.getClientRects().length > 100"), std::string("true"));
-    // Only the query count is load-bearing: the returned DOMRects' allocations are charged to the task anyway.
-    const auto [oneUnits, oneQueries] = costOf(one, "s.getClientRects()");
-    const auto [manyUnits, manyQueries] = costOf(many, "s.getClientRects()");
-    (void)oneUnits;
-    (void)manyUnits;
-    CHECK(manyQueries >= oneQueries + 100 * wr::work::kLayoutBox);
-}
-
-namespace {
-
-std::string nestedIn(int depth) {
-    std::string html = "<!doctype html><body>";
-    for (int i = 0; i < depth; i++) {
-        html += "<div>";
-    }
-    html += "<span id=c>x</span>";
-    for (int i = 0; i < depth; i++) {
-        html += "</div>";
-    }
-    return html + "<script>window.c = document.getElementById('c');</script></body>";
-}
-
-std::string parentOf(int children) {
-    std::string html = "<!doctype html><body><div id=p style=\"overflow:hidden;height:10px\">";
-    for (int i = 0; i < children; i++) {
-        html += "<div style=\"height:1px\"></div>";
-    }
-    return html + "</div><script>window.p = document.getElementById('p');</script></body>";
-}
-
-} // namespace
-
-/// The walks behind offsetParent (the ancestors) and scrollWidth (the descendants) count against the query budget.
-WR_TEST(testTheOffsetParentAndScrollWalksAreCharged) {
-    RenderEnv shallow(nestedIn(1));
-    // Under the render depth cap (256): deeper, the span has no box and offsetParent answers at once.
-    RenderEnv deep(nestedIn(200));
-    costOf(shallow, "c.offsetParent");
-    costOf(deep, "c.offsetParent");
-    const auto [shallowUnits, shallowQueries] = costOf(shallow, "c.offsetParent");
-    const auto [deepUnits, deepQueries] = costOf(deep, "c.offsetParent");
-    (void)shallowUnits;
-    (void)deepUnits;
-    CHECK(deepQueries >= shallowQueries + 199 * (wr::work::kNodeVisit + wr::work::kLayoutBox));
-    RenderEnv few(parentOf(1));
-    RenderEnv lots(parentOf(300));
-    costOf(few, "p.scrollHeight");
-    costOf(lots, "p.scrollHeight");
-    const auto [fewUnits, fewQueries] = costOf(few, "p.scrollHeight");
-    const auto [lotsUnits, lotsQueries] = costOf(lots, "p.scrollHeight");
-    (void)fewUnits;
-    (void)lotsUnits;
-    CHECK(lotsQueries >= fewQueries + 299 * (wr::work::kNodeVisit + wr::work::kLayoutBox));
-    CHECK_EQ(lots.env().eval("p.scrollHeight"), std::string("300"));
-}
-
-namespace {
-
-std::string absoluteIn(int depth) {
-    std::string html = "<!doctype html><body>";
-    for (int i = 0; i < depth; i++) {
-        html += "<div>";
-    }
-    html += "<span id=c style=\"position:absolute\">x</span>";
-    for (int i = 0; i < depth; i++) {
-        html += "</div>";
-    }
-    return html + "<script>window.c = document.getElementById('c');</script></body>";
-}
-
-} // namespace
-
-/// Final review I4: getComputedStyle's ancestor walks (an inherited declaration's, an absolute element's containing
-/// block's) count against the query budget per element, as the other queries' walks do.
-WR_TEST(testComputedStyleWalksAreCharged) {
-    RenderEnv shallow(nestedIn(1));
-    RenderEnv deep(nestedIn(200));
-    costOf(shallow, "getComputedStyle(c).fontFeatureSettings");
-    costOf(deep, "getComputedStyle(c).fontFeatureSettings");
-    const auto [shallowUnits, shallowQueries] = costOf(shallow, "getComputedStyle(c).fontFeatureSettings");
-    const auto [deepUnits, deepQueries] = costOf(deep, "getComputedStyle(c).fontFeatureSettings");
-    (void)shallowUnits;
-    (void)deepUnits;
-    CHECK(deepQueries >= shallowQueries + 199 * wr::work::kNodeVisit);
-    RenderEnv near(absoluteIn(1));
-    RenderEnv far(absoluteIn(200));
-    costOf(near, "getComputedStyle(c).right");
-    costOf(far, "getComputedStyle(c).right");
-    const auto [nearUnits, nearQueries] = costOf(near, "getComputedStyle(c).right");
-    const auto [farUnits, farQueries] = costOf(far, "getComputedStyle(c).right");
-    (void)nearUnits;
-    (void)farUnits;
-    CHECK(farQueries >= nearQueries + 199 * wr::work::kNodeVisit);
-}
-
-namespace {
-
-std::string inheritingIn(int depth) {
-    std::string html = "<!doctype html><head><style>div, span { row-gap: inherit }</style></head><body>";
-    for (int i = 0; i < depth; i++) {
-        html += "<div>";
-    }
-    html += "<span id=c>x</span>";
-    for (int i = 0; i < depth; i++) {
-        html += "</div>";
-    }
-    return html + "<script>window.c = document.getElementById('c');</script></body>";
-}
-
-std::string rawJunk(const std::string& rule, const std::string& junk) {
-    return "<!doctype html><head><style>" + rule + junk + "}</style></head><body><div style=\"display:flex\"><div id=c>"
-           "</div></div><script>window.c = document.getElementById('c');</script></body>";
-}
-
-} // namespace
-
-/// A longhand read from litehtml's parse walks the ancestors that inherit it too, each a node visit charged, and never
-/// recurses (final review I3).
-WR_TEST(testAnInheritWalkIsCharged) {
-    RenderEnv shallow(inheritingIn(1));
-    RenderEnv deep(inheritingIn(200));
-    costOf(shallow, "getComputedStyle(c).rowGap");
-    costOf(deep, "getComputedStyle(c).rowGap");
-    const auto [shallowUnits, shallowQueries] = costOf(shallow, "getComputedStyle(c).rowGap");
-    const auto [deepUnits, deepQueries] = costOf(deep, "getComputedStyle(c).rowGap");
-    (void)shallowUnits;
-    (void)deepUnits;
-    CHECK(deepQueries >= shallowQueries + 199 * wr::work::kNodeVisit);
-    CHECK_EQ(deep.env().eval("getComputedStyle(c).rowGap"), std::string("normal"));
-}
-
-/// A raw declaration a read spells from is charged by its length: its copy is kept before litehtml validates it, so a
-/// long invalid place-content or flex would otherwise be scanned for nothing on every read (final review I2).
-WR_TEST(testRawDeclarationReadsAreChargedByLength) {
-    // No trailing space: the declaration keeps exactly these bytes.
-    std::string junk = "a";
-    for (int i = 1; i < 30000; i++) {
-        junk += " a";
-    }
-    const struct {
-        const char* rule;
-        const char* read;
-    } cases[] = {
-        {"#c{display:flex;justify-content:flex-start;place-content:", "getComputedStyle(c).justifyContent"},
-        {"#c{flex:1;flex:", "getComputedStyle(c).flexBasis"},
-    };
-    for (const auto& item : cases) {
-        RenderEnv small(rawJunk(item.rule, "a a a"));
-        RenderEnv large(rawJunk(item.rule, junk));
-        costOf(small, item.read);
-        costOf(large, item.read);
-        const auto [smallUnits, smallQueries] = costOf(small, item.read);
-        const auto [largeUnits, largeQueries] = costOf(large, item.read);
-        (void)smallUnits;
-        (void)largeUnits;
-        if (largeQueries < smallQueries + junk.size() / 8 * wr::work::kScanEightUnits) {
-            std::printf("  %s: %llu query units, against %llu with a short declaration\n", item.read,
-                        (unsigned long long)largeQueries, (unsigned long long)smallQueries);
-        }
-        CHECK(largeQueries >= smallQueries + junk.size() / 8 * wr::work::kScanEightUnits);
-    }
-}

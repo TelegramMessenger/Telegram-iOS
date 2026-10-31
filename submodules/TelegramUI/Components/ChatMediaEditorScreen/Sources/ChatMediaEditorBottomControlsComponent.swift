@@ -24,6 +24,7 @@ final class ChatMediaEditorBottomControlsComponent: Component {
     let rightLongPressed: ((UIView) -> Void)?
     let middlePressed: (ChatMediaEditorBottomControlsAction) -> Void
     let accessibilityStrings: PresentationStrings?
+    let side: ChatMediaEditorToolbarSide?
 
     init(
         items: ChatMediaEditorBottomControlsItems,
@@ -37,7 +38,8 @@ final class ChatMediaEditorBottomControlsComponent: Component {
         rightPressed: @escaping () -> Void,
         rightLongPressed: ((UIView) -> Void)?,
         middlePressed: @escaping (ChatMediaEditorBottomControlsAction) -> Void,
-        accessibilityStrings: PresentationStrings? = nil
+        accessibilityStrings: PresentationStrings? = nil,
+        side: ChatMediaEditorToolbarSide? = nil
     ) {
         self.items = items
         self.isHidden = isHidden
@@ -51,6 +53,7 @@ final class ChatMediaEditorBottomControlsComponent: Component {
         self.rightLongPressed = rightLongPressed
         self.middlePressed = middlePressed
         self.accessibilityStrings = accessibilityStrings
+        self.side = side
     }
 
     static func ==(lhs: ChatMediaEditorBottomControlsComponent, rhs: ChatMediaEditorBottomControlsComponent) -> Bool {
@@ -73,6 +76,9 @@ final class ChatMediaEditorBottomControlsComponent: Component {
             return false
         }
         if (lhs.rightLongPressed == nil) != (rhs.rightLongPressed == nil) {
+            return false
+        }
+        if lhs.side != rhs.side {
             return false
         }
         return true
@@ -178,7 +184,14 @@ final class ChatMediaEditorBottomControlsComponent: Component {
             infoString: self.infoString,
             leftPressed: self.leftPressed,
             rightPressed: self.rightPressed,
-            rightLongPressed: self.rightLongPressed
+            rightLongPressed: self.rightLongPressed,
+            customLayout: self.side.map { side in
+                let middleSpacing = items.middleSpacing
+                return MediaEditorBottomControlsCustomLayout(key: AnyHashable("chat.column.\(side)"), layout: { size, middleItemWidths, leftWidth, rightWidth in
+                    return chatMediaEditorBottomControlsColumnLocalLayout(size: size, middleItemWidths: middleItemWidths, middleSpacing: middleSpacing, leftWidth: leftWidth, rightWidth: rightWidth)
+                })
+            },
+            middleFadesWhenEmpty: true
         )
     }
 

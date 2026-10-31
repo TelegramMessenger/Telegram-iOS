@@ -83,9 +83,9 @@ public:
     std::optional<DecodedImage> snapshot(uint64_t serial) const;
 
     /// An <img> source's decoded image, shared by every image with the same src while any of them holds it (V5d
-    /// fix-wave review, I-A); `decoded` is set when this call decoded it. Keyed by the src's hash and length, so no
-    /// copy of the src is kept (C-A). nullopt when refused, undecodable, or without a render tree.
-    std::optional<DecodedImage> sharedImage(std::string_view src, bool& decoded);
+    /// fix-wave review, I-A). Keyed by the src's hash and length, so no copy of the src is kept (C-A). nullopt when
+    /// refused, undecodable, or without a render tree.
+    std::optional<DecodedImage> sharedImage(std::string_view src);
 
     /// The images the document's parse left pending (imageSourceChanged): fireParsedImageEvents fires the ones still
     /// waiting at the window's load that belong to the main document, in its tree or taken out of it (v0.2.3 review,

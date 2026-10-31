@@ -9,7 +9,6 @@
 
 #include "Sources/Host/Intl.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::intl {
 

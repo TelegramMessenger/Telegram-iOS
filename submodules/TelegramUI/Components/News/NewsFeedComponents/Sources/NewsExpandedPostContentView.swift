@@ -153,17 +153,18 @@ private func newsCollapsedMessageParts(_ message: EngineMessage, cutLength: Int)
 
 /// Where a long post is cut (`newsCollapsedTextLength`) and how much taller the whole text is (from the last kept
 /// line's baseline to the last line's), or nil when it fits the limit. The text is laid out at the bubble's text width
-/// with its entities in the chat's fonts, and without what would give a line a range that does not index
+/// with its entities in the fonts the bubble draws it in (New York when picked), and without what would give a line a range that does not index
 /// `message.text`: no strings, so a formatted date is not substituted, and no code block colours, so a code block gets
 /// no title line.
 private func newsCollapsedCut(_ message: EngineMessage, presentationData: PresentationData, width: CGFloat) -> (length: Int, hiddenHeight: CGFloat)? {
     let fonts = ChatPresentationData(presentationData: presentationData)
+    let bodyFonts = fonts.messageBodyFonts
     let text = message.text as NSString
     let entities = message.attributes.compactMap({ $0 as? TextEntitiesMessageAttribute }).first?.entities ?? []
-    var string = stringWithAppliedEntities(message.text, entities: entities, baseColor: .black, linkColor: .black, baseFont: fonts.messageFont, linkFont: fonts.messageFont, boldFont: fonts.messageBoldFont, italicFont: fonts.messageItalicFont, boldItalicFont: fonts.messageBoldItalicFont, fixedFont: fonts.messageFixedFont, blockQuoteFont: fonts.messageBlockQuoteFont, message: message._asMessage(), adjustQuoteFontSize: true)
+    var string = stringWithAppliedEntities(message.text, entities: entities, baseColor: .black, linkColor: .black, baseFont: bodyFonts.body.regular, linkFont: bodyFonts.body.regular, boldFont: bodyFonts.body.bold, italicFont: bodyFonts.body.italic, boldItalicFont: bodyFonts.body.boldItalic, fixedFont: fonts.messageFixedFont, blockQuoteFont: fonts.messageBlockQuoteFont, blockFonts: bodyFonts.blockFonts, message: message._asMessage(), adjustQuoteFontSize: true)
     if string.length != text.length {
         // Something is drawn as other text: the lines' ranges would not index the message's text.
-        string = NSAttributedString(string: message.text, font: fonts.messageFont, textColor: .black)
+        string = NSAttributedString(string: message.text, font: bodyFonts.body.regular, textColor: .black)
     }
     let (layout, _) = TextNode.asyncLayout(nil)(TextNodeLayoutArguments(attributedString: string, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width, height: .greatestFiniteMagnitude)))
     let limit = NewsExpandedPostMetrics.collapsedLineLimit
@@ -504,7 +505,7 @@ final class NewsExpandedPostContentView: UIView {
     /// would show its photos growing out of a corner.
     private var hasLaidOut = false
     /// The last cut's inputs and result: a cut is a layout of the whole text, and every time tick updates the row.
-    private var cutCache: (id: EngineMessage.Id, text: String, entities: [MessageTextEntity], width: CGFloat, fontSize: CGFloat, cut: (length: Int, hiddenHeight: CGFloat)?)?
+    private var cutCache: (id: EngineMessage.Id, text: String, entities: [MessageTextEntity], width: CGFloat, fontSize: CGFloat, serif: Bool, cut: (length: Int, hiddenHeight: CGFloat)?)?
 
     /// The gallery's frame in this view, when the post has one, and how far its content has moved from rest: the
     /// floating avatar keeps out of a gallery scrolled under its column (`newsExpandedAvatarOffset`).
@@ -677,16 +678,17 @@ final class NewsExpandedPostContentView: UIView {
         return nil
     }
 
-    /// `newsCollapsedCut` for `message`, measured again only when its text, its entities, the width or the font size
-    /// change.
+    /// `newsCollapsedCut` for `message`, measured again only when its text, its entities, the width, the font size or
+    /// the face (New York) change.
     private func collapsedCut(of message: EngineMessage, presentationData: PresentationData, width: CGFloat) -> (length: Int, hiddenHeight: CGFloat)? {
         let entities = message.attributes.compactMap({ $0 as? TextEntitiesMessageAttribute }).first?.entities ?? []
         let fontSize = presentationData.chatFontSize.baseDisplaySize
-        if let cache = self.cutCache, cache.id == message.id, cache.text == message.text, cache.entities == entities, cache.width == width, cache.fontSize == fontSize {
+        let serif = presentationData.chatBubbleCorners.serifMessageText
+        if let cache = self.cutCache, cache.id == message.id, cache.text == message.text, cache.entities == entities, cache.width == width, cache.fontSize == fontSize, cache.serif == serif {
             return cache.cut
         }
         let cut = newsCollapsedCut(message, presentationData: presentationData, width: width)
-        self.cutCache = (message.id, message.text, entities, width, fontSize, cut)
+        self.cutCache = (message.id, message.text, entities, width, fontSize, serif, cut)
         return cut
     }
 

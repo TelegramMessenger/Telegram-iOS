@@ -111,6 +111,7 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatMessageBubbleContentNode
 import ChatNavigationButton
+import ChatSideListPanel
 import WebsiteType
 import PeerInfoScreen
 import MediaEditor
@@ -316,6 +317,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var moreBarButton: MoreHeaderButton
     var moreInfoNavigationButton: ChatNavigationButton?
+    
+    var sideListPanel: ChatSideListPanelNode?
+    var sideListOpenFraction: CGFloat = 0.0
+    var sideListEdgePanHandler: ChatSideListEdgePanHandler?
+    /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
+    var sideListAppeared = false
+    var sideListButtonKind: ChatSideListKind?
     
     var historyStateDisposable: Disposable?
     
@@ -7801,6 +7809,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        self.forwardSideListAppearance(.willAppear, animated: animated)
 
         self.walletTransferAnimationsVisible = true
         self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
@@ -7973,6 +7982,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.forwardSideListAppearance(.didAppear, animated: animated)
         
         self.didAppear = true
         
@@ -8417,8 +8427,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        self.forwardSideListAppearance(.didDisappear, animated: animated)
+    }
+    
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        self.forwardSideListAppearance(.willDisappear, animated: animated)
 
         self.walletTransferAnimationsVisible = false
         
@@ -8426,6 +8442,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             //TODO:release
         }
+        // Before endEditing, which can relayout the history with the keyboard's inset gone.
+        self.chatDisplayNode.historyNode.readVisibleMessagesBeforeLeaving()
         UIView.performWithoutAnimation {
             self.view.endEditing(true)
         }
@@ -8621,6 +8639,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
+        
+        self.updateSideListLayout(transition: transition)
+        // The strip is chosen per layout; keep the button in step when the width class or the flag changed.
+        if self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != self.sideListButtonKind {
+            self.updateRightNavigationButtons(presentationInterfaceState: self.presentationInterfaceState, transition: .immediate)
+        }
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
@@ -8651,6 +8675,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 avatarNode.updateSelectionState(animated: animated)
             }
         }
+        self.chatDisplayNode.historyNode.updateBubblelessSelectionVisibleTops()
     }
     
     func updatePollTooltipMessageState(animated: Bool) {
@@ -8716,7 +8741,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
 
+    /// While the side list is open its header is the one on screen (the chat's own is off to the left, under the strip),
+    /// so a screen pushed from it morphs out of that header.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+            return sideListPanel.listController.navigationBarTransitionSource
+        }
+        return super.navigationBarTransitionSource
+    }
+
     override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        // While the side list is open its header is the one on screen, as for `navigationBarTransitionSource`.
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+            return sideListPanel.listController.navigationExpansionSource(above: controller, operation: operation)
+        }
         switch operation {
         case .push:
             guard let profile = self.expansionProfileToPush, profile === controller else {

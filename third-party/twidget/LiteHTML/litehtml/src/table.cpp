@@ -16,11 +16,15 @@ void litehtml::table_grid::add_cell(const std::shared_ptr<render_item>& el)
     if(cell.rowspan < 1) cell.rowspan = 1;
     if(cell.rowspan > 1000) cell.rowspan = 1000;
     auto doc = el->src_el()->get_document();
-    if(!doc->take_table_cells(cell.colspan * cell.rowspan))
+    if(doc->take_table_cells(cell.colspan * cell.rowspan))
+    {
+        m_cells_taken += cell.colspan * cell.rowspan;
+    } else
     {
         cell.colspan = 1;
         cell.rowspan = 1;
-        doc->take_table_cells(1);
+        if(doc->take_table_cells(1))
+            m_cells_taken += 1;
     }
     cell.borders = el->get_borders();
 

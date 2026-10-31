@@ -81,10 +81,8 @@ URLParts splitURL(std::string_view url) {
 }
 
 URLParts Location::parts(JSContext* ctx) {
-    // The document holds its URL as a flat string, so reading it copies nothing: the UTF-8 conversion and the split
-    // are charged by its length before either runs.
+    // The document holds its URL as a flat string, so reading it copies nothing.
     USVString url = DOMState::of(ctx).document().URL(ctx);
-    chargeScan(ctx, url.length());
     return splitURL(url.utf8());
 }
 

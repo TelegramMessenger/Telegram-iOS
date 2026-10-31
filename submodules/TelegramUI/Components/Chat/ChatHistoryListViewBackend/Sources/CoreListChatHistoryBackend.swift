@@ -9,6 +9,7 @@ import CoreListComponentHost
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatMessageItemView
+import TelegramCore
 
 // Shared by the chat's diamonds; their existing animation clocks advance this spring on demand.
 // All inputs are user-scroll deltas in screen coordinates, with downward content movement positive.
@@ -98,7 +99,7 @@ private final class CoreListChatScrollMotion {
 // scope are safe stubs (no-ops / plain storage) and must never crash. Architecture, invariants, and
 // deferred items: docs/chat/corelist-chat-history-backend.md
 //
-// Made through `makeCoreListChatHistoryBackend(rotated:)`, the one public entry point: the chat's
+// Made through `makeCoreListChatHistoryBackend(rotated:scrollTrace:)`, the one public entry point: the chat's
 // history and the widget harness both host it.
 final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBackend {
     // Matches ListViewImpl's rotation math: the wrapper (ChatHistoryListNodeImpl) applies the chat's
@@ -184,6 +185,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         guard distance != self.overscrollHoldDistance else {
             return
         }
+        CoreListScrollTrace.log("HOLD-OVERSCROLL \(self.overscrollHoldDistance) -> \(distance) movesContent=\(movesContent) \(self.traceLocation())")
         self.overscrollHoldDistance = distance
         // Before the first updateSizeAndInsets there is no geometry to hold and no window to pin;
         // the stored distance still applies to the first real pass through `coreListInsets`.
@@ -309,6 +311,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     }
 
     func releaseScrollHold() {
+        CoreListScrollTrace.log("RELEASE-SCROLL-HOLD \(self.traceLocation())")
         self.coreList.releaseScrollHold()
     }
 
@@ -942,6 +945,21 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             self.opaqueTransactionState = updateOpaqueState
         }
 
+        // Debug Settings ▸ "Chat: CoreList scroll trace": what the chat asked of the list, and where the list was
+        // before and after, so a jump in the log can be told from a flight the engine launched.
+        if CoreListScrollTrace.isEnabled {
+            let scrollTo = scrollToItem.flatMap { "\($0.index) \($0.position) animated=\($0.animated) \($0.directionHint)" } ?? "nil"
+            let stationary = stationaryItemRange.flatMap { "\($0.0)..\($0.1)" } ?? "nil"
+            let sizeAndInsets = updateSizeAndInsets.flatMap { "\($0.size.height) insets=\($0.insets.top),\($0.insets.bottom) duration=\($0.duration)" } ?? "nil"
+            CoreListScrollTrace.log("TX delete=\(deleteIndices.count) insert=\(insertIndicesAndItems.count) update=\(updateIndicesAndItems.count) "
+                + "options=0x\(String(options.rawValue, radix: 16)) scrollTo=\(scrollTo) additional=\(additionalScrollDistance) "
+                + "stationary=\(stationary) size=\(sizeAndInsets) unreadAlignment=\(maintainsUnreadItemAlignment) \(self.traceLocation())")
+        }
+        defer {
+            CoreListScrollTrace.log("TX-END \(self.traceLocation())")
+            CoreListScrollTrace.flush()
+        }
+
         // Scoped to the transaction, because that is the scope ListViewImpl gives it: nodes this pass
         // builds load synchronously, nodes any later pass builds do not. See the property.
         //
@@ -1406,6 +1424,34 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // tests `minY < visibleSize.height - insets.bottom` (4723). The `+` looks like an upstream typo, so
     // both scans here use the symmetric `- insets.bottom` (i.e. `visibleBand.bottom`). The `- 10.0`
     // fully-visible tolerance is reproduced verbatim.
+    /// For the scroll trace: the engine offset, the displayed range, and the messages at its two ends (by timestamp),
+    /// which is what tells a far jump from a scroll in the log.
+    private func traceLocation() -> String {
+        let range = self.immediateDisplayedItemRange()
+        var result = "offset=\(self.coreList.currentScrollOffset)"
+        if let visible = range.visibleRange {
+            result += " visible=\(visible.firstIndex)..\(visible.lastIndex) [\(self.traceItem(visible.firstIndex)) .. \(self.traceItem(visible.lastIndex))]"
+        } else {
+            result += " visible=nil"
+        }
+        if let loaded = range.loadedRange {
+            result += " loaded=\(loaded.firstIndex)..\(loaded.lastIndex)"
+        }
+        result += " entries=\(self.entries.count)"
+        return result
+    }
+
+    private func traceItem(_ index: Int) -> String {
+        guard index >= 0, index < self.entries.count else {
+            return "?"
+        }
+        let listItem = self.entries[index].listItem
+        if let item = listItem as? ChatMessageItem {
+            return "ts\(EngineMessage(item.message).timestamp)"
+        }
+        return "\(type(of: listItem))"
+    }
+
     private func immediateDisplayedItemRange() -> ListViewDisplayedItemRange {
         guard let range = self.coreList.loadedIndexRange else {
             return ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
@@ -1642,6 +1688,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     func updateVisibleItemRange(force: Bool) {
         let currentRange = self.immediateDisplayedItemRange()
         if currentRange != self.internalDisplayedItemRange || force {
+            CoreListScrollTrace.log("RANGE force=\(force) \(self.traceLocation())")
             self.displayedItemRange = currentRange
             self.internalDisplayedItemRange = currentRange
             self.displayedItemRangeChanged(currentRange, self.opaqueTransactionState)
@@ -1806,6 +1853,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         defer {
             self.didMoveContentDuringDrag = didMoveContentDuringDrag
         }
+        CoreListScrollTrace.log("SCROLL-DIRECTION \(direction) distance=\(distance) \(self.traceLocation())")
         return self.coreList.scroll(by: direction == .up ? distance : -distance)
     }
 }
@@ -1983,7 +2031,7 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
         guard let itemNode = self.itemNode else {
             return 0.0
         }
-        return self.rotated ? itemNode.insets.top : itemNode.insets.bottom
+        return self.rotated ? (itemNode.insets.top + itemNode.stickyHeaderBandTrim) : itemNode.insets.bottom
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -2260,8 +2308,16 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
 }
 
 /// The chat history's CoreList backend. `rotated` is construction-only, so it is set here, before the upcast, and is
-/// not on the `ChatHistoryListViewBackend` contract.
-public func makeCoreListChatHistoryBackend(rotated: Bool) -> ChatHistoryListViewBackend {
+/// not on the `ChatHistoryListViewBackend` contract. `scrollTrace` (Debug Settings ▸ "Chat: CoreList scroll trace")
+/// switches CoreList's trace on or off for the whole app as a chat's list is made; its lines go to the app's log too.
+public func makeCoreListChatHistoryBackend(rotated: Bool, scrollTrace: Bool = false) -> ChatHistoryListViewBackend {
+    CoreListScrollTrace.isEnabled = scrollTrace
+    if CoreListScrollTrace.sink == nil {
+        CoreListScrollTrace.sink = { line in
+            Logger.shared.log("CoreListScroll", line)
+        }
+    }
+    CoreListScrollTrace.log("CHAT-LIST created rotated=\(rotated)")
     let backend = CoreListChatHistoryBackend()
     backend.rotated = rotated
     return backend

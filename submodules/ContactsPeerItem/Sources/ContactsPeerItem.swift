@@ -219,6 +219,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let editing: ContactsPeerItemEditing
     let options: [ItemListPeerItemRevealOption]
     let additionalActions: [ContactsPeerItemAction]
+    /// In the chat side list's search: the highlight is an inset rounded plate in the search field's colour.
+    let isSideListStyle: Bool
     let actionIcon: ContactsPeerItemActionIcon
     let buttonAction: ContactsPeerItemButtonAction?
     let searchQuery: String?
@@ -286,6 +288,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         isAd: Bool = false,
         alwaysShowLastSeparator: Bool = false,
         hideBackground: Bool = false,
+        isSideListStyle: Bool = false,
         action: ((ContactsPeerItemPeer) -> Void)?,
         disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil,
         setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil,
@@ -340,6 +343,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.openStories = openStories
         self.adButtonAction = adButtonAction
         self.visibilityUpdated = visibilityUpdated
+        self.isSideListStyle = isSideListStyle
         
         if let index = index {
             var letter: String = "#"
@@ -1422,6 +1426,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
+                            if item.isSideListStyle {
+                                strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.rootController.navigationSearchBar.inputFillColor
+                            }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params)
                             var hasTopCorners = false
@@ -2035,7 +2042,13 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             topHighlightInset -= nodeLayout.insets.top
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
-                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: stripExcessLeft, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width - stripExcessLeft - stripExcessRight, height: nodeLayout.size.height + topHighlightInset)), aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
+                            var highlightedBackgroundFrame = CGRect(origin: CGPoint(x: stripExcessLeft, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width - stripExcessLeft - stripExcessRight, height: nodeLayout.size.height + topHighlightInset))
+                            if item.isSideListStyle {
+                                highlightedBackgroundFrame.origin.x = params.leftInset
+                                highlightedBackgroundFrame.size.width = nodeLayout.size.width - params.leftInset - params.rightInset
+                                strongSelf.revealOptionsHighlightedBackgroundRestingCornerRadius = 24.0
+                            }
+                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: highlightedBackgroundFrame, aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset - separatorRightInset), height: separatorHeight))
                             if !item.alwaysShowLastSeparator && item.style != .blocks {

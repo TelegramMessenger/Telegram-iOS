@@ -2,8 +2,7 @@ import QuartzCore
 import XCTest
 @testable import MessageWidget
 
-/// Spec 2026-10-15 D3: main waits for a task until it finishes, spends its sync budget, or the cap passes; results reach
-/// main in task order.
+/// Spec 2026-10-15 D3: main waits for a task until it finishes or the cap passes; results reach main in task order.
 final class HandshakeTests: XCTestCase {
     private final class Applied {
         var values: [Int] = []
@@ -45,30 +44,15 @@ final class HandshakeTests: XCTestCase {
 
     func testAWaitEndsWhenTheTaskFinishes() {
         let (handshake, applied) = self.make(.standard)
-        XCTAssertTrue(handshake.run(wait: true) { _ in 7 })
+        XCTAssertTrue(handshake.run(wait: true) { 7 })
         XCTAssertEqual(applied.values, [7])
     }
 
-    func testAWaitEndsWhenTheTaskSpendsItsSyncBudget() {
-        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 5.0, allowance: 1_000))
-        let release = DispatchSemaphore(value: 0)
-        let start = CACurrentMediaTime()
-        XCTAssertFalse(handshake.run(wait: true) { meter in
-            meter.add(1_000)
-            release.wait()
-            return 1
-        })
-        XCTAssertLessThan(CACurrentMediaTime() - start, 1.0, "the wait ended at the crossing, long before the 5 s cap")
-        XCTAssertEqual(applied.values, [])
-        release.signal()
-        self.waitUntil { applied.values == [1] }
-    }
-
     func testAWaitEndsAtTheCap() {
-        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.05, allowance: nil))
+        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.05))
         let release = DispatchSemaphore(value: 0)
         let start = CACurrentMediaTime()
-        XCTAssertFalse(handshake.run(wait: true) { _ in
+        XCTAssertFalse(handshake.run(wait: true) {
             release.wait()
             return 2
         })
@@ -84,8 +68,8 @@ final class HandshakeTests: XCTestCase {
     func testATaskFinishingAtTheCapIsDeliveredExactlyOnce() {
         for i in 0 ..< 300 {
             self.turn.reset()
-            let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.002, allowance: nil))
-            let sync = handshake.run(wait: true) { _ in
+            let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.002))
+            let sync = handshake.run(wait: true) {
                 usleep(UInt32(1_000 + (i % 3) * 500))
                 return i
             }
@@ -95,40 +79,46 @@ final class HandshakeTests: XCTestCase {
         }
     }
 
-    func testTheAllowanceIsSharedWithinATurnAndResetAfterIt() {
-        let policy = MessageWidgetWaitPolicy(cap: nil, allowance: 1_000)
+    /// The CPU-clock limits design: main's only bound is the cap, shared by every wait of a turn (the unit allowance went
+    /// with the units).
+    func testTheCapIsSharedWithinATurnAndResetAfterIt() {
+        let policy = MessageWidgetWaitPolicy(cap: 0.1)
         let (handshake, _) = self.make(policy)
-        XCTAssertTrue(handshake.run(wait: true) { meter in
-            meter.add(600)
+        XCTAssertTrue(handshake.run(wait: true) {
+            usleep(40_000)
             return 1
         })
-        XCTAssertEqual(self.turn.remainingUnits(policy), 400)
+        XCTAssertLessThan(self.turn.remainingTime(policy) ?? 0.0, 0.065)
         let release = DispatchSemaphore(value: 0)
-        XCTAssertFalse(handshake.run(wait: true) { meter in
-            meter.add(600)
+        let held = CACurrentMediaTime()
+        XCTAssertFalse(handshake.run(wait: true) {
             release.wait()
             return 2
         })
-        XCTAssertEqual(self.turn.remainingUnits(policy), 0)
+        XCTAssertLessThan(CACurrentMediaTime() - held, 0.09, "the wait ended at what the turn had left of its cap")
+        XCTAssertEqual(self.turn.remainingTime(policy), 0.0)
         let start = CACurrentMediaTime()
-        XCTAssertFalse(handshake.run(wait: true) { _ in 3 })
-        XCTAssertLessThan(CACurrentMediaTime() - start, 0.5, "no allowance left in this turn: no wait")
+        XCTAssertFalse(handshake.run(wait: true) {
+            usleep(20_000)
+            return 3
+        })
+        XCTAssertLessThan(CACurrentMediaTime() - start, 0.015, "no cap left in this turn: no wait")
         release.signal()
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
-        XCTAssertEqual(self.turn.remainingUnits(policy), 1_000, "the run loop waited: a new turn")
+        XCTAssertEqual(self.turn.remainingTime(policy), 0.1, "the run loop waited: a new turn")
     }
 
     /// A result that arrived after its wait is applied before a newer one, though nothing has drained the mailbox yet.
     func testALateResultIsAppliedBeforeANewerOne() {
-        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.02, allowance: nil))
+        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.02))
         let release = DispatchSemaphore(value: 0)
-        XCTAssertFalse(handshake.run(wait: true) { _ in
+        XCTAssertFalse(handshake.run(wait: true) {
             release.wait()
             return 1
         })
         self.turn.reset()
         release.signal()
-        XCTAssertTrue(handshake.run(wait: true) { _ in 2 })
+        XCTAssertTrue(handshake.run(wait: true) { 2 })
         XCTAssertEqual(applied.values, [1, 2])
     }
 
@@ -146,18 +136,18 @@ final class HandshakeTests: XCTestCase {
         handshake.apply = { value in
             applied.values.append(value)
             if value == 1 {
-                handshake.run(wait: false) { _ in 3 }
+                handshake.run(wait: false) { 3 }
                 waitForIdle()
-                handshake.run(wait: false) { _ in 4 }
+                handshake.run(wait: false) { 4 }
             }
         }
         // Held, so both are abandoned and land in the mailbox together.
         let release = DispatchSemaphore(value: 0)
-        XCTAssertFalse(handshake.run(wait: false) { _ in
+        XCTAssertFalse(handshake.run(wait: false) {
             release.wait()
             return 1
         })
-        XCTAssertFalse(handshake.run(wait: false) { _ in 2 })
+        XCTAssertFalse(handshake.run(wait: false) { 2 })
         release.signal()
         waitForIdle()
         self.waitUntil { applied.values.count == 4 }
@@ -179,18 +169,18 @@ final class HandshakeTests: XCTestCase {
         handshake.apply = { value in
             applied.values.append(value)
             if value == 1 {
-                handshake.run(wait: false) { _ in 3 }
+                handshake.run(wait: false) { 3 }
                 waitForIdle()
             }
         }
         let release = DispatchSemaphore(value: 0)
-        XCTAssertFalse(handshake.run(wait: false) { _ in
+        XCTAssertFalse(handshake.run(wait: false) {
             release.wait()
             return 1
         })
         release.signal()
         waitForIdle()
-        XCTAssertTrue(handshake.run(wait: true, policy: .unbounded) { _ in 2 })
+        XCTAssertTrue(handshake.run(wait: true, policy: .unbounded) { 2 })
         self.waitUntil { applied.values.count == 3 }
         XCTAssertEqual(applied.values, [1, 2, 3])
         handshake.apply = nil
@@ -198,30 +188,18 @@ final class HandshakeTests: XCTestCase {
 
     /// The test accessors wait for their task whatever the widget's policy (Task 4's `onCoreForTesting`).
     func testAPolicyGivenForOneCallOverridesTheHandshakes() {
-        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.0, allowance: 0))
+        let (handshake, applied) = self.make(MessageWidgetWaitPolicy(cap: 0.0))
         // Held, or a pool thread could finish it before main looks, and a finished task is reported done.
         let release = DispatchSemaphore(value: 0)
-        XCTAssertFalse(handshake.run(wait: true) { _ in
+        XCTAssertFalse(handshake.run(wait: true) {
             release.wait()
             return 1
         })
         release.signal()
-        XCTAssertTrue(handshake.run(wait: true, policy: .unbounded) { _ in
+        XCTAssertTrue(handshake.run(wait: true, policy: .unbounded) {
             usleep(20_000)
             return 2
         })
         XCTAssertEqual(applied.values, [1, 2])
-    }
-
-    func testAMeterCountsEveryReportOfItsTask() {
-        var crossed = 0
-        let meter = WorkMeter(threshold: 1_000, crossed: { crossed += 1 })
-        meter.add(700)
-        XCTAssertFalse(meter.hasCrossed)
-        meter.add(300)
-        meter.add(5)
-        XCTAssertEqual(meter.spent, 1_005)
-        XCTAssertTrue(meter.hasCrossed)
-        XCTAssertEqual(crossed, 1)
     }
 }

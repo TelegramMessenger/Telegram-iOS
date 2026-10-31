@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- widget-sandbox v0.5.0 (sdk-v1 §2.18): corpus/interactive/05-wallet's flow for WidgetHarnessWalletTests. #pay (the top
+     60 px) asks the bot with the wallet and passes its answer's transaction to the wallet on the grant; #sign (the next 60
+     px) asks for a signature. It logs `wallet` or `no-wallet` at load, then `paid:<result>`, `signed:<result>` or
+     `err:<code>`. A folder fixture, loaded by its path only. -->
+<html><head><meta charset="utf-8"><style>body{margin:0;padding:0} #pay,#sign{display:block;width:200px;height:60px}</style></head>
+<body><div id="pay">pay</div><div id="sign">sign</div>
+<script>
+var T = TelegramWidget, root = document.documentElement;
+function log(s) { root.dataset.log = s; }
+log(T.wallet === null ? 'no-wallet' : 'wallet');
+document.getElementById('pay').onclick = function () {
+  T.request('pay:0', { wallet: true }).then(function (a) {
+    return T.wallet.sendTransaction(JSON.parse(a.result), 'paid:0');
+  }).then(function (a) { log('paid:' + a.result); }, function (e) { log('err:' + e.code); });
+};
+document.getElementById('sign').onclick = function () {
+  T.wallet.signData({ type: 'text', text: 'I agree' }, 'sign:1').then(function (a) { log('signed:' + a.result); }, function (e) { log('err:' + e.code); });
+};
+</script></body></html>
