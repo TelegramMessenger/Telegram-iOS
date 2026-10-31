@@ -422,6 +422,7 @@ final class WalletSendRecipientComponent: Component {
     let peer: EnginePeer?
     let address: String
     let isLoading: Bool
+    let unavailableText: String?
     let openChat: (() -> Void)?
     let copyAddress: () -> Void
     let openInfo: () -> Void
@@ -434,6 +435,7 @@ final class WalletSendRecipientComponent: Component {
         peer: EnginePeer?,
         address: String,
         isLoading: Bool,
+        unavailableText: String?,
         openChat: (() -> Void)?,
         copyAddress: @escaping () -> Void,
         openInfo: @escaping () -> Void
@@ -445,6 +447,7 @@ final class WalletSendRecipientComponent: Component {
         self.peer = peer
         self.address = address
         self.isLoading = isLoading
+        self.unavailableText = unavailableText
         self.openChat = openChat
         self.copyAddress = copyAddress
         self.openInfo = openInfo
@@ -457,6 +460,7 @@ final class WalletSendRecipientComponent: Component {
             && lhs.peer == rhs.peer
             && lhs.address == rhs.address
             && lhs.isLoading == rhs.isLoading
+            && lhs.unavailableText == rhs.unavailableText
             && (lhs.openChat == nil) == (rhs.openChat == nil)
     }
 
@@ -494,6 +498,7 @@ final class WalletSendRecipientComponent: Component {
         private var applicationIsActive = false
         private let applicationIsActiveDisposable = MetaDisposable()
         private var formattedAddressLines: [String] = []
+        private var displayedUnavailableText: String?
         private var addressAttributes: [NSAttributedString.Key: Any] = [:]
         private var addressTextWidth: CGFloat = 0
         private var addressSize: CGSize = .zero
@@ -638,6 +643,12 @@ final class WalletSendRecipientComponent: Component {
             self.renderedRevealStep = revealStep
             let attributedAddress = NSMutableAttributedString()
             var place = 0
+            if let unavailableText = self.displayedUnavailableText {
+                var attributes = self.addressAttributes
+                attributes[.font] = Font.regular(14.0)
+                attributes[.kern] = nil
+                attributedAddress.append(NSAttributedString(string: unavailableText, attributes: attributes))
+            }
             for (row, line) in self.formattedAddressLines.enumerated() {
                 if row != 0 {
                     attributedAddress.append(NSAttributedString(string: "\n", attributes: self.addressAttributes))
@@ -686,8 +697,8 @@ final class WalletSendRecipientComponent: Component {
                 containerSize: CGSize(width: self.addressTextWidth, height: .greatestFiniteMagnitude)
             )
             if let addressView = self.address.view as? PlainButtonComponent.View {
-                addressView.isAccessibilityElement = !component.isLoading && !component.address.isEmpty
-                addressView.accessibilityLabel = component.address
+                addressView.isAccessibilityElement = self.displayedUnavailableText != nil || (!component.isLoading && !component.address.isEmpty)
+                addressView.accessibilityLabel = self.displayedUnavailableText ?? component.address
                 addressView.contentView?.accessibilityElementsHidden = true
             }
             self.refreshOpeningContents()
@@ -723,7 +734,7 @@ final class WalletSendRecipientComponent: Component {
                 self.applicationIsActive = false
             }
             let hasPeer = component.peer != nil
-            let displaysPlaceholder = hasPeer && (component.isLoading || component.address.isEmpty)
+            let displaysPlaceholder = hasPeer && component.isLoading
             if self.component?.peer?.id != component.peer?.id || self.component?.address != component.address || self.component?.isLoading != component.isLoading {
                 let continuesLoading = self.component?.peer?.id == component.peer?.id
                     && self.addressPhase == .loading
@@ -733,7 +744,7 @@ final class WalletSendRecipientComponent: Component {
                 self.revealElapsed = 0
                 if displaysPlaceholder {
                     self.addressPhase = .loading
-                } else if hasPeer && continuesLoading && self.openingTime == nil {
+                } else if hasPeer && continuesLoading && self.openingTime == nil && !component.address.isEmpty {
                     self.addressPhase = .revealing
                 } else {
                     self.addressPhase = .ready
@@ -762,8 +773,14 @@ final class WalletSendRecipientComponent: Component {
                 groupsPerLine -= 1
             }
 
-            let addressText = displaysPlaceholder ? String(repeating: "0", count: 48) : (component.address.isEmpty ? "—" : component.address)
-            self.formattedAddressLines = Self.addressLines(addressText, groupsPerLine: groupsPerLine)
+            if !displaysPlaceholder && component.address.isEmpty, let unavailableText = component.unavailableText {
+                self.displayedUnavailableText = unavailableText
+                self.formattedAddressLines = []
+            } else {
+                let addressText = displaysPlaceholder ? String(repeating: "0", count: 48) : (component.address.isEmpty ? "—" : component.address)
+                self.displayedUnavailableText = nil
+                self.formattedAddressLines = Self.addressLines(addressText, groupsPerLine: groupsPerLine)
+            }
             self.addressAttributes = addressAttributes
             self.addressTextWidth = textWidth
             self.updateAddressText(force: true)

@@ -2330,7 +2330,8 @@ private final class WalletSendScreenComponent: Component {
                         nameDisplayOrder: presentationData.nameDisplayOrder,
                         peer: component.peer,
                         address: self.recipientAddress,
-                        isLoading: self.recipientAddress.isEmpty && (self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading),
+                        isLoading: self.peerAddressResolution.display(recipientAddress: self.recipientAddress) == .loading,
+                        unavailableText: self.peerAddressResolution.display(recipientAddress: self.recipientAddress) == .unavailable ? environment.strings.Wallet_Recipient_Error : nil,
                         openChat: self.canOpenRecipientChat ? { [weak self] in
                             self?.openRecipientChat()
                         } : nil,

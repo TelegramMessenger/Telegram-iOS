@@ -11,6 +11,12 @@ struct WalletSendPeerAddressResolution {
         case cancelled
     }
 
+    enum Display: Equatable {
+        case loading
+        case address
+        case unavailable
+    }
+
     var state: State = .notRequested
     private(set) var recipient: WalletUserAddress?
     private var generation = 0
@@ -43,5 +49,19 @@ struct WalletSendPeerAddressResolution {
             self.state = .failed
         }
         return true
+    }
+
+    /// What the recipient row shows for a peer: the lookup animation only while the lookup is due or running, so a
+    /// failed one, or a peer without an address, ends in a static state rather than animating forever.
+    func display(recipientAddress: String) -> Display {
+        if !recipientAddress.isEmpty {
+            return .address
+        }
+        switch self.state {
+        case .notRequested, .loading:
+            return .loading
+        case .resolved, .failed, .errorPresented, .cancelled:
+            return .unavailable
+        }
     }
 }
