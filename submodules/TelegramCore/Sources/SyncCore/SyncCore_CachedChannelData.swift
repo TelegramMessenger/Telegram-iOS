@@ -205,6 +205,12 @@ public final class CachedChannelData: CachedPeerData {
             self.isStream = isStream
         }
         
+        /// The call a full peer names by its `inputGroupCall` alone, keeping what is cached about the previous call.
+        /// `isStream` is kept only when it is the same call: the next call of the peer can be the other kind.
+        init(fullPeerCallId id: Int64, accessHash: Int64, previous: ActiveCall?) {
+            self.init(id: id, accessHash: accessHash, title: previous?.title, scheduleTimestamp: previous?.scheduleTimestamp, subscribedToScheduled: previous?.subscribedToScheduled ?? false, isStream: previous?.id == id ? previous?.isStream : nil)
+        }
+        
         public init(decoder: PostboxDecoder) {
             self.id = decoder.decodeInt64ForKey("id", orElse: 0)
             self.accessHash = decoder.decodeInt64ForKey("accessHash", orElse: 0)

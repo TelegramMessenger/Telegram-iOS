@@ -1048,8 +1048,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
-        // Joining needs no microphone: a video chat is joined muted and a live stream never records. The permission
-        // is asked for when the user unmutes, so a denied or undetermined microphone must not stop the join here.
+        // Joining must not require the microphone: a video chat is joined muted and a live stream never records.
+        // Asking for it belongs to unmuting, so a denied or undetermined microphone does not stop the join here.
         return accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue
         |> mapToSignal { [weak self] peer -> Signal<Bool, NoError> in
