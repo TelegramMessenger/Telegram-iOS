@@ -1260,7 +1260,7 @@ private func attachmentOffsets(line: CTLine, startIndex: Int, endIndex: Int) -> 
         return (floor(glyphExtent.minX), ceil(glyphExtent.maxX))
     }
     
-    // No glyph (an attachment elided by truncation).
+    // No glyph of its own (elided under a custom truncation token, or inside another character's cluster).
     var secondaryLeftOffset: CGFloat = 0.0
     let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
