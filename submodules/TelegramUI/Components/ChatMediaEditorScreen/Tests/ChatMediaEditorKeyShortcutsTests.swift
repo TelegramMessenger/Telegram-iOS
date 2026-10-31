@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import XCTest
 import ChatMediaEditorScreen
 
@@ -23,6 +24,12 @@ final class ChatMediaEditorKeyShortcutsTests: XCTestCase {
 
     func testReturnFocusesCaptionWhenNothingIsFocused() {
         XCTAssertTrue(self.returnFocusesCaption())
+    }
+
+    func testReturnFocusesCaptionOnTabletInLandscape() {
+        // The reported device: an iPad never moves the toolbar to the side, so the caption stays usable.
+        let toolbarSide = chatMediaEditorToolbarSide(size: CGSize(width: 1366.0, height: 1024.0), orientation: .landscapeLeft, isTablet: true)
+        XCTAssertTrue(self.returnFocusesCaption(toolbarSide: toolbarSide))
     }
 
     func testReturnKeepsTheFocusedFieldsOwnBehaviour() {
