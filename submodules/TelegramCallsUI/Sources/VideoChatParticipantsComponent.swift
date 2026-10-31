@@ -659,7 +659,9 @@ final class VideoChatParticipantsComponent: Component {
     final class View: UIView, UIScrollViewDelegate {
         private let scrollViewClippingContainer: SolidRoundedCornersContainer
         private let scrollView: ScrollView
-        private let scrollViewBottomShadowView: UIImageView
+        // Internal for VideoChatParticipantsContextMenuTransitionTests.
+        let scrollViewBottomShadowView: UIImageView
+        private let contextMenuTransitionContainer: UIView
         
         private let separateVideoScrollViewClippingContainer: SolidRoundedCornersContainer
         private let separateVideoScrollView: ScrollView
@@ -707,6 +709,8 @@ final class VideoChatParticipantsComponent: Component {
             self.scrollViewClippingContainer = SolidRoundedCornersContainer()
             self.scrollView = ScrollView()
             self.scrollViewBottomShadowView = UIImageView()
+            self.contextMenuTransitionContainer = UIView()
+            self.contextMenuTransitionContainer.isUserInteractionEnabled = false
             
             self.separateVideoScrollViewClippingContainer = SolidRoundedCornersContainer()
             self.separateVideoScrollView = ScrollView()
@@ -756,6 +760,7 @@ final class VideoChatParticipantsComponent: Component {
             self.scrollViewClippingContainer.addSubview(self.scrollView)
             self.addSubview(self.scrollViewClippingContainer)
             self.addSubview(self.scrollViewClippingContainer.cornersView)
+            self.addSubview(self.contextMenuTransitionContainer)
             self.addSubview(self.scrollViewBottomShadowView)
             
             self.separateVideoScrollViewClippingContainer.addSubview(self.separateVideoScrollView)
@@ -774,6 +779,18 @@ final class VideoChatParticipantsComponent: Component {
         
         deinit {
             self.stopRequestingNonCentralVideoTimer?.invalidate()
+        }
+        
+        /// Where a participant's context menu puts its extracted item back while dismissing: above the list and
+        /// beneath the list's bottom shadow, so an item that sits under the shadow returns under it. Without it the
+        /// item travels back above everything and drops under the shadow only once it lands, which blinks the shadow
+        /// off and on. Only items of the main list qualify: the separate video column and the expanded video sit above
+        /// the shadow.
+        func contextMenuTransitionSurface(for sourceView: UIView) -> UIView? {
+            if sourceView.isDescendant(of: self.scrollView) {
+                return self.contextMenuTransitionContainer
+            }
+            return nil
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -2053,6 +2070,7 @@ final class VideoChatParticipantsComponent: Component {
             let scrollViewBottomShadowOverflow: CGFloat = 30.0
             let scrollViewBottomShadowFrame = CGRect(origin: CGPoint(x: itemLayout.scrollClippingFrame.minX, y: itemLayout.scrollClippingFrame.maxY - component.layout.mainColumn.insets.bottom - scrollViewBottomShadowOverflow), size: CGSize(width: itemLayout.scrollClippingFrame.width, height: component.layout.mainColumn.insets.bottom + scrollViewBottomShadowOverflow))
             transition.setFrame(view: self.scrollViewBottomShadowView, frame: scrollViewBottomShadowFrame)
+            self.contextMenuTransitionContainer.frame = CGRect(origin: CGPoint(), size: availableSize)
             
             transition.setPosition(view: self.separateVideoScrollViewClippingContainer, position: itemLayout.separateVideoScrollClippingFrame.center)
             transition.setBounds(view: self.separateVideoScrollViewClippingContainer, bounds: CGRect(origin: CGPoint(x: itemLayout.separateVideoScrollClippingFrame.minX - itemLayout.separateVideoGridFrame.minX, y: itemLayout.separateVideoScrollClippingFrame.minY - itemLayout.separateVideoGridFrame.minY), size: itemLayout.separateVideoScrollClippingFrame.size))
