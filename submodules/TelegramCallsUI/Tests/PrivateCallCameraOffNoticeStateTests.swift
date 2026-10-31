@@ -2,9 +2,10 @@ import Foundation
 import XCTest
 import CallScreen
 
-/// Pins when the call screen's "Your camera is off" notice is up: from the moment the other party turns on video
-/// while the local camera is off until it is dismissed (its close button, the camera button), the local video turns on
-/// or the remote video goes away; it returns only when the remote video starts again.
+/// Pins when the call screen's camera-off notice ("Tap here to turn on your camera") is up: from the moment the other
+/// party turns on video while the local camera is off until it is dismissed (its close button, tapping it or the
+/// camera button), the local video turns on or the remote video goes away; it returns only when the remote video starts
+/// again.
 final class PrivateCallCameraOffNoticeStateTests: XCTestCase {
     func testShownWhenRemoteVideoStartsWhileLocalCameraIsOff() {
         var state = PrivateCallCameraOffNoticeState()

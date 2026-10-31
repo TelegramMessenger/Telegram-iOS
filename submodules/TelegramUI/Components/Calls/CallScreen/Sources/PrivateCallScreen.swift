@@ -888,12 +888,20 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), icon: "Call/CallToastMicrophone", text: params.state.strings.Call_MicrophoneOff(params.state.shortName).string))
             }
             if self.cameraOffNoticeState.isVisible {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: params.state.strings.Call_YourCameraOff, closeAction: { [weak self] in
+                let isVideoButtonActionable = isVideoButtonEnabled && !isTerminated
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: params.state.strings.Call_CameraTooltip, closeAction: { [weak self] in
                     guard let self else {
                         return
                     }
                     self.dismissCameraOffNotice()
-                }))
+                }, action: { [weak self] in
+                    // "Tap here to turn on your camera": the video button's action, while that button can be pressed.
+                    guard let self, isVideoButtonActionable else {
+                        return
+                    }
+                    self.dismissCameraOffNotice()
+                    self.videoAction?()
+                }, tailTarget: .video))
             }
             if params.state.isRemoteBatteryLow {
                 notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), icon: "Call/CallToastBattery", text: params.state.strings.Call_BatteryLow(params.state.shortName).string))
