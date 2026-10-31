@@ -87,10 +87,12 @@ public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat) ->
 
 /// A centered card (`centeredSheetFrame`) whose bottom stays at `maxY`, where it rests, while its content is
 /// `contentHeight` high: a card whose list rubber-bands grows and shrinks at its top only, as a bottom sheet does.
+/// Its top never rises above the tallest card's: past that it moves up as a whole.
 public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat, maxY: CGFloat) -> CGRect {
-    let rest = centeredSheetFrame(containerSize: containerSize, contentHeight: contentHeight)
+    let tallest = centeredSheetFrame(containerSize: containerSize, contentHeight: .greatestFiniteMagnitude)
     let height = max(0.0, contentHeight)
-    return CGRect(origin: CGPoint(x: rest.minX, y: maxY - height), size: CGSize(width: rest.width, height: height))
+    let minY = max(tallest.minY, maxY - height)
+    return CGRect(origin: CGPoint(x: tallest.minX, y: minY), size: CGSize(width: tallest.width, height: height))
 }
 
 /// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) `alertWidth` wide, from `alertMinY` to

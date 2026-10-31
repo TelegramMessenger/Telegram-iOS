@@ -158,6 +158,7 @@ final class SheetPlacementTests: XCTestCase {
         XCTAssertEqual(f.minX, 10.0)
         XCTAssertEqual(f.minY, 600.0)
     }
+
     func test_centeredAnchored_atRest_isTheCenteredFrame() {
         let container = CGSize(width: 1180.0, height: 820.0)
         let rest = centeredSheetFrame(containerSize: container, contentHeight: 400.0)
@@ -168,5 +169,11 @@ final class SheetPlacementTests: XCTestCase {
         // The list rubber-bands 50pt: the card's bottom stays where it rests, its top follows the content.
         let f = centeredSheetFrame(containerSize: CGSize(width: 1180.0, height: 820.0), contentHeight: 450.0, maxY: 610.0)
         XCTAssertEqual(f, CGRect(x: 295.0, y: 160.0, width: 590.0, height: 450.0))
+    }
+    func test_centeredAnchored_neverRisesAboveTheTallestCard() {
+        // Stretched to the tallest card's height from a bottom resting at 681: the card stops at the 44pt margin
+        // and moves up as a whole instead of running off the screen.
+        let f = centeredSheetFrame(containerSize: CGSize(width: 1180.0, height: 820.0), contentHeight: 732.0, maxY: 681.0)
+        XCTAssertEqual(f, CGRect(x: 295.0, y: 44.0, width: 590.0, height: 732.0))
     }
 }

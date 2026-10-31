@@ -713,6 +713,9 @@ public final class InviteLinkInviteController: ViewController {
                     strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                 }
             }
+            self.listNode.didEndScrolling = { [weak self] _ in
+                self?.updateCardFrame(transition: .animated(duration: 0.3, curve: .spring), isResting: true)
+            }
             
             self.addSubnode(self.dimNode)
             self.addSubnode(self.contentNode)
@@ -829,8 +832,9 @@ public final class InviteLinkInviteController: ViewController {
         
         /// On a wide layout, centers the card on the screen around the sheet: from its header, wherever the list
         /// puts it, to the bottom of its box. While the list is dragged or springs back the card keeps its bottom
-        /// where it rests and only its top follows the header, as the sheet's does on a phone.
-        private func updateCardFrame(transition: ContainedViewLayoutTransition) {
+        /// where it rests and only its top follows the header, as the sheet's does on a phone; `isResting` once the
+        /// list has stopped, wherever it did.
+        private func updateCardFrame(transition: ContainedViewLayoutTransition, isResting: Bool = false) {
             guard let layout = self.validLayout else {
                 return
             }
@@ -842,7 +846,7 @@ public final class InviteLinkInviteController: ViewController {
             let sheetHeight = geometry.size.height - sheetMinY
             let scroller = self.listNode.scroller
             let cardFrame: CGRect
-            if let cardRestingMaxY = self.cardRestingMaxY, scroller.isTracking || scroller.isDecelerating {
+            if !isResting, let cardRestingMaxY = self.cardRestingMaxY, scroller.isTracking || scroller.isDecelerating {
                 cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight, maxY: cardRestingMaxY)
             } else {
                 cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight)
