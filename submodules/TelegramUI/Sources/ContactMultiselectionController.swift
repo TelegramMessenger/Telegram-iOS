@@ -444,7 +444,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 strongSelf.updateTitle()
                 
                 if displayCountAlert {
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    let alertText: String
+                    if case .groupCreation(true) = strongSelf.mode {
+                        alertText = strongSelf.presentationData.strings.NewCall_ParticipantLimitAlert("\(strongSelf.context.userLimits.maxConferenceParticipantCount)").string
+                    } else {
+                        alertText = strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert
+                    }
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }
         }

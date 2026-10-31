@@ -14205,6 +14205,7 @@ Sorry for the inconvenience.";
 "NewCall.VideoOption" = "Call with video enabled";
 "NewCall.ActionCallSingle" = "Call %@";
 "NewCall.ActionCallMultiple" = "Call";
+"NewCall.ParticipantLimitAlert" = "A call can have up to %@ participants.";
 
 "Chat.ToastCallLinkExpired.Text" = "This link is no longer active";
 

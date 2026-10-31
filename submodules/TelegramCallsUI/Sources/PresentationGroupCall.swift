@@ -844,7 +844,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var lastErrorAlertTimestamp: Double = 0.0
-    
+    private var pendingForbiddenInvitePeers: [EnginePeer] = []
+    private var pendingForbiddenInvitePeersTimer: SwiftSignalKit.Timer?
+
     public init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -3775,6 +3777,33 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
+    // Invitations sent together (several people picked at once) fail together: the people whose privacy settings refuse
+    // the call are collected for a moment and offered the call link on one screen, rather than the first of them alone.
+    private func enqueueForbiddenInvitePeer(_ peer: EnginePeer) {
+        if !self.pendingForbiddenInvitePeers.contains(where: { $0.id == peer.id }) {
+            self.pendingForbiddenInvitePeers.append(peer)
+        }
+        self.pendingForbiddenInvitePeersTimer?.invalidate()
+        let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: { [weak self] in
+            self?.presentPendingForbiddenInvitePeers()
+        }, queue: Queue.mainQueue())
+        self.pendingForbiddenInvitePeersTimer = timer
+        timer.start()
+    }
+
+    private func presentPendingForbiddenInvitePeers() {
+        self.pendingForbiddenInvitePeersTimer = nil
+        let peers = self.pendingForbiddenInvitePeers
+        self.pendingForbiddenInvitePeers = []
+        guard !peers.isEmpty, let currentInviteLinks = self.currentInviteLinks else {
+            return
+        }
+        let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
+        if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+            navigationController.pushViewController(inviteLinkScreen)
+        }
+    }
+
     public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
@@ -3803,7 +3832,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let self else {
                         return
                     }
-                    
+
+                    if case let .privacy(peer) = error, let peer, self.currentInviteLinks != nil {
+                        self.enqueueForbiddenInvitePeer(peer)
+                        return
+                    }
+
                     let timestamp = CACurrentMediaTime()
                     if self.lastErrorAlertTimestamp > timestamp - 1.0 {
                         return
@@ -3817,15 +3851,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     switch error {
                     case let .privacy(peer):
                         if let peer {
-                            if let currentInviteLinks = self.currentInviteLinks {
-                                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: [TelegramForbiddenInvitePeer(peer: peer, canInviteWithPremium: false, premiumRequiredToContact: false)], theme: defaultDarkColorPresentationTheme)
-                                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
-                                    navigationController.pushViewController(inviteLinkScreen)
-                                }
-                                return
-                            } else {
-                                errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
-                            }
+                            errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
                         }
                     default:
                         break
