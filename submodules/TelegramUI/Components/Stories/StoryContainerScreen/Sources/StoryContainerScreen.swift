@@ -309,6 +309,11 @@ private final class StoryContainerScreenComponent: Component {
         
         let tintLayer = SimpleGradientLayer()
         
+        // Holds the item set's transitionCloneContainerView in transitionCloneMasterView at the item set's frame. The
+        // clones are laid out in the item set's coordinates, which are the container's only when the item set fills it,
+        // not for the card (iPad, unfolded iPhone Duo) nor beside iPhone Duo's side strip.
+        let transitionCloneHostView: UIView
+        
         var rotationFraction: CGFloat?
         
         override static var layerClass: AnyClass {
@@ -316,6 +321,9 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         override init(frame: CGRect) {
+            self.transitionCloneHostView = UIView()
+            self.transitionCloneHostView.isUserInteractionEnabled = false
+            
             super.init(frame: frame)
             
             self.tintLayer.opacity = 0.0
@@ -1903,11 +1911,15 @@ private final class StoryContainerScreenComponent: Component {
                                 itemSetView.addSubview(itemSetComponentView)
                                 itemSetView.layer.addSublayer(itemSetView.tintLayer)
                                 
-                                self.transitionCloneMasterView.addSubview(itemSetComponentView.transitionCloneContainerView)
+                                self.transitionCloneMasterView.addSubview(itemSetView.transitionCloneHostView)
+                                itemSetView.transitionCloneHostView.addSubview(itemSetComponentView.transitionCloneContainerView)
                             }
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                            
+                            itemSetTransition.setPosition(view: itemSetView.transitionCloneHostView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
+                            itemSetTransition.setBounds(view: itemSetView.transitionCloneHostView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -2028,6 +2040,7 @@ private final class StoryContainerScreenComponent: Component {
                     removedIds.append(id)
                     itemSetView.view.parentState = nil
                     itemSetView.removeFromSuperview()
+                    itemSetView.transitionCloneHostView.removeFromSuperview()
                     
                     if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                         view.saveDraft()
