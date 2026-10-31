@@ -66,6 +66,8 @@ final class InstantPageV2AudioStreamingBadgeTests: XCTestCase {
         XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Fetching(isActive: true, progress: 0.4), isPlaying: false, onBadge: true), .cancelFetch)
         XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Remote(progress: 0.0), isPlaying: false, onBadge: true), .fetch)
         XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Paused(progress: 0.2), isPlaying: false, onBadge: true), .fetch)
+        // No badge is shown once local; a tap there is the row's.
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Local, isPlaying: false, onBadge: true), .play)
     }
 
     func test_aTapElsewhereKeepsTheRowsRouting() {
