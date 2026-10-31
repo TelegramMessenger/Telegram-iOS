@@ -48,14 +48,14 @@ final class TextNodeAttachmentTests: XCTestCase {
         return result
     }
 
-    private func layout(_ string: NSAttributedString, maximumNumberOfLines: Int) -> TextNodeLayout {
+    private func layout(_ string: NSAttributedString, maximumNumberOfLines: Int, width: CGFloat = 1000.0) -> TextNodeLayout {
         return TextNode.calculateLayout(
             attributedString: string,
             minimumNumberOfLines: 0,
             maximumNumberOfLines: maximumNumberOfLines,
             truncationType: .end,
             backgroundColor: nil,
-            constrainedSize: CGSize(width: 1000.0, height: .greatestFiniteMagnitude),
+            constrainedSize: CGSize(width: width, height: .greatestFiniteMagnitude),
             alignment: .natural,
             verticalAlignment: .top,
             lineSpacingFactor: 0.12,
@@ -71,9 +71,11 @@ final class TextNodeAttachmentTests: XCTestCase {
         )
     }
 
-    /// Where CoreText places the attachment's glyph, from the same string set as one line.
-    private func glyphSlot(_ string: NSAttributedString, at index: Int) -> (minX: CGFloat, maxX: CGFloat)? {
-        let line = CTLineCreateWithAttributedString(string)
+    /// Where CoreText places the attachment's glyph, from the same string set as one line (or its first `length`
+    /// characters, a wrapped first line).
+    private func glyphSlot(_ string: NSAttributedString, at index: Int, length: Int? = nil) -> (minX: CGFloat, maxX: CGFloat)? {
+        let typesetter = CTTypesetterCreateWithAttributedString(string)
+        let line = CTTypesetterCreateLine(typesetter, CFRange(location: 0, length: length ?? string.length))
         for run in CTLineGetGlyphRuns(line) as! [CTRun] {
             let range = CTRunGetStringRange(run)
             guard index >= range.location && index < range.location + range.length else {
@@ -137,5 +139,42 @@ final class TextNodeAttachmentTests: XCTestCase {
 
     func test_leftToRightLineWithArabic_attachmentAtEnd_coversItsGlyph() {
         self.assertAttachmentCoversItsGlyph("Hello مجلد غزة \u{fffc}")
+    }
+
+    /// One character after the attachment still counts as the end of the line for the layout.
+    func test_rightToLeftLine_attachmentFollowedByOneCharacter_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة الصحفية القنوات \u{fffc}.")
+    }
+
+    func test_leftToRightLine_attachmentFollowedByOneCharacter_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("Beli Produk Buka Bot \u{fffc}x")
+    }
+
+    /// Between Latin words the attachment runs left to right, inside a right-to-left line: its end is not the line's
+    /// right edge.
+    func test_rightToLeftLine_leftToRightAttachmentFollowedByOneCharacter_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة Hello \u{fffc}x")
+    }
+
+    /// The chat list preview's first line, wrapped right after a left-to-right attachment in a right-to-left paragraph.
+    func test_wrappedRightToLeftLine_endingAtLeftToRightAttachment_coversItsGlyph() {
+        let prefix = "مجلد غزة Hello \u{fffc}"
+        let text = prefix + " World is here and more"
+        let string = self.makeString(text)
+        let index = (text as NSString).range(of: "\u{fffc}").location
+        let width = ceil(CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(self.makeString(prefix)), nil, nil, nil))) + 2.0
+        let firstLineLength = CTTypesetterSuggestLineBreak(CTTypesetterCreateWithAttributedString(string), 0, Double(width))
+        XCTAssertEqual(firstLineLength, index + 2, "the first line should end right after the attachment and its space")
+        guard let slot = self.glyphSlot(string, at: index, length: firstLineLength) else {
+            XCTFail("no glyph for the attachment")
+            return
+        }
+        let frames = self.layout(string, maximumNumberOfLines: 2, width: width).lineAttachmentFrames
+        XCTAssertEqual(frames.count, 1)
+        guard let frame = frames.first?.frame else {
+            return
+        }
+        XCTAssertEqual(frame.minX, slot.minX, accuracy: 1.0)
+        XCTAssertEqual(frame.maxX, slot.maxX, accuracy: 1.0)
     }
 }
