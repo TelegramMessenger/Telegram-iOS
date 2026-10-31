@@ -72,10 +72,26 @@ final class AudioSessionOutputsTests: XCTestCase {
         XCTAssertEqual(result.current, "speaker")
     }
 
-    func testWiredHeadsetStaysSelectableWhileAirPodsAreCurrent() {
+    /// While a Bluetooth device is the output, "Headphones" can mean that device (an A2DP-only one reads as
+    /// headphones), so the wired headset keeps being offered by its microphone, as before.
+    func testWiredHeadsetIsOfferedByItsMicrophoneWhileAirPodsAreCurrent() {
         let result = self.classify(outputs: [self.airPodsHFP], inputs: [self.airPodsHFP], available: [self.iPhoneMic, self.iPhoneHeadsetMic, self.airPodsHFP], hasLoudspeaker: true)
-        XCTAssertEqual(result.available, ["builtin", "headphones", "speaker", "port:AirPods Pro:bluetooth"])
+        XCTAssertEqual(result.available, ["builtin", "speaker", "port:Headset Microphone:wired", "port:AirPods Pro:bluetooth"])
         XCTAssertEqual(result.current, "port:AirPods Pro:bluetooth")
+    }
+
+    func testWiredHeadsetIsOfferedByItsMicrophoneWhileABluetoothSpeakerIsCurrent() {
+        let result = self.classify(outputs: [self.bluetoothSpeakerA2DP], inputs: [self.iPhoneMic], available: [self.iPhoneMic, self.iPhoneHeadsetMic], hasLoudspeaker: true)
+        XCTAssertEqual(result.available, ["builtin", "speaker", "port:Headset Microphone:wired"])
+        XCTAssertEqual(result.current, "headphones")
+    }
+
+    /// The fold of a USB microphone needs wired headphones as the output; elsewhere it stays a port that
+    /// still selects the headset.
+    func testUSBCEarPodsMicrophoneIsAPortWhileTheSpeakerIsCurrent() {
+        let result = self.classify(outputs: [self.speaker], inputs: [self.iPhoneMic], available: [self.iPhoneMic, self.earPodsUSBMic], hasLoudspeaker: true)
+        XCTAssertEqual(result.available, ["builtin", "speaker", "port:EarPods Microphone:generic"])
+        XCTAssertEqual(result.current, "speaker")
     }
 
     // MARK: - Bluetooth, car, built-in (unchanged)
@@ -155,8 +171,14 @@ final class AudioSessionOutputsTests: XCTestCase {
         XCTAssertEqual(self.headsetInput(outputs: [self.wiredHeadphones], available: [self.iPadMic, self.earPodsUSBMic]), self.earPodsUSBMic)
     }
 
-    func testSelectingHeadphonesFromAirPodsPinsTheWiredHeadset() {
-        XCTAssertEqual(self.headsetInput(outputs: [self.airPodsHFP], available: [self.iPhoneMic, self.iPhoneHeadsetMic, self.airPodsHFP]), self.iPhoneHeadsetMic)
+    func testSelectingHeadphonesFromTheSpeakerPinsTheWiredHeadset() {
+        XCTAssertEqual(self.headsetInput(outputs: [self.speaker], available: [self.iPhoneMic, self.iPhoneHeadsetMic]), self.iPhoneHeadsetMic)
+    }
+
+    /// An A2DP-only device is reported as "Headphones"; re-applying that must not move the call to the wired headset.
+    func testHeadphonesWhileABluetoothDeviceIsCurrentPinsNothing() {
+        XCTAssertNil(self.headsetInput(outputs: [self.bluetoothSpeakerA2DP], available: [self.iPhoneMic, self.iPhoneHeadsetMic]))
+        XCTAssertNil(self.headsetInput(outputs: [self.airPodsHFP], available: [self.iPhoneMic, self.iPhoneHeadsetMic, self.airPodsHFP]))
     }
 
     func testSelectingHeadphonesWithoutAHeadsetMicrophonePinsNothing() {

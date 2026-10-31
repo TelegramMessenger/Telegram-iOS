@@ -169,8 +169,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
     if let availableInputs = route.availableInputs {
         var hasHeadphones = false
         var hasBluetoothHeadphones = false
-        var hasWiredHeadset = false
-        
+
         var headphonesAreActive = false
         loop: for currentOutput in route.outputs {
             switch currentOutput.portType {
@@ -211,7 +210,6 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
                     activeOutput = .headphones
                 }
                 hasHeadphones = true
-                hasWiredHeadset = true
                 continue
             }
             let output = AudioSessionOutput(description: input)
@@ -225,7 +223,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             availableOutputs.insert(.speaker, at: 0)
         }
 
-        if (hasHeadphones && !hasBluetoothHeadphones) || hasWiredHeadset {
+        if hasHeadphones && !hasBluetoothHeadphones {
             availableOutputs.insert(.headphones, at: 0)
         }
         availableOutputs.insert(.builtin, at: 0)
@@ -235,8 +233,15 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
 }
 
 /// The microphone of a wired headset: a headset microphone, or a USB audio input while wired
-/// headphones are the output (USB-C EarPods). A USB input without them is a microphone of its own.
+/// headphones are the output (USB-C EarPods; a separate USB microphone next to wired headphones is taken
+/// for one too). A USB input without them is a microphone of its own.
+///
+/// Not while a Bluetooth device is the output: an A2DP-only device reads as "Headphones" too, so the
+/// wired headset is then offered, and selected, by its microphone port, as before.
 private func isWiredHeadsetInput(_ input: AudioSessionRoutePort, route: AudioSessionRoute) -> Bool {
+    if route.outputs.contains(where: { bluetoothPortTypes.contains($0.portType) }) {
+        return false
+    }
     switch input.portType {
     case .headsetMic:
         return true
@@ -1128,7 +1133,7 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
                     }
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                 case .headphones:
-                    try self.preferWiredHeadsetInput()
+                    self.preferWiredHeadsetInput()
                 case let .port(port):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
@@ -1163,13 +1168,13 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
     /// "Headphones" includes a wired headset's microphone (see `audioSessionOutputs`), so choosing it
     /// pins that microphone, which also moves the output to the headset. Without a headset microphone
     /// the route is left as it is.
-    private func preferWiredHeadsetInput() throws {
+    private func preferWiredHeadsetInput() {
         let session = AVAudioSession.sharedInstance()
         guard let input = audioSessionWiredHeadsetInput(route: AudioSessionRoute(session)), let route = session.availableInputs?.first(where: { $0.uid == input.uid }) else {
             return
         }
         managedAudioSessionLog("ManagedAudioSession pinning preferred input -> \(describeAudioPort(route)) for headphones")
-        try session.overrideOutputAudioPort(.none)
+        let _ = try? session.overrideOutputAudioPort(.none)
         let _ = try? session.setPreferredInput(route)
     }
     
@@ -1201,7 +1206,7 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
                     }
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                 case .headphones:
-                    try self.preferWiredHeadsetInput()
+                    self.preferWiredHeadsetInput()
                 case let .port(port):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
