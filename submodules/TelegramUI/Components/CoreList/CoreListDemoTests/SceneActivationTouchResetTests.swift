@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import UIKit.UIGestureRecognizerSubclass
+import ObjectiveC
 @testable import CoreListDemo
 
 /// Defensive, for #127: a swipe Home starts on the list and the system takes the touch, so the engine lets go of the
@@ -47,6 +48,7 @@ final class SceneActivationTouchResetTests: XCTestCase {
         f.pan.state = .began
         self.turnRunLoop()
         self.post(UIScene.willDeactivateNotification, f.scene)
+        XCTAssertEqual(ends, 1, "UIKit delivers the .cancelled inside isEnabled = false, which the at-rest flag relies on")
         self.turnRunLoop()
         XCTAssertEqual(f.pan.state, .possible, "the pan is reset, ready for the next finger")
         XCTAssertTrue(f.pan.isEnabled, "and still enabled")
@@ -86,7 +88,53 @@ final class SceneActivationTouchResetTests: XCTestCase {
         XCTAssertFalse(f.engine.isScrollEnabled)
     }
 
-    func test_aSceneTheListIsNotShownInLeavesThePanAlone() throws {
+    /// Makes this pan (only) report a finger moving at 3000 pt/s, which a test host's recognizer, with no touches, never
+    /// does: a dynamic subclass, as KVO makes, overriding `velocity(in:)`.
+    private func giveVelocity(to pan: UIGestureRecognizer) {
+        let base: AnyClass = object_getClass(pan)!
+        let name = "SceneActivationTouchResetTests_FlingingPan"
+        let subclass: AnyClass
+        if let existing = NSClassFromString(name) {
+            subclass = existing
+        } else {
+            subclass = objc_allocateClassPair(base, name, 0)!
+            let selector = #selector(UIPanGestureRecognizer.velocity(in:))
+            let block: @convention(block) (AnyObject, UIView?) -> CGPoint = { _, _ in CGPoint(x: 0, y: 3000) }
+            class_addMethod(subclass, selector, imp_implementationWithBlock(block),
+                            method_getTypeEncoding(class_getInstanceMethod(base, selector)!))
+            objc_registerClassPair(subclass)
+        }
+        object_setClass(pan, subclass)
+    }
+
+    /// A drag under way at 3000 pt/s on open content.
+    private func startFastDrag(_ f: (engine: PhysicsScrollEngine, pan: UIGestureRecognizer, scene: UIWindowScene)) {
+        f.engine.setEdges(min: 0, max: 100_000)
+        f.engine.setOffset(50_000)
+        self.giveVelocity(to: f.pan)
+        f.pan.state = .began
+        self.turnRunLoop()
+    }
+
+    func test_aFastDragReleasedAsUsualDecelerates() throws {
+        // The control for the next test: the same drag, cancelled with no scene change, flings.
+        let f = try makeFixture()
+        self.startFastDrag(f)
+        f.pan.state = .cancelled
+        self.turnRunLoop()
+        XCTAssertTrue(f.engine.isDecelerating)
+    }
+
+    func test_aDragTheSceneCancelsReleasesAtRest() throws {
+        // The system took the finger: flinging the content as the app leaves would move what the user comes back to.
+        let f = try makeFixture()
+        self.startFastDrag(f)
+        self.post(UIScene.willDeactivateNotification, f.scene)
+        self.turnRunLoop()
+        XCTAssertFalse(f.engine.isDecelerating)
+    }
+
+    func test_aListMovedToASceneLessWindowIgnoresItsOldScene() throws {
         let f = try makeFixture()
         let otherWindow = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 800))
         otherWindow.addSubview(f.engine.contentHost)

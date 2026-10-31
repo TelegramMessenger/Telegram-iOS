@@ -933,7 +933,9 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// notch landing on moving content behaves here is unverified on a device.
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
         if gestureRecognizer.state == .possible {
-            touchDownCount &+= 1               // an indirect scroll's finger-down: see `sceneActivationChanged`
+            // An indirect scroll's finger-down (`sceneActivationChanged`). Were UIKit to ask here for touches too, the
+            // count would only rise faster, which can only spare a drag from the activation's cancel.
+            touchDownCount &+= 1
         }
         guard gestureRecognizer.state == .possible, flight != nil || core.isDecelerating else { return true }
         catchMotionForFingerRest()
