@@ -263,12 +263,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             case let .chats(chatsNode):
                 count = chatsNode.currentState.selectedPeerIds.count
             }
-            if isCall && count <= 1 {
+            // A new call with one person selected is a 1:1 call, which has no participant limit to count against.
+            if isCall && count <= 1 && self.params.existingCallParticipantCount <= 1 {
                 self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: nil)
             } else {
                 var count = count
                 if isCall {
-                    count += 1
+                    count += self.params.existingCallParticipantCount
                 }
                 self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
             }
@@ -349,11 +350,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?
                 
-                let maxRegularCount: Int32
+                // The most peers the selection may hold: the group's members other than the account, or the call's
+                // free participant slots.
+                let maxSelectedCount: Int
                 if case .groupCreation(true) = strongSelf.mode {
-                    maxRegularCount = strongSelf.context.userLimits.maxConferenceParticipantCount
+                    maxSelectedCount = Int(strongSelf.context.userLimits.maxConferenceParticipantCount) - strongSelf.params.existingCallParticipantCount
                 } else {
-                    maxRegularCount = strongSelf.limitsConfiguration?.maxGroupMemberCount ?? 200
+                    maxSelectedCount = Int(strongSelf.limitsConfiguration?.maxGroupMemberCount ?? 200) - 1
                 }
                 var displayCountAlert = false
                 
@@ -379,7 +382,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                                 selectedPeerMap[.peer(peer.id)] = .peer(peer: peer, isGlobal: false, participantCount: nil)
                                 updatedState = updatedState.withSelectedPeerMap(selectedPeerMap)
                                 
-                                if updatedState.selectedPeerIndices.count >= maxRegularCount {
+                                if updatedState.selectedPeerIndices.count > maxSelectedCount {
                                     displayCountAlert = true
                                     updatedState = updatedState.withToggledPeerId(.peer(peer.id))
                                 } else {
