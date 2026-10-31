@@ -4146,7 +4146,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
-    // Call right before `canReadHistory` turns false because the chat is leaving the screen. The chat reads what it
+    // Call right before the chat stops reading because it is leaving the screen (`canReadHistory` turning false, or the
+    // node being replaced by another chat location's). The chat reads what it
     // shows when the list reports its content offset, and an animated pass reports its landed rows only when its whole
     // duration has elapsed (1.15s for the go-down button's scroll, which looks finished well before that). Leaving
     // in between, e.g. back to a forum's topic list, would otherwise leave what the pass brought on screen unread.

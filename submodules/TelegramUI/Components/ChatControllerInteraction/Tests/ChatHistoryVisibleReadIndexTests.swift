@@ -52,6 +52,11 @@ final class ChatHistoryVisibleReadIndexTests: XCTestCase {
         XCTAssertEqual(self.maxIndex([self.row(minY: 0.0, height: 300.0, [self.index(20)])]), self.index(20))
     }
 
+    func testTheBandEndsExactly100PointsAboveTheTopInset() {
+        XCTAssertEqual(self.maxIndex([self.row(minY: self.topInset - 100.0, height: 300.0, [self.index(20)])]), self.index(20))
+        XCTAssertNil(self.maxIndex([self.row(minY: self.topInset - 100.5, height: 300.0, [self.index(20)])]))
+    }
+
     func testATallerRowIsReadOnlyWhenItIsTheLastMessage() {
         let tall = [self.row(minY: -50.0, height: 400.0, [self.index(20)]), self.row(minY: 400.0, [self.index(5)])]
         XCTAssertEqual(self.maxIndex(tall), self.index(5))
@@ -67,6 +72,15 @@ final class ChatHistoryVisibleReadIndexTests: XCTestCase {
         ]
         XCTAssertEqual(self.maxIndex(rows, isThread: true), self.index(6))
         XCTAssertEqual(self.maxIndex(rows, isThread: false), self.index(30, namespace: Namespaces.Message.Local))
+    }
+
+    func testAThreadSkipsATallLastMessageRowWithANonCloudMessage() {
+        let lastMessage = self.index(31)
+        let rows = [
+            self.row(minY: -50.0, height: 400.0, [lastMessage, self.index(32, namespace: Namespaces.Message.Local)]),
+            self.row(minY: 400.0, [self.index(6)])
+        ]
+        XCTAssertEqual(self.maxIndex(rows, lastMessageId: lastMessage.id, isThread: true), self.index(6))
     }
 
     func testAThreadReadsTheNewestCloudMessageInView() {
