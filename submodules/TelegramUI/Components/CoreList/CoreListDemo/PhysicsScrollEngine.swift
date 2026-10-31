@@ -118,6 +118,27 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         pan.delaysTouchesEnded = false
         pan.delegate = self
         host.addGestureRecognizer(pan)
+        NotificationCenter.default.addObserver(self, selector: #selector(sceneActivationChanged(_:)),
+                                               name: UIScene.willDeactivateNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sceneActivationChanged(_:)),
+                                               name: UIScene.didActivateNotification, object: nil)
+    }
+
+    /// A finger on the content when the scene stops being active is the system's from then on: a swipe Home starts at
+    /// the bottom edge, on the list, and the system takes the touch. A pan left holding it, recognizing or not, is not
+    /// reset until that touch ends, and takes no other finger meanwhile, so the list stopped scrolling after the app
+    /// came back (#127, iOS 27.2 devices; the simulator resets the pan itself). Cancelling the pan as the scene
+    /// deactivates, and again as it activates, ends that touch sequence: a drag in progress ends as `.cancelled`, a
+    /// failed pan's `reset()` reports the lift. A pan the host turned off (`isScrollEnabled`) stays off.
+    @objc private func sceneActivationChanged(_ notification: Notification) {
+        guard let scene = notification.object as? UIScene, scene === host.window?.windowScene, pan.isEnabled else {
+            return
+        }
+        guard pan.state != .possible || pan.numberOfTouches != 0 else {
+            return
+        }
+        pan.isEnabled = false
+        pan.isEnabled = true
     }
 
     // MARK: - ScrollEngine

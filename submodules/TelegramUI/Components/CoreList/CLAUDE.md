@@ -751,6 +751,10 @@ clock); `TestScrollEngine` has no render server.
   - **`delaysTouchesEnded` must stay `false`** (the recognizer default is `true`; match
     `UIScrollView.panGestureRecognizer`; asserted in `PhysicsScrollEngineTests`), or `UIControl`s in rows
     (inline bot keyboards) never see touch-up.
+  - **A scene deactivating or activating cancels a pan that is not idle** (`sceneActivationChanged`, an
+    `isEnabled` toggle; a host-disabled pan stays off). A swipe Home starts on the list and the system keeps the
+    touch; on iOS 27.2 devices the chat then stopped scrolling until it was reopened (#127). The simulator resets
+    the pan itself, so it never showed this; the stuck piece was not observed on a device. `SceneActivationTouchResetTests`.
 
 ### Attachments
 
