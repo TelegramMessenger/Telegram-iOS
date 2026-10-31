@@ -5585,35 +5585,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             if let addedContentNodes = addedContentNodes {
-                for (contentNodeMessage, isAttachment, contentNode, _) in addedContentNodes {
+                for (_, _, contentNode, _) in addedContentNodes {
                     let index = updatedContentNodes.count
                     updatedContentNodes.append(contentNode)
                     
                     if index < contentNodeFramesPropertiesAndApply.count && contentNodeFramesPropertiesAndApply[index].1.isDetached {
                         strongSelf.addSubnode(contentNode)
-                    } else {
-                        let contextSourceNode: ContextExtractedContentContainingNode
-                        let containerSupernode: ASDisplayNode
-                        if isAttachment {
-                            contextSourceNode = strongSelf.mainContextSourceNode
-                            containerSupernode = strongSelf.clippingNode
-                        } else {
-                            contextSourceNode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.mainContextSourceNode
-                            containerSupernode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode.contentNode ?? strongSelf.clippingNode
-                        }
-                        containerSupernode.addSubnode(contentNode)
-                        contentNode.updateIsTextSelectionActive = { [weak strongSelf, weak contextSourceNode, weak contentNode] value in
-                            // One selection at a time in a bubble (a widget's and its caption's): the others go first,
-                            // so their going does not end the distraction-free mode this one starts.
-                            if value, let strongSelf, let contentNode {
-                                for other in strongSelf.contentNodes where other !== contentNode {
-                                    other.resignTextSelection()
-                                }
-                            }
-                            contextSourceNode?.updateDistractionFreeMode?(value)
-                        }
-                        contentNode.updateIsExtractedToContextPreview(contextSourceNode.isExtractedToContextPreview)
                     }
+                    // Any other node goes into the bubble or its message's container below, with the nodes the bubble
+                    // already had.
                     
                     contentNode.itemNode = strongSelf
                     contentNode.bubbleBackgroundNode = strongSelf.backgroundNode
@@ -5706,6 +5686,60 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             strongSelf.contentNodes = sortedContentNodes
+        }
+        
+        // Every layout, not only for added nodes: a lone message of an album of files becomes the album in place, and
+        // back, keeping its node, which has to move between the bubble and its message's container (#123).
+        let laidOutContainerStableIds = contentContainerNodeFrames.map { $0.0 }
+        for (index, contentNode) in strongSelf.contentNodes.enumerated() {
+            if index >= contentNodeMessagesAndClasses.count || contentNode.supernode === strongSelf {
+                // A detached node is in the item node itself.
+                continue
+            }
+            let (contentNodeMessage, _, _, bubbleAttributes) = contentNodeMessagesAndClasses[index]
+            let contextSourceNode: ContextExtractedContentContainingNode
+            let containerSupernode: ASDisplayNode
+            switch chatMessageBubbleContentHost(messageStableId: contentNodeMessage.stableId, isAttachment: bubbleAttributes.isAttachment, containerStableIds: laidOutContainerStableIds) {
+            case .bubble:
+                contextSourceNode = strongSelf.mainContextSourceNode
+                containerSupernode = strongSelf.clippingNode
+            case let .messageContainer(stableId):
+                guard let container = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == stableId }) else {
+                    continue
+                }
+                contextSourceNode = container.sourceNode
+                containerSupernode = container.sourceNode.contentNode
+            }
+            if contentNode.supernode === containerSupernode {
+                continue
+            }
+            // A node that moves stays where it was on screen, so its frame animates from there.
+            let previousFrame = contentNode.supernode.flatMap { previousSupernode in previousSupernode.view.convert(contentNode.frame, to: containerSupernode.view) }
+            containerSupernode.addSubnode(contentNode)
+            if let previousFrame {
+                contentNode.frame = previousFrame
+            }
+            contentNode.updateIsTextSelectionActive = { [weak strongSelf, weak contextSourceNode, weak contentNode] value in
+                // One selection at a time in a bubble (a widget's and its caption's): the others go first,
+                // so their going does not end the distraction-free mode this one starts.
+                if value, let strongSelf, let contentNode {
+                    for other in strongSelf.contentNodes where other !== contentNode {
+                        other.resignTextSelection()
+                    }
+                }
+                contextSourceNode?.updateDistractionFreeMode?(value)
+            }
+            contentNode.updateIsExtractedToContextPreview(contextSourceNode.isExtractedToContextPreview)
+        }
+        let staleContainerStableIds = chatMessageBubbleStaleContentContainers(existing: strongSelf.contentContainers.map { $0.contentMessageStableId }, laidOut: laidOutContainerStableIds)
+        if !staleContainerStableIds.isEmpty {
+            for container in strongSelf.contentContainers where staleContainerStableIds.contains(container.contentMessageStableId) {
+                // What is left in it is a removed message's node, fading out.
+                animation.animator.updateAlpha(layer: container.containerNode.layer, alpha: 0.0, completion: { [weak containerNode = container.containerNode] _ in
+                    containerNode?.removeFromSupernode()
+                })
+            }
+            strongSelf.contentContainers.removeAll(where: { staleContainerStableIds.contains($0.contentMessageStableId) })
         }
         
         var shouldClipOnTransitions = true
