@@ -55,34 +55,6 @@ private final class CachedChatMessageText {
     }
 }
 
-private func findQuoteRange(string: String, quoteText: String, offset: Int?) -> NSRange? {
-    let nsString = string as NSString
-    var currentRange: NSRange?
-    while true {
-        let startOffset = currentRange?.upperBound ?? 0
-        let range = nsString.range(of: quoteText, range: NSRange(location: startOffset, length: nsString.length - startOffset))
-        if range.location != NSNotFound {
-            if let offset {
-                if let currentRangeValue = currentRange {
-                    if abs(range.location - offset) > abs(currentRangeValue.location - offset) {
-                        break
-                    } else {
-                        currentRange = range
-                    }
-                } else {
-                    currentRange = range
-                }
-            } else {
-                currentRange = range
-                break
-            }
-        } else {
-            break
-        }
-    }
-    return currentRange
-}
-
 public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     public final class ContainerNode: ASDisplayNode {
     }
@@ -1541,9 +1513,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     public func getQuoteRect(quote: String, offset: Int?) -> CGRect? {
         var rectsSet: [CGRect] = []
-        if !quote.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            
-            let range = findQuoteRange(string: string, quoteText: quote, offset: offset)
+        if !quote.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let layoutString = cachedLayout.attributedString {
+            let range = findQuoteRange(layoutString: layoutString, quoteText: quote, offset: offset)
             if let range, let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
                 rectsSet = rects
             }
@@ -1566,8 +1537,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     public func updateQuoteTextHighlightState(text: String?, offset: Int?, color: UIColor, animated: Bool) {
         var rectsSet: [CGRect] = []
-        if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            let quoteRange = findQuoteRange(string: string, quoteText: text, offset: offset)
+        if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let layoutString = cachedLayout.attributedString {
+            let quoteRange = findQuoteRange(layoutString: layoutString, quoteText: text, offset: offset)
             if let quoteRange, let rects = cachedLayout.rangeRects(in: quoteRange)?.rects, !rects.isEmpty {
                 rectsSet = rects
             }
