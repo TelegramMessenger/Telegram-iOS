@@ -34,6 +34,14 @@ final class PrivateCallCameraOffNoticeStateTests: XCTestCase {
         XCTAssertFalse(state.isVisible)
     }
 
+    /// Only the remote video starting brings it up: the local camera turning off under running remote video does not.
+    func testLocalVideoTurningOffUnderRemoteVideoDoesNotShowIt() {
+        var state = PrivateCallCameraOffNoticeState()
+        state.update(hasRemoteVideo: true, hasLocalVideo: true)
+        state.update(hasRemoteVideo: true, hasLocalVideo: false)
+        XCTAssertFalse(state.isVisible)
+    }
+
     func testLocalVideoTurningOnDismissesItForGood() {
         var state = PrivateCallCameraOffNoticeState()
         state.update(hasRemoteVideo: true, hasLocalVideo: false)

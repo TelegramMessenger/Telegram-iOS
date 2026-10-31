@@ -13,6 +13,7 @@ final class NoticeView: OverlayMaskContainerView {
     private var closeIconView: UIImageView?
     
     var closeAction: (() -> Void)?
+    var closeAccessibilityLabel: String?
     
     override init(frame: CGRect) {
         self.backgroundView = RoundedCornersView(color: .white)
@@ -109,16 +110,17 @@ final class NoticeView: OverlayMaskContainerView {
                 closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
                 closeIconView = UIImageView(image: UIImage(bundleImageName: "Components/Close")?.withRenderingMode(.alwaysTemplate))
                 closeIconView.tintColor = .white
-                closeIconView.isUserInteractionEnabled = false
                 closeButton.addSubview(closeIconView)
                 self.closeButton = closeButton
                 self.closeIconView = closeIconView
                 self.textContainer.addSubview(closeButton)
             }
-            // The button takes the pill's height from the end of the text to its trailing edge.
-            let closeButtonFrame = CGRect(origin: CGPoint(x: textFrame.maxX, y: 0.0), size: CGSize(width: size.width - textFrame.maxX, height: size.height))
+            closeButton.accessibilityLabel = self.closeAccessibilityLabel
+            // The button takes the pill's height from just before the end of the text to its trailing edge.
+            let closeButtonOverlap: CGFloat = 10.0
+            let closeButtonFrame = CGRect(origin: CGPoint(x: textFrame.maxX - closeButtonOverlap, y: 0.0), size: CGSize(width: size.width - textFrame.maxX + closeButtonOverlap, height: size.height))
             closeTransition.setFrame(view: closeButton, frame: closeButtonFrame)
-            closeTransition.setFrame(view: closeIconView, frame: CGRect(origin: CGPoint(x: closeSpacing, y: floorToScreenPixels((size.height - closeIconSize.height) * 0.5)), size: closeIconSize))
+            closeTransition.setFrame(view: closeIconView, frame: CGRect(origin: CGPoint(x: closeButtonOverlap + closeSpacing, y: floorToScreenPixels((size.height - closeIconSize.height) * 0.5)), size: closeIconSize))
         } else if let closeButton = self.closeButton {
             self.closeButton = nil
             self.closeIconView = nil

@@ -151,6 +151,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 }
             }
             noticeView.closeAction = notice.closeAction
+            noticeView.closeAccessibilityLabel = strings.Common_Close
             let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, displayClose: notice.closeAction != nil, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
             let noticeFrame = CGRect(origin: CGPoint(x: centeredX(width: noticeSize.width), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
             noticesHeight += noticeSize.height
