@@ -15,9 +15,7 @@ import OverlayStatusController
 import UndoUI
 import ContextUI
 import BuildConfig
-#if DEBUG
 import AppBundle
-#endif
 
 private let crashReportBot = "iOSCrashReportsBot"
 private let crashReportWorkQueue = DispatchQueue(label: "org.telegram.crash-report-ui", qos: .utility)
@@ -64,13 +62,9 @@ private func crashReportArchive(_ report: CrashReport) throws -> Data {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
     let json = directory.appendingPathComponent("crash.json")
-    let metadata = directory.appendingPathComponent("metadata.json")
-    let text = directory.appendingPathComponent("report.txt")
     try report.diagnosticJSON.write(to: json)
-    try report.exportMetadata().write(to: metadata)
-    try Data(report.text.utf8).write(to: text)
     let archive = directory.appendingPathComponent("report.zip")
-    guard SSZipArchive.createZipFile(atPath: archive.path, withFilesAtPaths: [json.path, metadata.path, text.path]) else {
+    guard SSZipArchive.createZipFile(atPath: archive.path, withFilesAtPaths: [json.path]) else {
         throw CocoaError(.fileWriteUnknown)
     }
     return try Data(contentsOf: archive)
@@ -160,18 +154,25 @@ private final class CrashReportActions {
         guard self.canPresent, let sourceNode = self.reportNode(report.id) else { return }
         let data = self.sharedContext.currentPresentationData.with { $0 }
         let items: [ContextMenuItem] = [
-            .action(ContextMenuActionItem(text: "View Log", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
-            }, action: { controller, _ in
-                controller?.dismiss(completion: {
-                    self.view(report)
-                })
-            })),
             .action(ContextMenuActionItem(text: "Send to Telegram Team", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
             }, action: { controller, _ in
                 controller?.dismiss(completion: {
                     self.confirmSend(report)
+                })
+            })),
+            .action(ContextMenuActionItem(text: "Share Log", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
+            }, action: { controller, _ in
+                controller?.dismiss(completion: {
+                    self.share(report)
+                })
+            })),
+            .action(ContextMenuActionItem(text: "View Log", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
+            }, action: { controller, _ in
+                controller?.dismiss(completion: {
+                    self.view(report)
                 })
             })),
             .action(ContextMenuActionItem(text: "Delete Log", textColor: .destructive, icon: { theme in
@@ -216,6 +217,25 @@ private final class CrashReportActions {
         }
     }
 
+    private func share(_ report: CrashReport) {
+        guard self.canPresent, !self.busy else { return }
+        guard let context = self.context else {
+            self.alert("Sign In Required", "Sign in to a Telegram account to share this log.")
+            return
+        }
+        let controller = self.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled, .excludeSecretChats]))
+        controller.peerSelected = { [weak controller] peer, threadId in
+            guard self.canPresent, !self.busy else { return }
+            controller?.dismiss()
+            self.busy = true
+            let progress = OverlayStatusController(theme: self.sharedContext.currentPresentationData.with { $0 }.theme, type: .loading(cancelled: nil))
+            self.progress = progress
+            self.present(progress)
+            self.enqueue(report, context: context, peerId: peer.id, threadId: threadId, toTelegramTeam: false)
+        }
+        self.push(controller)
+    }
+
     func confirmSend(_ report: CrashReport) {
         guard self.canPresent, !self.busy else { return }
         guard let context = self.context else {
@@ -236,7 +256,7 @@ private final class CrashReportActions {
                 sender += " (@\(username))"
             }
             // Reset before showing the confirmation so dismissing it by tapping outside is harmless.
-            self.show(textAlertController(sharedContext: self.sharedContext, title: "Send Crash Log?", text: "From: \(sender)\n\nThe archive includes the crash diagnostic, app and device details, and stack addresses. You can review these in View Log.", actions: [
+            self.show(textAlertController(sharedContext: self.sharedContext, title: "Send Crash Log?", text: "From: \(sender)\n\nThe archive includes the crash diagnostic and stack addresses. App and device details are included in the message text. You can review these in View Log.", actions: [
                 TextAlertAction(type: .genericAction, title: self.sharedContext.currentPresentationData.with { $0 }.strings.Common_Cancel, action: {}),
                 TextAlertAction(type: .defaultAction, title: "Send", action: { self.send(report, context: context) })
             ]))
@@ -282,35 +302,57 @@ private final class CrashReportActions {
                 self.alert("Crash Log Bot Is Blocked", "Open @\(crashReportBot) and unblock it before sending the log.")
                 return
             }
-            crashReportWorkQueue.async { [self] in
-                let archive = Result { try crashReportArchive(report) }
-                DispatchQueue.main.async { [self] in
-                    switch archive {
-                    case let .success(data):
-                        let id = Int64.random(in: Int64.min ... Int64.max)
-                        let resource = LocalFileMediaResource(fileId: id, size: Int64(data.count), isSecretRelated: false)
-                        context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
-                        let file = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(data.count), attributes: [.FileName(fileName: "CrashReport-\(report.id.prefix(12)).zip")], alternativeRepresentations: [])
-                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                        self.disposable.set((enqueueMessages(account: context.account, peerId: peerId, messages: [message])
-                        |> deliverOnMainQueue).start(next: { [weak self] ids in
-                            guard let self else { return }
-                            self.finishSending()
-                            guard ids.contains(where: { $0 != nil }) else {
-                                self.alert("Could Not Queue Log", "Please try again. The log remains saved on this device.")
-                                return
-                            }
-                            self.show(UndoOverlayController(presentationData: self.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: "Thank you for helping make Telegram better!", timeout: nil, customUndoText: nil), action: { _ in
-                                return false
-                            }))
-                        }))
-                    case .failure:
+            self.enqueue(report, context: context, peerId: peerId, threadId: nil, toTelegramTeam: true)
+        }))
+    }
+
+    private func enqueue(_ report: CrashReport, context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?, toTelegramTeam: Bool) {
+        crashReportWorkQueue.async { [self] in
+            let archive = Result {
+                let data = try crashReportArchive(report)
+                let metadata = try report.exportMetadata(bundleId: getAppBundle().bundleIdentifier ?? "Unknown")
+                return (data: data, text: String(decoding: metadata, as: UTF8.self))
+            }
+            DispatchQueue.main.async { [self] in
+                switch archive {
+                case let .success(payload):
+                    let data = payload.data
+                    let id = Int64.random(in: Int64.min ... Int64.max)
+                    let resource = LocalFileMediaResource(fileId: id, size: Int64(data.count), isSecretRelated: false)
+                    context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
+                    let file = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(data.count), attributes: [.FileName(fileName: "CrashReport-\(report.id.prefix(12)).zip")], alternativeRepresentations: [])
+                    let instantPage = InstantPage(
+                        blocks: [
+                            .document(id: file.fileId, caption: InstantPageCaption(text: .empty, credit: .empty)),
+                            .details(title: .plain("Metadata"), blocks: [
+                                .preformatted(text: .plain(payload.text), language: "json")
+                            ], expanded: false)
+                        ],
+                        media: [file.fileId: .file(file)],
+                        isComplete: true,
+                        rtl: false,
+                        url: "",
+                        views: nil
+                    )
+                    let message: EnqueueMessage = .message(text: "", attributes: [RichTextMessageAttribute(instantPage: instantPage, fullInstantPage: nil)], inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                    self.disposable.set((enqueueMessages(account: context.account, peerId: peerId, messages: [message])
+                    |> deliverOnMainQueue).start(next: { [weak self] ids in
+                        guard let self else { return }
                         self.finishSending()
-                        self.alert("Could Not Prepare Log", "Please try again. The log remains saved on this device.")
-                    }
+                        guard ids.contains(where: { $0 != nil }) else {
+                            self.alert("Could Not Queue Log", "Please try again. The log remains saved on this device.")
+                            return
+                        }
+                        self.show(UndoOverlayController(presentationData: self.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: toTelegramTeam ? "Thank you for helping make Telegram better!" : "Log shared", timeout: nil, customUndoText: nil), action: { _ in
+                            return false
+                        }))
+                    }))
+                case .failure:
+                    self.finishSending()
+                    self.alert("Could Not Prepare Log", "Please try again. The log remains saved on this device.")
                 }
             }
-        }))
+        }
     }
 }
 
@@ -465,7 +507,7 @@ public func setupCrashReportPrompt(context: AccountContext, isInternalBuild: Boo
         let pending = reports.filter { !$0.wasPresented }
         guard !pending.isEmpty else { return }
         didPresent = true
-        let controller = textAlertController(sharedContext: context.sharedContext, title: "New Crash Log Available", text: "The app closed unexpectedly.\n\n Would you like to send a crash log to help us fix the issue?", actions: [
+        let controller = textAlertController(sharedContext: context.sharedContext, title: "New Crash Log Available", text: "The app closed unexpectedly.\n\nWould you like to send a crash log to help us fix the issue?", actions: [
             TextAlertAction(type: .genericAction, title: "Not Now", action: {}),
             TextAlertAction(type: .defaultAction, title: "Send Log", action: {
                 actions.send(pending[0], context: context)
