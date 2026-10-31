@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-26
+    # The source needs the iOS 27 SDK (Xcode 27.1); the macos-26 image tops out at Xcode 26.6.
+    runs-on: xcode-27-arm64
     timeout-minutes: 360
 
     steps:
@@ -24,9 +25,11 @@ jobs:
           set -x
           WANTED=$(python3 -c 'import json;print(json.load(open("versions.json"))["xcode"])')
           ls -d /Applications/Xcode*.app || true
-          if [ -d "/Applications/Xcode_$WANTED.app" ]; then
-            XCODE_APP="/Applications/Xcode_$WANTED.app"
-            echo "OVERRIDE_XCODE=" >> $GITHUB_ENV
+          # The image may ship it as Xcode_<version>_beta.app.
+          MATCH=$(ls -d /Applications/Xcode_$WANTED.app /Applications/Xcode_${WANTED}_*.app 2>/dev/null | head -1 || true)
+          if [ -n "$MATCH" ]; then
+            XCODE_APP="$MATCH"
+            echo "OVERRIDE_XCODE=--overrideXcodeVersion" >> $GITHUB_ENV
           else
             # The pinned Xcode is not on this runner image; use the newest one and let Make.py skip its version check.
             XCODE_APP=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
@@ -58,6 +61,8 @@ jobs:
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
 
+          # The checked-in fake profiles expire; re-sign them with fresh dates before the build checks them.
+          (cd build-system/Make && python3 RefreshFakeProfiles.py ../fake-codesigning)
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
