@@ -5,7 +5,7 @@ import ChatInputPanelNode
 
 // The chat's bottom panels, and the history navigation buttons that line up with their right edge, step 18pt in from
 // a rounded screen's corners when the bottom inset is small; screens without rounded corners (iPads, home-button
-// iPhones) keep them at the plain side inset.
+// iPhones) keep them at the plain side inset. (ChatInputPanelNode has no test target of its own.)
 final class ChatInputPanelCompactBottomSideInsetTests: XCTestCase {
     func test_roundedCorners_smallBottomInset_stepsIn() {
         XCTAssertEqual(chatInputPanelCompactBottomSideInset(bottomInset: 21.0, deviceMetrics: .iPhone18Pro), 18.0)

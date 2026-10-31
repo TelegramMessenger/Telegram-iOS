@@ -1915,6 +1915,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return self.makeMediaInputNode()
         })
         
+        // The gap between the bottom inset and the bottom panels.
+        let inputPanelsInset: CGFloat = 8.0
+        // The bottom inset with neither a keyboard nor an input node.
+        var restingBottomInset = cleanInsets.bottom
         var insets: UIEdgeInsets
         var inputPanelBottomInsetTerm: CGFloat = 0.0
         if let inputNodeForState = inputNodeForState {
@@ -1927,10 +1931,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             inputPanelBottomInsetTerm = max(insets.bottom, layout.standardInputHeight)
         } else {
             insets = layout.insets(options: [.input])
-            // iPad, without a keyboard: the bottom panels' row (40pt, 8pt above the inset) is centred on the master
-            // pane's tab bar beside the chat.
-            if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode, (layout.inputHeight ?? 0.0) == 0.0 {
-                insets.bottom += tabBarAlignedRowBottomInsetOffset(bottomInset: insets.bottom, rowSpacing: 8.0, rowHeight: 40.0)
+            // iPad: at rest, the bottom panels' row (a panel's default height, 40pt) is centred on the tab bar in the
+            // master pane beside the chat (when the master pane shows another screen, the row moves by the same 4pt).
+            // A keyboard taller than that inset takes over from it continuously.
+            if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode {
+                restingBottomInset += tabBarAlignedRowBottomInsetOffset(bottomInset: restingBottomInset, rowSpacing: inputPanelsInset, rowHeight: 40.0)
+                insets.bottom = max(layout.inputHeight ?? 0.0, restingBottomInset)
             }
         }
 
@@ -2417,7 +2423,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.overlayContextPanelNode = nil
         }
         
-        let inputPanelsInset: CGFloat = 8.0
         let accessoryPanelsInset: CGFloat = 8.0
         var inputPanelsHeight: CGFloat = 0.0
         
@@ -2492,9 +2497,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             var footerPanelsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right + 16.0
-            if containerInsets.bottom <= 32.0 {
-                footerPanelsWidth -= 36.0
-            }
+            footerPanelsWidth -= 2.0 * chatInputPanelCompactBottomSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
             
             let footerPanelsSizeValue = footerPanelsView.update(
                 transition: footerPanelsTransition,
@@ -3169,7 +3172,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         if let disappearingNode = self.disappearingNode {
             let targetY: CGFloat
-            if cleanInsets.bottom.isLess(than: insets.bottom) {
+            if restingBottomInset.isLess(than: insets.bottom) {
                 targetY = layout.size.height - insets.bottom
             } else {
                 targetY = layout.size.height
