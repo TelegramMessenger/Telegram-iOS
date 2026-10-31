@@ -183,7 +183,8 @@ final class LocationSearchContainerNode: ASDisplayNode {
         }
         |> mapToSignal { query -> Signal<([LocationSearchEntry], String)?, NoError> in
             if let query, !query.isEmpty {
-                let foundVenues = nearbyVenues(context: context, story: story, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
+                let venuesResult: Signal<ChatContextResultCollection?, NoError> = locationPickerVenuesEnabled ? nearbyVenues(context: context, story: story, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query) : .single(nil)
+                let foundVenues = venuesResult
                 |> afterCompleted {
                     isSearching.set(false)
                 }

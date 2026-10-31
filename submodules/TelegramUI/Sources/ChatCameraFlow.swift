@@ -8,7 +8,6 @@ import TelegramPresentationData
 import PresentationDataUtils
 import LegacyComponents
 import LegacyMediaPickerUI
-import OverlayStatusController
 import Camera
 import CameraScreen
 import ChatMediaSend
@@ -167,7 +166,6 @@ final class ChatCameraFlow {
     private var inFlightIds = Set<String>()
     private let sendInProgress = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let sendDisposable = MetaDisposable()
-    private weak var progressController: ViewController?
 
     convenience init(context: AccountContext, parameters: ChatCameraFlowParameters, completion: @escaping ChatCameraFlowCompletion) {
         self.init(context: context, parameters: parameters, output: .messages(completion))
@@ -440,10 +438,6 @@ final class ChatCameraFlow {
         )
         let sendParameters = ChatSendMessageActionSheetController.SendParameters(effect: nil, textIsAboveMedia: editingContext.isCaptionAbove())
 
-        Queue.mainQueue().after(0.2) { [weak self] in
-            self?.presentProgressIfNeeded()
-        }
-
         let context = self.context
         let receivedOutcome = Atomic<Bool>(value: false)
         self.sendDisposable.set((chatMediaSendMessages(context: context, items: items, global: global, renderer: ChatMediaSendDefaultRenderer(context: context))
@@ -456,13 +450,11 @@ final class ChatCameraFlow {
                 chatMediaSendDiscardCameraRollImages(outcome.cameraRollImagePaths)
                 return
             }
-            self.dismissProgress()
             self.handleOutcome(outcome, sentIds: uniqueIds, timers: timers, silently: silently, scheduleTime: scheduleTime, parameters: sendParameters, completion: completion)
         }, completed: { [weak self] in
             guard let self, self.isSending, !receivedOutcome.with({ $0 }) else {
                 return
             }
-            self.dismissProgress()
             self.restoreDetachedItems()
         }))
         return true
@@ -488,16 +480,11 @@ final class ChatCameraFlow {
         self.sendInProgress.set(true)
         self.detachedItems.append(contentsOf: camera.chatBatch?.detachAll() ?? [])
 
-        Queue.mainQueue().after(0.2) { [weak self] in
-            self?.presentProgressIfNeeded()
-        }
-
         self.sendDisposable.set((passportRenderedResources(context: self.context, items: items)
         |> deliverOnMainQueue).startStrict(next: { [weak self] resources in
             guard let self, self.isSending else {
                 return
             }
-            self.dismissProgress()
             if resources.isEmpty {
                 self.restoreDetachedItems()
                 return
@@ -511,31 +498,6 @@ final class ChatCameraFlow {
             chatCameraDeleteFiles(paths)
         }))
         return true
-    }
-
-    private func presentProgressIfNeeded() {
-        guard self.isSending, self.progressController == nil, let review = self.review else {
-            return
-        }
-        let overlay = OverlayStatusController(style: .dark, type: .loading(cancelled: { [weak self] in
-            self?.cancelSend()
-        }))
-        self.progressController = overlay
-        review.present(overlay, in: .window(.root))
-    }
-
-    private func dismissProgress() {
-        self.progressController?.dismiss()
-        self.progressController = nil
-    }
-
-    private func cancelSend() {
-        guard self.isSending else {
-            return
-        }
-        self.sendDisposable.set(nil)
-        self.progressController = nil
-        self.restoreDetachedItems()
     }
 
     private func restoreDetachedItems() {

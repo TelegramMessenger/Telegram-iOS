@@ -10,10 +10,10 @@ final class ChatSideListFlagTests: XCTestCase {
     private func kind(
         peerId: EnginePeer.Id,
         isForum: Bool = false,
-        isInlineForum: Bool = false,
+        isSidebarForum: Bool = false,
         isMonoforum: Bool = false,
         isAdminMonoforum: Bool = false,
-        isBotWithThreads: Bool = false,
+        isSidebarBot: Bool = false,
         isRegularWidth: Bool = false,
         enabled: Bool = true
     ) -> ChatSideListKind? {
@@ -21,10 +21,10 @@ final class ChatSideListFlagTests: XCTestCase {
             peerId: peerId,
             accountPeerId: self.accountPeerId,
             isForum: isForum,
-            isInlineForum: isInlineForum,
+            isSidebarForum: isSidebarForum,
             isMonoforum: isMonoforum,
             isAdminMonoforum: isAdminMonoforum,
-            isBotWithThreads: isBotWithThreads,
+            isSidebarBot: isSidebarBot,
             isRegularWidth: isRegularWidth,
             enabled: enabled
         )
@@ -66,8 +66,8 @@ final class ChatSideListFlagTests: XCTestCase {
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isMonoforum: true, isAdminMonoforum: false))
     }
 
-    func testBotThreads() {
-        let value = self.kind(peerId: self.botPeerId, isBotWithThreads: true)
+    func testSidebarBot() {
+        let value = self.kind(peerId: self.botPeerId, isSidebarBot: true)
         XCTAssertEqual(value, .botThreads(peerId: self.botPeerId))
         XCTAssertEqual(value?.listLocation, .forum(peerId: self.botPeerId))
         XCTAssertEqual(value?.showsNewTopicButton, true)
@@ -81,17 +81,17 @@ final class ChatSideListFlagTests: XCTestCase {
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true))
     }
 
-    func testInlineForum() {
-        let value = self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true)
+    func testSidebarForum() {
+        let value = self.kind(peerId: self.channelPeerId, isForum: true, isSidebarForum: true)
         XCTAssertEqual(value, .forum(peerId: self.channelPeerId))
         XCTAssertEqual(value?.listLocation, .forum(peerId: self.channelPeerId))
         XCTAssertEqual(value?.parentPeerId, self.channelPeerId)
         XCTAssertEqual(value?.showsNewTopicButton, true)
     }
 
-    func testInlineForumDisabled() {
-        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, enabled: false))
-        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, isRegularWidth: true))
+    func testSidebarForumDisabled() {
+        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isSidebarForum: true, enabled: false))
+        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isSidebarForum: true, isRegularWidth: true))
     }
 
     func testForumTopicSelectionSwitches() {
@@ -101,12 +101,12 @@ final class ChatSideListFlagTests: XCTestCase {
 
     func testRegularWidthExcluded() {
         XCTAssertNil(self.kind(peerId: self.accountPeerId, isRegularWidth: true))
-        XCTAssertNil(self.kind(peerId: self.botPeerId, isBotWithThreads: true, isRegularWidth: true))
+        XCTAssertNil(self.kind(peerId: self.botPeerId, isSidebarBot: true, isRegularWidth: true))
     }
 
     func testDisabledReturnsNil() {
         XCTAssertNil(self.kind(peerId: self.accountPeerId, enabled: false))
-        XCTAssertNil(self.kind(peerId: self.botPeerId, isBotWithThreads: true, enabled: false))
+        XCTAssertNil(self.kind(peerId: self.botPeerId, isSidebarBot: true, enabled: false))
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isMonoforum: true, isAdminMonoforum: true, enabled: false))
     }
 

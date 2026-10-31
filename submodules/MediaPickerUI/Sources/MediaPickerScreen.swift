@@ -27,7 +27,6 @@ import ChatSendMessageActionUI
 import AnimatedCountLabelNode
 import MediaAssetsContext
 import ChatMediaSend
-import OverlayStatusController
 import GlassBackgroundComponent
 import EdgeEffect
 import ComponentFlow
@@ -2030,35 +2029,12 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             let disposable = MetaDisposable()
             self.chatMediaSendDisposable.set(disposable)
-            var progressController: ViewController?
-            var isFinished = false
-            let finish: () -> Void = {
-                isFinished = true
-                progressController?.dismiss()
-                progressController = nil
-            }
             let reset: () -> Void = { [weak controller] in
                 controller?.completed = false
                 controller?.isDismissing = false
             }
-            Queue.mainQueue().after(0.2) { [weak controller] in
-                guard let controller, !isFinished else {
-                    return
-                }
-                let overlay = OverlayStatusController(style: .dark, type: .loading(cancelled: {
-                    disposable.dispose()
-                    finish()
-                    reset()
-                }))
-                progressController = overlay
-                controller.present(overlay, in: .window(.root))
-            }
             disposable.set((passportRenderedResources(context: controller.context, items: items)
             |> deliverOnMainQueue).startStandalone(next: { [weak self] resources in
-                guard !isFinished else {
-                    return
-                }
-                finish()
                 guard let self, let controller = self.controller else {
                     return
                 }
@@ -2109,30 +2085,12 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             let disposable = MetaDisposable()
             self.chatMediaSendDisposable.set(disposable)
-            var progressController: ViewController?
             var isFinished = false
-            let finish: () -> Void = {
-                isFinished = true
-                progressController?.dismiss()
-                progressController = nil
-            }
             let reset: () -> Void = { [weak controller] in
                 controller?.completed = false
                 controller?.isDismissing = false
             }
             
-            Queue.mainQueue().after(0.2) { [weak controller] in
-                guard let controller, !isFinished else {
-                    return
-                }
-                let overlay = OverlayStatusController(style: .dark, type: .loading(cancelled: {
-                    disposable.dispose()
-                    finish()
-                    reset()
-                }))
-                progressController = overlay
-                controller.present(overlay, in: .window(.root))
-            }
             
             let messages: Signal<ChatMediaSendEvent, NoError> = combineLatest(mediaPickerChatMediaSendPrepareThumbnails(context: context, legacyContext: legacyContext, store: store), legacyMedia |> take(1))
             |> take(1)
@@ -2153,7 +2111,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     chatMediaSendDiscardCameraRollImages(outcome.cameraRollImagePaths)
                     return
                 }
-                finish()
+                isFinished = true
                 guard let self, let controller = self.controller else {
                     chatMediaSendDiscardCameraRollImages(outcome.cameraRollImagePaths)
                     return
@@ -2191,7 +2149,6 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
             }, completed: {
                 if !isFinished {
-                    finish()
                     reset()
                 }
             }))

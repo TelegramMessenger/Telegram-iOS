@@ -112,8 +112,8 @@ public:
     /// The client's outcome for request `id`, sent to it: frees the request gate and settles the promise; nothing for
     /// an id that is not an outgoing request still pending.
     void settleRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome);
-    /// Rejects request `id`, refused before it went out, with `code`.
-    void refuseRequest(JSContext* ctx, int64_t id, const std::string& code);
+    /// Rejects request `id`, refused before it went out, with `code`, its message worded for the glue's `reason`.
+    void refuseRequest(JSContext* ctx, int64_t id, const std::string& code, const std::string& reason);
     /// Runs the handlers of `event` in the order added, `this` the TelegramWidget and no arguments, then for
     /// ThemeChanged onTheme's callbacks with the colour scheme; each is reported on its own.
     void runEvent(JSContext* ctx, Event event);
@@ -126,8 +126,10 @@ private:
     struct PendingRequest {
         int64_t id = 0;
         bool outgoing = false;
-        /// A wallet call (v0.5.0): its failures keep the wallet's codes.
-        bool wallet = false;
+        /// What the error messages name (upstream's label): `request`, or a wallet call (v0.5.0)
+        /// `wallet.sendTransaction` or `wallet.signData`, whose failures keep the wallet's codes.
+        std::string_view label = "request";
+        bool isWallet() const { return label != "request"; }
         PromiseSlot slot;
         /// A background request made off screen (widget-sandbox v0.3.0): held, with its data, until the widget appears.
         bool held = false;
