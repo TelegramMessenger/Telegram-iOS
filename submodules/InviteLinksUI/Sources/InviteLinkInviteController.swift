@@ -314,6 +314,8 @@ public final class InviteLinkInviteController: ViewController {
         private var enqueuedTransitions: [InviteLinkInviteTransaction] = []
         
         private var validLayout: ContainerViewLayout?
+        /// Where the card's bottom rests on a wide layout, kept while the list is dragged or springs back.
+        private var cardRestingMaxY: CGFloat?
         
         private var revokeDisposable = MetaDisposable()
         
@@ -826,7 +828,8 @@ public final class InviteLinkInviteController: ViewController {
         }
         
         /// On a wide layout, centers the card on the screen around the sheet: from its header, wherever the list
-        /// puts it, to the bottom of its box.
+        /// puts it, to the bottom of its box. While the list is dragged or springs back the card keeps its bottom
+        /// where it rests and only its top follows the header, as the sheet's does on a phone.
         private func updateCardFrame(transition: ContainedViewLayoutTransition) {
             guard let layout = self.validLayout else {
                 return
@@ -836,12 +839,23 @@ public final class InviteLinkInviteController: ViewController {
                 return
             }
             let sheetMinY = self.headerNode.frame.minY
-            let cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: geometry.size.height - sheetMinY)
-            transition.updateBounds(node: self.cardNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: sheetMinY), size: cardFrame.size))
-            transition.updatePosition(node: self.cardNode, position: CGPoint(x: cardFrame.midX, y: cardFrame.midY))
+            let sheetHeight = geometry.size.height - sheetMinY
+            let scroller = self.listNode.scroller
+            let cardFrame: CGRect
+            if let cardRestingMaxY = self.cardRestingMaxY, scroller.isTracking || scroller.isDecelerating {
+                cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight, maxY: cardRestingMaxY)
+            } else {
+                cardFrame = centeredSheetFrame(containerSize: layout.size, contentHeight: sheetHeight)
+                self.cardRestingMaxY = cardFrame.maxY
+            }
+            transition.updateBounds(node: self.cardNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: sheetMinY), size: cardFrame.size), beginWithCurrentState: true)
+            transition.updatePosition(node: self.cardNode, position: CGPoint(x: cardFrame.midX, y: cardFrame.midY), beginWithCurrentState: true)
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+            if self.validLayout?.size != layout.size {
+                self.cardRestingMaxY = nil
+            }
             self.validLayout = layout
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))

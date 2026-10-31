@@ -133,6 +133,7 @@ final class SheetPlacementTests: XCTestCase {
     func test_header_noCorners_unchanged() {
         XCTAssertEqual(sheetHeaderCornerInsets(containerWidth: 402.0, sheetMinX: 0.0, sheetWidth: 402.0, sheetMinY: 72.0, reservedCorners: .none), UIEdgeInsets())
     }
+
     // MARK: centeredSheetFrame
 
     func test_centered_iPadLandscape_halfTheLongerSideAcross_centered() {
@@ -151,10 +152,21 @@ final class SheetPlacementTests: XCTestCase {
     }
 
     func test_centered_narrowContainer_keeps10ptOnEachSide() {
-        // A slide-over-sized regular layout: narrower than half its longer side allows.
+        // A tall, narrow regular container: narrower than half its longer side allows.
         let f = centeredSheetFrame(containerSize: CGSize(width: 700.0, height: 1500.0), contentHeight: 300.0)
         XCTAssertEqual(f.width, 680.0)
         XCTAssertEqual(f.minX, 10.0)
         XCTAssertEqual(f.minY, 600.0)
+    }
+    func test_centeredAnchored_atRest_isTheCenteredFrame() {
+        let container = CGSize(width: 1180.0, height: 820.0)
+        let rest = centeredSheetFrame(containerSize: container, contentHeight: 400.0)
+        XCTAssertEqual(centeredSheetFrame(containerSize: container, contentHeight: 400.0, maxY: rest.maxY), rest)
+    }
+
+    func test_centeredAnchored_stretchedContent_growsUpwardOnly() {
+        // The list rubber-bands 50pt: the card's bottom stays where it rests, its top follows the content.
+        let f = centeredSheetFrame(containerSize: CGSize(width: 1180.0, height: 820.0), contentHeight: 450.0, maxY: 610.0)
+        XCTAssertEqual(f, CGRect(x: 295.0, y: 160.0, width: 590.0, height: 450.0))
     }
 }
