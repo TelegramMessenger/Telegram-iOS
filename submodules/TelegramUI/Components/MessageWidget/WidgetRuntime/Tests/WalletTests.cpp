@@ -253,6 +253,49 @@ WR_TEST(testWalletFailureCodes) {
     }
 }
 
+/// A wallet call's rejection is worded as upstream's shim words it: `wallet.<method>: `, the wallet's words where they
+/// differ (WALLET_MESSAGES), a request's otherwise (upstream's sdk.test.ts: "wallet.sendTransaction: the user declined in
+/// the wallet window").
+WR_TEST(testWalletErrorsCarryTheShimsWords) {
+    constexpr const char* kLogMessage = "const say = p => p.then(a => log.push('ok'), e => log.push(e.message));";
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => say(T.wallet.sendTransaction(TX, 'w'));"));
+        pass(env, context(true, false, true));
+        tap(env);
+        complete(env, 1, failure(twidget::WidgetRequestFailure::Rejected));
+        tap(env);
+        complete(env, 2, failure(twidget::WidgetRequestFailure::BadRequest));
+        tap(env);
+        complete(env, 3, failure(twidget::WidgetRequestFailure::Failed));
+        tap(env);
+        complete(env, 4, failure(twidget::WidgetRequestFailure::Timeout));
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("wallet.sendTransaction: the user declined in the wallet window|"
+                             "wallet.sendTransaction: the wallet refused it (the network, the sender, the expiry or the cells)|"
+                             "wallet.sendTransaction: the client could not complete the call|"
+                             "wallet.sendTransaction: the bot did not answer in time"));
+    }
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => { say(T.wallet.signData({ type: 'text', text: 'x' }, 'a'));"
+                                                      " say(T.wallet.sendTransaction(TX, 'b')); };"));
+        pass(env, context(true, false, true));
+        env.env().eval("say(T.wallet.sendTransaction(TX, 'c')); 1");
+        env.env().drain();
+        tap(env);
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("wallet.sendTransaction: it needs a tap on the widget and runs in that tap's handler (one call per tap), or follows within "
+                             "10 s the answer to a call made by a tap|"
+                             "wallet.sendTransaction: a request is already in flight; wait for its answer"));
+        // A reference kept past a context without the wallet.
+        env.env().eval("window.W = T.wallet; 1");
+        complete(env, 2, answer("ok"));
+        pass(env, context(true, false, false));
+        env.env().eval("log.length = 0; say(W.signData({ type: 'text', text: 'x' }, 'd')); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("wallet.signData: the client has no wallet for this user (TelegramWidget.wallet is null)"));
+    }
+}
+
 /// TON Connect's transaction as the shim checks it: anything else throws a TypeError and posts nothing.
 WR_TEST(testWalletMalformedTransactionsThrow) {
     HostEnv env;
@@ -279,6 +322,33 @@ WR_TEST(testWalletMalformedTransactionsThrow) {
                       " { messages: new Proxy([M], {}) }]) {"
                       " try { TelegramWidget.wallet.sendTransaction(tx, 'd').catch(() => {}); g.push('ok'); } catch (e) { g.push(e.constructor.name); } } g.join()"),
              std::string("get,ok,ok,ok,ok,ok"));
+}
+
+/// The shim reads the messages with `for…of` once their `length` is from 1 to 255: what goes out is what the array's
+/// iterator gives, whatever its indices hold, and the global Symbol replaced changes nothing.
+WR_TEST(testWalletTheMessagesAreTheIteratorsValues) {
+    RenderEnv env(page(std::string(kPay) + "const A = TX.messages[0].address;"
+                                           "const ms = [{ address: A, amount: '7' }];"
+                                           "ms[Symbol.iterator] = function* () { yield TX.messages[0]; };"
+                                           "window.Symbol = { iterator: 'nope' };"
+                                           "t.onclick = () => pay({ valid_until: 1900000000, messages: ms }, 'paid:1');"));
+    pass(env, context(true, false, true));
+    tap(env);
+    CHECK(env.env().host().bridgeCalls == (Calls{walletCall(1, "paid:1")}));
+
+    HostEnv host;
+    wr::HostState::of(host.ctx()).setContext(host.ctx(), context(true, true, true));
+    host.eval("var M = { address: '" + kAddress + "', amount: '1' }, closed = 0;"
+              "var withValues = (length, values) => { const a = Array(length).fill(M); a[Symbol.iterator] = values; return a; };"
+              "var endless = () => ({ next: () => ({ done: false, value: M }), return() { closed++; return {}; } }); 1");
+    // The length bounds first, then the iterator: none, nothing, 256 values (the rest unread, the iterator closed), a
+    // non-object result; 255 values pass whatever the length says.
+    CHECK_EQ(host.eval("const r = []; for (const ms of [withValues(0, function* () { yield M; }), withValues(256, function* () { yield M; }),"
+                       " withValues(1, undefined), withValues(1, function* () {}), withValues(1, endless), withValues(1, () => ({ next: () => 5 })),"
+                       " withValues(1, function* () { for (let i = 0; i < 255; i++) yield M; })]) {"
+                       " try { TelegramWidget.wallet.sendTransaction({ messages: ms }, 'd').catch(() => {}); r.push('ok'); } catch (e) { r.push(e.constructor.name); } }"
+                       " r.join() + ':' + closed"),
+             std::string("TypeError,TypeError,TypeError,TypeError,TypeError,TypeError,ok:1"));
 }
 
 /// TON Connect's signData payload: text, bytes or a cell with its schema; no domain (the client signs for the bot).

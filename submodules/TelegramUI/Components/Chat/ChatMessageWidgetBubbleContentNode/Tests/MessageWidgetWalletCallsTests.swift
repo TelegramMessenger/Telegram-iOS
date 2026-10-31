@@ -50,9 +50,11 @@ final class MessageWidgetWalletCallsTests: XCTestCase {
         XCTAssertEqual(outcomes, [.answered(nil)])
     }
 
-    /// The wallet's failures keep their codes and ask the bot nothing; the query's map as a request's.
+    /// The wallet's failures keep their codes (a short balance, after the top-up's offer, is the wallet's refusal) and ask
+    /// the bot nothing; the query's map as a request's.
     func testFailuresReachTheWidgetAsTheirCodes() {
-        for (failure, outcome) in [(WalletContext.WidgetWalletFailure.rejected, MessageWidgetRequestOutcome.rejected), (.badRequest, .badRequest), (.failed, .failed)] {
+        for (failure, outcome) in [(WalletContext.WidgetWalletFailure.rejected, MessageWidgetRequestOutcome.rejected), (.badRequest, .badRequest),
+                                   (.insufficientBalance, .badRequest), (.failed, .failed)] {
             let calls = MessageWidgetWalletCalls()
             var outcomes: [MessageWidgetRequestOutcome] = []
             var asked = 0

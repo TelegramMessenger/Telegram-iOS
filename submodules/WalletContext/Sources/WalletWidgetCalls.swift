@@ -37,10 +37,12 @@ public extension WalletContext {
     }
 
     /// What the widget's promise rejects with for a wallet call that did not reach its bot (sdk-v1 §2.18): the user
-    /// declined (`REJECTED`), the wallet refused it (`BAD_REQUEST`), or anything else (`FAILED`).
+    /// declined (`REJECTED`), the wallet refused it (`BAD_REQUEST`), or anything else (`FAILED`). A balance short of the
+    /// transaction and its fees is the wallet's refusal too, after the client offers the top-up (§5.13).
     enum WidgetWalletFailure: Error, Equatable, Sendable {
         case rejected
         case badRequest
+        case insufficientBalance
         case failed
     }
 
@@ -71,27 +73,34 @@ public extension WalletContext {
         public let wallet: EngineUserWallet
     }
 
-    /// Before the window: the user's cancelled passcode is a decline; the wallet's refusals of the transaction or the
-    /// payload (expiry, network or sender, destinations, amounts, cells, the emulation, the balance) are BAD_REQUEST;
-    /// anything else (no wallet, another operation, the network) FAILED.
+    /// Before the window: the user's cancelled passcode is a decline; the balance is the top-up's; the wallet's other
+    /// refusals of the transaction or the payload (expiry, network or sender, destinations, amounts, cells, a preview it
+    /// could not make) are BAD_REQUEST; anything else (no wallet, another operation, the network) FAILED.
+    /// `previewIncomplete` no longer comes from a widget's transaction (the window shows an incomplete emulation's
+    /// warning, as for a dApp) and keeps its mapping for any other path.
     static func widgetPrepareFailure(_ error: WalletError) -> WidgetWalletFailure {
         switch error {
         case .authorizationCancelled:
             return .rejected
-        case .preparedTransferExpired, .walletKeyMismatch, .invalidAddress, .invalidAmount, .previewFailed, .previewIncomplete, .insufficientBalance, .engine:
+        case .insufficientBalance:
+            return .insufficientBalance
+        case .preparedTransferExpired, .walletKeyMismatch, .invalidAddress, .invalidAmount, .previewFailed, .previewIncomplete, .engine:
             return .badRequest
         default:
             return .failed
         }
     }
 
-    /// After the confirmation: the user's cancelled passcode is a decline; only an expiry passed meanwhile and the balance
-    /// are still the wallet's refusals; anything else FAILED (whether the transfer went out is the bot's to tell).
+    /// After the confirmation: the user's cancelled passcode is a decline; the balance is the top-up's; only an expiry
+    /// passed meanwhile is still the wallet's refusal; anything else FAILED (whether the transfer went out is the bot's
+    /// to tell).
     static func widgetSubmitFailure(_ error: WalletError) -> WidgetWalletFailure {
         switch error {
         case .authorizationCancelled:
             return .rejected
-        case .preparedTransferExpired, .insufficientBalance:
+        case .insufficientBalance:
+            return .insufficientBalance
+        case .preparedTransferExpired:
             return .badRequest
         default:
             return .failed
@@ -191,13 +200,11 @@ extension WalletContextImpl {
                 throw WalletError.unavailable
             }
             let parsed = try widgetTransactionIntent(json: json, now: Int64(currentWalletTimestamp()), walletAddress: info.address)
+            // The engine refuses a balance short of the total and its fees here (`insufficientBalance`, the top-up's).
             let preview = try await self.runtime.previewSend(intent: parsed.intent)
             try Task.checkCancellation()
-            // As the wallet's own raw-payload transfer: an emulation that did not finish is refused; one whose trace
-            // failed is shown with the window's warning, as for a dApp.
-            guard !preview.emulation.isIncomplete else {
-                throw WalletError.previewIncomplete
-            }
+            // As for a dApp (sdk-v1 §5.13, "the client's existing TON Connect window"): an emulation whose trace failed
+            // or did not finish is shown with the window's warning (`tonConnectOperation`), the wallet's own fee kept.
             guard let fee = Int64(preview.emulation.walletFeesNanograms) else {
                 throw WalletError.previewFailed
             }

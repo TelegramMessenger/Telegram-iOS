@@ -234,6 +234,73 @@ WR_TEST(testFailuresRejectWithTheirCodes) {
     CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(5));
 }
 
+/// Upstream's shim words each rejection (globals.ts, requestError: `request: ` and the words for the refusal's reason or
+/// the code), and makes it as `new Error(message)` does: the message the error's own and not enumerable.
+WR_TEST(testErrorsCarryTheShimsWords) {
+    constexpr const char* kLogMessage = "const say = p => p.then(a => log.push('ok'), e => log.push(e.message));";
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => say(T.request('a'));"));
+        pass(env, context(false, false));
+        tap(env);
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: requests are off for this message (the bot did not allow them here)"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, true, true));
+        env.env().eval("say(T.request('a')); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: a preview (an inline result not sent yet) cannot ask the bot"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, false));
+        env.env().eval("say(T.request('a')); say(T.request('b', { wallet: true })); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("request: it needs a tap on the widget and runs in that tap's handler, one call per tap; background requests only "
+                             "where the client allows them (the private chat with the bot)|"
+                             "request: the client has no wallet for this user (TelegramWidget.wallet is null)"));
+    }
+    {
+        RenderEnv env(page(kLogMessage));
+        pass(env, context(true, true));
+        env.env().eval("say(T.request('a')); say(T.request('b')); 1");
+        env.env().drain();
+        complete(env, 1, answer("ok"));
+        env.env().eval("say(T.request('c')); 1");
+        env.env().drain();
+        CHECK_EQ(env.env().eval("log.join('|')"), std::string("request: a request is already in flight; wait for its answer|ok|"
+                                                              "request: too many requests (background requests at most once per 5 s); try again later"));
+    }
+    {
+        RenderEnv env(page(std::string(kLogMessage) + "t.onclick = () => say(T.request('a'));"));
+        pass(env, context(true, false));
+        tap(env);
+        complete(env, 1, failure(twidget::WidgetRequestFailure::Timeout));
+        tap(env);
+        complete(env, 2, failure(twidget::WidgetRequestFailure::RateLimited));
+        tap(env);
+        complete(env, 3, failure(twidget::WidgetRequestFailure::Failed));
+        tap(env);
+        complete(env, 4, failure(twidget::WidgetRequestFailure::Rejected));
+        tap(env);
+        complete(env, 5, answer(std::string(1025, 'a')));
+        CHECK_EQ(env.env().eval("log.join('|')"),
+                 std::string("request: the bot did not answer in time|"
+                             "request: too many requests (background requests at most once per 5 s); try again later|"
+                             "request: the client could not deliver the request|request: the client could not deliver the request|"
+                             "request: the bot's answer broke the limits (a result over 1024 bytes, or not text)"));
+    }
+    {
+        RenderEnv env(page("t.onclick = () => T.request('a').catch(e => { window.e = e; });"));
+        pass(env, context(false, false));
+        tap(env);
+        CHECK_EQ(env.env().eval("[e instanceof Error, Object.keys(e).join(), Object.getOwnPropertyDescriptor(e, 'message').enumerable, e.name, e.code,"
+                                " String(e).startsWith('WidgetRequestError: request: ')].join()"),
+                 std::string("true,name,code,false,WidgetRequestError,NOT_ALLOWED,true"));
+    }
+}
+
 WR_TEST(testAnAnswerForAnUnknownIdIsIgnored) {
     RenderEnv env(page(std::string(kLogRequest) + "t.onclick = () => ask('a');"));
     pass(env, context(true, false));

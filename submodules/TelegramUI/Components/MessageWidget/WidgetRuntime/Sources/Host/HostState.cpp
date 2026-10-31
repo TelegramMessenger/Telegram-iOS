@@ -161,10 +161,10 @@ void HostState::completeRequest(JSContext* ctx, int64_t id, const twidget::Widge
     }
 }
 
-void HostState::queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code) {
+void HostState::queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code, const std::string& reason) {
     // From inside a binding: a failure to queue is the binding's (a memory stop), thrown through.
-    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, code](JSContext* ctx) {
-        HostState::of(ctx).window().TelegramWidget(ctx)->refuseRequest(ctx, id, code);
+    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, code, reason](JSContext* ctx) {
+        HostState::of(ctx).window().TelegramWidget(ctx)->refuseRequest(ctx, id, code, reason);
     }), TaskKind::Bridge);
 }
 
