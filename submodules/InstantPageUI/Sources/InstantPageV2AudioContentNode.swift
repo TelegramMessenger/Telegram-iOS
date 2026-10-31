@@ -56,6 +56,7 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     var play: () -> Void = {}
     var togglePlayPause: () -> Void = {}
     var fetch: () -> Void = {}
+    var cancelFetch: () -> Void = {}
 
     private var resourceStatusDisposable: Disposable?
     // EngineMediaResourceStatus is the TelegramCore typealias for Postbox's MediaResourceStatus;
@@ -163,20 +164,55 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.tapView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
     }
 
-    @objc private func tapped() {
-        self.controlTapped()
+    @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
+        // A tap on a shown badge goes to the badge (ChatMessageInteractiveFileNode's `fileTap`), anything else to the row.
+        let badgeFrame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: InstantPageV2AudioContentNode.controlFrame)
+        let onBadge = self.streamingStatusNode != nil && badgeFrame.contains(recognizer.location(in: self.view))
+        self.perform(InstantPageV2AudioContentNode.tapAction(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying, onBadge: onBadge))
     }
 
     func controlTapped() {
-        switch self.fetchStatus {
-        case .Remote, .Paused:
-            self.fetch()
-        case .none, .Local, .Fetching:
-            if self.isPlaying {
-                self.togglePlayPause()
-            } else {
-                self.play()
+        self.perform(InstantPageV2AudioContentNode.tapAction(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying, onBadge: false))
+    }
+
+    enum TapAction: Equatable {
+        case fetch
+        case cancelFetch
+        case play
+        case togglePlayPause
+    }
+
+    // The badge cancels a running download (its ✕) or starts one (its arrow), as a regular music message's
+    // `cacheProgressPressed` does; the rest of the row fetches a remote file and otherwise plays or toggles.
+    static func tapAction(fetchStatus: EngineMediaResourceStatus?, isPlaying: Bool, onBadge: Bool) -> TapAction {
+        if onBadge {
+            switch fetchStatus {
+            case .Fetching:
+                return .cancelFetch
+            case .Remote, .Paused:
+                return .fetch
+            case .none, .Local:
+                break
             }
+        }
+        switch fetchStatus {
+        case .Remote, .Paused:
+            return .fetch
+        case .none, .Local, .Fetching:
+            return isPlaying ? .togglePlayPause : .play
+        }
+    }
+
+    private func perform(_ action: TapAction) {
+        switch action {
+        case .fetch:
+            self.fetch()
+        case .cancelFetch:
+            self.cancelFetch()
+        case .play:
+            self.play()
+        case .togglePlayPause:
+            self.togglePlayPause()
         }
     }
 
@@ -282,7 +318,8 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     }
 
     // Mirrors ChatMessageInteractiveFileNode's streaming badge handling: the badge appears in the control's
-    // colours (at once; the cutout animates), fades out when there is nothing to show, and the control carries a cutout ring while it is there.
+    // colours (at once; the cutout animates), fades out when there is nothing to show, and the control
+    // carries a cutout ring while it is there.
     private func updateStreamingState(animated: Bool) {
         let streamingState = InstantPageV2AudioContentNode.streamingState(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying)
         let controlFrame = InstantPageV2AudioContentNode.controlFrame

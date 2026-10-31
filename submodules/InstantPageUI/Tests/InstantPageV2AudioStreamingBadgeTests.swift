@@ -61,6 +61,21 @@ final class InstantPageV2AudioStreamingBadgeTests: XCTestCase {
         XCTAssertFalse(InstantPageV2AudioContentNode.isPlaying(nil))
     }
 
+    func test_aTapOnTheBadgeCancelsOrStartsTheDownload() {
+        // The badge's ✕ cancels a running download and its arrow starts one, as on a regular music message.
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Fetching(isActive: true, progress: 0.4), isPlaying: false, onBadge: true), .cancelFetch)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Remote(progress: 0.0), isPlaying: false, onBadge: true), .fetch)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Paused(progress: 0.2), isPlaying: false, onBadge: true), .fetch)
+    }
+
+    func test_aTapElsewhereKeepsTheRowsRouting() {
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Remote(progress: 0.0), isPlaying: false, onBadge: false), .fetch)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Fetching(isActive: true, progress: 0.4), isPlaying: false, onBadge: false), .play)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Local, isPlaying: false, onBadge: false), .play)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: .Local, isPlaying: true, onBadge: false), .togglePlayPause)
+        XCTAssertEqual(InstantPageV2AudioContentNode.tapAction(fetchStatus: nil, isPlaying: false, onBadge: false), .play)
+    }
+
     func test_controlColorsFollowTheRegularMusicMessage() {
         let accent = UIColor(rgb: 0x3e88f7)
         let incoming = InstantPageV2AudioContentNode.controlColors(mediaActiveControlColor: accent, incoming: true, colorOverride: nil)
