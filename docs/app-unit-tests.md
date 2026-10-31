@@ -52,6 +52,11 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 placement of the icons before a chat header's title: a secret chat's lock next to the name, and a third-party
 verification icon to the left of the lock, never on top of it.
 
+`//submodules/TelegramUI/Components/InteractiveTextComponent:InteractiveTextComponentTests` covers
+`InteractiveTextNode`'s layout of a truncated line (a story caption's "Show more", a collapsed quote): custom emoji
+past the cut are not laid out, the last one before it keeps its own place, and a link's highlight across the cut starts
+at the link. CoreText reports offset 0 for all of them, which put an emoji over the line's first word.
+
 `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` covers the round video
 message camera's placement helpers (`VideoMessageCameraLayout.swift`): on iPhone Duo the preview kept above the chat's
 input panel and the trailing buttons clear of the status corner, and on every phone the touches that reach the panel
