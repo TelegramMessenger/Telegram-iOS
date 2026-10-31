@@ -104,7 +104,6 @@ final class TextNodeAttachmentTests: XCTestCase {
             }
             XCTAssertEqual(frame.minX, slot.minX, accuracy: 1.0, "lines: \(maximumNumberOfLines)", file: file, line: line)
             XCTAssertEqual(frame.maxX, slot.maxX, accuracy: 1.0, "lines: \(maximumNumberOfLines)", file: file, line: line)
-            XCTAssertEqual(frame.midX, (slot.minX + slot.maxX) * 0.5, accuracy: 1.0, "lines: \(maximumNumberOfLines)", file: file, line: line)
         }
     }
 
@@ -154,6 +153,62 @@ final class TextNodeAttachmentTests: XCTestCase {
     /// right edge.
     func test_rightToLeftLine_leftToRightAttachmentFollowedByOneCharacter_coversItsGlyph() {
         self.assertAttachmentCoversItsGlyph("مجلد غزة Hello \u{fffc}x")
+    }
+
+    /// An attachment touching text of the other direction, with no space between them (an inline formula): the line
+    /// offsets at that boundary belong to the neighbouring run as much as to the attachment.
+    func test_rightToLeftLine_attachmentRightAfterLatin_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة Hello\u{fffc}")
+    }
+
+    func test_rightToLeftLine_attachmentRightAfterDigits_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة 59\u{fffc}")
+    }
+
+    func test_rightToLeftLine_attachmentRightAfterLatinFollowedByOneCharacter_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة Hello\u{fffc}.")
+    }
+
+    func test_rightToLeftLine_attachmentBetweenLatinAndArabic_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة Hello\u{fffc} الصحفية")
+    }
+
+    func test_leftToRightLine_attachmentRightBeforeArabic_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("Hello\u{fffc}مجلد")
+    }
+
+    func test_leftToRightLine_attachmentRightBeforeArabicInTheMiddle_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("Hello \u{fffc}مجلد world")
+    }
+
+    func test_rightToLeftLine_attachmentRightBeforeLatin_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("مجلد غزة \u{fffc}Hello")
+    }
+
+    func test_leftToRightLine_attachmentRightAfterArabic_coversItsGlyph() {
+        self.assertAttachmentCoversItsGlyph("Hello مجلد\u{fffc}")
+    }
+
+    /// A truncated last line that keeps the attachment and elides what follows it.
+    func test_truncatedLine_attachmentBeforeTheTruncationToken_coversItsGlyph() {
+        let prefix = "Beli Produk Buka Bot \u{fffc}"
+        let text = prefix + "WWWWWW"
+        let string = self.makeString(text)
+        let index = (text as NSString).range(of: "\u{fffc}").location
+        let width = ceil(CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(self.makeString(prefix + "\u{2026}")), nil, nil, nil))) + 2.0
+        guard let slot = self.glyphSlot(string, at: index) else {
+            XCTFail("no glyph for the attachment")
+            return
+        }
+        let layout = self.layout(string, maximumNumberOfLines: 1, width: width)
+        XCTAssertTrue(layout.truncated)
+        let frames = layout.lineAttachmentFrames
+        XCTAssertEqual(frames.count, 1)
+        guard let frame = frames.first?.frame else {
+            return
+        }
+        XCTAssertEqual(frame.minX, slot.minX, accuracy: 1.0)
+        XCTAssertEqual(frame.maxX, slot.maxX, accuracy: 1.0)
     }
 
     /// The chat list preview's first line, wrapped right after a left-to-right attachment in a right-to-left paragraph.
