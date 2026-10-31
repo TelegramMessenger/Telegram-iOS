@@ -3,9 +3,10 @@ import UIKit
 import UIKit.UIGestureRecognizerSubclass
 @testable import CoreListDemo
 
-/// A finger on the list when its scene stops being active is the system's from then on: a swipe Home starts at the
-/// bottom edge, on the list. The engine lets go of that touch sequence when the scene deactivates and again when it
-/// activates, so a pan left holding it cannot keep the list from scrolling after the app comes back (#127).
+/// Defensive, for #127: a swipe Home starts on the list and the system takes the touch, so the engine lets go of the
+/// pan's touch sequence when the scene deactivates, and again when it activates if no finger came down meanwhile, so a
+/// pan left holding that touch cannot keep the list from scrolling after the app comes back. The test host has no
+/// `UITouch`es: a pan "holding a touch" is one set to a recognizing state, which UIKit does not reset by itself.
 final class SceneActivationTouchResetTests: XCTestCase {
     private var window: UIWindow?
 
@@ -33,40 +34,63 @@ final class SceneActivationTouchResetTests: XCTestCase {
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
     }
 
+    private func post(_ name: Notification.Name, _ scene: UIScene?) {
+        NotificationCenter.default.post(name: name, object: scene)
+    }
+
     func test_aSceneDeactivatingCancelsAPanStillRecognizing() throws {
         let f = try makeFixture()
+        var begins = 0
+        var ends = 0
+        f.engine.onWillBeginDragging = { begins += 1 }
+        f.engine.onDidEndDragging = { ends += 1 }
         f.pan.state = .began
-        NotificationCenter.default.post(name: UIScene.willDeactivateNotification, object: f.scene)
+        self.turnRunLoop()
+        self.post(UIScene.willDeactivateNotification, f.scene)
         self.turnRunLoop()
         XCTAssertEqual(f.pan.state, .possible, "the pan is reset, ready for the next finger")
         XCTAssertTrue(f.pan.isEnabled, "and still enabled")
+        XCTAssertEqual(begins, 1)
+        XCTAssertEqual(ends, 1, "the drag ends once, as .cancelled")
     }
 
-    func test_aSceneActivatingCancelsAPanLeftRecognizing() throws {
-        // A pan still holding a touch the app never saw end when it came back: until that touch ends it takes no
-        // other finger.
+    func test_aSceneActivatingCancelsAPanStillHoldingTheTouchItHadWhenTheAppLeft() throws {
         let f = try makeFixture()
+        self.post(UIScene.willDeactivateNotification, f.scene)
         f.pan.state = .began
         f.pan.state = .changed
-        NotificationCenter.default.post(name: UIScene.didActivateNotification, object: f.scene)
+        self.post(UIScene.didActivateNotification, f.scene)
         self.turnRunLoop()
         XCTAssertEqual(f.pan.state, .possible)
         XCTAssertTrue(f.pan.isEnabled)
     }
 
+    func test_aSceneActivatingLeavesADragBegunOnTheWayBack() throws {
+        // A finger that lands while the app comes back, before the scene is active, is the user scrolling.
+        let f = try makeFixture()
+        self.post(UIScene.willDeactivateNotification, f.scene)
+        f.engine.noteTouchDown(at: CACurrentMediaTime())
+        f.pan.state = .began
+        self.post(UIScene.didActivateNotification, f.scene)
+        self.turnRunLoop()
+        XCTAssertEqual(f.pan.state, .began)
+    }
+
     func test_aPanTheHostDisabledStaysDisabled() throws {
         // MediaGrid turns the scroll off for its pinch; a scene change must not turn it back on.
         let f = try makeFixture()
+        f.pan.state = .began
         f.engine.isScrollEnabled = false
-        NotificationCenter.default.post(name: UIScene.didActivateNotification, object: f.scene)
+        self.post(UIScene.willDeactivateNotification, f.scene)
         XCTAssertFalse(f.pan.isEnabled)
         XCTAssertFalse(f.engine.isScrollEnabled)
     }
 
-    func test_anotherScenesActivationLeavesThePanAlone() throws {
+    func test_aNotificationForNoSceneLeavesThePanAlone() throws {
+        // The test host has one scene, so "another scene" is a notification that names none.
         let f = try makeFixture()
         f.pan.state = .began
-        NotificationCenter.default.post(name: UIScene.willDeactivateNotification, object: nil)
+        self.post(UIScene.willDeactivateNotification, nil)
         self.turnRunLoop()
         XCTAssertEqual(f.pan.state, .began, "only the scene the list is shown in counts")
     }
