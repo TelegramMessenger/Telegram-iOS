@@ -1917,8 +1917,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         // The gap between the bottom inset and the bottom panels.
         let inputPanelsInset: CGFloat = 8.0
-        // The bottom inset with neither a keyboard nor an input node.
+        // The bottom inset with neither a keyboard nor an input node, the least the panels sit above.
         var restingBottomInset = cleanInsets.bottom
+        // iPad: the bottom panels' row (a panel's default height, 40pt) rests centred on the tab bar in the master
+        // pane beside the chat (when the master pane shows another screen, the row moves by the same 4pt).
+        if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode {
+            restingBottomInset += tabBarAlignedRowBottomInsetOffset(bottomInset: restingBottomInset, rowSpacing: inputPanelsInset, rowHeight: 40.0)
+        }
         var insets: UIEdgeInsets
         var inputPanelBottomInsetTerm: CGFloat = 0.0
         if let inputNodeForState = inputNodeForState {
@@ -1928,16 +1933,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             insets = layout.insets(options: [])
+            insets.bottom = restingBottomInset
             inputPanelBottomInsetTerm = max(insets.bottom, layout.standardInputHeight)
         } else {
             insets = layout.insets(options: [.input])
-            // iPad: at rest, the bottom panels' row (a panel's default height, 40pt) is centred on the tab bar in the
-            // master pane beside the chat (when the master pane shows another screen, the row moves by the same 4pt).
-            // A keyboard taller than that inset takes over from it continuously.
-            if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode {
-                restingBottomInset += tabBarAlignedRowBottomInsetOffset(bottomInset: restingBottomInset, rowSpacing: inputPanelsInset, rowHeight: 40.0)
-                insets.bottom = max(layout.inputHeight ?? 0.0, restingBottomInset)
-            }
+            // A keyboard taller than the resting inset takes over from it continuously.
+            insets.bottom = max(layout.inputHeight ?? 0.0, restingBottomInset)
         }
 
         switch self.chatPresentationInterfaceState.mode {

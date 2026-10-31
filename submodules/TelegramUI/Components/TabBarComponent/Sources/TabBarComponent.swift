@@ -958,7 +958,7 @@ public final class TabBarComponent: Component {
                 } else {
                     searchSize = CGSize(width: barHeight, height: barHeight)
                     size.width += barHeight + 8.0
-                    searchFrame = CGRect(origin: CGPoint(x: availableSize.width - searchSize.width, y: 0.0), size: searchSize)
+                    searchFrame = CGRect(origin: CGPoint(x: tabBarSearchButtonOrigin(tabsLength: tabsSize.width, availableLength: availableSize.width, buttonLength: searchSize.width, isCompact: component.isCompact && component.axis == .horizontal), y: 0.0), size: searchSize)
                 }
 
                 let searchView: NavigationSearchView

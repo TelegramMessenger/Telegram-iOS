@@ -19,3 +19,14 @@ public func tabBarAlignedRowBottomInsetOffset(bottomInset: CGFloat, rowSpacing: 
     let rowCenterInset = bottomInset + rowSpacing + rowHeight * 0.5
     return barCenterInset - rowCenterInset
 }
+
+/// Where the inactive search button starts along a horizontal bar whose items take `tabsLength` of
+/// `availableLength`: 8pt after the items in a compact bar, which can hug its items (`tabBarItemsLayout`) and is
+/// centred on its items and search together, and at the end of `availableLength` in the other modes, which fill it.
+public func tabBarSearchButtonOrigin(tabsLength: CGFloat, availableLength: CGFloat, buttonLength: CGFloat, isCompact: Bool) -> CGFloat {
+    if isCompact {
+        return tabsLength + 8.0
+    } else {
+        return availableLength - buttonLength
+    }
+}
