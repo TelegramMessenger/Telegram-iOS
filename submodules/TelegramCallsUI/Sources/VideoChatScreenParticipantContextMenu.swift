@@ -352,7 +352,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView)),
+            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)),
             items: items |> map { items in
                 return ContextController.Items(content: .list(items))
             },
@@ -410,7 +410,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView)),
+            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)),
             items: .single(ContextController.Items(content: .list(items))),
             recognizer: nil,
             gesture: gesture
@@ -852,9 +852,11 @@ private final class ParticipantExtractedContentSource: ContextExtractedContentSo
     let blurBackground: Bool = true
     
     private let contentView: ContextExtractedContentContainingView
+    private weak var participantsView: VideoChatParticipantsComponent.View?
     
-    init(contentView: ContextExtractedContentContainingView) {
+    init(contentView: ContextExtractedContentContainingView, participantsView: VideoChatParticipantsComponent.View?) {
         self.contentView = contentView
+        self.participantsView = participantsView
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
@@ -862,6 +864,6 @@ private final class ParticipantExtractedContentSource: ContextExtractedContentSo
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds, sourceTransitionSurface: self.participantsView?.contextMenuTransitionSurface(for: self.contentView))
     }
 }
