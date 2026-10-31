@@ -171,6 +171,10 @@ Review and runtime findings, fixed:
 - The sticker pack's visible glass button was a different node from the legacy one the fixer changed; caught by an
   FP capture, not by the two reviewers.
 - Share and import-sticker sheets stay in the band: tall scrolling grids whose corner buttons rise to the block.
+  The new share screen (`ShareScreen`) brought back a centered card on unfolded landscape by choosing its
+  `centeredSize` with `widthClass == .regular`; its content then lost the screen's 84pt strip inset off the card
+  (#86). A `ResizableSheetComponent` caller chooses `centeredSize` with `presentsFloatingPanels`, as its `isCentered`
+  (`RecentSessionScreen` still uses the width class; it is pushed, so it sees compact metrics on the Duo).
 - A mini app in the sheet (`WebAppController`) keeps its page to the band: the page spanned the strip under the
   navigation bar's close and more buttons, which stand there, and most pages ignore the safe area reported to them, so
   the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
