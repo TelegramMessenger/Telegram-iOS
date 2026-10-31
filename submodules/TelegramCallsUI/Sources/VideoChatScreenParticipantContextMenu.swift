@@ -27,6 +27,7 @@ extension VideoChatScreenComponent.View {
         }
         
         let muteStatePromise = Promise<GroupCallParticipantsContext.Participant.MuteState?>(participant.muteState)
+        let contentSource = ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)
            
         let itemsForEntry: (GroupCallParticipantsContext.Participant.MuteState?) -> [ContextMenuItem] = { [weak self] muteState in
             guard let self, let environment = self.environment, let currentCall = self.currentCall else {
@@ -253,6 +254,7 @@ extension VideoChatScreenComponent.View {
                     }
                     self.openPeer(peer)
                     
+                    contentSource.returnsToList = false
                     f(.dismissWithoutContent)
                 })))
                 
@@ -268,6 +270,7 @@ extension VideoChatScreenComponent.View {
                     }
                     self.openPeerInfo(peer)
                     
+                    contentSource.returnsToList = false
                     f(.dismissWithoutContent)
                 })))
             
@@ -352,7 +355,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)),
+            source: .extracted(contentSource),
             items: items |> map { items in
                 return ContextController.Items(content: .list(items))
             },
@@ -380,6 +383,8 @@ extension VideoChatScreenComponent.View {
         guard case .group = self.currentCall else {
             return
         }
+        
+        let contentSource = ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)
            
         let itemsForEntry: () -> [ContextMenuItem] = { [weak self] in
             guard let self, let environment = self.environment else {
@@ -391,6 +396,7 @@ extension VideoChatScreenComponent.View {
             items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { [weak self] c, _ in
+                contentSource.returnsToList = false
                 c?.dismiss(result: .dismissWithoutContent, completion: nil)
                 
                 guard let self else {
@@ -410,7 +416,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)),
+            source: .extracted(contentSource),
             items: .single(ContextController.Items(content: .list(items))),
             recognizer: nil,
             gesture: gesture
@@ -854,6 +860,11 @@ private final class ParticipantExtractedContentSource: ContextExtractedContentSo
     private let contentView: ContextExtractedContentContainingView
     private weak var participantsView: VideoChatParticipantsComponent.View?
     
+    /// Cleared by an action that dismisses the menu without its content (`.dismissWithoutContent`): the item then
+    /// fades out where the menu shows it, and must not be put back into the list's transition surface, where it would
+    /// appear in its list slot at once and outlive a removal of its row.
+    var returnsToList: Bool = true
+    
     init(contentView: ContextExtractedContentContainingView, participantsView: VideoChatParticipantsComponent.View?) {
         self.contentView = contentView
         self.participantsView = participantsView
@@ -864,6 +875,6 @@ private final class ParticipantExtractedContentSource: ContextExtractedContentSo
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds, sourceTransitionSurface: self.participantsView?.contextMenuTransitionSurface(for: self.contentView))
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds, sourceTransitionSurface: self.returnsToList ? self.participantsView?.contextMenuTransitionSurface(for: self.contentView) : nil)
     }
 }

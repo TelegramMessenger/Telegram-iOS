@@ -35,7 +35,7 @@ final class VideoChatParticipantsContextMenuTransitionTests: XCTestCase {
         let shadowIndex = try XCTUnwrap(view.subviews.firstIndex(of: view.scrollViewBottomShadowView))
         
         let scrollViews = self.scrollViews(in: view)
-        XCTAssertEqual(scrollViews.count, 2)
+        XCTAssertEqual(scrollViews.count, 2, "the main list and the separate video column; a new scroll view needs its side of the shadow pinned here")
         
         var checkedBeneath = 0
         var checkedAbove = 0

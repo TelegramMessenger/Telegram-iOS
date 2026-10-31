@@ -659,6 +659,7 @@ final class VideoChatParticipantsComponent: Component {
     final class View: UIView, UIScrollViewDelegate {
         private let scrollViewClippingContainer: SolidRoundedCornersContainer
         private let scrollView: ScrollView
+        // Internal for VideoChatParticipantsContextMenuTransitionTests.
         let scrollViewBottomShadowView: UIImageView
         private let contextMenuTransitionContainer: UIView
         
