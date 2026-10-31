@@ -72,6 +72,14 @@ public let chatTextInputMinFontSize: CGFloat = 5.0
 
 private let minInputFontSize = chatTextInputMinFontSize
 
+/// Whether the panel's own recognizer takes a tap on the input field: before the input node loads (the tap loads and
+/// focuses it), and while sending text is restricted, when the input node is disabled and the tap answers with the
+/// boost-to-unrestrict sheet or the restriction tooltip. An enabled input node takes its own taps, and the touch-down
+/// recognizer must then stay off: it conflicts with the Apple Intelligence gestures.
+func textInputTapRecognizerIsEnabled(isInputNodeLoaded: Bool, sendingTextDisabled: Bool) -> Bool {
+    return !isInputNodeLoaded || sendingTextDisabled
+}
+
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
     return chatTextInputFieldMinHeight(for: presentationInterfaceState.fontSize)
 }
@@ -1101,7 +1109,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         self.textInputBackgroundTapRecognizer = recognizer
         self.textInputBackgroundNode.isUserInteractionEnabled = true
-        self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
+        // On the clipping container, not the background: the glass field and its content lie over the background
+        // and take every touch, while the container covers the text and holds the input node.
+        self.textInputNodeClippingContainer.addGestureRecognizer(recognizer)
         
         if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
@@ -1138,6 +1148,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     override public func didLoad() {
         super.didLoad()
+    }
+    
+    private func updateTextInputTapRecognizer() {
+        self.textInputBackgroundTapRecognizer?.isEnabled = textInputTapRecognizerIsEnabled(isInputNodeLoaded: self.richTextInputNode != nil, sendingTextDisabled: self.sendingTextDisabled)
     }
     
     public func loadTextInputNodeIfNeeded() {
@@ -1305,11 +1319,6 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         richTextInputNode.mediaItemViewFactory = self.mediaItemViewFactory
         richTextInputNode.formulaRenderer = self.formulaRenderer
 
-        if let textInputBackgroundTapRecognizer = self.textInputBackgroundTapRecognizer {
-            self.textInputBackgroundTapRecognizer = nil
-            self.textInputBackgroundNode.view.removeGestureRecognizer(textInputBackgroundTapRecognizer)
-        }
-        
         var accessoryButtonsWidth: CGFloat = 0.0
         var firstButton = true
         for (_, button) in self.accessoryItemButtons {
@@ -1345,6 +1354,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         self.textInputBackgroundNode.isUserInteractionEnabled = !richTextInputNode.inputIsUserInteractionEnabled
+        self.updateTextInputTapRecognizer()
         
         richTextInputNode.toggleQuoteCollapse = { [weak self] range in
             guard let self else {
@@ -1924,6 +1934,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.sendingTextDisabled = sendingTextDisabled
         
         self.richTextInputNode?.inputIsUserInteractionEnabled = !sendingTextDisabled
+        self.updateTextInputTapRecognizer()
         
         var displayBotStartButton = false
         if case .scheduledMessages = interfaceState.subject {
