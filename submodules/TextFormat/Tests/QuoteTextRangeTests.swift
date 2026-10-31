@@ -66,6 +66,33 @@ final class QuoteTextRangeTests: XCTestCase {
         XCTAssertEqual(range, NSRange(location: 0, length: 3))
     }
 
+    func testQuoteStartInsideAnEmojiCoversItsPlaceholder() {
+        let text = "a 👍👍 b"
+        let layout = self.layoutString(text, customEmoji: ["👍👍"])
+
+        let range = findQuoteRange(layoutString: layout, quoteText: "👍 b", offset: 4)
+
+        XCTAssertEqual(range, NSRange(location: 2, length: 3))
+    }
+
+    func testQuoteEndingWithCustomEmojiAtTheEndOfTheText() {
+        let text = "💬 one x 💬"
+        let layout = self.layoutString(text, customEmoji: ["💬"])
+
+        let range = findQuoteRange(layoutString: layout, quoteText: "x 💬", offset: nil)
+
+        XCTAssertEqual(range, NSRange(location: 6, length: 3))
+    }
+
+    func testWithoutOffsetTheFirstOccurrenceIsFound() {
+        let text = "💬 ab 💬 ab"
+        let layout = self.layoutString(text, customEmoji: ["💬"])
+
+        let range = findQuoteRange(layoutString: layout, quoteText: "ab", offset: nil)
+
+        XCTAssertEqual(range, NSRange(location: 2, length: 2))
+    }
+
     func testTextWithoutCustomEmojiIsSearchedAsIs() {
         let text = "one two one two"
         let layout = NSAttributedString(string: text)
