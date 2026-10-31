@@ -206,7 +206,7 @@ other device stays byte-identical; the band helpers above are built that way.
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
-  widths in and outside a chat), `//submodules/ReactionSelectionNode:ReactionSelectionNodeTests` (the reaction panel's
+  widths in and outside a chat), `//submodules/ReactionSelectionNode:ReactionContextGeometryTests` (the reaction panel's
   glass keeps to the panel when its hidden tail points past it, as at a story's input row on the landscape card),
   `//submodules/PasswordSetupUI:PasswordSetupUITests` (the 2FA data input's
   bands and its button-row actions per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
