@@ -86,6 +86,16 @@ final class SceneActivationTouchResetTests: XCTestCase {
         XCTAssertFalse(f.engine.isScrollEnabled)
     }
 
+    func test_aSceneTheListIsNotShownInLeavesThePanAlone() throws {
+        let f = try makeFixture()
+        let otherWindow = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 800))
+        otherWindow.addSubview(f.engine.contentHost)
+        f.pan.state = .began
+        self.post(UIScene.willDeactivateNotification, f.scene)
+        self.turnRunLoop()
+        XCTAssertEqual(f.pan.state, .began, "a window with no scene is not the one that deactivated")
+    }
+
     func test_aNotificationForNoSceneLeavesThePanAlone() throws {
         // The test host has one scene, so "another scene" is a notification that names none.
         let f = try makeFixture()

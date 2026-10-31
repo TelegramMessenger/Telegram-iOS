@@ -128,7 +128,8 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// lets go only of the touch sequence the pan held when the app left, never one a finger began on the way back.
     private var touchDownCount = 0
     private var touchDownCountAtDeactivation: Int?
-    /// The pan is being let go of on a scene change: its release, whenever UIKit delivers it, is at rest.
+    /// The pan is being let go of on a scene change. UIKit delivers its `.cancelled` inside `isEnabled = false`, so the
+    /// flag is set only around that toggle, and the release it marks is at rest.
     private var releasesSceneCancelAtRest = false
 
     /// Defensive, for #127 (iOS 27.2 devices: after Home and back the chat did not scroll until it was reopened). The
@@ -152,8 +153,13 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         guard pan.isEnabled, pan.state != .possible || pan.numberOfTouches != 0 else {
             return
         }
+        // Debug Settings ▸ "Chat: CoreList scroll trace": whether a device ever finds the pan holding a sequence here.
+        FlightTrace.shared.log("SCENE-CANCEL \(notification.name.rawValue) state=\(Self.traceName(pan.state)) "
+            + "touches=\(pan.numberOfTouches) offset=\(core.offset)")
+        FlightTrace.shared.flush()
         releasesSceneCancelAtRest = true
         pan.isEnabled = false
+        releasesSceneCancelAtRest = false
         pan.isEnabled = true
     }
 
@@ -219,7 +225,6 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     func noteTouchDown(at timestamp: TimeInterval) {
         sawDrag = false
         touchDownCount &+= 1
-        releasesSceneCancelAtRest = false
         // Cleared at finger-down, which runs BEFORE `shouldBeginImmediately` is consulted. Clearing it
         // only on `.ended`/`.cancelled` would leak a stale `true` into the next gesture whenever a
         // forced begin was then denied by `gestureRecognizerShouldBegin` (a tracking UIControl), and
@@ -348,7 +353,6 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         switch state {
         case .began:
             sawDrag = true
-            releasesSceneCancelAtRest = false      // a new gesture: a scene cancel's release is behind it
             onWillBeginDragging?()
             // Trackpad-style indirect scroll delivers no touch-down, so `onTouchDown` never catches an
             // in-flight keyframe flight — catch it here. Idempotent for touch (onTouchDown nulled it).
@@ -395,7 +399,6 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
             // still does. Skipping the call instead would strand an overscrolled list off its edge.
             let hostStops = shouldStopScrollingOnRelease?(velocity.y) ?? false
             let releaseVelocity = (hostStops || releasesSceneCancelAtRest) ? 0.0 : velocity.y
-            releasesSceneCancelAtRest = false
             let decelerates = core.endDrag(recognizerVelocity: releaseVelocity, at: CACurrentMediaTime())
             FlightTrace.shared.log("RELEASE recognizer=\(velocity.y) used=\(releaseVelocity) decelerates=\(decelerates) "
                 + "velocity(pt/ms)=\(core.decelerationVelocity) vScale=\(core.decelerationVelocityScale) "
@@ -929,6 +932,9 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// The forced `.began` and the translation baseline were measured on the trackpad only; how a wheel
     /// notch landing on moving content behaves here is unverified on a device.
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
+        if gestureRecognizer.state == .possible {
+            touchDownCount &+= 1               // an indirect scroll's finger-down: see `sceneActivationChanged`
+        }
         guard gestureRecognizer.state == .possible, flight != nil || core.isDecelerating else { return true }
         catchMotionForFingerRest()
         // Mark the forced-began path so handlePan(.began) captures the recognizer's stale translation as
