@@ -211,7 +211,9 @@ public final class CachedChannelData: CachedPeerData {
             self.title = decoder.decodeOptionalStringForKey("title")
             self.scheduleTimestamp = decoder.decodeOptionalInt32ForKey("scheduleTimestamp")
             self.subscribedToScheduled = decoder.decodeBoolForKey("subscribed", orElse: false)
-            self.isStream = decoder.decodeOptionalBoolForKey("isStream_v2")
+            // Read from the key encode(_:) writes. It used to read "isStream_v2", which nothing writes, so a stored call
+            // always came back with isStream == nil and a live stream was joined as a video chat.
+            self.isStream = decoder.decodeOptionalBoolForKey("isStream")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
