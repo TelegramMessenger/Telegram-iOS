@@ -927,7 +927,12 @@ did. The order of the checks is upstream's glue's (`packages/ios` `SandboxEngine
   - the client's outcome through `HostState::completeRequest` → `TelegramWidget::settleRequest`. This frees the gate
     first, checks the answer (`checkRequestAnswer`, else `INVALID_ANSWER` and `answer-rejected`), and resolves
     `{result}` frozen.
-  - A rejection is an `Error` named `WidgetRequestError` with its `code`, made in a job.
+  - A rejection is an `Error` named `WidgetRequestError` with its `code`, made in a job. Its `message` is upstream's
+    shim's (`requestErrorMessage`, globals.ts's `requestError`): the call's label (`request`, `wallet.sendTransaction`,
+    `wallet.signData`), then the words for the glue's reason when the code is `NOT_ALLOWED` (`preview`, `disabled`,
+    `no-wallet`, `no-activation`, the gate's verdict that `queueRequestRefusal` carries), else for the code, a wallet
+    call's own words first (`WALLET_MESSAGES`). It is the error's own and not enumerable, as `new Error(message)` makes
+    it (since 2026-10-31; before, the message was the code).
   - An outcome for an id that is not an outgoing pending request changes nothing.
 - **The gate's `show()`** runs in `setVisible`'s task when the widget becomes visible.
 - **Diagnostics:** `request-blocked` and `preview-blocked` are capped at `MAX_REJECTION_REPORTS` (`reportCapped`).
@@ -993,10 +998,13 @@ query) is the message widgets guide's ("The wallet").
 - **The arguments are checked as the shim checks the JS value.** The vendored policy's twin checks JSON
   (`checkWalletTransaction`, `checkSignDataPayload`, `checkRequestOptions`), so `walletArgumentJson` converts the value
   by the shim's rules: the value itself a non-null, non-array object that is not a function; below it `Object.keys` and
-  `Array.isArray` (through proxies), `undefined` kept as null so `onlyKeys` sees its key, a function, symbol or bigint
-  as `{}` (refused wherever one stands), nothing read below the deepest field a check reads, and refusals before
-  reading on for more keys than any check allows (5), an array past 255 or a string past 65,536 code units. Getters and
-  proxies run, as in the shim. A refusal throws `TypeError` with upstream's text; the label `data` is a request's.
+  `Array.isArray` (through proxies), an array read as the shim's `for…of` reads a transaction's messages (its `length`
+  from 1 to 255, then the values of its own iterator through the runtime's @@iterator, `sequenceValues`, whatever its
+  indices hold; since 2026-10-31), `undefined` kept as null so `onlyKeys` sees its key, a function, symbol or bigint as
+  `{}` (refused wherever one stands), nothing read below the deepest field a check reads, and refusals before reading
+  on for more keys than any check allows (5), an iterator past 255 values (the 256th read, the iterator closed) or a
+  string past 65,536 code units. Getters and proxies run, as in the shim. A refusal throws `TypeError` with upstream's
+  text; the label `data` is a request's.
 - **The gate** (`HostState::decideRequest(ctx, withWallet)`, `decideWallet`): a request for the wallet needs the
   wallet (`no-wallet`) and a press, never the background, never held; a wallet call needs a press or the grant. The
   grant: the answer with no error to a call that went out on a press or the grant (`settleRequest`'s
@@ -1007,7 +1015,8 @@ query) is the message widgets guide's ("The wallet").
 - **Out**: a call that passes posts the bridge call `wallet` with `[id, method, the checked argument's toJson, data]`
   (`postBridgeCallJson`); a request for the wallet posts `[id, data, {"wallet":true}]`. Its outcome comes back as a
   request's (`completeRequest`), and its failures keep `REJECTED` and `BAD_REQUEST` (`walletFailureCode`) where a
-  request's are `FAILED`.
+  request's are `FAILED`, worded as the shim words a wallet call's (`wallet.sendTransaction: the user declined in the
+  wallet window`).
 - **Upward**: `WRSession`'s context gains `wallet:`, `WRRequestFailure` gains `Rejected` and `BadRequest`;
   `MessageWidgetContext.wallet` (part of the registry's key), `BridgeCall.request(id:data:wallet:)` and
   `.wallet(id:call:)`, `MessageWidgetRequestOutcome.rejected` / `.badRequest` (Swift `StateTests`, `RegistryTests`).
@@ -1637,24 +1646,23 @@ purpose. One line each:
 
 ## Divergences from widget-sandbox v0.5.0 (for the maintainers)
 
-What this client does differently from v0.5.0's shim and glue, on purpose. One line each:
+What this client does differently from v0.5.0's shim and glue, on purpose. One line each. Aligned with upstream on
+2026-10-31 (the user): the promise errors' words, the messages read through their iterator, an incomplete emulation
+shown in the window, and the top-up offered for a short balance (§5.13).
 
 1. **No wallet for a user whose device cannot sign** (the user, 2026-10-30): `context.wallet` needs a wallet this device
    holds the key for, beside `wallet_available`, so a widget never makes the server create a wallet (§5.13 says whether
    the user has one is not part of it).
-2. **No top-up** (the user, 2026-10-30): an unaffordable transaction is `BAD_REQUEST` before any window.
-3. **Our promise errors' `message` is the code**, for wallet calls as for requests since v0.2, not the shim's sentences
-   (`wallet.sendTransaction: the user declined in the wallet window`); the diagnostics carry the glue's texts.
-4. **The transaction's messages are read by index** up to `length`, where the shim's `for…of` takes the iterator:
-   different only for an array whose iterator was replaced, and what is posted is what was checked either way.
-5. **A failed emulation trace opens the window with its warning**, as for a dApp; only an incomplete emulation is
-   refused (`BAD_REQUEST`), as the wallet's own raw-payload transfers are.
-6. **A send whose server reply is lost reaches the bot only through the chain**: the transfer accepted with no message
+2. **A send whose server reply is lost reaches the bot only through the chain**: the transfer accepted with no message
    hash (`.submissionUnknown`) is `FAILED` to the widget, and no query reports it, though the wallet may resolve it
    later (§2.18's "may have been sent").
-7. **A channel post a bot sent cannot pay or sign**: the client finds no bot for it (no via bot, the channel as the
+3. **A channel post a bot sent cannot pay or sign**: the client finds no bot for it (no via bot, the channel as the
    author, no bot id on the media), so its wallet calls are `FAILED` with no window; the bot's id on
    `messageMediaWidget` would close this.
+4. **Messages whose iterator gives no value, or more than 255, while their `length` is 1–255, throw `TypeError`**: the
+   shim posts what its `for…of` read and the glue drops the malformed call (`bridge-rejected`, the promise never
+   settles); this runtime is the shim and the glue in one, so it refuses the call where it is made, reading at most 256
+   values.
 
 ## What the corpus still trips on
 
@@ -1818,8 +1826,9 @@ The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox
   bot's query with `msg_hash` or the signature) has not run end to end; it needs a wallet this device signs for, a
   bot's widget that can query, and the server's side of layer 233's wallet queries. The window itself was seen only
   through Debug Settings ▸ "Show widget wallet window (nothing is sent)". For the maintainer: the bot's id on
-  `messageMediaWidget`, so a bot's channel post can pay (divergence 7); whether a send the wallet resolves later should
-  reach the bot (divergence 6). `userWallet#454d2737` is the maintainer's (their schema of 2026-10-31). Follow-ups,
+  `messageMediaWidget`, so a bot's channel post can pay (divergence 3); whether a send the wallet resolves later should
+  reach the bot (divergence 2). The top-up offer (2026-10-31) is unit-tested as far as its outcome; the alert and its
+  receive screen were not seen on a short balance. `userWallet#454d2737` is the maintainer's (their schema of 2026-10-31). Follow-ups,
   none blocking:
   - the window: a cancelled passcode closes it (a dApp's stays for a retry); after a failure past Confirm the sheet
     leaves in one frame instead of sliding out (`dismiss(completion:)` on a pushed sheet, and the screen has no public

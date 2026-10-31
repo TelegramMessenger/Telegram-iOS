@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/AccountContext",
+        "//submodules/PresentationDataUtils",
         "//submodules/WalletContext",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 
+#include "Sources/Host/Sequences.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Values.h"
 #include "twidget/sdk_policy.h"
@@ -50,17 +51,25 @@ bool isArray(JSContext* ctx, JSValueConst value) {
 
 twidget::Json convert(JSContext* ctx, JSValueConst value, int depth);
 
+/// The shim's reading of a transaction's messages (checkWalletTransaction): `length` from 1 to 255, then `for…of`, so
+/// the values are the array's own iterator's (through the runtime's @@iterator, which a script cannot replace), whatever
+/// its indices hold. No other check takes an array, so any other array is refused whichever way it is read. One value
+/// more than a transaction takes refuses it with the rest unread and the iterator closed, where the shim reads on and
+/// the glue's check refuses what it posts.
 twidget::Json convertArray(JSContext* ctx, JSValueConst array, int depth) {
     int64_t length = 0;
     if (JS_GetLength(ctx, array, &length) < 0) {
         throw Thrown{};
     }
-    if (length > kMaxElements) {
+    if (length < 1 || length > kMaxElements) {
+        throw Refused{};
+    }
+    std::optional<std::vector<Value>> values = sequenceValues(ctx, array, "TelegramWidget.wallet.sendTransaction", size_t(kMaxElements) + 1);
+    if (!values || values->size() > size_t(kMaxElements)) {
         throw Refused{};
     }
     twidget::Json out = twidget::Json::array();
-    for (int64_t i = 0; i < length; i++) {
-        Value element = Value::adopt(ctx, checked(ctx, JS_GetPropertyInt64(ctx, array, i)));
+    for (const Value& element : *values) {
         out.push(convert(ctx, element.get(), depth + 1));
     }
     return out;
