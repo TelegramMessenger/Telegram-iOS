@@ -9,6 +9,10 @@ final class NoticeView: OverlayMaskContainerView {
     private let textContainer: UIView
     private let iconView: UIImageView
     private let textView: TextView
+    private var closeButton: HighlightableButton?
+    private var closeIconView: UIImageView?
+    
+    var closeAction: (() -> Void)?
     
     override init(frame: CGRect) {
         self.backgroundView = RoundedCornersView(color: .white)
@@ -54,6 +58,10 @@ final class NoticeView: OverlayMaskContainerView {
         })
     }
     
+    @objc private func closePressed() {
+        self.closeAction?()
+    }
+    
     func animateOut(completion: @escaping () -> Void) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
             completion()
@@ -61,10 +69,13 @@ final class NoticeView: OverlayMaskContainerView {
         self.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
-    func update(icon: String, text: String, constrainedWidth: CGFloat, transition: ComponentTransition) -> CGSize {
+    func update(icon: String, text: String, displayClose: Bool, constrainedWidth: CGFloat, transition: ComponentTransition) -> CGSize {
         let sideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 6.0
         let iconSpacing: CGFloat = -3.0
+        let closeSpacing: CGFloat = 6.0
+        let closeIconSize = CGSize(width: 16.0, height: 16.0)
+        let closeWidth: CGFloat = displayClose ? closeSpacing + closeIconSize.width : 0.0
         
         if self.iconView.image == nil {
             self.iconView.image = UIImage(bundleImageName: icon)?.withRenderingMode(.alwaysTemplate)
@@ -72,8 +83,8 @@ final class NoticeView: OverlayMaskContainerView {
         }
         let iconSize = self.iconView.image?.size ?? CGSize(width: 12.0, height: 12.0)
         
-        let textSize = self.textView.update(string: text, fontSize: 15.0, fontWeight: 0.0, color: .white, constrainedWidth: constrainedWidth - sideInset * 2.0, transition: .immediate)
-        let size = CGSize(width: iconSize.width + iconSpacing + textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0)
+        let textSize = self.textView.update(string: text, fontSize: 15.0, fontWeight: 0.0, color: .white, constrainedWidth: constrainedWidth - sideInset * 2.0 - closeWidth, transition: .immediate)
+        let size = CGSize(width: iconSize.width + iconSpacing + textSize.width + closeWidth + sideInset * 2.0, height: textSize.height + verticalInset * 2.0)
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         self.backgroundView.update(cornerRadius: floor(size.height * 0.5), transition: transition)
@@ -82,7 +93,37 @@ final class NoticeView: OverlayMaskContainerView {
         
         transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - iconSize.height) * 0.5) + 4.0, y: verticalInset + floorToScreenPixels((textSize.height - iconSize.height) * 0.5)), size: iconSize))
         
-        transition.setFrame(view: self.textView, frame: CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: verticalInset), size: textSize))
+        let textFrame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: verticalInset), size: textSize)
+        transition.setFrame(view: self.textView, frame: textFrame)
+        
+        if displayClose {
+            let closeButton: HighlightableButton
+            let closeIconView: UIImageView
+            var closeTransition = transition
+            if let current = self.closeButton, let currentIconView = self.closeIconView {
+                closeButton = current
+                closeIconView = currentIconView
+            } else {
+                closeTransition = .immediate
+                closeButton = HighlightableButton()
+                closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
+                closeIconView = UIImageView(image: UIImage(bundleImageName: "Components/Close")?.withRenderingMode(.alwaysTemplate))
+                closeIconView.tintColor = .white
+                closeIconView.isUserInteractionEnabled = false
+                closeButton.addSubview(closeIconView)
+                self.closeButton = closeButton
+                self.closeIconView = closeIconView
+                self.textContainer.addSubview(closeButton)
+            }
+            // The button takes the pill's height from the end of the text to its trailing edge.
+            let closeButtonFrame = CGRect(origin: CGPoint(x: textFrame.maxX, y: 0.0), size: CGSize(width: size.width - textFrame.maxX, height: size.height))
+            closeTransition.setFrame(view: closeButton, frame: closeButtonFrame)
+            closeTransition.setFrame(view: closeIconView, frame: CGRect(origin: CGPoint(x: closeSpacing, y: floorToScreenPixels((size.height - closeIconSize.height) * 0.5)), size: closeIconSize))
+        } else if let closeButton = self.closeButton {
+            self.closeButton = nil
+            self.closeIconView = nil
+            closeButton.removeFromSuperview()
+        }
         
         return size
     }

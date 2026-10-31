@@ -53,11 +53,14 @@ final class ButtonGroupView: OverlayMaskContainerView {
         let id: AnyHashable
         let icon: String
         let text: String
+        /// Shows a close button that calls this; a notice without one goes when its condition does.
+        let closeAction: (() -> Void)?
         
-        init(id: AnyHashable, icon: String, text: String) {
+        init(id: AnyHashable, icon: String, text: String, closeAction: (() -> Void)? = nil) {
             self.id = id
             self.icon = icon
             self.text = text
+            self.closeAction = closeAction
         }
     }
     
@@ -147,7 +150,8 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     noticesHeight += buttonNoticeSpacing
                 }
             }
-            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
+            noticeView.closeAction = notice.closeAction
+            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, displayClose: notice.closeAction != nil, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
             let noticeFrame = CGRect(origin: CGPoint(x: centeredX(width: noticeSize.width), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
             noticesHeight += noticeSize.height
             if !isAnimatedOutToGroupCall {
