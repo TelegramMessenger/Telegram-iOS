@@ -2098,6 +2098,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
             case .selectionDone:
+                // A Select All still loading must not land in a later selection.
+                strongSelf.selectAllDisposable.set(nil)
                 strongSelf.state = strongSelf.state.withSelectedMessageIds(nil).withSelectedStoryIds(nil).withPaneIsReordering(false)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
@@ -5878,7 +5880,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
                     ))
                     |> deliverOnMainQueue).startStandalone(next: { messageMap in
-                        let messages = messageMap.values.compactMap { $0 }
+                        // Only photos and videos (GIFs included) can go to the camera roll.
+                        let messages = messageMap.values.compactMap { $0 }.filter { message in
+                            return message.media.contains(where: { media in
+                                if media is TelegramMediaImage {
+                                    return true
+                                } else if let file = media as? TelegramMediaFile {
+                                    return file.isVideo
+                                } else {
+                                    return false
+                                }
+                            })
+                        }
                         
                         if let strongSelf = self, !messages.isEmpty {
                             strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
