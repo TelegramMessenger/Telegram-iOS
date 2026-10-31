@@ -2667,7 +2667,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var currentCredibilityIcon: (EmojiStatusComponent.Content, UIColor?)?
-        // The third-party verification icon of the peer whose name heads the message, drawn left of the name.
+        // The author's third-party verification icon, drawn left of the name. A channel's own posts carry no badges
+        // beside its name (the chat header shows them), so it is the effective author's only.
         var authorVerificationIconFileId: Int64?
         var authorVerificationIcon: EmojiStatusComponent.Content?
         
@@ -2756,7 +2757,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if initialDisplayHeader && displayAuthorInfo {
             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil, !overrideEffectiveAuthor {
                 authorNameString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                authorVerificationIconFileId = peer.verificationIconFileId
                 
                 let peer = (peer as Peer)
                 let nameColors: PeerNameColors.Colors?
@@ -4751,7 +4751,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             } else if let verificationIconView = strongSelf.verificationIconView {
                 strongSelf.verificationIconView = nil
                 strongSelf.verificationIconComponent = nil
-                verificationIconView.removeFromSuperview()
+                if animation.isAnimated {
+                    verificationIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak verificationIconView] _ in
+                        verificationIconView?.removeFromSuperview()
+                    })
+                } else {
+                    verificationIconView.removeFromSuperview()
+                }
             }
             
             if nameNode.supernode == nil {
