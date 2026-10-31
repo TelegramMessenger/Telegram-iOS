@@ -29,6 +29,15 @@ public func chatMediaEditorKeyboardPagerOffset(keyboardHeight: CGFloat) -> CGFlo
     return -keyboardHeight / 2.0
 }
 
+// Return on a hardware keyboard starts a caption when nothing has the keyboard and the caption field is
+// on screen and usable. A focused field (the caption, a text sticker) keeps its own Return.
+public func chatMediaEditorReturnFocusesCaption(hasCaptionPanel: Bool, hasFirstResponder: Bool, toolbarSide: ChatMediaEditorToolbarSide?, isToolActive: Bool, isSending: Bool, isDismissing: Bool) -> Bool {
+    guard hasCaptionPanel, !hasFirstResponder, !isSending, !isDismissing else {
+        return false
+    }
+    return chatMediaEditorCaptionIsVisible(toolbarSide: toolbarSide, isToolActive: isToolActive, isInterfaceHidden: false)
+}
+
 public final class ChatMediaEditorCaptionModel {
     public let adapter: ChatMediaEditorCaptionAdapter
     public private(set) var currentId: String
