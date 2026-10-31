@@ -211,11 +211,7 @@ final class TabBarControllerNode: ASDisplayNode {
         if params.layout.metrics.widthClass == .regular, let inputHeight = params.layout.inputHeight, inputHeight != 0.0 {
             panelsBottomInset = inputHeight + 8.0
         }
-        if panelsBottomInset == 0.0 {
-            panelsBottomInset = 8.0
-        } else {
-            panelsBottomInset = max(panelsBottomInset, 8.0)
-        }
+        panelsBottomInset = tabBarFloatingBottomInset(bottomInset: panelsBottomInset)
 
         let sidePlacement = self.sidePlacement(for: params.layout)
         let isCompact = tabBarIsCompact(layout: params.layout, sidePlacement: sidePlacement)

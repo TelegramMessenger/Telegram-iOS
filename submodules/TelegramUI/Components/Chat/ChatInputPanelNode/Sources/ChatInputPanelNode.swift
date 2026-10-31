@@ -30,6 +30,16 @@ public struct ChatInputPanelOverscrollIsland {
     }
 }
 
+/// The extra side inset of the chat's bottom panels with a small bottom inset on a screen with rounded corners, which
+/// they keep clear of. What lines up with the panels' edges (the history navigation buttons above them) takes it too.
+public func chatInputPanelCompactBottomSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
+    if bottomInset <= 32.0 && deviceMetrics.screenCornerRadius > 0.0 {
+        return 18.0
+    } else {
+        return 0.0
+    }
+}
+
 open class ChatInputPanelNode: ASDisplayNode {
     open var context: AccountContext?
     open var chatControllerInteraction: ChatControllerInteraction?
@@ -42,11 +52,7 @@ open class ChatInputPanelNode: ASDisplayNode {
     }
     
     public final func compactBottomSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
-        if bottomInset <= 32.0 && deviceMetrics.screenCornerRadius > 0.0 {
-            return 18.0
-        } else {
-            return 0.0
-        }
+        return chatInputPanelCompactBottomSideInset(bottomInset: bottomInset, deviceMetrics: deviceMetrics)
     }
     
     open func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {

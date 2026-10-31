@@ -740,7 +740,15 @@ public final class TabBarComponent: Component {
             
             self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
 
-            let barHeight: CGFloat = isSystemLayout ? tabBarSystemBarThickness : (56.0 + innerInset * 2.0)
+            // The search button is as tall as the bar.
+            let barHeight: CGFloat
+            if isSystemLayout {
+                barHeight = tabBarSystemBarThickness
+            } else if component.isCompact {
+                barHeight = tabBarCompactBarThickness
+            } else {
+                barHeight = 56.0 + innerInset * 2.0
+            }
 
             // Each item's title width at the unselected font, as `-[_UITabButton sizeThatFits:]` measures it.
             var titleWidths: [CGFloat] = []

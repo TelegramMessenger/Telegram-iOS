@@ -78,6 +78,7 @@ import InstantPageUI
 import ChatRichTextEditorComposer
 import ChatHistoryListViewBackend
 import MessageWidget
+import TabBarLayout
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -1926,6 +1927,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             inputPanelBottomInsetTerm = max(insets.bottom, layout.standardInputHeight)
         } else {
             insets = layout.insets(options: [.input])
+            // iPad, without a keyboard: the bottom panels' row (40pt, 8pt above the inset) is centred on the master
+            // pane's tab bar beside the chat.
+            if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode, (layout.inputHeight ?? 0.0) == 0.0 {
+                insets.bottom += tabBarAlignedRowBottomInsetOffset(bottomInset: insets.bottom, rowSpacing: 8.0, rowHeight: 40.0)
+            }
         }
 
         switch self.chatPresentationInterfaceState.mode {
@@ -2801,9 +2807,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         // (and keep the strip beside the column). Without corner blocks this is the plain safe inset.
         let navigateButtonsRightInset = sideColumnBandInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnExtent).right
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsRightInset - navigateButtonsSize.width - 8.0, y: navigateButtonsMinY), size: navigateButtonsSize)
-        if containerInsets.bottom <= 32.0 {
-            navigateButtonsFrame.origin.x -= 18.0
-        }
+        // Over the panels' right edge, which steps in from rounded corners only.
+        navigateButtonsFrame.origin.x -= chatInputPanelCompactBottomSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
         if case .overlay = self.chatPresentationInterfaceState.mode {
             navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
