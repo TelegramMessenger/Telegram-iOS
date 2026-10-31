@@ -51,6 +51,7 @@ final class ChatMediaEditorToolHandOverTests: XCTestCase {
 
     func testCaptionDimShowsOnlyWhileEditingOverAKeyboard() {
         XCTAssertTrue(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: 300.0))
+        XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: 0.0))
         XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: false, keyboardHeight: 300.0))
         XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: false, keyboardHeight: 0.0))
     }

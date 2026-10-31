@@ -709,6 +709,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                             case .paint:
                                 self.drawingScreen?.requestExternalDismiss(sourceView: (self.toolbar.view as? ChatMediaEditorBottomControlsComponent.View)?.leftButtonView)
                             case .cover, .none:
+                                let _ = self.endCaptionEditing()
                                 controller?.cancel()
                             }
                         },
