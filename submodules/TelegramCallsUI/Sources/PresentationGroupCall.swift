@@ -598,6 +598,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     private let isMutedPromise = ValuePromise<PresentationGroupCallMuteAction>(.muted(isPushToTalkActive: false))
+    private var microphoneAccessGate = GroupCallMicrophoneAccessGate()
     public var isMuted: Signal<Bool, NoError> {
         return self.isMutedPromise.get()
         |> map { value -> Bool in
@@ -900,18 +901,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
         
+        let joinsUnmuted: Bool
         if let unmuteByDefault {
-            if unmuteByDefault {
-                self.isMutedValue = .unmuted
-                self.isMutedPromise.set(self.isMutedValue)
-                self.stateValue.muteState = nil
-            }
+            joinsUnmuted = unmuteByDefault
         } else {
-            if self.isConference && conferenceSourceId == nil {
-                self.isMutedValue = .unmuted
-                self.isMutedPromise.set(self.isMutedValue)
-                self.stateValue.muteState = nil
-            }
+            joinsUnmuted = self.isConference && conferenceSourceId == nil
+        }
+        // Without microphone access the call joins muted and asks for it (below); it unmutes if access is granted.
+        let joinsUnmutedAfterAccess = joinsUnmuted && !(isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true)
+        if joinsUnmuted && !joinsUnmutedAfterAccess {
+            self.isMutedValue = .unmuted
+            self.isMutedPromise.set(self.isMutedValue)
+            self.stateValue.muteState = nil
         }
 
         if let keyPair, let initialCall {
@@ -1264,6 +1265,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         if beginWithVideo {
             self.requestVideo()
+        }
+        
+        if joinsUnmutedAfterAccess {
+            // Once the call screen is up, so that the "denied" alert shows above it.
+            Queue.mainQueue().async { [weak self] in
+                self?.setIsMuted(action: .unmuted)
+            }
         }
     }
     
@@ -3101,6 +3109,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }*/
 
+        if !action.isEffectivelyMuted, let muteState = self.stateValue.muteState, !muteState.canUnmute {
+            return
+        }
+        switch self.microphoneAccessGate.decide(action: action, isAccessGranted: self.isMicrophoneAccessGranted) {
+        case .apply:
+            break
+        case .requestAccess:
+            self.requestMicrophoneAccess()
+            return
+        case .waitForAccess:
+            return
+        }
+
         if self.isMutedValue == action {
             return
         }
@@ -3140,6 +3161,27 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         } else {
             self.stateValue.muteState = nil
         }
+    }
+
+    /// A stream's audio input is off, so it needs no access.
+    private var isMicrophoneAccessGranted: Bool {
+        return self.isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true
+    }
+
+    private func requestMicrophoneAccess() {
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+            present(c, a)
+        }, openSettings: {
+            openSettings()
+        }, { [weak self] value in
+            guard let self else {
+                return
+            }
+            if let action = self.microphoneAccessGate.accessRequestCompleted(isGranted: value) {
+                self.setIsMuted(action: action)
+            }
+        })
     }
 
     public func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {

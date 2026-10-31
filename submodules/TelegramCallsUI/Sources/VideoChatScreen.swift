@@ -3186,15 +3186,17 @@ final class VideoChatScreenComponent: Component {
                         
                         if let unmutedStateIsPushToTalk {
                             if unmutedStateIsPushToTalk {
+                                // Without microphone access the call stays muted while it asks for access.
+                                let isMicrophoneAccessGranted = DeviceAccess.isMicrophoneAccessAuthorized() == true
                                 if let muteState = callState.muteState {
                                     if muteState.canUnmute {
-                                        self.isPushToTalkActive = true
+                                        self.isPushToTalkActive = isMicrophoneAccessGranted
                                         currentCall.setIsMuted(action: .muted(isPushToTalkActive: true))
                                     } else {
                                         self.isPushToTalkActive = false
                                     }
                                 } else {
-                                    self.isPushToTalkActive = true
+                                    self.isPushToTalkActive = isMicrophoneAccessGranted
                                     currentCall.setIsMuted(action: .muted(isPushToTalkActive: true))
                                 }
                             } else {
