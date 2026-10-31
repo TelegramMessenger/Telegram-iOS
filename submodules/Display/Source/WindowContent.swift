@@ -205,6 +205,18 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     return false
 }
 
+// With a hardware keyboard, iPadOS posts a keyboard frame for its minimized keyboard bar as soon as a text input becomes
+// first responder: full width, 68.5pt high on an iPad Air 11" (iOS 27 simulator), while all it draws is a small button in
+// the bottom corner, which hides itself, with no notification, once the user types. Taken as the keyboard, it lifted the
+// chat's input panel and left an empty gap below it. No software keyboard on an iPad is anywhere near 100pt high (337pt
+// on the same iPad), so a shorter frame is the bar. A phone posts a zero-height frame for a hardware keyboard.
+func isHardwareKeyboardBar(keyboardFrame: CGRect, deviceType: DeviceType) -> Bool {
+    if case .tablet = deviceType, keyboardFrame.height > 0.0, keyboardFrame.height < 100.0 {
+        return true
+    }
+    return false
+}
+
 public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
     if view.isFirstResponder {
         return (view, accessoryHeight)
@@ -767,6 +779,10 @@ public class Window1 {
                 // often zero-height (`{{0, 466}, {678, 0}}`, logged on the simulator), so an empty frame counts too;
                 // an all-zero frame has minY 0 and is not caught here.
                 if #available(iOSApplicationExtension 16.1, iOS 16.1, *), let screen = notification.object as? UIScreen, let keyboardFrameEnd = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect, keyboardFrameEnd.minY >= screen.bounds.height - 1.0 {
+                    keyboardHeight = 0.0
+                }
+                
+                if let keyboardFrameEnd = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect, isHardwareKeyboardBar(keyboardFrame: keyboardFrameEnd, deviceType: strongSelf.deviceMetrics.type) {
                     keyboardHeight = 0.0
                 }
                 
