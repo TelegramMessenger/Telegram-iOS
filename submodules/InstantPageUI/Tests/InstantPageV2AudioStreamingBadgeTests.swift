@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramCore
 import SemanticStatusNode
+import UniversalMediaPlayer
 @testable import InstantPageUI
 
 /// The download badge on a rich message's audio row, which follows a regular music message's
@@ -14,17 +15,14 @@ final class InstantPageV2AudioStreamingBadgeTests: XCTestCase {
 
     func test_badgeIsTwentyPointsAndOverhangsTheControlByTwo() {
         let frame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: self.controlFrame)
-        XCTAssertEqual(frame.size, CGSize(width: 20.0, height: 20.0))
-        XCTAssertEqual(frame.maxX, self.controlFrame.maxX + 2.0)
-        XCTAssertEqual(frame.maxY, self.controlFrame.maxY + 2.0)
+        XCTAssertEqual(frame, CGRect(x: 34.0, y: 24.0, width: 20.0, height: 20.0))
     }
 
     func test_cutoutIsInTheControlsCoordinatesAndRingsTheBadge() {
-        let badge = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: self.controlFrame)
         let cutout = InstantPageV2AudioContentNode.streamingBadgeCutout(controlFrame: self.controlFrame)
         let margin = 1.0 + UIScreenPixel
-        let badgeInControl = badge.offsetBy(dx: -self.controlFrame.minX, dy: -self.controlFrame.minY)
-        XCTAssertEqual(cutout, badgeInControl.insetBy(dx: -margin, dy: -margin))
+        // The badge at (34, 24) is at (22, 22) in the control's coordinates, ringed by `margin`.
+        XCTAssertEqual(cutout, CGRect(x: 22.0 - margin, y: 22.0 - margin, width: 20.0 + margin * 2.0, height: 20.0 + margin * 2.0))
     }
 
     func test_notDownloadedShowsTheDownloadBadge() {
@@ -53,6 +51,14 @@ final class InstantPageV2AudioStreamingBadgeTests: XCTestCase {
         // A regular music message hides the badge while the control shows pause (streaming playback).
         XCTAssertEqual(InstantPageV2AudioContentNode.streamingState(fetchStatus: .Remote(progress: 0.0), isPlaying: true), .none)
         XCTAssertEqual(InstantPageV2AudioContentNode.streamingState(fetchStatus: .Fetching(isActive: true, progress: 0.4), isPlaying: true), .none)
+    }
+
+    func test_bufferingWhilePlayingCountsAsPlaying() {
+        XCTAssertTrue(InstantPageV2AudioContentNode.isPlaying(.playing))
+        XCTAssertTrue(InstantPageV2AudioContentNode.isPlaying(.buffering(initial: true, whilePlaying: true, progress: 0.0, display: true)))
+        XCTAssertFalse(InstantPageV2AudioContentNode.isPlaying(.buffering(initial: false, whilePlaying: false, progress: 0.0, display: true)))
+        XCTAssertFalse(InstantPageV2AudioContentNode.isPlaying(.paused))
+        XCTAssertFalse(InstantPageV2AudioContentNode.isPlaying(nil))
     }
 
     func test_controlColorsFollowTheRegularMusicMessage() {

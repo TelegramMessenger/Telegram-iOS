@@ -71,6 +71,7 @@ swift_library(
         "//submodules/TelegramUI/Components/RichTextButtonIcons",
         "//submodules/TelegramUI/Components/RichTextEditorMessageConversion",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
     ],
 )
 

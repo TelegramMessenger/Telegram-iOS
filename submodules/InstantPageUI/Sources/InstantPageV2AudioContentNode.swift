@@ -191,20 +191,24 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.playbackStatusDisposable?.dispose()   // defensive: a re-call must not leak the prior subscription
         self.playbackStatusDisposable = (signal |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             guard let self else { return }
-            let isPlaying: Bool
-            if let status = state?.status {
-                if case .playing = status.status {
-                    isPlaying = true
-                } else {
-                    isPlaying = false
-                }
-            } else {
-                isPlaying = false
-            }
+            let isPlaying = InstantPageV2AudioContentNode.isPlaying(state?.status.status)
             self.isPlaying = isPlaying
             self.statusNode.transitionToState(isPlaying ? .pause : .play)
             self.updateStreamingState(animated: true)
         })
+    }
+
+    // Buffering while playing counts as playing, as for a regular music message (FileMediaResourceStatus): a
+    // stream catching up with its download keeps showing pause, without the badge coming back.
+    static func isPlaying(_ status: MediaPlayerPlaybackStatus?) -> Bool {
+        switch status {
+        case .playing:
+            return true
+        case let .buffering(_, whilePlaying, _, _):
+            return whilePlaying
+        case .paused, .none:
+            return false
+        }
     }
 
     // Refreshes title/description attributed strings and the statusNode tint/foreground/overlay
@@ -278,7 +282,7 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     }
 
     // Mirrors ChatMessageInteractiveFileNode's streaming badge handling: the badge appears in the control's
-    // colours, fades out when there is nothing to show, and the control carries a cutout ring while it is there.
+    // colours (at once; the cutout animates), fades out when there is nothing to show, and the control carries a cutout ring while it is there.
     private func updateStreamingState(animated: Bool) {
         let streamingState = InstantPageV2AudioContentNode.streamingState(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying)
         let controlFrame = InstantPageV2AudioContentNode.controlFrame
@@ -290,9 +294,6 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
             streamingStatusNode.frame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: controlFrame)
             self.insertSubnode(streamingStatusNode, aboveSubnode: self.statusNode)
             self.streamingStatusNode = streamingStatusNode
-            if animated {
-                streamingStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
-            }
         }
 
         if let streamingStatusNode = self.streamingStatusNode {
