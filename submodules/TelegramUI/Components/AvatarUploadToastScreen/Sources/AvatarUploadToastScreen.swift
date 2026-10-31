@@ -217,8 +217,12 @@ private final class AvatarUploadToastScreenComponent: Component {
                 right: environment.safeInsets.right + 12.0
             )
             
-            // Narrower on a regular-width layout, centred.
-            let toastHorizontalFrame = toastFrame(CGRect(x: containerInsets.left, y: 0.0, width: availableSize.width - containerInsets.left - containerInsets.right, height: 0.0), metrics: environment.metrics)
+            // Narrower on a regular-width layout, centred, but over the tab its arrow points at: on iPad that tab is in
+            // the master column, which can lie outside the centred toast.
+            let arrowTargetRect = component.arrowTarget().flatMap { targetView, targetRect in
+                return targetView.convert(targetRect, to: self)
+            }
+            let toastHorizontalFrame = toastFrame(CGRect(x: containerInsets.left, y: 0.0, width: availableSize.width - containerInsets.left - containerInsets.right, height: 0.0), metrics: environment.metrics, anchorX: arrowTargetRect?.midX)
             let availableContentSize = CGSize(width: toastHorizontalFrame.width, height: availableSize.height - containerInsets.top - containerInsets.bottom)
             
             let spacing: CGFloat = 12.0
@@ -379,8 +383,7 @@ private final class AvatarUploadToastScreenComponent: Component {
                 })?.withRenderingMode(.alwaysTemplate)
             }
             
-            if let arrowImage = self.backgroundArrowMaskView.image, let (targetView, targetRect) = component.arrowTarget() {
-                let targetArrowRect = targetView.convert(targetRect, to: self)
+            if let arrowImage = self.backgroundArrowMaskView.image, let targetArrowRect = arrowTargetRect {
                 self.backgroundArrowMaskView.isHidden = false
                 
                 var arrowFrame = CGRect(origin: CGPoint(x: targetArrowRect.minX + floor((targetArrowRect.width - arrowImage.size.width) * 0.5), y: contentFrame.maxY), size: arrowImage.size)

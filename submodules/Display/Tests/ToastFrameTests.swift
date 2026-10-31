@@ -43,4 +43,28 @@ final class ToastFrameTests: XCTestCase {
         // A 440pt phone with the toast's 12pt margins.
         XCTAssertEqual(toastMaximumWidth, 440.0 - 12.0 * 2.0)
     }
+
+    // A toast with an arrow pointing at a tab (the avatar upload toast at Settings): on iPad the tab is in the master
+    // column, outside the centred toast; the toast moves over it, keeping a margin, within the band.
+    func test_regular_anchorOutsideTheCenteredToast_shiftedToContainIt() {
+        let band = CGRect(x: 12.0, y: 0.0, width: 1170.0, height: 50.0)
+        let result = toastFrame(band, metrics: self.regular, anchorX: 320.0)
+        XCTAssertEqual(result, CGRect(x: 320.0 - 32.0, y: 0.0, width: toastMaximumWidth, height: 50.0))
+    }
+
+    func test_regular_anchorNearTheBandsEdge_staysInTheBand() {
+        let band = CGRect(x: 12.0, y: 0.0, width: 1170.0, height: 50.0)
+        XCTAssertEqual(toastFrame(band, metrics: self.regular, anchorX: 20.0).minX, 12.0)
+        XCTAssertEqual(toastFrame(band, metrics: self.regular, anchorX: 1180.0).maxX, band.maxX)
+    }
+
+    func test_regular_anchorInsideTheCenteredToast_staysCentered() {
+        let band = CGRect(x: 12.0, y: 0.0, width: 1170.0, height: 50.0)
+        XCTAssertEqual(toastFrame(band, metrics: self.regular, anchorX: 597.0), toastFrame(band, metrics: self.regular))
+    }
+
+    func test_compact_anchor_unchanged() {
+        let band = CGRect(x: 12.0, y: 0.0, width: 378.0, height: 50.0)
+        XCTAssertEqual(toastFrame(band, metrics: self.compact, anchorX: 360.0), band)
+    }
 }
