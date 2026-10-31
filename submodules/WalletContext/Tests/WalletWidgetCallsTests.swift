@@ -110,21 +110,22 @@ final class WalletWidgetCallsTests: XCTestCase {
         XCTAssertEqual(WalletContext.WidgetWalletRequester(botId: 7, name: "Shop", username: nil).displayDomain, "Shop")
     }
 
-    /// sdk-v1 §5.13: the user's decline is REJECTED, the wallet's refusal BAD_REQUEST, anything else FAILED; after the
-    /// confirmation only an expired transaction and the balance are still the wallet's refusals.
+    /// sdk-v1 §5.13: the user's decline is REJECTED, the wallet's refusal BAD_REQUEST, anything else FAILED; the balance is
+    /// the top-up's, before the window and after it; after the confirmation only an expired transaction is still the
+    /// wallet's refusal.
     func testFailuresMapAsTheSpecSays() {
         typealias E = WalletContext.WalletError
         let prepare: [(E, WalletContext.WidgetWalletFailure)] = [
             (.authorizationCancelled, .rejected), (.preparedTransferExpired, .badRequest), (.walletKeyMismatch, .badRequest),
             (.invalidAddress, .badRequest), (.invalidAmount, .badRequest), (.previewFailed, .badRequest), (.previewIncomplete, .badRequest),
-            (.insufficientBalance(required: 5), .badRequest), (.engine("cells"), .badRequest), (.unavailable, .failed), (.noWallet, .failed),
+            (.insufficientBalance(required: 5), .insufficientBalance), (.engine("cells"), .badRequest), (.unavailable, .failed), (.noWallet, .failed),
             (.operationInProgress, .failed), (.network, .failed),
         ]
         for (error, failure) in prepare {
             XCTAssertEqual(WalletContext.widgetPrepareFailure(error), failure, "\(error)")
         }
         let submit: [(E, WalletContext.WidgetWalletFailure)] = [
-            (.authorizationCancelled, .rejected), (.preparedTransferExpired, .badRequest), (.insufficientBalance(required: 5), .badRequest),
+            (.authorizationCancelled, .rejected), (.preparedTransferExpired, .badRequest), (.insufficientBalance(required: 5), .insufficientBalance),
             (.engine("send"), .failed), (.network, .failed), (.walletKeyMismatch, .failed), (.unavailable, .failed),
         ]
         for (error, failure) in submit {

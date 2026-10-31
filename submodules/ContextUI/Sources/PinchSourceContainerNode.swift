@@ -212,7 +212,9 @@ public final class PinchSourceContainerNode: ASDisplayNode, ASGestureRecognizerD
     public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
         let contentFrame = CGRect(origin: CGPoint(), size: size)
         self.naturalContentFrame = contentFrame
-        if !self.isActive {
+        // While the pinch controller holds the content (which outlasts `isActive` by the animation back), it positions
+        // it in its own coordinates; `restoreToNaturalSize()` applies the latest frame once the content is back.
+        if !self.isActive && self.contentNode.supernode === self {
             transition.updateFrame(node: self.contentNode, frame: contentFrame)
         }
     }

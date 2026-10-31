@@ -61,7 +61,6 @@ swift_library(
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/ChatMediaSend",
-        "//submodules/OverlayStatusController",
         "//submodules/TelegramUI/Components/MediaGrid",
         "//submodules/TelegramUI/Components/MediaGridPhotoLibrary",
     ],

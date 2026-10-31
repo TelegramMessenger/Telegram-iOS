@@ -175,9 +175,10 @@ public:
     /// that settles its promise (TelegramWidget::settleRequest); an id that is not an outgoing request still pending
     /// changes nothing. Never throws, and a stopped widget queues nothing.
     void completeRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome);
-    /// Queues the task that rejects refused request `id` with `code`: every outcome reaches the widget in a task of its
-    /// own, never inside the call (upstream's glue).
-    void queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code);
+    /// Queues the task that rejects refused request `id` with `code` and the glue's `reason` (the gate's verdict,
+    /// `preview` or `no-wallet`, which word the error's message): every outcome reaches the widget in a task of its own,
+    /// never inside the call (upstream's glue).
+    void queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code, const std::string& reason);
     /// A press is active, its activation not consumed, on a visible widget: the request gate's `gesture`, peeked
     /// (consumeActivation takes it).
     bool activationAvailable(JSContext* ctx) const;

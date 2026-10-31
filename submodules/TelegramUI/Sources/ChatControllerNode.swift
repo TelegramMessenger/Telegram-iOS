@@ -2208,6 +2208,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.pendingSwitchToChatLocation = nil
             
             let previousHistoryNode = self.historyNode
+            // Switching in place (another forum topic) does not go through viewWillDisappear.
+            previousHistoryNode.readVisibleMessagesBeforeLeaving()
             self.historyNode = pendingSwitchToChatLocation.historyNode
             
             self.historyNode.position = previousHistoryNode.position
@@ -2830,7 +2832,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var isInputExpansionEnabled = false
-        if case .media = self.chatPresentationInterfaceState.inputMode {
+        if case .media = self.chatPresentationInterfaceState.inputMode, inputNodeForState != nil {
             isInputExpansionEnabled = true
         }
         
@@ -4122,6 +4124,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             break
         case .inputButtons:
             if let peer = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, self.chatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup?.flags.contains(.persistent) == true {
+            } else if chatDisplaysBotStartButton(self.chatPresentationInterfaceState) {
+                // The reply keyboard is hidden behind Start (a blocked bot), not shown: keep it for when Start goes.
             } else {
                 self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                     return (.none, state.keyboardButtonsMessage?.id ?? state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)

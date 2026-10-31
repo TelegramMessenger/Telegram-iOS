@@ -1383,7 +1383,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         deleteAction: nil
                     )
                 },
-                selectedTab: self.currentPaneKey.flatMap { HorizontalTabsComponent.Tab.Id($0) },
+                // A lone tab has no pill: the bar fits its tabs, so the pill would fill the whole capsule and leave
+                // only its border, reading as a bare chip. Its title sits on the glass capsule instead.
+                selectedTab: availablePanes.count > 1 ? self.currentPaneKey.flatMap { HorizontalTabsComponent.Tab.Id($0) } : nil,
                 isEditing: false,
                 layout: .fit,
                 liftWhileSwitching: deviceMetrics.type != .tablet

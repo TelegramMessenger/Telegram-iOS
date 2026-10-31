@@ -132,7 +132,7 @@ final class WidgetHarnessWalletTests: XCTestCase {
     }
 
     func testTheWalletsFailuresReachTheWidget() throws {
-        for (failure, code) in [(WalletContext.WidgetWalletFailure.rejected, "REJECTED"), (.badRequest, "BAD_REQUEST")] {
+        for (failure, code) in [(WalletContext.WidgetWalletFailure.rejected, "REJECTED"), (.badRequest, "BAD_REQUEST"), (.insufficientBalance, "BAD_REQUEST")] {
             var queries: [BotWidgetQueryType] = []
             self.shop { type, _ in queries.append(type) }
             MessageWidgetWallet.perform = { _, done in done(.failure(failure)) }

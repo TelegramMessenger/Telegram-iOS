@@ -52,6 +52,11 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 placement of the icons before a chat header's title: a secret chat's lock next to the name, and a third-party
 verification icon to the left of the lock, never on top of it.
 
+`//submodules/TelegramUI/Components/InteractiveTextComponent:InteractiveTextComponentTests` covers
+`InteractiveTextNode`'s layout of a truncated line (a story caption's "Show more", a collapsed quote): custom emoji
+past the cut are not laid out, the last one before it keeps its own place, and a link's highlight across the cut starts
+at the link. CoreText reports offset 0 for all of them, which put an emoji over the line's first word.
+
 `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` covers the round video
 message camera's placement helpers (`VideoMessageCameraLayout.swift`): on iPhone Duo the preview kept above the chat's
 input panel and the trailing buttons clear of the status corner, and on every phone the touches that reach the panel
@@ -93,7 +98,10 @@ previous ones.
 `//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteractionTests` covers
 `chatIsOpeningMedia`, the window in which a chat ignores further taps on its media (`isOpeningMedia`) after one opened
 it. A gallery appears only once its first item is ready (up to 2 s), so it stays blocked until the gallery reports it
-is on screen (at most 4 s); an open that reports nothing is released after 1 s, as before.
+is on screen (at most 4 s); an open that reports nothing is released after 1 s, as before. It also covers
+`chatHistoryMaxVisibleReadIndex`, the newest message a chat reads from the rows on screen: a row under the top inset
+does not count, one starting up to 100 points above it does, and in a thread (a forum topic, a reply or monoforum
+thread) a row holding a non-cloud message is left out.
 
 `//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
 the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no

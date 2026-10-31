@@ -413,7 +413,7 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   - **The harness replaces the seam** (`WidgetHarnessNetworkTests`, `Fixtures/widget-request.html`). The engine's call
     is pinned in TelegramCore (`WidgetQueryRequestTests`), and the cancellation in `MessageWidgetRequestsTests`.
 
-- **The wallet** (widget-sandbox v0.5.0, sdk-v1 §2.18, §5.13; the user's decisions of 2026-10-30; the plan
+- **The wallet** (widget-sandbox v0.5.0, sdk-v1 §2.18, §5.13; the user's decisions of 2026-10-30 and 2026-10-31; the plan
   `docs/superpowers/plans/2026-10-30-message-widgets-v0.5.0.md`, its ledger's rulings). A widget pays
   (`TelegramWidget.wallet.sendTransaction`, TON Connect's transaction) or signs (`wallet.signData`, TON Connect's
   payload) through Gram Wallet, and `request(data, { wallet: true })` gives its bot the user's wallet card. The rules:
@@ -456,10 +456,14 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     Connect signing path's, for `bot<bot_id>`, and the query carries TON Connect's `SignDataResponse` with the card's
     public key and StateInit (`userWallet.state_init`).
   - **Outcomes:** a decline (or a cancelled passcode) `REJECTED`; the wallet's refusal before the window (expiry, another
-    network or sender, a testnet or malformed destination, cells, an incomplete emulation, the balance: no top-up, by
-    the user's call) `BAD_REQUEST` with no window; after the confirmation only an expiry or the balance are still
-    `BAD_REQUEST`, anything else `FAILED`, the window closed first so it shows no alert of its own. The query's own
-    failures map as a request's. **A send whose server reply is lost** (`.submissionUnknown`: the transfer accepted
+    network or sender, a testnet or malformed destination, cells) `BAD_REQUEST` with no window. An emulation whose trace
+    failed or did not finish opens the window with its warning, as a dApp's does. **A short balance offers the top-up**
+    (§5.13; the user, 2026-10-31): the engine's preview refuses a transaction the balance cannot cover with its fees, so
+    no window can show it (a dApp gets only a generic alert); `MessageWidgetWalletWindow.offerTopUp` shows the wallet's
+    "Not Enough Grams" alert over the chat, whose Top Up pushes the wallet's receive screen, and the call is
+    `BAD_REQUEST` at once (`WidgetWalletFailure.insufficientBalance`), so the user pays again with a new tap. After the
+    confirmation a short balance does the same, only an expiry is still `BAD_REQUEST`, anything else `FAILED`, the
+    window closed first so it shows no alert of its own. The query's own failures map as a request's. **A send whose server reply is lost** (`.submissionUnknown`: the transfer accepted
     with no `sentTransfer`) answers `FAILED` and asks the bot nothing, though the transfer may resolve later: §2.18's
     "may have been sent", which the bot settles from the chain by the card's address; reporting it once the wallet
     resolves it is a follow-up.

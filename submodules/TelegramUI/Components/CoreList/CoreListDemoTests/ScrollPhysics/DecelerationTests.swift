@@ -101,4 +101,33 @@ final class DecelerationTests: XCTestCase {
                                     rate: 0.998, vScale: 1)
         XCTAssertFalse(coasting.step(dtMs: 16.667).endedDeceleration, "still coasting in bounds")
     }
+
+    // MARK: - A release exactly on an edge, moving past it
+
+    func test_releaseExactlyOnTheMinEdge_bouncesOffThatEdge() {
+        // A short quick flick at a chat's newest end: the pan begins and ends with no translation, so the
+        // release sits EXACTLY on the min edge with velocity past it. Integrating to the edge then takes no
+        // time and leaves the offset == min, which the spring read as "not below min" and sent toward the
+        // MAX edge (an open one is 10,000,000 pt away in the chat). It must spring back to min.
+        var d = makeDecel(offset: 0, velocity: -2.0, min: 0, max: 1000)
+        _ = d.step(dtMs: 1000.0 / 120.0)
+        XCTAssertLessThan(d.offset, 0, "the residual velocity carries it past the min edge it was released on")
+
+        var settled = false
+        for _ in 0..<600 where !settled { settled = d.step(dtMs: 1000.0 / 120.0).settled }
+        XCTAssertTrue(settled)
+        XCTAssertEqual(d.offset, 0, accuracy: 0.001, "it comes back to the edge it bounced off")
+    }
+
+    func test_releaseExactlyOnTheMaxEdge_bouncesOffThatEdge() {
+        // The mirror case, which never went wrong: pins that both edges behave alike.
+        var d = makeDecel(offset: 1000, velocity: 2.0, min: 0, max: 1000)
+        _ = d.step(dtMs: 1000.0 / 120.0)
+        XCTAssertGreaterThan(d.offset, 1000)
+
+        var settled = false
+        for _ in 0..<600 where !settled { settled = d.step(dtMs: 1000.0 / 120.0).settled }
+        XCTAssertTrue(settled)
+        XCTAssertEqual(d.offset, 1000, accuracy: 0.001)
+    }
 }

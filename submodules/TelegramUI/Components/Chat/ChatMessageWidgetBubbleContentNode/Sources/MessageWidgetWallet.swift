@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import AccountContext
+import PresentationDataUtils
 import WalletContext
 import MessageWidget
 
@@ -168,20 +169,21 @@ extension MessageWidgetWalletWindowLifetime {
     }
 }
 
-/// What the widget's promise rejects with for the wallet's failure (sdk-v1 §2.18).
+/// What the widget's promise rejects with for the wallet's failure (sdk-v1 §2.18): a short balance is the wallet's
+/// refusal, BAD_REQUEST, once the client has offered the top-up.
 func messageWidgetWalletOutcome(_ failure: WalletContext.WidgetWalletFailure) -> MessageWidgetRequestOutcome {
     switch failure {
     case .rejected:
         return .rejected
-    case .badRequest:
+    case .badRequest, .insufficientBalance:
         return .badRequest
     case .failed:
         return .failed
     }
 }
 
-/// The real wallet: prepares the call (no window when the wallet refuses it), shows the TON Connect window over the chat
-/// with the bot, and sends or signs on the confirmation.
+/// The real wallet: prepares the call (no window when the wallet refuses it; for a short balance, the top-up offered
+/// instead), shows the TON Connect window over the chat with the bot, and sends or signs on the confirmation.
 enum MessageWidgetWalletWindow {
     /// sdk-v1 §5.13: the second tap of a double tap over the widget must not land on Confirm (0.5–1 s). Counted from the
     /// push: the sheet slides in for about 0.22 s (measured on the iOS 27 simulator), so 0.8 s keeps it untouchable for
@@ -190,6 +192,23 @@ enum MessageWidgetWalletWindow {
 
     private final class WeakController {
         weak var value: ViewController?
+    }
+
+    /// sdk-v1 §5.13, "if the wallet is empty, offer the top-up over the chat before sending": the wallet's alert for a
+    /// short balance, as an NFT transfer's; Top Up opens the wallet's receive screen over the chat. The call has ended by
+    /// then, so the user pays with a new tap once the Grams arrive.
+    static func offerTopUp(_ request: MessageWidgetWallet.Request, walletContext: WalletContext) {
+        let strings = request.context.sharedContext.currentPresentationData.with { $0 }.strings
+        let alert = textAlertController(context: request.context, title: strings.Wallet_Backup_InsufficientFundsTitle, text: strings.Wallet_Transfer_TopUpText, actions: [
+            TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {}),
+            TextAlertAction(type: .defaultAction, title: strings.Wallet_Backup_TopUp, action: {
+                guard case let .wallet(info) = walletContext.stateValue.phase else {
+                    return
+                }
+                let _ = request.present(request.context.sharedContext.makeWalletReceiveScreen(context: request.context, address: info.address))
+            })
+        ])
+        request.context.sharedContext.presentGlobalController(alert, nil)
     }
 
     static func perform(_ request: MessageWidgetWallet.Request, completion: @escaping (Result<MessageWidgetWallet.Outcome, WalletContext.WidgetWalletFailure>) -> Void) {
@@ -207,12 +226,19 @@ enum MessageWidgetWalletWindow {
         }
         let requester = WalletContext.WidgetWalletRequester(botId: user.id.id._internalGetInt64Value(), name: request.bot.compactDisplayTitle, username: user.addressName)
         let window = WeakController()
+        // A short balance, before the window or after it, ends the call with the top-up offered over the chat (§5.13).
+        let fail: (WalletContext.WidgetWalletFailure) -> Void = { failure in
+            if failure == .insufficientBalance {
+                MessageWidgetWalletWindow.offerTopUp(request, walletContext: walletContext)
+            }
+            finish(.failure(failure))
+        }
         // A failure after the confirmation closes the window first, so it shows no alert of its own: the widget says what
         // happened, and a new tap starts again.
         let failAfterConfirmation: (WalletContext.WidgetWalletFailure, @escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void = { failure, result in
             window.value?.dismiss()
             result(.failure(.unavailable))
-            finish(.failure(failure))
+            fail(failure)
         }
         switch request.call {
         case let .sendTransaction(json, _):
@@ -245,7 +271,7 @@ enum MessageWidgetWalletWindow {
                     finish(.failure(.failed))
                 }
             }, error: { failure in
-                finish(.failure(failure))
+                fail(failure)
             })
         case let .signData(json, _):
             let _ = (walletContext.prepareWidgetSignData(json: json, requester: requester)
@@ -274,7 +300,7 @@ enum MessageWidgetWalletWindow {
                     finish(.failure(.failed))
                 }
             }, error: { failure in
-                finish(.failure(failure))
+                fail(failure)
             })
         }
     }
