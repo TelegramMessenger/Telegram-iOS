@@ -19,7 +19,7 @@ public func toastFrame(_ band: CGRect, metrics: LayoutMetrics, anchorX: CGFloat?
     var x = floorToScreenPixels(band.minX + (band.width - toastMaximumWidth) / 2.0)
     if let anchorX {
         x = min(max(x, anchorX + anchorMargin - toastMaximumWidth), anchorX - anchorMargin)
-        x = max(band.minX, min(x, band.maxX - toastMaximumWidth))
+        x = floorToScreenPixels(max(band.minX, min(x, band.maxX - toastMaximumWidth)))
     }
     return CGRect(x: x, y: band.minY, width: toastMaximumWidth, height: band.height)
 }
