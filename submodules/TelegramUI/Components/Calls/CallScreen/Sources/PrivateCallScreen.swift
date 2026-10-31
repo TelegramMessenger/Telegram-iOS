@@ -1363,11 +1363,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if currentAreControlsHidden {
             titleY = -8.0 - titleSize.height - statusSize.height
         } else if havePrimaryVideo {
+            var isActive = false
             if case .active = params.state.lifecycleState {
-                titleY = params.insets.top + 2.0 + 54.0
-            } else {
-                titleY = params.insets.top + 2.0
+                isActive = true
             }
+            titleY = privateCallScreenVideoTitleY(insetTop: params.insets.top, isActive: isActive, isBackButtonInTopRow: self.sideColumnBackButtonFrame == nil)
         } else {
             titleY = collapsedAvatarFrame.maxY + 39.0
         }
@@ -1567,5 +1567,20 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 })
             }
         }
+    }
+}
+
+/// Where the 1:1 call screen puts the peer's name over full-screen video, from the top of the screen.
+///
+/// The top row holds the back button (top-left) and, once the call is active, the key emoji and the conference button.
+/// The name goes below that row whenever the row holds the back button or the key emoji, so a long name never runs into
+/// "‹ Back" (wider in some languages) while the call is requesting, ringing or connecting, and does not move when the
+/// call becomes active. iPhone Duo puts the back button in the side strip, which leaves the top row to the name until
+/// the call is active.
+public func privateCallScreenVideoTitleY(insetTop: CGFloat, isActive: Bool, isBackButtonInTopRow: Bool) -> CGFloat {
+    if isActive || isBackButtonInTopRow {
+        return insetTop + 2.0 + 54.0
+    } else {
+        return insetTop + 2.0
     }
 }
