@@ -908,6 +908,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             joinsUnmuted = self.isConference && conferenceSourceId == nil
         }
         // Without microphone access the call joins muted and asks for it (below); it unmutes if access is granted.
+        // A call link's join asks before the call is created (joinConferenceCall); this covers any other caller.
         let joinsUnmutedAfterAccess = joinsUnmuted && !(isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true)
         if joinsUnmuted && !joinsUnmutedAfterAccess {
             self.isMutedValue = .unmuted
@@ -1270,7 +1271,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if joinsUnmutedAfterAccess {
             // After init, from the main queue: the call screen is presented on the same queue.
             Queue.mainQueue().async { [weak self] in
-                self?.setIsMuted(action: .unmuted)
+                guard let self, !self.leaving else {
+                    return
+                }
+                self.setIsMuted(action: .unmuted)
             }
         }
     }

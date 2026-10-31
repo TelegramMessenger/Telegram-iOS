@@ -76,7 +76,7 @@ final class GroupCallMicrophoneAccessGateTests: XCTestCase {
         XCTAssertEqual(gate.accessRequestCompleted(isGranted: true), .unmuted)
     }
 
-    /// A press of the mic button while the system prompt is up (push-to-talk, then mute on a long release) changes nothing.
+    /// Push-to-talk while a request is showing (another mic button, the header panel) keeps the pending unmute.
     func testPushToTalkWhileRequestingKeepsThePendingUnmute() {
         var gate = GroupCallMicrophoneAccessGate()
         XCTAssertEqual(gate.decide(action: .unmuted, isAccessGranted: false), .requestAccess)

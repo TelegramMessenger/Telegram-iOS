@@ -1197,16 +1197,25 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 return
             }
             // Joining with the microphone on asks for access before the call's audio starts, as startGroupCall does;
-            // without it the call still joins, muted.
+            // without it the call still joins, muted. A newer start (startCallDisposable) supersedes a pending request.
             if unmuteByDefault && DeviceAccess.isMicrophoneAccessAuthorized() != true {
                 let (presentationData, present, openSettings) = self.getDeviceAccessData()
-                DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
-                    present(c, a)
-                }, openSettings: {
-                    openSettings()
-                }, { value in
+                let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+                    DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                    return EmptyDisposable
+                }
+                |> runOn(Queue.mainQueue())
+                self.startCallDisposable.set((accessEnabledSignal
+                |> deliverOnMainQueue).startStrict(next: { value in
                     createCall(value)
-                })
+                }))
             } else {
                 createCall(unmuteByDefault)
             }
