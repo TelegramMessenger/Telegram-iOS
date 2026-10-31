@@ -3492,7 +3492,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
             let contextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
             contextPlaceholder.addAttribute(.foregroundColor, value: placeholderColor.withAlphaComponent(1.0), range: NSRange(location: 0, length: contextPlaceholder.length))
-            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, nextButtonTopRight.x - actualTextInputViewInternalInsets.left), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: chatTextInputPlaceholderMaxWidth(textLeftInset: actualTextInputViewInternalInsets.left, buttonsMinX: nextButtonTopRight.x), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let tintContextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
             tintContextPlaceholder.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintContextPlaceholder.length))
             let contextPlaceholderNode = placeholderApply()
@@ -3524,7 +3524,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         let textPlaceholderSize: CGSize
-        let textPlaceholderMaxWidth: CGFloat = isAgentLayout ? max(1.0, textInputContainerBackgroundFrame.width - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right) : max(1.0, nextButtonTopRight.x - 12.0)
+        let textPlaceholderMaxWidth: CGFloat = isAgentLayout ? max(1.0, textInputContainerBackgroundFrame.width - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right) : chatTextInputPlaceholderMaxWidth(textLeftInset: actualTextInputViewInternalInsets.left, buttonsMinX: nextButtonTopRight.x)
         
         if (updatedPlaceholder != nil && self.currentPlaceholder != updatedPlaceholder) || themeUpdated || fontSizeUpdated {
             let currentPlaceholder = updatedPlaceholder ?? self.currentPlaceholder ?? ""
