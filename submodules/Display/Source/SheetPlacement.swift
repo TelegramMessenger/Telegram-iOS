@@ -87,7 +87,7 @@ public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat) ->
 
 /// A centered card (`centeredSheetFrame`) whose bottom stays at `maxY`, where it rests, while its content is
 /// `contentHeight` high: a card whose list rubber-bands grows and shrinks at its top only, as a bottom sheet does.
-/// Its top never rises above the tallest card's: past that it moves up as a whole.
+/// Its top never rises above the tallest card's: past that the card grows downward, within the margins.
 public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat, maxY: CGFloat) -> CGRect {
     let tallest = centeredSheetFrame(containerSize: containerSize, contentHeight: .greatestFiniteMagnitude)
     let height = max(0.0, contentHeight)
