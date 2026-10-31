@@ -3790,20 +3790,45 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.pendingForbiddenInvitePeersTimer = timer
         timer.start()
     }
-
+    
     private func presentPendingForbiddenInvitePeers() {
         self.pendingForbiddenInvitePeersTimer = nil
         let peers = self.pendingForbiddenInvitePeers
         self.pendingForbiddenInvitePeers = []
-        guard !peers.isEmpty, let currentInviteLinks = self.currentInviteLinks else {
+        if peers.isEmpty {
             return
         }
-        let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
-        if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
-            navigationController.pushViewController(inviteLinkScreen)
+        // The call screen keeps `currentInviteLinks`; a call it has not fetched them for yet (a new call, a 1:1 call
+        // becoming a conference) fetches them here. Without a link the people are named in an alert.
+        let inviteLinks: Signal<GroupCallInviteLinks?, NoError>
+        if let currentInviteLinks = self.currentInviteLinks {
+            inviteLinks = .single(currentInviteLinks)
+        } else {
+            inviteLinks = self.inviteLinks
+            |> filter { $0 != nil }
+            |> take(1)
+            |> timeout(5.0, queue: Queue.mainQueue(), alternate: .single(nil))
         }
+        let _ = (inviteLinks
+        |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
+            guard let self else {
+                return
+            }
+            if let inviteLinks {
+                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: inviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
+                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+                    navigationController.pushViewController(inviteLinkScreen)
+                }
+            } else {
+                let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+                let text = presentationData.strings.Call_PrivacyErrorMessage(peers.map { $0.compactDisplayTitle }.joined(separator: ", ")).string
+                self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: text, actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                ]), on: .root, blockInteraction: false, completion: {})
+            }
+        })
     }
-
+    
     public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
@@ -3833,7 +3858,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         return
                     }
 
-                    if case let .privacy(peer) = error, let peer, self.currentInviteLinks != nil {
+                    if case let .privacy(peer) = error, let peer {
                         self.enqueueForbiddenInvitePeer(peer)
                         return
                     }
@@ -3846,16 +3871,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
                     
-                    var errorText = presentationData.strings.Login_UnknownError
-                    
-                    switch error {
-                    case let .privacy(peer):
-                        if let peer {
-                            errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
-                        }
-                    default:
-                        break
-                    }
+                    // A privacy refusal naming its peer went to `enqueueForbiddenInvitePeer` above.
+                    let errorText = presentationData.strings.Login_UnknownError
                     
                     self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: errorText, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
