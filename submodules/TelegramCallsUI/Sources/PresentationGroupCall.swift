@@ -3798,35 +3798,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if peers.isEmpty {
             return
         }
-        // The call screen keeps `currentInviteLinks`; a call it has not fetched them for yet (a new call, a 1:1 call
-        // becoming a conference) fetches them here. Without a link the people are named in an alert.
-        let inviteLinks: Signal<GroupCallInviteLinks?, NoError>
+        // With the call's links (the call screen keeps them) the people are offered the link; before it has them (a new
+        // call, a 1:1 call becoming a conference) one alert names them all.
         if let currentInviteLinks = self.currentInviteLinks {
-            inviteLinks = .single(currentInviteLinks)
+            let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
+            if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(inviteLinkScreen)
+            }
         } else {
-            inviteLinks = self.inviteLinks
-            |> filter { $0 != nil }
-            |> take(1)
-            |> timeout(5.0, queue: Queue.mainQueue(), alternate: .single(nil))
-        }
-        let _ = (inviteLinks
-        |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
-            guard let self else {
-                return
-            }
-            if let inviteLinks {
-                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: inviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
-                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
-                    navigationController.pushViewController(inviteLinkScreen)
-                }
+            let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+            let text: String
+            if peers.count == 1 {
+                text = presentationData.strings.Call_PrivacyErrorMessage(peers[0].compactDisplayTitle).string
             } else {
-                let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
-                let text = presentationData.strings.Call_PrivacyErrorMessage(peers.map { $0.compactDisplayTitle }.joined(separator: ", ")).string
-                self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: text, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
-                ]), on: .root, blockInteraction: false, completion: {})
+                text = presentationData.strings.Call_PrivacyErrorMessageMultiple(peers.map { $0.compactDisplayTitle }.joined(separator: ", ")).string
             }
-        })
+            self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+            ]), on: .root, blockInteraction: false, completion: {})
+        }
     }
     
     public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
