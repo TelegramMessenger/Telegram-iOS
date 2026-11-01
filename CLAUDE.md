@@ -78,6 +78,7 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests`,
 `//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`,
 `//submodules/TelegramPresentationData:TelegramPresentationDataTests`,
+`//submodules/TranslateUI:TranslateUITests`,
 `//submodules/MtProtoKit:MtProtoKitTests` (also `swift test` in `submodules/MtProtoKit` on macOS), and the targets the
 subsystem guides name. `PresentationStrings` cannot be built in a test process (it asserts without the app bundle's
 `PresentationStrings.data`), so keep a decision under test strings-free. The RichTextEditor SwiftPM package keeps its
