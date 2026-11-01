@@ -61,6 +61,8 @@ final class ChatTranslationPeerChoiceTests: XCTestCase {
         
         let otherPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(1235))
         XCTAssertNotEqual(choiceKey, chatTranslationPeerChoiceKey(peerId: otherPeerId))
+        let userWithTheSameId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(1234))
+        XCTAssertNotEqual(choiceKey, chatTranslationPeerChoiceKey(peerId: userWithTheSameId))
     }
     
     func testLocationKeysAreUnchanged() {
@@ -79,16 +81,18 @@ final class ChatTranslationPeerChoiceTests: XCTestCase {
         }
     }
     
-    func testATopicInTheTargetLanguageHasNothingToTranslate() {
-        let frenchTopic = self.state(fromLang: "fr", isEnabled: false)
-        XCTAssertNil(effectiveChatTranslationState(frenchTopic, peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "fr")))
-        XCTAssertNil(effectiveChatTranslationState(self.state(fromLang: "en", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: nil)))
-        XCTAssertNil(effectiveChatTranslationState(self.state(fromLang: "pt", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "pt-br")))
+    func testATopicInTheTargetLanguageIsShownUntranslatedOfferingTheBaseLanguage() {
+        for (fromLang, toLang) in [("fr", "fr"), ("pt", "pt-br"), ("en", nil)] as [(String, String?)] {
+            let topic = effectiveChatTranslationState(self.state(fromLang: fromLang, toLang: "it", isEnabled: true), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: toLang))
+            XCTAssertFalse(topic.isEnabled, fromLang)
+            XCTAssertNil(topic.toLang, fromLang)
+            XCTAssertEqual(topic.fromLang, fromLang)
+        }
         
         let spanishTopic = effectiveChatTranslationState(self.state(fromLang: "es", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "fr"))
-        XCTAssertEqual(spanishTopic?.isEnabled, true)
-        XCTAssertEqual(spanishTopic?.toLang, "fr")
-        XCTAssertEqual(spanishTopic?.fromLang, "es")
+        XCTAssertTrue(spanishTopic.isEnabled)
+        XCTAssertEqual(spanishTopic.toLang, "fr")
+        XCTAssertEqual(spanishTopic.fromLang, "es")
     }
     
     func testWithoutAPeerChoiceTheLocationStateIsShownAsBefore() {

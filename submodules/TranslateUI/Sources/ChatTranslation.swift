@@ -135,15 +135,17 @@ public extension ChatTranslationState {
     }
 }
 
-/// A location's state under the peer's choice, or nil when the choice's target language is the language the location is
-/// detected to be in: a topic already in the language the forum is translated into has nothing to translate.
-public func effectiveChatTranslationState(_ locationState: ChatTranslationState, peerChoice: ChatTranslationPeerChoice?) -> ChatTranslationState? {
+/// A location's state under the peer's choice. When the choice's target language is the language the location is
+/// detected to be in (a topic already in the language the forum is translated into), the location has nothing to
+/// translate into it: it is shown untranslated, offering the base language, so its bar still lets the user translate it
+/// or pick another language.
+public func effectiveChatTranslationState(_ locationState: ChatTranslationState, peerChoice: ChatTranslationPeerChoice?) -> ChatTranslationState {
     guard let peerChoice else {
         return locationState
     }
     let toLang = normalizeTranslationLanguage(peerChoice.toLang ?? locationState.baseLang)
     if toLang == normalizeTranslationLanguage(locationState.fromLang) {
-        return nil
+        return locationState.withToLang(nil).withIsEnabled(false)
     }
     return locationState.withPeerChoice(peerChoice)
 }
@@ -165,9 +167,9 @@ func chatTranslationStateKey(peerId: EnginePeer.Id, threadId: Int64?) -> EngineD
 /// The peer's `ChatTranslationPeerChoice`, in the same collection (so resetting translation states clears it too), under
 /// a key length no location's key has.
 func chatTranslationPeerChoiceKey(peerId: EnginePeer.Id) -> EngineDataBuffer {
-    let key = EngineDataBuffer(length: 9)
+    let key = EngineDataBuffer(length: 12)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
-    key.setUInt8(8, value: 1)
+    key.setInt32(8, value: peerId.namespace._internalGetInt32Value())
     return key
 }
 
@@ -212,14 +214,15 @@ public func updateChatTranslationStateInteractively(engine: TelegramEngine, peer
         if let current = entry?.get(ChatTranslationState.self) {
             let sharesPeerChoice = chatTranslationSharesPeerChoice(peer: peer)
             let peerChoice = sharesPeerChoice ? peerChoiceEntry?.get(ChatTranslationPeerChoice.self) : nil
-            let updated = f(current.withPeerChoice(peerChoice))
+            let updated = f(effectiveChatTranslationState(current, peerChoice: peerChoice))
             // The choice is written first: readers take it over the location's own, so the toggle shows at once.
             if sharesPeerChoice, let updated {
                 return updateChatTranslationPeerChoice(engine: engine, peerId: peerId, choice: ChatTranslationPeerChoice(updated))
                 |> then(updateChatTranslationState(engine: engine, peerId: peerId, threadId: threadId, state: updated))
             } else if sharesPeerChoice, chatTranslationDiscardsPeerChoice(peer: peer, threadId: threadId) {
-                return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: chatTranslationPeerChoiceKey(peerId: peerId))
-                |> then(updateChatTranslationState(engine: engine, peerId: peerId, threadId: threadId, state: updated))
+                // The location goes first, so that no reader sees it still enabled with no choice and migrates it back.
+                return updateChatTranslationState(engine: engine, peerId: peerId, threadId: threadId, state: updated)
+                |> then(engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: chatTranslationPeerChoiceKey(peerId: peerId)))
             } else {
                 return updateChatTranslationState(engine: engine, peerId: peerId, threadId: threadId, state: updated)
             }
@@ -304,23 +307,27 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 }
 
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
-    return combineLatest(
-        chatTranslationLocationState(context: context, peerId: peerId, threadId: threadId),
-        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> map { peer -> Bool in
-            return chatTranslationSharesPeerChoice(peer: peer)
-        },
-        cachedChatTranslationPeerChoice(engine: context.engine, peerId: peerId)
-    )
-    |> map { state, sharesPeerChoice, peerChoice -> ChatTranslationState? in
-        guard let state, sharesPeerChoice else {
-            return state
+    let sharesPeerChoice = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    |> map { peer -> Bool in
+        return chatTranslationSharesPeerChoice(peer: peer)
+    }
+    
+    return chatTranslationLocationState(context: context, peerId: peerId, threadId: threadId)
+    |> mapToSignal { state -> Signal<ChatTranslationState?, NoError> in
+        guard let state else {
+            return .single(nil)
         }
-        if let migratedChoice = chatTranslationPeerChoiceToMigrate(locationState: state, peerChoice: peerChoice) {
-            // Every subscriber of the chat (its bar, its history) may write the same choice; the writes are idempotent.
-            let _ = updateChatTranslationPeerChoice(engine: context.engine, peerId: peerId, choice: migratedChoice).start()
+        return combineLatest(sharesPeerChoice, cachedChatTranslationPeerChoice(engine: context.engine, peerId: peerId))
+        |> map { sharesPeerChoice, peerChoice -> ChatTranslationState? in
+            guard sharesPeerChoice else {
+                return state
+            }
+            if let migratedChoice = chatTranslationPeerChoiceToMigrate(locationState: state, peerChoice: peerChoice) {
+                // Every subscriber of the chat (its bar, its history) may write the same choice; the writes are idempotent.
+                let _ = updateChatTranslationPeerChoice(engine: context.engine, peerId: peerId, choice: migratedChoice).start()
+            }
+            return effectiveChatTranslationState(state, peerChoice: peerChoice)
         }
-        return effectiveChatTranslationState(state, peerChoice: peerChoice)
     }
     |> distinctUntilChanged
 }

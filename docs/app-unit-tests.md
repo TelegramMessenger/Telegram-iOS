@@ -52,8 +52,9 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 into which language (`ChatTranslationPeerChoice`) is the peer's, shared by its own chat and every thread (forum topics,
 comment threads), so enabling or disabling it in one topic applies to all; the detected source language stays each
 location's own. A monoforum's threads keep their own choice, being conversations with different users. Topics translated
-before the choice was shared enable the peer the first time one of them is shown. A topic already in the target language
-shows no bar, and "Do not translate" in one topic keeps the others translating, while in a chat without topics it turns
+before the choice was shared enable the peer the first time one of them is shown (no API lists a peer's stored topics,
+so this is lazy). A topic already in the target language is shown untranslated, offering the base language, so its bar
+never disappears; "Do not translate" in one topic keeps the others translating, while in a chat without topics it turns
 the chat's translation off as it always did.
 
 `//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests` covers `chatTitleLeadingIconsLayout`, the
