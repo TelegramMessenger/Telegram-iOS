@@ -89,9 +89,10 @@ final class SceneActivationTouchResetTests: XCTestCase {
     }
 
     /// Makes this pan (only) report a finger moving at 3000 pt/s, which a test host's recognizer, with no touches, never
-    /// does: a dynamic subclass, as KVO makes, overriding `velocity(in:)`.
+    /// does: a dynamic subclass, as KVO makes, overriding `velocity(in:)`. For the pan's whole life: only a fixture's own.
     private func giveVelocity(to pan: UIGestureRecognizer) {
-        let base: AnyClass = object_getClass(pan)!
+        let base: AnyClass = PhysicsPanGestureRecognizer.self
+        precondition(object_getClass(pan) == base, "the subclass is made on, and swapped in for, the plain pan only")
         let name = "SceneActivationTouchResetTests_FlingingPan"
         let subclass: AnyClass
         if let existing = NSClassFromString(name) {
@@ -128,9 +129,12 @@ final class SceneActivationTouchResetTests: XCTestCase {
     func test_aDragTheSceneCancelsReleasesAtRest() throws {
         // The system took the finger: flinging the content as the app leaves would move what the user comes back to.
         let f = try makeFixture()
+        var ends = 0
+        f.engine.onDidEndDragging = { ends += 1 }
         self.startFastDrag(f)
         self.post(UIScene.willDeactivateNotification, f.scene)
         self.turnRunLoop()
+        XCTAssertEqual(ends, 1, "the scene cancel released the drag")
         XCTAssertFalse(f.engine.isDecelerating)
     }
 
