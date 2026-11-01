@@ -105,6 +105,25 @@ final class PhysicsScrollCoreTests: XCTestCase {
         XCTAssertEqual(core.containerOrigin(windowHeight: h, topLoaded: false, bottomLoaded: false), -h / 2, accuracy: 0.001)
     }
 
+    func test_flickReleasedOnTheNewestEdge_withNoTranslation_staysAtThatEdge() {
+        // Issue #99, from the chat's scroll trace: at the bottom of a channel (the rotated list's min edge,
+        // -79 with a 79 pt inset; older history not loaded, so max is open) a short quick upward flick
+        // began and ended with tr=0 at 1.40 pt/ms toward the bottom. The baked flight launched with
+        // finalOffset=802695 and the chat jumped far up its history. It must bounce at the bottom.
+        let (core, _) = makeCore(viewport: CGSize(width: 402, height: 874))
+        core.setOffset(-79)
+        core.setEdges(min: -79, max: nil)
+        core.beginDrag()
+        core.drag(translation: 0, velocity: 1404.9)
+        XCTAssertTrue(core.endDrag(recognizerVelocity: 1404.9, at: 0), "the flick decelerates")
+
+        let trajectory = core.bakeTrajectory()
+        let extent = trajectory.offsetExtent()
+        XCTAssertEqual(trajectory.finalOffset, -79, accuracy: 0.001, "it settles back on the edge it was released at")
+        XCTAssertLessThanOrEqual(extent.max, -79 + 0.001, "it never travels away from that edge")
+        XCTAssertLessThan(extent.min, -79, "it bounces past the edge, as UIScrollView does")
+    }
+
     func test_bakeTrajectory_fromFlick_settles() {
         let (core, _) = makeCore()
         core.setEdges(min: nil, max: nil)              // free travel both ways

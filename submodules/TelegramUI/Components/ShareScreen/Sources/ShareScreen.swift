@@ -1031,7 +1031,9 @@ private final class ShareScreenComponent: Component {
                 slidesOutBottomItem: isEmbedded,
                 animatesAppearance: self.animatesSheetAppearance,
                 scrollsContentWhenCentered: true,
-                centeredSize: environment.metrics.widthClass == .regular ? CGSize(width: min(414.0, availableSize.width - 20.0), height: min(670.0, availableSize.height - 88.0)) : nil,
+                // A centered card where floating panels are shown; iPhone Duo's regular-width unfolded landscape keeps
+                // the phone sheet, in the band beside the strip.
+                centeredSize: environment.presentsFloatingPanels ? CGSize(width: min(414.0, availableSize.width - 20.0), height: min(670.0, availableSize.height - 88.0)) : nil,
                 defaultHeight: sheetDefaultHeight, externalState: self.externalState, animateOut: component.animateOut
             )), environment: {
                 environment

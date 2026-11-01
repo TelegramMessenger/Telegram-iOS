@@ -37,3 +37,13 @@ A channel post's comments, a `?comment=` link and a group reply thread each open
     reads the post as never having existed.
   - `-debugOpenUrl <url>` opens a link through the universal-link path.
   - The `ReplyThreadOpen` log tag times each step. The `[MT] … add request` lines show what reached the wire.
+
+## Marking a whole chat read from the chat list
+
+The swipe, "Mark as Read" and reading a folder read up to the **server's** newest message, not the newest stored one
+(`_internal_readPeerHistoryToTopInteractively`). The read state keeps the dialog's `top_message` as `maxKnownId`, and its
+count includes that message even when this device never stored it; a read short of it leaves it unread on the server,
+which answers with `still_unread_count` (or the validation the push runs) and the chat comes back unread (issue #98).
+Postbox clears the count for such a read: an interactive read past the newest stored message and at or past
+`maxKnownId` reads every counted message (`MessageHistoryReadStateTable.applyIncomingMaxReadId`); tests in
+`Tests/StateSync/ChatListMarkReadTests.swift` and Postbox's `MessageHistoryReadStateTableTests`.

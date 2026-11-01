@@ -63,6 +63,7 @@ private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNod
         let _ = self.contentNode.updateLayout(size: size, leftInset: insets.left, rightInset: insets.right, transition: transition)
         
         var contentHeight: CGFloat = size.height
+        var hasPanel = false
         
         if self.appliedPanelNode !== self.panelNode {
             if let previous = self.appliedPanelNode {
@@ -83,6 +84,7 @@ private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNod
                 
                 contentHeight += 14.0 + 66.0
                 contentHeight += panelHeight
+                hasPanel = true
             }
         } else if let panelNode = self.panelNode, let chatController = self.chatController {
             let panelLayout = panelNode.updateLayout(width: width, leftInset: insets.left, rightInset: insets.right, transition: transition, chatController: chatController)
@@ -92,6 +94,15 @@ private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNod
             
             contentHeight += 14.0 + 66.0
             contentHeight += panelHeight
+            hasPanel = true
+        }
+        
+        if !hasPanel {
+            // The panes start at the returned height, measured from the top of the screen like `defaultHeight` (the
+            // navigation bar's bottom, status bar included). With the regular 60pt navigation bar the profile's search bar
+            // container is 10pt below the status bar and the content sits 6pt above it, so the 60pt content ends 4pt
+            // below the navigation bar (with the 68pt form-sheet bar it ends at it, leaving a 4pt gap).
+            contentHeight = defaultHeight + 4.0
         }
         
         return contentHeight

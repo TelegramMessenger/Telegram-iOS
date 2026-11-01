@@ -48,3 +48,16 @@ public func reactionContextShrunkItemSize(visibleContentWidth: CGFloat, availabl
     }
     return floor((availableWidth - (visibleItemCount - 1.0) * itemSpacing - sideInset * 2.0) / visibleItemCount)
 }
+
+/// What the reaction panel's background covers: the panel with a 10pt margin, and the tail's circles below it. Hidden
+/// circles (`displayTail` false) keep the height they give it but do not widen it: the tail's anchor can lie well past
+/// the panel's end (a story's input row, which it points to, is wider than iPhone Duo's landscape card), and the glass
+/// then reached out to it, past the reactions and the story. Circles under the panel give the same bounds either way.
+public func reactionContextBackgroundContentBounds(backgroundFrame: CGRect, largeCircleFrame: CGRect, smallCircleFrame: CGRect, displayTail: Bool) -> CGRect {
+    let panelBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0)
+    let bounds = panelBounds.union(largeCircleFrame).union(smallCircleFrame)
+    if displayTail {
+        return bounds
+    }
+    return CGRect(x: panelBounds.minX, y: bounds.minY, width: panelBounds.width, height: bounds.height)
+}

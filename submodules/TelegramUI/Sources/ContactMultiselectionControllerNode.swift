@@ -501,7 +501,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                     footerPanelNode.content = FooterPanelNode.Content(title: callTitle, badge: "")
                 } else {
-                    footerPanelNode.content = FooterPanelNode.Content(title: "Call", badge: "\(count)")
+                    footerPanelNode.content = FooterPanelNode.Content(title: self.presentationData.strings.NewCall_ActionCallMultiple, badge: "\(count)")
                 }
             } else {
                 footerPanelNode.content = FooterPanelNode.Content(title: self.presentationData.strings.Premium_Gift_ContactSelection_Proceed, badge: count == 0 ? "" : "\(count)")

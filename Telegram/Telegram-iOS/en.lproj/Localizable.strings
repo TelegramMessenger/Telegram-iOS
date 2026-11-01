@@ -2597,6 +2597,7 @@ Unused sets are archived when you add more.";
 "NetworkUsageSettings.CallDataSection" = "CALLS";
 
 "Call.PrivacyErrorMessage" = "Sorry, %@ doesn't accept calls.";
+"Call.PrivacyErrorMessageMultiple" = "Sorry, %@ don't accept calls.";
 
 "Notification.CallBack" = "Call Back";
 
@@ -14205,6 +14206,7 @@ Sorry for the inconvenience.";
 "NewCall.VideoOption" = "Call with video enabled";
 "NewCall.ActionCallSingle" = "Call %@";
 "NewCall.ActionCallMultiple" = "Call";
+"NewCall.ParticipantLimitAlert" = "A call can have up to %@ participants.";
 
 "Chat.ToastCallLinkExpired.Text" = "This link is no longer active";
 

@@ -41,7 +41,9 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     private let colorOverride: InstantPageAudioColorOverride?
 
     private let statusNode: SemanticStatusNode
-    private let streamingStatusNode: SemanticStatusNode
+    // The download badge (download arrow / progress ring) on the control's bottom-right, as a regular music
+    // message draws it: made when there is something to show, faded out and dropped when there is not.
+    private var streamingStatusNode: SemanticStatusNode?
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let tapView: UIView
@@ -54,6 +56,7 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     var play: () -> Void = {}
     var togglePlayPause: () -> Void = {}
     var fetch: () -> Void = {}
+    var cancelFetch: () -> Void = {}
 
     private var resourceStatusDisposable: Disposable?
     // EngineMediaResourceStatus is the TelegramCore typealias for Postbox's MediaResourceStatus;
@@ -74,6 +77,7 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     private static let progressOrigin = CGPoint(x: 12.0, y: 2.0)
     private static let controlAreaWidth: CGFloat = 12.0 + 40.0 + 8.0
     private static let normHeight: CGFloat = 44.0
+    private static let streamingDiameter: CGFloat = 20.0
 
     init(context: AccountContext, message: MessageReference?, file: TelegramMediaFile, incoming: Bool, presentationData: PresentationData, colorOverride: InstantPageAudioColorOverride? = nil) {
         self.context = context
@@ -86,8 +90,7 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
 
         let messageTheme = incoming ? presentationData.theme.chat.message.incoming : presentationData.theme.chat.message.outgoing
 
-        let backgroundNodeColor = colorOverride?.control ?? messageTheme.mediaActiveControlColor
-        let foregroundNodeColor: UIColor = colorOverride?.controlForeground ?? ((incoming && messageTheme.mediaActiveControlColor.rgb != 0xffffff) ? .white : .clear)
+        let controlColors = InstantPageV2AudioContentNode.controlColors(mediaActiveControlColor: messageTheme.mediaActiveControlColor, incoming: incoming, colorOverride: colorOverride)
 
         var title: String?
         var performer: String?
@@ -114,12 +117,11 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         }
 
         self.statusNode = SemanticStatusNode(
-            backgroundNodeColor: backgroundNodeColor,
-            foregroundNodeColor: foregroundNodeColor,
+            backgroundNodeColor: controlColors.background,
+            foregroundNodeColor: controlColors.foreground,
             image: albumArtImage,
             overlayForegroundNodeColor: colorOverride?.controlForeground ?? presentationData.theme.chat.message.mediaOverlayControlColors.foregroundColor
         )
-        self.streamingStatusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: colorOverride?.control ?? messageTheme.mediaActiveControlColor)
 
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -136,18 +138,19 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.descriptionAttributedString = InstantPageV2AudioContentNode.descriptionString(file: file, incoming: incoming, presentationData: presentationData, overrideColor: colorOverride?.description)
 
         self.addSubnode(self.statusNode)
-        self.addSubnode(self.streamingStatusNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
 
         self.statusNode.transitionToState(.play, animated: false)
-        self.streamingStatusNode.transitionToState(.none, animated: false)
 
         if let messageId = self.message?.id {
             self.resourceStatusDisposable = (messageMediaFileStatus(context: context, messageId: messageId, file: file)
             |> deliverOnMainQueue).startStrict(next: { [weak self] status in
-                self?.fetchStatus = status
-                self?.updateStreamingState()
+                guard let self else { return }
+                // The first status only places the badge; later ones animate it.
+                let animated = self.fetchStatus != nil
+                self.fetchStatus = status
+                self.updateStreamingState(animated: animated)
             })
         }
     }
@@ -161,20 +164,55 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.tapView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
     }
 
-    @objc private func tapped() {
-        self.controlTapped()
+    @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
+        // A tap on a shown badge goes to the badge (ChatMessageInteractiveFileNode's `fileTap`), anything else to the row.
+        let badgeFrame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: InstantPageV2AudioContentNode.controlFrame)
+        let onBadge = self.streamingStatusNode != nil && badgeFrame.contains(recognizer.location(in: self.view))
+        self.perform(InstantPageV2AudioContentNode.tapAction(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying, onBadge: onBadge))
     }
 
     func controlTapped() {
-        switch self.fetchStatus {
-        case .Remote, .Paused:
-            self.fetch()
-        case .none, .Local, .Fetching:
-            if self.isPlaying {
-                self.togglePlayPause()
-            } else {
-                self.play()
+        self.perform(InstantPageV2AudioContentNode.tapAction(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying, onBadge: false))
+    }
+
+    enum TapAction: Equatable {
+        case fetch
+        case cancelFetch
+        case play
+        case togglePlayPause
+    }
+
+    // The badge cancels a running download (its ✕) or starts one (its arrow), as a regular music message's
+    // `cacheProgressPressed` does; the rest of the row fetches a remote file and otherwise plays or toggles.
+    static func tapAction(fetchStatus: EngineMediaResourceStatus?, isPlaying: Bool, onBadge: Bool) -> TapAction {
+        if onBadge {
+            switch fetchStatus {
+            case .Fetching:
+                return .cancelFetch
+            case .Remote, .Paused:
+                return .fetch
+            case .none, .Local:
+                break
             }
+        }
+        switch fetchStatus {
+        case .Remote, .Paused:
+            return .fetch
+        case .none, .Local, .Fetching:
+            return isPlaying ? .togglePlayPause : .play
+        }
+    }
+
+    private func perform(_ action: TapAction) {
+        switch action {
+        case .fetch:
+            self.fetch()
+        case .cancelFetch:
+            self.cancelFetch()
+        case .play:
+            self.play()
+        case .togglePlayPause:
+            self.togglePlayPause()
         }
     }
 
@@ -189,19 +227,24 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.playbackStatusDisposable?.dispose()   // defensive: a re-call must not leak the prior subscription
         self.playbackStatusDisposable = (signal |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             guard let self else { return }
-            let isPlaying: Bool
-            if let status = state?.status {
-                if case .playing = status.status {
-                    isPlaying = true
-                } else {
-                    isPlaying = false
-                }
-            } else {
-                isPlaying = false
-            }
+            let isPlaying = InstantPageV2AudioContentNode.isPlaying(state?.status.status)
             self.isPlaying = isPlaying
             self.statusNode.transitionToState(isPlaying ? .pause : .play)
+            self.updateStreamingState(animated: true)
         })
+    }
+
+    // Buffering while playing counts as playing, as for a regular music message (FileMediaResourceStatus): a
+    // stream catching up with its download keeps showing pause, without the badge coming back.
+    static func isPlaying(_ status: MediaPlayerPlaybackStatus?) -> Bool {
+        switch status {
+        case .playing:
+            return true
+        case let .buffering(_, whilePlaying, _, _):
+            return whilePlaying
+        case .paused, .none:
+            return false
+        }
     }
 
     // Refreshes title/description attributed strings and the statusNode tint/foreground/overlay
@@ -213,28 +256,103 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
         self.incomingValue = incoming
         self.titleAttributedString = InstantPageV2AudioContentNode.titleString(file: self.file, incoming: incoming, presentationData: presentationData, overrideColor: self.colorOverride?.title)
         self.descriptionAttributedString = InstantPageV2AudioContentNode.descriptionString(file: self.file, incoming: incoming, presentationData: presentationData, overrideColor: self.colorOverride?.description)
-        let messageTheme = incoming ? presentationData.theme.chat.message.incoming : presentationData.theme.chat.message.outgoing
-        self.statusNode.backgroundNodeColor = self.colorOverride?.control ?? messageTheme.mediaActiveControlColor
+        let controlColors = self.currentControlColors()
+        self.statusNode.backgroundNodeColor = controlColors.background
         // foreground/overlay also depend on incoming + theme (set at construction) — refresh them
         // too so the play glyph isn't miscolored after an in-place theme/direction change.
-        self.statusNode.foregroundNodeColor = self.colorOverride?.controlForeground ?? ((incoming && messageTheme.mediaActiveControlColor.rgb != 0xffffff) ? .white : .clear)
+        self.statusNode.foregroundNodeColor = controlColors.foreground
         self.statusNode.overlayForegroundNodeColor = self.colorOverride?.controlForeground ?? presentationData.theme.chat.message.mediaOverlayControlColors.foregroundColor
+        if let streamingStatusNode = self.streamingStatusNode {
+            streamingStatusNode.backgroundNodeColor = controlColors.background
+            streamingStatusNode.foregroundNodeColor = controlColors.foreground
+        }
 
         // No setNeedsLayout(): this node doesn't override layout(); the host calls updateLayout(width:)
         // right after updatePresentationData, which re-runs the text layout with the rebuilt strings.
     }
 
-    private func updateStreamingState() {
-        let state: SemanticStatusNodeState
-        switch self.fetchStatus {
-        case .none, .Local:
-            state = .none
-        case let .Fetching(_, progress):
-            state = .progress(value: CGFloat(max(progress, 0.027)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: true)
-        case .Remote, .Paused:
-            state = .download
+    // The control's fill and glyph colours, shared by the play control and its download badge as in
+    // ChatMessageInteractiveFileNode: an outgoing (or white) control cuts its glyph out, so the bubble shows through.
+    static func controlColors(mediaActiveControlColor: UIColor, incoming: Bool, colorOverride: InstantPageAudioColorOverride?) -> (background: UIColor, foreground: UIColor) {
+        let background = colorOverride?.control ?? mediaActiveControlColor
+        let foreground: UIColor = colorOverride?.controlForeground ?? ((incoming && mediaActiveControlColor.rgb != 0xffffff) ? .white : .clear)
+        return (background, foreground)
+    }
+
+    private func currentControlColors() -> (background: UIColor, foreground: UIColor) {
+        let messageTheme = self.incomingValue ? self.presentationData.theme.chat.message.incoming : self.presentationData.theme.chat.message.outgoing
+        return InstantPageV2AudioContentNode.controlColors(mediaActiveControlColor: messageTheme.mediaActiveControlColor, incoming: self.incomingValue, colorOverride: self.colorOverride)
+    }
+
+    // A regular music message's badge: download while remote, a thin ring while fetching, nothing once local
+    // or while playing (the control then shows pause and the file streams).
+    static func streamingState(fetchStatus: EngineMediaResourceStatus?, isPlaying: Bool) -> SemanticStatusNodeState {
+        if isPlaying {
+            return .none
         }
-        self.streamingStatusNode.transitionToState(state)
+        switch fetchStatus {
+        case .none, .Local:
+            return .none
+        case let .Fetching(_, progress):
+            return .progress(value: CGFloat(max(progress, 0.027)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: true)
+        case .Remote, .Paused:
+            return .download
+        }
+    }
+
+    // The badge sits on the control's bottom-right corner, 2pt past it (ChatMessageInteractiveFileNode's
+    // `streamingCacheStatusFrame`).
+    static func streamingBadgeFrame(controlFrame: CGRect) -> CGRect {
+        let diameter = InstantPageV2AudioContentNode.streamingDiameter
+        return CGRect(origin: CGPoint(x: controlFrame.maxX - diameter + 2.0, y: controlFrame.maxY - diameter + 2.0), size: CGSize(width: diameter, height: diameter))
+    }
+
+    // The ring cut out of the control around the badge, in the control's own coordinates.
+    static func streamingBadgeCutout(controlFrame: CGRect) -> CGRect {
+        let margin = 1.0 + UIScreenPixel
+        return InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: controlFrame).offsetBy(dx: -controlFrame.minX, dy: -controlFrame.minY).insetBy(dx: -margin, dy: -margin)
+    }
+
+    private static var controlFrame: CGRect {
+        return CGRect(origin: InstantPageV2AudioContentNode.progressOrigin, size: CGSize(width: InstantPageV2AudioContentNode.progressDiameter, height: InstantPageV2AudioContentNode.progressDiameter))
+    }
+
+    // Mirrors ChatMessageInteractiveFileNode's streaming badge handling: the badge appears in the control's
+    // colours (at once; the cutout animates), fades out when there is nothing to show, and the control
+    // carries a cutout ring while it is there.
+    private func updateStreamingState(animated: Bool) {
+        let streamingState = InstantPageV2AudioContentNode.streamingState(fetchStatus: self.fetchStatus, isPlaying: self.isPlaying)
+        let controlFrame = InstantPageV2AudioContentNode.controlFrame
+
+        if streamingState != .none && self.streamingStatusNode == nil {
+            let controlColors = self.currentControlColors()
+            let streamingStatusNode = SemanticStatusNode(backgroundNodeColor: controlColors.background, foregroundNodeColor: controlColors.foreground)
+            streamingStatusNode.isUserInteractionEnabled = false
+            streamingStatusNode.frame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: controlFrame)
+            self.insertSubnode(streamingStatusNode, aboveSubnode: self.statusNode)
+            self.streamingStatusNode = streamingStatusNode
+        }
+
+        if let streamingStatusNode = self.streamingStatusNode {
+            if streamingState == .none {
+                self.streamingStatusNode = nil
+                if animated {
+                    streamingStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak streamingStatusNode] _ in
+                        streamingStatusNode?.removeFromSupernode()
+                    })
+                } else {
+                    streamingStatusNode.removeFromSupernode()
+                }
+            } else {
+                streamingStatusNode.transitionToState(streamingState, animated: animated)
+            }
+        }
+
+        if streamingState == .none {
+            self.statusNode.setCutout(nil, animated: animated)
+        } else {
+            self.statusNode.setCutout(InstantPageV2AudioContentNode.streamingBadgeCutout(controlFrame: controlFrame), animated: animated)
+        }
     }
 
     // Line 1: track title at 17pt (= baseDisplaySize at the default font setting; scales with it).
@@ -273,10 +391,9 @@ final class InstantPageV2AudioContentNode: ASDisplayNode {
     }
 
     func updateLayout(width: CGFloat) {
-        let progressFrame = CGRect(origin: InstantPageV2AudioContentNode.progressOrigin, size: CGSize(width: InstantPageV2AudioContentNode.progressDiameter, height: InstantPageV2AudioContentNode.progressDiameter))
+        let progressFrame = InstantPageV2AudioContentNode.controlFrame
         self.statusNode.frame = progressFrame
-        let streamingDiameter: CGFloat = 24.0
-        self.streamingStatusNode.frame = CGRect(origin: CGPoint(x: progressFrame.maxX - streamingDiameter + 2.0, y: progressFrame.maxY - streamingDiameter + 2.0), size: CGSize(width: streamingDiameter, height: streamingDiameter))
+        self.streamingStatusNode?.frame = InstantPageV2AudioContentNode.streamingBadgeFrame(controlFrame: progressFrame)
 
         let controlAreaWidth = InstantPageV2AudioContentNode.controlAreaWidth
         let textWidth = max(1.0, width - controlAreaWidth - 8.0)
