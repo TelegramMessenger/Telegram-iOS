@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     # The source needs the iOS 27 SDK (Xcode 27.1); the macos-26 image tops out at Xcode 26.6.
-    runs-on: xcode-27-arm64
+    runs-on: macos-14
     timeout-minutes: 360
 
     steps:
