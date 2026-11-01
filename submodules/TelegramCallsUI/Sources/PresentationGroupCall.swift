@@ -844,7 +844,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var lastErrorAlertTimestamp: Double = 0.0
-    
+    private var pendingForbiddenInvitePeers: [EnginePeer] = []
+    private var pendingForbiddenInvitePeersTimer: SwiftSignalKit.Timer?
+
     public init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -3775,6 +3777,48 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
+    // Invitations sent together (several people picked at once) fail together: the people whose privacy settings refuse
+    // the call are collected for a moment and offered the call link on one screen, rather than the first of them alone.
+    private func enqueueForbiddenInvitePeer(_ peer: EnginePeer) {
+        if !self.pendingForbiddenInvitePeers.contains(where: { $0.id == peer.id }) {
+            self.pendingForbiddenInvitePeers.append(peer)
+        }
+        self.pendingForbiddenInvitePeersTimer?.invalidate()
+        let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: { [weak self] in
+            self?.presentPendingForbiddenInvitePeers()
+        }, queue: Queue.mainQueue())
+        self.pendingForbiddenInvitePeersTimer = timer
+        timer.start()
+    }
+    
+    private func presentPendingForbiddenInvitePeers() {
+        self.pendingForbiddenInvitePeersTimer = nil
+        let peers = self.pendingForbiddenInvitePeers
+        self.pendingForbiddenInvitePeers = []
+        if peers.isEmpty {
+            return
+        }
+        // With the call's links (the call screen keeps them) the people are offered the link; before it has them (a new
+        // call, a 1:1 call becoming a conference) one alert names them all.
+        if let currentInviteLinks = self.currentInviteLinks {
+            let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
+            if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(inviteLinkScreen)
+            }
+        } else {
+            let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+            let text: String
+            if peers.count == 1 {
+                text = presentationData.strings.Call_PrivacyErrorMessage(peers[0].compactDisplayTitle).string
+            } else {
+                text = presentationData.strings.Call_PrivacyErrorMessageMultiple(peers.map { $0.compactDisplayTitle }.joined(separator: ", ")).string
+            }
+            self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+            ]), on: .root, blockInteraction: false, completion: {})
+        }
+    }
+    
     public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
@@ -3803,7 +3847,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let self else {
                         return
                     }
-                    
+
+                    if case let .privacy(peer) = error, let peer {
+                        self.enqueueForbiddenInvitePeer(peer)
+                        return
+                    }
+
                     let timestamp = CACurrentMediaTime()
                     if self.lastErrorAlertTimestamp > timestamp - 1.0 {
                         return
@@ -3812,24 +3861,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
                     
-                    var errorText = presentationData.strings.Login_UnknownError
-                    
-                    switch error {
-                    case let .privacy(peer):
-                        if let peer {
-                            if let currentInviteLinks = self.currentInviteLinks {
-                                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: [TelegramForbiddenInvitePeer(peer: peer, canInviteWithPremium: false, premiumRequiredToContact: false)], theme: defaultDarkColorPresentationTheme)
-                                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
-                                    navigationController.pushViewController(inviteLinkScreen)
-                                }
-                                return
-                            } else {
-                                errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
-                            }
-                        }
-                    default:
-                        break
-                    }
+                    // A privacy refusal naming its peer went to `enqueueForbiddenInvitePeer` above.
+                    let errorText = presentationData.strings.Login_UnknownError
                     
                     self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: errorText, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})

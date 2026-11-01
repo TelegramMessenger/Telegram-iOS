@@ -110,6 +110,9 @@ public final class ContactMultiselectionControllerParams {
     public let openProfile: ((EnginePeer) -> Void)?
     public let sendMessage: ((EnginePeer) -> Void)?
     public let initialSelectedPeers: [EnginePeer]
+    /// `.groupCreation(isCall: true)`: the participants the call already has, which count against its participant
+    /// limit before the selection does. A new call has the account itself; an ongoing one, everyone in it.
+    public let existingCallParticipantCount: Int
     
     public init(
         context: AccountContext,
@@ -127,7 +130,8 @@ public final class ContactMultiselectionControllerParams {
         reachedLimit: ((Int32) -> Void)? = nil,
         openProfile: ((EnginePeer) -> Void)? = nil,
         sendMessage: ((EnginePeer) -> Void)? = nil,
-        initialSelectedPeers: [EnginePeer] = []
+        initialSelectedPeers: [EnginePeer] = [],
+        existingCallParticipantCount: Int = 1
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -145,6 +149,7 @@ public final class ContactMultiselectionControllerParams {
         self.openProfile = openProfile
         self.sendMessage = sendMessage
         self.initialSelectedPeers = initialSelectedPeers
+        self.existingCallParticipantCount = existingCallParticipantCount
     }
 }
 
