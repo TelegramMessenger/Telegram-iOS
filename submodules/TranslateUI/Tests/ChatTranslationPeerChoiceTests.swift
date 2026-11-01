@@ -73,11 +73,37 @@ final class ChatTranslationPeerChoiceTests: XCTestCase {
         XCTAssertEqual(topicKey.getInt64(8), 7)
     }
     
-    func testPeerChoiceRoundTripsThroughCodable() throws {
-        let choice = ChatTranslationPeerChoice(isEnabled: true, toLang: "fr")
-        let decoded = try JSONDecoder().decode(ChatTranslationPeerChoice.self, from: JSONEncoder().encode(choice))
-        XCTAssertEqual(decoded, choice)
-        let noLang = ChatTranslationPeerChoice(isEnabled: false, toLang: nil)
-        XCTAssertEqual(try JSONDecoder().decode(ChatTranslationPeerChoice.self, from: JSONEncoder().encode(noLang)), noLang)
+    func testPeerChoiceRoundTripsThroughTheItemCacheCoding() {
+        for choice in [ChatTranslationPeerChoice(isEnabled: true, toLang: "fr"), ChatTranslationPeerChoice(isEnabled: false, toLang: nil)] {
+            XCTAssertEqual(EngineCodableEntry(choice)?.get(ChatTranslationPeerChoice.self), choice)
+        }
+    }
+    
+    func testATopicInTheTargetLanguageHasNothingToTranslate() {
+        let frenchTopic = self.state(fromLang: "fr", isEnabled: false)
+        XCTAssertNil(effectiveChatTranslationState(frenchTopic, peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "fr")))
+        XCTAssertNil(effectiveChatTranslationState(self.state(fromLang: "en", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: nil)))
+        XCTAssertNil(effectiveChatTranslationState(self.state(fromLang: "pt", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "pt-br")))
+        
+        let spanishTopic = effectiveChatTranslationState(self.state(fromLang: "es", isEnabled: false), peerChoice: ChatTranslationPeerChoice(isEnabled: true, toLang: "fr"))
+        XCTAssertEqual(spanishTopic?.isEnabled, true)
+        XCTAssertEqual(spanishTopic?.toLang, "fr")
+        XCTAssertEqual(spanishTopic?.fromLang, "es")
+    }
+    
+    func testWithoutAPeerChoiceTheLocationStateIsShownAsBefore() {
+        let state = self.state(fromLang: "en", isEnabled: true)
+        XCTAssertEqual(effectiveChatTranslationState(state, peerChoice: nil), state)
+    }
+    
+    func testDoNotTranslateInAChatWithoutTopicsTurnsTheChatsTranslationOff() {
+        XCTAssertTrue(chatTranslationDiscardsPeerChoice(peer: self.channel(flags: []), threadId: nil))
+        XCTAssertTrue(chatTranslationDiscardsPeerChoice(peer: nil, threadId: nil))
+    }
+    
+    func testDoNotTranslateInOneTopicKeepsTheOtherTopicsTranslating() {
+        XCTAssertFalse(chatTranslationDiscardsPeerChoice(peer: self.channel(flags: [.isForum]), threadId: 3))
+        XCTAssertFalse(chatTranslationDiscardsPeerChoice(peer: self.channel(flags: [.isForum]), threadId: nil))
+        XCTAssertFalse(chatTranslationDiscardsPeerChoice(peer: self.channel(flags: []), threadId: 100))
     }
 }
