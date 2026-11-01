@@ -716,7 +716,9 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                 }
                 self.transitionFraction = transitionFraction + self.transitionFractionOffset
                 if let currentItemNode = self.currentItemNodeValue {
-                    let isNavigationHidden = currentItemNode.listNode.isNavigationHidden
+                    // From the header when it has an offset, so that this and the matching below agree (they differ from
+                    // the current list's own while it is still loading).
+                    let isNavigationHidden = self.navigationBarScrollOffset.flatMap { ChatListNavigationOffset.isNavigationHidden(.known($0)) } ?? currentItemNode.listNode.isNavigationHidden
                     for (_, itemNode) in self.itemNodes {
                         if itemNode !== currentItemNode {
                             itemNode.listNode.adjustScrollOffsetForNavigation(isNavigationHidden: isNavigationHidden)
@@ -820,9 +822,16 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     // `adjustScrollOffsetForNavigation` agrees with this (both stop at the header's collapsed offset), so the two never
     // move a list back and forth.
     private func scrollToNavigationBarOffset(itemNode: ChatListContainerItemNode) {
-        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-            let _ = itemNode.listNode.scrollToOffsetFromTop(clippedScrollOffset, animated: false)
+        if let navigationBarScrollOffset = self.navigationBarScrollOffset {
+            let _ = itemNode.listNode.scrollToOffsetFromTop(navigationBarScrollOffset, animated: false)
         }
+    }
+    
+    private var navigationBarScrollOffset: CGFloat? {
+        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            return navigationBarComponentView.clippedScrollOffset
+        }
+        return nil
     }
     
     func fixContentOffset(offset: CGFloat) {

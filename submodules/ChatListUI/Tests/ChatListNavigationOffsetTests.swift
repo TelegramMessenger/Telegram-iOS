@@ -18,6 +18,19 @@ final class ChatListNavigationOffsetTests: XCTestCase {
         XCTAssertFalse(ChatListNavigationOffset.isNavigationHidden(.known(0.0)))
     }
 
+    func testListScrolledUnderTheCollapsedHeaderHasItsNavigationHidden() {
+        XCTAssertTrue(ChatListNavigationOffset.isNavigationHidden(.known(100.0)))
+    }
+
+    func testListJustShortOfTheCollapsedHeaderOffsetShowsItsNavigation() {
+        XCTAssertFalse(ChatListNavigationOffset.isNavigationHidden(.known(52.9)))
+        XCTAssertTrue(ChatListNavigationOffset.isNavigationHidden(.known(53.0)))
+    }
+
+    func testListWithoutRowsShowsItsNavigation() {
+        XCTAssertFalse(ChatListNavigationOffset.isNavigationHidden(.none))
+    }
+
     func testListScrolledPastItsFirstRowHasItsNavigationHidden() {
         XCTAssertTrue(ChatListNavigationOffset.isNavigationHidden(.unknown))
     }
@@ -32,6 +45,15 @@ final class ChatListNavigationOffsetTests: XCTestCase {
 
     func testListScrolledPastItsFirstRowReturnsToItsTopWhenTheCurrentListShowsNavigation() {
         XCTAssertEqual(ChatListNavigationOffset.offsetMatching(isNavigationHidden: false, from: .unknown), 0.0)
+    }
+
+    func testListScrolledUnderTheCollapsedHeaderReturnsToItsTopWhenTheCurrentListShowsNavigation() {
+        XCTAssertEqual(ChatListNavigationOffset.offsetMatching(isNavigationHidden: false, from: .known(100.0)), 0.0)
+    }
+
+    func testListWithoutRowsStays() {
+        XCTAssertNil(ChatListNavigationOffset.offsetMatching(isNavigationHidden: true, from: .none))
+        XCTAssertNil(ChatListNavigationOffset.offsetMatching(isNavigationHidden: false, from: .none))
     }
 
     func testListWithTheStoriesRowExpandedStaysWhenTheCurrentListShowsNavigation() {

@@ -4,7 +4,7 @@ import Display
 import ChatListHeaderComponent
 
 // The header (search field, stories row) collapses as the current list scrolls and stops at the search field's height
-// (`ChatListNavigationBar.clippedScrollOffset`), whatever `scrollHeightTopInset` lets a list scroll: the root lists'
+// (`ChatListNavigationBar.View.clippedScrollOffset`), whatever `scrollHeightTopInset` lets a list scroll: the root lists'
 // 150 (search and stories) is not where the header ends. A list is past the header ("navigation hidden") from that offset
 // on, and a list matched to a current one that is past it goes there, not further: further would leave its first chat
 // under the collapsed header.
@@ -24,7 +24,7 @@ enum ChatListNavigationOffset {
     }
 
     // The offset from the top a list that is not current moves to so that its navigation state matches the current
-    // list's, or nil when it already does (or cannot: it is scrolled past its first row while the current one is too).
+    // list's, or nil when it already does or cannot (it has no rows yet).
     static func offsetMatching(isNavigationHidden: Bool, from offset: ListViewVisibleContentOffset) -> CGFloat? {
         if self.isNavigationHidden(offset) == isNavigationHidden {
             return nil
