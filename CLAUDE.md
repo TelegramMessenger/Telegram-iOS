@@ -68,6 +68,7 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
 `//submodules/UndoUI:UndoUITests`, `//submodules/ContactsPeerItem:ContactsPeerItemTests`,
 `//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteractionTests`,
+`//submodules/ReactionSelectionNode:ReactionContextGeometryTests`,
 `//submodules/PasswordSetupUI:PasswordSetupUITests`,
 `//submodules/ItemListUI:ItemListUITests`,
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,

@@ -103,6 +103,12 @@ is on screen (at most 4 s); an open that reports nothing is released after 1 s, 
 does not count, one starting up to 100 points above it does, and in a thread (a forum topic, a reply or monoforum
 thread) a row holding a non-cloud message is left out.
 
+`//submodules/ReactionSelectionNode:ReactionContextGeometryTests` covers the reaction bar's pure geometry (`Geometry/`,
+linked without AccountContext), among it `reactionContextBackgroundContentBounds`, what the reaction panel's background
+(the glass) covers. Its tail's circles widen it only when the tail is shown: a hidden tail can point well past the panel
+(a story's input row, wider than iPhone Duo's landscape card), and the glass reached out to it. Circles under the panel
+give the same bounds as before.
+
 `//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
 the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no
 chat and progress 0; a progress without a chat must count as no selection in progress, or every row on screen takes
