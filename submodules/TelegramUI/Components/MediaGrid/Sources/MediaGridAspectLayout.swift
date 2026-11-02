@@ -8,7 +8,7 @@ public final class MediaGridAspectTable {
         public var spacing: CGFloat
 
         public init(geometry: MediaGridGeometry) {
-            self.contentWidth = max(0.0, geometry.width - 2.0 * geometry.sideInset)
+            self.contentWidth = max(0.0, geometry.contentWidth)
             self.scale = max(1.0, geometry.scale)
             self.spacing = geometry.spacing
         }
@@ -194,7 +194,7 @@ public struct MediaGridAspectLayout: MediaGridLayout {
     }
 
     public func frame(at index: Int) -> CGRect {
-        return CGRect(x: self.geometry.sideInset, y: self.minY(at: index), width: self.key.contentWidth, height: CGFloat(self.heightPixels(at: index)) / self.key.scale)
+        return CGRect(x: self.geometry.leftInset, y: self.minY(at: index), width: self.key.contentWidth, height: CGFloat(self.heightPixels(at: index)) / self.key.scale)
     }
 
     private func firstIndex(where predicate: (Int) -> Bool) -> Int {
