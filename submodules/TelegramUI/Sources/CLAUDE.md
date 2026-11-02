@@ -125,12 +125,7 @@ dismissed or the account sends them a message:
   its label as plain text.
 - Their emoji status is hidden in the chat title, in the panel's "is a mark for Premium" note and in the
   profile header, including the cover and colours of a collectible status.
-- Nothing is marked read (`ChatHistoryListNode.holdsReadsForSender`): not the visible messages, not by the
-  at-bottom read actions (`updateReadHistoryActions`, which read whatever arrives while installed), and no mention or
-  reaction is marked seen (`canMarkReadValue`); they catch up when the hold lifts. Unseen reactions coming into view
-  wait to play until then too, as they play when marked; one arriving live plays at once, and again when the hold lifts. The unseen-reactions jump
-  button still marks the reaction it targets, on screen yet or not: it is the user's own action. Reads also wait while a
-  non-contact's settings are still unknown, as on the first open of a chat they started: a read cannot be taken back.
+- Reads are not held: their messages, mentions and reactions are marked read and seen as in any other chat.
 
 Non-obvious:
 
