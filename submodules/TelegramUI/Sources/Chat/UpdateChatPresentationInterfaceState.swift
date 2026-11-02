@@ -49,7 +49,13 @@ extension ChatControllerImpl {
             self.secondaryRightNavigationButton = nil
         }
 
-        let rightBarButtons = [self.rightNavigationButton, self.secondaryRightNavigationButton].compactMap { $0?.buttonItem }
+        // The sidebar button stays outermost, with Saved Messages' search before it.
+        let rightBarButtons: [UIBarButtonItem]
+        if self.rightNavigationButton?.action == .toggleSideList {
+            rightBarButtons = [self.secondaryRightNavigationButton, self.rightNavigationButton].compactMap { $0?.buttonItem }
+        } else {
+            rightBarButtons = [self.rightNavigationButton, self.secondaryRightNavigationButton].compactMap { $0?.buttonItem }
+        }
         var rightBarButtonsUpdated = false
         let currentRightBarButtons = self.navigationItem.rightBarButtonItems ?? []
         if rightBarButtons.count != currentRightBarButtons.count {
@@ -518,14 +524,13 @@ func updateChatPresentationInterfaceStateImpl(
     
     if var chatTitleContent = selfController.contentData?.state.chatTitleContent, let chatTitleView = selfController.chatTitleView {
         // With the side list, the header's right avatar gives way to the list's button, so the title carries the chat's
-        // icon before it: Saved Messages' own (the list replaces "Tap to view as chats"), a sub-chat's peer, a topic's
-        // icon. A channel's direct messages name the channel below.
+        // icon before it: a sub-chat's peer, a topic's icon. Saved Messages shows its title alone (the list replaces "Tap
+        // to view as chats"). A channel's direct messages name the channel below.
         var leadingIcon: ChatTitleLeadingIcon?
         if let sideListKind = selfController.currentSideListKind(presentationInterfaceState: updatedChatPresentationInterfaceState), case let .peer(peerView, customTitle, customSubtitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, hidePeerStatus, isEnabled) = chatTitleContent {
             var subtitle = customSubtitle
             if updatedChatPresentationInterfaceState.chatLocation.threadId == nil {
                 if case .savedMessages = sideListKind {
-                    leadingIcon = .savedMessages
                     subtitle = nil
                 }
             } else {

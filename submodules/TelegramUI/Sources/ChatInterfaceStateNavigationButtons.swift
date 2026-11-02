@@ -286,10 +286,21 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
 }
 
 func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?, sideListKind: ChatSideListKind?) -> ChatNavigationButton? {
-    if sideListKind != nil {
+    if presentationInterfaceState.interfaceState.selectionState != nil {
         return nil
     }
-    if presentationInterfaceState.interfaceState.selectionState != nil {
+    if let sideListKind {
+        // Saved Messages keeps its search beside the sidebar button.
+        if case .savedMessages = sideListKind {
+            let isTags = presentationInterfaceState.hasSearchTags
+            if case .search(isTags) = currentButton?.action {
+                return currentButton
+            } else {
+                let buttonItem = UIBarButtonItem(image: isTags ? PresentationResourcesRootController.navigationCompactTagsSearchIcon(presentationInterfaceState.theme) : PresentationResourcesRootController.navigationSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                buttonItem.accessibilityLabel = strings.Conversation_Search
+                return ChatNavigationButton(action: .search(hasTags: isTags), buttonItem: buttonItem)
+            }
+        }
         return nil
     }
     if case .standard(.default) = presentationInterfaceState.mode {
