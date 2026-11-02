@@ -30,6 +30,7 @@ import ChatUserInfoItem
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatMessageItemView
+import ChatMessageItemCommon
 import ChatMessageBubbleItemNode
 import ChatMessageTransitionNode
 import ChatControllerInteraction
@@ -4574,7 +4575,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        if historyView.originalView.isLoading {
+                        // The topic's root is stored but not displayed (chatHistoryEntriesForView).
+                        let originalView = historyView.originalView
+                        let holdsOnlyForumTopicRoot = !originalView.entries.isEmpty && originalView.entries.allSatisfy { entry in
+                            return isUndisplayedForumTopicRoot(entry.message, location: strongSelf.chatLocation, additionalData: originalView.additionalData)
+                        }
+                        if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater, holdsOnlyForumTopicRoot: holdsOnlyForumTopicRoot) {
                             loadState = .loading(false)
                         } else if let firstEntry = historyView.originalView.entries.first {
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
