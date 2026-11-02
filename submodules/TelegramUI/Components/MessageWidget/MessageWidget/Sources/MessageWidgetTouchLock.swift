@@ -102,8 +102,16 @@ enum MessageWidgetTouchLock {
             guard let recognizer = entry.recognizer else {
                 continue
             }
-            recognizer.delaysTouchesBegan = recognizer.view.map { root in self.holders.contains { $0.view?.isDescendant(of: root) ?? false } } ?? false
+            recognizer.delaysTouchesBegan = self.isHeld(under: recognizer.view)
+            recognizer.updateIsEnabled()
         }
+    }
+
+    fileprivate static func isHeld(under root: UIView?) -> Bool {
+        guard let root else {
+            return false
+        }
+        return self.holders.contains { $0.view?.isDescendant(of: root) ?? false }
     }
 
     /// Tests only.
@@ -142,7 +150,15 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
         self.cancelsTouchesInView = true
         self.delaysTouchesBegan = false
         self.delaysTouchesEnded = false
+        self.isEnabled = false
         MessageWidgetTouchLock.register(self)
+    }
+
+    fileprivate func updateIsEnabled() {
+        let isEnabled = !self.locked.isEmpty || MessageWidgetTouchLock.isHeld(under: self.view)
+        if self.isEnabled != isEnabled {
+            self.isEnabled = isEnabled
+        }
     }
 
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -249,6 +265,9 @@ public final class MessageWidgetChatLockRecognizer: UIGestureRecognizer {
         super.reset()
         self.locked = []
         self.preventsPans = false
+        DispatchQueue.main.async { [weak self] in
+            self?.updateIsEnabled()
+        }
     }
 
     override public func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {

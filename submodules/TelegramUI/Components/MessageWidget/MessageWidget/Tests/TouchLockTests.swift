@@ -223,4 +223,22 @@ final class TouchLockTests: MessageWidgetTestCase {
         lock.touchesEnded([stray], with: UIEvent())
         XCTAssertEqual(lock.lockedTouchCount, 0)
     }
+
+    func testTheLockRecognizerIsOffWhileNoWidgetUnderItHolds() {
+        let chat = UIView()
+        let holder = UIView()
+        chat.addSubview(holder)
+        let otherChat = UIView()
+        let otherHolder = UIView()
+        otherChat.addSubview(otherHolder)
+        let lock = MessageWidgetChatLockRecognizer()
+        chat.addGestureRecognizer(lock)
+        XCTAssertFalse(lock.isEnabled)
+        MessageWidgetTouchLock.setHolding(otherHolder, true)
+        XCTAssertFalse(lock.isEnabled)
+        MessageWidgetTouchLock.setHolding(holder, true)
+        XCTAssertTrue(lock.isEnabled)
+        MessageWidgetTouchLock.setHolding(holder, false)
+        XCTAssertFalse(lock.isEnabled)
+    }
 }
