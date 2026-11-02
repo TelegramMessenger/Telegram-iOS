@@ -161,7 +161,10 @@ public struct AudioSessionRoute: Equatable {
 }
 
 /// The outputs a call offers in its audio menu, and the one it shows as current, for `route`.
-/// `hasLoudspeaker` is whether the device has a receiver besides its speaker (an iPhone).
+/// `hasLoudspeaker` is whether the device has a receiver besides its speaker (an iPhone). A device without one (an iPad)
+/// offers its speaker as `.speaker`, not `.builtin`: it has no other built-in route, `.builtin` only resets the output
+/// override (which leaves the sound in wired headphones), and `.speaker` is what its route reports as current, so a
+/// two-item toggle can always go back.
 public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) -> (available: [AudioSessionOutput], current: AudioSessionOutput) {
     var availableOutputs: [AudioSessionOutput] = []
     var activeOutput: AudioSessionOutput = .builtin
@@ -184,9 +187,9 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
             }
         }
 
-        // While the sound is in wired headphones but the built-in microphone is in use ("builtin" chosen on a
-        // device without a receiver), the headset's microphone stays an item of its own, as before: it is the
-        // way back, which a two-item "builtin"/"headphones" toggle would not offer.
+        // While the sound is in wired headphones but the built-in microphone is in use (`.builtin` applied on a
+        // device without a receiver, as at a call's start), the headset's microphone stays an item of its own, as
+        // before: it is the way back to it.
         let keepsWiredHeadsetInputSeparate = headphonesAreActive && route.inputs.contains(where: { $0.portType == .builtInMic })
 
         for input in availableInputs {
@@ -231,7 +234,7 @@ public func audioSessionOutputs(route: AudioSessionRoute, hasLoudspeaker: Bool) 
         if hasHeadphones && !hasBluetoothHeadphones {
             availableOutputs.insert(.headphones, at: 0)
         }
-        availableOutputs.insert(.builtin, at: 0)
+        availableOutputs.insert(hasLoudspeaker ? .builtin : .speaker, at: 0)
     }
     
     return (availableOutputs, activeOutput)

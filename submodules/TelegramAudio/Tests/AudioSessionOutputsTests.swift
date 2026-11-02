@@ -44,22 +44,31 @@ final class AudioSessionOutputsTests: XCTestCase {
 
     func testIPadWithEarPodsIsOneHeadphonesRoute() {
         let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.earPodsMic], available: [self.iPadMic, self.earPodsMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "headphones"])
+        XCTAssertEqual(result.available, ["speaker", "headphones"])
         XCTAssertEqual(result.current, "headphones")
     }
 
     func testIPadWithUSBCEarPodsIsOneHeadphonesRoute() {
         let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.earPodsUSBMic], available: [self.iPadMic, self.earPodsUSBMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "headphones"])
+        XCTAssertEqual(result.available, ["speaker", "headphones"])
         XCTAssertEqual(result.current, "headphones")
     }
 
-    /// After choosing "iPad" the built-in microphone can be pinned while the sound stays in the headset (an
-    /// iPad has no receiver). The route is then classified as before the fix: the headset's microphone is its
-    /// own item, so the audio button keeps a menu with a way back to it, and "Headphones" stays current.
+    /// `.builtin` applied with the headset plugged in (as at a call's start) pins the built-in microphone while the
+    /// sound stays in the headset (an iPad has no receiver). The route is then classified as before the fix: the
+    /// headset's microphone is its own item, so the audio button keeps a menu with a way back to it, and "Headphones"
+    /// stays current.
+    /// An iPad offers its speaker, not a "builtin" route that would leave the sound in the headset: choosing it moves
+    /// the sound to the speaker, which is then current, so the two-item toggle goes back to "Headphones".
+    func testIPadWithEarPodsOnItsSpeakerTogglesBackToHeadphones() {
+        let result = self.classify(outputs: [self.speaker], inputs: [self.iPadMic], available: [self.iPadMic, self.earPodsMic], hasLoudspeaker: false)
+        XCTAssertEqual(result.available, ["speaker", "headphones"])
+        XCTAssertEqual(result.current, "speaker")
+    }
+
     func testIPadWithEarPodsAndBuiltInMicPinnedOffersTheHeadsetMicrophone() {
         let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.iPadMic], available: [self.iPadMic, self.earPodsMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "headphones", "port:EarPods Microphone:generic"])
+        XCTAssertEqual(result.available, ["speaker", "headphones", "port:EarPods Microphone:generic"])
         XCTAssertEqual(result.current, "headphones")
         XCTAssertEqual(self.headsetInput(outputs: [self.wiredHeadphones], available: [self.iPadMic, self.earPodsMic]), self.earPodsMic)
     }
@@ -74,7 +83,7 @@ final class AudioSessionOutputsTests: XCTestCase {
     /// A USB microphone next to wired headphones is taken for the headset's microphone.
     func testUSBMicrophoneNextToWiredHeadphonesIsPartOfHeadphones() {
         let result = self.classify(outputs: [self.wiredHeadphones], inputs: [self.usbMic], available: [self.iPadMic, self.usbMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "headphones"])
+        XCTAssertEqual(result.available, ["speaker", "headphones"])
         XCTAssertEqual(result.current, "headphones")
         XCTAssertEqual(self.headsetInput(outputs: [self.wiredHeadphones], available: [self.iPadMic, self.usbMic]), self.usbMic)
     }
@@ -135,7 +144,7 @@ final class AudioSessionOutputsTests: XCTestCase {
 
     func testAirPodsOnIPadAreABluetoothPort() {
         let result = self.classify(outputs: [self.airPodsHFP], inputs: [self.airPodsHFP], available: [self.iPadMic, self.airPodsHFP], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "port:AirPods Pro:bluetooth"])
+        XCTAssertEqual(result.available, ["speaker", "port:AirPods Pro:bluetooth"])
         XCTAssertEqual(result.current, "port:AirPods Pro:bluetooth")
     }
 
@@ -172,20 +181,20 @@ final class AudioSessionOutputsTests: XCTestCase {
 
     func testIPadBuiltInOnly() {
         let result = self.classify(outputs: [self.speaker], inputs: [self.iPadMic], available: [self.iPadMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin"])
+        XCTAssertEqual(result.available, ["speaker"])
         XCTAssertEqual(result.current, "speaker")
     }
 
     /// A USB microphone without wired headphones is its own input, not a headset.
     func testUSBMicrophoneWithoutHeadphonesStaysAPort() {
         let result = self.classify(outputs: [self.speaker], inputs: [self.usbMic], available: [self.iPadMic, self.usbMic], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin", "port:Yeti Stereo Microphone:generic"])
+        XCTAssertEqual(result.available, ["speaker", "port:Yeti Stereo Microphone:generic"])
         XCTAssertEqual(result.current, "port:Yeti Stereo Microphone:generic")
     }
 
     func testNoAvailableInputsOffersNothing() {
         let result = self.classify(outputs: [self.speaker], inputs: [], available: [], hasLoudspeaker: false)
-        XCTAssertEqual(result.available, ["builtin"])
+        XCTAssertEqual(result.available, ["speaker"])
         let missing = audioSessionOutputs(route: AudioSessionRoute(outputs: [self.speaker], inputs: [], availableInputs: nil), hasLoudspeaker: true)
         XCTAssertEqual(missing.available, [])
         XCTAssertEqual(missing.current, .builtin)
