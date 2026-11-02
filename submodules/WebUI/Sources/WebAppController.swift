@@ -254,6 +254,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var iconDisposable: Disposable?
         fileprivate var icon: UIImage?
         
+        private var botVerificationIconDisposable: Disposable?
+        /// The bot's third-party verification icon, shown left of its name in the header and the fullscreen controls.
+        private var botVerificationIconFileId: Int64?
+        
         private var lastExpansionTimestamp: Double?
         
         private var didTransitionIn = false
@@ -461,10 +465,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 self.icon = icon
             })
+            
+            self.botVerificationIconDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let verificationIconFileId = peer?.verificationIconFileId else {
+                    return
+                }
+                self.botVerificationIconFileId = verificationIconFileId
+                self.controller?.titleView?.title.verificationIconFileId = verificationIconFileId
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                }
+            })
         }
         
         deinit {
             self.iconDisposable?.dispose()
+            self.botVerificationIconDisposable?.dispose()
             self.placeholderDisposable.dispose()
             self.keepAliveDisposable?.dispose()
             self.paymentDisposable?.dispose()
@@ -600,7 +617,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
                                 }
-                                self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
+                                self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified, verificationIconFileId: self.botVerificationIconFileId)
                                 self.controller?.sameOrigin = result.flags.contains(.sameOrigin)
                                 self.load(url: parsedUrl)
                             })
@@ -960,6 +977,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strings: self.presentationData.strings,
                             title: controller.botName,
                             isVerified: controller.botVerified,
+                            verificationIconFileId: self.botVerificationIconFileId,
                             insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset),
                             statusBarStyle: self.fullScreenStatusBarStyle,
                             hasBack: self.hasBackButton,
