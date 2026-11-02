@@ -139,6 +139,8 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// host's scene deactivates, and again as it activates if no finger has come down since: a drag ends as
     /// `.cancelled` at rest (the system took it; flinging the content as the app leaves would move what the user comes
     /// back to), a failed pan's `reset()` reports the lift. A pan the host turned off (`isScrollEnabled`) stays off.
+    /// Must stay synchronous: the app's main window lets go of every recognizer still holding a touch on the next turn
+    /// (Display's `WindowTouchRelease`), which would otherwise cancel a drag with its velocity, before this at rest.
     @objc private func sceneActivationChanged(_ notification: Notification) {
         guard let scene = notification.object as? UIScene, scene === host.window?.windowScene else {
             return
