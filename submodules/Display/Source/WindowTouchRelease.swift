@@ -18,15 +18,18 @@ import UIKit.UIGestureRecognizerSubclass
 /// recognizers can be reset. Again as the scene activates, unless a finger came down on the way back, whose gesture is
 /// kept. A recognizer the app turned off stays off; the window's own (the system's gates) are left alone. The touch
 /// itself cannot be asked: once UIKit has processed its end, it no longer lists the recognizers still holding it.
+///
+/// It acts on any gesture in progress in the window, not only a chat's. The window runs it after every other observer
+/// of the scene change, so a recognizer's owner that lets go of its own touch then (the chat list's pan, at rest:
+/// `PhysicsScrollEngine.sceneActivationChanged`) does so first, its own way.
 public final class WindowTouchRelease {
     /// Debug Settings ▸ "Chat: CoreList scroll trace" (the chat's backend sets it): a line at every scene change, with
     /// the recognizers let go of, so that a device trace shows whether a touch was ever stuck.
     public static var trace: ((String) -> Void)?
 
     private let holders: () -> [UIGestureRecognizer]
-    private var touchDowns = 0
-    /// The touch-downs so far when the scene last deactivated, until it activates again.
-    private var touchDownsAtDeactivation: Int?
+    /// Whether a finger came down since the scene last deactivated; nil while it is active (no event is looked at).
+    private var touchBeganSinceDeactivation: Bool?
 
     /// `holders`: the recognizers holding touches, `WindowTouchRelease.holders(in:)` of the window.
     init(holders: @escaping () -> [UIGestureRecognizer]) {
@@ -35,30 +38,32 @@ public final class WindowTouchRelease {
 
     /// Every event the window sends.
     func update(with event: UIEvent) {
-        guard event.type == .touches, let touches = event.allTouches else {
+        guard self.touchBeganSinceDeactivation == false, event.type == .touches, let touches = event.allTouches else {
             return
         }
-        for touch in touches where touch.phase == .began {
+        if touches.contains(where: { $0.phase == .began }) {
             self.touchBegan()
         }
     }
 
     func touchBegan() {
-        self.touchDowns &+= 1
+        if self.touchBeganSinceDeactivation != nil {
+            self.touchBeganSinceDeactivation = true
+        }
     }
 
     func sceneWillDeactivate() {
-        self.touchDownsAtDeactivation = self.touchDowns
+        self.touchBeganSinceDeactivation = false
         self.release(reason: "deactivate")
     }
 
     func sceneDidActivate() {
-        guard let touchDownsAtDeactivation = self.touchDownsAtDeactivation else {
+        guard let touchBeganSinceDeactivation = self.touchBeganSinceDeactivation else {
             return
         }
-        self.touchDownsAtDeactivation = nil
-        if touchDownsAtDeactivation != self.touchDowns {
-            WindowTouchRelease.trace?("TOUCH-RELEASE activate kept touchDowns=\(self.touchDowns &- touchDownsAtDeactivation)")
+        self.touchBeganSinceDeactivation = nil
+        if touchBeganSinceDeactivation {
+            WindowTouchRelease.trace?("TOUCH-RELEASE activate kept: a finger came down since")
             return
         }
         self.release(reason: "activate")

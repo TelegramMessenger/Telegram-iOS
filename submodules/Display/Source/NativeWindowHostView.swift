@@ -326,10 +326,19 @@ private final class NativeWindow: UIWindow, WindowHost {
         guard let scene = notification.object as? UIScene, scene === self.windowScene else {
             return
         }
-        if notification.name == UIScene.willDeactivateNotification {
-            self.touchRelease.sceneWillDeactivate()
-        } else {
-            self.touchRelease.sceneDidActivate()
+        let deactivates = notification.name == UIScene.willDeactivateNotification
+        // After every other observer of this change, whatever their order: an owner that lets go of its own
+        // recognizer's touch then (the chat list's pan, released at rest so that it does not fling as the app leaves)
+        // does so first, and the window lets go of what is still held.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                return
+            }
+            if deactivates {
+                self.touchRelease.sceneWillDeactivate()
+            } else {
+                self.touchRelease.sceneDidActivate()
+            }
         }
     }
 

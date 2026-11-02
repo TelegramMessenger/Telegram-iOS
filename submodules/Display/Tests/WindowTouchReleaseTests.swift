@@ -170,7 +170,7 @@ final class WindowTouchReleaseTests: XCTestCase {
             "TOUCH-RELEASE deactivate recognizers=0",
             "TOUCH-RELEASE activate recognizers=0",
             "TOUCH-RELEASE deactivate recognizers=0",
-            "TOUCH-RELEASE activate kept touchDowns=1",
+            "TOUCH-RELEASE activate kept: a finger came down since",
         ])
     }
 }

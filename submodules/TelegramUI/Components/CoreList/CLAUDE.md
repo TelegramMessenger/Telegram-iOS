@@ -759,7 +759,8 @@ clock); `TestScrollEngine` has no render server.
     It does not cover a still finger: there the two-finger selection pan and the back swipe stay `.possible` on the
     touch, so the pan, failed (or cancelled by this), is never reset. The main window lets go of every recognizer
     holding a touch at the same scene changes (Display's `WindowTouchRelease`, `TOUCH-RELEASE` trace lines), which
-    covers both; reproduced on the simulator by withholding a touch's end from the window.
+    covers both; reproduced on the simulator by withholding a touch's end from the window. The window runs after
+    this handler (dispatched to the next turn), so a drag still ends here, at rest, and the window lets go of the rest.
 
 ### Attachments
 
