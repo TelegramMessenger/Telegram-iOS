@@ -2771,7 +2771,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 authorNameColor = nameColors?.main
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                authorVerificationIconFileId = effectiveAuthor.verificationIconFileId
+                // Not when the author is the chat itself (an anonymous admin), which the chat header already badges, as
+                // a broadcast channel's own posts above.
+                if effectiveAuthor.id != item.message.id.peerId {
+                    authorVerificationIconFileId = effectiveAuthor.verificationIconFileId
+                }
                 
                 let nameColors: PeerNameColors.Colors
                 switch effectiveAuthor.nameColor {
@@ -2824,9 +2828,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
                 }
             }
-            if let authorVerificationIconFileId, let authorNameColor {
-                // As the chat header draws it, tinted with the name's colour when the emoji is a template.
-                authorVerificationIcon = .animation(content: .customEmoji(fileId: authorVerificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: authorNameColor, loopMode: .count(2))
+            if let authorVerificationIconFileId {
+                // As the chat header and the chat list draw it: a template emoji takes the accent colour (the bubble's).
+                authorVerificationIcon = .animation(content: .customEmoji(fileId: authorVerificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor, loopMode: .count(2))
             }
         }
         
