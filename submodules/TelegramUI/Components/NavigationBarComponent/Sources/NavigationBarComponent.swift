@@ -1131,7 +1131,10 @@ public final class NavigationBarComponent: Component {
                     capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 capsuleTransition.setFrame(view: capsuleBackgroundContainer, frame: capsuleFrame)
-                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
+                // A last button with glass of its own (a forum's square avatar): the capsule's bottom follows its corners,
+                // the capsule being wider than the 44 pt button by as much on each side.
+                let bottomCornerRadius = self.effectiveContentView?.columnLastButtonGlassCornerRadius.flatMap { $0 + max(0.0, capsuleFrame.width - 44.0) * 0.5 }
+                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, bottomCornerRadius: bottomCornerRadius, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
                 capsuleBackgroundContainer.morphsIntoContextMenu = self.effectiveContentView?.columnLayout?.cellFrames.count == 1
                 capsuleTransition.setFrame(view: self.columnButtonsContainer, frame: CGRect(origin: CGPoint(), size: capsuleFrame.size))
                 for (contentView, _) in contents {

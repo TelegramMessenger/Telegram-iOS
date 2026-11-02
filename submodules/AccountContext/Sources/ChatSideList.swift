@@ -64,10 +64,9 @@ public func chatSideListKind(
     isMonoforum: Bool,
     isAdminMonoforum: Bool,
     isBotWithThreads: Bool,
-    isRegularWidth: Bool,
     enabled: Bool
 ) -> ChatSideListKind? {
-    if !enabled || isRegularWidth {
+    if !enabled {
         return nil
     }
     if isForum {

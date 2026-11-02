@@ -319,6 +319,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var moreInfoNavigationButton: ChatNavigationButton?
     
     var sideListPanel: ChatSideListPanelNode?
+    /// The layout the chat's container gave it, before a docked side list narrows it (`sideListDockedChatLayout`).
+    var sideListFullLayout: ContainerViewLayout?
     var sideListOpenFraction: CGFloat = 0.0
     var sideListEdgePanHandler: ChatSideListEdgePanHandler?
     /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
@@ -8574,6 +8576,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.sideListFullLayout = layout
+        // A docked side list takes the right of the screen: the chat lays out in what is left.
+        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(layout), transition: transition)
+    }
+
+    private func chatContainerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.suspendNavigationBarLayout = true
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -8742,7 +8750,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     /// While the side list is open its header is the one on screen (the chat's own is off to the left, under the strip),
     /// so a screen pushed from it morphs out of that header.
     override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
-        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0, !self.isSideListDocked {
             return sideListPanel.listController.navigationBarTransitionSource
         }
         return super.navigationBarTransitionSource
@@ -8750,7 +8758,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
         // While the side list is open its header is the one on screen, as for `navigationBarTransitionSource`.
-        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0 {
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0, !self.isSideListDocked {
             return sideListPanel.listController.navigationExpansionSource(above: controller, operation: operation)
         }
         switch operation {

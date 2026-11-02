@@ -1719,6 +1719,8 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
     private struct NormalParams {
         let size: CGSize
         let cornerRadius: CGFloat
+        /// The bottom corners' own radius (a capsule whose bottom button is a rounded square), nil: `cornerRadius`.
+        var bottomCornerRadius: CGFloat?
         let isDark: Bool
         let tintColor: GlassBackgroundView.TintColor
         let isInteractive: Bool
@@ -1845,8 +1847,9 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         self.glassView.frame = self.glassFrameBeforeLending
     }
 
-    public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
-        let normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
+    public func update(size: CGSize, cornerRadius: CGFloat, bottomCornerRadius: CGFloat? = nil, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
+        var normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
+        normalParams.bottomCornerRadius = bottomCornerRadius
         self.normalParams = normalParams
         
         if case .normal = self.state {
@@ -1862,6 +1865,30 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         self.applyState(previousState: previousState, transition: transition, completion: completion)
     }
     
+    private func updateNormalGlass(_ normalParams: NormalParams, transition: ComponentTransition) {
+        if let bottomCornerRadius = normalParams.bottomCornerRadius {
+            self.glassView.update(
+                size: normalParams.size,
+                cornerRadii: GlassBackgroundView.CornerRadii(topLeft: normalParams.cornerRadius, topRight: normalParams.cornerRadius, bottomLeft: bottomCornerRadius, bottomRight: bottomCornerRadius),
+                isDark: normalParams.isDark,
+                tintColor: normalParams.tintColor,
+                isInteractive: normalParams.isInteractive,
+                isVisible: normalParams.isVisible,
+                transition: transition
+            )
+        } else {
+            self.glassView.update(
+                size: normalParams.size,
+                cornerRadius: normalParams.cornerRadius,
+                isDark: normalParams.isDark,
+                tintColor: normalParams.tintColor,
+                isInteractive: normalParams.isInteractive,
+                isVisible: normalParams.isVisible,
+                transition: transition
+            )
+        }
+    }
+
     private func applyState(previousState: State?, transition: Transition, completion: ((Bool) -> Void)?) {
         guard let normalParams = self.normalParams else {
             completion?(true)
@@ -1903,15 +1930,7 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
                 completion?(completed)
             })
             
-            self.glassView.update(
-                size: normalParams.size,
-                cornerRadius: normalParams.cornerRadius,
-                isDark: normalParams.isDark,
-                tintColor: normalParams.tintColor,
-                isInteractive: normalParams.isInteractive,
-                isVisible: normalParams.isVisible,
-                transition: mappedTransition,
-            )
+            self.updateNormalGlass(normalParams, transition: mappedTransition)
         case let .extracted(size, cornerRadius, extractionState):
             switch extractionState {
             case .animatedOut:
@@ -1919,15 +1938,7 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
                     completion?(completed)
                 })
                 
-                self.glassView.update(
-                    size: normalParams.size,
-                    cornerRadius: normalParams.cornerRadius,
-                    isDark: normalParams.isDark,
-                    tintColor: normalParams.tintColor,
-                    isInteractive: normalParams.isInteractive,
-                    isVisible: normalParams.isVisible,
-                    transition: mappedTransition
-                )
+                self.updateNormalGlass(normalParams, transition: mappedTransition)
             case .animatedIn:
                 mappedTransition.setAlpha(view: self.normalContentView, alpha: 0.0, completion: { completed in
                     completion?(completed)

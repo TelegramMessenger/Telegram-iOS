@@ -10,11 +10,80 @@ import ChatControllerInteraction
 import SwiftSignalKit
 import ContextUI
 import ForumCreateTopicScreen
+import NavigationBarNode
 
 extension ChatControllerImpl {
     func currentSideListKind(presentationInterfaceState: ChatPresentationInterfaceState) -> ChatSideListKind? {
-        let isRegularWidth = self.validLayout?.metrics.widthClass == .regular
-        return chatSideListKindForChatPresentationInterfaceState(presentationInterfaceState, context: self.context, isRegularWidth: isRegularWidth)
+        return chatSideListKindForChatPresentationInterfaceState(presentationInterfaceState, context: self.context)
+    }
+
+    /// The chat's whole layout, the side list's included.
+    private var sideListLayout: ContainerViewLayout? {
+        return self.sideListFullLayout ?? self.validLayout
+    }
+
+    /// The side list is a column beside the chat (`ChatSideListPanelNode.isDocked`).
+    var isSideListDocked: Bool {
+        guard let layout = self.sideListLayout else {
+            return false
+        }
+        return ChatSideListPanelNode.isDocked(layout)
+    }
+
+    /// The docked column narrows the chat (`ChatSideListPanelNode.narrowsChat`); the chat stays in use beside it.
+    var sideListNarrowsChat: Bool {
+        guard let layout = self.sideListLayout else {
+            return false
+        }
+        return ChatSideListPanelNode.narrowsChat(layout)
+    }
+
+    /// The chat's own layout: narrowed by as much of a docked side list as is out.
+    func sideListDockedChatLayout(_ layout: ContainerViewLayout) -> ContainerViewLayout {
+        guard self.sideListPanel != nil, self.sideListOpenFraction > 0.0, ChatSideListPanelNode.narrowsChat(layout) else {
+            return layout
+        }
+        let width = ChatSideListPanelNode.dockedWidth(layout) * min(1.0, self.sideListOpenFraction)
+        var safeInsets = layout.safeInsets
+        safeInsets.right = max(0.0, safeInsets.right - width)
+        var intrinsicInsets = layout.intrinsicInsets
+        intrinsicInsets.right = max(0.0, intrinsicInsets.right - width)
+        return ContainerViewLayout(
+            size: CGSize(width: layout.size.width - width, height: layout.size.height),
+            metrics: layout.metrics,
+            deviceMetrics: layout.deviceMetrics,
+            intrinsicInsets: intrinsicInsets,
+            safeInsets: safeInsets,
+            reservedCorners: layout.reservedCorners,
+            division: layout.division,
+            additionalInsets: layout.additionalInsets,
+            statusBarHeight: layout.statusBarHeight,
+            inputHeight: layout.inputHeight,
+            inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging,
+            inVoiceOver: layout.inVoiceOver,
+            presentedInFormSheet: layout.presentedInFormSheet
+        )
+    }
+
+    /// Gives the list the open chat's row to highlight, as on iPad's master list. Saved Messages and direct-messages rows
+    /// are keyed by the thread's peer; topics' and bot threads' rows match the open thread
+    /// (`ChatListSideListHighlightKey.thread`).
+    private func updateSideListHighlight(panel: ChatSideListPanelNode) {
+        var highlightedLocation: ChatLocation?
+        switch panel.kind {
+        case .savedMessages, .monoforum:
+            if let threadId = self.chatLocation.threadId {
+                highlightedLocation = .peer(id: EnginePeer.Id(threadId))
+            }
+        case .botThreads, .forum:
+            if case .replyThread = self.chatLocation {
+                highlightedLocation = self.chatLocation
+            }
+        }
+        if panel.highlightedLocation != highlightedLocation {
+            panel.highlightedLocation = highlightedLocation
+            panel.listController.updateNavigationCustomData(highlightedLocation, progress: 1.0, transition: .immediate)
+        }
     }
 
     /// `initialVelocity` is the finger's speed over the distance left to go, so a released drag carries on.
@@ -107,24 +176,11 @@ extension ChatControllerImpl {
         guard let panel = self.ensureSideListPanel() else {
             return
         }
-        let kind = panel.kind
-
-        self.chatDisplayNode.dismissInput()
-        // The open chat's row is highlighted, as on iPad's master list. Saved Messages and direct-messages rows are
-        // keyed by the thread's peer; a bot's threads share the bot's peer, so they have no row to match.
-        var highlightedLocation: ChatLocation?
-        switch kind {
-        case .savedMessages, .monoforum:
-            if let threadId = self.chatLocation.threadId {
-                highlightedLocation = .peer(id: EnginePeer.Id(threadId))
-            }
-        case .botThreads, .forum:
-            // A topic's or thread's row matches the open thread (`ChatListSideListHighlightKey.thread`).
-            if case .replyThread = self.chatLocation {
-                highlightedLocation = self.chatLocation
-            }
+        // Beside the list, the chat stays in use.
+        if !self.sideListNarrowsChat {
+            self.chatDisplayNode.dismissInput()
         }
-        panel.listController.updateNavigationCustomData(highlightedLocation, progress: 1.0, transition: .immediate)
+        self.updateSideListHighlight(panel: panel)
         let wasOpen = self.sideListAppeared
         if !wasOpen {
             self.sideListAppeared = true
@@ -163,8 +219,11 @@ extension ChatControllerImpl {
 
     /// The distance the list moves between closed and open.
     private var sideListTravel: CGFloat {
-        guard let layout = self.validLayout else {
+        guard let layout = self.sideListLayout else {
             return 1.0
+        }
+        if ChatSideListPanelNode.isDocked(layout) {
+            return ChatSideListPanelNode.dockedWidth(layout)
         }
         return max(1.0, layout.size.width - ChatSideListPanelNode.stripWidth)
     }
@@ -197,7 +256,7 @@ extension ChatControllerImpl {
     }
 
     fileprivate func sideListEdgePanAllowed(at point: CGPoint) -> Bool {
-        guard let layout = self.validLayout, self.sideListOpenFraction == 0.0, self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != nil else {
+        guard let layout = self.validLayout, self.sideListOpenFraction == 0.0, !self.isSideListDocked, self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != nil else {
             return false
         }
         // Not over the composer, whose controls reach the edge.
@@ -392,10 +451,15 @@ extension ChatControllerImpl {
         case .passThrough:
             return false
         case .closeOnly:
-            self.closeSideList(animated: true)
+            // Beside the chat, the list stays, as a master list does.
+            if !self.sideListNarrowsChat {
+                self.closeSideList(animated: true)
+            }
             return true
         case let .switchThread(threadId, messageId):
-            self.closeSideList(animated: true)
+            if !self.sideListNarrowsChat {
+                self.closeSideList(animated: true)
+            }
             if threadId == self.chatLocation.threadId, let messageId {
                 // `updateChatLocationThread` does nothing for the open thread.
                 self.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), animated: true, forceInCurrentChat: true)
@@ -412,28 +476,65 @@ extension ChatControllerImpl {
             return
         }
         let wasOpen = self.sideListAppeared
+        let narrowedChat = self.sideListNarrowsChat && self.sideListOpenFraction > 0.0
         self.sideListPanel = nil
         self.sideListOpenFraction = 0.0
+        if narrowedChat {
+            // The chat takes its whole width back; not from inside the layout pass this may be called from.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let layout = self.sideListFullLayout else {
+                    return
+                }
+                self.containerLayoutUpdated(layout, transition: .immediate)
+            }
+        }
         self.sideListAppeared = false
         if wasOpen {
             panel.listController.viewWillDisappear(false)
             panel.listController.viewDidDisappear(false)
         }
         self.chatDisplayNode.updateSideListOffset(0.0, dimAlpha: 0.0, transition: .immediate)
+        if let layout = self.sideListLayout {
+            self.updateSideListHeaderButtonShift(layout: layout, transition: .immediate)
+        }
         panel.listController.willMove(toParent: nil)
         panel.backgroundNode.removeFromSupernode()
         panel.removeFromSupernode()
         panel.listController.removeFromParent()
     }
 
+    /// Over the strip the list leaves, the header's side list button moves into view (`headerButtonShift`).
+    private func updateSideListHeaderButtonShift(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        guard let item = self.rightNavigationButton?.buttonItem, let capsule = (self.navigationBar as? NavigationBarNode)?.rightButtonCapsule(for: item) else {
+            return
+        }
+        var shift: CGFloat = 0.0
+        if self.sideListPanel != nil, !ChatSideListPanelNode.isDocked(layout) {
+            shift = ChatSideListPanelNode.headerButtonShift(layout) * max(0.0, min(1.0, self.sideListOpenFraction))
+        }
+        transition.updateTransform(layer: capsule.container.layer, transform: CATransform3DMakeTranslation(shift, 0.0, 0.0))
+    }
+
     func setSideListOpenFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.sideListOpenFraction = fraction
+        if self.sideListNarrowsChat, let layout = self.sideListFullLayout {
+            // The chat narrows or widens with the column: its whole layout follows (and lays the panel out).
+            self.containerLayoutUpdated(layout, transition: transition)
+            if case let .animated(duration, _) = transition {
+                DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: {
+                    completion?()
+                })
+            } else {
+                completion?()
+            }
+            return
+        }
         self.updateSideListLayout(transition: transition, completion: completion)
     }
 
     func updateSideListLayout(transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.attachSideListEdgePan()
-        guard let panel = self.sideListPanel, let layout = self.validLayout else {
+        guard let panel = self.sideListPanel, let layout = self.sideListLayout else {
             completion?()
             return
         }
@@ -441,6 +542,20 @@ extension ChatControllerImpl {
         if self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != panel.kind {
             self.removeSideListPanel()
             completion?()
+            return
+        }
+        if self.sideListAppeared {
+            self.updateSideListHighlight(panel: panel)
+        }
+        self.updateSideListHeaderButtonShift(layout: layout, transition: transition)
+        if ChatSideListPanelNode.isDocked(layout) {
+            // Beside the chat, which its own layout narrows: nothing moves the chat aside or dims it.
+            panel.backgroundNode.isHidden = true
+            self.chatDisplayNode.updateSideListOffset(0.0, dimAlpha: 0.0, transition: transition, completion: {
+                completion?()
+            })
+            transition.updateFrame(node: panel, frame: CGRect(origin: CGPoint(), size: layout.size))
+            panel.updateLayout(layout: layout, openFraction: self.sideListOpenFraction, transition: transition)
             return
         }
         let offset = self.sideListOpenFraction * self.sideListTravel

@@ -14,7 +14,6 @@ final class ChatSideListFlagTests: XCTestCase {
         isMonoforum: Bool = false,
         isAdminMonoforum: Bool = false,
         isBotWithThreads: Bool = false,
-        isRegularWidth: Bool = false,
         enabled: Bool = true
     ) -> ChatSideListKind? {
         return chatSideListKind(
@@ -25,7 +24,6 @@ final class ChatSideListFlagTests: XCTestCase {
             isMonoforum: isMonoforum,
             isAdminMonoforum: isAdminMonoforum,
             isBotWithThreads: isBotWithThreads,
-            isRegularWidth: isRegularWidth,
             enabled: enabled
         )
     }
@@ -91,17 +89,11 @@ final class ChatSideListFlagTests: XCTestCase {
 
     func testInlineForumDisabled() {
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, enabled: false))
-        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, isRegularWidth: true))
     }
 
     func testForumTopicSelectionSwitches() {
         let value = chatSideListSelection(kind: .forum(peerId: self.channelPeerId), currentThreadId: 1, selectedPeerId: self.channelPeerId, selectedThreadId: 4, messageId: nil)
         XCTAssertEqual(value, .switchThread(4, messageId: nil))
-    }
-
-    func testRegularWidthExcluded() {
-        XCTAssertNil(self.kind(peerId: self.accountPeerId, isRegularWidth: true))
-        XCTAssertNil(self.kind(peerId: self.botPeerId, isBotWithThreads: true, isRegularWidth: true))
     }
 
     func testDisabledReturnsNil() {
