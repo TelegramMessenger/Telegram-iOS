@@ -14,6 +14,7 @@ import LokiRng
 import TextFormat
 import HierarchyTrackingLayer
 import PeerInfoPaneNode
+import TelegramStringFormatting
 
 public final class PeerInfoGiftsCoverComponent: Component {
     public let context: AccountContext
@@ -178,6 +179,57 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     component.action(iconLayer.gift)
                     break
                 }
+            }
+        }
+        
+        private var accessibilityGiftElements: [AnyHashable: GiftAccessibilityElement] = [:]
+        
+        /// VoiceOver: the collectible gifts on the cover are buttons (a tap opens the gift), named as the gift screen
+        /// names them ("Title #number"); other gifts are decoration. Elements are kept per gift so focus survives.
+        override public var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return []
+                }
+                let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
+                var elements: [(frame: CGRect, element: GiftAccessibilityElement)] = []
+                var validIds = Set<AnyHashable>()
+                for (id, iconLayer) in self.iconLayers {
+                    guard case let .unique(gift) = iconLayer.gift.gift, iconLayer.opacity > 0.01, self.bounds.intersects(iconLayer.frame) else {
+                        continue
+                    }
+                    validIds.insert(id)
+                    let element: GiftAccessibilityElement
+                    if let current = self.accessibilityGiftElements[id] {
+                        element = current
+                    } else {
+                        element = GiftAccessibilityElement(accessibilityContainer: self)
+                        self.accessibilityGiftElements[id] = element
+                    }
+                    element.accessibilityLabel = "\(gift.title) #\(formatCollectibleNumber(gift.number, dateTimeFormat: dateTimeFormat))"
+                    element.accessibilityTraits = .button
+                    element.accessibilityFrameInContainerSpace = iconLayer.frame
+                    let starGift = iconLayer.gift
+                    element.activate = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return false
+                        }
+                        component.action(starGift)
+                        return true
+                    }
+                    elements.append((iconLayer.frame, element))
+                }
+                for id in self.accessibilityGiftElements.keys where !validIds.contains(id) {
+                    self.accessibilityGiftElements.removeValue(forKey: id)
+                }
+                elements.sort(by: { lhs, rhs in
+                    if lhs.frame.minY != rhs.frame.minY {
+                        return lhs.frame.minY < rhs.frame.minY
+                    }
+                    return lhs.frame.minX < rhs.frame.minX
+                })
+                return elements.map(\.element)
+            } set(value) {
             }
         }
         
@@ -922,4 +974,12 @@ private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -
     let localT = 1.0 - windowFunction(t: windowT)
 
     return localT
+}
+
+private final class GiftAccessibilityElement: UIAccessibilityElement {
+    var activate: (() -> Bool)?
+    
+    override func accessibilityActivate() -> Bool {
+        return self.activate?() ?? false
+    }
 }

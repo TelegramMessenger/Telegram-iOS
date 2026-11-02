@@ -134,6 +134,11 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         
         self.pageControlNode.isUserInteractionEnabled = false
         self.pageControlNode.pagesCount = 2
+        // VoiceOver: the chat and chat-list previews (sample messages on the wallpaper) and their page dots only
+        // illustrate the chosen size; the slider and buttons are the screen.
+        self.scrollNode.accessibilityElementsHidden = true
+        self.pageControlNode.accessibilityElementsHidden = true
+        self.pageControlBackgroundNode.accessibilityElementsHidden = true
         
         self.addSubnode(self.scrollNode)
         self.chatListBackgroundNode.addSubnode(self.maskNode)
@@ -920,7 +925,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         })
         let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.customMode == .chat ? self.presentationThemeSettings.fontSize : self.presentationThemeSettings.listsFontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, disableDecorations: true, force: true, sectionId: 0, updated: { [weak self] value in
             self?.updateCustomFontSize?(value)
-        })
+        }, accessibilityLabel: self.presentationData.strings.Appearance_TextSize_Title)
         
         switchItem.updateNode(async: { f in
             f()

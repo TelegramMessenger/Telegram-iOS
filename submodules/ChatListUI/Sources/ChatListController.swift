@@ -502,8 +502,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if let strongSelf = self {
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
+                    strongSelf.tabBarItem.accessibilityValue = nil
                 } else {
                     strongSelf.tabBarItem.badgeValue = compactNumericCountString(Int(count.0), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                    strongSelf.tabBarItem.accessibilityValue = presentationData.strings.VoiceOver_Chat_UnreadMessages(count.0)
                 }
             }
         }).strict()
@@ -7457,6 +7459,16 @@ private final class ChatListLocationContext {
                     proxyStatus = .available
                 }
                 
+                // The shield's state for VoiceOver, in the proxy list's own status words.
+                let proxyAccessibilityValue: String
+                switch proxyStatus {
+                case .connecting:
+                    proxyAccessibilityValue = presentationData.strings.SocksProxySetup_ProxyStatusConnecting
+                case .connected:
+                    proxyAccessibilityValue = presentationData.strings.SocksProxySetup_ProxyStatusConnected
+                case .available:
+                    proxyAccessibilityValue = presentationData.strings.SocksProxySetup_TypeNone
+                }
                 self.proxyButton = NavigationBarComponent.Button(id: "proxy",
                     content: .custom(AnyComponent(ChatListProxyButtonComponent(theme: presentationData.theme, status: proxyStatus))),
                     action: { [weak self] _ in
@@ -7464,7 +7476,8 @@ private final class ChatListLocationContext {
                             return
                         }
                         (parentController.navigationController as? NavigationController)?.pushViewController(self.context.sharedContext.makeProxySettingsController(context: self.context))
-                    }
+                    },
+                    accessibilityValue: proxyAccessibilityValue
                 )
                 
                 titleContent.hasProxy = false

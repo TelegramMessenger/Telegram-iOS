@@ -619,6 +619,38 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     strongSelf.item = item
                     
                     strongSelf.accessibilityLabel = displayTitle.composedTitle
+                    // The status under the name (username, phone, member count) is read as the value.
+                    strongSelf.accessibilityValue = statusText.isEmpty ? nil : statusText.replacingOccurrences(of: "\n", with: ", ")
+                    // A row that opens something (`action`) is a button; otherwise it is the screen's peer header, text.
+                    strongSelf.accessibilityTraits = item.action != nil ? .button : [.staticText, .header]
+                    // While the name is edited (new group/channel, edit contact) the row is not one element: its photo
+                    // button, name fields and their clear buttons are read on their own.
+                    if let editingName = item.state.editingName {
+                        strongSelf.isAccessibilityElement = false
+                        strongSelf.accessibilityLabel = nil
+                        strongSelf.accessibilityValue = nil
+                        strongSelf.accessibilityTraits = []
+                        switch editingName {
+                        case .personName:
+                            // Editing a contact's name the avatar tap only opens the existing photo (it sets none), so
+                            // it is not offered as a "Set Photo" button.
+                            strongSelf.avatarNode.isAccessibilityElement = false
+                            strongSelf.avatarNode.accessibilityLabel = nil
+                        case let .title(_, type):
+                            strongSelf.avatarNode.isAccessibilityElement = true
+                            strongSelf.avatarNode.accessibilityTraits = .button
+                            switch type {
+                            case .group:
+                                strongSelf.avatarNode.accessibilityLabel = item.presentationData.strings.GroupInfo_SetGroupPhoto
+                            case .channel:
+                                strongSelf.avatarNode.accessibilityLabel = item.presentationData.strings.Channel_UpdatePhotoItem
+                            }
+                        }
+                    } else {
+                        strongSelf.isAccessibilityElement = true
+                        strongSelf.avatarNode.isAccessibilityElement = false
+                        strongSelf.avatarNode.accessibilityLabel = nil
+                    }
                     
                     strongSelf.layoutWidthAndNeighbors = (params, neighbors)
                     
@@ -830,6 +862,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                 
                                 strongSelf.inputFirstField?.textColor = item.presentationData.theme.list.itemPrimaryTextColor
                                 strongSelf.inputFirstField?.attributedPlaceholder = NSAttributedString(string: item.presentationData.strings.UserInfo_FirstNamePlaceholder, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemPlaceholderTextColor)
+                                strongSelf.inputFirstField?.accessibilityLabel = item.presentationData.strings.UserInfo_FirstNamePlaceholder
                                 if strongSelf.inputFirstField?.keyboardAppearance != keyboardAppearance {
                                     strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
                                 }
@@ -843,6 +876,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.inputFirstClearButton?.addTarget(strongSelf, action: #selector(strongSelf.firstClearPressed), forControlEvents: .touchUpInside)
                                     strongSelf.inputFirstClearButton?.isHidden = true
                                     strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
+                                    strongSelf.inputFirstClearButton?.accessibilityLabel = item.presentationData.strings.WebSearch_RecentSectionClear
+                                    strongSelf.inputFirstClearButton?.accessibilityTraits = .button
                                 }
                                 
                                 if strongSelf.inputSecondField == nil {
@@ -861,6 +896,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                 
                                 strongSelf.inputSecondField?.textColor = item.presentationData.theme.list.itemPrimaryTextColor
                                 strongSelf.inputSecondField?.attributedPlaceholder = NSAttributedString(string: item.presentationData.strings.UserInfo_LastNamePlaceholder, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemPlaceholderTextColor)
+                                strongSelf.inputSecondField?.accessibilityLabel = item.presentationData.strings.UserInfo_LastNamePlaceholder
                                 if strongSelf.inputSecondField?.keyboardAppearance != keyboardAppearance {
                                     strongSelf.inputSecondField?.keyboardAppearance = keyboardAppearance
                                 }
@@ -874,6 +910,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.inputSecondClearButton?.addTarget(strongSelf, action: #selector(strongSelf.secondClearPressed), forControlEvents: .touchUpInside)
                                     strongSelf.inputSecondClearButton?.isHidden = true
                                     strongSelf.addSubnode(strongSelf.inputSecondClearButton!)
+                                    strongSelf.inputSecondClearButton?.accessibilityLabel = item.presentationData.strings.WebSearch_RecentSectionClear
+                                    strongSelf.inputSecondClearButton?.accessibilityTraits = .button
                                 }
                                 
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 46.0), size: CGSize(width: params.width - params.leftInset - 100.0 - separatorRightInset, height: separatorHeight))
@@ -923,6 +961,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                         placeholder = item.presentationData.strings.GroupInfo_ChannelListNamePlaceholder
                                 }
                                 strongSelf.inputFirstField?.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 19.0 / 17.0)), textColor: item.presentationData.theme.list.itemPlaceholderTextColor)
+                                strongSelf.inputFirstField?.accessibilityLabel = placeholder
                                 if strongSelf.inputFirstField?.keyboardAppearance != keyboardAppearance {
                                     strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
                                 }
@@ -936,6 +975,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.inputFirstClearButton?.addTarget(strongSelf, action: #selector(strongSelf.firstClearPressed), forControlEvents: .touchUpInside)
                                     strongSelf.inputFirstClearButton?.isHidden = true
                                     strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
+                                    strongSelf.inputFirstClearButton?.accessibilityLabel = item.presentationData.strings.WebSearch_RecentSectionClear
+                                    strongSelf.inputFirstClearButton?.accessibilityTraits = .button
                                 }
                                 
                                 let inputFieldHeight: CGFloat = 35.0

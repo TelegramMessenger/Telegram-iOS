@@ -221,8 +221,6 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         
             contentSize = CGSize(width: params.width, height: height)
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     let themeUpdated = strongSelf.item?.presentationData.theme !== item.presentationData.theme
@@ -231,8 +229,10 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     let _ = balanceApply()
                     let _ = valueApply()
                     
-                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityTraits = []
+                    // VoiceOver: the amount (and its dollar estimate) as one text; the buttons below stay separate.
+                    strongSelf.activateArea.accessibilityLabel = amountString.string
+                    strongSelf.activateArea.accessibilityValue = value.isEmpty ? nil : value
+                    strongSelf.activateArea.accessibilityTraits = .staticText
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -315,6 +315,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
                                       
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: strongSelf.valueTextNode.frame.maxY))
                     strongSelf.buttonLayout = (isStars: isStars, origin: strongSelf.valueTextNode.frame.maxY + buttonSpacing + 3.0, width: params.width, leftInset: leftInset, rightInset: rightInset)
                     strongSelf.updateButton()
                 }

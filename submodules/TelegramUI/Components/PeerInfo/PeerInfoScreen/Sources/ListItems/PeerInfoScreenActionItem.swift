@@ -126,6 +126,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.textNode.maximumNumberOfLines = 1
         self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         self.activateArea.accessibilityLabel = item.text
+        self.activateArea.applyPeerInfoRowAction(item.action)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
         let height = textSize.height + 32.0

@@ -31,6 +31,8 @@ public final class ListTextFieldItemComponent: Component {
     public let initialText: String
     public let resetText: ResetText?
     public let placeholder: String
+    /// VoiceOver label of the clear button, which shows only an icon (the search bar's "Clear").
+    public let clearButtonAccessibilityLabel: String?
     public let characterLimit: Int?
     public let hasClearButton: Bool
     public let autocapitalizationType: UITextAutocapitalizationType
@@ -49,6 +51,7 @@ public final class ListTextFieldItemComponent: Component {
         initialText: String,
         resetText: ResetText? = nil,
         placeholder: String,
+        clearButtonAccessibilityLabel: String? = nil,
         characterLimit: Int? = nil,
         hasClearButton: Bool = true,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
@@ -66,6 +69,7 @@ public final class ListTextFieldItemComponent: Component {
         self.initialText = initialText
         self.resetText = resetText
         self.placeholder = placeholder
+        self.clearButtonAccessibilityLabel = clearButtonAccessibilityLabel
         self.characterLimit = characterLimit
         self.hasClearButton = hasClearButton
         self.autocapitalizationType = autocapitalizationType
@@ -93,6 +97,9 @@ public final class ListTextFieldItemComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.clearButtonAccessibilityLabel != rhs.clearButtonAccessibilityLabel {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
@@ -303,6 +310,8 @@ public final class ListTextFieldItemComponent: Component {
                 
                 placeholderView.isHidden = !self.currentText.isEmpty
             }
+            // The placeholder is drawn by its own view, not by the field, so the field is labelled with it for VoiceOver.
+            self.textField.accessibilityLabel = component.placeholder.isEmpty ? nil : component.placeholder
             
             transition.setFrame(view: self.textField, frame: CGRect(origin: CGPoint(x: component.contentInsets.left, y: 0.0), size: CGSize(width: availableSize.width - component.contentInsets.left - component.contentInsets.right - textFieldRightInset, height: contentHeight)))
             
@@ -324,7 +333,8 @@ public final class ListTextFieldItemComponent: Component {
                             self.setText(text: "", updateState: true)
                         },
                         animateAlpha: false,
-                        animateScale: true
+                        animateScale: true,
+                        accessibility: listTextFieldClearButtonAccessibility(label: component.clearButtonAccessibilityLabel)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -385,4 +395,12 @@ public final class ListTextFieldItemComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+/// The clear button's VoiceOver description: its label when the host gives one (the button shows only an icon).
+func listTextFieldClearButtonAccessibility(label: String?) -> ComponentAccessibility? {
+    guard let label, !label.isEmpty else {
+        return nil
+    }
+    return ComponentAccessibility(label: label)
 }

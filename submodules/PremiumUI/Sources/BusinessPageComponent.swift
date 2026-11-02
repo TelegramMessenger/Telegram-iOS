@@ -219,6 +219,7 @@ private final class ParagraphComponent: CombinedComponent {
             
             context.add(icon
                 .position(CGPoint(x: 47.0, y: textTopInset + 18.0))
+                .accessibilityHidden(true)
             )
         
             return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 25.0)
@@ -489,6 +490,10 @@ final class BusinessPageComponent: CombinedComponent {
         }
     }
 
+    func makeView() -> UIView {
+        return PremiumScrollPageView()
+    }
+    
     func makeState() -> State {
         return State()
     }
@@ -602,6 +607,7 @@ final class BusinessPageComponent: CombinedComponent {
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY))
                 .scale(titleScale)
+                .accessibilityTraits(.header)
             )
                         
             return scroll.size

@@ -407,7 +407,7 @@ public final class CallListController: TelegramBaseController {
                             case .tab:
                                 if strongSelf.editingMode {
                                     strongSelf.navigationItem.setLeftBarButton(strongSelf.editingDoneBarButtonItem(), animated: strongSelf.controllerNode.didSetReady)
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setRightBarButton(strongSelf.deleteAllBarButtonItem(buttonNode), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
@@ -417,7 +417,7 @@ public final class CallListController: TelegramBaseController {
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setLeftBarButton(strongSelf.deleteAllBarButtonItem(buttonNode), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.leftBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
@@ -490,7 +490,9 @@ public final class CallListController: TelegramBaseController {
         if self.callButtonInSideColumn {
             return nil
         }
-        return UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme)?.withRenderingMode(.alwaysTemplate), style: .plain, target: self, action: #selector(self.callPressed))
+        let item = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme)?.withRenderingMode(.alwaysTemplate), style: .plain, target: self, action: #selector(self.callPressed))
+        item.accessibilityLabel = self.presentationData.strings.CallList_NewCall
+        return item
     }
     
     @objc func callPressed() {
@@ -676,6 +678,13 @@ public final class CallListController: TelegramBaseController {
         return false
     }
     
+    /// The "Delete All" node is hosted as is; the item carries its text for VoiceOver.
+    private func deleteAllBarButtonItem(_ buttonNode: DeleteAllButtonNode) -> UIBarButtonItem? {
+        let item = UIBarButtonItem(customDisplayNode: buttonNode)
+        item?.accessibilityLabel = self.presentationData.strings.CallList_DeleteAll
+        return item
+    }
+    
     /// The Done of the Edit/Done toggle: the accent checkmark, kept in the bar's row where Edit is (on iPhone Duo it would
     /// otherwise move into the side column).
     private func editingDoneBarButtonItem() -> UIBarButtonItem {
@@ -702,12 +711,12 @@ public final class CallListController: TelegramBaseController {
             case .tab:
                 self.navigationItem.setLeftBarButton(self.editingDoneBarButtonItem(), animated: true)
                
-                self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                self.navigationItem.setRightBarButton(self.deleteAllBarButtonItem(buttonNode), animated: true)
                 self.navigationItem.rightBarButtonItem?.setCustomAction({
                     pressedImpl?()
                 })
             case .navigation:
-                self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                self.navigationItem.setLeftBarButton(self.deleteAllBarButtonItem(buttonNode), animated: true)
                 self.navigationItem.leftBarButtonItem?.setCustomAction({
                     pressedImpl?()
                 })

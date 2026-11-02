@@ -82,6 +82,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+        // The bar wraps the dots in its own button, which VoiceOver names from the item.
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_More
         
         self.moreButtonNode.action = { [weak self] _, gesture in
             if let strongSelf = self {

@@ -50,6 +50,9 @@ private final class AvatarComponent: Component {
             
             super.init(frame: frame)
             
+            // The user's own photo with a story ring, an illustration: not read by VoiceOver.
+            self.accessibilityElementsHidden = true
+            
             self.addSubnode(self.avatarNode)
         }
         
@@ -230,6 +233,7 @@ private final class ParagraphComponent: CombinedComponent {
             
             context.add(icon
                 .position(CGPoint(x: 47.0, y: textTopInset + 18.0))
+                .accessibilityHidden(true)
             )
         
             return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 25.0)
@@ -470,6 +474,18 @@ private final class StoriesListComponent: CombinedComponent {
     }
 }
 
+/// The view of a feature page whose title is drawn over a full-page list (Stories, Doubled Limits, Business): VoiceOver
+/// reads the title before the list, which starts at the top of the page and so would come first.
+final class PremiumScrollPageView: UIView {
+    override var accessibilityElements: [Any]? {
+        get {
+            let visible = self.subviews.filter { !$0.isHidden && $0.alpha > 0.01 }
+            return visible.filter { !($0 is UIScrollView) } + visible.filter { $0 is UIScrollView }
+        } set(value) {
+        }
+    }
+}
+
 final class StoriesPageComponent: CombinedComponent {
     typealias EnvironmentType = DemoPageEnvironment
 
@@ -504,6 +520,10 @@ final class StoriesPageComponent: CombinedComponent {
 
     func makeState() -> State {
         return State()
+    }
+    
+    func makeView() -> UIView {
+        return PremiumScrollPageView()
     }
 
     static var body: Body {
@@ -615,6 +635,7 @@ final class StoriesPageComponent: CombinedComponent {
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY))
                 .scale(titleScale)
+                .accessibilityTraits(.header)
             )
                         
             return scroll.size

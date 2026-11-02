@@ -142,6 +142,8 @@ public final class ContextMenuActionItem {
     public let textLinkAction: () -> Void
     public let action: ((Action) -> Void)?
     public let longPressAction: ((Action) -> Void)?
+    /// VoiceOver: the item is the current choice, shown only as a checkmark icon (a sort order, a mode).
+    public let accessibilityIsSelected: Bool
     
     convenience public init(
         id: AnyHashable? = nil,
@@ -164,7 +166,8 @@ public final class ContextMenuActionItem {
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
         action: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)?,
-        longPressAction: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)? = nil
+        longPressAction: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)? = nil,
+        accessibilityIsSelected: Bool = false
     ) {
         self.init(
             id: id,
@@ -195,7 +198,8 @@ public final class ContextMenuActionItem {
                 return { impl in
                     longPressAction(impl.controller, impl.dismissWithResult)
                 }
-            }
+            },
+            accessibilityIsSelected: accessibilityIsSelected
         )
     }
 
@@ -220,7 +224,8 @@ public final class ContextMenuActionItem {
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
         action: ((Action) -> Void)?,
-        longPressAction: ((Action) -> Void)? = nil
+        longPressAction: ((Action) -> Void)? = nil,
+        accessibilityIsSelected: Bool = false
     ) {
         self.id = id
         self.text = text
@@ -243,6 +248,7 @@ public final class ContextMenuActionItem {
         self.textLinkAction = textLinkAction
         self.action = action
         self.longPressAction = longPressAction
+        self.accessibilityIsSelected = accessibilityIsSelected
     }
 }
 

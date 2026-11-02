@@ -1149,6 +1149,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let reactionsTitleTextFrame = CGRect(origin: CGPoint(x: sideInset + textSideInset, y: contentHeight), size: reactionsTitleTextSize)
                 if let reactionsTitleTextView = reactionsTitleText.view {
                     if reactionsTitleTextView.superview == nil {
+                        // A section title, read as a heading like the list's own section headers.
+                        reactionsTitleTextView.accessibilityTraits = [.staticText, .header]
                         reactionsTitleTextView.layer.anchorPoint = CGPoint()
                         self.scrollView.addSubview(reactionsTitleTextView)
                     }
@@ -1379,7 +1381,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         self.state?.updated(transition: .immediate)
                                     }
                                 )),
-                                preferNative: true
+                                preferNative: true,
+                                accessibilityLabel: environment.strings.PeerInfo_AllowedReactions_MaxCountSectionTitle
                             )))
                         ],
                         displaySeparators: false

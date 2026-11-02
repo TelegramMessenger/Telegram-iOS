@@ -169,7 +169,11 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
-                    strongSelf.accessibilityLabel = attributedText.string
+                    // VoiceOver: the header is one text element (title and text); the animation is decoration. Without
+                    // being an element its label was only a container's and was never read.
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityTraits = .staticText
+                    strongSelf.accessibilityLabel = [item.title, attributedText.string].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
                                         
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)

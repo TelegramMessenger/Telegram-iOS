@@ -71,6 +71,14 @@ public final class ChatListHeaderNoticeComponent: Component {
         deinit {
         }
         
+        override public var accessibilityElements: [Any]? {
+            get {
+                return self.panel?.accessibilityElements(container: self)
+            }
+            set {
+            }
+        }
+        
         @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
             guard let component = self.component else {
                 return

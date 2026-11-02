@@ -46,6 +46,51 @@ public protocol SparseItemGridBinding: AnyObject {
     func scrollingOffsetUpdated(transition: ContainedViewLayoutTransition)
     func onBeginFastScrolling()
     func getShimmerColors() -> SparseItemGrid.ShimmerColors
+    /// VoiceOver: how an item reads, or nil to leave it out of the tree. Asked only while an accessibility client is
+    /// active.
+    func accessibilityItem(item: SparseItemGrid.Item) -> SparseItemGrid.AccessibilityItem?
+    /// VoiceOver: the item's long-press menu, opened without a gesture (`AccessibilityItem.contextActionName`).
+    func accessibilityPerformContextAction(item: SparseItemGrid.Item, itemLayer: CALayer) -> Bool
+}
+
+public extension SparseItemGridBinding {
+    func accessibilityItem(item: SparseItemGrid.Item) -> SparseItemGrid.AccessibilityItem? {
+        return nil
+    }
+    
+    func accessibilityPerformContextAction(item: SparseItemGrid.Item, itemLayer: CALayer) -> Bool {
+        return false
+    }
+}
+
+private final class SparseItemGridAccessibilityElement: UIAccessibilityElement {
+    var activate: (() -> Bool)?
+    var focused: (() -> Void)?
+    var contextActionName: String?
+    var contextAction: (() -> Bool)?
+    
+    override func accessibilityActivate() -> Bool {
+        return self.activate?() ?? false
+    }
+    
+    override func accessibilityElementDidBecomeFocused() {
+        super.accessibilityElementDidBecomeFocused()
+        self.focused?()
+    }
+    
+    func updateContextAction(name: String?) {
+        if self.contextActionName == name {
+            return
+        }
+        self.contextActionName = name
+        if let name {
+            self.accessibilityCustomActions = [UIAccessibilityCustomAction(name: name, actionHandler: { [weak self] _ in
+                return self?.contextAction?() ?? false
+            })]
+        } else {
+            self.accessibilityCustomActions = nil
+        }
+    }
 }
 
 private func binarySearch(_ inputArr: [SparseItemGrid.Item], searchItem: Int) -> (index: Int?, lowerBound: Int?, upperBound: Int?) {
@@ -158,6 +203,22 @@ private final class Shimmer {
 }
 
 public final class SparseItemGrid: ASDisplayNode {
+    /// VoiceOver description of one grid item (`SparseItemGridBinding.accessibilityItem`).
+    public struct AccessibilityItem {
+        public var label: String
+        public var value: String?
+        public var traits: UIAccessibilityTraits
+        /// The name of the custom action that opens the item's long-press menu, or nil when it has none.
+        public var contextActionName: String?
+        
+        public init(label: String, value: String? = nil, traits: UIAccessibilityTraits = .button, contextActionName: String? = nil) {
+            self.label = label
+            self.value = value
+            self.traits = traits
+            self.contextActionName = contextActionName
+        }
+    }
+    
     public struct ShimmerColors: Equatable {
         public var background: UInt32
         public var foreground: UInt32
@@ -517,6 +578,19 @@ public final class SparseItemGrid: ASDisplayNode {
         
         class ScrollView: UIScrollView {
             var forceDecelerating = false
+            /// VoiceOver: the grid's items (`Viewport.scrollViewAccessibilityElements`).
+            var accessibilityElementsProvider: (() -> [Any])?
+            
+            override var accessibilityElements: [Any]? {
+                get {
+                    if let accessibilityElementsProvider = self.accessibilityElementsProvider {
+                        return accessibilityElementsProvider()
+                    }
+                    return super.accessibilityElements
+                } set(value) {
+                    super.accessibilityElements = value
+                }
+            }
             
             override var isDecelerating: Bool {
                 return self.forceDecelerating || super.isDecelerating
@@ -809,6 +883,117 @@ public final class SparseItemGrid: ASDisplayNode {
             }
 
             return nil
+        }
+        
+        private var accessibilityItemElements: [AnyHashable: SparseItemGridAccessibilityElement] = [:]
+        
+        /// VoiceOver: the grid's items, as elements of the grid's scroll view (so UIKit scrolls it to a focused item and
+        /// their frames, in its content space, stay right while it scrolls). Listed: the items on screen plus the
+        /// already-loaded row beyond each edge, as ListView's edge rows, so swiping reaches the next row; focusing one asks
+        /// the host to bring it on screen (`accessibilityItemFocused`). Items are layers, so without this the grid is empty
+        /// to VoiceOver. Built only when asked; elements are kept per item so focus survives the next query.
+        override var accessibilityElements: [Any]? {
+            get {
+                if self.scrollView.accessibilityElementsProvider == nil {
+                    self.scrollView.accessibilityElementsProvider = { [weak self] in
+                        return self?.scrollViewAccessibilityElements() ?? []
+                    }
+                }
+                return [self.scrollView]
+            } set(value) {
+            }
+        }
+        
+        private func scrollViewAccessibilityElements() -> [Any] {
+            guard let items = self.items, let layout = self.layout, let window = self.view.window, items.count > 0 else {
+                self.accessibilityItemElements.removeAll()
+                return []
+            }
+            // The part of the scroll view on screen (the profile scrolls the grid's pane partly out of the window), in
+            // content coordinates, widened by one row on each side.
+            // The insets are the part the host covers (the profile's navigation bar and pane tabs above, a panel below).
+            let uncovered = self.scrollView.bounds.inset(by: UIEdgeInsets(top: layout.containerLayout.insets.top, left: 0.0, bottom: layout.containerLayout.insets.bottom, right: 0.0))
+            let onScreen = uncovered.intersection(self.scrollView.convert(window.bounds, from: window))
+            if onScreen.isNull || onScreen.isEmpty {
+                self.accessibilityItemElements.removeAll()
+                return []
+            }
+            let rowHeight = layout.itemSize.height + layout.itemSpacing
+            let listed = onScreen.insetBy(dx: 0.0, dy: -rowHeight)
+            var elements: [Any] = []
+            var validIds = Set<AnyHashable>()
+            // The index range of the listed rect, in index order; items are looked up by index (a binary search), so a
+            // query costs the listed items only.
+            var listedItems: [(index: Int, item: Item, visibleItem: VisibleItem)] = []
+            let range = layout.visibleItemRange(for: listed, count: items.count)
+            if range.maxIndex >= range.minIndex {
+                for index in range.minIndex ... range.maxIndex {
+                    guard let item = items.item(at: index), let visibleItem = self.visibleItems[item.id] else {
+                        continue
+                    }
+                    let frame = visibleItem.frame
+                    if frame.isEmpty || !frame.intersects(listed) {
+                        continue
+                    }
+                    listedItems.append((index, item, visibleItem))
+                }
+            }
+            for (_, item, visibleItem) in listedItems {
+                if let view = visibleItem.view {
+                    // A view-backed item (a list row) describes itself.
+                    if !view.isHidden && view.alpha >= 0.01 {
+                        elements.append(view)
+                    }
+                    continue
+                }
+                guard let description = items.itemBinding.accessibilityItem(item: item) else {
+                    continue
+                }
+                let displayLayer = visibleItem.displayLayer
+                validIds.insert(item.id)
+                let element: SparseItemGridAccessibilityElement
+                if let current = self.accessibilityItemElements[item.id] {
+                    element = current
+                } else {
+                    element = SparseItemGridAccessibilityElement(accessibilityContainer: self.scrollView)
+                    self.accessibilityItemElements[item.id] = element
+                }
+                element.accessibilityLabel = description.label
+                element.accessibilityValue = description.value
+                element.accessibilityTraits = description.traits
+                element.accessibilityFrameInContainerSpace = visibleItem.frame
+                element.activate = { [weak items, weak displayLayer] in
+                    guard let items, let displayLayer else {
+                        return false
+                    }
+                    items.itemBinding.onTap(item: item, itemLayer: displayLayer, point: CGPoint(x: displayLayer.bounds.midX, y: displayLayer.bounds.midY))
+                    return true
+                }
+                element.contextAction = { [weak items, weak displayLayer] in
+                    guard let items, let displayLayer else {
+                        return false
+                    }
+                    return items.itemBinding.accessibilityPerformContextAction(item: item, itemLayer: displayLayer)
+                }
+                element.focused = { [weak self, weak displayLayer] in
+                    guard let self, let displayLayer else {
+                        return
+                    }
+                    var grid: ASDisplayNode? = self.supernode
+                    while let current = grid, !(current is SparseItemGrid) {
+                        grid = current.supernode
+                    }
+                    if let grid = grid as? SparseItemGrid {
+                        grid.accessibilityItemFocused?(self.scrollView.convert(displayLayer.frame, to: grid.view))
+                    }
+                }
+                element.updateContextAction(name: description.contextActionName)
+                elements.append(element)
+            }
+            for id in Array(self.accessibilityItemElements.keys) where !validIds.contains(id) {
+                self.accessibilityItemElements.removeValue(forKey: id)
+            }
+            return elements
         }
         
         func itemHitTest(at point: CGPoint) -> (Item, CALayer, CGPoint)? {
@@ -1663,6 +1848,9 @@ public final class SparseItemGrid: ASDisplayNode {
     }
 
     public var cancelExternalContentGestures: (() -> Void)?
+    /// VoiceOver focused an item: its frame in this node's view, for a host whose own scrolling must bring it on screen
+    /// (a profile pane below the fold). The grid's scroll view scrolls by itself.
+    public var accessibilityItemFocused: ((CGRect) -> Void)?
     public var zoomLevelUpdated: ((ZoomLevel) -> Void)?
 
     public var pinchEnabled: Bool = true {

@@ -859,6 +859,8 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 
                 if let itemIconView = itemIcon.view {
                     if itemIconView.superview == nil {
+                        // The paragraph's glyph: its title and text are read.
+                        itemIconView.accessibilityElementsHidden = true
                         self.scrollView.addSubview(itemIconView)
                     }
                     transition.setFrame(view: itemIconView, frame: itemIconFrame)

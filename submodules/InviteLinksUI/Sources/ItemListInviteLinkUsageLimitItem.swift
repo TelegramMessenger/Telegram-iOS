@@ -296,6 +296,13 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
+                    // VoiceOver: the slider with its stop labels is one adjustable element named by its section,
+                    // valued by the current stop; swiping up/down moves a stop, as dragging does.
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = item.strings.InviteLink_Create_UsersLimit
+                    strongSelf.accessibilityTraits = item.enabled ? .adjustable : [.adjustable, .notEnabled]
+                    let accessibilityStops: [String] = ["1", "10", "100", item.strings.InviteLink_Create_UsersLimitNoLimit]
+                    strongSelf.accessibilityValue = !customTextString.isEmpty ? customTextString : accessibilityStops[max(0, min(accessibilityStops.count - 1, item.value.position))]
                     
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -398,6 +405,24 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func accessibilityIncrement() {
+        self.accessibilityStep(1)
+    }
+    
+    override func accessibilityDecrement() {
+        self.accessibilityStep(-1)
+    }
+    
+    private func accessibilityStep(_ delta: Int) {
+        guard let item = self.item, item.enabled else {
+            return
+        }
+        let position = max(0, min(3, item.value.position + delta))
+        if position != item.value.position {
+            item.updated(InviteLinkUsageLimit(position: position))
+        }
     }
     
     @objc func sliderValueChanged() {

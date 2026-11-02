@@ -130,7 +130,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleNode.displaysAsynchronously = false
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
-        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
         self.titleActivateAreaNode.accessibilityIdentifier = "Auth.CodeEntry.Title"
 
         self.titleIconNode = ASImageNode()
@@ -180,6 +180,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.textField.returnKeyType = .done
         self.codeInputView.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeInputView.textField.accessibilityIdentifier = "Auth.CodeEntry.CodeField"
+        self.codeInputView.textField.accessibilityLabel = self.strings.Login_Code
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             self.codeInputView.textField.textContentType = .oneTimeCode
         }
@@ -839,6 +840,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 }
                 
                 self.hintTextNode.attributedText = NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
+                self.hintButtonNode.accessibilityLabel = actionTitle
+                self.hintButtonNode.accessibilityTraits = .button
                 
                 let originY: CGFloat
                 if !self.codeInputView.isHidden {
@@ -862,6 +865,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 self.hintButtonNode.isUserInteractionEnabled = false
                 
                 self.hintTextNode.attributedText = NSAttributedString(string: self.strings.Login_EnterPhraseHint, font: Font.regular(13.0), textColor: self.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                self.hintButtonNode.accessibilityLabel = self.strings.Login_EnterPhraseHint
+                self.hintButtonNode.accessibilityTraits = .staticText
                 
                 let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: bandWidth - 48.0, height: .greatestFiniteMagnitude))
                 transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - hintTextSize.width) / 2.0), y: self.textField.frame.maxY + yOffset), size: hintTextSize))
@@ -961,6 +966,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
+        // The error appears under the field (the shake is not seen): VoiceOver says it.
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .announcement, argument: text)
+        }
         
         if let (layout, _) = self.layoutArguments {
             // iPhone Duo: centered under the field in the content band, as containerLayoutUpdated lays it out.

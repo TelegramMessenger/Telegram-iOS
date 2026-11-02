@@ -1560,7 +1560,9 @@ private final class WalletReceiveSheetContent: Component {
                         fitToContentWidth: true,
                         isEnabled: true,
                         displaysProgress: false,
-                        action: copyButtonAction
+                        action: copyButtonAction,
+                        // VoiceOver: the address drawn around the code (a ring of text that is not read) as the value.
+                        accessibility: ComponentAccessibility(value: component.address)
                     )),
                     environment: {},
                     containerSize: CGSize(width: max(1.0, cardWidth - 32.0), height: copyButtonHeight)

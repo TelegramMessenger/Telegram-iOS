@@ -720,6 +720,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     strongSelf.currentMedia = selectedMedia
                     strongSelf.currentPrimaryUrl = primaryUrl
                     strongSelf.currentIsInstantView = isInstantView
+                    strongSelf.applyListMessageAccessibility(label: listMessageAccessibilityText([title?.string, descriptionText?.string, linkText?.string, authorString]), value: dateText, item: item, contextSourceNode: strongSelf.contextSourceNode, isContextMenuEnabled: strongSelf.containerNode.isGestureEnabled)
                     
                     if let _ = updatedTheme {
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.theme.list.itemPlainSeparatorColor

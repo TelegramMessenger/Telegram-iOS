@@ -64,7 +64,11 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    /// VoiceOver name of the slider ("Text Size").
+    let accessibilityLabel: String?
+    
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil, accessibilityLabel: String? = nil) {
+        self.accessibilityLabel = accessibilityLabel
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
@@ -280,7 +284,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                                 )),
                                 useNative: true,
                                 trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
-                                trackForegroundColor: item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
+                                trackForegroundColor: item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor,
+                                accessibilityLabel: item.accessibilityLabel
                             )
                         ),
                         environment: {},

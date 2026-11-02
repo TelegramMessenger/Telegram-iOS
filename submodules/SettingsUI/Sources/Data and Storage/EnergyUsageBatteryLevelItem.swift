@@ -292,7 +292,9 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
                                 )),
                                 useNative: true,
                                 trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
-                                trackForegroundColor: item.theme.list.itemAccentColor
+                                trackForegroundColor: item.theme.list.itemAccentColor,
+                                accessibilityLabel: item.strings.Settings_PowerSaving,
+                                accessibilityValue: centralText
                             )
                         ),
                         environment: {},

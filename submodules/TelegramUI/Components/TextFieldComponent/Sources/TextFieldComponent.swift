@@ -896,6 +896,14 @@ public final class TextFieldComponent: Component {
         }
         
         private var currentSpeechHolder: SpeechSynthesizerHolder?
+        /// VoiceOver label of the text view for a host that draws its own placeholder (the component's own
+        /// placeholder, when set, labels the field itself).
+        public func setAccessibilityFieldLabel(_ label: String?) {
+            if self.textView.accessibilityLabel != label {
+                self.textView.accessibilityLabel = label
+            }
+        }
+        
         @objc public func _accessibilitySpeak(_ sender: Any) {
             let selectionRange = self.inputState.selectionRange
             let text = self.inputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
@@ -1625,7 +1633,13 @@ public final class TextFieldComponent: Component {
                 if let placeholderView = placeholder.view {
                     if placeholderView.superview == nil {
                         placeholderView.isUserInteractionEnabled = false
+                        // VoiceOver: the field is labelled by its placeholder; the placeholder text is not read again.
+                        placeholderView.isAccessibilityElement = false
+                        placeholderView.accessibilityElementsHidden = true
                         self.textView.insertSubview(placeholderView, at: 0)
+                    }
+                    if self.textView.accessibilityLabel != placeholderValue.string {
+                        self.textView.accessibilityLabel = placeholderValue.string
                     }
                     placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.center)
                     placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)

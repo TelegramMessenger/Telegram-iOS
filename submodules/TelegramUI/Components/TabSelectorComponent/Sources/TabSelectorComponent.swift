@@ -88,27 +88,34 @@ public final class TabSelectorComponent: Component {
         public let id: AnyHashable
         public let content: Content
         public let isReorderable: Bool
-        public let contextAction: ((ASDisplayNode, ContextGesture) -> Void)?
+        /// The long-press menu. The gesture is nil when VoiceOver opens it (`contextAccessibilityLabel`).
+        public let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+        /// VoiceOver: the name of the custom action that opens the long-press menu ("More"); without it the menu has no
+        /// VoiceOver path.
+        public let contextAccessibilityLabel: String?
 
         public init(
             id: AnyHashable,
             content: Content,
             isReorderable: Bool = false,
-            contextAction: ((ASDisplayNode, ContextGesture) -> Void)? = nil
+            contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+            contextAccessibilityLabel: String? = nil
         ) {
             self.id = id
             self.content = content
             self.isReorderable = isReorderable
             self.contextAction = contextAction
+            self.contextAccessibilityLabel = contextAccessibilityLabel
         }
         
         convenience public init(
             id: AnyHashable,
             title: String,
             isReorderable: Bool = false,
-            contextAction: ((ASDisplayNode, ContextGesture) -> Void)? = nil
+            contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+            contextAccessibilityLabel: String? = nil
         ) {
-            self.init(id: id, content: .text(title), isReorderable: isReorderable, contextAction: contextAction)
+            self.init(id: id, content: .text(title), isReorderable: isReorderable, contextAction: contextAction, contextAccessibilityLabel: contextAccessibilityLabel)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -122,6 +129,9 @@ public final class TabSelectorComponent: Component {
                 return false
             }
             if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
+                return false
+            }
+            if lhs.contextAccessibilityLabel != rhs.contextAccessibilityLabel {
                 return false
             }
             return true
@@ -196,7 +206,7 @@ public final class TabSelectorComponent: Component {
     
     final class VisibleItem: UIView {
         let action: () -> Void
-        let contextAction: (ASDisplayNode, ContextGesture) -> Void
+        let contextAction: (ASDisplayNode, ContextGesture?) -> Void
         
         let extractedContainerNode: ContextExtractedContentContainingNode
         let containerNode: ContextControllerSourceNode
@@ -212,8 +222,82 @@ public final class TabSelectorComponent: Component {
         var theme: PresentationTheme?
         var size: CGSize?
         var isReordering: Bool = false
+        /// VoiceOver: the shown tab.
+        var isSelected: Bool = false
         
-        init(action: @escaping () -> Void, contextAction: @escaping (ASDisplayNode, ContextGesture) -> Void) {
+        // VoiceOver: a tab is one button named by the text it shows; activation selects it, as a tap does.
+        override var isAccessibilityElement: Bool {
+            get {
+                if accessibilityIsInsideViewElementsSubtree(self) {
+                    // Inside the chat's history subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
+                    return false
+                }
+                return self.accessibilityLabel != nil
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                if case let .text(text)? = self.item?.content, !text.isEmpty {
+                    return text
+                }
+                guard let titleView = self.title.view else {
+                    return nil
+                }
+                let texts = titleView.accessibilityDisplayedContent().texts
+                return texts.isEmpty ? nil : texts.joined(separator: ", ")
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                var traits: UIAccessibilityTraits = .button
+                if self.isSelected {
+                    traits.insert(.selected)
+                }
+                if !self.isUserInteractionEnabled {
+                    traits.insert(.notEnabled)
+                }
+                return traits
+            } set(value) {
+            }
+        }
+        
+        override func accessibilityActivate() -> Bool {
+            guard self.isUserInteractionEnabled, self.tapGesture?.isEnabled == true else {
+                return false
+            }
+            self.action()
+            return true
+        }
+        
+        private var accessibilityContextActionName: String?
+        private var accessibilityContextActions: [UIAccessibilityCustomAction]?
+        
+        /// The long-press menu as "More", offered only while the gesture itself is (not while reordering).
+        override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                guard let item = self.item, item.contextAction != nil, let name = item.contextAccessibilityLabel, self.containerNode.isGestureEnabled else {
+                    return nil
+                }
+                if self.accessibilityContextActionName != name || self.accessibilityContextActions == nil {
+                    self.accessibilityContextActionName = name
+                    self.accessibilityContextActions = [UIAccessibilityCustomAction(name: name, actionHandler: { [weak self] _ in
+                        guard let self, self.containerNode.isGestureEnabled else {
+                            return false
+                        }
+                        self.contextAction(self.extractedContainerNode, nil)
+                        return true
+                    })]
+                }
+                return self.accessibilityContextActions
+            } set(value) {
+            }
+        }
+        
+        init(action: @escaping () -> Void, contextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void) {
             self.action = action
             self.contextAction = contextAction
             
@@ -397,6 +481,8 @@ public final class TabSelectorComponent: Component {
             self.alwaysBounceVertical = false
             self.clipsToBounds = false
             
+            // The selected tab's plate: the tab itself carries `.selected`.
+            self.selectionView.accessibilityElementsHidden = true
             self.addSubview(self.selectionView)
             
             let reorderRecognizer = ReorderGestureRecognizer(
@@ -724,6 +810,7 @@ public final class TabSelectorComponent: Component {
                     }
                     
                     itemView.update(theme: component.theme, size: itemBackgroundRect.size, item: item, isReordering: item.isReorderable && component.reorderItem != nil, transition: itemTransition)
+                    itemView.isSelected = item.id == component.selectedId
                     
                     itemTransition.setPosition(view: itemTitleView, position: CGPoint(x: itemTitleFrame.minX, y: itemTitleFrame.minY))
                     itemTransition.setBounds(view: itemTitleView, bounds: CGRect(origin: CGPoint(), size: itemTitleFrame.size))

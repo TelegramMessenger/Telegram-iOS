@@ -79,6 +79,10 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         super.init(theme: theme)
         
         self.view.addSubview(self.button)
+        // VoiceOver reads the item through `accessibilityArea`; the touch button under it would be a second, unnamed
+        // element.
+        self.button.isAccessibilityElement = false
+        self.button.accessibilityElementsHidden = true
         
         self.label.isUserInteractionEnabled = false
         self.addSubnode(self.label)

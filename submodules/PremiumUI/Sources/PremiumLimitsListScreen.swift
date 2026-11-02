@@ -160,6 +160,7 @@ private final class PremiumLimitsSheetComponent: Component {
         private let externalState = ResizableSheetComponent<EnvironmentType>.ExternalState()
         private let animateOut = ActionSlot<Action<()>>()
         private let nextAction = ActionSlot<Void>()
+        private let pageAction = ActionSlot<Int>()
         private var subjects: [PremiumDemoScreen.Subject] = []
         private var position: CGFloat = 0.0
         private var scrollViews: [PremiumDemoScreen.Subject: WeakScrollView] = [:]
@@ -281,6 +282,7 @@ private final class PremiumLimitsSheetComponent: Component {
                         demoHeight: defaultHeight,
                         bottomInset: bottomInset,
                         nextAction: self.nextAction,
+                        pageAction: self.pageAction,
                         updated: { [weak self] position, subjects in
                             self?.pagerUpdated(position: position, subjects: subjects)
                         },
@@ -316,6 +318,13 @@ private final class PremiumLimitsSheetComponent: Component {
                         pageCount: pageCount,
                         position: self.position,
                         sideInsets: footerSideInsets,
+                        pageAccessibilityLabel: environment.strings.VoiceOver_Common_Page,
+                        pageAccessibilityValue: { [strings = environment.strings] index, count in
+                            return strings.Items_NOfM("\(index)", "\(count)").string
+                        },
+                        showPage: { [weak self] index in
+                            self?.pageAction.invoke(index)
+                        },
                         action: { (controller() as? PremiumLimitsListScreen)?.action() }
                     )),
                     bottomEdgeEffectExtension: pageCount > 1 ? 24.0 : 0.0,
@@ -378,6 +387,7 @@ private struct PremiumLimitsContentComponent: Component {
     let demoHeight: CGFloat
     let bottomInset: CGFloat
     let nextAction: ActionSlot<Void>
+    let pageAction: ActionSlot<Int>
     let updated: (CGFloat, [PremiumDemoScreen.Subject]) -> Void
     let interactionUpdated: (Bool) -> Void
     let scrollViewUpdated: (PremiumDemoScreen.Subject, UIScrollView) -> Void
@@ -1128,6 +1138,7 @@ private struct PremiumLimitsContentComponent: Component {
                     items: items,
                     index: initialIndex,
                     nextAction: component.nextAction,
+                    pageAction: component.pageAction,
                     cornerRadius: 0.0,
                     interactionUpdated: component.interactionUpdated,
                     updated: { position, _ in
@@ -1163,10 +1174,13 @@ private struct PremiumLimitsFooterComponent: CombinedComponent {
     let pageCount: Int
     let position: CGFloat
     let sideInsets: UIEdgeInsets
+    let pageAccessibilityLabel: String
+    let pageAccessibilityValue: (Int, Int) -> String
+    let showPage: (Int) -> Void
     let action: () -> Void
 
     static func ==(lhs: PremiumLimitsFooterComponent, rhs: PremiumLimitsFooterComponent) -> Bool {
-        return lhs.theme === rhs.theme && lhs.title == rhs.title && lhs.isShimmering == rhs.isShimmering && lhs.pageCount == rhs.pageCount && lhs.position == rhs.position && lhs.sideInsets == rhs.sideInsets
+        return lhs.theme === rhs.theme && lhs.title == rhs.title && lhs.isShimmering == rhs.isShimmering && lhs.pageCount == rhs.pageCount && lhs.position == rhs.position && lhs.sideInsets == rhs.sideInsets && lhs.pageAccessibilityLabel == rhs.pageAccessibilityLabel
     }
 
     static func height(pageCount: Int) -> CGFloat {
@@ -1183,7 +1197,7 @@ private struct PremiumLimitsFooterComponent: CombinedComponent {
             let centerX = component.sideInsets.left + contentWidth * 0.5
             if component.pageCount > 1 {
                 let indicator = indicator.update(
-                    component: PageIndicatorComponent(pageCount: component.pageCount, position: component.position, inactiveColor: component.theme.list.disclosureArrowColor, activeColor: UIColor(rgb: 0x7169ff)),
+                    component: PageIndicatorComponent(pageCount: component.pageCount, position: component.position, inactiveColor: component.theme.list.disclosureArrowColor, activeColor: UIColor(rgb: 0x7169ff), accessibilityLabel: component.pageAccessibilityLabel, accessibilityValue: component.pageAccessibilityValue, showPage: component.showPage),
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
@@ -1220,6 +1234,8 @@ public class PremiumLimitsListScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, buttonText: String, isPremium: Bool, forceDark: Bool = false) {
         super.init(context: context, component: PremiumLimitsSheetComponent(context: context, subject: subject, source: source, order: order, buttonText: buttonText, isPremium: isPremium), navigationBarAppearance: .none, statusBarStyle: .ignore, presentationMode: .modal, theme: forceDark ? .dark : .default)
         self.navigationPresentation = .flatModal
+        // VoiceOver reads only the sheet while it shows (it is presented over the screen that opened it).
+        self.blocksBackgroundWhenInOverlay = true
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
 

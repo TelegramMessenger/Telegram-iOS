@@ -5979,6 +5979,16 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.SwitchHint" = "Double Tap To Toggle";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
+"VoiceOver.Common.SectionIndex" = "Section Index";
+"VoiceOver.QrCodeScan.Flashlight" = "Flashlight";
+"VoiceOver.Common.ColorNumber" = "Color %@";
+"VoiceOver.Common.NoColor" = "No Color";
+"VoiceOver.Common.Page" = "Page";
+"VoiceOver.Common.Expand" = "Expand";
+"VoiceOver.Common.Collapse" = "Collapse";
+"VoiceOver.Common.Add" = "Add";
+
+"VoiceOver.TabBar.AttentionRequired" = "Attention required";
 
 "VoiceOver.Chat.MessagesSelected_0" = "%@ messages selected";
 "VoiceOver.Chat.MessagesSelected_1" = "%@ message selected";
@@ -6233,6 +6243,11 @@ Sorry for the inconvenience.";
 "VoiceOver.ChatList.MessageFrom" = "From: %@";
 "VoiceOver.ChatList.MessageRead" = "Read";
 "VoiceOver.ChatList.MessageEmpty" = "Empty";
+"VoiceOver.ChatList.Pinned" = "Pinned";
+"VoiceOver.ChatList.Muted" = "Muted";
+"VoiceOver.ChatList.UnreadMentions" = "Unread mentions";
+"VoiceOver.ChatList.UnreadReactions" = "Unread reactions";
+"VoiceOver.ChatList.ShowStoriesHint" = "Double tap to show stories";
 
 "VoiceOver.Chat.Profile" = "Profile";
 "VoiceOver.Chat.GroupInfo" = "Group Info";
@@ -9007,6 +9022,15 @@ Sorry for the inconvenience.";
 "Gallery.VoiceOver.Edit" = "Edit";
 "Gallery.VoiceOver.Stickers" = "Stickers";
 "Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+"VoiceOver.Gallery.VideoSettings" = "Video Settings";
+"VoiceOver.Gallery.TextRecognition" = "Recognize Text";
+"VoiceOver.Gallery.SeekBackward" = "Back 15 Seconds";
+"VoiceOver.Gallery.SeekForward" = "Forward 15 Seconds";
+"VoiceOver.Gallery.PlaybackPosition" = "Playback position";
+"VoiceOver.Browser.Forward" = "Forward";
+"VoiceOver.Browser.PreviousResult" = "Previous Result";
+"VoiceOver.Browser.NextResult" = "Next Result";
+"VoiceOver.EmojiPicker.None" = "None";
 
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 
@@ -17298,3 +17322,23 @@ Error: %8$@";
 "Chat.SideList.NewTopic" = "New Topic";
 "Chat.SideList.DirectMessages" = "Direct messages";
 "Chat.SideList.AllMessages" = "All Messages";
+
+"VoiceOver.Stories.Unseen" = "New stories";
+"VoiceOver.Stories.Position" = "Story %1$@ of %2$@";
+"VoiceOver.Stories.NextPeer" = "Next: %@";
+"VoiceOver.Stories.PreviousPeer" = "Previous: %@";
+"VoiceOver.Stories.Sound" = "Sound";
+"VoiceOver.Stories.Like" = "Like";
+"VoiceOver.Stories.Repost" = "Repost";
+"VoiceOver.Common.Verified" = "Verified";
+"VoiceOver.Camera.Collage" = "Collage";
+"VoiceOver.Camera.Flash" = "Flash";
+"VoiceOver.Camera.SwitchCamera" = "Switch Camera";
+"VoiceOver.Camera.DualCamera" = "Dual Camera";
+"VoiceOver.Camera.RecordVideo" = "Record Video";
+"VoiceOver.MessageInput.Timer" = "Timer";
+"VoiceOver.MediaEditor.Adjustments" = "Adjustments";
+"VoiceOver.MediaEditor.Rotate" = "Rotate";
+"VoiceOver.Reactions.ShowAll" = "Show All Reactions";
+"VoiceOver.Reactions.Premium" = "Premium Reactions";
+"VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";

@@ -260,6 +260,27 @@ private final class TitleLabelView: UIView {
     }
 }
 
+/// The name VoiceOver reads for a reaction in the picker: the emoji itself, or the paid (star) and Premium items by
+/// name. A custom emoji's alt emoji is looked up by `ReactionNode` when VoiceOver asks, not here (it decodes the file).
+func reactionContextItemAccessibilityLabel(_ item: ReactionContextItem, strings: PresentationStrings) -> String? {
+    switch item {
+    case let .staticEmoji(emoji):
+        return emoji
+    case let .reaction(reactionItem, _):
+        switch reactionItem.reaction.rawValue {
+        case let .builtin(value):
+            return value
+        case .custom:
+            // Read from the file only when VoiceOver asks (ReactionNode.accessibilityLabel).
+            return nil
+        case .stars:
+            return strings.Stars_Intro_Transaction_Reaction_Title
+        }
+    case .premium:
+        return strings.VoiceOver_Reactions_Premium
+    }
+}
+
 public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
     private struct ItemLayout {
         var itemSize: CGFloat
@@ -608,6 +629,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         if getEmojiContent != nil && !self.reactionsLocked {
             let expandItemView = ExpandItemView()
+            expandItemView.isAccessibilityElement = true
+            expandItemView.accessibilityLabel = presentationData.strings.VoiceOver_Reactions_ShowAll
+            expandItemView.accessibilityTraits = .button
+            expandItemView.tintView.accessibilityElementsHidden = true
             self.expandItemView = expandItemView
             
             self.contentContainer.view.addSubview(expandItemView)
@@ -1113,6 +1138,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                         itemNode = PremiumReactionsNode(theme: self.presentationData.theme)
                         maskNode = itemNode.maskNode
                     }
+                    // VoiceOver: each reaction is a button named by its emoji (a custom one by its alt emoji). Activation is
+                    // the tap at its centre, so it goes through `tapGesture` exactly as a tap does.
+                    itemNode.isAccessibilityElement = true
+                    itemNode.accessibilityLabel = reactionContextItemAccessibilityLabel(self.items[i], strings: self.presentationData.strings)
                     self.visibleItemNodes[i] = itemNode
                     
                     self.scrollNode.addSubnode(itemNode)
@@ -1123,6 +1152,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }
                 maskTransition = itemTransition
+                
+                itemNode.accessibilityTraits = isSelected ? [.button, .selected] : .button
                 
                 if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
                     if isSelected {

@@ -153,6 +153,20 @@ public final class GlassControlPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        /// Leading to trailing, as the groups are laid out: they are added to the view as left, right, central.
+        override public var accessibilityElements: [Any]? {
+            get {
+                return [self.leftItemComponent, self.centralItemComponent, self.rightItemComponent].compactMap { item -> UIView? in
+                    guard let view = item?.view, view.superview != nil, !view.isHidden, view.alpha > 0.01 else {
+                        return nil
+                    }
+                    return view
+                }
+            }
+            set {
+            }
+        }
+        
         func update(component: GlassControlPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state

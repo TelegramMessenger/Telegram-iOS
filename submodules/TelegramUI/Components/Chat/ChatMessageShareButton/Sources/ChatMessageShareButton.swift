@@ -201,6 +201,28 @@ public class ChatMessageShareButton: ASDisplayNode {
             self.topIconNode.image = updatedIconImage
             self.topIconOffset = updatedIconOffset
             
+            // VoiceOver: the icon-only button is named by what it does (it was an unlabelled element).
+            var topLabel: String?
+            if isSummarize || message.adAttribute != nil {
+                topLabel = nil
+            } else if case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
+                topLabel = presentationData.strings.SharedMedia_ViewInChat
+            } else if isNavigate {
+                topLabel = presentationData.strings.SharedMedia_ViewInChat
+            } else if case .pinnedMessages = subject {
+                topLabel = presentationData.strings.SharedMedia_ViewInChat
+            } else if isReplies {
+                topLabel = presentationData.strings.Conversation_TitleCommentsEmpty
+            } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
+                topLabel = presentationData.strings.SharedMedia_ViewInChat
+            } else {
+                topLabel = presentationData.strings.Conversation_ContextMenuShare
+            }
+            if let topLabel {
+                self.topButton.accessibilityLabel = topLabel
+                self.topButton.accessibilityTraits = .button
+            }
+            
             if let updatedBottomIconImage {
                 let bottomButton: HighlightTrackingButtonNode
                 let bottomIconNode: ASImageNode

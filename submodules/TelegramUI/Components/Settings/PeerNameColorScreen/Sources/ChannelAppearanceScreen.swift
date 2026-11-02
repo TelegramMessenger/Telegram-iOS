@@ -1022,6 +1022,8 @@ final class ChannelAppearanceScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        // VoiceOver: the bar reads this title where its own is (NavigationBarNode), as the heading.
+                        navigationTitleView.accessibilityTraits = [.staticText, .header]
                         navigationBar.view.addSubview(navigationTitleView)
                     }
                 }
@@ -1188,7 +1190,8 @@ final class ChannelAppearanceScreenComponent: Component {
                                     self.updatedPeerProfileColor = value
                                     self.state?.updated(transition: .spring(duration: 0.4))
                                 },
-                                sectionId: 0
+                                sectionId: 0,
+                                strings: environment.strings
                             ),
                             params: listItemParams
                         ))),
@@ -1578,7 +1581,8 @@ final class ChannelAppearanceScreenComponent: Component {
                                         self.updatedPeerNameColor = value
                                         self.state?.updated(transition: .spring(duration: 0.4))
                                     },
-                                    sectionId: 0
+                                    sectionId: 0,
+                                    strings: environment.strings
                                 ),
                                 params: listItemParams
                             ))),

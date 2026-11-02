@@ -214,6 +214,27 @@ private final class PeerInfoScreenAgentProviderItemNode: PeerInfoScreenItemNode 
         self.activateArea.accessibilityLabel = item.provider.title
         self.activateArea.accessibilityValue = item.provider.vendor
         self.activateArea.accessibilityTraits = item.isActive ? [.button, .selected] : .button
+        // The same paths as the tap (the action, or the menu when there is none) and the long press (the menu).
+        self.activateArea.activate = { [weak self] in
+            guard let self, let item = self.item else {
+                return false
+            }
+            if let action = item.action {
+                action()
+            } else {
+                item.contextAction(self.contextSourceNode, nil)
+            }
+            return true
+        }
+        if self.activateArea.view.accessibilityCustomActions?.first?.name != presentationData.strings.Common_More {
+            self.activateArea.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: presentationData.strings.Common_More, actionHandler: { [weak self] _ in
+                guard let self, let item = self.item else {
+                    return false
+                }
+                item.contextAction(self.contextSourceNode, nil)
+                return true
+            })]
+        }
         self.activateArea.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
 
         return height

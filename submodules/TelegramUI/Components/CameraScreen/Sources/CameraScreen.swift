@@ -1953,7 +1953,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                     return
                                 }
                                 controller.requestCancel()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: environment.strings.Common_Close)
                         ).tagged(cancelButtonTag),
                         availableSize: CGSize(width: 40.0, height: 40.0),
                         transition: .immediate
@@ -2068,7 +2069,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                     if let state {
                                         state.disableCollageCamera()
                                     }
-                                }
+                                },
+                                accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_Collage, traits: .selected)
                             ).tagged(disableCollageButtonTag),
                             availableSize: CGSize(width: 40.0, height: 40.0),
                             transition: .immediate
@@ -2095,7 +2097,17 @@ private final class CameraScreenComponent: CombinedComponent {
                                     if let state {
                                         state.presentFlashTint()
                                     }
-                                }
+                                },
+                                accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_Flash, value: {
+                                    switch component.cameraState.flashMode {
+                                    case .on:
+                                        return environment.strings.Camera_FlashOn
+                                    case .auto:
+                                        return environment.strings.Camera_FlashAuto
+                                    default:
+                                        return environment.strings.Camera_FlashOff
+                                    }
+                                }())
                             ).tagged(flashButtonTag),
                             availableSize: CGSize(width: 40.0, height: 40.0),
                             transition: .immediate
@@ -2129,7 +2141,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                     ),
                                     action: { [weak state] in
                                         state?.togglePosition(animateFlipAction)
-                                    }
+                                    },
+                                    accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_SwitchCamera)
                                 ),
                                 availableSize: CGSize(width: 40.0, height: 40.0),
                                 transition: .immediate
@@ -2161,7 +2174,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                         if let state {
                                             state.toggleDualCamera()
                                         }
-                                    }
+                                    },
+                                    accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_DualCamera, traits: component.cameraState.isDualCameraEnabled ? .selected : [])
                                 ).tagged(dualButtonTag),
                                 availableSize: CGSize(width: 40.0, height: 40.0),
                                 transition: .immediate
@@ -2195,7 +2209,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                             if let state {
                                                 state.togglePosition(animateFlipAction)
                                             }
-                                        }
+                                        },
+                                        accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_SwitchCamera)
                                     ),
                                     availableSize: availableSize,
                                     transition: context.transition
@@ -2224,7 +2239,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                         if let state {
                                             state.toggleCollageCamera()
                                         }
-                                    }
+                                    },
+                                    accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_Collage, traits: component.cameraState.isCollageEnabled ? .selected : [])
                                 ).tagged(collageButtonTag),
                                 availableSize: CGSize(width: 40.0, height: 40.0),
                                 transition: .immediate
@@ -2294,7 +2310,8 @@ private final class CameraScreenComponent: CombinedComponent {
                             if let state {
                                 state.togglePosition(animateFlipAction)
                             }
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: environment.strings.VoiceOver_Camera_SwitchCamera)
                     ),
                     availableSize: availableSize,
                     transition: context.transition
@@ -3175,6 +3192,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.previewContainerView.addSubview(self.focusCrosshairsView)
             self.containerView.addSubview(self.transitionDimView)
             self.view.addSubview(self.transitionCornersView)
+            // VoiceOver: the camera picture and the transition decorations are not read (as in the QR scanner); the
+            // controls over them are, and so are the detected-code frame and the collage tiles beside the picture.
+            self.mainPreviewContainerView.accessibilityElementsHidden = true
+            self.additionalPreviewContainerView.accessibilityElementsHidden = true
+            self.previewBlurView.accessibilityElementsHidden = true
+            self.transitionCornersView.accessibilityElementsHidden = true
+            self.backgroundView.accessibilityElementsHidden = true
             
             self.mainPreviewContainerView.addSubview(self.mainPreviewView)
             self.mainPreviewContainerView.addSubview(self.mainPreviewAnimationWrapperView)

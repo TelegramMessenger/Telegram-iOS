@@ -70,6 +70,22 @@ final class StarsStatisticsScreenComponent: Component {
     }
     
     private final class ScrollViewImpl: UIScrollView {
+        /// VoiceOver: the full-size container of the transactions starts at the top of the content, so it would be read
+        /// first; the sections above it are read top to bottom, the transactions last.
+        weak var accessibilityLastView: UIView?
+        
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let lastView = self.accessibilityLastView, lastView.superview === self else {
+                    return super.accessibilityElements
+                }
+                let shown = self.subviews.filter { !$0.isHidden && $0.alpha >= 0.01 && !$0.accessibilityElementsHidden && $0 !== lastView }
+                return shown.sorted(by: { $0.frame.minY < $1.frame.minY }) + [lastView]
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
+        
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
@@ -161,6 +177,7 @@ final class StarsStatisticsScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContainerView)
+            self.scrollView.accessibilityLastView = self.scrollContainerView
             self.scrollContainerView.addSubview(self.transactionsBackground)
             
             self.addSubview(self.headerOffsetContainer)
@@ -395,6 +412,8 @@ final class StarsStatisticsScreenComponent: Component {
             )
             if let titleView = self.titleView.view {
                 if titleView.superview == nil {
+                    // The screen's title in the navigation bar.
+                    titleView.accessibilityTraits = .header
                     component.overNavigationContainer.addSubview(titleView)
                 }
                 let titlePosition = CGPoint(x: bandMinX + bandWidth / 2.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)

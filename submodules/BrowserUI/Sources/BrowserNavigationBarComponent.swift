@@ -155,6 +155,17 @@ final class BrowserNavigationBarComponent: Component {
             preconditionFailure()
         }
         
+        /// VoiceOver: the bar's groups leading to trailing (close, the title or address, more); they share one glass
+        /// container, where the centre item is added last. (The full-bar activate button of the collapsed bar is not
+        /// listed: the items stay reachable and VoiceOver focus on them expands nothing it needs.)
+        override var accessibilityElements: [Any]? {
+            get {
+                return self.containerView.contentView.subviews.filter { !$0.isHidden && $0.alpha > 0.01 }.sorted { $0.frame.minX < $1.frame.minX }
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
+        
         @objc private func activatePressed() {
             guard let component = self.component else {
                 return

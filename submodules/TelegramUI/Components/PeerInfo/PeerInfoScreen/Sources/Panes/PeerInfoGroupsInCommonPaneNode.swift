@@ -121,6 +121,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.listBackgroundView = UIImageView()
         self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
         self.listMaskView = UIImageView()
+        // The rounded list background and its mask are decoration.
+        self.listBackgroundView.accessibilityElementsHidden = true
+        self.listMaskView.accessibilityElementsHidden = true
         self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 2.0 * 2.0 + 26.0 * 2.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(UIColor.white.cgColor)

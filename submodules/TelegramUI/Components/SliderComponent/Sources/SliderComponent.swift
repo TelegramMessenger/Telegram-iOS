@@ -94,6 +94,8 @@ public final class SliderComponent: Component {
     public let displaysBorderOnTracking: Bool
     public let useLegacyKnob: Bool
     public let isTrackingUpdated: ((Bool) -> Void)?
+    public let accessibilityLabel: String?
+    public let accessibilityValue: String?
     
     public init(
         content: Content,
@@ -107,7 +109,9 @@ public final class SliderComponent: Component {
         trackHeight: CGFloat? = nil,
         displaysBorderOnTracking: Bool = false,
         useLegacyKnob: Bool = false,
-        isTrackingUpdated: ((Bool) -> Void)? = nil
+        isTrackingUpdated: ((Bool) -> Void)? = nil,
+        accessibilityLabel: String? = nil,
+        accessibilityValue: String? = nil
     ) {
         self.content = content
         self.useNative = useNative
@@ -121,6 +125,8 @@ public final class SliderComponent: Component {
         self.displaysBorderOnTracking = displaysBorderOnTracking
         self.useLegacyKnob = useLegacyKnob
         self.isTrackingUpdated = isTrackingUpdated
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityValue = accessibilityValue
     }
     
     public static func ==(lhs: SliderComponent, rhs: SliderComponent) -> Bool {
@@ -154,16 +160,54 @@ public final class SliderComponent: Component {
         if lhs.useLegacyKnob != rhs.useLegacyKnob {
             return false
         }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
+            return false
+        }
+        if lhs.accessibilityValue != rhs.accessibilityValue {
+            return false
+        }
         return true
     }
     
     final class SliderView: UISlider {
+        /// VoiceOver: a value worded by the host (UISlider would read its percentage, ignoring an assigned value).
+        var customAccessibilityValue: String?
+        
+        override var accessibilityValue: String? {
+            get {
+                return self.customAccessibilityValue ?? super.accessibilityValue
+            } set(value) {
+                self.customAccessibilityValue = value
+            }
+        }
+
         
     }
     
     public final class View: UIView {
         private var nativeSliderView: SliderView?
         private var nativeTapGestureRecognizer: UITapGestureRecognizer?
+        
+        // A host that turns touches off (`isUserInteractionEnabled = false`, a disabled row) also makes the slider
+        // dimmed and not adjustable for VoiceOver, as it is for touch.
+        override public var isUserInteractionEnabled: Bool {
+            didSet {
+                if oldValue != self.isUserInteractionEnabled {
+                    self.updateAccessibilityEnabled()
+                }
+            }
+        }
+        
+        private func updateAccessibilityEnabled() {
+            guard let slider: UIView = (self.nativeSliderView as UIView?) ?? (self.sliderView as UIView?) else {
+                return
+            }
+            if self.isUserInteractionEnabled {
+                slider.accessibilityTraits.remove(.notEnabled)
+            } else {
+                slider.accessibilityTraits.insert(.notEnabled)
+            }
+        }
         private let nativeTrackBackgroundView = UIView()
         private let nativeTrackForegroundView = UIView()
         private var sliderView: TGPhotoEditorSliderView?
@@ -426,6 +470,17 @@ public final class SliderComponent: Component {
                 sliderView.hitTestEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             }
             
+            // VoiceOver: the host names the slider and may word its value (the position as the screen describes it).
+            if let slider: UIView = (self.nativeSliderView as UIView?) ?? (self.sliderView as UIView?) {
+                if let accessibilityLabel = component.accessibilityLabel {
+                    slider.accessibilityLabel = accessibilityLabel
+                }
+                if let accessibilityValue = component.accessibilityValue {
+                    slider.accessibilityValue = accessibilityValue
+                }
+            }
+            self.updateAccessibilityEnabled()
+
             return size
         }
         

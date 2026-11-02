@@ -1273,6 +1273,10 @@ final class PieChartComponent: Component {
             
             self.addSubview(self.dataView)
             
+            // VoiceOver: the chart repeats what the category rows below it read (name, share, size); its section
+            // labels and selection tooltip are a visual-only way to the same data.
+            self.accessibilityElementsHidden = true
+            
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         }
         

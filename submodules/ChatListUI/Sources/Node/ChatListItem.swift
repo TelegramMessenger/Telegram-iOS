@@ -1556,6 +1556,18 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var onlineIsVoiceChat: Bool = false
     private var currentOnline: Bool?
     
+    /// State the row shows only as icons (pin, muted bell), read out after the title.
+    private var accessibilityIsPinned: Bool = false
+    private var accessibilityIsMuted: Bool = false
+    /// Shown text the row's label and value read besides the title and the last message: the verified / premium /
+    /// scam / fake badge, the date, and the draft or typing line when the row shows one instead of the message.
+    private var accessibilityCredibilityText: String?
+    private var accessibilityDateText: String?
+    private var accessibilityDraftText: String?
+    private var accessibilityActivityText: String?
+    /// The custom actions are rebuilt only when this changes (option keys and names, open-app and "More" presence).
+    private var accessibilityCustomActionsKey: [String]?
+    
     override public var canBeSelected: Bool {
         if self.selectableControlNode != nil || self.item?.editing == true {
             return false
@@ -1608,8 +1620,23 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
+                    if let accessibilityCredibilityText = self.accessibilityCredibilityText {
+                        result += ", \(accessibilityCredibilityText)"
+                    }
                     if let combinedReadState = peerData.combinedReadState, combinedReadState.count > 0 {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
+                    }
+                    if peerData.hasUnseenMentions {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_UnreadMentions)"
+                    }
+                    if peerData.hasUnseenReactions {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_UnreadReactions)"
+                    }
+                    if self.accessibilityIsPinned {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_Pinned)"
+                    }
+                    if self.accessibilityIsMuted {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_Muted)"
                     }
                     return result
             }
@@ -1622,6 +1649,27 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             guard let item = self.item else {
                 return nil
             }
+            if case .loading = item.content {
+                return nil
+            }
+            // The typing line and a draft stand where the last message is shown, so they are read in its place.
+            var result: String?
+            if case .peer = item.content, let accessibilityActivityText = self.accessibilityActivityText {
+                result = accessibilityActivityText
+            } else if case .peer = item.content, let accessibilityDraftText = self.accessibilityDraftText {
+                result = accessibilityDraftText
+            } else {
+                result = self.lastMessageAccessibilityValue(item: item)
+            }
+            if let accessibilityDateText = self.accessibilityDateText {
+                result = result.flatMap { "\($0)\n\(accessibilityDateText)" } ?? accessibilityDateText
+            }
+            return result
+        } set(value) {
+        }
+    }
+    
+    private func lastMessageAccessibilityValue(item: ChatListItem) -> String? {
             switch item.content {
                 case .loading:
                     return nil
@@ -1683,8 +1731,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
             }
-        } set(value) {
-        }
     }
     
     override public var visibility: ListViewItemNodeVisibility {
@@ -2758,6 +2804,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var attributedText: NSAttributedString
             var hasDraft = false
+            /// What VoiceOver reads in place of the last message while the row shows a draft.
+            var accessibilityDraftText: String?
             
             var inlineAuthorPrefix: String?
             var useInlineAuthorPrefix = false
@@ -2964,8 +3012,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         case .video:
                             attributedText = NSAttributedString(string: item.presentationData.strings.Message_VideoMessage, font: textFont, textColor: theme.messageTextColor)
                         }
+                        accessibilityDraftText = "\(item.presentationData.strings.DialogList_Draft)\n\(attributedText.string)"
                     } else if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true
+                        accessibilityDraftText = "\(item.presentationData.strings.DialogList_Draft)\n\(draftState.text)"
                         let draftText = stringWithAppliedEntities(draftState.text, entities: draftState.entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, message: nil)
                         
                         if !itemTags.isEmpty {
@@ -4240,12 +4290,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + heightOffset)), insets: insets)
             
-            var customActions: [ChatListItemAccessibilityCustomAction] = []
+            // The swipe options VoiceOver offers as custom actions; the action objects are made in apply, only when
+            // these change.
+            var customActionOptions: [(name: String, key: Int32)] = []
             for option in peerLeftRevealOptions {
-                customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
+                customActionOptions.append((option.title, option.key))
             }
             for option in peerRevealOptions {
-                customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
+                customActionOptions.append((option.title, option.key))
             }
             
             return (layout, { [weak self] synchronousLoads, animated in
@@ -5662,15 +5714,64 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
                     }
                     
+                    strongSelf.accessibilityIsPinned = item.isPinned && promoInfo == nil
+                    strongSelf.accessibilityIsMuted = isMuted
+                    // The text the date slot draws: no date on archive rows, the Ad/PSA label on promo rows.
+                    let displayedDateText = dateAttributedString?.string ?? ""
+                    strongSelf.accessibilityDateText = displayedDateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : displayedDateText
+                    strongSelf.accessibilityDraftText = accessibilityDraftText
+                    strongSelf.accessibilityActivityText = strongSelf.inputActivitiesNode.alpha.isZero ? nil : strongSelf.inputActivitiesNode.displayedText
+                    switch currentCredibilityIconContent {
+                    case .verified:
+                        strongSelf.accessibilityCredibilityText = item.presentationData.strings.VoiceOver_Common_Verified
+                    case .premium:
+                        strongSelf.accessibilityCredibilityText = item.presentationData.strings.Premium_Premium
+                    case let .text(_, string):
+                        strongSelf.accessibilityCredibilityText = string == item.presentationData.strings.Message_FakeAccount.uppercased() ? item.presentationData.strings.Message_FakeAccount : item.presentationData.strings.Message_ScamAccount
+                    default:
+                        strongSelf.accessibilityCredibilityText = nil
+                    }
                     strongSelf.view.accessibilityLabel = strongSelf.accessibilityLabel
                     strongSelf.view.accessibilityValue = strongSelf.accessibilityValue
-                    
-                    if !customActions.isEmpty {
-                        strongSelf.view.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
-                            return ChatListItemAccessibilityCustomAction(name: action.name, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)), key: action.key)
-                        })
+                    if item.editing {
+                        strongSelf.view.accessibilityTraits = item.selected ? [.button, .selected] : [.button]
                     } else {
-                        strongSelf.view.accessibilityCustomActions = nil
+                        strongSelf.view.accessibilityTraits = [.button]
+                    }
+                    
+                    let hasOpenAppAction = actionButtonTitleNodeLayoutAndApply != nil
+                    let hasMoreAction = strongSelf.contextContainer.isGestureEnabled
+                    var accessibilityCustomActionsKey: [String] = customActionOptions.map { "\($0.key):\($0.name)" }
+                    if hasOpenAppAction {
+                        accessibilityCustomActionsKey.append("open:\(item.presentationData.strings.ChatList_InlineButtonOpenApp)")
+                    }
+                    if hasMoreAction {
+                        accessibilityCustomActionsKey.append("more:\(item.presentationData.strings.Common_More)")
+                    }
+                    if strongSelf.accessibilityCustomActionsKey != accessibilityCustomActionsKey {
+                        strongSelf.accessibilityCustomActionsKey = accessibilityCustomActionsKey
+                        var accessibilityCustomActions: [UIAccessibilityCustomAction] = customActionOptions.map({ option -> UIAccessibilityCustomAction in
+                            return ChatListItemAccessibilityCustomAction(name: option.name, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)), key: option.key)
+                        })
+                        if hasOpenAppAction {
+                            // The inline OPEN button of a bot with a web app: the same path as its tap.
+                            accessibilityCustomActions.insert(UIAccessibilityCustomAction(name: item.presentationData.strings.ChatList_InlineButtonOpenApp, actionHandler: { [weak strongSelf] _ in
+                                strongSelf?.actionButtonPressed()
+                                return true
+                            }), at: 0)
+                        }
+                        if hasMoreAction {
+                            // The long-press menu (pin, mute, ...), as `secondaryAction` opens it: no gesture, so the menu
+                            // shows without peeking into the chat. Off in edit mode, as the gesture is (`setupItem`).
+                            accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                guard let strongSelf, let item = strongSelf.item, let activateChatPreview = item.interaction.activateChatPreview else {
+                                    return false
+                                }
+                                activateChatPreview(item, nil, strongSelf.contextContainer, nil, nil)
+                                return true
+                            }))
+                        }
+                        strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     }
                     
                     strongSelf.avatarTapRecognizer?.isEnabled = item.interaction.inlineNavigationLocation == nil

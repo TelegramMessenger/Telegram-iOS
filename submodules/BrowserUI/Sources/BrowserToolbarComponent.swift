@@ -138,6 +138,7 @@ final class BrowserToolbarComponent: CombinedComponent {
 
 final class NavigationToolbarContentComponent: CombinedComponent {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let canGoBack: Bool
     let canGoForward: Bool
     let canOpenIn: Bool
@@ -148,6 +149,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     
     init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         canGoBack: Bool,
         canGoForward: Bool,
         canOpenIn: Bool,
@@ -157,6 +159,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     ) {
         self.theme = theme
+        self.strings = strings
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
         self.canOpenIn = canOpenIn
@@ -168,6 +171,9 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     
     static func ==(lhs: NavigationToolbarContentComponent, rhs: NavigationToolbarContentComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.canGoBack != rhs.canGoBack {
@@ -210,6 +216,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             let textColor = context.component.theme.rootController.navigationBar.primaryTextColor
             
             let canShare = context.component.canShare
+            let strings = context.component.strings
             let share = share.update(
                 component: Button(
                     content: AnyComponent(
@@ -222,7 +229,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         if canShare {
                             performAction.invoke(.share)
                         }
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: strings.WebBrowser_Share, isHidden: !canShare)
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
@@ -242,7 +250,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         action: {
                             performAction.invoke(.updateSearchActive(true))
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: strings.Common_Search)
                     ).minSize(buttonSize),
                     availableSize: buttonSize,
                     transition: .easeInOut(duration: 0.2)
@@ -273,7 +282,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         action: {
                             performAction.invoke(.openIn)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: strings.Conversation_FileOpenIn)
                     ).minSize(buttonSize),
                     availableSize: buttonSize,
                     transition: .easeInOut(duration: 0.2)
@@ -306,7 +316,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         action: {
                             performAction.invoke(.openIn)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: strings.Conversation_FileOpenIn)
                     ).minSize(buttonSize),
                     availableSize: buttonSize,
                     transition: .easeInOut(duration: 0.2)
@@ -328,6 +339,11 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                             )
                         ),
                         minSize: buttonSize,
+                        accessibility: ComponentAccessibility(label: strings.Common_Back, traits: canGoBack ? [] : .notEnabled),
+                        contextAccessibilityLabel: canGoBack ? strings.Common_More : nil,
+                        contextAccessibilityAction: canGoBack ? { view in
+                            performHoldAction(view, nil, .navigateBack)
+                        } : nil,
                         action: { view, gesture in
                             guard canGoBack else {
                                 return
@@ -357,6 +373,11 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                             )
                         ),
                         minSize: buttonSize,
+                        accessibility: ComponentAccessibility(label: strings.VoiceOver_Browser_Forward, traits: canGoForward ? [] : .notEnabled),
+                        contextAccessibilityLabel: canGoForward ? strings.Common_More : nil,
+                        contextAccessibilityAction: canGoForward ? { view in
+                            performHoldAction(view, nil, .navigateForward)
+                        } : nil,
                         action: { view, gesture in
                             guard canGoForward else {
                                 return
@@ -391,7 +412,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         action: {
                             performAction.invoke(.openBookmarks)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: strings.WebBrowser_Bookmarks_Title)
                     ).minSize(buttonSize),
                     availableSize: buttonSize,
                     transition: .easeInOut(duration: 0.2)
@@ -413,7 +435,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                             ),
                             action: {
                                 performAction.invoke(.openIn)
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: strings.InstantPage_OpenInBrowser("Safari").string)
                         ).minSize(buttonSize),
                         availableSize: buttonSize,
                         transition: .easeInOut(duration: 0.2)
@@ -499,7 +522,8 @@ final class SearchToolbarContentComponent: CombinedComponent {
                     isEnabled: context.component.count > 0,
                     action: {
                         performAction.invoke(.scrollToNextSearchResult)
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: context.component.strings.VoiceOver_Browser_NextResult)
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
@@ -519,7 +543,8 @@ final class SearchToolbarContentComponent: CombinedComponent {
                     isEnabled: context.component.count > 0,
                     action: {
                         performAction.invoke(.scrollToPreviousSearchResult)
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: context.component.strings.VoiceOver_Browser_PreviousResult)
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)

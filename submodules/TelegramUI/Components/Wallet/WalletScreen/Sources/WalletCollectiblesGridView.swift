@@ -247,7 +247,12 @@ final class WalletCollectiblesGridView: UIView {
                 self.addSubview(view)
                 itemTransition = .immediate
             }
-            view.accessibilityLabel = item.name
+            // VoiceOver: a Telegram gift reads as everywhere else, "Title #number"; other collectibles by their name.
+            if let gift = item.nft?.gift, !gift.title.isEmpty {
+                view.accessibilityLabel = gift.title.contains("#\(gift.number)") ? gift.title : "\(gift.title) #\(gift.number)"
+            } else {
+                view.accessibilityLabel = item.name
+            }
             view.accessibilityValue = item.subtitle
             view.action = { [weak self] in self?.openCollectible?(item) }
             view.media.isHidden = item.kind == .gift

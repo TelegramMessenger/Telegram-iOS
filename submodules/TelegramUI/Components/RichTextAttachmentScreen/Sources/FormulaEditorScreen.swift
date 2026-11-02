@@ -448,6 +448,7 @@ private final class FormulaEditorSheetContent: Component {
                                 theme: theme,
                                 initialText: component.initialLatex,
                                 placeholder: component.placeholderLatex,
+                                clearButtonAccessibilityLabel: environment.strings.WebSearch_RecentSectionClear,
                                 hasClearButton: false,
                                 autocapitalizationType: .none,
                                 autocorrectionType: .no,

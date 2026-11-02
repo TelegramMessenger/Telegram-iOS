@@ -52,11 +52,14 @@ public final class NavigationBarStrings {
     public let close: String
     /// The iPhone Duo side column's "…" overflow button.
     public let more: String
+    /// VoiceOver label of the Done checkmark (`___done`), which shows no text.
+    public let done: String
 
-    public init(back: String, close: String, more: String) {
+    public init(back: String, close: String, more: String, done: String = "") {
         self.back = back
         self.close = close
         self.more = more
+        self.done = done
     }
 }
 
@@ -114,6 +117,11 @@ public func navigationBarBackArrowImage(color: UIColor) -> UIImage? {
 
 public protocol NavigationButtonCustomDisplayNode {
     var isHighlightable: Bool { get }
+}
+
+/// VoiceOver: a node hosted in a bar button whose label changes while it stays hosted (an icon that morphs between
+/// "More" and "Search"). The bar's button reads the node's current label instead of the one it was built with.
+public protocol NavigationButtonLiveAccessibilityLabel: AnyObject {
 }
 
 

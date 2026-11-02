@@ -78,6 +78,9 @@ final class AlertActionComponent: Component {
         private var hasProgress = false
         
         private var isUpdating = false
+        
+        /// VoiceOver: performs the action, as tapping it does (the alert's gesture recognizer picks it by location).
+        var accessibilityPerform: (() -> Void)?
                 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -93,6 +96,14 @@ final class AlertActionComponent: Component {
         deinit {
             self.isEnabledDisposable?.dispose()
             self.progressDisposable?.dispose()
+        }
+        
+        override func accessibilityActivate() -> Bool {
+            guard self.isEnabled, let accessibilityPerform = self.accessibilityPerform else {
+                return false
+            }
+            accessibilityPerform()
+            return true
         }
         
         func update(component: AlertActionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<AlertComponentEnvironment>, transition: ComponentTransition) -> CGSize {
@@ -133,6 +144,11 @@ final class AlertActionComponent: Component {
                 attributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: attributedString.string))
             }
                   
+            // VoiceOver: one button named by its title ("$" stands for the Premium icon and is not read).
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = component.title.replacingOccurrences(of: "$", with: "").trimmingCharacters(in: .whitespaces)
+            self.accessibilityTraits = self.isEnabled ? .button : [.button, .notEnabled]
+            
             let titlePadding: CGFloat = 16.0
             let titleSize = self.title.update(
                 transition: .immediate,

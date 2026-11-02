@@ -116,6 +116,9 @@ public final class GiftAvatarComponent: Component {
             self.avatarNode.displaysAsynchronously = false
             
             super.init(frame: frame)
+            // A decorative 3D scene: VoiceOver reads the title and text beside it.
+            self.sceneView.accessibilityElementsHidden = true
+            self.sceneView.isAccessibilityElement = false
             
             self.addSubview(self.sceneView)
             self.addSubview(self.avatarNode.view)

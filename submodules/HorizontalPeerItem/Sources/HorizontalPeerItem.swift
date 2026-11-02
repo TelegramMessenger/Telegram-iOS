@@ -119,6 +119,8 @@ public final class HorizontalPeerItem: ListViewItem {
 }
 
 public final class HorizontalPeerItemNode: ListViewItemNode {
+    /// The "More" custom action (the long-press menu), kept across layouts.
+    private var moreAccessibilityAction: UIAccessibilityCustomAction?
     private(set) var peerNode: SelectablePeerNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
@@ -271,6 +273,29 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                     
                     let _ = badgeApply()
                     let _ = onlineApply(animateContent)
+                    
+                    // One element per peer: the title it shows, its unread count, selected when picked.
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = strongSelf.peerNode.displayedTitle
+                    if let (unreadCount, _) = item.unreadBadge, unreadCount > 0 {
+                        strongSelf.accessibilityValue = item.strings.VoiceOver_Chat_UnreadMessages(unreadCount)
+                    } else {
+                        strongSelf.accessibilityValue = nil
+                    }
+                    strongSelf.accessibilityTraits = item.isPeerSelected(item.peer.id) ? [.button, .selected] : [.button]
+                    if item.contextAction != nil {
+                        // The long-press menu, as a custom action, made once per title.
+                        if strongSelf.moreAccessibilityAction?.name != item.strings.Common_More {
+                            strongSelf.moreAccessibilityAction = UIAccessibilityCustomAction(name: item.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                return strongSelf?.peerNode.openContextMenu() ?? false
+                            })
+                        }
+                        if let moreAccessibilityAction = strongSelf.moreAccessibilityAction, strongSelf.view.accessibilityCustomActions?.first !== moreAccessibilityAction {
+                            strongSelf.view.accessibilityCustomActions = [moreAccessibilityAction]
+                        }
+                    } else if strongSelf.view.accessibilityCustomActions != nil {
+                        strongSelf.view.accessibilityCustomActions = nil
+                    }
                 }
             })
         }
@@ -278,7 +303,9 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
     
     public func updateSelection(animated: Bool) {
         if let item = self.item {
-            self.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: animated)
+            let isSelected = item.isPeerSelected(item.peer.id)
+            self.peerNode.updateSelection(selected: isSelected, animated: animated)
+            self.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
         }
     }
     

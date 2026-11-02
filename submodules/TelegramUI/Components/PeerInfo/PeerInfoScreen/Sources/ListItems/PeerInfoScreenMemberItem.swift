@@ -246,6 +246,17 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         }
         
         itemNode.visibility = .visible(1.0, .infinite)
+        // This node handles the row's tap (`tapLongTapOrDoubleTapGesture`); VoiceOver activates the same `.open`.
+        if item.action != nil {
+            itemNode.accessibilityActivateAction = { [weak self] in
+                guard let self, let item = self.item, self.itemNode?.isRevealOptionsActive != true else {
+                    return
+                }
+                item.action?(.open)
+            }
+        } else {
+            itemNode.accessibilityActivateAction = nil
+        }
         
         let height = itemNode.contentSize.height
         

@@ -714,6 +714,8 @@ public final class ChatListNavigationBar: Component {
                 }
                 transition.setFrameWithAdditivePosition(view: headerContentView, frame: CGRect(origin: CGPoint(), size: headerContentFrame.size))
                 
+                // While searching the header is faded out and scrolled away; VoiceOver must not reach it there.
+                headerContentView.accessibilityElementsHidden = component.activeSearch != nil
                 if (component.activeSearch != nil) != (headerContentView.alpha == 0.0) {
                     headerContentView.alpha = component.activeSearch != nil ? 0.0 : 1.0
                     

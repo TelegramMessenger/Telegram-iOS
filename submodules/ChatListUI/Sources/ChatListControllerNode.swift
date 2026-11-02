@@ -1603,6 +1603,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         let id: HorizontalTabsComponent.Tab.Id
                         let title: HorizontalTabsComponent.Tab.Title
                         var badge: HorizontalTabsComponent.Tab.Badge?
+                        var accessibilityValue: String?
                         var isMainTab = false
                         switch entry {
                         case .all:
@@ -1617,6 +1618,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                                     title: "\(unread.value)",
                                     isAccent: unread.hasUnmuted
                                 )
+                                accessibilityValue = self.presentationData.strings.VoiceOver_Chat_UnreadMessages(Int32(clamping: unread.value))
                             }
                         }
                         
@@ -1694,7 +1696,10 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                                 if case let .filter(id) = entry.id {
                                     self.controller?.askForFilterRemoval(id: id)
                                 }
-                            }
+                            },
+                            accessibilityValue: accessibilityValue,
+                            deleteAccessibilityLabel: self.presentationData.strings.Common_Delete,
+                            contextAccessibilityLabel: self.presentationData.strings.Common_More
                         )
                     },
                     selectedTab: selectedTab,

@@ -48,6 +48,13 @@ class ChartVisibilityItemView: UIView {
         guard let item = item else {
             return
         }
+        // VoiceOver: this view is one toggle button named by its series ("Total followers"), selected while the series
+        // is shown; the check mark is the selection, not a word. The UIButton inside (and its title label, which UIKit
+        // lists as the button's child) is hidden.
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = item.title
+        self.accessibilityTraits = self.isChecked ? [.button, .selected] : .button
+        self.checkButton.accessibilityElementsHidden = true
         UIView.perform(animated: animated, animations: {
             if self.isChecked {
                 self.checkButton.setTitleColor(.white, for: .normal)
@@ -70,6 +77,11 @@ class ChartVisibilityItemView: UIView {
         super.layoutSubviews()
         
         checkButton.frame = bounds
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        self.didTapButton()
+        return true
     }
     
     @objc private func didTapButton() {

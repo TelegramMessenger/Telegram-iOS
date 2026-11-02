@@ -28,6 +28,7 @@
         headlineLabel.text = _headline;
         headlineLabel.textColor = color;
         headlineLabel.textAlignment = NSTextAlignmentCenter;
+        headlineLabel.accessibilityTraits = UIAccessibilityTraitStaticText | UIAccessibilityTraitHeader;
         headlineLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
         _headerLabel = headlineLabel;
       

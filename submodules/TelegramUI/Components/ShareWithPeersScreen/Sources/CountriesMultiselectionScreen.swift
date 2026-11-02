@@ -1044,6 +1044,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 let indexSections = stateValue.sections.map { $0.0 }
                 self.indexNode.update(size: CGSize(width: indexNodeFrame.width, height: indexNodeFrame.height), color: environment.theme.list.itemAccentColor, sections: indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
                 self.indexNode.isUserInteractionEnabled = !indexSections.isEmpty
+                self.indexNode.accessibilityLabel = environment.strings.VoiceOver_Common_SectionIndex
             }
             
             return availableSize

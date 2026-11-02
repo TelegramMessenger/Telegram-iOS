@@ -121,6 +121,23 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// A post row's context menu, lifting the row's content out of the list.
     var openPostMenu: ((ContextExtractedContentContainingView, ContextGesture, NewsPostMenu) -> Void)?
 
+    /// VoiceOver: the header (More, For you / Added, Search) first, then the feed and the search results. The header
+    /// view spans the whole screen from the top as the lists do, so the frame sort would keep subview order and read
+    /// the feed first.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let index = elements.firstIndex(where: { ($0 as AnyObject) === self.headerView }) {
+                elements.insert(elements.remove(at: index), at: 0)
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+
     init(context: AccountContext, controller: NewsScreen) {
         self.context = context
         self.controller = controller

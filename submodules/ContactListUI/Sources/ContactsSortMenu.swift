@@ -100,11 +100,11 @@ public func contactsSortMenuItems(context: AccountContext, presentationData: Pre
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByLastSeen, icon: { theme in return currentSettings.sortOrder == .presence ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage() }, action: { _, f in
             f(.default)
             updateSortOrder(.presence)
-        })))
+        }, accessibilityIsSelected: currentSettings.sortOrder == .presence)))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByName, icon: { theme in return currentSettings.sortOrder == .natural ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage() }, action: { _, f in
             f(.default)
             updateSortOrder(.natural)
-        })))
+        }, accessibilityIsSelected: currentSettings.sortOrder == .natural)))
         return items
     }
 }

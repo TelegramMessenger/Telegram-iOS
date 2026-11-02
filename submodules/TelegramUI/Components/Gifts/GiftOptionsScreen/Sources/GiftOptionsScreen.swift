@@ -78,6 +78,51 @@ final class GiftOptionsScreenComponent: Component {
     }
     
     private final class ScrollView: UIScrollView {
+        /// VoiceOver: the section titles, drawn outside the scroll view (they stick under the navigation bar), are read
+        /// in their place among the content, as headings.
+        var accessibilityHeadingViews: (() -> [UIView])?
+        /// The heading elements, kept so the accessibility client's references stay valid between queries.
+        private var accessibilityHeadingElements: [UIAccessibilityElement] = []
+        
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let accessibilityHeadingViews = self.accessibilityHeadingViews else {
+                    return super.accessibilityElements
+                }
+                var items: [(frame: CGRect, element: Any)] = []
+                for subview in self.subviews {
+                    if subview.isHidden || subview.alpha < 0.01 || subview.accessibilityElementsHidden {
+                        continue
+                    }
+                    items.append((subview.frame, subview))
+                }
+                let headingViews = accessibilityHeadingViews()
+                while self.accessibilityHeadingElements.count < headingViews.count {
+                    self.accessibilityHeadingElements.append(UIAccessibilityElement(accessibilityContainer: self))
+                }
+                for (index, headingView) in headingViews.enumerated() {
+                    guard headingView.superview != nil, !headingView.isHidden, headingView.alpha >= 0.01, let label = headingView.accessibilityLabel, !label.isEmpty else {
+                        continue
+                    }
+                    let element = self.accessibilityHeadingElements[index]
+                    element.accessibilityLabel = label
+                    element.accessibilityTraits = .header
+                    let frame = headingView.convert(headingView.bounds, to: self)
+                    element.accessibilityFrameInContainerSpace = frame
+                    items.append((frame, element))
+                }
+                // Top to bottom, then leading to trailing within a row of tiles.
+                return items.sorted(by: { lhs, rhs in
+                    if abs(lhs.frame.minY - rhs.frame.minY) > 0.5 {
+                        return lhs.frame.minY < rhs.frame.minY
+                    }
+                    return lhs.frame.minX < rhs.frame.minX
+                }).map(\.element)
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
+        
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
@@ -274,6 +319,22 @@ final class GiftOptionsScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+            
+            self.scrollView.accessibilityHeadingViews = { [weak self] in
+                guard let self else {
+                    return []
+                }
+                return [self.premiumTitle.view, self.starsTitle.view].compactMap { $0 }
+            }
+        }
+        
+        /// VoiceOver: the bar items (Close, the balance) before the content.
+        override var accessibilityElements: [Any]? {
+            get {
+                let visible = self.subviews.filter { !$0.isHidden && $0.alpha >= 0.01 && !$0.accessibilityElementsHidden }
+                return visible.filter { $0 !== self.scrollView } + [self.scrollView]
+            } set(value) {
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -1285,6 +1346,8 @@ final class GiftOptionsScreenComponent: Component {
                 if balanceTitleView.superview == nil {
                     self.addSubview(balanceTitleView)
                     self.addSubview(balanceValueView)
+                    // The Stars glyph beside the amount; "Balance" and the number are read.
+                    balanceIconView.accessibilityElementsHidden = true
                     self.addSubview(balanceIconView)
                 }
                 let navigationHeight = environment.navigationHeight - environment.statusBarHeight
@@ -1318,6 +1381,8 @@ final class GiftOptionsScreenComponent: Component {
             )
             if let premiumTitleView = self.premiumTitle.view {
                 if premiumTitleView.superview == nil {
+                    // Read from the scroll view, in its place among the content.
+                    premiumTitleView.accessibilityElementsHidden = true
                     self.addSubview(premiumTitleView)
                 }
                 transition.setBounds(view: premiumTitleView, bounds: CGRect(origin: .zero, size: premiumTitleSize))
@@ -1573,6 +1638,8 @@ final class GiftOptionsScreenComponent: Component {
                     )
                     if let starsTitleView = self.starsTitle.view {
                         if starsTitleView.superview == nil {
+                            // Read from the scroll view, in its place among the content.
+                            starsTitleView.accessibilityElementsHidden = true
                             self.addSubview(starsTitleView)
                         }
                         transition.setBounds(view: starsTitleView, bounds: CGRect(origin: .zero, size: starsTitleSize))

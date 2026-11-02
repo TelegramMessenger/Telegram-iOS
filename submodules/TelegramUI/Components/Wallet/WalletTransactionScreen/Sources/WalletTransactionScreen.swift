@@ -3376,7 +3376,9 @@ private final class WalletTransactionContentComponent: Component {
                             )),
                             action: { [weak self] in
                                 self?.presentFeesAlert(transaction: transaction)
-                            }
+                            },
+                            // VoiceOver: "?" opens the network fees explanation; named by its title.
+                            accessibility: ComponentAccessibility(label: environment.strings.Wallet_Transaction_NetworkFeesTitle)
                         )),
                         spacing: 6.0,
                         alignSendButtonToTop: false

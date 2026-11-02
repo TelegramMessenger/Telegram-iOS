@@ -27,7 +27,10 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
-        
+        // The row's own accessibility element (its `AccessibilityAreaNode`) describes and activates the row; the
+        // highlight button would otherwise be read as an unlabelled container around it.
+        self.button.accessibilityElementsHidden = true
+
         super.init()
         
         self.addSubnode(self.backgroundNode)
@@ -61,5 +64,24 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
+    }
+}
+
+extension AccessibilityAreaNode {
+    /// A tappable PeerInfo row: a button that runs the row's action, the same closure its tap runs; a row without an
+    /// action is not enabled.
+    func applyPeerInfoRowAction(_ action: (() -> Void)?, traits: UIAccessibilityTraits = []) {
+        var accessibilityTraits: UIAccessibilityTraits = traits
+        accessibilityTraits.insert(.button)
+        if action == nil {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.accessibilityTraits = accessibilityTraits
+        self.activate = action.flatMap { action in
+            return {
+                action()
+                return true
+            }
+        }
     }
 }

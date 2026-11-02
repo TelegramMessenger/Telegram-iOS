@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import WebProxyTransport
 import Display
+import ComponentFlow
 import TelegramPresentationData
 import TelegramCallsUI
 import TelegramAudio
@@ -264,7 +265,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     
-    var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
+    var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?, chatListBadgeAccessibilityValue: String?) = (nil, nil, nil, nil)
     
     private let _currentPresentationData: Atomic<PresentationData>
     public var currentPresentationData: Atomic<PresentationData> {
@@ -473,6 +474,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                     return next
                 }
+                ComponentAccessibilityStrings.on = next.strings.VoiceOver_Common_On
+                ComponentAccessibilityStrings.off = next.strings.VoiceOver_Common_Off
+                ComponentAccessibilityStrings.close = next.strings.Common_Close
+                ComponentAccessibilityStrings.done = next.strings.Common_Done
+                ComponentAccessibilityStrings.back = next.strings.Common_Back
+                ComponentAccessibilityStrings.search = next.strings.Common_Search
+                ComponentAccessibilityStrings.more = next.strings.Common_More
+                OverlayStatusControllerAccessibilityStrings.loading = next.strings.Channel_NotificationLoading
+                OverlayStatusControllerAccessibilityStrings.done = next.strings.Common_Done
                 if stringsUpdated {
                     updateLegacyLocalization(strings: next.strings)
                 }
@@ -1944,11 +1954,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         assert(Queue.mainQueue().isCurrent())
         var chatsBadge: String?
+        var chatsBadgeAccessibilityValue: String?
         if let rootController = self.mainWindow?.viewController as? TelegramRootController {
             if let tabsController = rootController.viewControllers.first as? TabBarController {
                 for controller in tabsController.controllers {
                     if let controller = controller as? ChatListController {
                         chatsBadge = controller.tabBarItem.badgeValue
+                        chatsBadgeAccessibilityValue = controller.tabBarItem.accessibilityValue
                     }
                 }
                 
@@ -1961,7 +1973,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
         }
-        self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge)
+        self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge, chatsBadgeAccessibilityValue)
         
         let _ = self.accountManager.transaction({ transaction -> Bool in
             if transaction.getCurrent()?.0 != id {
@@ -1972,7 +1984,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         }).start(next: { value in
             if !value {
-                self.switchingData = (nil, nil, nil)
+                self.switchingData = (nil, nil, nil, nil)
             }
         })
     }

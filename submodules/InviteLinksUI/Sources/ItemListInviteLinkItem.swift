@@ -157,6 +157,7 @@ public class ItemListInviteLinkItem: ListViewItem, ItemListItem {
 }
 
 public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
+    private var moreAccessibilityAction: UIAccessibilityCustomAction?
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -533,6 +534,24 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                                         
                     strongSelf.accessibilityLabel = titleAttributedString.string
                     strongSelf.accessibilityValue = subtitleAttributedString.string
+                    // The row opens the link (tap); its long-press menu is "More". The action is created once.
+                    strongSelf.accessibilityTraits = .button
+                    if item.contextAction != nil {
+                        if strongSelf.moreAccessibilityAction == nil {
+                            strongSelf.moreAccessibilityAction = UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                guard let strongSelf, let item = strongSelf.layoutParams?.0, let invite = item.invite, let contextAction = item.contextAction else {
+                                    return false
+                                }
+                                contextAction(invite, strongSelf.contextSourceNode, nil)
+                                return true
+                            })
+                        }
+                        if strongSelf.view.accessibilityCustomActions == nil {
+                            strongSelf.view.accessibilityCustomActions = strongSelf.moreAccessibilityAction.flatMap { [$0] }
+                        }
+                    } else if strongSelf.view.accessibilityCustomActions != nil {
+                        strongSelf.view.accessibilityCustomActions = nil
+                    }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)

@@ -206,6 +206,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         
         if let textComponentView = self.textView.view {
             if textComponentView.superview == nil {
+                // The accessibility area over the item reads this text; the text view is not a second element.
+                textComponentView.isAccessibilityElement = false
                 self.view.addSubview(textComponentView)
             }
             textComponentView.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: topInset + avatarSize + textSpacing), size: textSize)

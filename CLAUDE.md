@@ -235,7 +235,8 @@ subsystem from elsewhere.
   `submodules/TelegramUIPreferences/CLAUDE.md`.
 - **Smaller ones**: links with a login part (`submodules/UrlWhitelist/`), the code-block highlighter's recursion bound
   (`third-party/libprisma/`), an Apple Metal binary-archive bug (`submodules/MetalEngine/`), wallpaper soft light
-  (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)).
+  (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)), VoiceOver
+  screen status and how to check a screen ([`docs/accessibility/voiceover-inventory.md`](docs/accessibility/voiceover-inventory.md)).
 
 ## The system ICU: only the SDK's headers are public
 

@@ -46,6 +46,30 @@ import MarqueeComponent
 import EdgeEffect
 
 final class PeerInfoHeaderRegularContentNode: SparseNode {
+    /// VoiceOver: the action buttons' container spans the header from its top, so the frame sort would read the buttons
+    /// before the avatar and the name. They are read where they are drawn: after the name, status and balance, before the
+    /// music strip below them.
+    weak var accessibilityButtonsNode: ASDisplayNode?
+    weak var accessibilityTrailingView: UIView?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let buttonsNode = self.accessibilityButtonsNode, buttonsNode.isNodeLoaded, case let buttonsView = buttonsNode.view, let index = elements.firstIndex(where: { ($0 as AnyObject) === buttonsView }) {
+                let buttons = elements.remove(at: index)
+                if let trailingView = self.accessibilityTrailingView, let trailingIndex = elements.firstIndex(where: { ($0 as AnyObject) === trailingView }) {
+                    elements.insert(buttons, at: trailingIndex)
+                } else {
+                    elements.append(buttons)
+                }
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
 }
 
 enum PeerInfoHeaderTextFieldNodeKey: Equatable {
@@ -284,6 +308,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNodeRawContainer = ASDisplayNode()
         self.titleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.titleNode.displaysAsynchronously = false
+        // The peer's name is the screen's title. (Its text elements carry the label; the containers stay unlabelled.)
+        self.titleNode.textAccessibilityTraits = .header
         
         self.titleCredibilityIconView = ComponentHostView<Empty>()
         self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.view.addSubview(self.titleCredibilityIconView)
@@ -381,6 +407,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if !isMediaOnly {
             self.regularContentNode.addSubnode(self.buttonsContainerNode)
+            self.regularContentNode.accessibilityButtonsNode = self.buttonsContainerNode
         }
         
         self.addSubnode(self.editingContentNode)
@@ -433,6 +460,22 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     deinit {
         self.emojiStatusPackDisposable.dispose()
+    }
+    
+    /// VoiceOver: the avatar, name and status (with the buttons, in `PeerInfoHeaderRegularContentNode`), then the gifts
+    /// on the cover. The cover spans the header from its top, so the frame sort would read the gifts first.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let giftsCoverView = self.giftsCover.view, let index = elements.firstIndex(where: { ($0 as AnyObject) === giftsCoverView }) {
+                elements.append(elements.remove(at: index))
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
     }
     
     override func didLoad() {
@@ -1431,6 +1474,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         #endif
 
+        self.avatarListNode.avatarContainerNode.updateAccessibility(label: presentationData.strings.Privacy_ProfilePhoto, moreLabel: presentationData.strings.Common_More)
+        
         if let starRating = self.currentStarRating {
             let subtitleRating: ComponentView<Empty>
             var subtitleRatingTransition = ComponentTransition(transition)
@@ -1461,7 +1506,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             customTheme: self.presentationData?.theme
                         ))
                     },
-                    debugLevel: self.context.sharedContext.immediateExperimentalUISettings.debugRatingLayout
+                    debugLevel: self.context.sharedContext.immediateExperimentalUISettings.debugRatingLayout,
+                    accessibilityLabel: presentationData.strings.ProfileLevelInfo_Title
                 )),
                 environment: {},
                 containerSize: CGSize(width: width - 12.0 * 2.0 - stripLeft - stripRight, height: 100.0)
@@ -1501,7 +1547,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: subtitleStates, mainState: subtitleMainState)
         }
-        self.subtitleNode.accessibilityLabel = subtitleStringText
         
         var subtitleButtonHorizontalOffset: CGFloat = 0.0
         if subtitleIsButton {
@@ -1614,13 +1659,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(text: panelSubtitleString?.text ?? subtitleStringText, states: panelSubtitleStates, mainState: subtitleMainState)
         }
-        self.panelSubtitleNode.accessibilityLabel = panelSubtitleString?.text ?? subtitleStringText
         
         let usernameNodeLayout = self.usernameNode.updateLayout(text: usernameString.text, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
-        self.usernameNode.accessibilityLabel = usernameString.text
         
         let avatarCenter = avatarFrame.center
         
@@ -2161,6 +2204,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             )
             if let standardTitleView = standardTitle.view {
                 if standardTitleView.superview == nil {
+                    // The screen's title (Saved Messages, a media-only profile), read as a heading like the name.
+                    standardTitleView.accessibilityTraits = [.staticText, .header]
                     self.regularContentNode.view.addSubview(standardTitleView)
                 }
                 let standardTitleFrame = titleSize.centered(in: self.titleNodeContainer.frame).offsetBy(dx: 2.0, dy: 0.0)
@@ -2729,7 +2774,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             minSize: CGSize(width: musicBandWidth, height: musicHeight),
                             action: { [weak self] in
                                 self?.displaySavedMusic?()
-                            }
+                            },
+                            // Its shown text; nothing while the track's title is still loading.
+                            accessibility: ComponentAccessibility(label: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines), isHidden: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         )
                     ),
                     environment: {},
@@ -2737,6 +2784,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 )
                 let musicFrame = CGRect(origin: CGPoint(x: stripLeft, y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0) + 1.0 - UIScreenPixel), size: musicSize)
                 if let musicView = music.view {
+                    self.regularContentNode.accessibilityTrailingView = musicView
                     if musicView.superview == nil {
                         // A newly loaded strip item fades in at its final position.
                         ContainedViewLayoutTransition.immediate.updateFrame(view: musicView, frame: musicFrame)

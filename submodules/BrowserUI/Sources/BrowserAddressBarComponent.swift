@@ -210,6 +210,61 @@ final class AddressBarContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        private final class TitleAccessibilityElement: UIAccessibilityElement {
+            var activate: (() -> Void)?
+            
+            override func accessibilityActivate() -> Bool {
+                self.activate?()
+                return true
+            }
+        }
+        private var titleAccessibilityElement: TitleAccessibilityElement?
+        
+        /// VoiceOver, collapsed: the page's host as one button (the tap opens the address field). Editing: the address
+        /// field, Clear while it has text, Cancel. The glass keeps the hidden field, glyph and button of the other state
+        /// as subviews, so the list is explicit.
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component, let params = self.params else {
+                    return nil
+                }
+                if component.isExpanded {
+                    var elements: [Any] = []
+                    if let textField = self.textField {
+                        textField.accessibilityLabel = params.strings.WebBrowser_AddressPlaceholder
+                        elements.append(textField)
+                    }
+                    if !self.clearIconButton.isHidden {
+                        elements.append(self.clearIconButton)
+                    }
+                    if let cancelButtonView = self.cancelButton.view, cancelButtonView.alpha > 0.01 {
+                        elements.append(cancelButtonView)
+                    }
+                    return elements
+                } else {
+                    let element: TitleAccessibilityElement
+                    if let current = self.titleAccessibilityElement {
+                        element = current
+                    } else {
+                        element = TitleAccessibilityElement(accessibilityContainer: self)
+                        element.accessibilityTraits = .button
+                        element.activate = { [weak self] in
+                            guard let self, let component = self.component, !component.isExpanded else {
+                                return
+                            }
+                            component.performAction.invoke(.openAddressBar)
+                        }
+                        self.titleAccessibilityElement = element
+                    }
+                    element.accessibilityLabel = params.title
+                    element.accessibilityFrameInContainerSpace = self.backgroundView.frame
+                    return [element]
+                }
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
+        
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, !component.isExpanded {
                 component.performAction.invoke(.openAddressBar)
@@ -443,6 +498,13 @@ final class AddressBarContentComponent: Component {
                 transition.setFrame(view: self.clearIconButton, frame: iconFrame.insetBy(dx: -8.0, dy: -10.0))
                 transition.setAlpha(view: self.clearIconView, alpha: isActiveWithText ? 1.0 : 0.0)
                 self.clearIconButton.isUserInteractionEnabled = isActiveWithText
+                // VoiceOver: the glyph is decoration; the button is "Clear" only while editing, when it is shown and
+                // takes touches (hidden otherwise, as for a sighted user).
+                self.clearIconView.isAccessibilityElement = false
+                self.clearIconView.accessibilityElementsHidden = true
+                self.clearIconButton.accessibilityLabel = strings.WebSearch_RecentSectionClear
+                self.clearIconButton.accessibilityElementsHidden = !isActiveWithText
+                self.clearIconButton.isAccessibilityElement = isActiveWithText
             }
             
             if let cancelButtonView = self.cancelButton.view {

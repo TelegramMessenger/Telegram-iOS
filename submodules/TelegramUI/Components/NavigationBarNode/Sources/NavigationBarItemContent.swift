@@ -5,9 +5,10 @@ import Display
 import NavigationBarComponent
 
 /// A bar button item's label for VoiceOver and the iPhone Duo "…" menu: its accessibility label, else its title.
-/// The sentinel titles (`___close`, `___done`, …) are not labels.
+/// The sentinel titles (`___close`, `___done`, …) are not labels. With an accessibility client running, UIKit's
+/// default `accessibilityLabel` of a bar button item is its title, sentinel included, so the label is checked too.
 func navigationBarItemLabel(_ item: UIBarButtonItem) -> String? {
-    if let label = item.accessibilityLabel, !label.isEmpty {
+    if let label = item.accessibilityLabel, !label.isEmpty, !label.hasPrefix("___") {
         return label
     }
     if let title = item.title, !title.isEmpty, !title.hasPrefix("___") {

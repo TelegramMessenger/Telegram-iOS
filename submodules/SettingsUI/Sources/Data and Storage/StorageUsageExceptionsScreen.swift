@@ -391,7 +391,7 @@ public func storageUsageExceptionsScreen(
                 }, action: { _, f in
                     applyValue(value)
                     f(.default)
-                })))
+                }, accessibilityIsSelected: currentValue == value)))
             }
             
             subItems.append(.separator)

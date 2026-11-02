@@ -131,6 +131,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         if self.textNode.attributedPlaceholderText == nil || !self.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
             self.textNode.attributedPlaceholderText = attributedPlaceholderText
         }
+        // The field is named by its placeholder, which is hidden once there is text.
+        self.textNode.textView.accessibilityLabel = placeholder
         
         if let updateText = updateText {
             let attributedText = NSAttributedString(string: updateText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)

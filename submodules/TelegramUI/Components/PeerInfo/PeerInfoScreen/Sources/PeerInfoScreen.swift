@@ -212,6 +212,28 @@ enum TopicsLimitedReason {
     case discussion
 }
 
+/// The profile's scroll node. VoiceOver: the shared-media tabs and the current pane share one frame, and the tabs are
+/// added after the panes (they float above them), so the frame sort would read the pane before its tabs.
+final class PeerInfoScrollNode: ASScrollNode {
+    weak var accessibilityTabsView: UIView?
+    weak var accessibilityPanesNode: ASDisplayNode?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let tabsView = self.accessibilityTabsView, let panesNode = self.accessibilityPanesNode, panesNode.isNodeLoaded, let tabsIndex = elements.firstIndex(where: { ($0 as AnyObject) === tabsView }), let panesIndex = elements.firstIndex(where: { ($0 as AnyObject) === panesNode.view }), tabsIndex > panesIndex {
+                let tabs = elements.remove(at: tabsIndex)
+                elements.insert(tabs, at: panesIndex)
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
 final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
     weak var controller: PeerInfoScreenImpl?
     
@@ -239,7 +261,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     let cachedDataPromise = Promise<EngineCachedPeerData?>()
     
-    let scrollNode: ASScrollNode
+    let scrollNode: PeerInfoScrollNode
     let edgeEffectView: EdgeEffectView
     
     let headerNode: PeerInfoHeaderNode
@@ -482,7 +504,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.sharedMediaFromForumTopic = sharedMediaFromForumTopic
         self.sharedMediaChatLocation = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         
-        self.scrollNode = ASScrollNode()
+        self.scrollNode = PeerInfoScrollNode()
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.canCancelAllTouchesInViews = true
         
@@ -1356,6 +1378,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.scrollNode.addSubnode(self.paneContainerNode)
         self.scrollNode.view.addSubview(self.headerNode.headerEdgeEffectContainer)
         self.scrollNode.view.addSubview(self.paneContainerNode.headerContainer)
+        self.scrollNode.accessibilityTabsView = self.paneContainerNode.headerContainer
+        self.scrollNode.accessibilityPanesNode = self.paneContainerNode
         
         self.view.addSubview(self.edgeEffectView)
         
@@ -2701,6 +2725,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
         }
+    }
+    
+    /// The navigation bar, then the header (avatar, name, status), then the rows. The header's frame starts where the
+    /// scroll node's does and the bar is added last, so UIKit's order would read the header after every row.
+    override var screenAccessibilityElements: [Any]? {
+        let headerView = self.headerNode.view
+        let navigationBarView = self.controller?.navigationBar?.view
+        var elements: [Any] = []
+        if let navigationBarView, navigationBarView.superview === self.view {
+            elements.append(navigationBarView)
+        }
+        if headerView.superview === self.view {
+            elements.append(headerView)
+        }
+        for subview in self.view.subviews where subview !== headerView && subview !== navigationBarView {
+            elements.append(subview)
+        }
+        return elements
     }
     
     deinit {
@@ -6869,8 +6911,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
             }
             
-            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?, Bool, Bool), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), context.engine.notices.getServerProvidedSuggestions(), accountTabBarAvatar, accountTabBarAvatarBadge)
-            |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?, Bool, Bool) in
+            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?, String?, Bool, Bool), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), context.engine.notices.getServerProvidedSuggestions(), accountTabBarAvatar, accountTabBarAvatarBadge)
+            |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?, String?, Bool, Bool) in
                 let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
                 let phoneNumberWarning = suggestions.contains(.validatePhoneNumber)
                 let passwordWarning = suggestions.contains(.validatePassword)
@@ -6878,10 +6920,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 if accountTabBarAvatarBadge > 0 {
                     otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
-                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning || passwordWarning ? "!" : otherAccountsBadge, accountTabBarAvatar != nil, presentationData.reduceMotion)
+                let hasWarning = notificationsWarning || phoneNumberWarning || passwordWarning
+                // The numeric badge of the other accounts is read as it shows; the warning mark is not.
+                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, hasWarning ? "!" : otherAccountsBadge, hasWarning ? presentationData.strings.VoiceOver_TabBar_AttentionRequired : nil, accountTabBarAvatar != nil, presentationData.reduceMotion)
             }
             
-            self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).startStrict(next: { [weak self] title, image, selectedImage, badgeValue, isAvatar, reduceMotion in
+            self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).startStrict(next: { [weak self] title, image, selectedImage, badgeValue, badgeAccessibilityValue, isAvatar, reduceMotion in
                 if let strongSelf = self {
                     strongSelf.tabBarItem.title = title
                     strongSelf.tabBarItem.image = image
@@ -6889,6 +6933,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     strongSelf.tabBarItem.animationName = isAvatar || reduceMotion ? nil : "TabSettings"
                     strongSelf.tabBarItem.ringSelection = isAvatar
                     strongSelf.tabBarItem.badgeValue = badgeValue
+                    strongSelf.tabBarItem.accessibilityValue = badgeAccessibilityValue
                 }
             })
             

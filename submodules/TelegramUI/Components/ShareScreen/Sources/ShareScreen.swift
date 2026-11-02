@@ -72,6 +72,9 @@ public final class ShareScreenHostController: ViewController {
         self.navigation.isOpaqueWhenInOverlay = false
         super.init(navigationBarPresentationData: nil)
         self.statusBar.statusBarStyle = .Ignore
+        // VoiceOver: while the sheet is up only the sheet is read (the screen under it is hidden), as for alerts.
+        // Nothing else reads this flag: it is not opacity and does not change what is drawn.
+        self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .default
         screen.navigationPresentation = .default
         self.navigation.setViewControllers([screen], animated: false)
@@ -173,6 +176,7 @@ private final class ShareScreenHeaderComponent: Component {
 
         func update(component: ShareScreenHeaderComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.isUserInteractionEnabled = !component.isHidden
+            self.accessibilityElementsHidden = component.isHidden
             transition.setAlpha(view: self, alpha: component.isHidden ? 0.0 : 1.0)
             transition.setBlur(layer: self.layer, radius: component.isHidden ? 8.0 : 0.0)
             // Keep the sheet's title slot independent of the subtitle's measured width.
@@ -200,6 +204,8 @@ private final class ShareScreenHeaderComponent: Component {
                     }
                 }
                 view.frame = CGRect(x: floorToScreenPixels((size.width - titleSize.width) * 0.5), y: 0.0, width: titleSize.width, height: titleSize.height)
+                // The sheet's title ("Share with", or the opened forum/community) is its heading.
+                view.accessibilityTraits = [.staticText, .header]
             }
             let subtitleFont = Font.regular(12.0)
             var subtitleItems: [AnimatedTextComponent.Item] = []

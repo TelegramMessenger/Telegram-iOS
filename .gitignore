@@ -85,3 +85,4 @@ submodules/TelegramApi/Sources/SwiftPMGenerated/
 submodules/TelegramApi/ObjC/SwiftPMGenerated/
 submodules/TelegramApi/Tests/SwiftPMGenerated/
 /Telegram.app/
+build/accessibility/

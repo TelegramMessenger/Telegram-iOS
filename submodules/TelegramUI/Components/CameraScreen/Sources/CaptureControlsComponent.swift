@@ -666,14 +666,15 @@ final class LockContentComponent: Component {
     }
 }
 
-private func captureControlsBottomGlassButton(content: AnyComponentWithIdentity<Empty>, action: @escaping (UIView) -> Void) -> GlassBarButtonComponent {
+private func captureControlsBottomGlassButton(content: AnyComponentWithIdentity<Empty>, action: @escaping (UIView) -> Void, accessibility: ComponentAccessibility? = nil) -> GlassBarButtonComponent {
     return GlassBarButtonComponent(
         size: CGSize(width: cameraScreenBottomButtonSize, height: cameraScreenBottomButtonSize),
         backgroundColor: nil,
         isDark: true,
         state: .glass,
         component: content,
-        action: action
+        action: action,
+        accessibility: accessibility
     )
 }
 
@@ -985,6 +986,8 @@ final class CaptureControlsComponent: Component {
             return self.bottomCloseButton?.view
         }
 
+        private var bottomSettingsButtonIsHidden: Bool = false
+        
         private func updateBottomButtonUnderlay(_ current: UIView?, frame: CGRect, isHidden: Bool, transition: ComponentTransition) -> UIView? {
             let underlay: UIView
             if let current {
@@ -1568,7 +1571,8 @@ final class CaptureControlsComponent: Component {
                             animateScale: component.isTablet,
                             action: {
                                 component.galleryTapped()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: component.strings.Attachment_Gallery)
                         )
                     ),
                     environment: {},
@@ -1674,7 +1678,8 @@ final class CaptureControlsComponent: Component {
                             minSize: CGSize(width: 44.0, height: 44.0),
                             action: {
                                 component.flipTapped()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: component.strings.VoiceOver_Camera_SwitchCamera)
                         )
                     ),
                     environment: {},
@@ -1698,6 +1703,7 @@ final class CaptureControlsComponent: Component {
                 
                 let bottomFlipButtonContent: AnyComponentWithIdentity<Empty>
                 let bottomFlipButtonAction: (UIView) -> Void
+                let bottomFlipButtonAccessibilityLabel: String
                 var bottomFlipButtonTransition: ComponentTransition = .immediate
                 if let chatTrailingButton = component.chatTrailingButton, case .done = chatTrailingButton {
                     bottomFlipButtonContent = AnyComponentWithIdentity(id: "done", component: AnyComponent(
@@ -1706,6 +1712,7 @@ final class CaptureControlsComponent: Component {
                     bottomFlipButtonAction = { _ in
                         component.chatDoneTapped()
                     }
+                    bottomFlipButtonAccessibilityLabel = component.strings.Common_Done
                 } else {
                     bottomFlipButtonContent = AnyComponentWithIdentity(id: "flip", component: AnyComponent(
                         FlipButtonContentComponent(
@@ -1717,6 +1724,7 @@ final class CaptureControlsComponent: Component {
                     bottomFlipButtonAction = { _ in
                         component.flipTapped()
                     }
+                    bottomFlipButtonAccessibilityLabel = component.strings.VoiceOver_Camera_SwitchCamera
                 }
                 if let previousChatTrailingButton = self.previousChatTrailingButton, let chatTrailingButton = component.chatTrailingButton, previousChatTrailingButton != chatTrailingButton {
                     bottomFlipButtonTransition = .spring(duration: 0.4)
@@ -1726,7 +1734,7 @@ final class CaptureControlsComponent: Component {
                 let bottomFlipButtonSize = self.bottomFlipButton.update(
                     transition: bottomFlipButtonTransition,
                     component: AnyComponent(
-                        captureControlsBottomGlassButton(content: bottomFlipButtonContent, action: bottomFlipButtonAction)
+                        captureControlsBottomGlassButton(content: bottomFlipButtonContent, action: bottomFlipButtonAction, accessibility: ComponentAccessibility(label: bottomFlipButtonAccessibilityLabel))
                     ),
                     environment: {},
                     containerSize: availableSize
@@ -1742,6 +1750,7 @@ final class CaptureControlsComponent: Component {
                     let hidesBottomFlipButton = isRecording || isLiveActive || isTransitioning || hideControls || !component.hasAccess
                     transition.setScale(view: bottomFlipButtonView, scale: hidesBottomFlipButton ? 0.01 : 1.0)
                     transition.setAlpha(view: bottomFlipButtonView, alpha: hidesBottomFlipButton ? 0.0 : 1.0)
+                    bottomFlipButtonView.accessibilityElementsHidden = hidesBottomFlipButton
                     self.bottomFlipButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomFlipButtonUnderlay, frame: bottomFlipButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomFlipButton || self.isHandedOffToEditor, transition: transition)
                 }
                 
@@ -1796,6 +1805,7 @@ final class CaptureControlsComponent: Component {
                 }
             }
             
+            let hidesBottomSettingsButton = !isLiveStream || isLiveActive || isRecording || isTransitioning || hideControls
             let bottomSettingsButtonSize = self.bottomSettingsButton.update(
                 transition: .immediate,
                 component: AnyComponent(
@@ -1805,7 +1815,8 @@ final class CaptureControlsComponent: Component {
                         )),
                         action: { _ in
                             component.settingsTapped()
-                        }
+                        },
+                        accessibility: hidesBottomSettingsButton ? ComponentAccessibility(isHidden: true) : ComponentAccessibility(label: component.strings.Settings_Title)
                     )
                 ),
                 environment: {},
@@ -1819,9 +1830,20 @@ final class CaptureControlsComponent: Component {
                 transition.setBounds(view: bottomSettingsButtonView, bounds: CGRect(origin: .zero, size: bottomSettingsButtonFrame.size))
                 transition.setPosition(view: bottomSettingsButtonView, position: bottomSettingsButtonFrame.center)
                 
-                let hidesBottomSettingsButton = !isLiveStream || isLiveActive || isRecording || isTransitioning || hideControls
                 transition.setScale(view: bottomSettingsButtonView, scale: hidesBottomSettingsButton ? 0.01 : 1.0)
-                transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0)
+                // Out of the accessibility tree while it is scaled out (its inner button was still listed under the hidden
+                // glass view): hidden once it has faded out, shown again before it animates in. No visual change: it is
+                // transparent then.
+                self.bottomSettingsButtonIsHidden = hidesBottomSettingsButton
+                if !hidesBottomSettingsButton {
+                    bottomSettingsButtonView.isHidden = false
+                }
+                transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0, completion: { [weak self, weak bottomSettingsButtonView] _ in
+                    guard let self, let bottomSettingsButtonView, self.bottomSettingsButtonIsHidden else {
+                        return
+                    }
+                    bottomSettingsButtonView.isHidden = true
+                })
                 self.bottomSettingsButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomSettingsButtonUnderlay, frame: bottomSettingsButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomSettingsButton || self.isHandedOffToEditor, transition: transition)
             }
             
@@ -1866,7 +1888,20 @@ final class CaptureControlsComponent: Component {
                             self?.shutterUpdateOffsetX.invoke((0.0, .immediate))
                             component.shutterTapped()
                         },
-                        highlightedAction: self.shutterHightlightedAction
+                        highlightedAction: self.shutterHightlightedAction,
+                        accessibility: {
+                            // VoiceOver: the shutter by what its tap does in the current mode.
+                            switch component.shutterState {
+                            case .generic, .disabled:
+                                return ComponentAccessibility(label: component.strings.Common_TakePhoto, traits: component.shutterState == .disabled ? .notEnabled : [])
+                            case .video, .transition:
+                                return ComponentAccessibility(label: component.strings.VoiceOver_Camera_RecordVideo)
+                            case .stopRecording, .holdRecording:
+                                return ComponentAccessibility(label: component.strings.VoiceOver_Chat_Stop)
+                            case let .live(active, _):
+                                return ComponentAccessibility(label: active ? component.strings.Camera_LiveStream_End : component.strings.Camera_LiveStream_StartLiveStream)
+                            }
+                        }()
                     ).minSize(maximumShutterSize).withHitTestEdgeInsets(hitTestEdgeInsets)
                 ),
                 environment: {},
@@ -2008,7 +2043,9 @@ final class CaptureControlsComponent: Component {
                         minSize: hintIconSize,
                         action: {
                             component.lockRecording()
-                        }
+                        },
+                        // The hold-to-record lock, reached by dragging the shutter; the shutter's tap records and stops.
+                        accessibility: ComponentAccessibility(isHidden: true)
                     )
                 ),
                 environment: {},

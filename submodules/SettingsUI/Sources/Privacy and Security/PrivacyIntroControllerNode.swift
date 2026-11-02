@@ -83,6 +83,10 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
             self.animationNode.isHidden = true
         }
         
+        // The icon / duck animation is decoration.
+        self.iconNode.accessibilityElementsHidden = true
+        self.animationNode.accessibilityElementsHidden = true
+        
         self.addSubnode(self.iconNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.titleNode)
@@ -123,6 +127,20 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.buttonTextNode.attributedText = NSAttributedString(string: self.mode.buttonTitle(strings: presentationData.strings), font: buttonFont, textColor: presentationData.theme.list.itemAccentColor, paragraphAlignment: .center)
         self.buttonTextNode.isAccessibilityElement = false
         self.buttonNode.accessibilityLabel = self.buttonTextNode.attributedText?.string
+        self.buttonNode.accessibilityTraits = [.button]
+        // The navigation bar already reads the same words as a heading ("Passcode Lock"): the repeat is not read again.
+        let titleString = self.titleNode.attributedText?.string
+        let titleRepeatsNavigationTitle = titleString == self.mode.controllerTitle(strings: presentationData.strings)
+        self.titleNode.isAccessibilityElement = !titleRepeatsNavigationTitle
+        self.titleNode.accessibilityElementsHidden = titleRepeatsNavigationTitle
+        self.titleNode.accessibilityLabel = titleString
+        self.titleNode.accessibilityTraits = [.header]
+        self.textNode.isAccessibilityElement = true
+        self.textNode.accessibilityLabel = self.textNode.attributedText?.string
+        self.textNode.accessibilityTraits = [.staticText]
+        self.noticeNode.isAccessibilityElement = true
+        self.noticeNode.accessibilityLabel = self.noticeNode.attributedText?.string
+        self.noticeNode.accessibilityTraits = [.staticText]
         self.buttonBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, highlightColor: nil)
         self.buttonHighlightedBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, highlightColor: presentationData.theme.list.itemHighlightedBackgroundColor)
         

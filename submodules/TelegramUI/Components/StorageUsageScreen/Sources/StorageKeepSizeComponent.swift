@@ -124,6 +124,9 @@ final class StorageKeepSizeComponent: Component {
                 let titleSize = titleSizes[i]
                 if let titleView = self.titles[i].view {
                     if titleView.superview == nil {
+                        // The stop labels are read as the slider's value instead.
+                        titleView.isAccessibilityElement = false
+                        titleView.accessibilityElementsHidden = true
                         self.addSubview(titleView)
                     }
                     
@@ -152,7 +155,9 @@ final class StorageKeepSizeComponent: Component {
                         )),
                         useNative: true,
                         trackBackgroundColor: component.theme.list.itemSwitchColors.frameColor,
-                        trackForegroundColor: component.theme.list.itemAccentColor
+                        trackForegroundColor: component.theme.list.itemAccentColor,
+                        accessibilityLabel: component.strings.Cache_MaximumCacheSize,
+                        accessibilityValue: stringForCacheSize(strings: component.strings, size: component.value)
                     )
                 ),
                 environment: {},

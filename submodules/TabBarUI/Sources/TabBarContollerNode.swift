@@ -375,6 +375,8 @@ final class TabBarControllerNode: ASDisplayNode {
             }
             tabBarFrameTransition.updateFrame(view: tabBarComponentView, frame: tabBarFrame)
             transition.updateAlpha(layer: tabBarComponentView.layer, alpha: tabBarAlpha)
+            // A hidden bar is moved below the screen, not removed: VoiceOver must not reach it there.
+            tabBarComponentView.accessibilityElementsHidden = self.tabBarHidden
         }
         
         tabBarFrameTransition.updateFrame(node: self.disabledOverlayNode, frame: tabBarFrame)

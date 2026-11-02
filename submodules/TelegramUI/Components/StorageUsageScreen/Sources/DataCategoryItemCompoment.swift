@@ -168,6 +168,12 @@ private final class SubItemComponent: Component {
             )
             availableWidth = max(1.0, availableWidth - titleValueSize.width - 4.0)
             
+            // VoiceOver: one element, "Received" = the size.
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = component.isIncoming ? component.strings.DataUsage_MediaDirectionIncoming : component.strings.DataUsage_MediaDirectionOutgoing
+            self.accessibilityValue = dataSizeString(Int(component.value), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
+            self.accessibilityTraits = .staticText
+            
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.isIncoming ? component.strings.DataUsage_MediaDirectionIncoming : component.strings.DataUsage_MediaDirectionOutgoing, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)))),
@@ -279,6 +285,66 @@ final class DataCategoryItemComponent: Component {
     }
     
     class View: HighlightTrackingButton {
+        // VoiceOver: the row is one button ("Messages, 93.6%" = "1.3 GB"; activation expands it as the tap does),
+        // followed by its Sent/Received rows while expanded.
+        private var accessibilityRowTexts: (label: String, value: String) = ("", "")
+        private var rowAccessibilityElement: RowAccessibilityElement?
+        
+        private final class RowAccessibilityElement: UIAccessibilityElement {
+            var activate: (() -> Bool)?
+            
+            override func accessibilityActivate() -> Bool {
+                return self.activate?() ?? false
+            }
+        }
+        
+        override var isAccessibilityElement: Bool {
+            get {
+                return false
+            } set(value) {
+            }
+        }
+        
+        // A plain container for VoiceOver (it is a UIButton for the touch handling only).
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return []
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return nil
+                }
+                let element: RowAccessibilityElement
+                if let current = self.rowAccessibilityElement {
+                    element = current
+                } else {
+                    element = RowAccessibilityElement(accessibilityContainer: self)
+                    element.activate = { [weak self] in
+                        guard let self, let component = self.component, component.action != nil else {
+                            return false
+                        }
+                        self.pressed()
+                        return true
+                    }
+                    self.rowAccessibilityElement = element
+                }
+                element.accessibilityLabel = self.accessibilityRowTexts.label
+                element.accessibilityValue = self.accessibilityRowTexts.value
+                element.accessibilityTraits = component.action != nil ? .button : .staticText
+                element.accessibilityFrameInContainerSpace = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.width, height: 52.0))
+                
+                var elements: [Any] = [element]
+                let subitemViews = self.itemViews.values.compactMap { $0.view }.filter { $0.superview != nil && $0.alpha > 0.01 }.sorted { $0.frame.minY < $1.frame.minY }
+                elements.append(contentsOf: subitemViews)
+                return elements
+            } set(value) {
+            }
+        }
+        
         private let iconView: UIImageView
         private var expandIconView: UIImageView?
         private let title = ComponentView<Empty>()
@@ -461,6 +527,8 @@ final class DataCategoryItemComponent: Component {
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
             availableWidth = max(1.0, availableWidth - titleValueSize.width - 4.0)
+            
+            self.accessibilityRowTexts = (fractionString.isEmpty ? component.category.title : "\(component.category.title), \(fractionString)", dataSizeString(Int(component.category.size), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: ".")))
             
             let titleSize = self.title.update(
                 transition: transition,

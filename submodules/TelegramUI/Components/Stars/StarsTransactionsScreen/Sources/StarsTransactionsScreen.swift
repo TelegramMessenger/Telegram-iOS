@@ -78,6 +78,20 @@ final class StarsTransactionsScreenComponent: Component {
     }
     
     private final class ScrollViewImpl: UIScrollView {
+        /// VoiceOver: the content top to bottom (the transactions container starts at the top of the content).
+        var accessibilityOrder: (() -> [UIView])?
+        
+        override var accessibilityElements: [Any]? {
+            get {
+                if let accessibilityOrder = self.accessibilityOrder {
+                    return accessibilityOrder().filter { $0.superview === self }
+                }
+                return super.accessibilityElements
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
+        
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
@@ -182,6 +196,20 @@ final class StarsTransactionsScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContainerView)
+            self.scrollView.accessibilityOrder = { [weak self] in
+                guard let self else {
+                    return []
+                }
+                return [
+                    self.starView.view,
+                    self.descriptionView.view,
+                    self.proceedsView.view,
+                    self.balanceView.view,
+                    self.earnStarsSection.view,
+                    self.subscriptionsView.view,
+                    self.scrollContainerView
+                ].compactMap { $0 }
+            }
 
             self.topEdgeEffectView.alpha = 0.0
             self.topEdgeEffectView.isUserInteractionEnabled = false
@@ -556,6 +584,8 @@ final class StarsTransactionsScreenComponent: Component {
             if let titleView = self.titleView.view {
                 if titleView.superview == nil {
                     if let navigationBar = environment.controller()?.navigationBar {
+                        // The page title ("Telegram Stars", "Gram Balance").
+                        titleView.accessibilityTraits = .header
                         navigationBar.customOverBackgroundContentView.insertSubview(titleView, at: 0)
                     }
                 }

@@ -111,6 +111,10 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
             self.proxyNode.isHidden = !self.title.hasProxy
             
             self.buttonView.isHidden = !self.title.isPasscodeSet
+            // The lock button carries the title as a heading while it shows; otherwise the text itself does.
+            self.titleNode.isAccessibilityElement = !self.title.isPasscodeSet && !self.title.text.isEmpty
+            self.titleNode.accessibilityLabel = self.title.text
+            self.titleNode.accessibilityTraits = .header
             if self.title.isPasscodeSet && !self.title.activity {
                 if self.lockView.isHidden && animated {
                     self.lockView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -225,6 +229,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         didSet {
             if self.strings !== oldValue {
                 self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+                self.buttonView.accessibilityHint = self.strings.DialogList_PasscodeLockHelp
             }
         }
     }
@@ -251,13 +256,16 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         self.lockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
         self.lockView.isHidden = true
         self.lockView.isUserInteractionEnabled = false
+        self.lockView.accessibilityElementsHidden = true
         
         self.proxyNode = ChatTitleProxyNode(theme: self.theme)
         self.proxyNode.isHidden = true
         
         self.buttonView = HighlightTrackingButton()
         self.buttonView.isAccessibilityElement = true
-        self.buttonView.accessibilityTraits = .header
+        // Shown only with a passcode set: the title with the lock glyph; a tap locks the app.
+        self.buttonView.accessibilityTraits = [.header, .button]
+        self.buttonView.accessibilityHint = self.strings.DialogList_PasscodeLockHelp
         
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true

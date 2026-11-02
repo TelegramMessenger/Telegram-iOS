@@ -925,7 +925,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }, action: { _, f in
                 f(.default)
                 ttlAction(value)
-            }))
+            }, accessibilityIsSelected: currentAuthorizationTTLDays == value))
         }
         guard let sourceNode = findAutoTerminateReferenceNode?() else {
             return

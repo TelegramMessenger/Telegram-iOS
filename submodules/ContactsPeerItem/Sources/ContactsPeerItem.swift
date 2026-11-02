@@ -477,6 +477,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
+    /// What the VoiceOver custom actions were last built from (option keys and titles, the menu's presence).
+    private var accessibilityCustomActionsKey: [String]?
     private let backgroundNode: ASDisplayNode
     private let topSeparatorNode: ASDisplayNode
     public let separatorNode: ASDisplayNode
@@ -1299,7 +1301,22 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.layoutParams = (item, params, first, last, firstWithHeader, neighbors)
                             
                             strongSelf.accessibilityLabel = titleAttributedString?.string
-                            strongSelf.accessibilityValue = statusAttributedString?.string
+                            var accessibilityValue = statusAttributedString?.string ?? ""
+                            if let badge = item.badge, badge.count > 0 {
+                                // The unread badge: a number on screen, "7 unread messages" for VoiceOver.
+                                let unreadString = item.presentationData.strings.VoiceOver_Chat_UnreadMessages(badge.count)
+                                accessibilityValue = accessibilityValue.isEmpty ? unreadString : accessibilityValue + "\n" + unreadString
+                            }
+                            strongSelf.accessibilityValue = accessibilityValue.isEmpty ? nil : accessibilityValue
+                            var accessibilityTraits: UIAccessibilityTraits = [.button]
+                            if case .selectable(selected: true) = item.selection {
+                                accessibilityTraits.insert(.selected)
+                            }
+                            if !item.enabled {
+                                // Shown dimmed; activating it runs `disabledAction` (an explanation), as a tap does.
+                                accessibilityTraits.insert(.notEnabled)
+                            }
+                            strongSelf.accessibilityTraits = accessibilityTraits
                             
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
@@ -2068,6 +2085,43 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             } else {
                                 strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
                                 strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
+                            }
+                            
+                            // The swipe options and the long-press menu as VoiceOver custom actions, through the same
+                            // paths as the gestures (`revealOptionSelected`, `secondaryAction`'s menu without a gesture).
+                            // Rebuilt only when the options or the menu's presence change.
+                            let revealOptions: [ItemListRevealOption]
+                            if item.editing.editable {
+                                revealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: .clear, iconColor: .clear, textColor: .clear, isDestructive: true)]
+                            } else {
+                                revealOptions = peerRevealOptions
+                            }
+                            var accessibilityCustomActionsKey: [String] = revealOptions.map { "\($0.key):\($0.title)" }
+                            if item.contextAction != nil {
+                                accessibilityCustomActionsKey.append("more:\(item.presentationData.strings.Common_More)")
+                            }
+                            if strongSelf.accessibilityCustomActionsKey != accessibilityCustomActionsKey {
+                                strongSelf.accessibilityCustomActionsKey = accessibilityCustomActionsKey
+                                var accessibilityCustomActions: [UIAccessibilityCustomAction] = []
+                                for option in revealOptions {
+                                    accessibilityCustomActions.append(UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak strongSelf] _ in
+                                        guard let strongSelf else {
+                                            return false
+                                        }
+                                        strongSelf.revealOptionSelected(option, animated: false)
+                                        return true
+                                    }))
+                                }
+                                if item.contextAction != nil {
+                                    accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                        guard let strongSelf, let contextAction = strongSelf.item?.contextAction else {
+                                            return false
+                                        }
+                                        contextAction(strongSelf.containerNode, nil, nil)
+                                        return true
+                                    }))
+                                }
+                                strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                             }
                             
                             if item.isAd {

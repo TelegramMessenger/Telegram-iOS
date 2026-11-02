@@ -811,6 +811,25 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
 
 @end
 
+@interface ASDisplayNode (AccessibilityCollection)
+
+/**
+ * When YES, this node's view and the views of its whole subtree answer `accessibilityElements` with UIKit's own
+ * behaviour (`[super accessibilityElements]`: an explicitly set array, otherwise UIKit's subview traversal) instead
+ * of ASDK's collector. Default NO. Main thread only.
+ */
+@property (nonatomic) BOOL accessibilityUsesViewElements;
+
+@end
+
+/**
+ * What a node's view answers for `accessibilityElements`: the node's `accessibilityElements` (a subclass override as
+ * is, otherwise ASDK's visibility-aware collector), cached for the current main run loop turn. Returns nil when UIKit's
+ * own behaviour applies (`accessibilityUsesViewElements` on the node or an ancestor, or an override returning nil).
+ * For views that host a node without being an `_ASDisplayView` (ListView's backing view). Main thread only.
+ */
+AS_EXTERN NSArray * _Nullable ASDisplayNodeCachedAccessibilityElements(ASDisplayNode * _Nullable node);
+
 @interface ASDisplayNode (ASLayoutElement) <ASLayoutElement>
 
 /**

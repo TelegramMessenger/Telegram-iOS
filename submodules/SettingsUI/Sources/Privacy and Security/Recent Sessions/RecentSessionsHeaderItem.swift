@@ -79,6 +79,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
     private var animationNode: AnimatedStickerNode
     private let buttonNode: SolidRoundedButtonNode
     private let button = ComponentView<Empty>()
+    private let titleAccessibilityArea = AccessibilityAreaNode()
     
     private var item: RecentSessionsHeaderItem?
     
@@ -98,6 +99,10 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)
         //self.addSubnode(self.buttonNode)
+        // The illustration is decoration; the text (with its links) is one element over the title.
+        self.animationNode.isAccessibilityElement = false
+        self.animationNode.accessibilityElementsHidden = true
+        self.addSubnode(self.titleAccessibilityArea)
     }
     
     override public func didLoad() {
@@ -186,7 +191,8 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                             ),
                             action: {
                                 item.buttonAction()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: item.context.sharedContext.currentPresentationData.with { $0 }.strings.AuthSessions_LinkDesktopDevice)
                         )),
                         environment: {},
                         containerSize: CGSize(width: buttonWidth, height: buttonHeight)
@@ -198,7 +204,14 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                         buttonView.frame = buttonFrame
                     }
                     
-                    strongSelf.accessibilityLabel = attributedText.string
+                    let linkAction = item.linkAction
+                    strongSelf.titleAccessibilityArea.applyAccessibilityText(attributedText, linkAttribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), open: linkAction.flatMap { linkAction in
+                        return { value in
+                            if let url = value as? String {
+                                linkAction(.tap(url))
+                            }
+                        }
+                    })
                                         
                     let iconSize = CGSize(width: 128.0, height: 128.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
@@ -206,6 +219,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                     
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
+                    strongSelf.titleAccessibilityArea.frame = strongSelf.titleNode.frame
                 }
             })
         }

@@ -86,6 +86,11 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return false
             }
+            if strongSelf.lockedButtonNode != nil {
+                // A locked switch: the same path as tapping it (the lock's explanation), never a toggle.
+                strongSelf.lockedButtonPressed()
+                return true
+            }
             let value = !strongSelf.switchNode.isOn
             item.toggled?(value)
             return true
@@ -120,6 +125,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
             self.switchNode.isUserInteractionEnabled = false
             if self.lockedButtonNode == nil {
                 let lockedButtonNode = HighlightableButtonNode()
+                // The row's element speaks for the locked switch (and activates as this button does).
+                lockedButtonNode.accessibilityElementsHidden = true
+                lockedButtonNode.isAccessibilityElement = false
                 self.lockedButtonNode = lockedButtonNode
                 self.insertSubnode(lockedButtonNode, aboveSubnode: self.switchNode)
                 lockedButtonNode.addTarget(self, action: #selector(self.lockedButtonPressed), forControlEvents: .touchUpInside)
@@ -164,6 +172,10 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityLabel = item.text
         self.activateArea.accessibilityValue = item.value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
         self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_SwitchHint
+        self.activateArea.accessibilityTraits = .button
+        // The row's element toggles; the switch itself would be a second, unlabelled element.
+        self.switchNode.view.accessibilityElementsHidden = true
+        self.switchNode.view.isAccessibilityElement = false
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: .greatestFiniteMagnitude))
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: textSize)

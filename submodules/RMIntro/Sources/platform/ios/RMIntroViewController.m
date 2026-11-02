@@ -66,6 +66,51 @@ typedef enum {
 }
 @end
 
+// The page dots, for VoiceOver an adjustable "Page" element: swiping up/down shows the next/previous page, as a
+// sideways swipe on the pages does. Everything is computed when VoiceOver asks.
+@interface RMIntroPageControl : UIPageControl
+
+@property (nonatomic, copy) NSString *pageAccessibilityLabel;
+@property (nonatomic, copy) NSString *(^pageAccessibilityValue)(NSInteger page, NSInteger count);
+@property (nonatomic, copy) void (^showPage)(NSInteger page);
+
+@end
+
+@implementation RMIntroPageControl
+
+- (BOOL)isAccessibilityElement {
+    return true;
+}
+
+- (NSString *)accessibilityLabel {
+    return _pageAccessibilityLabel;
+}
+
+- (NSString *)accessibilityValue {
+    if (_pageAccessibilityValue) {
+        return _pageAccessibilityValue(self.currentPage + 1, self.numberOfPages);
+    }
+    return [super accessibilityValue];
+}
+
+- (UIAccessibilityTraits)accessibilityTraits {
+    return UIAccessibilityTraitAdjustable;
+}
+
+- (void)accessibilityIncrement {
+    if (_showPage && self.currentPage + 1 < self.numberOfPages) {
+        _showPage(self.currentPage + 1);
+    }
+}
+
+- (void)accessibilityDecrement {
+    if (_showPage && self.currentPage > 0) {
+        _showPage(self.currentPage - 1);
+    }
+}
+
+@end
+
 @interface RMIntroView : UIView
 
 @property (nonatomic, copy) void (^onLayout)();
@@ -108,6 +153,8 @@ typedef enum {
     UIView *_startButton;
     
     bool _loadedView;
+    
+    NSInteger _accessibilityPendingPage;
 }
 @end
 
@@ -120,6 +167,7 @@ typedef enum {
     if (self != nil)
     {
         _isEnabled = true;
+        _accessibilityPendingPage = -1;
         
         _backgroundColor = backgroundColor;
         _primaryColor = primaryColor;
@@ -380,7 +428,15 @@ typedef enum {
     
     [self.view addSubview:_alternativeLanguageButton];
     
-    _pageControl = [[UIPageControl alloc] init];
+    RMIntroPageControl *pageControl = [[RMIntroPageControl alloc] init];
+    pageControl.pageAccessibilityLabel = _pageAccessibilityLabel;
+    pageControl.pageAccessibilityValue = _pageAccessibilityValue;
+    __weak RMIntroViewController *weakSelf = self;
+    pageControl.showPage = ^(NSInteger page) {
+        __strong RMIntroViewController *strongSelf = weakSelf;
+        [strongSelf accessibilityShowPage:page];
+    };
+    _pageControl = pageControl;
     _pageControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin;
     _pageControl.userInteractionEnabled = false;
     [_pageControl setNumberOfPages:6];
@@ -711,6 +767,28 @@ NSInteger _current_page_end;
     }
     
     [_pageControl setCurrentPage:_currentPage];
+}
+
+- (void)accessibilityShowPage:(NSInteger)page {
+    page = MAX(0, MIN((NSInteger)_headlines.count - 1, page));
+    if (page == _currentPage) {
+        return;
+    }
+    // The pages' own scroll tracking only settles a page after a drag; a VoiceOver request names the page up front.
+    _currentPage = page;
+    _current_page_end = page;
+    _accessibilityPendingPage = page;
+    [_pageControl setCurrentPage:page];
+    [_pageScrollView setContentOffset:CGPointMake(page * _pageScrollView.frame.size.width, 0.0) animated:true];
+}
+
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView {
+    if (scrollView == _pageScrollView && _accessibilityPendingPage >= 0) {
+        NSInteger page = _accessibilityPendingPage;
+        _accessibilityPendingPage = -1;
+        NSString *value = _pageAccessibilityValue ? _pageAccessibilityValue(page + 1, _pageControl.numberOfPages) : nil;
+        UIAccessibilityPostNotification(UIAccessibilityPageScrolledNotification, value);
+    }
 }
 
 - (void)alternativeLanguageButtonPressed {

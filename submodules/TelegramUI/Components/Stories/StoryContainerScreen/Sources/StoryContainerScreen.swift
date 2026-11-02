@@ -362,7 +362,7 @@ private final class StoryContainerScreenComponent: Component {
         }
     }
 
-    final class View: UIView, UIGestureRecognizerDelegate {
+    final class View: UIView, UIGestureRecognizerDelegate, StoryAccessibilityPeerNavigating {
         private var component: StoryContainerScreenComponent? {
             didSet {
                 if self.component != nil {
@@ -1265,6 +1265,61 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
 
+        /// Where the sideways swipe between authors is allowed (`horizontalPanRecognizer`'s directions): not while the
+        /// interaction guide or the viewers sheet is up; under VoiceOver also not while the story's tap would first close
+        /// something (the reaction picker, the keyboard), which escape closes. Evaluated when VoiceOver asks.
+        private func accessibilityAllowsPeerSwipe() -> Bool {
+            guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                return false
+            }
+            if self.isDisplayingInteractionGuide || self.itemSetPanState != nil {
+                return false
+            }
+            if !itemSetComponentView.allowsInteractiveGestures() || !itemSetComponentView.storyAccessibilityCanNavigate() {
+                return false
+            }
+            return true
+        }
+        
+        func accessibilityNeighbourPeers() -> (previous: EnginePeer?, next: EnginePeer?) {
+            guard let stateValue = self.stateValue, stateValue.slice != nil, self.accessibilityAllowsPeerSwipe() else {
+                return (nil, nil)
+            }
+            return (stateValue.previousSlice?.peer, stateValue.nextSlice?.peer)
+        }
+        
+        func accessibilityNavigatePeer(next: Bool) -> Bool {
+            guard let stateValue = self.stateValue, stateValue.slice != nil, self.accessibilityAllowsPeerSwipe() else {
+                return false
+            }
+            // The path `navigate(direction:)` takes past either end of an author's stories: a completed sideways swipe.
+            if next {
+                guard stateValue.nextSlice != nil else {
+                    return false
+                }
+                self.beginHorizontalPan(translation: CGPoint())
+                self.updateHorizontalPan(translation: CGPoint())
+                self.commitHorizontalPan(velocity: CGPoint(x: -200.0, y: 0.0))
+            } else {
+                guard stateValue.previousSlice != nil else {
+                    return false
+                }
+                self.beginHorizontalPan(translation: CGPoint())
+                self.updateHorizontalPan(translation: CGPoint())
+                self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
+            }
+            return true
+        }
+        
+        func accessibilityFocusShownStory() {
+            Queue.mainQueue().after(0.5, { [weak self] in
+                guard let self, let slice = self.stateValue?.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                    return
+                }
+                UIAccessibility.post(notification: .layoutChanged, argument: itemSetComponentView.storyAccessibilityFocusElement())
+            })
+        }
+        
         fileprivate func navigateWithKeyShortcut(direction: StoryItemSetContainerComponent.NavigationDirection) {
             guard !hasFirstResponder(self) else {
                 return
@@ -1905,6 +1960,9 @@ private final class StoryContainerScreenComponent: Component {
                                 //print("init time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                             }
                             itemSetView.isHidden = isItemSetsContainerBand && self.isAnimatingOut && i != focusedIndex
+                            // VoiceOver reads only the focused peer's stories: the neighbours kept for the cube
+                            // transition are not on screen.
+                            itemSetView.accessibilityElementsHidden = i != focusedIndex
                             if itemSetComponentView.superview == nil {
                                 itemSetView.tintLayer.isDoubleSided = false
                                 itemSetComponentView.layer.isDoubleSided = false

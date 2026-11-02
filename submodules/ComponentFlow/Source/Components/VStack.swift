@@ -11,6 +11,10 @@ public final class VStack<ChildEnvironment: Equatable>: CombinedComponent {
     public typealias EnvironmentType = ChildEnvironment
 
     private let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    /// The stacked components, for a container that describes its content to VoiceOver (ButtonComponent's title).
+    public var accessibilityChildren: [AnyComponentWithIdentity<ChildEnvironment>] {
+        return self.items
+    }
     private let alignment: VStackAlignment
     private let spacing: CGFloat
     private let fillWidth: Bool

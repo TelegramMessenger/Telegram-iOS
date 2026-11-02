@@ -121,6 +121,10 @@ final class BadgeLabelView: UIView {
     
     func update(value: String, suffix: String?, transition: ComponentTransition) -> CGSize {
         self.params = (value, suffix)
+        // VoiceOver reads the value once, not each rolling digit column.
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .staticText
+        self.accessibilityLabel = value + (suffix ?? "")
         
         if value.contains(" ") || value.contains(".") || value.contains(where: { !$0.isNumber }) || suffix != nil {
             for (_, view) in self.itemViews {

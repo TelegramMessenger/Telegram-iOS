@@ -172,6 +172,12 @@ private final class TokenNode: ASDisplayNode {
             self.emojiTextNode.attributedText = countryFlagAttributedString(countryId: countryId, font: Font.regular(17.0), textColor: .white)
         }
         
+        // One element per token: its title (the avatar and the remove glyph are decoration), as the chat module's copy
+        // of this field (Chat/EditableTokenListNode) reads it.
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = token.title
+        self.accessibilityTraits = [.button]
+        
         self.updateIsSelected(isSelected, animated: false)
     }
     
@@ -211,6 +217,7 @@ private final class TokenNode: ASDisplayNode {
             return
         }
         self.isSelected = isSelected
+        self.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0
@@ -314,6 +321,9 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
+        // The field is labelled by the placeholder; the placeholder text itself is not a separate element.
+        self.placeholderNode.isAccessibilityElement = false
+        self.placeholderNode.accessibilityElementsHidden = true
         
         self.textFieldScrollNode = ASScrollNode()
         self.textFieldScrollNode.view.scrollsToTop = false
@@ -325,6 +335,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.returnKeyType = .done
         self.textFieldNode.textField.keyboardAppearance = theme.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.tintColor = theme.accentColor
+        self.textFieldNode.textField.accessibilityLabel = placeholder
         
         self.caretIndicatorNode = CaretIndicatorNode()
         self.caretIndicatorNode.isLayerBacked = true

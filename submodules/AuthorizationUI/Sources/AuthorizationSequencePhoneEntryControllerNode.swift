@@ -115,8 +115,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
-        self.phoneInputNode.countryCodeField.accessibilityHint = strings.Login_VoiceOver_PhoneCountryCode
-        self.phoneInputNode.numberField.accessibilityHint = strings.Login_VoiceOver_PhoneNumber
+        // The fields show only digits (or a placeholder): VoiceOver names them.
+        self.phoneInputNode.countryCodeField.textField.accessibilityLabel = strings.Login_VoiceOver_PhoneCountryCode
+        self.phoneInputNode.numberField.textField.accessibilityLabel = strings.Login_VoiceOver_PhoneNumber
         self.phoneInputNode.countryCodeField.textField.accessibilityIdentifier = "Auth.PhoneEntry.CountryCodeField"
         self.phoneInputNode.numberField.textField.accessibilityIdentifier = "Auth.PhoneEntry.PhoneNumberField"
 
@@ -180,7 +181,11 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 }
                 
-                strongSelf.countryButton.accessibilityLabel = strongSelf.countryButton.attributedTitle(for: .normal)?.string ?? ""
+                if !strongSelf.hasCountry {
+                    // setCountryTitle labels the button with the country's name (its title starts with the flag's
+                    // placeholder); the plain "Select Country" title is read as shown.
+                    strongSelf.countryButton.accessibilityLabel = strings.Login_SelectCountry
+                }
                 strongSelf.countryButton.accessibilityTraits = [.button]
                 
                 if strongSelf.hasCountry {
@@ -404,7 +409,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: account == nil ? strings.Login_NewNumber : strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
-        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
         
         self.noticeNode = ImmediateTextNode()
         self.noticeNode.maximumNumberOfLines = 0
@@ -682,7 +687,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
         
         self.titleActivateAreaNode.frame = self.titleNode.frame
-        self.noticeActivateAreaNode.accessibilityLabel = self.noticeNode.attributedText?.string ?? ""
+        // The notice may carry the "log in using Passkey" link: a link element whose activation is the link's tap.
+        self.noticeActivateAreaNode.applyAccessibilityText(self.noticeNode.attributedText ?? NSAttributedString(), linkAttribute: NSAttributedString.Key(rawValue: "URL"), open: { [weak self] _ in
+            self?.retryPasskey?()
+        })
         self.noticeActivateAreaNode.frame = self.noticeNode.frame
     }
     
@@ -950,7 +958,16 @@ final class PhoneConfirmationController: ViewController {
             self.dimNode.isUserInteractionEnabled = false
             self.cancel()
         }
-        
+
+        // VoiceOver escape: the same as a tap on the dimmed background (Edit). While the sheet is already closing the
+        // escape is still consumed, so it does not reach the navigation controller and pop the phone screen.
+        override func accessibilityPerformEscape() -> Bool {
+            if self.dimNode.isUserInteractionEnabled {
+                self.cancelPressed()
+            }
+            return true
+        }
+
         func animateIn(codeNode: ASDisplayNode, numberNode: ASDisplayNode, buttonNode: ASDisplayNode) {
             guard let layout = self.validLayout else {
                 return
