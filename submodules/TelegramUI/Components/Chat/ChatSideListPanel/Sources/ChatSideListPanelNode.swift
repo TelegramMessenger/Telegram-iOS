@@ -11,6 +11,37 @@ import SolidRoundedButtonNode
 /// lays the list out from its right edge, so both move together.
 public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDelegate {
     public static let stripWidth: CGFloat = 75.0
+
+    /// How far the chat header's right button moves right as the list comes out, into the strip: iPhone Duo's side inset
+    /// and status corner keep it in from the edge, and the list covers them (0 elsewhere).
+    public static func headerButtonShift(_ layout: ContainerViewLayout) -> CGFloat {
+        return layout.safeInsets.right + layout.navigationBarTrailingButtonsInset
+    }
+
+    /// Wide enough for the chat beside it (iPad, iPhone Duo unfolded, any landscape): the list is a column at the chat's
+    /// right that narrows the chat, rather than a sheet that moves the chat aside.
+    public static func isDocked(_ layout: ContainerViewLayout) -> Bool {
+        return layout.metrics.widthClass == .regular || layout.size.width > layout.size.height
+    }
+
+    /// Docked beside the chat, the column narrows it on iPad and on iPhone Duo unfolded in portrait. On a phone in landscape
+    /// it lies over the chat instead, which keeps its width (a tap on the chat closes the column then, as on the sheet).
+    public static func narrowsChat(_ layout: ContainerViewLayout) -> Bool {
+        guard ChatSideListPanelNode.isDocked(layout) else {
+            return false
+        }
+        // The window's shape, not the chat's: unfolded, the chat is the split's detail column, taller than it is wide.
+        let windowSize = layout.metrics.windowSize ?? layout.size
+        if layout.deviceMetrics.type != .tablet, windowSize.width > windowSize.height {
+            return false
+        }
+        return true
+    }
+
+    /// The docked column's width: its content's, plus the screen's right inset it reaches into (landscape's sensor side).
+    public static func dockedWidth(_ layout: ContainerViewLayout) -> CGFloat {
+        return min(360.0, max(300.0, floor(layout.size.width * 0.3))) + layout.safeInsets.right
+    }
     /// A drag from the list's own left edge closes it too; further in, row swipes win.
     private static let listEdgeDragWidth: CGFloat = 20.0
 
@@ -24,6 +55,11 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
     private var newTopicButton: SolidRoundedButtonNode?
 
     public private(set) var openFraction: CGFloat = 0.0
+    public private(set) var isDocked = false
+    /// Docked over the chat rather than beside it (`narrowsChat`).
+    public private(set) var coversChat = false
+    /// The open chat's row, as last given to the list.
+    public var highlightedLocation: ChatLocation?
     /// Set by the owner the first time it opens the list.
     public var hasBeenOpened = false
     private var validLayout: ContainerViewLayout?
@@ -119,6 +155,10 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
         if !self.isOpen {
             return nil
         }
+        // Docked, the chat beside the column takes its own touches.
+        if self.isDocked, !self.coversChat, !self.listContainer.frame.contains(point), !(self.newTopicButton?.frame.contains(point) ?? false) {
+            return nil
+        }
         return super.hitTest(point, with: event)
     }
 
@@ -133,7 +173,7 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
         guard let pan = self.panRecognizer, gestureRecognizer === pan else {
             return super.gestureRecognizerShouldBegin(gestureRecognizer)
         }
-        if !self.isOpen {
+        if !self.isOpen || self.isDocked {
             return false
         }
         let velocity = pan.velocity(in: self.view)
@@ -186,8 +226,9 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
         if self.newTopicButton != nil {
             intrinsicInsets.bottom += 52.0 + 16.0
         }
+        let width = self.isDocked ? ChatSideListPanelNode.dockedWidth(layout) : layout.size.width - ChatSideListPanelNode.stripWidth
         return ContainerViewLayout(
-            size: CGSize(width: layout.size.width - ChatSideListPanelNode.stripWidth, height: layout.size.height),
+            size: CGSize(width: width, height: layout.size.height),
             metrics: layout.metrics,
             deviceMetrics: layout.deviceMetrics,
             intrinsicInsets: intrinsicInsets,
@@ -207,13 +248,19 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
     public func updateLayout(layout: ContainerViewLayout, openFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         self.openFraction = openFraction
+        self.isDocked = ChatSideListPanelNode.isDocked(layout)
+        self.coversChat = self.isDocked && !ChatSideListPanelNode.narrowsChat(layout)
 
-        let offset = openFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
         let listLayout = self.listLayout(layout)
+        // Docked, the column slides in at the right edge; otherwise the list comes out by the distance the chat moves.
+        let offset = self.isDocked ? openFraction * listLayout.size.width : openFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
         let listFrame = CGRect(origin: CGPoint(x: layout.size.width - offset, y: 0.0), size: listLayout.size)
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.listContainer, frame: listFrame)
-        transition.updateFrame(node: self.stripNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, listFrame.minX), height: layout.size.height)))
+        // Beside the chat there is nothing of it to tap; over it, a tap on what shows closes the column.
+        let hasStrip = !self.isDocked || self.coversChat
+        self.stripNode.isHidden = !hasStrip
+        transition.updateFrame(node: self.stripNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: hasStrip ? max(0.0, listFrame.minX) : 0.0, height: layout.size.height)))
 
         if self.validListLayout != listLayout {
             let isFirst = self.validListLayout == nil
@@ -223,11 +270,12 @@ public final class ChatSideListPanelNode: ASDisplayNode, ASGestureRecognizerDele
         }
 
         if let newTopicButton = self.newTopicButton {
-            let sideInset: CGFloat = 16.0 + layout.safeInsets.right
-            let buttonWidth = min(listLayout.size.width - 16.0 - sideInset, 320.0)
+            // Centred on the list's content, clear of the screen's right inset.
+            let contentWidth = listLayout.size.width - layout.safeInsets.right
+            let buttonWidth = min(contentWidth - 16.0 * 2.0, 320.0)
             let buttonHeight = newTopicButton.updateLayout(width: buttonWidth, transition: transition)
             let bottomInset = max(layout.intrinsicInsets.bottom, layout.safeInsets.bottom) + 8.0
-            let buttonFrame = CGRect(origin: CGPoint(x: listFrame.minX + floor((listLayout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
+            let buttonFrame = CGRect(origin: CGPoint(x: listFrame.minX + floor((contentWidth - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
             transition.updateFrame(node: newTopicButton, frame: buttonFrame)
         }
     }

@@ -118,6 +118,57 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         pan.delaysTouchesEnded = false
         pan.delegate = self
         host.addGestureRecognizer(pan)
+        NotificationCenter.default.addObserver(self, selector: #selector(sceneActivationChanged(_:)),
+                                               name: UIScene.willDeactivateNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(sceneActivationChanged(_:)),
+                                               name: UIScene.didActivateNotification, object: nil)
+    }
+
+    /// Touch-downs so far, and how many there had been when the host's scene last deactivated: the activation then
+    /// lets go only of the touch sequence the pan held when the app left, never one a finger began on the way back.
+    private var touchDownCount = 0
+    private var touchDownCountAtDeactivation: Int?
+    /// The pan is being let go of on a scene change. UIKit delivers its `.cancelled` inside `isEnabled = false`, so the
+    /// flag is set only around that toggle, and the release it marks is at rest.
+    private var releasesSceneCancelAtRest = false
+
+    /// Defensive, for #127 (iOS 27.2 devices: after Home and back the chat did not scroll until it was reopened). The
+    /// suspected cause, not observed on a device (the simulator resets the pan itself as the app resigns): a swipe Home
+    /// starts on the list and the system takes the touch, and a pan left holding it, recognizing or failed, is not
+    /// reset until that touch ends and takes no other finger meanwhile. So the pan lets go of its touch sequence as the
+    /// host's scene deactivates, and again as it activates if no finger has come down since: a drag ends as
+    /// `.cancelled` at rest (the system took it; flinging the content as the app leaves would move what the user comes
+    /// back to), a failed pan's `reset()` reports the lift. A pan the host turned off (`isScrollEnabled`) stays off.
+    @objc private func sceneActivationChanged(_ notification: Notification) {
+        guard let scene = notification.object as? UIScene, scene === host.window?.windowScene else {
+            return
+        }
+        // Debug Settings ▸ "Chat: CoreList scroll trace": the pan at every scene change, not only when it is let go of
+        // below, so that one device trace of #127 shows whether the pan was holding a sequence (this fix's suspect) or
+        // idle (then the cause is elsewhere, such as the navigation swipe-back every pan waits on).
+        FlightTrace.shared.log("SCENE \(notification.name.rawValue) state=\(Self.traceName(pan.state)) "
+            + "touches=\(pan.numberOfTouches) enabled=\(pan.isEnabled) touchDowns=\(touchDownCount) "
+            + "atDeactivation=\(touchDownCountAtDeactivation.map(String.init) ?? "-")")
+        // Written now: if the list then does not scroll, no gesture ends to write it.
+        FlightTrace.shared.flush()
+        if notification.name == UIScene.willDeactivateNotification {
+            touchDownCountAtDeactivation = touchDownCount
+        } else {
+            let heldSinceDeactivation = touchDownCountAtDeactivation == touchDownCount
+            touchDownCountAtDeactivation = nil
+            guard heldSinceDeactivation else { return }
+        }
+        guard pan.isEnabled, pan.state != .possible || pan.numberOfTouches != 0 else {
+            return
+        }
+        // Debug Settings ▸ "Chat: CoreList scroll trace": whether a device ever finds the pan holding a sequence here.
+        FlightTrace.shared.log("SCENE-CANCEL \(notification.name.rawValue) state=\(Self.traceName(pan.state)) "
+            + "touches=\(pan.numberOfTouches) offset=\(core.offset)")
+        FlightTrace.shared.flush()
+        releasesSceneCancelAtRest = true
+        pan.isEnabled = false
+        releasesSceneCancelAtRest = false
+        pan.isEnabled = true
     }
 
     // MARK: - ScrollEngine
@@ -181,6 +232,7 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// state, so it must run BEFORE the catch nulls that motion.
     func noteTouchDown(at timestamp: TimeInterval) {
         sawDrag = false
+        touchDownCount &+= 1
         // Cleared at finger-down, which runs BEFORE `shouldBeginImmediately` is consulted. Clearing it
         // only on `.ended`/`.cancelled` would leak a stale `true` into the next gesture whenever a
         // forced begin was then denied by `gestureRecognizerShouldBegin` (a tracking UIControl), and
@@ -353,7 +405,8 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
             // exactly the state a genuinely slow release leaves behind — and `.stop` still springs
             // back when the content was released overscrolled, so the one motion that MUST happen
             // still does. Skipping the call instead would strand an overscrolled list off its edge.
-            let releaseVelocity = (shouldStopScrollingOnRelease?(velocity.y) ?? false) ? 0.0 : velocity.y
+            let hostStops = shouldStopScrollingOnRelease?(velocity.y) ?? false
+            let releaseVelocity = (hostStops || releasesSceneCancelAtRest) ? 0.0 : velocity.y
             let decelerates = core.endDrag(recognizerVelocity: releaseVelocity, at: CACurrentMediaTime())
             FlightTrace.shared.log("RELEASE recognizer=\(velocity.y) used=\(releaseVelocity) decelerates=\(decelerates) "
                 + "velocity(pt/ms)=\(core.decelerationVelocity) vScale=\(core.decelerationVelocityScale) "
@@ -887,6 +940,11 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// The forced `.began` and the translation baseline were measured on the trackpad only; how a wheel
     /// notch landing on moving content behaves here is unverified on a device.
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
+        if gestureRecognizer.state == .possible {
+            // An indirect scroll's finger-down (`sceneActivationChanged`). Were UIKit to ask here for touches too, the
+            // count would only rise faster, which can only spare a drag from the activation's cancel.
+            touchDownCount &+= 1
+        }
         guard gestureRecognizer.state == .possible, flight != nil || core.isDecelerating else { return true }
         catchMotionForFingerRest()
         // Mark the forced-began path so handlePan(.began) captures the recognizer's stale translation as

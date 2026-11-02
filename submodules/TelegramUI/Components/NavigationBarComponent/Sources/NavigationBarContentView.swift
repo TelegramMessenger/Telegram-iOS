@@ -27,6 +27,8 @@ final class NavigationBarContentView: UIView {
     /// iPhone Duo: this content's part of the side column; the bar view hosts them.
     let columnBackContainer: UIView
     let columnButtonsContainer: UIView
+    /// The radius of the side column's last button's own glass (a forum's square avatar), when it is the column's last cell.
+    private(set) var columnLastButtonGlassCornerRadius: CGFloat?
     /// iPhone Duo: this content's confirming button (the Done checkmark) in the column's own circle; the bar view
     /// hosts it.
     let columnTrailingContainer: UIView
@@ -339,6 +341,10 @@ final class NavigationBarContentView: UIView {
         self.rightPillCornerRadii = placement.rowRightSections.map(navigationBarCapsuleCornerRadius)
         self.rightPillButtonCounts = placement.rowRightSections.map(\.count)
 
+        self.columnLastButtonGlassCornerRadius = nil
+        if let columnLayout, columnLayout.visibleItems.count == columnLayout.cellFrames.count, let lastItemIndex = columnLayout.visibleItems.last {
+            self.columnLastButtonGlassCornerRadius = placement.columnItems[lastItemIndex].glassCornerRadius
+        }
         if let columnLayout {
             for (cellIndex, itemIndex) in columnLayout.visibleItems.enumerated() {
                 let item = placement.columnItems[itemIndex]

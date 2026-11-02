@@ -1189,6 +1189,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     
     private(set) var inlineStackContainerTransitionFraction: CGFloat = 0.0
     private(set) var inlineStackContainerNode: ChatListContainerNode?
+    // How far below its place a pushed inline list starts: the header is still that much taller (an expanded stories
+    // row), and collapses in the same transition.
+    private var inlineStackContainerAppearanceOffset: CGFloat = 0.0
     private var inlineContentPanRecognizer: InteractiveTransitionGestureRecognizer?
     var temporaryContentOffsetChangeTransition: ContainedViewLayoutTransition?
     
@@ -1837,6 +1840,10 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             var inlineOffset: CGFloat
             if let contentOffset = inlineStackContainerNode.contentOffset, case let .known(value) = contentOffset {
                 inlineOffset = value
+            } else if inlineStackContainerNode.contentOffset == nil, let initialScrollingOffset = inlineStackContainerNode.initialScrollingOffset {
+                // A list being pushed has not laid out yet: the header moves straight to where it will start, rather than
+                // hiding the search field until its first layout (with the stories row expanded it would then reappear).
+                inlineOffset = initialScrollingOffset
             } else {
                 inlineOffset = navigationHeight
             }
@@ -2075,7 +2082,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             inlineStackContainerNode.update(layout: inlineLayout, navigationBarHeight: inlineNavigationHeight, visualNavigationHeight: inlineNavigationHeight, originalNavigationHeight: inlineNavigationHeight, cleanNavigationBarHeight: inlineNavigationHeight, insets: inlineInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, storiesInset: storiesInset, transition: inlineStackContainerNodeTransition)
             
             if animateIn {
-                transition.animatePosition(node: inlineStackContainerNode, from: CGPoint(x: inlineStackContainerNode.position.x + inlineStackContainerNode.bounds.width + UIScreenPixel, y: inlineStackContainerNode.position.y))
+                transition.animatePosition(node: inlineStackContainerNode, from: CGPoint(x: inlineStackContainerNode.position.x + inlineStackContainerNode.bounds.width + UIScreenPixel, y: inlineStackContainerNode.position.y + self.inlineStackContainerAppearanceOffset))
+                self.inlineStackContainerAppearanceOffset = 0.0
             }
         }
         
@@ -2478,9 +2486,11 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 
                 let previousInlineStackContainerNode = self.inlineStackContainerNode
                 
+                self.inlineStackContainerAppearanceOffset = 0.0
                 if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
                     let scrollOffset = max(0.0, clippedScrollOffset)
                     inlineStackContainerNode.initialScrollingOffset = scrollOffset
+                    self.inlineStackContainerAppearanceOffset = scrollOffset - clippedScrollOffset
                 }
                 
                 self.inlineStackContainerNode = inlineStackContainerNode

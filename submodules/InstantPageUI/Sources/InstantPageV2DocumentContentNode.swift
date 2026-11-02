@@ -359,7 +359,7 @@ final class InstantPageV2DocumentView: UIView, InstantPageItemView {
         self.item = item
 
         let presentationData = renderContext.context.sharedContext.currentPresentationData.with { $0 }
-        let incoming = renderContext.message?.isIncoming == true
+        let incoming = renderContext.isIncoming
         let documentFile: TelegramMediaFile
         if case let .file(f) = item.media.media {
             documentFile = f

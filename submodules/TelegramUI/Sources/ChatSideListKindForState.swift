@@ -5,7 +5,7 @@ import ChatPresentationInterfaceState
 
 /// The side list this chat shows its sidebar button for, or nil. The navigation buttons and the topics strips both ask
 /// this, so the button and the strip never show together.
-func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentationInterfaceState, context: AccountContext, isRegularWidth: Bool) -> ChatSideListKind? {
+func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentationInterfaceState, context: AccountContext) -> ChatSideListKind? {
     guard let peerId = state.chatLocation.peerId else {
         return nil
     }
@@ -44,7 +44,6 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
         isMonoforum: isMonoforum,
         isAdminMonoforum: isAdminMonoforum,
         isSidebarBot: isSidebarBot,
-        isRegularWidth: isRegularWidth,
         enabled: context.usesChatSideList
     )
 }
