@@ -130,6 +130,16 @@ extension VideoChatCall {
         }
     }
     
+    var isMicrophoneAccessGranted: Bool {
+        switch self {
+        case let .group(group):
+            return group.isMicrophoneAccessGranted
+        case .conferenceSource:
+            // A 1:1 call starts only with access.
+            return true
+        }
+    }
+    
     func setIsMuted(action: PresentationGroupCallMuteAction) {
         switch self {
         case let .group(group):
@@ -3188,15 +3198,17 @@ final class VideoChatScreenComponent: Component {
                         
                         if let unmutedStateIsPushToTalk {
                             if unmutedStateIsPushToTalk {
+                                // Without microphone access the call stays muted; the release asks for access.
+                                let isMicrophoneAccessGranted = currentCall.isMicrophoneAccessGranted
                                 if let muteState = callState.muteState {
                                     if muteState.canUnmute {
-                                        self.isPushToTalkActive = true
+                                        self.isPushToTalkActive = isMicrophoneAccessGranted
                                         currentCall.setIsMuted(action: .muted(isPushToTalkActive: true))
                                     } else {
                                         self.isPushToTalkActive = false
                                     }
                                 } else {
-                                    self.isPushToTalkActive = true
+                                    self.isPushToTalkActive = isMicrophoneAccessGranted
                                     currentCall.setIsMuted(action: .muted(isPushToTalkActive: true))
                                 }
                             } else {
