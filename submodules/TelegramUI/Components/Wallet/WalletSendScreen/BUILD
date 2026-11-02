@@ -81,7 +81,10 @@ swift_library(
         "Sources/WalletSendPeerAddressResolution.swift",
         "Sources/WalletTransferMessageRecipient.swift",
     ] + glob(["Tests/*.swift"]),
-    deps = ["//submodules/TelegramCore"],
+    deps = [
+        "//submodules/TelegramCore",
+        "//submodules/WalletContext",
+    ],
 )
 
 ios_test_runner(
