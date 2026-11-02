@@ -72,6 +72,29 @@ public func sheetBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) 
     return SheetHorizontalPlacement(minX: safeInsets.left, width: containerSize.width - safeInsets.left - safeInsets.right, contentSideInsets: UIEdgeInsets())
 }
 
+/// The frame of a sheet shown as a centered card (where the layout `presentsFloatingPanels`) whose content is
+/// `contentHeight` high, in a container `containerSize` large: as wide as `SheetComponent`'s and the modal
+/// container's centered cards (half the longer side, at least 10pt from each edge), at most the shorter side less
+/// 44pt above and below, centered on the container.
+public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat) -> CGRect {
+    let verticalInset: CGFloat = 44.0
+    let maxSide = max(containerSize.width, containerSize.height)
+    let minSide = min(containerSize.width, containerSize.height)
+    let width = min(containerSize.width - 20.0, floor(maxSide / 2.0))
+    let height = max(0.0, min(contentHeight, minSide - verticalInset * 2.0))
+    return CGRect(origin: CGPoint(x: floor((containerSize.width - width) / 2.0), y: floor((containerSize.height - height) / 2.0)), size: CGSize(width: width, height: height))
+}
+
+/// A centered card (`centeredSheetFrame`) whose bottom stays at `maxY`, where it rests, while its content is
+/// `contentHeight` high: a card whose list rubber-bands grows and shrinks at its top only, as a bottom sheet does.
+/// Its top never rises above the tallest card's: past that the card grows downward, within the margins.
+public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat, maxY: CGFloat) -> CGRect {
+    let tallest = centeredSheetFrame(containerSize: containerSize, contentHeight: .greatestFiniteMagnitude)
+    let height = max(0.0, contentHeight)
+    let minY = max(tallest.minY, maxY - height)
+    return CGRect(origin: CGPoint(x: tallest.minX, y: minY), size: CGSize(width: tallest.width, height: height))
+}
+
 /// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) `alertWidth` wide, from `alertMinY` to
 /// `alertMaxY`, centers between in a container `containerSize` large: the axis of the screen's sheets.
 ///

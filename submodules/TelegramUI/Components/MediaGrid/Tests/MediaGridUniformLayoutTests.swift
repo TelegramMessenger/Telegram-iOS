@@ -134,6 +134,24 @@ final class MediaGridUniformLayoutTests: XCTestCase {
         }
     }
 
+    // iPhone Duo: the side strip is on one side only (folded portrait: 466pt, right 84). The grid keeps to the band
+    // beside it, not to a band inset by the strip on both sides.
+    func testOneSidedInsetKeepsToTheBand() {
+        for (left, right) in [(CGFloat(0), CGFloat(84)), (CGFloat(84), CGFloat(0))] {
+            let geometry = MediaGridGeometry(width: 466, leftInset: left, rightInset: right, topInset: 0, bottomInset: 0, spacing: 1.0, scale: 3.0)
+            for columns in [3, 5] {
+                let layout = MediaGridUniformLayout(geometry: geometry, columns: columns, cellAspect: 1.0, reservedSlots: [], count: columns * 2)
+                let context = "insets \(left) \(right) columns \(columns)"
+                XCTAssertEqual(layout.frame(at: 0).minX, left, accuracy: 1e-9, context)
+                XCTAssertEqual(layout.frame(at: columns - 1).maxX, 466 - right, accuracy: 1e-9, context)
+                XCTAssertEqual(layout.itemSize.width, floor((382 - CGFloat(columns - 1)) / CGFloat(columns) * 3.0) / 3.0, accuracy: 1e-9, context)
+                XCTAssertEqual(layout.index(at: CGPoint(x: left + 0.5, y: 1)), 0, context)
+                XCTAssertNil(layout.index(at: CGPoint(x: left - 0.5, y: 1)), context)
+                XCTAssertEqual(layout.index(at: CGPoint(x: 466 - right - 0.5, y: 1)), columns - 1, context)
+            }
+        }
+    }
+
     func testNonFiniteInputsDoNotTrap() {
         let layout = MediaGridUniformLayout(geometry: self.geometry(), columns: 31, cellAspect: 1.0, reservedSlots: [], count: 1000)
         XCTAssertTrue(layout.indexRange(intersecting: CGRect(x: 0, y: CGFloat.nan, width: 393, height: 100)).isEmpty)

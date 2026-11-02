@@ -638,11 +638,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     if id != selectedId {
                         itemNode.emptyNode?.restartAnimation()
                         
-                        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                            let scrollOffset = clippedScrollOffset
-                            
-                            let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                        }
+                        self.scrollToNavigationBarOffset(itemNode: itemNode)
                     }
                 }
                 
@@ -720,10 +716,16 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                 }
                 self.transitionFraction = transitionFraction + self.transitionFractionOffset
                 if let currentItemNode = self.currentItemNodeValue {
-                    let isNavigationHidden = currentItemNode.listNode.isNavigationHidden
+                    // From the header when it has an offset, so that this and the matching below agree (they differ from
+                    // the current list's own while it is still loading).
+                    let isNavigationHidden = self.navigationBarScrollOffset.flatMap { ChatListNavigationOffset.isNavigationHidden(.known($0)) } ?? currentItemNode.listNode.isNavigationHidden
                     for (_, itemNode) in self.itemNodes {
                         if itemNode !== currentItemNode {
                             itemNode.listNode.adjustScrollOffsetForNavigation(isNavigationHidden: isNavigationHidden)
+                            // On every change, not once: a list's rows can load, reload at its top (a folder update) or
+                            // come back to its top (above) at any point of the swipe, and the header can move with the
+                            // current list.
+                            self.scrollToNavigationBarOffset(itemNode: itemNode)
                         }
                     }
                 }
@@ -784,7 +786,8 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     }
                     let switchToId = self.availableFilters[updatedIndex].id
                     if switchToId != self.selectedId, let itemNode = self.itemNodes[switchToId] {
-                        let _ = itemNode
+                        // It may have loaded or reloaded after the last change of the swipe.
+                        self.scrollToNavigationBarOffset(itemNode: itemNode)
                         self.selectedId = switchToId
                         applyNodeAsCurrent = switchToId
                     }
@@ -810,6 +813,25 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         default:
             break
         }
+    }
+    
+    // The header shows the current list's scroll state, and switching lists does not change it: a list that may become
+    // current is scrolled to match it (the search field and an expanded stories row stay as they are). A list without its
+    // first row (still loading, or scrolled past it) cannot be. A list that is not current does not move the header, so
+    // nothing else corrects a list that was matched and then moved: it is matched again until it becomes current.
+    // `adjustScrollOffsetForNavigation` agrees with this (both stop at the header's collapsed offset), so the two never
+    // move a list back and forth.
+    private func scrollToNavigationBarOffset(itemNode: ChatListContainerItemNode) {
+        if let navigationBarScrollOffset = self.navigationBarScrollOffset {
+            let _ = itemNode.listNode.scrollToOffsetFromTop(navigationBarScrollOffset, animated: false)
+        }
+    }
+    
+    private var navigationBarScrollOffset: CGFloat? {
+        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            return navigationBarComponentView.clippedScrollOffset
+        }
+        return nil
     }
     
     func fixContentOffset(offset: CGFloat) {
@@ -915,11 +937,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     return
                 }
                 
-                if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                    let scrollOffset = clippedScrollOffset
-                    
-                    let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                }
+                self.scrollToNavigationBarOffset(itemNode: itemNode)
                 
                 self.selectedId = id
                 self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
@@ -960,11 +978,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     strongSelf.pendingItemNode = nil
                     itemNode.listNode.tempTopInset = strongSelf.tempTopInset
                     
-                    if let controller = strongSelf.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                        let scrollOffset = clippedScrollOffset
-                        
-                        let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                    }
+                    strongSelf.scrollToNavigationBarOffset(itemNode: itemNode)
                     
                     guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = strongSelf.validLayout else {
                         strongSelf.itemNodes[id] = itemNode

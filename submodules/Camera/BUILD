@@ -64,8 +64,10 @@ swift_test(
     srcs = [
         "Sources/CameraCaptureMode.swift",
         "Sources/CameraCaptureModeChange.swift",
+        "Sources/CameraVideoOrientation.swift",
         "Tests/CameraCaptureModeTests.swift",
         "Tests/CameraCaptureModeChangeTests.swift",
+        "Tests/CameraVideoOrientationTests.swift",
     ],
     copts = [
         "-warnings-as-errors",

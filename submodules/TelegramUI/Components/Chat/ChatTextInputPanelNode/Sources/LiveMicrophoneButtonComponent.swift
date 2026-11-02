@@ -139,7 +139,8 @@ final class LiveMicrophoneButtonComponent: Component {
                         }
                         if let unmutedStateIsPushToTalk {
                             if unmutedStateIsPushToTalk {
-                                self.isPushToTalkActive = true
+                                // Without microphone access the call stays muted; the release asks for access.
+                                self.isPushToTalkActive = call.isMicrophoneAccessGranted
                                 call.setIsMuted(action: .muted(isPushToTalkActive: true))
                             } else {
                                 call.setIsMuted(action: .unmuted)

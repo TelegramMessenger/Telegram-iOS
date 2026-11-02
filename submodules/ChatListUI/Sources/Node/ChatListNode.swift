@@ -3656,14 +3656,7 @@ public final class ChatListNode: ListViewImpl {
     }
     
     var isNavigationHidden: Bool {
-        switch self.visibleContentOffset() {
-        case let .known(value) where abs(value) < self.scrollHeightTopInset - 1.0:
-            return false
-        case .none:
-            return false
-        default:
-            return true
-        }
+        return ChatListNavigationOffset.isNavigationHidden(self.visibleContentOffset())
     }
     
     var isNavigationInAFinalState: Bool {
@@ -3687,21 +3680,8 @@ public final class ChatListNode: ListViewImpl {
     }
     
     func adjustScrollOffsetForNavigation(isNavigationHidden: Bool) {
-        if self.isNavigationHidden == isNavigationHidden {
-            return
-        }
-        var scrollToItem: ListViewScrollToItem?
-        switch self.visibleContentOffset() {
-        case let .known(value) where abs(value) < self.scrollHeightTopInset - 1.0:
-            if isNavigationHidden {
-                scrollToItem = ListViewScrollToItem(index: 0, position: .top(-self.scrollHeightTopInset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
-            }
-        default:
-            if !isNavigationHidden {
-                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
-            }
-        }
-        if let scrollToItem = scrollToItem {
+        if let offset = ChatListNavigationOffset.offsetMatching(isNavigationHidden: isNavigationHidden, from: self.visibleContentOffset()) {
+            let scrollToItem = ListViewScrollToItem(index: 0, position: .top(-offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         }
     }

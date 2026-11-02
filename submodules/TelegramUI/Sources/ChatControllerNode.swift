@@ -78,6 +78,7 @@ import InstantPageUI
 import ChatRichTextEditorComposer
 import ChatHistoryListViewBackend
 import MessageWidget
+import TabBarLayout
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -1914,6 +1915,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return self.makeMediaInputNode()
         })
         
+        // The gap between the bottom inset and the bottom panels.
+        let inputPanelsInset: CGFloat = 8.0
+        // The bottom inset with neither a keyboard nor an input node, the least the panels sit above.
+        var restingBottomInset = cleanInsets.bottom
+        // iPad: the bottom panels' row (a panel's default height, 40pt) rests centred on the tab bar in the master
+        // pane beside the chat, while there is one (not beside a pushed master screen, such as a forum's topics).
+        if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, layout.isBesideBottomTabBar, case .standard(.default) = self.chatPresentationInterfaceState.mode {
+            restingBottomInset += tabBarAlignedRowBottomInsetOffset(bottomInset: restingBottomInset, rowSpacing: inputPanelsInset, rowHeight: 40.0)
+        }
         var insets: UIEdgeInsets
         var inputPanelBottomInsetTerm: CGFloat = 0.0
         if let inputNodeForState = inputNodeForState {
@@ -1923,9 +1933,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             insets = layout.insets(options: [])
+            insets.bottom = restingBottomInset
             inputPanelBottomInsetTerm = max(insets.bottom, layout.standardInputHeight)
         } else {
             insets = layout.insets(options: [.input])
+            // A keyboard taller than the resting inset takes over from it continuously.
+            insets.bottom = max(layout.inputHeight ?? 0.0, restingBottomInset)
         }
 
         switch self.chatPresentationInterfaceState.mode {
@@ -2208,6 +2221,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.pendingSwitchToChatLocation = nil
             
             let previousHistoryNode = self.historyNode
+            // Switching in place (another forum topic) does not go through viewWillDisappear.
+            previousHistoryNode.readVisibleMessagesBeforeLeaving()
             self.historyNode = pendingSwitchToChatLocation.historyNode
             
             self.historyNode.position = previousHistoryNode.position
@@ -2411,7 +2426,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.overlayContextPanelNode = nil
         }
         
-        let inputPanelsInset: CGFloat = 8.0
         let accessoryPanelsInset: CGFloat = 8.0
         var inputPanelsHeight: CGFloat = 0.0
         
@@ -2486,9 +2500,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             var footerPanelsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right + 16.0
-            if containerInsets.bottom <= 32.0 {
-                footerPanelsWidth -= 36.0
-            }
+            footerPanelsWidth -= 2.0 * chatBottomControlsCompactSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
             
             let footerPanelsSizeValue = footerPanelsView.update(
                 transition: footerPanelsTransition,
@@ -2801,9 +2813,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         // (and keep the strip beside the column). Without corner blocks this is the plain safe inset.
         let navigateButtonsRightInset = sideColumnBandInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnExtent).right
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsRightInset - navigateButtonsSize.width - 8.0, y: navigateButtonsMinY), size: navigateButtonsSize)
-        if containerInsets.bottom <= 32.0 {
-            navigateButtonsFrame.origin.x -= 18.0
-        }
+        // Over the panels' right edge on iPad, which does not step in there.
+        navigateButtonsFrame.origin.x -= chatBottomControlsCompactSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
         if case .overlay = self.chatPresentationInterfaceState.mode {
             navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
@@ -2830,7 +2841,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var isInputExpansionEnabled = false
-        if case .media = self.chatPresentationInterfaceState.inputMode {
+        if case .media = self.chatPresentationInterfaceState.inputMode, inputNodeForState != nil {
             isInputExpansionEnabled = true
         }
         
@@ -3164,7 +3175,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         if let disappearingNode = self.disappearingNode {
             let targetY: CGFloat
-            if cleanInsets.bottom.isLess(than: insets.bottom) {
+            if restingBottomInset.isLess(than: insets.bottom) {
                 targetY = layout.size.height - insets.bottom
             } else {
                 targetY = layout.size.height
@@ -4122,6 +4133,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             break
         case .inputButtons:
             if let peer = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, self.chatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup?.flags.contains(.persistent) == true {
+            } else if chatDisplaysBotStartButton(self.chatPresentationInterfaceState) {
+                // The reply keyboard is hidden behind Start (a blocked bot), not shown: keep it for when Start goes.
             } else {
                 self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                     return (.none, state.keyboardButtonsMessage?.id ?? state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)

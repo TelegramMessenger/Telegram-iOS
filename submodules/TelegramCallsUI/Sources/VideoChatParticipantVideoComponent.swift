@@ -307,8 +307,6 @@ final class VideoChatParticipantVideoComponent: Component {
             transition.setBounds(view: self.extractedContainerView.contentView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             self.extractedContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
             
-            transition.setFrame(view: self.pinchContainerNode.contentNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            
             transition.setFrame(view: self.backgroundGradientView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             let alphaTransition: ComponentTransition

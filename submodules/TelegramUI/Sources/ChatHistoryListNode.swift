@@ -30,6 +30,7 @@ import ChatUserInfoItem
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatMessageItemView
+import ChatMessageItemCommon
 import ChatMessageBubbleItemNode
 import ChatMessageTransitionNode
 import ChatControllerInteraction
@@ -1207,70 +1208,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
                 }
                 
-                var lastMessageId: MessageId?
-                if let historyView = (strongSelf.listView.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
-                    if historyView.originalView.laterId == nil && !historyView.originalView.holeLater {
-                        lastMessageId = historyView.originalView.entries.last?.message.id
-                    }
-                }
-                
-                var maxMessage: MessageIndex?
-                strongSelf.forEachVisibleMessageItemNode { itemNode in
-                    if let item = itemNode.item, let itemFrame = strongSelf.listView.itemNodeFrame(itemNode) {
-                        var matches = false
-                        if itemFrame.maxY < strongSelf.insets.top {
-                            return
-                        }
-                        if itemFrame.minY >= strongSelf.insets.top {
-                            matches = true
-                        } else if itemFrame.minY >= strongSelf.insets.top - 100.0 {
-                            matches = true
-                        } else if let lastMessageId {
-                            for (message, _) in item.content {
-                                if message.id == lastMessageId {
-                                    matches = true
-                                }
-                            }
-                        }
-                        
-                        if matches {
-                            for (message, _) in item.content {
-                                if strongSelf.chatLocation.threadId != nil {
-                                    if message.id.namespace != Namespaces.Message.Cloud {
-                                        matches = false
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if matches {
-                            var maxItemIndex: MessageIndex?
-                            for (message, _) in item.content {
-                                if let maxItemIndexValue = maxItemIndex {
-                                    if maxItemIndexValue < message.index {
-                                        maxItemIndex = message.index
-                                    }
-                                } else {
-                                    maxItemIndex = message.index
-                                }
-                            }
-                            
-                            if let maxItemIndex {
-                                if let maxMessageValue = maxMessage {
-                                    if maxMessageValue < maxItemIndex {
-                                        maxMessage = maxItemIndex
-                                    }
-                                } else {
-                                    maxMessage = maxItemIndex
-                                }
-                            }
-                        }
-                    }
-                }
-                if let maxMessage {
-                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
-                }
+                strongSelf.updateMaxVisibleReadIncomingMessageIndexFromVisibleItems()
                 
                 strongSelf.messageReadMetricsTracker?.reportUserActivity()
                 strongSelf.updateMessageReadTracker()
@@ -4189,6 +4127,35 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
+    // Reads the messages on screen now (presented geometry, mid-pass included).
+    private func updateMaxVisibleReadIncomingMessageIndexFromVisibleItems() {
+        var lastMessageId: MessageId?
+        if let historyView = (self.listView.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
+            if historyView.originalView.laterId == nil && !historyView.originalView.holeLater {
+                lastMessageId = historyView.originalView.entries.last?.message.id
+            }
+        }
+        
+        var rows: [ChatHistoryVisibleReadRow] = []
+        self.forEachVisibleMessageItemNode { itemNode in
+            if let item = itemNode.item, let itemFrame = self.listView.itemNodeFrame(itemNode) {
+                rows.append(ChatHistoryVisibleReadRow(frame: itemFrame, messages: item.content.map { $0.0.index }))
+            }
+        }
+        if let maxMessage = chatHistoryMaxVisibleReadIndex(rows: rows, topInset: self.insets.top, lastMessageId: lastMessageId, isThread: self.chatLocation.threadId != nil) {
+            self.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
+        }
+    }
+    
+    // Call right before the chat stops reading because it is leaving the screen (`canReadHistory` turning false, or the
+    // node being replaced by another chat location's). The chat reads what it
+    // shows when the list reports its content offset, and an animated pass reports its landed rows only when its whole
+    // duration has elapsed (1.15s for the go-down button's scroll, which looks finished well before that). Leaving
+    // in between, e.g. back to a forum's topic list, would otherwise leave what the pass brought on screen unread.
+    public func readVisibleMessagesBeforeLeaving() {
+        self.updateMaxVisibleReadIncomingMessageIndexFromVisibleItems()
+    }
+    
     private func updateMaxVisibleReadIncomingMessageIndex(_ index: MessageIndex) {
         self.maxVisibleIncomingMessageIndex.set(index)
     }
@@ -4608,7 +4575,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        if historyView.originalView.isLoading {
+                        // The topic's root is stored but not displayed (chatHistoryEntriesForView).
+                        let originalView = historyView.originalView
+                        let holdsOnlyForumTopicRoot = !originalView.entries.isEmpty && originalView.entries.allSatisfy { entry in
+                            return isUndisplayedForumTopicRoot(entry.message, location: strongSelf.chatLocation, additionalData: originalView.additionalData)
+                        }
+                        if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater, holdsOnlyForumTopicRoot: holdsOnlyForumTopicRoot) {
                             loadState = .loading(false)
                         } else if let firstEntry = historyView.originalView.entries.first {
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic

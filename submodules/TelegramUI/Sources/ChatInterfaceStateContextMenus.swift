@@ -40,6 +40,7 @@ import ChatMessageBubbleItemNode
 import AdsInfoScreen
 import AdsReportScreen
 import WalletContext
+import WalletSendScreen
  
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -1228,18 +1229,25 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable,
-           let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init), case .user = peer,
-           message.media.contains(where: { media in
-               if let action = media as? TelegramMediaAction, case .gramTransfer = action.action {
-                   return true
+           let peerAddress = message.media.lazy.compactMap({ media -> String? in
+               if let action = media as? TelegramMediaAction, case let .gramTransfer(_, peerAddress, _, _, _) = action.action {
+                   return peerAddress
                }
-               return false
-           }) {
+               return nil
+           }).first,
+           let transferRecipient = walletTransferMessageRecipient(chatPeer: message.peers[message.id.peerId].flatMap(EnginePeer.init), accountPeerId: context.account.peerId, peerAddress: peerAddress) {
+            let recipient: WalletSendRequest.Recipient
+            switch transferRecipient {
+            case let .peer(peer):
+                recipient = .peer(peer)
+            case let .address(address):
+                recipient = .address(address)
+            }
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Wallet_SendMoney, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ton"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 f(.dismissWithoutContent)
-                (interfaceInteraction.chatController() as? ChatControllerImpl)?.openResolved(result: .sendGrams(transfer: WalletSendRequest(recipient: .peer(peer), amountNanograms: nil)), sourceMessageId: message.id)
+                (interfaceInteraction.chatController() as? ChatControllerImpl)?.openResolved(result: .sendGrams(transfer: WalletSendRequest(recipient: recipient, amountNanograms: nil)), sourceMessageId: message.id)
             })))
         }
         

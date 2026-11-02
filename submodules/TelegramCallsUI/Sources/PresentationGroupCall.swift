@@ -598,6 +598,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     private let isMutedPromise = ValuePromise<PresentationGroupCallMuteAction>(.muted(isPushToTalkActive: false))
+    private var microphoneAccessGate = GroupCallMicrophoneAccessGate()
     public var isMuted: Signal<Bool, NoError> {
         return self.isMutedPromise.get()
         |> map { value -> Bool in
@@ -844,7 +845,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var lastErrorAlertTimestamp: Double = 0.0
-    
+    private var pendingForbiddenInvitePeers: [EnginePeer] = []
+    private var pendingForbiddenInvitePeersTimer: SwiftSignalKit.Timer?
+
     public init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -900,18 +903,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
         
+        let joinsUnmuted: Bool
         if let unmuteByDefault {
-            if unmuteByDefault {
-                self.isMutedValue = .unmuted
-                self.isMutedPromise.set(self.isMutedValue)
-                self.stateValue.muteState = nil
-            }
+            joinsUnmuted = unmuteByDefault
         } else {
-            if self.isConference && conferenceSourceId == nil {
-                self.isMutedValue = .unmuted
-                self.isMutedPromise.set(self.isMutedValue)
-                self.stateValue.muteState = nil
-            }
+            joinsUnmuted = self.isConference && conferenceSourceId == nil
+        }
+        // Without microphone access the call joins muted and asks for it (below); once it is granted, the user unmutes
+        // (GroupCallMicrophoneAccessGate). A call link's join asks before the call is created (joinConferenceCall); this
+        // covers any other caller.
+        let asksForMicrophoneAccessAtJoin = joinsUnmuted && !(isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true)
+        if joinsUnmuted && !asksForMicrophoneAccessAtJoin {
+            self.isMutedValue = .unmuted
+            self.isMutedPromise.set(self.isMutedValue)
+            self.stateValue.muteState = nil
         }
 
         if let keyPair, let initialCall {
@@ -1264,6 +1269,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         if beginWithVideo {
             self.requestVideo()
+        }
+        
+        if asksForMicrophoneAccessAtJoin {
+            // After init (`Queue.mainQueue().async` would run inline here, on the main queue), so that the call screen,
+            // presented on the same queue, is up when the request shows.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.leaving else {
+                    return
+                }
+                self.setIsMuted(action: .unmuted)
+            }
         }
     }
     
@@ -3101,6 +3117,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }*/
 
+        if !action.isEffectivelyMuted, let muteState = self.stateValue.muteState, !muteState.canUnmute {
+            return
+        }
+        switch self.microphoneAccessGate.decide(action: action, isAccessGranted: self.isMicrophoneAccessGranted) {
+        case .apply:
+            break
+        case .requestAccess:
+            self.requestMicrophoneAccess()
+            return
+        case .ignore:
+            return
+        }
+
         if self.isMutedValue == action {
             return
         }
@@ -3140,6 +3169,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         } else {
             self.stateValue.muteState = nil
         }
+    }
+
+    /// A stream's audio input is off, so it needs no access.
+    public var isMicrophoneAccessGranted: Bool {
+        return self.isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true
+    }
+
+    private func requestMicrophoneAccess() {
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+            present(c, a)
+        }, openSettings: {
+            openSettings()
+        }, { [weak self] _ in
+            // Granted or not, the call stays muted: a grant does not unmute (GroupCallMicrophoneAccessGate).
+            self?.microphoneAccessGate.accessRequestCompleted()
+        })
     }
 
     public func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
@@ -3775,6 +3821,48 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
+    // Invitations sent together (several people picked at once) fail together: the people whose privacy settings refuse
+    // the call are collected for a moment and offered the call link on one screen, rather than the first of them alone.
+    private func enqueueForbiddenInvitePeer(_ peer: EnginePeer) {
+        if !self.pendingForbiddenInvitePeers.contains(where: { $0.id == peer.id }) {
+            self.pendingForbiddenInvitePeers.append(peer)
+        }
+        self.pendingForbiddenInvitePeersTimer?.invalidate()
+        let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: false, completion: { [weak self] in
+            self?.presentPendingForbiddenInvitePeers()
+        }, queue: Queue.mainQueue())
+        self.pendingForbiddenInvitePeersTimer = timer
+        timer.start()
+    }
+    
+    private func presentPendingForbiddenInvitePeers() {
+        self.pendingForbiddenInvitePeersTimer = nil
+        let peers = self.pendingForbiddenInvitePeers
+        self.pendingForbiddenInvitePeers = []
+        if peers.isEmpty {
+            return
+        }
+        // With the call's links (the call screen keeps them) the people are offered the link; before it has them (a new
+        // call, a 1:1 call becoming a conference) one alert names them all.
+        if let currentInviteLinks = self.currentInviteLinks {
+            let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: peers.map { TelegramForbiddenInvitePeer(peer: $0, canInviteWithPremium: false, premiumRequiredToContact: false) }, theme: defaultDarkColorPresentationTheme)
+            if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(inviteLinkScreen)
+            }
+        } else {
+            let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+            let text: String
+            if peers.count == 1 {
+                text = presentationData.strings.Call_PrivacyErrorMessage(peers[0].compactDisplayTitle).string
+            } else {
+                text = presentationData.strings.Call_PrivacyErrorMessageMultiple(peers.map { $0.compactDisplayTitle }.joined(separator: ", ")).string
+            }
+            self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+            ]), on: .root, blockInteraction: false, completion: {})
+        }
+    }
+    
     public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
@@ -3803,7 +3891,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let self else {
                         return
                     }
-                    
+
+                    if case let .privacy(peer) = error, let peer {
+                        self.enqueueForbiddenInvitePeer(peer)
+                        return
+                    }
+
                     let timestamp = CACurrentMediaTime()
                     if self.lastErrorAlertTimestamp > timestamp - 1.0 {
                         return
@@ -3812,24 +3905,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
                     
-                    var errorText = presentationData.strings.Login_UnknownError
-                    
-                    switch error {
-                    case let .privacy(peer):
-                        if let peer {
-                            if let currentInviteLinks = self.currentInviteLinks {
-                                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(.existing(link: currentInviteLinks.listenerLink)), peers: [TelegramForbiddenInvitePeer(peer: peer, canInviteWithPremium: false, premiumRequiredToContact: false)], theme: defaultDarkColorPresentationTheme)
-                                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
-                                    navigationController.pushViewController(inviteLinkScreen)
-                                }
-                                return
-                            } else {
-                                errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
-                            }
-                        }
-                    default:
-                        break
-                    }
+                    // A privacy refusal naming its peer went to `enqueueForbiddenInvitePeer` above.
+                    let errorText = presentationData.strings.Login_UnknownError
                     
                     self.accountContext.sharedContext.mainWindow?.present(textAlertController(context: self.accountContext, title: nil, text: errorText, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})

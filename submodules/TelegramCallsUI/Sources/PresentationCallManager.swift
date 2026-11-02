@@ -1048,52 +1048,12 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
-        let (presentationData, present, openSettings) = self.getDeviceAccessData()
-        
-        let isVideo = false
-        
-        let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
-            if let isStream = initialCall.isStream, isStream {
-                subscriber.putNext(true)
-                subscriber.putCompletion()
-                
-                return EmptyDisposable
-            }
-            
-            DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
-                present(c, a)
-            }, openSettings: {
-                openSettings()
-            }, { value in
-                if isVideo && value {
-                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
-                        present(c, a)
-                    }, openSettings: {
-                        openSettings()
-                    }, { value in
-                        subscriber.putNext(value)
-                        subscriber.putCompletion()
-                    })
-                } else {
-                    subscriber.putNext(value)
-                    subscriber.putCompletion()
-                }
-            })
-            return EmptyDisposable
-        }
-        |> runOn(Queue.mainQueue())
-        
-        return combineLatest(queue: .mainQueue(),
-            accessEnabledSignal,
-            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        )
+        // Joining must not require the microphone: a video chat is joined muted and a live stream never records.
+        // Asking for it belongs to unmuting, so a denied or undetermined microphone does not stop the join here.
+        return accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
-                return .single(false)
-            }
-            
-            if !accessEnabled {
                 return .single(false)
             }
 
@@ -1156,7 +1116,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         endCurrentIfAny: Bool,
         unmuteByDefault: Bool
     ) -> JoinGroupCallManagerResult {
-        let begin: () -> Void = { [weak self] in
+        let createCall: (Bool) -> Void = { [weak self] unmuteByDefault in
             guard let self else {
                 return
             }
@@ -1191,6 +1151,36 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 let _ = call.invitePeer(peerId, isVideo: beginWithVideo)
             }
             self.updateCurrentGroupCall(.group(call))
+        }
+        let begin: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            // Joining with the microphone on asks for access before the call's audio starts; without it the call still
+            // joins, muted. A grant here keeps the microphone on, as the call was started with it on; only a grant asked
+            // for mid-call leaves the call muted (GroupCallMicrophoneAccessGate). A newer start (startCallDisposable)
+            // supersedes a pending request.
+            if unmuteByDefault && DeviceAccess.isMicrophoneAccessAuthorized() != true {
+                let (presentationData, present, openSettings) = self.getDeviceAccessData()
+                let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+                    DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                    return EmptyDisposable
+                }
+                |> runOn(Queue.mainQueue())
+                self.startCallDisposable.set((accessEnabledSignal
+                |> deliverOnMainQueue).startStrict(next: { value in
+                    createCall(value)
+                }))
+            } else {
+                createCall(unmuteByDefault)
+            }
         }
         
         if let currentGroupCall = self.currentGroupCallValue {

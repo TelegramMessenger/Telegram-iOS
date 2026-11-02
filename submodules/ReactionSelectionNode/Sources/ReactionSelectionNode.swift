@@ -168,6 +168,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     var didSetupStillAnimation: Bool = false
         
     var expandedAnimationDidBegin: (() -> Void)?
+    private(set) var didBeginExpandedAnimation: Bool = false
     
     var currentFrameIndex: Int {
         return self.staticAnimationNode.currentFrameIndex
@@ -352,6 +353,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             animationNode.started = { [weak self] in
                 if !didReportStarted {
                     didReportStarted = true
+                    self?.didBeginExpandedAnimation = true
                     self?.expandedAnimationDidBegin?()
                 }
             }

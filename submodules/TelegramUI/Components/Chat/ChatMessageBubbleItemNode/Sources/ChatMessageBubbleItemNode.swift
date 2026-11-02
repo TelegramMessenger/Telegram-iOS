@@ -833,6 +833,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var credibilityButtonNode: HighlightTrackingButtonNode?
     private var credibilityHighlightNode: ASImageNode?
     
+    // The author's third-party verification icon, left of the name.
+    private var verificationIconView: ComponentHostView<Empty>?
+    private var verificationIconComponent: EmojiStatusComponent?
+    
     private var boostBadgeNode: TextNode?
     private var boostIconNode: UIImageView?
     private var boostCount: Int = 0
@@ -934,6 +938,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         component: AnyComponent(credibilityIconComponent.withVisibleForAnimations(self.visibilityStatus)),
                         environment: {},
                         containerSize: credibilityIconView.bounds.size
+                    )
+                }
+                if let verificationIconView = self.verificationIconView, let verificationIconComponent = self.verificationIconComponent {
+                    let _ = verificationIconView.update(
+                        transition: .immediate,
+                        component: AnyComponent(verificationIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                        environment: {},
+                        containerSize: verificationIconView.bounds.size
                     )
                 }
             }
@@ -2655,6 +2667,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var currentCredibilityIcon: (EmojiStatusComponent.Content, UIColor?)?
+        // The author's third-party verification icon, drawn left of the name. A channel's own posts carry no badges
+        // beside its name (the chat header shows them), so it is the effective author's only.
+        var authorVerificationIconFileId: Int64?
+        var authorVerificationIcon: EmojiStatusComponent.Content?
         
         let displayEphemeralBadge: Bool
         if ephemeralBadgeText != nil && !mergedTop.merged && !hidesHeaders && item.message.adAttribute == nil {
@@ -2755,6 +2771,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 authorNameColor = nameColors?.main
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                // Not when the author is the chat itself (an anonymous admin), which the chat header already badges, as
+                // a broadcast channel's own posts above.
+                if effectiveAuthor.id != item.message.id.peerId {
+                    authorVerificationIconFileId = effectiveAuthor.verificationIconFileId
+                }
                 
                 let nameColors: PeerNameColors.Colors
                 switch effectiveAuthor.nameColor {
@@ -2806,6 +2827,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
                     authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
                 }
+            }
+            if let authorVerificationIconFileId {
+                // As the chat header and the chat list draw it: a template emoji takes the accent colour (the bubble's).
+                authorVerificationIcon = .animation(content: .customEmoji(fileId: authorVerificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor, loopMode: .count(2))
             }
         }
         
@@ -3148,7 +3173,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 let closeButtonWidth: CGFloat = item.message.adAttribute != nil ? 18.0 : 0.0
                 
-                var nameMaximumWidth = maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth
+                let verificationIconWidth = ChatMessageAuthorVerificationIcon.leadingWidth(iconSize: authorVerificationIcon != nil ? ChatMessageAuthorVerificationIcon.size : nil)
+                
+                var nameMaximumWidth = maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - verificationIconWidth - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth
                 var bubblelessHeaderRunWidth: CGFloat = 0.0
                 if bubbleStyle.isBubbleless {
                     // Without a bubble the time leaves the corner and follows the name and its rank badge, on the name's
@@ -3189,7 +3216,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 })
 
                 if let viaSuffix {
-                    let (viaLayout, _) = viaMeasureLayout(TextNodeLayoutArguments(attributedString: viaSuffix, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    let (viaLayout, _) = viaMeasureLayout(TextNodeLayoutArguments(attributedString: viaSuffix, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - verificationIconWidth - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     viaWidth = viaLayout.size.width + 3.0
                 }
                 
@@ -3208,7 +3235,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     nameNodeOriginY += 5.0
                 }
                 
-                var headerSizeWidth = nameAvatarSpaceWidth + nameNodeSizeApply.0.width + 8.0 + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets
+                var headerSizeWidth = nameAvatarSpaceWidth + verificationIconWidth + nameNodeSizeApply.0.width + 8.0 + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets
                 if bubbleStyle.isBubbleless {
                     // The clipping node is as wide as the header, so it must hold the time's run.
                     headerSizeWidth += max(0.0, bubblelessHeaderRunWidth - credibilityIconWidth)
@@ -4242,6 +4269,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 authorNameColor: authorNameColor,
                 layoutConstants: layoutConstants,
                 currentCredibilityIcon: currentCredibilityIcon,
+                authorVerificationIcon: authorVerificationIcon,
                 rankBadgeNodeSizeApply: rankBadgeNodeSizeApply,
                 ephemeralBadgeNodeSizeApply: ephemeralBadgeNodeSizeApply,
                 ephemeralBadgeOriginY: layoutInsets.top + ephemeralBadgeOriginY + detachedContentNodesHeight + additionalTopHeight,
@@ -4325,6 +4353,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         authorNameColor: UIColor?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentCredibilityIcon: (EmojiStatusComponent.Content, UIColor?)?,
+        authorVerificationIcon: EmojiStatusComponent.Content?,
         rankBadgeNodeSizeApply: (CGSize, () -> TextNode?, UIColor?),
         ephemeralBadgeNodeSizeApply: (CGSize, CGSize, () -> TextNode?),
         ephemeralBadgeOriginY: CGFloat,
@@ -4677,6 +4706,64 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
+            var verificationIconFrame: CGRect?
+            if let authorVerificationIcon {
+                let verificationIconView: ComponentHostView<Empty>
+                var animateVerificationIconFrame = true
+                if let current = strongSelf.verificationIconView {
+                    verificationIconView = current
+                } else {
+                    animateVerificationIconFrame = false
+                    verificationIconView = ComponentHostView<Empty>()
+                    verificationIconView.isUserInteractionEnabled = false
+                    strongSelf.verificationIconView = verificationIconView
+                    strongSelf.clippingNode.view.addSubview(verificationIconView)
+                    
+                    if animation.isAnimated {
+                        verificationIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                
+                let verificationIconComponent = EmojiStatusComponent(
+                    context: item.context,
+                    animationCache: item.context.animationCache,
+                    animationRenderer: item.context.animationRenderer,
+                    content: authorVerificationIcon,
+                    isVisibleForAnimations: strongSelf.visibilityStatus,
+                    action: nil
+                )
+                strongSelf.verificationIconComponent = verificationIconComponent
+                
+                let verificationIconSize = verificationIconView.update(
+                    transition: .immediate,
+                    component: AnyComponent(verificationIconComponent),
+                    environment: {},
+                    containerSize: ChatMessageAuthorVerificationIcon.size
+                )
+                
+                // The icon takes the name's place and the name follows it; the layout pass kept its width for it.
+                let verificationIconLayout = ChatMessageAuthorVerificationIcon.layout(nameFrame: nameNodeFrame, iconSize: verificationIconSize)
+                nameNodeFrame = verificationIconLayout.name
+                if let iconFrame = verificationIconLayout.icon {
+                    verificationIconFrame = iconFrame
+                    if animateVerificationIconFrame {
+                        animation.animator.updateFrame(layer: verificationIconView.layer, frame: iconFrame, completion: nil)
+                    } else {
+                        verificationIconView.frame = iconFrame
+                    }
+                }
+            } else if let verificationIconView = strongSelf.verificationIconView {
+                strongSelf.verificationIconView = nil
+                strongSelf.verificationIconComponent = nil
+                if animation.isAnimated {
+                    verificationIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak verificationIconView] _ in
+                        verificationIconView?.removeFromSuperview()
+                    })
+                } else {
+                    verificationIconView.removeFromSuperview()
+                }
+            }
+            
             if nameNode.supernode == nil {
                 if !nameNode.isNodeLoaded {
                     nameNode.isUserInteractionEnabled = false
@@ -4695,6 +4782,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if item.bubbleStyle.isBubbleless {
                 // The name counts as a line of text; the time and views beside it only widen the card.
                 bubblelessLiftHeaderParts.append(.textLines(nameNodeFrame))
+                if let verificationIconFrame {
+                    bubblelessLiftHeaderParts.append(.widthOnly(verificationIconFrame))
+                }
                 if let dateNode = strongSelf.bubblelessHeaderDateNode {
                     bubblelessLiftHeaderParts.append(.widthOnly(dateNode.frame))
                 }
@@ -4744,6 +4834,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             var nameHiglightFrame = nameNodeFrame
             nameHiglightFrame.size.width -= viaWidth
+            if let verificationIconFrame {
+                // The icon is part of the name's tap target.
+                nameHiglightFrame = CGRect(x: verificationIconFrame.minX, y: nameHiglightFrame.minY, width: nameHiglightFrame.maxX - verificationIconFrame.minX, height: nameHiglightFrame.height)
+            }
             nameHighlightNode.frame = nameHiglightFrame.insetBy(dx: -2.0, dy: -1.0)
             nameButtonNode.frame = nameHiglightFrame.insetBy(dx: -2.0, dy: -3.0)
             
@@ -5115,6 +5209,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         credibilityIconView?.removeFromSuperview()
                     })
                 }
+                if let verificationIconView = strongSelf.verificationIconView {
+                    strongSelf.verificationIconView = nil
+                    strongSelf.verificationIconComponent = nil
+                    verificationIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak verificationIconView] _ in
+                        verificationIconView?.removeFromSuperview()
+                    })
+                }
                 if let boostBadgeNode = strongSelf.boostBadgeNode {
                     strongSelf.boostBadgeNode = nil
                     boostBadgeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak boostBadgeNode] _ in
@@ -5140,6 +5241,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.rankBadgeNode = nil
                 strongSelf.credibilityIconView?.removeFromSuperview()
                 strongSelf.credibilityIconView = nil
+                strongSelf.verificationIconView?.removeFromSuperview()
+                strongSelf.verificationIconView = nil
+                strongSelf.verificationIconComponent = nil
                 strongSelf.boostBadgeNode?.removeFromSupernode()
                 strongSelf.boostBadgeNode = nil
                 strongSelf.boostIconNode?.removeFromSuperview()
@@ -8313,7 +8417,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let headerNodes = [self.nameNode, self.bubblelessHeaderDateNode, self.bubblelessHeaderViewsIconNode, self.bubblelessHeaderViewsNode].compactMap { $0 }
                 // The header's badges and icons keep alphas of their own, so they are hidden rather than faded.
                 let badgeNodes: [ASDisplayNode?] = [self.nameAvatarNode, self.rankBackgroundNode, self.rankBadgeNode, self.ephemeralBadgeBackgroundNode, self.ephemeralBadgeTextNode, self.boostBadgeNode]
-                let badgeViews: [UIView?] = [self.nameNavigateButton, self.credibilityIconView, self.ephemeralBadgeIconNode, self.boostIconNode]
+                let badgeViews: [UIView?] = [self.nameNavigateButton, self.credibilityIconView, self.verificationIconView, self.ephemeralBadgeIconNode, self.boostIconNode]
                 let headerBadgeLayers = badgeNodes.compactMap { $0?.layer } + badgeViews.compactMap { $0?.layer }
                 for headerNode in headerNodes {
                     transition.updateAlpha(node: headerNode, alpha: 0.0)

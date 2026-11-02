@@ -109,7 +109,7 @@ may span the strip (now the general bottom rule, below).
 | F61 | Theme preview + limits list page dots, gift auction accessory panel, wallet collectible/transaction sheets (more button vs FP block), wallet peer selection empty state, wallet send close into strip, music player controls (band) + playlist margins (listSideMargins) | Settings, Premium, TelegramBaseController, Wallet, TelegramUI overlay audio player | all | B1/B2/B4/B8 | details in the branch commit messages | fixed (code) |
 | SKIP | Recent session card, Text Size / Theme preview UL split, sticker pack UL popover | | UL | B12/B13 | unreachable: .modal/.flatModal get forOptionalFloatingPresentation (StickerPackScreen applies it itself) | not a bug on the Duo |
 | F62 | Poll/checklist/new-contact close into strip, sticker attachment (close + keyboard band), context menu preview (UL phone branch) + ContextMenuNode block clamp, entity search, emoji status picker, forum topic header, gift options/store widths + close, five gift sheets' FR width (+ GiftAuctionBid), gift variants playback slide, video message capture circle (ObjC) | Compose, Context, EntityKeyboard, Gifts, LegacyComponents | all | B1/B2/B4/B8/B12/B13 | details in the branch commit messages | fixed (code) |
-| F63 | Gift craft slots + avatar, face scan ring/preview/instruction/cancel, QR preview orientation in UL, video message camera tablet-landscape band | GiftCraftScreen/CraftTableComponent, FaceScanScreen, QrCodeScanScreen, VideoMessageCameraScreen | FP/FL/UL | B2/B11/B12 | band-sized but screen-centred; regular-width phone treated as fixed portrait | fixed: centred on the band (`bandCenterX`), `previewFollowsDeviceOrientation` for a regular-width Duo, band insets added (code) |
+| F63 | Gift craft slots + avatar, face scan ring/preview/instruction/cancel, QR preview orientation in UL, video message camera tablet-landscape band | GiftCraftScreen/CraftTableComponent, FaceScanScreen, QrCodeScanScreen, VideoMessageCameraScreen | FP/FL/UL | B2/B11/B12 | band-sized but screen-centred; regular-width phone treated as fixed portrait | fixed: centred on the band (`bandCenterX`), `previewFollowsDeviceOrientation` for a regular-width Duo (dropped with #84: the preview's connection takes the body's orientation, `CameraVideoOrientation`), band insets added (code) |
 | F64 | Legacy photo editor (crop/adjust/quality/avatar/drawing host) | LegacyComponents TGPhotoCropController/TGPhotoEditorTabController container frames + TGViewController class table | FP/FL/UL | B4 | static inset table (no context) => crop area full width, top-right handle under the 84x170 block | fixed: table returns the last context safe area on the Duo; portrait branch honours side insets. FP sim-verified: crop area x 7..374, adjust photo in band |
 | F65 | Legacy photo viewer top row in UP | TGMediaPickerGalleryInterfaceView + LegacyComponentsContext.statusIslandTrailingInset | UP | B6/decision 2 | after F64 the top row (recipient, check) moved below the island; decision 2 keeps viewers' top rows beside it | fixed: row stays at the top, check button left by the island inset (0 elsewhere; FP unchanged, sim-checked) — UP code-only |
 | SKIP | Five gift B12 rows | | UL | B12 | unreachable on the Duo (flatModal gets forOptionalFloatingPresentation) | not a bug on the Duo |
@@ -171,6 +171,10 @@ Review and runtime findings, fixed:
 - The sticker pack's visible glass button was a different node from the legacy one the fixer changed; caught by an
   FP capture, not by the two reviewers.
 - Share and import-sticker sheets stay in the band: tall scrolling grids whose corner buttons rise to the block.
+  The new share screen (`ShareScreen`) brought back a centered card on unfolded landscape by choosing its
+  `centeredSize` with `widthClass == .regular`; its content then lost the screen's 84pt strip inset off the card
+  (#86). A `ResizableSheetComponent` caller chooses `centeredSize` with `presentsFloatingPanels`, as its `isCentered`
+  (`RecentSessionScreen` still uses the width class; it is pushed, so it sees compact metrics on the Duo).
 - A mini app in the sheet (`WebAppController`) keeps its page to the band: the page spanned the strip under the
   navigation bar's close and more buttons, which stand there, and most pages ignore the safe area reported to them, so
   the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
@@ -196,7 +200,10 @@ clear of the strip and the status corner block.
 
 Changed later too: SheetComponent's landscape band (issue #72, `sheetBandPlacement`). Beside a strip in landscape the
 whole sheet, background included, keeps to the band instead of only its content, so it no longer runs under unfolded
-landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet.
+landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet. This also fixed the
+Disable Sharing sheet (issue #87, `PeerCopyProtectionInfoScreen`), runtime-checked folded: it spans and is
+screen-centred in FP, keeps to the band with its content centred in FL and FR. UL, where it was reported, is code-only
+(`SheetPlacementTests.test_band_unfoldedLandscape_sheetKeepsClearOfTheRightStrip`).
 
 Runtime-checked (folded): Text Size Cancel/Set span 0..466 (portrait-only modal); wallpaper preview Apply 30..436;
 language sheet spans in FP, screen-centred in FR, clear of the bottom-right block in FL; sticker pack button spans in

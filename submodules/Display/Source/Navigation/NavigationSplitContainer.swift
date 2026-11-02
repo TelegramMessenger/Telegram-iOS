@@ -28,6 +28,8 @@ final class NavigationSplitContainer: ASDisplayNode {
     
     private(set) var masterControllers: [ViewController] = []
     private(set) var detailControllers: [ViewController] = []
+    // The detail pane's last size and `isBesideBottomTabBar`.
+    private var detailLayoutState: (size: CGSize, isBesideBottomTabBar: Bool)?
     
     var canHaveKeyboardFocus: Bool = false {
         didSet {
@@ -124,8 +126,19 @@ final class NavigationSplitContainer: ASDisplayNode {
         let masterReserved = reservedAreaForPane(corners: layout.reservedCorners, division: layout.division, paneFrame: CGRect(x: 0.0, y: 0.0, width: masterWidth, height: layout.size.height), containerSize: layout.size)
         let detailReserved = reservedAreaForPane(corners: layout.reservedCorners, division: layout.division, paneFrame: CGRect(x: masterWidth, y: 0.0, width: detailWidth, height: layout.size.height), containerSize: layout.size)
         
+        // The master pane is laid out first, so that its top controller reports its tab bar for the layout it now has.
         self.masterContainer.update(layout: ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: masterSafeInsets, reservedCorners: masterReserved.corners, division: masterReserved.division, additionalInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: false, controllers: masterControllers, transition: transition)
-        self.detailContainer.update(layout: ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: detailSafeInsets, reservedCorners: detailReserved.corners, division: detailReserved.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: true, controllers: detailControllers, transition: transition)
+        let detailSize = CGSize(width: detailWidth, height: layout.size.height)
+        let isBesideBottomTabBar = masterControllers.last?.showsBottomTabBar ?? false
+        var detailTransition = transition
+        // A master stack change applied without animation (a swipe back in the master pane, as it commits) would move
+        // what in the detail lines up with the master's tab bar in one frame; with nothing else changed (the detail's
+        // size and its stack, which an animated transition would animate a push or pop of), animate it.
+        if case .immediate = transition, let detailLayoutState = self.detailLayoutState, detailLayoutState.size == detailSize, detailLayoutState.isBesideBottomTabBar != isBesideBottomTabBar, self.detailControllers.elementsEqual(detailControllers, by: ===) {
+            detailTransition = .animated(duration: 0.3, curve: .easeInOut)
+        }
+        self.detailLayoutState = (detailSize, isBesideBottomTabBar)
+        self.detailContainer.update(layout: ContainerViewLayout(size: detailSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: detailSafeInsets, reservedCorners: detailReserved.corners, division: detailReserved.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet, isBesideBottomTabBar: isBesideBottomTabBar), canBeClosed: true, controllers: detailControllers, transition: detailTransition)
         
         var controllersUpdated = false
         if self.detailControllers.last !== detailControllers.last {

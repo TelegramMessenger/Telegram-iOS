@@ -312,7 +312,7 @@ final class CameraNeo: NSObject, CameraProtocol {
 
         let outputUrl = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
         let orientation: AVCaptureVideoOrientation
-        if DeviceModel.current.isIpad {
+        if cameraRecordsRoundVideoInPreviewOrientation {
             orientation = self.previewView?.captureOrientation ?? .portrait
         } else {
             orientation = .portrait
@@ -995,6 +995,11 @@ final class CameraNeo: NSObject, CameraProtocol {
             self?.singleFramesEnabled = true
         }
         self.updateActiveDeviceState()
+        // The new input gives the preview a new connection, which starts in portrait (not the body's orientation on
+        // iPhone Duo's inner screen).
+        DispatchQueue.main.async { [weak self] in
+            self?.previewView?.updateOrientation()
+        }
     }
 
     private func updateActiveDeviceState() {

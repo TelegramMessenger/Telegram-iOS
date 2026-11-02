@@ -215,6 +215,8 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         // Hold first, so that the bar's own glass never shows in between.
         guard source.holdGlass(true, interrupted: { [weak self] in
             self?.endLingering()
+        }, titlePillMoved: { [weak self] in
+            self?.followLingeringBar()
         }) else {
             self.putBack()
             return false
@@ -241,6 +243,22 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         return true
     }
 
+    /// The bar the glass lingers above moved its title pill (the chat header re-centred once the push has ended): the
+    /// glass re-reads both bars at the transition's end, so that its capsules head for the pill's new place on their
+    /// springs, and it settles where the bar draws the pill rather than snapping sideways at the hand-over.
+    private func followLingeringBar() {
+        guard self.isLingering else {
+            return
+        }
+        // A bar gone leaves the renderer nothing to read: hand over. After a pop that is the usual case (the popped screen
+        // is released when the pop completes), so there a moved pill hands over rather than being followed.
+        guard self.bottom.source != nil, self.top.source != nil else {
+            self.endLingering()
+            return
+        }
+        self.renderer.update(size: self.bounds.size, fraction: self.fraction, bottomFrame: self.bottom.frame, topFrame: self.top.frame, transition: .immediate)
+    }
+
     /// The renderer's glass hands over to the bar it lingered above.
     func endLingering() {
         guard self.isLingering else {
@@ -254,7 +272,7 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         self.renderer.end()
         let source = self.lingeringSource
         self.lingeringSource = nil
-        let _ = source?.holdGlass(false, interrupted: nil)
+        let _ = source?.holdGlass(false, interrupted: nil, titlePillMoved: nil)
         let handovers = self.lingerHandovers
         self.lingerHandovers = []
         handovers.forEach { $0() }

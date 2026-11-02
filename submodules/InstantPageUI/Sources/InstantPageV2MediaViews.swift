@@ -802,6 +802,10 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
             // `hasEntry` — surfaces .Fetching, letting the overlay show the animated ring.
             let _ = messageMediaFileInteractiveFetched(fetchManager: fetchContext.fetchManager, messageId: messageId, messageReference: message, file: file, userInitiated: true, priority: .userInitiated).startStandalone()
         }
+        self.audioNode.cancelFetch = {
+            guard case let .file(file) = fetchMedia.media, let messageId = fetchMessage?.id else { return }
+            messageMediaFileCancelInteractiveFetch(context: fetchContext, messageId: messageId, file: file)
+        }
 
         let mediaForPlayback = item.media
         let playlistTypeForPlayback: MediaManagerPlayerType

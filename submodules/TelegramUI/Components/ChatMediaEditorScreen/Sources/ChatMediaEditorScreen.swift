@@ -371,9 +371,20 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
         }
 
         @objc private func captionDimTapped() {
-            if self.captionPanelView?.dismissInput() ?? true {
-                self.updateIsEditingCaption(false)
+            let _ = self.endCaptionEditing()
+        }
+
+        // With a hardware keyboard the bottom row stays reachable while the caption is edited: what it starts ends the
+        // editing first, which commits the caption. False when the panel keeps the input (a caption over the limit).
+        private func endCaptionEditing() -> Bool {
+            guard self.isEditingCaption else {
+                return true
             }
+            guard self.captionPanelView?.dismissInput() ?? true else {
+                return false
+            }
+            self.updateIsEditingCaption(false)
+            return true
         }
 
         private func updateIsEditingCaption(_ isEditing: Bool) {
@@ -382,9 +393,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             }
             self.isEditingCaption = isEditing
             self.captionEditingUpdated(isEditing)
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-            transition.updateAlpha(layer: self.captionDimView.layer, alpha: isEditing ? 1.0 : 0.0)
-            self.requestLayout(transition: transition)
+            self.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
         }
 
         func activateCaptionInput() {
@@ -598,6 +607,8 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 let bottomInset = layout.size.height - chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY + chatMediaEditorCaptionPanelSpacing
                 let _ = captionPanelView.updateContainerLayoutSize?(layout.size, safeAreaInset: safeInsets, bottomInset: bottomInset, keyboardHeight: keyboardHeight, animated: transition.isAnimated)
             }
+            let coveringKeyboardHeight = chatMediaEditorEffectiveKeyboardHeight(inputHeight: keyboardHeight, captionAdditionalInputHeight: self.captionPanelView?.additionalInputHeight ?? 0.0)
+            transition.updateAlpha(layer: self.captionDimView.layer, alpha: chatMediaEditorCaptionDimIsVisible(isEditingCaption: self.isEditingCaption, keyboardHeight: coveringKeyboardHeight) ? 1.0 : 0.0)
 
             let recipientLayout = chatMediaEditorRecipientLayout(size: layout.size, safeInsets: safeInsets, arrowSize: self.recipientArrowView.image?.size ?? .zero, labelSize: self.recipientLabel.bounds.size, statusIsland: chatMediaEditorStatusIslandRow(layout: layout), toolbarSide: toolbarSide)
             transition.updateFrame(view: self.recipientArrowView, frame: recipientLayout.arrowFrame)
@@ -606,7 +617,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             transition.updateAlpha(layer: self.recipientArrowView.layer, alpha: recipientAlpha)
             transition.updateAlpha(layer: self.recipientLabel.layer, alpha: recipientAlpha)
 
-            self.updateToolbar(frame: editorLayout.toolbarFrame, side: toolbarSide, keyboardHeight: keyboardHeight, transition: ComponentTransition(transition))
+            self.updateToolbar(frame: editorLayout.toolbarFrame, side: toolbarSide, keyboardHeight: coveringKeyboardHeight, transition: ComponentTransition(transition))
             self.updateSelectionLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateCameraButtonLayout(layout: layout, safeInsets: safeInsets, toolbarFrame: editorLayout.toolbarFrame, keyboardHeight: keyboardHeight, transition: transition)
             self.updateScrubber(layout: layout, safeInsets: safeInsets, transition: ComponentTransition(transition))
@@ -639,7 +650,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             } else {
                 mode = .gallery(activeTab: self.activeToolbarTab)
             }
-            let buttonsHidden = chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: keyboardHeight, isEditingCaption: self.isEditingCaption, paintControlsVisible: self.paintControlsVisible)
+            let buttonsHidden = chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: keyboardHeight, paintControlsVisible: self.paintControlsVisible)
             let isToolToolbar: Bool
             if case .gallery = mode {
                 isToolToolbar = false
@@ -698,6 +709,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                             case .paint:
                                 self.drawingScreen?.requestExternalDismiss(sourceView: (self.toolbar.view as? ChatMediaEditorBottomControlsComponent.View)?.leftButtonView)
                             case .cover, .none:
+                                let _ = self.endCaptionEditing()
                                 controller?.cancel()
                             }
                         },
@@ -859,6 +871,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
             guard let controller = self.controller, chatMediaEditorCanOpenTool(isToolActive: self.activeTool != nil, isSending: self.isSending, isDismissing: controller.isDismissing, isPagerMoving: self.isPagerMoving) else {
                 return
             }
+            guard self.endCaptionEditing() else {
+                return
+            }
             if tab == .qualityTab {
                 self.qualityTabPressed()
                 return
@@ -875,6 +890,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
 
         private func presentSendMenu(sourceView: UIView?) {
             guard let controller = self.controller, let sourceView, !self.isSending, !controller.isDismissing else {
+                return
+            }
+            guard self.endCaptionEditing() else {
                 return
             }
             if let gallery = controller.gallery {
@@ -922,6 +940,9 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
 
         func send(silentPosting: Bool, scheduleTime: Int32) {
             guard let controller = self.controller, !self.isSending, !controller.isDismissing, !self.isInvalidated else {
+                return
+            }
+            guard self.endCaptionEditing() else {
                 return
             }
             self.dismissTimerTooltip()
