@@ -393,7 +393,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 }
                 self.optionsHintTimer?.invalidate()
                 let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
-                    guard let self, !self.isOptionsHintDisabled else {
+                    // A panel no longer in a window (its chat closed within the 3 seconds) shows nothing and uses up no show.
+                    guard let self, !self.isOptionsHintDisabled, self.window != nil else {
                         return
                     }
                     self.optionsHintTimer = nil
