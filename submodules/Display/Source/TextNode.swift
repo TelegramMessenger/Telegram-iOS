@@ -484,6 +484,11 @@ public final class TextNodeLayout: NSObject {
         self.embeddedItems = embeddedItems
     }
     
+    /// Image attachments' frames, relative to their line's origin; for tests.
+    var lineAttachmentFrames: [(range: NSRange, frame: CGRect)] {
+        return self.lines.flatMap { line in line.attachments.map { (range: $0.range, frame: $0.frame) } }
+    }
+    
     public func areLinesEqual(to other: TextNodeLayout) -> Bool {
         if self.lines.count != other.lines.count {
             return false
@@ -1224,20 +1229,56 @@ private func addEmbeddedItem(item: AnyHashable, line: TextNodeLine, ascent: CGFl
     line.embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
 }
 
-private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+/// The horizontal extent of an attachment's glyphs in its line, which the attachment's image is drawn centred in. The
+/// glyphs' own positions, not the line's offsets for the string indices: at the end of a line, or where the attachment
+/// touches a run of the other direction, those offsets lie on the line's or the other run's edge.
+private func attachmentOffsets(line: CTLine, startIndex: Int, endIndex: Int) -> (left: CGFloat, right: CGFloat) {
+    var glyphExtent: (minX: CGFloat, maxX: CGFloat)?
+    for run in CTLineGetGlyphRuns(line) as! [CTRun] {
+        let runRange = CTRunGetStringRange(run)
+        let glyphCount = CTRunGetGlyphCount(run)
+        if glyphCount == 0 || runRange.location >= endIndex || runRange.location + runRange.length <= startIndex {
+            continue
+        }
+        var stringIndices = [CFIndex](repeating: 0, count: glyphCount)
+        var positions = [CGPoint](repeating: CGPoint(), count: glyphCount)
+        var advances = [CGSize](repeating: CGSize(), count: glyphCount)
+        CTRunGetStringIndices(run, CFRangeMake(0, glyphCount), &stringIndices)
+        CTRunGetPositions(run, CFRangeMake(0, glyphCount), &positions)
+        CTRunGetAdvances(run, CFRangeMake(0, glyphCount), &advances)
+        for i in 0 ..< glyphCount where stringIndices[i] >= startIndex && stringIndices[i] < endIndex {
+            let minX = positions[i].x
+            let maxX = positions[i].x + advances[i].width
+            if let current = glyphExtent {
+                glyphExtent = (min(current.minX, minX), max(current.maxX, maxX))
+            } else {
+                glyphExtent = (minX, maxX)
+            }
+        }
+    }
+    if let glyphExtent {
+        return (floor(glyphExtent.minX), ceil(glyphExtent.maxX))
+    }
+    
+    // No glyph of its own (elided under a custom truncation token, or inside another character's cluster).
     var secondaryLeftOffset: CGFloat = 0.0
-    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
     if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
         leftOffset = floor(secondaryLeftOffset)
     }
     
     var secondaryRightOffset: CGFloat = 0.0
-    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
     var rightOffset = ceil(rawRightOffset)
     if !rawRightOffset.isEqual(to: secondaryRightOffset) {
         rightOffset = ceil(secondaryRightOffset)
     }
+    return (leftOffset, rightOffset)
+}
+
+private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+    let (leftOffset, rightOffset) = attachmentOffsets(line: line.line, startIndex: startIndex, endIndex: endIndex)
     
     line.attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
 }
@@ -1919,26 +1960,8 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                 embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
             }
             
-            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, isAtEndOfTheLine: Bool, rightInset: CGFloat = 0.0) {
-                var secondaryLeftOffset: CGFloat = 0.0
-                let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
-                var leftOffset = floor(rawLeftOffset)
-                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                    leftOffset = floor(secondaryLeftOffset)
-                }
-                
-                var rightOffset: CGFloat = leftOffset
-                if isAtEndOfTheLine {
-                    let rawRightOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
-                    rightOffset = floor(rawRightOffset)
-                } else {
-                    var secondaryRightOffset: CGFloat = 0.0
-                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                    rightOffset = ceil(rawRightOffset)
-                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                        rightOffset = ceil(secondaryRightOffset)
-                    }
-                }
+            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                let (leftOffset, rightOffset) = attachmentOffsets(line: line, startIndex: startIndex, endIndex: endIndex)
                 
                 attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
             }
@@ -2146,7 +2169,7 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
 
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)))
                         }
                     }
                 }
@@ -2279,7 +2302,7 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
 
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)))
                         }
                     }
                     
