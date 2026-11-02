@@ -2633,6 +2633,8 @@ final class VideoChatScreenComponent: Component {
                     buttonAudio = .speaker
                 case .headphones:
                     buttonAudio = .headphones
+                case let .port(port) where port.type == .wired:
+                    buttonAudio = .headphones
                 case let .port(port):
                     var type: VideoChatActionButtonComponent.Content.BluetoothType = .generic
                     let portName = port.name.lowercased()

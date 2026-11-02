@@ -21,7 +21,11 @@ the test process; push with `manualActivate` and never touch the control, so the
 alone. The rule pinned there: a `.voiceCall` holder is never displaced, not even temporarily, by a recording that mixes
 with other audio, because deactivating it makes `PresentationCall` drop its audio-session control. The recorder
 (`ManagedAudioRecorder`) needs a live `MediaManager` and real audio units, so keep session-policy decisions in testable
-helpers rather than in it.
+helpers rather than in it. It also pins how a call classifies the audio route into the outputs of its audio menu
+(`audioSessionOutputs(route:hasLoudspeaker:)` and the Headphones selection `audioSessionWiredHeadsetInput(route:)`,
+over `AudioSessionRoute` snapshots, since `AVAudioSessionPortDescription` cannot be constructed): a wired headset's
+microphone is part of "Headphones", except while a Bluetooth device is the output or the built-in microphone is in use
+over wired headphones, where it stays an item of its own.
 
 `//submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode:ChatTextInputPanelNodeTests` covers the legacy
 composer's Text Size metrics (`ChatTextInputFontMetrics.swift`) against a real `ChatInputTextView` measurement. The
