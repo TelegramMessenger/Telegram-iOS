@@ -33,6 +33,34 @@ struct ChatHistoryEntriesForViewState {
     }
 }
 
+/// Whether `message` is the root of the forum topic `location` shows, which the topic's history does not display: its
+/// `topicCreated` action, or the `groupCreated` one in a monoforum channel's or a forum bot's topic.
+func isUndisplayedForumTopicRoot(_ message: Message, location: ChatLocation, additionalData: [AdditionalMessageHistoryViewDataEntry]) -> Bool {
+    guard case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost else {
+        return false
+    }
+    for media in message.media {
+        if let action = media as? TelegramMediaAction {
+            if case .topicCreated = action.action {
+                return true
+            } else if case .groupCreated = action.action {
+                var chatPeer: Peer?
+                for entry in additionalData {
+                    if case let .peer(_, peer) = entry {
+                        chatPeer = peer
+                    }
+                }
+                if let channel = chatPeer as? TelegramChannel, channel.isMonoForum {
+                    return true
+                } else if let user = chatPeer as? TelegramUser, user.isForum {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
 func chatHistoryEntriesForView(
     currentState: ChatHistoryEntriesForViewState,
     context: AccountContext,
@@ -155,24 +183,8 @@ func chatHistoryEntriesForView(
         }
         
         if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
-            for media in message.media {
-                if let action = media as? TelegramMediaAction {
-                    if case .topicCreated = action.action {
-                        continue loop
-                    } else if case .groupCreated = action.action {
-                        var chatPeer: Peer?
-                        for entry in view.additionalData {
-                            if case let .peer(_, peer) = entry {
-                                chatPeer = peer
-                            }
-                        }
-                        if let channel = chatPeer as? TelegramChannel, channel.isMonoForum {
-                            continue loop
-                        } else if let user = chatPeer as? TelegramUser, user.isForum {
-                            continue loop
-                        }
-                    }
-                }
+            if isUndisplayedForumTopicRoot(message, location: location, additionalData: view.additionalData) {
+                continue loop
             }
         } else if case .peer = location {
             for media in message.media {

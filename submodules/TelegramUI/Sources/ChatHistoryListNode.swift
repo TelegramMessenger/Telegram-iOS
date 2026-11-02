@@ -4609,16 +4609,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        var holdsOnlyForumTopicRoot = false
-                        if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.isForumPost, !historyView.originalView.entries.isEmpty {
-                            holdsOnlyForumTopicRoot = historyView.originalView.entries.allSatisfy { entry in
-                                return entry.message.media.contains(where: { media in
-                                    if let action = media as? TelegramMediaAction, case .topicCreated = action.action {
-                                        return true
-                                    }
-                                    return false
-                                })
-                            }
+                        // The topic's root is stored but not displayed (chatHistoryEntriesForView).
+                        let originalView = historyView.originalView
+                        let holdsOnlyForumTopicRoot = !originalView.entries.isEmpty && originalView.entries.allSatisfy { entry in
+                            return isUndisplayedForumTopicRoot(entry.message, location: strongSelf.chatLocation, additionalData: originalView.additionalData)
                         }
                         if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater, holdsOnlyForumTopicRoot: holdsOnlyForumTopicRoot) {
                             loadState = .loading(false)
