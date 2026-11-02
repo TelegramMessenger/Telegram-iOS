@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import Display
 @testable import UndoUI
 
 final class UndoOverlayHorizontalLayoutTests: XCTestCase {
@@ -8,8 +9,8 @@ final class UndoOverlayHorizontalLayoutTests: XCTestCase {
     private let trailingInset: CGFloat = 16.0
     private let buttonWidth: CGFloat = 64.0
 
-    private func layout(width: CGFloat, safeInsets: UIEdgeInsets, intrinsicInsets: UIEdgeInsets, buttonWidth: CGFloat?) -> UndoOverlayHorizontalLayout {
-        return undoOverlayHorizontalLayout(width: width, safeInsets: safeInsets, intrinsicInsets: intrinsicInsets, margin: self.margin, leadingInset: self.leadingInset, trailingInset: self.trailingInset, buttonWidth: buttonWidth, isNarrow: false)
+    private func layout(width: CGFloat, safeInsets: UIEdgeInsets, intrinsicInsets: UIEdgeInsets, buttonWidth: CGFloat?, metrics: LayoutMetrics = LayoutMetrics(), isNarrow: Bool = false) -> UndoOverlayHorizontalLayout {
+        return undoOverlayHorizontalLayout(width: width, safeInsets: safeInsets, intrinsicInsets: intrinsicInsets, metrics: metrics, margin: self.margin, leadingInset: self.leadingInset, trailingInset: self.trailingInset, buttonWidth: buttonWidth, isNarrow: isNarrow)
     }
 
     // A chat hands its children the history list's insets with left and right swapped, so on the Duo the
@@ -75,18 +76,44 @@ final class UndoOverlayHorizontalLayoutTests: XCTestCase {
     // safe insets.
     func testPhonePortraitUnchanged() {
         let result = self.layout(width: 402.0, safeInsets: .zero, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0), buttonWidth: self.buttonWidth)
-        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 12.0, panelWidth: 378.0, textMaxWidth: 228.0))
+        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 12.0, panelWidth: 378.0, contentWidth: 378.0, textMaxWidth: 228.0))
     }
 
     func testPhoneLandscapeInChatUnchanged() {
         let safeInsets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 21.0, right: 62.0)
         let result = self.layout(width: 874.0, safeInsets: safeInsets, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 62.0, bottom: 21.0, right: 62.0), buttonWidth: self.buttonWidth)
-        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 74.0, panelX: 136.0, panelWidth: 602.0, textMaxWidth: 390.0))
+        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 74.0, panelX: 136.0, panelWidth: 602.0, contentWidth: 602.0, textMaxWidth: 390.0))
     }
 
     // A forum's side topics panel widens one side of a chat's list; only the context's left inset was used.
     func testPhoneChatWithFloatingTopicsPanelUnchanged() {
         let result = self.layout(width: 402.0, safeInsets: .zero, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 72.0), buttonWidth: nil)
-        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 12.0, panelWidth: 378.0, textMaxWidth: 402.0 - 16.0 - 8.0 - 50.0 - 12.0))
+        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 12.0, panelWidth: 378.0, contentWidth: 378.0, textMaxWidth: 402.0 - 16.0 - 8.0 - 50.0 - 12.0))
+    }
+
+    private let regular = LayoutMetrics(widthClass: .regular, heightClass: .regular, orientation: nil)
+
+    // An iPad window: the toast is as wide as the largest phone's, centred on the window, and its text loses
+    // exactly the width the panel lost.
+    func testRegularWidthWindowCapsThePanel() {
+        let result = self.layout(width: 1194.0, safeInsets: .zero, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 0.0), buttonWidth: self.buttonWidth, metrics: self.regular)
+        XCTAssertEqual(result, UndoOverlayHorizontalLayout(sideMargin: 12.0, panelX: 389.0, panelWidth: toastMaximumWidth, contentWidth: toastMaximumWidth, textMaxWidth: 416.0 - 12.0 - 16.0 - 64.0 - 8.0 - 50.0))
+    }
+
+    // A split view's detail pane hands the toast its own container: centred in the pane.
+    func testRegularWidthPaneCentersInThePane() {
+        let result = self.layout(width: 794.0, safeInsets: .zero, intrinsicInsets: .zero, buttonWidth: nil, metrics: self.regular)
+        XCTAssertEqual(result.panelX, 189.0)
+        XCTAssertEqual(result.panelWidth, toastMaximumWidth)
+        // Without a button the text keeps the same distance from the panel's trailing edge as on a phone.
+        let phone = self.layout(width: 402.0, safeInsets: .zero, intrinsicInsets: .zero, buttonWidth: nil)
+        XCTAssertEqual(result.panelWidth - (self.leadingInset + result.textMaxWidth), phone.panelWidth - (self.leadingInset + phone.textMaxWidth))
+    }
+
+    func testRegularWidthNarrowPanelUnchanged() {
+        let compact = self.layout(width: 1194.0, safeInsets: .zero, intrinsicInsets: .zero, buttonWidth: nil, isNarrow: true)
+        let regular = self.layout(width: 1194.0, safeInsets: .zero, intrinsicInsets: .zero, buttonWidth: nil, metrics: self.regular, isNarrow: true)
+        XCTAssertEqual(regular, compact)
+        XCTAssertEqual(regular.panelWidth, 210.0)
     }
 }

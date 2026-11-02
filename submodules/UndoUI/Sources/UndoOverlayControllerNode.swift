@@ -1937,7 +1937,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let margin: CGFloat = self.appearance?.sideInset ?? 12.0
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let horizontalLayout = undoOverlayHorizontalLayout(width: layout.size.width, safeInsets: layout.safeInsets, intrinsicInsets: layout.insets(options: []), margin: margin, leadingInset: leftInset, trailingInset: rightInset, buttonWidth: self.undoButtonNode.supernode != nil ? buttonTextSize.width : nil, isNarrow: self.appearance?.isNarrow == true)
+        let horizontalLayout = undoOverlayHorizontalLayout(width: layout.size.width, safeInsets: layout.safeInsets, intrinsicInsets: layout.insets(options: []), metrics: layout.metrics, margin: margin, leadingInset: leftInset, trailingInset: rightInset, buttonWidth: self.undoButtonNode.supernode != nil ? buttonTextSize.width : nil, isNarrow: self.appearance?.isNarrow == true)
         let leftMargin = horizontalLayout.sideMargin
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: horizontalLayout.textMaxWidth, height: .greatestFiniteMagnitude))
@@ -2014,8 +2014,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: panelWidth, height: contentHeight)
         
-        var buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
-        var undoButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - leftMargin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + leftMargin, height: contentHeight))
+        var buttonTextFrame = CGRect(origin: CGPoint(x: horizontalLayout.contentWidth - rightInset - buttonTextSize.width, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
+        var undoButtonFrame = CGRect(origin: CGPoint(x: horizontalLayout.contentWidth - rightInset - buttonTextSize.width - 8.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + leftMargin, height: contentHeight))
         if case .starsSent = self.content {
             let buttonOffset: CGFloat = -34.0
             undoButtonFrame.origin.x += buttonOffset
@@ -2140,7 +2140,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
    
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         if case .starsSent = self.content {
-            transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset + floor((rightInset - timerTextSize.width) * 0.5) - 46.0)), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
+            transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((horizontalLayout.contentWidth + leftMargin * 2.0 - rightInset + floor((rightInset - timerTextSize.width) * 0.5) - 46.0)), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         } else {
             transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         }
@@ -2149,7 +2149,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let statusSize: CGFloat = 30.0
             var statusFrame = CGRect(origin: CGPoint(x: floor((leftInset - statusSize) / 2.0), y: floor((contentHeight - statusSize) / 2.0)), size: CGSize(width: statusSize, height: statusSize))
             if case .starsSent = self.content {
-                statusFrame.origin.x = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - statusSize - 23.0
+                statusFrame.origin.x = horizontalLayout.contentWidth + leftMargin * 2.0 - rightInset - statusSize - 23.0
             }
             transition.updateFrame(node: statusNode, frame: statusFrame)
             if !self.didStartStatusNode {

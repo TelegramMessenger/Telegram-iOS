@@ -217,7 +217,13 @@ private final class AvatarUploadToastScreenComponent: Component {
                 right: environment.safeInsets.right + 12.0
             )
             
-            let availableContentSize = CGSize(width: availableSize.width - containerInsets.left - containerInsets.right, height: availableSize.height - containerInsets.top - containerInsets.bottom)
+            // Narrower on a regular-width layout, centred, but over the tab its arrow points at: on iPad that tab is in
+            // the master column, which can lie outside the centred toast.
+            let arrowTargetRect = component.arrowTarget().flatMap { targetView, targetRect in
+                return targetView.convert(targetRect, to: self)
+            }
+            let toastHorizontalFrame = toastFrame(CGRect(x: containerInsets.left, y: 0.0, width: availableSize.width - containerInsets.left - containerInsets.right, height: 0.0), metrics: environment.metrics, anchorX: arrowTargetRect?.midX)
+            let availableContentSize = CGSize(width: toastHorizontalFrame.width, height: availableSize.height - containerInsets.top - containerInsets.bottom)
             
             let spacing: CGFloat = 12.0
             
@@ -346,7 +352,7 @@ private final class AvatarUploadToastScreenComponent: Component {
             
             let size = CGSize(width: availableContentSize.width, height: contentHeight)
             
-            let contentFrame = CGRect(origin: CGPoint(x: containerInsets.left, y: availableSize.height - containerInsets.bottom - size.height), size: size)
+            let contentFrame = CGRect(origin: CGPoint(x: toastHorizontalFrame.minX, y: availableSize.height - containerInsets.bottom - size.height), size: size)
             
             self.backgroundView.updateColor(color: self.isDisplaying ? UIColor(white: 0.0, alpha: 0.7) : UIColor.black, transition: transition.containedViewLayoutTransition)
             let backgroundFrame: CGRect
@@ -377,8 +383,7 @@ private final class AvatarUploadToastScreenComponent: Component {
                 })?.withRenderingMode(.alwaysTemplate)
             }
             
-            if let arrowImage = self.backgroundArrowMaskView.image, let (targetView, targetRect) = component.arrowTarget() {
-                let targetArrowRect = targetView.convert(targetRect, to: self)
+            if let arrowImage = self.backgroundArrowMaskView.image, let targetArrowRect = arrowTargetRect {
                 self.backgroundArrowMaskView.isHidden = false
                 
                 var arrowFrame = CGRect(origin: CGPoint(x: targetArrowRect.minX + floor((targetArrowRect.width - arrowImage.size.width) * 0.5), y: contentFrame.maxY), size: arrowImage.size)
