@@ -184,7 +184,8 @@ public struct InstantPageV2CodeBlockItem {
     public var frame: CGRect
     /// Plain, flat band fill. Sourced from `InstantPageTheme.codeBlockBackgroundColor`, which the
     /// message hosts set to the same value they give `tableHeaderColor` — a code block reads as a
-    /// highlighted table row, not as an accent-tinted quote.
+    /// highlighted table row, not as an accent-tinted quote — except in a dark theme's outgoing bubble,
+    /// where that is a white wash and the code takes a darker fill.
     public let backgroundColor: UIColor
     public let language: String?
     /// The language line, laid out at LAYOUT time in block-local coordinates. It used to be built by
