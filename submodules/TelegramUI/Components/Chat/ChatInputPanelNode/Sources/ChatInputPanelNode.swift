@@ -40,6 +40,20 @@ public func chatInputPanelCompactBottomSideInset(bottomInset: CGFloat, deviceMet
     }
 }
 
+/// How far the chat's history navigation buttons and footer panels step in from the side with a small bottom inset.
+/// On iPad they line up with the input panels, which never step in there (no rounded corners). On phones they keep
+/// stepping in for any small bottom inset, as before, also on home-button iPhones, where the input panels do not.
+public func chatBottomControlsCompactSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
+    if case .tablet = deviceMetrics.type {
+        return chatInputPanelCompactBottomSideInset(bottomInset: bottomInset, deviceMetrics: deviceMetrics)
+    }
+    if bottomInset <= 32.0 {
+        return 18.0
+    } else {
+        return 0.0
+    }
+}
+
 open class ChatInputPanelNode: ASDisplayNode {
     open var context: AccountContext?
     open var chatControllerInteraction: ChatControllerInteraction?

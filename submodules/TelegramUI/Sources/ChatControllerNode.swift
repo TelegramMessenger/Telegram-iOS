@@ -2498,7 +2498,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             var footerPanelsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right + 16.0
-            footerPanelsWidth -= 2.0 * chatInputPanelCompactBottomSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
+            footerPanelsWidth -= 2.0 * chatBottomControlsCompactSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
             
             let footerPanelsSizeValue = footerPanelsView.update(
                 transition: footerPanelsTransition,
@@ -2811,8 +2811,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         // (and keep the strip beside the column). Without corner blocks this is the plain safe inset.
         let navigateButtonsRightInset = sideColumnBandInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnExtent).right
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsRightInset - navigateButtonsSize.width - 8.0, y: navigateButtonsMinY), size: navigateButtonsSize)
-        // Over the panels' right edge, which steps in from rounded corners only.
-        navigateButtonsFrame.origin.x -= chatInputPanelCompactBottomSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
+        // Over the panels' right edge on iPad, which does not step in there.
+        navigateButtonsFrame.origin.x -= chatBottomControlsCompactSideInset(bottomInset: containerInsets.bottom, deviceMetrics: layout.deviceMetrics)
         if case .overlay = self.chatPresentationInterfaceState.mode {
             navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
