@@ -150,6 +150,7 @@ swift_library(
     srcs = glob(["Tests/**/*.swift"]),
     deps = [
         ":ChatListUI",
+        "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
