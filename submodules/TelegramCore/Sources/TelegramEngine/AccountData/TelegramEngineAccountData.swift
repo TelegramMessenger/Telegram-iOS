@@ -3,6 +3,44 @@ import SwiftSignalKit
 import Postbox
 internal import TelegramApi
 
+public enum SetEmojiStatusError {
+    case generic
+}
+
+private final class AccountEmojiStatusRequestDependencyTag: NetworkRequestDependencyTag {
+    func shouldDependOn(other: NetworkRequestDependencyTag) -> Bool {
+        return other is AccountEmojiStatusRequestDependencyTag
+    }
+}
+
+private func _internal_setAccountEmojiStatus(account: Account, apiEmojiStatus: Api.EmojiStatus, emojiStatus: PeerEmojiStatus?, files: [TelegramMediaFile], recentFile: TelegramMediaFile?) -> Signal<Never, SetEmojiStatusError> {
+    let peerId = account.peerId
+    let postbox = account.postbox
+    return account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: apiEmojiStatus), tag: AccountEmojiStatusRequestDependencyTag())
+    |> mapError { _ in SetEmojiStatusError.generic }
+    |> then(.fail(.generic))
+    |> take(1)
+    |> mapToSignal { result -> Signal<Never, SetEmojiStatusError> in
+        guard case .boolTrue = result else {
+            return .fail(.generic)
+        }
+        return postbox.transaction { transaction -> Void in
+            for file in files {
+                transaction.storeMediaIfNotPresent(media: file)
+            }
+            if let recentFile, let entry = CodableEntry(RecentMediaItem(recentFile)) {
+                let itemEntry = OrderedItemListEntry(id: RecentMediaItemId(recentFile.fileId).rawValue, contents: entry)
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, item: itemEntry, removeTailIfCountExceeds: 32)
+            }
+            if let peer = transaction.getPeer(peerId) as? TelegramUser {
+                updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(emojiStatus)], update: { _, updated in updated })
+            }
+        }
+        |> castError(SetEmojiStatusError.self)
+        |> ignoreValues
+    }
+}
+
 public extension TelegramEngine {
     final class AccountData {
         private let account: Account
@@ -23,6 +61,17 @@ public extension TelegramEngine {
             _internal_addAppLogEvent(postbox: self.account.postbox, time: time, type: type, peerId: peerId, data: data)
         }
 
+        public func createAppLogEventContext() -> AppLogEventContext {
+            return makeAppLogEventContext(postbox: self.account.postbox)
+        }
+
+        public func addAppLogEvent(time: Double = Date().timeIntervalSince1970, type: String, data: @autoclosure () -> JSON, context: AppLogEventContext) {
+            AppLogEventCollection.perform(owner: self.account.postbox, identifiers: [context.identifier]) {
+                let data = data()
+                _internal_addAppLogEvent(postbox: self.account.postbox, time: time, type: type, data: data, context: context)
+            }
+        }
+
         public func requestChangeAccountPhoneNumberVerification(apiId: Int32, apiHash: String, phoneNumber: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
             return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, apiId: apiId, apiHash: apiHash, phoneNumber: phoneNumber, pushNotificationConfiguration: pushNotificationConfiguration, firebaseSecretStream: firebaseSecretStream)
         }
@@ -33,6 +82,10 @@ public extension TelegramEngine {
 
         public func requestChangeAccountPhoneNumber(phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> Signal<Void, ChangeAccountPhoneNumberError> {
             return _internal_requestChangeAccountPhoneNumber(account: self.account, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode)
+        }
+
+        public func updateProfile(firstName: String?, lastName: String?, about: String?) -> Signal<Void, UpdateAccountProfileError> {
+            return _internal_updateAccountProfile(account: self.account, firstName: firstName, lastName: lastName, about: about)
         }
 
         public func updateAccountPeerName(firstName: String, lastName: String) -> Signal<Void, NoError> {
@@ -89,9 +142,7 @@ public extension TelegramEngine {
             return _internal_removeAccountPhoto(account: self.account, reference: reference, fallback: true)
         }
         
-        public func setStarGiftStatus(starGift: StarGift.UniqueGift, expirationDate: Int32?) -> Signal<Never, NoError> {
-            let peerId = self.account.peerId
-            
+        public func setStarGiftStatusWithResult(starGift: StarGift.UniqueGift, expirationDate: Int32?) -> Signal<Never, SetEmojiStatusError> {
             var flags: Int32 = 0
             if let _ = expirationDate {
                 flags |= (1 << 0)
@@ -117,71 +168,31 @@ public extension TelegramEngine {
                     break
                 }
             }
-            let apiEmojiStatus: Api.EmojiStatus
-            var emojiStatus: PeerEmojiStatus?
-            if let file, let patternFile, let innerColor, let outerColor, let patternColor, let textColor {
-                apiEmojiStatus = .inputEmojiStatusCollectible(.init(flags: flags, collectibleId: starGift.id, until: expirationDate))
-                emojiStatus = PeerEmojiStatus(content: .starGift(id: starGift.id, fileId: file.fileId.id, title: starGift.title, slug: starGift.slug, patternFileId: patternFile.fileId.id, innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor), expirationDate: expirationDate)
-            } else {
-                apiEmojiStatus = .emojiStatusEmpty
+            guard let file, let patternFile, let innerColor, let outerColor, let patternColor, let textColor else {
+                return .fail(.generic)
             }
-            
-            let remoteApply = self.account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: apiEmojiStatus))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> ignoreValues
-            
-            return self.account.postbox.transaction { transaction -> Void in
-                if let file, let patternFile {
-                    transaction.storeMediaIfNotPresent(media: file)
-                    transaction.storeMediaIfNotPresent(media: patternFile)
-                }
-                if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                    updatePeersCustom(transaction: transaction, peers: [
-                        peer.withUpdatedEmojiStatus(emojiStatus)
-                    ], update: { _, updated in
-                        updated
-                    })
-                }
-            }
-            |> ignoreValues
-            |> then(remoteApply)
+            let apiEmojiStatus = Api.EmojiStatus.inputEmojiStatusCollectible(.init(flags: flags, collectibleId: starGift.id, until: expirationDate))
+            let emojiStatus = PeerEmojiStatus(content: .starGift(id: starGift.id, fileId: file.fileId.id, title: starGift.title, slug: starGift.slug, patternFileId: patternFile.fileId.id, innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor), expirationDate: expirationDate)
+            return _internal_setAccountEmojiStatus(account: self.account, apiEmojiStatus: apiEmojiStatus, emojiStatus: emojiStatus, files: [file, patternFile], recentFile: nil)
         }
-        
+
+        public func setStarGiftStatus(starGift: StarGift.UniqueGift, expirationDate: Int32?) -> Signal<Never, NoError> {
+            return self.setStarGiftStatusWithResult(starGift: starGift, expirationDate: expirationDate)
+            |> `catch` { _ in .complete() }
+        }
+
+        public func setEmojiStatusWithResult(file: TelegramMediaFile?, expirationDate: Int32?) -> Signal<Never, SetEmojiStatusError> {
+            let apiEmojiStatus = file.map { file -> Api.EmojiStatus in
+                let flags: Int32 = expirationDate == nil ? 0 : 1
+                return .emojiStatus(.init(flags: flags, documentId: file.fileId.id, until: expirationDate))
+            } ?? .emojiStatusEmpty
+            let emojiStatus = file.map { PeerEmojiStatus(content: .emoji(fileId: $0.fileId.id), expirationDate: expirationDate) }
+            return _internal_setAccountEmojiStatus(account: self.account, apiEmojiStatus: apiEmojiStatus, emojiStatus: emojiStatus, files: file.map { [$0] } ?? [], recentFile: file)
+        }
+
         public func setEmojiStatus(file: TelegramMediaFile?, expirationDate: Int32?) -> Signal<Never, NoError> {
-            let peerId = self.account.peerId
-            
-            let remoteApply = self.account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: file.flatMap({ file in
-                var flags: Int32 = 0
-                if let _ = expirationDate {
-                    flags |= (1 << 0)
-                }
-                return Api.EmojiStatus.emojiStatus(.init(flags: flags, documentId: file.fileId.id, until: expirationDate))
-            }) ?? Api.EmojiStatus.emojiStatusEmpty))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> ignoreValues
-            
-            return self.account.postbox.transaction { transaction -> Void in
-                if let file = file {
-                    transaction.storeMediaIfNotPresent(media: file)
-                    
-                    if let entry = CodableEntry(RecentMediaItem(file)) {
-                        let itemEntry = OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry)
-                        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, item: itemEntry, removeTailIfCountExceeds: 32)
-                    }
-                }
-                
-                if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                    updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(content: .emoji(fileId: $0.fileId.id), expirationDate: expirationDate) }))], update: { _, updated in
-                        updated
-                    })
-                }
-            }
-            |> ignoreValues
-            |> then(remoteApply)
+            return self.setEmojiStatusWithResult(file: file, expirationDate: expirationDate)
+            |> `catch` { _ in .complete() }
         }
         
         public func updateAccountBusinessHours(businessHours: TelegramBusinessHours?) -> Signal<Never, NoError> {

@@ -90,7 +90,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         self.isAccessibilityElement = true
         self.accessibilityLabel = item.text
-        self.accessibilityTraits = [.button]
+        self.accessibilityTraits = item.accessibilityIsSelected ? [.button, .selected] : [.button]
         
         self.addSubnode(self.titleLabelNode)
         self.addSubnode(self.subtitleNode)
@@ -206,6 +206,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     public func setItem(item: ContextMenuActionItem) {
         self.item = item
         self.accessibilityLabel = item.text
+        self.accessibilityTraits = item.accessibilityIsSelected ? [.button, .selected] : [.button]
     }
     
     public func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
@@ -279,6 +280,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
             self.titleLabelNode.maximumNumberOfLines = 0
             self.titleLabelNode.lineSpacing = 0.1
         }
+        // VoiceOver: the second line ("1 Person" under "Who Can See") is the item's value.
+        self.accessibilityValue = subtitle?.string
         
         let titleColor: UIColor
         let linkColor = presentationData.theme.list.itemAccentColor
@@ -681,6 +684,8 @@ private final class ContextControllerActionsListSeparatorItemNode: ASDisplayNode
         
         super.init()
         
+        // A divider between groups of items, not content.
+        self.separatorView.accessibilityElementsHidden = true
         self.view.addSubview(self.separatorView)
     }
     
@@ -1470,6 +1475,7 @@ private final class ItemSelectionRecognizer: UIGestureRecognizer {
 public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, ContextControllerActionsStackNode {
     public var usesClearGlass: Bool = false
     public var glassBlurRadius: CGFloat?
+    public var minimumListWidth: CGFloat?
 
     final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let backgroundContainer: GlassBackgroundContainerView
@@ -1780,6 +1786,14 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         return self.itemContainers.last?.storedScrollingState
     }
     
+    /// The submenu on top, when one has been pushed onto the root menu.
+    public var topPushedItemId: ObjectIdentifier? {
+        guard self.itemContainers.count > 1, let itemContainer = self.itemContainers.last else {
+            return nil
+        }
+        return ObjectIdentifier(itemContainer)
+    }
+    
     public init(
         context: AccountContext?,
         getController: @escaping () -> ContextControllerProtocol?,
@@ -2042,7 +2056,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
                 }
             } else {
                 itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
-                standardMinWidth = 220.0
+                standardMinWidth = self.minimumListWidth ?? 220.0
                 standardMaxWidth = 240.0
                 additionalBottomInset = 0.0
             }

@@ -620,6 +620,7 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
 
     private weak var walletContext: WalletContext?
     private var walletStateDisposable: MetaDisposable?
+    private let firstGramsSuggestionDisposable = MetaDisposable()
     private var renderedFiatState: WalletContext.FiatState?
     private var transferOperationId: String?
     private var transferTransactionHash: Data?
@@ -796,6 +797,7 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
     deinit {
         self.cardBackgroundDeviceMotion?.dispose()
         self.walletStateDisposable?.dispose()
+        self.firstGramsSuggestionDisposable.dispose()
     }
 
     private func stopCardBackgroundMotion() {
@@ -879,6 +881,20 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
         diamond.isHidden = self.isAwaitingTransferFlight
         diamond.isUserInteractionEnabled = !self.isAwaitingTransferFlight && !self.isSendingTransfer
         diamond.scrollTiltProvider = self.scrollTiltProvider
+        diamond.onTap = { [weak self] in
+            guard let self, let item = self.item, self.isIncomingTransfer else {
+                return
+            }
+            self.firstGramsSuggestionDisposable.set((item.context.engine.notices.getServerProvidedSuggestions()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] suggestions in
+                guard let self, self.item?.message.id == item.message.id,
+                      self.visibility != .none, suggestions.contains(.walletFirstIncomingTransfer) else {
+                    return
+                }
+                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+            }))
+        }
         diamond.onExpansionChanged = { [weak self] isExpanded in
             guard let self else { return }
             if isExpanded {
@@ -2021,6 +2037,7 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
                             && self.item?.message.id.peerId == item.message.id.peerId
                             && self.item?.message.stableId == item.message.stableId
                         if !isSameMessage {
+                            self.firstGramsSuggestionDisposable.set(nil)
                             self.cancelIncomingTransferAnimation()
                             self.mediaContainerNode.layer.removeAnimation(forKey: "transferFlightLanding")
                             self.stopCardBackgroundMotion()

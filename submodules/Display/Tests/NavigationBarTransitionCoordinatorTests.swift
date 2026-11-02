@@ -44,8 +44,15 @@ private final class FakeSource: NavigationBarTransitionSource {
     }
 
     func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {
+        return self.holdGlass(held, interrupted: interrupted, titlePillMoved: nil)
+    }
+
+    var titlePillMoved: (() -> Void)?
+
+    func holdGlass(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)?) -> Bool {
         self.holds.append(held)
         self.interrupted = interrupted
+        self.titlePillMoved = titlePillMoved
         return true
     }
 }
@@ -909,6 +916,68 @@ final class NavigationBarTransitionCoordinatorTests: XCTestCase {
                 XCTAssertEqual(top.holds, [true, false])
             }
         }
+    }
+
+    // The bar's title pill moving under the lingering glass (the chat header re-centred after the push) has the glass
+    // re-read both bars at the transition's end, so that its capsules head for the pill's new place; the linger goes on.
+    // Once it has ended, a late move asks nothing (issue #88).
+    func test_lingeringGlass_followsAMovedTitlePill() {
+        let bottom = FakeSource()
+        let top = FakeSource()
+        let (coordinator, container) = self.makeCoordinator(.Push, bottom: bottom, top: top, isInteractive: false)
+        guard let renderer = self.renderer else {
+            XCTFail("no renderer")
+            return
+        }
+        renderer.isGlassAnimating = true
+        coordinator.animateCompletion(0.0, completion: {})
+        for _ in 0 ..< 240 {
+            self.step(coordinator, 1.0 / 120.0)
+        }
+        XCTAssertNotNil(container.lingeringNavigationBarTransitionLayerForTesting)
+        let updates = renderer.fractions.count
+        let titlePillMoved = top.titlePillMoved
+        XCTAssertNotNil(titlePillMoved)
+        titlePillMoved?()
+        XCTAssertEqual(renderer.fractions.count, updates + 1)
+        XCTAssertEqual(renderer.fractions.last, 1.0)
+        XCTAssertNotNil(container.lingeringNavigationBarTransitionLayerForTesting)
+        XCTAssertEqual(top.holds, [true])
+
+        renderer.glassSettled?()
+        XCTAssertNil(container.lingeringNavigationBarTransitionLayerForTesting)
+        titlePillMoved?()
+        XCTAssertEqual(renderer.fractions.count, updates + 1)
+    }
+
+    // A bar gone during the linger (the popped screen released) leaves nothing to re-read: a move hands over instead.
+    func test_lingeringGlass_aMovedTitlePillWithABarGone_handsOver() {
+        weak var released: FakeSource?
+        let top = FakeSource()
+        var lingeringContainer: NavigationContainer?
+        autoreleasepool {
+            let bottom = FakeSource()
+            released = bottom
+            let (coordinator, container) = self.makeCoordinator(.Push, bottom: bottom, top: top, isInteractive: false)
+            lingeringContainer = container
+            self.renderer?.isGlassAnimating = true
+            coordinator.animateCompletion(0.0, completion: {})
+            for _ in 0 ..< 240 {
+                self.step(coordinator, 1.0 / 120.0)
+            }
+            bottom.containingView.removeFromSuperview()
+        }
+        guard let renderer = self.renderer, let container = lingeringContainer else {
+            XCTFail("no renderer")
+            return
+        }
+        XCTAssertNotNil(container.lingeringNavigationBarTransitionLayerForTesting)
+        XCTAssertNil(released)
+        let updates = renderer.fractions.count
+        top.titlePillMoved?()
+        XCTAssertEqual(renderer.fractions.count, updates)
+        XCTAssertNil(container.lingeringNavigationBarTransitionLayerForTesting)
+        XCTAssertEqual(top.holds, [true, false])
     }
 
     // Settled glass, and a cancelled swipe: the bar it ends on is the top one.

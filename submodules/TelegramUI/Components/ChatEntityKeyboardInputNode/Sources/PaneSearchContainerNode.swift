@@ -220,9 +220,10 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
     }
 
     private func openMore() {
-        guard let selectedStickerPack = self.selectedStickerPack, let controlsView = self.navigationButtons.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, let sourceView = rightItemView.itemView(id: AnyHashable("more")) else {
+        guard let selectedStickerPack = self.selectedStickerPack, let controlsView = self.navigationButtons.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
             return
         }
+        let sourceView = rightItemView.menuSourceView
 
         let link = "https://t.me/addstickers/\(selectedStickerPack.info.shortName)"
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: self.theme)

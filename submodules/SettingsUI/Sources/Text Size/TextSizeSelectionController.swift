@@ -12,6 +12,7 @@ import WallpaperResources
 import LegacyComponents
 import ItemListUI
 import WallpaperBackgroundNode
+import WallpaperGalleryScreen
 import AnimationCache
 import MultiAnimationRenderer
 
@@ -61,6 +62,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
+    private let maskFillNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let chatBackgroundNode: WallpaperBackgroundNode
     private let messagesContainerNode: ASDisplayNode
@@ -70,7 +72,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, focusOnItemTag: TextSizeSelectionEntryTag?, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize, PresentationFontSize) -> Void) {
+    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, focusOnItemTag: TextSizeSelectionEntryTag?, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize, PresentationFontSize, Bool) -> Void) {
         self.context = context
         self.focusOnItemTag = focusOnItemTag
         
@@ -106,12 +108,16 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper, animated: false)
         self.chatBackgroundNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
                         
-        self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData, focusOnItemTag: focusOnItemTag)
+        // Decided once for the screen, so that picking Default does not take the choice away under the finger.
+        let showsFontChoice = showsBubbleFreeModeSetting(isBubbleFreeModeAvailable: isBubbleFreeModeAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }), isInUse: presentationThemeSettings.chatBubbleSettings.serifMessageFont)
+        self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData, showsFontChoice: showsFontChoice, focusOnItemTag: focusOnItemTag)
                 
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
         self.maskNode.displayWithoutProcessing = true
         self.maskNode.contentMode = .scaleToFill
+        
+        self.maskFillNode = ASDisplayNode()
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
@@ -126,12 +132,19 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         
         self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.presentationData.theme.chatList.backgroundColor)
+        self.maskFillNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.pageControlNode.isUserInteractionEnabled = false
         self.pageControlNode.pagesCount = 2
+        // VoiceOver: the chat and chat-list previews (sample messages on the wallpaper) and their page dots only
+        // illustrate the chosen size; the slider and buttons are the screen.
+        self.scrollNode.accessibilityElementsHidden = true
+        self.pageControlNode.accessibilityElementsHidden = true
+        self.pageControlBackgroundNode.accessibilityElementsHidden = true
         
         self.addSubnode(self.scrollNode)
         self.chatListBackgroundNode.addSubnode(self.maskNode)
+        self.chatListBackgroundNode.addSubnode(self.maskFillNode)
         self.addSubnode(self.pageControlBackgroundNode)
         self.addSubnode(self.pageControlNode)
         self.addSubnode(self.toolbarNode)
@@ -152,7 +165,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
             }
             if !dismissed {
                 dismissed = true
-                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize, strongSelf.presentationThemeSettings.listsFontSize)
+                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize, strongSelf.presentationThemeSettings.listsFontSize, strongSelf.presentationThemeSettings.chatBubbleSettings.serifMessageFont)
             }
         }
         self.toolbarNode.updateUseSystemFont = { [weak self] value in
@@ -160,6 +173,13 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
                 return
             }
             strongSelf.presentationThemeSettings.useSystemFont = value
+            strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
+        }
+        self.toolbarNode.updateSerifMessageFont = { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentationThemeSettings.chatBubbleSettings.serifMessageFont = value
             strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
         }
         self.toolbarNode.updateCustomFontSize = { [weak self] value in
@@ -555,6 +575,9 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
             listsFontSize = presentationThemeSettings.listsFontSize
         }
         self.presentationData = self.presentationData.withFontSizes(chatFontSize: fontSize, listsFontSize: listsFontSize)
+        var chatBubbleCorners = self.presentationData.chatBubbleCorners
+        chatBubbleCorners.serifMessageText = presentationThemeSettings.chatBubbleSettings.serifMessageFont
+        self.presentationData = self.presentationData.withChatBubbleCorners(chatBubbleCorners)
         self.toolbarNode.updatePresentationData(presentationData: self.presentationData)
         self.toolbarNode.updatePresentationThemeSettings(presentationThemeSettings: self.presentationThemeSettings)
         if let (layout, navigationBarHeight) = self.validLayout {
@@ -614,6 +637,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))
+        transition.updateFrame(node: self.maskFillNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight, width: bounds.width, height: toolbarHeight))
     }
 }
 
@@ -693,20 +717,21 @@ final class TextSizeSelectionController: ViewController {
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
-        }, apply: { [weak self] useSystemFont, fontSize, listsFontSize in
+        }, apply: { [weak self] useSystemFont, fontSize, listsFontSize, serifMessageFont in
             if let strongSelf = self {
-                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize)
+                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize, serifMessageFont: serifMessageFont)
             }
         })
         self.displayNodeDidLoad()
     }
     
-    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize) {
+    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize, serifMessageFont: Bool) {
         let _ = (updatePresentationThemeSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { current in
             var current = current
             current.useSystemFont = useSystemFont
             current.fontSize = fontSize
             current.listsFontSize = listsFontSize
+            current.chatBubbleSettings.serifMessageFont = serifMessageFont
             return current
         })
         |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -726,14 +751,75 @@ private enum TextSelectionCustomMode {
     case chat
 }
 
+/// One of the two faces message text can be set in, shown as "Aa" in that face.
+private final class TextSizeFontOptionNode: ASDisplayNode {
+    private let backgroundNode = ASDisplayNode()
+    private let sampleNode = ImmediateTextNode()
+    private let titleNode = ImmediateTextNode()
+    private let buttonNode = HighlightableButtonNode()
+    
+    var pressed: (() -> Void)?
+    
+    override init() {
+        super.init()
+        
+        self.backgroundNode.cornerRadius = 20.0
+        self.backgroundNode.isUserInteractionEnabled = false
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.sampleNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.accessibilityTraits = [.button]
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
+                return
+            }
+            if highlighted {
+                self.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                self.backgroundNode.alpha = 0.6
+            } else {
+                self.backgroundNode.alpha = 1.0
+                self.backgroundNode.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.2)
+            }
+        }
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed?()
+    }
+    
+    func update(size: CGSize, sampleFont: UIFont, title: String, isSelected: Bool, theme: PresentationTheme) {
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+        self.backgroundNode.borderWidth = isSelected ? 2.0 : 0.0
+        self.backgroundNode.borderColor = theme.list.itemAccentColor.cgColor
+        
+        self.sampleNode.attributedText = NSAttributedString(string: "Aa", font: sampleFont, textColor: theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(13.0), textColor: isSelected ? theme.list.itemAccentColor : theme.list.itemSecondaryTextColor)
+        let sampleSize = self.sampleNode.updateLayout(size)
+        let titleSize = self.titleNode.updateLayout(size)
+        let spacing: CGFloat = 2.0
+        let originY = floor((size.height - sampleSize.height - spacing - titleSize.height) * 0.5)
+        self.sampleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - sampleSize.width) * 0.5), y: originY), size: sampleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: originY + sampleSize.height + spacing), size: titleSize)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.buttonNode.accessibilityLabel = title
+        self.buttonNode.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
+    }
+}
+
 private final class TextSelectionToolbarNode: ASDisplayNode {
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
     
-    private let cancelButton = HighlightableButtonNode()
-    private let doneButton = HighlightableButtonNode()
-    private let separatorNode = ASDisplayNode()
-    private let topSeparatorNode = ASDisplayNode()
+    // The face message text is set in, above the size.
+    private let showsFontChoice: Bool
+    private let defaultFontNode = TextSizeFontOptionNode()
+    private let serifFontNode = TextSizeFontOptionNode()
+    private let sectionNode = ASDisplayNode()
+    private let buttonsNode: WallpaperGalleryOldToolbarNode
     
     private var switchItemNode: ItemListSwitchItemNode
     private var fontSizeItemNode: ThemeSettingsFontSizeItemNode
@@ -745,63 +831,65 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     
     var updateUseSystemFont: ((Bool) -> Void)?
     var updateCustomFontSize: ((PresentationFontSize) -> Void)?
+    var updateSerifMessageFont: ((Bool) -> Void)?
     
-    init(presentationThemeSettings: PresentationThemeSettings, presentationData: PresentationData, focusOnItemTag: TextSizeSelectionEntryTag?) {
+    init(presentationThemeSettings: PresentationThemeSettings, presentationData: PresentationData, showsFontChoice: Bool, focusOnItemTag: TextSizeSelectionEntryTag?) {
         self.presentationThemeSettings = presentationThemeSettings
         self.presentationData = presentationData
-        
+        self.showsFontChoice = showsFontChoice
+
         self.switchItemNode = ItemListSwitchItemNode(type: .regular)
         self.fontSizeItemNode = ThemeSettingsFontSizeItemNode()
         
+        self.buttonsNode = WallpaperGalleryOldToolbarNode(theme: presentationData.theme, strings: presentationData.strings, cancelButtonType: .cancel, doneButtonType: .set)
+        
         super.init()
         
-        self.cancelButton.accessibilityTraits = [.button]
-        self.doneButton.accessibilityTraits = [.button]
+        self.sectionNode.clipsToBounds = true
+        self.sectionNode.cornerRadius = 26.0
+        if #available(iOS 13.0, *) {
+            self.sectionNode.layer.cornerCurve = .continuous
+        }
         
-        self.addSubnode(self.switchItemNode)
-        self.addSubnode(self.fontSizeItemNode)
-        self.addSubnode(self.cancelButton)
-        self.addSubnode(self.doneButton)
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.topSeparatorNode)
+        if self.showsFontChoice {
+            self.addSubnode(self.defaultFontNode)
+            self.addSubnode(self.serifFontNode)
+        }
+        self.addSubnode(self.sectionNode)
+        self.sectionNode.addSubnode(self.switchItemNode)
+        self.sectionNode.addSubnode(self.fontSizeItemNode)
+        self.addSubnode(self.buttonsNode)
         
         self.updatePresentationData(presentationData: self.presentationData)
         
-        self.cancelButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.cancelButton.backgroundColor = strongSelf.presentationData.theme.list.itemHighlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.cancelButton.backgroundColor = .clear
-                    })
-                }
-            }
+        self.buttonsNode.cancel = { [weak self] in
+            self?.cancelPressed()
         }
-        
-        self.doneButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.doneButton.backgroundColor = strongSelf.presentationData.theme.list.itemHighlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.doneButton.backgroundColor = .clear
-                    })
-                }
-            }
+        self.buttonsNode.done = { [weak self] _ in
+            self?.donePressed()
         }
-        
-        self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
-        self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
+        self.defaultFontNode.pressed = { [weak self] in
+            self?.updateSerifMessageFont?(false)
+        }
+        self.serifFontNode.pressed = { [weak self] in
+            self?.updateSerifMessageFont?(true)
+        }
         
         if focusOnItemTag == .useSystem {
             self.switchItemNode.displayHighlight()
         }
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result === self.view || result === self.buttonsNode.view {
+            return nil
+        }
+        return result
+    }
+    
     func setDoneEnabled(_ enabled: Bool) {
-        self.doneButton.alpha = enabled ? 1.0 : 0.4
-        self.doneButton.isUserInteractionEnabled = enabled
+        self.buttonsNode.setDoneEnabled(enabled)
     }
     
     func setCustomMode(_ customMode: TextSelectionCustomMode) {
@@ -809,15 +897,8 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     }
     
     func updatePresentationData(presentationData: PresentationData) {
-        self.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
-        self.separatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
-        self.topSeparatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
-        
-        self.cancelButton.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
-        self.doneButton.setTitle(presentationData.strings.Wallpaper_Set, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
-        
-        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Cancel
-        self.doneButton.accessibilityLabel = presentationData.strings.Wallpaper_Set
+        self.sectionNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.buttonsNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
     }
     
     func updatePresentationThemeSettings(presentationThemeSettings: PresentationThemeSettings) {
@@ -825,32 +906,45 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     }
     
     func updateLayout(width: CGFloat, bottomInset: CGFloat, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
-        var contentHeight: CGFloat = 0.0
-        // The rows keep the side safe insets too (iPhone Duo's side strip is a safe inset, not an intrinsic one).
-        let itemLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left)
-        let itemRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right)
-        // Beside a strip the bottom buttons split the band instead of the full width: they span iPhone Duo's side strip
-        // and keep clear only of a corner block at the bottom.
-        let bottomInsets = layout.bottomEdgeSideInsets()
-        let buttonsMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? bottomInsets.left : 0.0
-        let buttonsWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? width - bottomInsets.left - bottomInsets.right : width
+        let sideInset: CGFloat = 16.0
+        let buttonsSpacing: CGFloat = 12.0
+        let buttonsHeight: CGFloat = 52.0
+        let sectionLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left) + sideInset
+        let sectionRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right) + sideInset
+        let sectionWidth = max(1.0, width - sectionLeftInset - sectionRightInset)
         
-        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
+        var sectionOriginY: CGFloat = 0.0
+        if self.showsFontChoice {
+            let theme = self.presentationData.theme
+            let strings = self.presentationData.strings
+            let optionSpacing: CGFloat = 12.0
+            let optionSize = CGSize(width: floor((sectionWidth - optionSpacing) * 0.5), height: 84.0)
+            let serifMessageFont = self.presentationThemeSettings.chatBubbleSettings.serifMessageFont
+            self.defaultFontNode.update(size: optionSize, sampleFont: Font.regular(28.0), title: strings.Appearance_TextSize_FontDefault, isSelected: !serifMessageFont, theme: theme)
+            self.serifFontNode.update(size: optionSize, sampleFont: Font.with(size: 28.0, design: .serif), title: strings.Appearance_TextSize_FontSerif, isSelected: serifMessageFont, theme: theme)
+            transition.updateFrame(node: self.defaultFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset, y: 0.0), size: optionSize))
+            transition.updateFrame(node: self.serifFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset + sectionWidth - optionSize.width, y: 0.0), size: optionSize))
+            sectionOriginY = optionSize.height + buttonsSpacing
+        }
+
+        var sectionHeight: CGFloat = 0.0
+        
+        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), systemStyle: .glass, title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, noCorners: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateUseSystemFont?(value)
         })
         let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.customMode == .chat ? self.presentationThemeSettings.fontSize : self.presentationThemeSettings.listsFontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, disableDecorations: true, force: true, sectionId: 0, updated: { [weak self] value in
             self?.updateCustomFontSize?(value)
-        })
+        }, accessibilityLabel: self.presentationData.strings.Appearance_TextSize_Title)
         
         switchItem.updateNode(async: { f in
             f()
         }, node: {
             return self.switchItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: sectionWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: fontSizeItem.neighborDescriptor, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
             self.switchItemNode.contentSize = layout.contentSize
             self.switchItemNode.insets = layout.insets
-            transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
-            contentHeight += layout.contentSize.height
+            transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: sectionHeight), size: layout.contentSize))
+            sectionHeight += layout.contentSize.height
             apply(ListViewItemApply())
         })
         
@@ -858,34 +952,28 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.fontSizeItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: sectionWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
             self.fontSizeItemNode.contentSize = layout.contentSize
             self.fontSizeItemNode.insets = layout.insets
-            transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
-            contentHeight += layout.contentSize.height
+            transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: sectionHeight), size: layout.contentSize))
+            sectionHeight += layout.contentSize.height
             apply(ListViewItemApply())
         })
         
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: buttonsMinX, y: contentHeight), size: CGSize(width: floor(buttonsWidth / 2.0), height: 49.0))
-        self.doneButton.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: contentHeight), size: CGSize(width: buttonsWidth - floor(buttonsWidth / 2.0), height: 49.0))
+        transition.updateFrame(node: self.sectionNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset, y: sectionOriginY), size: CGSize(width: sectionWidth, height: sectionHeight)))
         
-        contentHeight += 49.0
+        let buttonsFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionOriginY + sectionHeight + buttonsSpacing), size: CGSize(width: width, height: buttonsHeight))
+        transition.updateFrame(node: self.buttonsNode, frame: buttonsFrame)
+        self.buttonsNode.updateLayout(size: buttonsFrame.size, layout: layout, transition: transition)
         
-        self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel))
-        
-        let resultHeight = contentHeight + bottomInset
-        
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
-        
-        return resultHeight
+        return buttonsFrame.maxY + (bottomInset.isZero ? sideInset : bottomInset)
     }
     
-    @objc func cancelPressed() {
+    private func cancelPressed() {
         self.cancel?()
     }
     
-    @objc func donePressed() {
-        self.doneButton.isUserInteractionEnabled = false
+    private func donePressed() {
         self.done?()
     }
 }

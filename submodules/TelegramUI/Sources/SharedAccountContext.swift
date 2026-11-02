@@ -1,10 +1,12 @@
 import Foundation
 import UIKit
+import UserNotifications
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import WebProxyTransport
 import Display
+import ComponentFlow
 import TelegramPresentationData
 import TelegramCallsUI
 import TelegramAudio
@@ -20,6 +22,7 @@ import SettingsUI
 import PasscodeUI
 import UrlHandling
 import LegacyMediaPickerUI
+import LegacyComponents
 import LocalMediaResources
 import OverlayStatusController
 import AlertUI
@@ -36,6 +39,7 @@ import ChatPresentationInterfaceState
 import StorageUsageScreen
 import DebugSettingsUI
 import MediaPickerUI
+import ChatMediaEditorScreen
 import Photos
 import TextFormat
 import ChatTextLinkEditUI
@@ -64,6 +68,8 @@ import CollectibleItemInfoScreen
 import StickerPickerScreen
 import MediaEditor
 import MediaEditorScreen
+import SaveToCameraRoll
+import AVFoundation
 import BusinessIntroSetupScreen
 import TelegramNotices
 import BotSettingsScreen
@@ -230,6 +236,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var callPeerDisposable: Disposable?
     private var callIsConferenceDisposable: Disposable?
     
+    private var callUnlockVideoNotificationState: CallUnlockVideoNotificationState?
+    private var callUnlockVideoNotificationInternalId: CallSessionInternalId?
+    private var callUnlockVideoNotificationDisposable: Disposable?
+    private var callUnlockVideoNotificationTimer: SwiftSignalKit.Timer?
+    
     private var groupCallController: VoiceChatController?
     public var currentGroupCallController: ViewController? {
         return self.groupCallController
@@ -254,7 +265,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     
-    var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
+    var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?, chatListBadgeAccessibilityValue: String?) = (nil, nil, nil, nil)
     
     private let _currentPresentationData: Atomic<PresentationData>
     public var currentPresentationData: Atomic<PresentationData> {
@@ -463,6 +474,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                     return next
                 }
+                ComponentAccessibilityStrings.on = next.strings.VoiceOver_Common_On
+                ComponentAccessibilityStrings.off = next.strings.VoiceOver_Common_Off
+                ComponentAccessibilityStrings.close = next.strings.Common_Close
+                ComponentAccessibilityStrings.done = next.strings.Common_Done
+                ComponentAccessibilityStrings.back = next.strings.Common_Back
+                ComponentAccessibilityStrings.search = next.strings.Common_Search
+                ComponentAccessibilityStrings.more = next.strings.Common_More
+                OverlayStatusControllerAccessibilityStrings.loading = next.strings.Channel_NotificationLoading
+                OverlayStatusControllerAccessibilityStrings.done = next.strings.Common_Done
                 if stringsUpdated {
                     updateLegacyLocalization(strings: next.strings)
                 }
@@ -537,6 +557,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass })
         ManagedAudioSessionImpl.respectsSystemRecordingInput = immediateExperimentalUISettingsValue.with({ $0.respectSystemMicrophone })
+        MediaEditorVideoExport.forceLegacyStoryWriter = immediateExperimentalUISettingsValue.with({ $0.storyLegacyVideoWriter })
+        MediaEditorVideoExport.forceLegacyChatWriter = immediateExperimentalUISettingsValue.with({ $0.chatLegacyVideoWriter })
         
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
@@ -546,6 +568,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
                 ManagedAudioSessionImpl.respectsSystemRecordingInput = settings.respectSystemMicrophone
+                MediaEditorVideoExport.forceLegacyStoryWriter = settings.storyLegacyVideoWriter
+                MediaEditorVideoExport.forceLegacyChatWriter = settings.chatLegacyVideoWriter
             }
         })
         
@@ -1109,6 +1133,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
         }
         
+        if applicationBindings.isMainApp {
+            self.removeStaleCallUnlockVideoNotifications()
+        }
+        
         /*if #available(iOS 13.0, *) {
             let userInterfaceStyle: UIUserInterfaceStyle
             if self.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
@@ -1215,6 +1243,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         self.currentCall = call
+        
+        if case let .call(call) = call {
+            self.updateCallUnlockVideoNotification(call: call)
+        } else {
+            self.updateCallUnlockVideoNotification(call: nil)
+        }
         
         let beginDisplayingCallStatusBar = Promise<Void>()
         
@@ -1518,6 +1552,135 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
+    private func updateCallUnlockVideoNotification(call: PresentationCall?) {
+        self.callUnlockVideoNotificationDisposable?.dispose()
+        self.callUnlockVideoNotificationDisposable = nil
+        self.callUnlockVideoNotificationTimer?.invalidate()
+        self.callUnlockVideoNotificationTimer = nil
+        if let state = self.callUnlockVideoNotificationState, case .shown = state.phase, let internalId = self.callUnlockVideoNotificationInternalId {
+            self.removeCallUnlockVideoNotification(internalId: internalId)
+        }
+        self.callUnlockVideoNotificationState = nil
+        self.callUnlockVideoNotificationInternalId = nil
+        
+        guard let call else {
+            return
+        }
+        let state = CallUnlockVideoNotificationState(isOutgoing: call.isOutgoing, isIntegratedWithCallKit: call.isIntegratedWithCallKit, isVideo: call.isVideo)
+        if case .finished = state.phase {
+            return
+        }
+        self.callUnlockVideoNotificationState = state
+        self.callUnlockVideoNotificationInternalId = call.internalId
+        
+        self.callUnlockVideoNotificationDisposable = (combineLatest(queue: .mainQueue(),
+            call.state,
+            self.applicationBindings.applicationInForeground
+        )).startStrict(next: { [weak self] callState, applicationInForeground in
+            self?.updateCallUnlockVideoNotificationState { state in
+                state.update(callState: callState.state, applicationInForeground: applicationInForeground)
+            }
+        })
+    }
+    
+    private func updateCallUnlockVideoNotificationState(_ f: (inout CallUnlockVideoNotificationState) -> Void) {
+        guard var state = self.callUnlockVideoNotificationState, let internalId = self.callUnlockVideoNotificationInternalId else {
+            return
+        }
+        let previousPhase = state.phase
+        f(&state)
+        self.callUnlockVideoNotificationState = state
+        if state.phase == previousPhase {
+            return
+        }
+        
+        switch state.phase {
+        case .awaitingAnswer:
+            break
+        case .pending:
+            let timer = SwiftSignalKit.Timer(timeout: CallUnlockVideoNotificationState.postDelay, repeat: false, completion: { [weak self] in
+                self?.updateCallUnlockVideoNotificationState { state in
+                    state.postDelayElapsed()
+                }
+            }, queue: Queue.mainQueue())
+            self.callUnlockVideoNotificationTimer = timer
+            timer.start()
+        case .shown:
+            self.callUnlockVideoNotificationTimer = nil
+            self.postCallUnlockVideoNotification(internalId: internalId)
+        case .finished:
+            self.callUnlockVideoNotificationTimer?.invalidate()
+            self.callUnlockVideoNotificationTimer = nil
+            if case .shown = previousPhase {
+                self.removeCallUnlockVideoNotification(internalId: internalId)
+            }
+        }
+    }
+    
+    private func postCallUnlockVideoNotification(internalId: CallSessionInternalId) {
+        let identifier = CallUnlockVideoNotificationState.identifier(internalId: internalId)
+        let strings = self.currentPresentationData.with({ $0 }).strings
+        let text = UIDevice.current.userInterfaceIdiom == .pad ? strings.Call_UnlockToSeeVideoNotificationPad : strings.Call_UnlockToSeeVideoNotification
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings(completionHandler: { [weak self] settings in
+            Queue.mainQueue().async {
+                guard let self, self.callUnlockVideoNotificationInternalId == internalId, let state = self.callUnlockVideoNotificationState, case .shown = state.phase else {
+                    return
+                }
+                switch settings.authorizationStatus {
+                case .authorized, .provisional:
+                    break
+                default:
+                    return
+                }
+                
+                // No sound: the call is already in progress.
+                let content = UNMutableNotificationContent()
+                content.body = text
+                content.userInfo = [CallUnlockVideoNotificationState.userInfoKey: internalId.uuidString]
+                content.categoryIdentifier = CallUnlockVideoNotificationState.categoryIdentifier
+                
+                Logger.shared.log("SharedAccountContext", "adding call unlock video notification \(internalId)")
+                center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil), withCompletionHandler: { error in
+                    if let error {
+                        Logger.shared.log("SharedAccountContext", "error adding call unlock video notification \(internalId), error: \(String(describing: error))")
+                    }
+                })
+            }
+        })
+    }
+    
+    private func removeCallUnlockVideoNotification(internalId: CallSessionInternalId) {
+        let identifier = CallUnlockVideoNotificationState.identifier(internalId: internalId)
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
+    
+    /// A notification whose call ended while the app was not running (terminated or crashed during the call) stays in
+    /// Notification Center, since nothing that would take it down is alive any more; launching removes it. The current
+    /// call's own is kept, should it already be up.
+    private func removeStaleCallUnlockVideoNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications(completionHandler: { [weak self] notifications in
+            let identifiers = notifications.map(\.request).filter({ $0.content.userInfo[CallUnlockVideoNotificationState.userInfoKey] != nil }).map(\.identifier)
+            if identifiers.isEmpty {
+                return
+            }
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                let currentIdentifier = self.callUnlockVideoNotificationInternalId.flatMap(CallUnlockVideoNotificationState.identifier(internalId:))
+                let staleIdentifiers = identifiers.filter({ $0 != currentIdentifier })
+                if !staleIdentifiers.isEmpty {
+                    Logger.shared.log("SharedAccountContext", "removing \(staleIdentifiers.count) stale call unlock video notifications")
+                    center.removeDeliveredNotifications(withIdentifiers: staleIdentifiers)
+                }
+            }
+        })
+    }
+    
     private func presentControllerWithCurrentCall() {
         /*guard let call = self.call else {
             return
@@ -1791,11 +1954,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         assert(Queue.mainQueue().isCurrent())
         var chatsBadge: String?
+        var chatsBadgeAccessibilityValue: String?
         if let rootController = self.mainWindow?.viewController as? TelegramRootController {
             if let tabsController = rootController.viewControllers.first as? TabBarController {
                 for controller in tabsController.controllers {
                     if let controller = controller as? ChatListController {
                         chatsBadge = controller.tabBarItem.badgeValue
+                        chatsBadgeAccessibilityValue = controller.tabBarItem.accessibilityValue
                     }
                 }
                 
@@ -1808,7 +1973,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
         }
-        self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge)
+        self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge, chatsBadgeAccessibilityValue)
         
         let _ = self.accountManager.transaction({ transaction -> Bool in
             if transaction.getCurrent()?.0 != id {
@@ -1819,7 +1984,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         }).start(next: { value in
             if !value {
-                self.switchingData = (nil, nil, nil)
+                self.switchingData = (nil, nil, nil, nil)
             }
         })
     }
@@ -2384,18 +2549,38 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatMessagePreviewItem(context: AccountContext, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool, activateGiftMessageInput: (() -> Void)?) -> ListViewItem {
+        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: theme, strings: strings, wallpaper: wallpaper, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: dateTimeFormat, nameOrder: nameOrder, forcedResourceStatus: forcedResourceStatus, tapMessage: tapMessage, clickThroughMessage: clickThroughMessage, backgroundNode: backgroundNode, availableReactions: availableReactions, accountPeer: accountPeer, isCentered: isCentered, isPreview: isPreview, isStandalone: isStandalone, rank: rank, rankRole: rankRole, isGiftMessageComposerPreview: isGiftMessageComposerPreview, activateGiftMessageInput: activateGiftMessageInput, feedActions: nil)
+    }
+
+    public func makeChatMessageFeedItem(context: AccountContext, messages: [EngineMessage], presentationData: PresentationData, accountPeer: EnginePeer?, actions: ChatMessageFeedItemActions) -> ListViewItem {
+        // Not a preview: a preview hides a link preview's action button (Instant View), and the feed shows it.
+        // No tails: the text and link preview content nodes draw no status line (views, time) then, and the row
+        // shows both in its channel line instead; the bubble's shape does not matter, it draws no background.
+        let corners = presentationData.chatBubbleCorners
+        let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false, serifMessageText: corners.serifMessageText)
+        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: feedCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
+    }
+
+    /// The item behind both the preview and the feed bubble; `feedActions` is set for the feed, which draws no
+    /// bubble background or author line and routes its taps to the host.
+    private func makeStandaloneChatMessageItem(context: AccountContext, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool, activateGiftMessageInput: (() -> Void)?, feedActions: ChatMessageFeedItemActions?) -> ListViewItem {
         let messages = messages.map { $0._asMessage() }
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(
             openMessage: { message, _ in
+                if let feedActions {
+                    return feedActions.openMessage(EngineMessage(message))
+                }
                 guard isGiftMessageComposerPreview, let tapMessage else {
                     return false
                 }
                 tapMessage(EngineMessage(message))
                 return true
             },
-            openPeer: { _, _, _, _ in },
+            openPeer: { peer, _, _, _ in
+                feedActions?.openPeer(peer)
+            },
             openPeerMention: { _, _ in },
             openMessageContextMenu: { _, _, _, _, _, _ in },
             openMessageReactionContextMenu: { _, _, _, _ in
@@ -2404,12 +2589,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             activateMessagePinch: { _ in
             },
             openMessageContextActions: { _, _, _, _ in },
-            navigateToMessage: { _, _, _ in },
+            navigateToMessage: { _, id, _ in
+                feedActions?.navigateToMessage(id)
+            },
             navigateToMessageStandalone: { _ in
             },
             navigateToThreadMessage: { _, _, _ in
             },
-            tapMessage: isGiftMessageComposerPreview ? nil : { message in
+            // The feed passes no `tapMessage` and gets none: with a closure in place the bubble answers a tap on its
+            // plain text with an empty action of its own (and reply headers stop navigating), and the host's tap
+            // never fires.
+            tapMessage: isGiftMessageComposerPreview || feedActions != nil ? nil : { message in
                 tapMessage?(EngineMessage(message))
             },
             clickThroughMessage: { view, location in
@@ -2429,13 +2619,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             requestMessageActionCallback: { _, _, _, _, _ in },
             requestMessageActionUrlAuth: { _, _ in },
             activateSwitchInline: { _, _, _ in },
-            openUrl: { _ in },
+            openUrl: { url in
+                feedActions?.openUrl(url.url)
+            },
             openExternalInstantPage: { _ in
             },
             shareCurrentLocation: { _ in },
             shareAccountContact: { _ in },
             sendBotCommand: { _, _ in },
-            openInstantPage: { _, _ in  },
+            openInstantPage: { message, _ in
+                feedActions?.openInstantPage(EngineMessage(message))
+            },
             openWallpaper: { _ in  },
             openTheme: { _ in  },
             openHashtag: { _, _ in },
@@ -2632,7 +2826,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             displayPollRestrictedToast: { _ in
             },
-            automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+            // The feed's videos play as the chat's do, by the user's autoplay settings.
+            automaticMediaDownloadSettings: feedActions != nil ? self.currentAutomaticMediaDownloadSettings : MediaAutoDownloadSettings.defaultSettings,
             pollActionState: ChatInterfacePollActionState(),
             stickerSettings: ChatInterfaceStickerSettings(),
             presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode)
@@ -2697,7 +2892,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 accountPeer: accountPeer,
                 forceInlineReactions: true,
                 isStandalone: isStandalone,
-                showTextAsPlaceholder: rank != nil
+                showTextAsPlaceholder: rank != nil,
+                hidesBubbleBackground: feedActions != nil,
+                hidesAuthorHeader: feedActions != nil,
+                hidesShareButton: feedActions != nil,
+                hostHandlesGestures: feedActions != nil
             ),
             controllerInteraction: controllerInteraction,
             content: content,
@@ -2712,38 +2911,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: EnginePeer, message: EngineMessage, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
         return ChatMessageAvatarHeader(timestamp: timestamp, peerId: peer.id, peer: peer, messageReference: nil, message: message, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, controllerInteraction: nil, storyStats: nil)
-    }
-    
-    public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
-            let legacyController = LegacyController(presentation: .navigation, theme: presentationData.theme)
-            legacyController.navigationPresentation = .modal
-            legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
-            
-            let controller = generator(legacyController.context)
-            legacyController.bind(controller: controller)
-            legacyController.deferScreenEdgeGestures = [.top]
-            controller.selectionBlock = { [weak legacyController] asset, _ in
-                if let asset = asset {
-                    let _ = (fetchPhotoLibraryImage(localIdentifier: asset.backingAsset.localIdentifier, thumbnail: false)
-                    |> deliverOnMainQueue).start(next: { imageAndFlag in
-                        if let (image, _) = imageAndFlag {
-                            completion(image)
-                        }
-                    })
-                    if let legacyController = legacyController {
-                        legacyController.dismiss()
-                    }
-                }
-            }
-            controller.dismissalBlock = { [weak legacyController] in
-                if let legacyController = legacyController {
-                    legacyController.dismiss()
-                }
-            }
-            present(legacyController)
-        })
     }
     
     public func displaySetPhoto(
@@ -2773,15 +2940,149 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         completion: @escaping (UIImage?) -> Void,
         completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
     ) {
+        self.displaySetPhoto(
+            parentController: parentController,
+            context: context,
+            peer: peer,
+            canDelete: canDelete,
+            performDelete: performDelete,
+            options: SetPhotoOptions(forceDark: false, allowsEmojiAvatar: true),
+            completion: completion,
+            completedWithUploadingImage: completedWithUploadingImage
+        )
+    }
+    
+    public func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        canDelete: Bool,
+        performDelete: @escaping () -> Void,
+        options: SetPhotoOptions,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    ) {
         PeerInfoScreenImpl.displaySetPhoto(
             parentController: parentController,
             context: context,
             peer: peer,
             canDelete: canDelete,
             performDelete: performDelete,
+            options: options,
             completion: completion,
             completedWithUploadingImage: completedWithUploadingImage
         )
+    }
+    
+    public func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController? {
+        guard largestImageRepresentation(image.representations) != nil else {
+            return nil
+        }
+        let mediaReference: AnyMediaReference = .message(message: MessageReference(message._asMessage()), media: image)
+        let videoRepresentation = image.videoRepresentations.last
+        let subjectKind = suggestedAvatarSubject(hasVideoRepresentation: videoRepresentation != nil)
+        
+        let imageSignal: Signal<(UIImage?, Bool), NoError> = fetchMediaData(context: context, userLocation: .other, mediaReference: mediaReference, forceVideo: false)
+        |> map { value, _ -> (UIImage?, Bool) in
+            if case let .data(data) = value, data.isComplete {
+                return (UIImage(contentsOfFile: data.path), true)
+            } else {
+                return (nil, false)
+            }
+        }
+        
+        let videoSignal: Signal<(String?, Bool), NoError>
+        if case .video = subjectKind {
+            videoSignal = fetchMediaData(context: context, userLocation: .other, mediaReference: mediaReference, forceVideo: true)
+            |> map { value, isImage -> (String?, Bool) in
+                if case let .data(data) = value, data.isComplete, !isImage {
+                    return (data.path, true)
+                } else {
+                    return (nil, false)
+                }
+            }
+        } else {
+            videoSignal = .single((nil, true))
+        }
+        
+        let temporaryVideoPath = Atomic<String?>(value: nil)
+        let subjectThumbnail = Atomic<UIImage?>(value: nil)
+        let removeTemporaryVideo: () -> Void = {
+            if let path = temporaryVideoPath.swap(nil) {
+                let _ = try? FileManager.default.removeItem(atPath: path)
+            }
+        }
+        
+        let fetchedSubject: Signal<MediaEditorScreenImpl.Subject?, NoError> = combineLatest(imageSignal, videoSignal)
+        |> filter { image, video in
+            return image.1 && video.1
+        }
+        |> take(1)
+        |> map { image, video -> MediaEditorScreenImpl.Subject? in
+            if let videoPath = video.0, let videoRepresentation {
+                var mp4Path = videoPath
+                if !videoPath.lowercased().hasSuffix(".mp4") {
+                    let tempPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
+                    let _ = try? FileManager.default.removeItem(atPath: tempPath)
+                    let _ = try? FileManager.default.copyItem(atPath: videoPath, toPath: tempPath)
+                    let _ = temporaryVideoPath.swap(tempPath)
+                    mp4Path = tempPath
+                }
+                let _ = subjectThumbnail.swap(image.0)
+                let duration = AVURLAsset(url: URL(fileURLWithPath: mp4Path)).duration.seconds
+                return .video(videoPath: mp4Path, thumbnail: image.0, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: videoRepresentation.dimensions, duration: duration, videoPositionChanges: [], additionalVideoPosition: .topLeft, fromCamera: false)
+            } else if let image = image.0 {
+                return .image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
+            } else {
+                return nil
+            }
+        }
+        |> deliverOnMainQueue
+        
+        let subjectPromise = Promise<MediaEditorScreenImpl.Subject?>()
+        
+        var transitionIn: MediaEditorScreenImpl.TransitionIn?
+        if let sourceView {
+            transitionIn = .gallery(MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(sourceView: sourceView, sourceRect: sourceView.bounds, sourceImage: nil))
+        }
+        let controller = MediaEditorScreenImpl(
+            context: context,
+            mode: .avatarEditor(clipStyle: .round),
+            subject: subjectPromise.get(),
+            transitionIn: transitionIn,
+            transitionOut: { [weak sourceView] finished, _ in
+                if !finished, let sourceView {
+                    return MediaEditorScreenImpl.TransitionOut(destinationView: sourceView, destinationRect: sourceView.bounds, destinationCornerRadius: 0.0)
+                }
+                return nil
+            },
+            completion: { results, commit in
+                guard var media = results.first?.media else {
+                    return
+                }
+                if case let .video(video, coverImage, values, duration, dimensions) = media {
+                    media = .video(video: video, coverImage: suggestedAvatarVideoCover(coverImage: coverImage, thumbnail: subjectThumbnail.with { $0 }), values: values, duration: duration, dimensions: dimensions)
+                }
+                completion(media, removeTemporaryVideo)
+                commit({})
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+        controller.avatarSuggestion = (senderName: senderName, isVideo: subjectKind == .video)
+        let fetchDisposable = MetaDisposable()
+        controller.cancelled = { _ in
+            fetchDisposable.dispose()
+            removeTemporaryVideo()
+        }
+        fetchDisposable.set(fetchedSubject.start(next: { [weak controller] subject in
+            if let subject {
+                subjectPromise.set(.single(subject))
+            } else {
+                Queue.mainQueue().justDispatch {
+                    controller?.requestCancel()
+                }
+            }
+        }))
+        return controller
     }
     
     public func makeInstantPageController(context: AccountContext, message: EngineMessage, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {
@@ -4063,6 +4364,64 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
     
+    public func makeChatCameraScreen(context: AccountContext, parameters: ChatCameraScreenParameters, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, transitionedOut: (() -> Void)?) -> ViewController {
+        let mappedTransitionIn = transitionIn.flatMap {
+            if let sourceView = $0.sourceView {
+                return CameraScreenImpl.TransitionIn(
+                    sourceView: sourceView,
+                    sourceRect: $0.sourceRect,
+                    sourceCornerRadius: $0.sourceCornerRadius,
+                    useFillAnimation: $0.useFillAnimation
+                )
+            } else {
+                return nil
+            }
+        }
+        let getCaptionPanelView = parameters.getCaptionPanelView
+        let flowParameters = ChatCameraFlowParameters(
+            camera: parameters.camera,
+            peer: parameters.peer,
+            isEditingMessage: parameters.isEditingMessage,
+            mediaGrouping: parameters.mediaGrouping,
+            initialCaption: parameters.initialCaption,
+            hasSchedule: parameters.hasSchedule,
+            sendPaidMessageStars: parameters.sendPaidMessageStars,
+            getCaptionPanelView: {
+                return getCaptionPanelView() as? TGCaptionPanelView
+            },
+            presentSchedulePicker: parameters.presentSchedulePicker,
+            presentTimerPicker: parameters.presentTimerPicker
+        )
+        let completion = parameters.completion
+        let controller = TelegramUI.makeChatCameraScreen(
+            context: context,
+            parameters: flowParameters,
+            holder: cameraHolder as? CameraHolder,
+            transitionIn: mappedTransitionIn,
+            transitionOut: { value in
+                return transitionOut(value).flatMap {
+                    if let destinationView = $0.destinationView {
+                        return CameraScreenImpl.TransitionOut(
+                            destinationView: destinationView,
+                            destinationRect: $0.destinationRect,
+                            destinationCornerRadius: $0.destinationCornerRadius,
+                            completion: $0.completion
+                        )
+                    } else {
+                        return nil
+                    }
+                }
+            },
+            completion: { _, messages, count, silently, scheduleTime, sendParameters, getAnimatedTransitionSource, sendCompletion in
+                completion(messages, count, silently, scheduleTime, sendParameters, getAnimatedTransitionSource, sendCompletion)
+            }
+        )
+        if let transitionedOut {
+            controller.transitionedOut = transitionedOut
+        }
+        return controller
+    }
+
     public func makeCameraScreen(context: AccountContext, mode: CameraScreenMode, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, completion: @escaping (Any, @escaping () -> Void) -> Void, transitionedOut: (() -> Void)?) -> ViewController {
         let mappedTransitionIn = transitionIn.flatMap {
             if let sourceView = $0.sourceView {
@@ -4114,8 +4473,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController? {
+        return makeChatMediaEditorGalleryController(context: context, parameters: parameters)
+    }
+    
+    public func makeWallpaperMediaEditor(context: AccountContext, asset: PHAsset, screenImage: UIImage, cropRect: CGRect, previousState: Any?, referenceView: UIView, apply: @escaping (UIImage?, Any?) -> Void, fullSizeApply: @escaping (UIImage?) -> Void, beginTransitionOut: @escaping (Bool) -> Void, finishTransitionOut: @escaping () -> Void) -> ViewController {
+        return WallpaperMediaEditorScreen(context: context, asset: asset, screenImage: screenImage, cropRect: cropRect, previousState: previousState, referenceView: referenceView, apply: apply, fullSizeApply: fullSizeApply, beginTransitionOut: beginTransitionOut, finishTransitionOut: finishTransitionOut)
+    }
+    
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
+    }
+    
+    public func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController {
+        return qrCodeMediaPickerController(context: context, completion: completion)
+    }
+    
+    public func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) {
+        presentPassportAttachmentFlow(context: context, intent: intent, present: present, completion: completion)
     }
     
     public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any], Bool) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
@@ -4327,8 +4702,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return WalletConnectScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, connect: connect)
     }
 
-    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
-        return WalletTransferScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, confirm: confirm)
+    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, ignoresTouchesFor: Double, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
+        return WalletTransferScreen(context: context, walletContext: walletContext, request: request, requester: requester, ignoresTouchesFor: ignoresTouchesFor, cancelled: cancelled, confirm: confirm)
     }
 
     public func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {
@@ -4636,10 +5011,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         screen.canSendInHighQuality = params.canSendInHighQuality
         screen.actionCompleted = params.actionCompleted
-        screen.enqueued = { ids, correlationIds in
+        screen.sent = { ids in
             shared = true
-            params.enqueued?(ids, correlationIds)
             params.completed?(ids)
+        }
+        screen.enqueued = { ids, correlationIds in
+            params.enqueued?(ids, correlationIds)
         }
         screen.dismissed = { params.dismissed?(shared) }
         let theme = params.forceTheme ?? params.updatedPresentationData?.initial.theme ?? self.currentPresentationData.with { $0 }.theme
@@ -4961,6 +5338,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var switchToGiftsTarget: PeerInfoSwitchToGiftsTarget?
         var switchToGroupsInCommon = false
         var switchToStoryFolder: Int64?
+        var hidesSavedMessagesChats = false
         
         switch mode {
         case let .calls(messages):
@@ -4999,10 +5377,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             if peer.id == context.account.peerId {
                 isMyProfile = true
             }
+        case .chatSideList:
+            hidesSavedMessagesChats = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: reactionSourceMessageId, sourceMessageId: sourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, sharedMediaFromForumTopic: sharedMediaFromForumTopic, switchToGiftsTarget: switchToGiftsTarget, switchToGroupsInCommon: switchToGroupsInCommon, switchToStoryFolder: switchToStoryFolder, switchToMediaTarget: switchToMediaTarget, hidesSavedMessagesChats: hidesSavedMessagesChats)
     } else if case .secretChat = peer {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, reactionSourceMessageId: nil, callMessages: [], switchToMediaTarget: switchToMediaTarget)
     }

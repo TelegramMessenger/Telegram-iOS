@@ -80,6 +80,106 @@ public func tabBarItemsLayout(axis: TabBarAxis, isCompact: Bool, unboundItemWidt
     }
 }
 
+/// The bar's thickness in the system layout (UIKit's `platterMinorDimension`, iOS 27 compact metrics).
+public let tabBarSystemBarThickness: CGFloat = 62.0
+/// A system-layout item's size across the bar and its minimum length along it (`minimumItemPrimaryDimension`).
+public let tabBarSystemItemThickness: CGFloat = 54.0
+
+/// The item frames and the bar's size of iOS 27's portrait tab bar (`_UITabBarVisualProvider_Floating` with its
+/// compact metrics, decompiled from UIKitCore and matched against UIKit's frames to 0.0001pt): one item per entry of
+/// `fittedItemWidths`, each an item's content width (its title's, at the unselected font).
+///
+/// Up to three items (without `hasAccessory`) sit 32pt apart and the bar hugs them, at most `availableLength` long;
+/// more fill `availableLength`, equally or in proportion to their widths. The frames overlap: each item reaches
+/// past its content into its neighbours' gaps, and the first and last end `tabBarInnerInset` inside the bar.
+/// Lengths are not rounded, as UIKit does not round them. `hasAccessory` (UIKit's hosted search or accessory
+/// element) makes any count lay out like four or more.
+public func tabBarSystemItemsLayout(fittedItemWidths: [CGFloat], availableLength: CGFloat, hasAccessory: Bool, scale: CGFloat = UIScreenScale) -> TabBarItemsLayout {
+    let count = fittedItemWidths.count
+    if count == 0 {
+        return TabBarItemsLayout(size: CGSize(width: tabBarInnerInset * 2.0, height: tabBarSystemBarThickness), itemFrames: [])
+    }
+    let roundToScale: (CGFloat) -> CGFloat = { value in
+        return floor(value * scale + 0.5) / scale
+    }
+
+    // The platter layout (sub_1c50ee7a8): the items' inset from the bar's ends, their spacing (nil: flexible)
+    // and the padding added to each content width.
+    let isFlexible = count > 3 || hasAccessory
+    let sideInset: CGFloat = count > 4 ? 15.0 : 24.0
+    let spacing: CGFloat? = isFlexible ? nil : 32.0
+    let padding: CGFloat = isFlexible ? 12.0 : 0.0
+    let gapCount = CGFloat(max(count - 1, 0))
+
+    var itemLengths = fittedItemWidths.map { max(tabBarSystemItemThickness, $0 + padding) }
+
+    // The bar's length (sub_1c50ea230, clamped in sub_1c50ef570).
+    let barLength: CGFloat
+    if let spacing {
+        let ideal = roundToScale(sideInset * 2.0 + gapCount * spacing + CGFloat(count) * (itemLengths.max() ?? 0.0))
+        barLength = min(max(ideal, 0.0), availableLength)
+    } else {
+        barLength = availableLength
+    }
+
+    // The items (sub_1c50eb15c).
+    let initialItemsLength = barLength - sideInset * 2.0
+    var totalLength = itemLengths.reduce(0.0, +)
+    let clampedMaxLength = min(max(itemLengths.max() ?? 0.0, 0.0), initialItemsLength)
+    let equalLength = (initialItemsLength - gapCount * (spacing ?? 2.0)) / CGFloat(count)
+    let fittedLength = min(clampedMaxLength, equalLength)
+    var contentInset = sideInset
+    var itemsLength = initialItemsLength
+    if spacing != nil {
+        itemLengths = Array(repeating: fittedLength, count: count)
+        totalLength = fittedLength * CGFloat(count)
+    } else {
+        let usesEqualLengths: Bool
+        var cappedInset: CGFloat?
+        if gapCount > 0.0 && (initialItemsLength - totalLength) / gapCount < 14.0 {
+            usesEqualLengths = false
+            cappedInset = 14.0
+        } else if tabBarSystemItemThickness >= clampedMaxLength {
+            usesEqualLengths = true
+        } else {
+            usesEqualLengths = clampedMaxLength <= equalLength
+            cappedInset = 18.0
+        }
+        if let cappedInset {
+            contentInset = min(sideInset, cappedInset)
+            itemsLength = barLength - contentInset * 2.0
+        }
+        if usesEqualLengths {
+            let length = count < 2 ? equalLength : max(fittedLength, itemsLength / CGFloat(count) - (contentInset - tabBarInnerInset))
+            itemLengths = Array(repeating: length, count: count)
+            totalLength = length * CGFloat(count)
+        } else if totalLength < itemsLength {
+            let factor = itemsLength / totalLength
+            itemLengths = itemLengths.map { $0 * factor }
+            totalLength = itemsLength
+        }
+    }
+    // Overflow comes off every item evenly, even below the minimum length: UIKit's branch meant to spare the
+    // items at the minimum never runs (its min() starts from 0).
+    let overflow = totalLength - itemsLength + (spacing.map { gapCount * $0 } ?? 0.0)
+    if overflow > 0.0 {
+        let reduction = overflow / CGFloat(count)
+        itemLengths = itemLengths.map { $0 - reduction }
+        totalLength = itemsLength
+    }
+    let gap: CGFloat = gapCount > 0.0 ? (spacing ?? (itemsLength - totalLength) / gapCount) : 0.0
+    // Each item reaches this far past its content on both sides (`_UITabButton.contentOutset`).
+    let outset = contentInset - tabBarInnerInset
+
+    var itemFrames: [CGRect] = []
+    var position = contentInset
+    for length in itemLengths {
+        itemFrames.append(CGRect(x: position - outset, y: tabBarInnerInset, width: length + outset * 2.0, height: tabBarSystemItemThickness))
+        position += length + gap
+    }
+    return TabBarItemsLayout(size: CGSize(width: barLength, height: tabBarSystemBarThickness), itemFrames: itemFrames)
+}
+
 /// The lens's selection rect in the bar's coordinates: the dragged position, else the selected item grown
 /// by the inner inset along the axis, else the first item's place; always the bar's full thickness across
 /// it, and clamped to the bar along it. A horizontal item narrower than its height is widened to 1.2 times
@@ -117,20 +217,27 @@ public func tabBarLensSelectionFrame(axis: TabBarAxis, barSize: CGSize, selected
     }
 }
 
-/// The item under `point`, or the nearest one by distance along the axis when it is outside every item.
-/// Nil when there are no items.
+/// The item under `point`, or the nearest one by distance along the axis when it is outside every item or inside
+/// several (the system layout's items overlap). Nil when there are no items.
 public func tabBarItemIndex(at point: CGPoint, axis: TabBarAxis, itemFrames: [CGRect]) -> Int? {
+    var containing: (index: Int, distance: CGFloat)?
     var closest: (index: Int, distance: CGFloat)?
     for (index, frame) in itemFrames.enumerated() {
-        if frame.contains(point) {
-            return index
-        }
         let distance: CGFloat
         switch axis {
         case .horizontal:
             distance = abs(point.x - frame.midX)
         case .vertical:
             distance = abs(point.y - frame.midY)
+        }
+        if frame.contains(point) {
+            if let containingValue = containing {
+                if distance < containingValue.distance {
+                    containing = (index, distance)
+                }
+            } else {
+                containing = (index, distance)
+            }
         }
         if let closestValue = closest {
             if distance < closestValue.distance {
@@ -140,5 +247,5 @@ public func tabBarItemIndex(at point: CGPoint, axis: TabBarAxis, itemFrames: [CG
             closest = (index, distance)
         }
     }
-    return closest?.index
+    return containing?.index ?? closest?.index
 }

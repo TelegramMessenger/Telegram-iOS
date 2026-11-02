@@ -90,6 +90,52 @@ public final class ListViewBackingView: UIView {
     override public func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
         return self.target?.accessibilityScroll(direction) ?? false
     }
+
+    // Not an `_ASDisplayView`, so it forwards to ASDK's collector itself: the rows inside the list's bounds, cached for
+    // the run loop turn. An explicitly set array and the `accessibilityUsesViewElements` opt-out keep UIKit's behaviour.
+    override public var accessibilityElements: [Any]? {
+        get {
+            if let elements = super.accessibilityElements {
+                return elements
+            }
+            return ASDisplayNodeCachedAccessibilityElements(self.target).flatMap { listViewAccessibilityReadingOrder($0) }
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
+/// ListView's elements in reading order: by origin, top to bottom then leading to trailing, as the collector sorts them,
+/// except that a row reads from its content, below its top inset. A section header is drawn in the top inset of its
+/// first row ("CHATS AND CONTACTS" over the first search result), so by frame the row would be read before its header.
+func listViewAccessibilityReadingOrder(_ elements: [Any]) -> [Any] {
+    if elements.count < 2 {
+        return elements
+    }
+    let keyed: [(origin: CGPoint, index: Int)] = elements.enumerated().map { index, element in
+        var origin: CGPoint
+        if let view = element as? UIView {
+            origin = view.convert(view.bounds, to: nil).origin
+            if let itemNode = view.asyncdisplaykit_node as? ListViewItemNode {
+                origin.y += itemNode.insets.top
+            }
+        } else if let object = element as? NSObject {
+            origin = object.accessibilityFrame.origin
+        } else {
+            origin = CGPoint()
+        }
+        return (origin, index)
+    }
+    let sorted = keyed.sorted { lhs, rhs in
+        if lhs.origin.y != rhs.origin.y {
+            return lhs.origin.y < rhs.origin.y
+        }
+        if lhs.origin.x != rhs.origin.x {
+            return lhs.origin.x < rhs.origin.x
+        }
+        return lhs.index < rhs.index
+    }
+    return sorted.map { elements[$0.index] }
 }
 
 private final class ListViewTimerProxy: NSObject {
@@ -4284,7 +4330,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         if itemHeader.stickOverInsets {
                             itemMaxY = itemFrame.maxY
                         } else {
-                            itemMaxY = itemFrame.maxY - (self.rotated ? itemNode.insets.top : itemNode.insets.bottom)
+                            itemMaxY = itemFrame.maxY - (self.rotated ? (itemNode.insets.top + itemNode.stickyHeaderBandTrim) : itemNode.insets.bottom)
                         }
                         
                         if let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeaderBySpace[itemHeader.id.space] {

@@ -58,6 +58,15 @@ public struct MultiScaleTextLayout {
 public final class MultiScaleTextNode: ASDisplayNode {
     private let stateNodes: [AnyHashable: MultiScaleTextStateNode]
     
+    /// The traits of the text's VoiceOver element (`.header` for a screen's title).
+    public var textAccessibilityTraits: UIAccessibilityTraits = .staticText {
+        didSet {
+            for (_, node) in self.stateNodes {
+                node.tintTextNode.accessibilityTraits = self.textAccessibilityTraits
+            }
+        }
+    }
+    
     public init(stateKeys: [AnyHashable]) {
         self.stateNodes = Dictionary(stateKeys.map { ($0, MultiScaleTextStateNode()) }, uniquingKeysWith: { lhs, _ in lhs })
         
@@ -111,6 +120,7 @@ public final class MultiScaleTextNode: ASDisplayNode {
                 }
                 node.tintTextNode.isAccessibilityElement = true
                 node.tintTextNode.accessibilityLabel = accessibilityText
+                node.tintTextNode.accessibilityTraits = self.textAccessibilityTraits
                 node.noTintTextNode.isAccessibilityElement = false
                 let nodeSize = node.tintTextNode.updateLayout(state.constrainedSize)
                 let _ = node.noTintTextNode.updateLayout(state.constrainedSize)

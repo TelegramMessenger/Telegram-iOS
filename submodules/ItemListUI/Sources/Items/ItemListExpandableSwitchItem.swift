@@ -189,6 +189,17 @@ private final class SubItemNode: HighlightTrackingButtonNode {
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
         
         self.alpha = item.isEnabled ? 1.0 : 0.5
+        
+        // VoiceOver: a check row, ticked while selected; the check mark itself is not read separately.
+        self.accessibilityLabel = item.title
+        var accessibilityTraits: UIAccessibilityTraits = .button
+        if item.isSelected {
+            accessibilityTraits.insert(.selected)
+        }
+        if !item.isEnabled {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.accessibilityTraits = accessibilityTraits
     }
 }
 
@@ -387,10 +398,26 @@ public class ItemListExpandableSwitchItemNode: ListViewItemNode, ItemListItemNod
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: mainContentHeight))
                     
+                    // VoiceOver: the row is the switch (activation toggles it, as the switch does) and reads the
+                    // count it shows ("10/10"); the switch control is not read on its own. The tap on the row's
+                    // title expands the sub-items: that is the "Expand"/"Collapse" custom action.
                     strongSelf.activateArea.accessibilityLabel = item.title
-                    strongSelf.activateArea.accessibilityValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
+                    let switchValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
+                    strongSelf.activateArea.accessibilityValue = item.subItems.isEmpty ? switchValue : "\(titleValue), \(switchValue)"
                     strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_SwitchHint
-                    var accessibilityTraits = UIAccessibilityTraits()
+                    strongSelf.switchNode.view.accessibilityElementsHidden = true
+                    strongSelf.switchGestureNode.view.accessibilityElementsHidden = true
+                    let expandActionName = item.isExpanded ? item.presentationData.strings.VoiceOver_Common_Collapse : item.presentationData.strings.VoiceOver_Common_Expand
+                    if strongSelf.activateArea.view.accessibilityCustomActions?.first?.name != expandActionName {
+                        strongSelf.activateArea.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: expandActionName, actionHandler: { [weak strongSelf] _ in
+                            guard let strongSelf, let item = strongSelf.item else {
+                                return false
+                            }
+                            item.selectAction()
+                            return true
+                        })]
+                    }
+                    var accessibilityTraits: UIAccessibilityTraits = .button
                     if item.enabled {
                     } else {
                         accessibilityTraits.insert(.notEnabled)

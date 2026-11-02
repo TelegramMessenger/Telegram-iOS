@@ -45,6 +45,24 @@ final class ChatListRichTextPreviewTests: XCTestCase {
         return (value.messageText, value.richTextPreview)
     }
 
+    private func describe(_ message: EngineMessage) -> String {
+        return descriptionStringForMessage(contentSettings: .default, message: message, strings: defaultPresentationStrings, nameDisplayOrder: .firstLast, dateTimeFormat: dateFormat, accountPeerId: peerId).0.string
+    }
+
+    /// A widget message's preview text is its caption, else the localized "Widget" stub (widget-sandbox v0.1.0,
+    /// integration.md "Caption and preview"): in the chat list and in the reply, pinned and notification headers.
+    func testACaptionedWidgetPreviewsItsCaption() {
+        let widget = EngineMedia(TelegramMediaWidget(width: 0, height: 0, payload: Data([0x1f, 0x8b])))
+        XCTAssertEqual(selected([message("Weekly report", media: [widget])]).0, "Weekly report")
+        XCTAssertEqual(describe(message("Weekly report", media: [widget])), "Weekly report")
+    }
+
+    func testAWidgetWithoutCaptionIsTheWidgetStub() {
+        let widget = EngineMedia(TelegramMediaWidget(width: 0, height: 0, payload: Data([0x1f, 0x8b])))
+        XCTAssertEqual(selected([message("", media: [widget])]).0, "Widget")
+        XCTAssertEqual(describe(message("", media: [widget])), "Widget")
+    }
+
     func testLocalizationResourcesAvailable() {
         XCTAssertNotNil(getAppBundle().path(forResource: "PresentationStrings", ofType: "data"))
         XCTAssertNotNil(getAppBundle().path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en"))

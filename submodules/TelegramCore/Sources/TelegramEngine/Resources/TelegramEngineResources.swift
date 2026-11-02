@@ -423,6 +423,12 @@ public extension TelegramEngine {
         public func pushPriorityDownload(resourceId: String, priority: Int = 1) -> Disposable {
             return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId, priority: priority)
         }
+
+        // Bits per second the account's media downloads reached recently on this kind of network (`DownloadThroughputMeter`),
+        // or nil without enough of them.
+        public func downloadThroughputEstimate(isWifi: Bool) -> Double? {
+            return self.account.network.downloadThroughputMeter.estimate(isWifi: isWifi, now: CFAbsoluteTimeGetCurrent())
+        }
         
         public func applicationIcons() -> Signal<TelegramApplicationIcons, NoError> {
             return _internal_applicationIcons(account: account)

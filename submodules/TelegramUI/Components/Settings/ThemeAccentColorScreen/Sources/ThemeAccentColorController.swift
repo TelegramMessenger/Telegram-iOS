@@ -45,6 +45,7 @@ public final class ThemeAccentColorController: ViewController {
     private let mode: ThemeAccentColorControllerMode
     private let resultMode: ResultMode
     private let section: ThemeColorSection
+    private let sections: [ThemeColorSection]
     private let initialBackgroundColor: UIColor?
     private var presentationData: PresentationData
     private var initialAccentColor: PresentationThemeAccentColor?
@@ -70,14 +71,32 @@ public final class ThemeAccentColorController: ViewController {
         self.resultMode = resultMode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let section: ThemeColorSection = .background
+        // Without bubbles chats have no wallpaper, so a theme's colours are only its accent and its outgoing bubbles. A
+        // chat's own background (`.background`) keeps its tab.
+        var sections: [ThemeColorSection] = [.background, .accent, .messages]
+        if !self.presentationData.chatBubbleCorners.bubbleMode {
+            switch mode {
+            case .colors, .edit:
+                sections = [.accent, .messages]
+            case .background:
+                break
+            }
+        }
+        self.sections = sections
+        let section: ThemeColorSection = sections[0]
         self.section = section
         
-        self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: [
-            self.presentationData.strings.Theme_Colors_Background,
-            self.presentationData.strings.Theme_Colors_Accent,
-            self.presentationData.strings.Theme_Colors_Messages
-        ], selectedIndex: section.rawValue)
+        let strings = self.presentationData.strings
+        self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: sections.map { section -> String in
+            switch section {
+            case .background:
+                return strings.Theme_Colors_Background
+            case .accent:
+                return strings.Theme_Colors_Accent
+            case .messages:
+                return strings.Theme_Colors_Messages
+            }
+        }, selectedIndex: 0)
         
         if case .background = mode {
             self.initialBackgroundColor = randomBackgroundColors.randomElement().flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
@@ -94,9 +113,10 @@ public final class ThemeAccentColorController: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.segmentedTitleView.indexUpdated = { [weak self] index in
-            guard let strongSelf = self, let section = ThemeColorSection(rawValue: index) else {
+            guard let strongSelf = self, index >= 0 && index < strongSelf.sections.count else {
                 return
             }
+            let section = strongSelf.sections[index]
             if strongSelf.segmentedTitleView.index == index {
                 return
             }
@@ -268,22 +288,25 @@ public final class ThemeAccentColorController: ViewController {
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper, creatorAccountId: context.account.id))
                                     
-                                    var updatedTheme = current.theme
-                                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                    var updatedTheme = current.currentModeTheme
+                                    var updatedAutomaticThemeSwitchSetting = current.currentModeAutomaticThemeSwitchSetting
                                     if autoNightModeTriggered {
                                         updatedAutomaticThemeSwitchSetting.theme = themeReference
                                     } else {
                                         updatedTheme = themeReference
                                     }
                                     
-                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
-                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
-                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
+                                    let themeSpecificAccentColors = current.accentColors(afterApplyingCloudTheme: themeReference.index, basedOn: baseThemeReference)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    var updated = current
+                                    updated.currentModeTheme = updatedTheme
+                                    updated.currentModeAutomaticThemeSwitchSetting = updatedAutomaticThemeSwitchSetting
+                                    updated.themeSpecificAccentColors = themeSpecificAccentColors
+                                    updated.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+                                    return updated
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {
@@ -298,22 +321,25 @@ public final class ThemeAccentColorController: ViewController {
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper, creatorAccountId: context.account.id))
                                     
-                                    var updatedTheme = current.theme
-                                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                    var updatedTheme = current.currentModeTheme
+                                    var updatedAutomaticThemeSwitchSetting = current.currentModeAutomaticThemeSwitchSetting
                                     if autoNightModeTriggered {
                                         updatedAutomaticThemeSwitchSetting.theme = themeReference
                                     } else {
                                         updatedTheme = themeReference
                                     }
                                     
-                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
-                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
-                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
+                                    let themeSpecificAccentColors = current.accentColors(afterApplyingCloudTheme: themeReference.index, basedOn: baseThemeReference)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    var updated = current
+                                    updated.currentModeTheme = updatedTheme
+                                    updated.currentModeAutomaticThemeSwitchSetting = updatedAutomaticThemeSwitchSetting
+                                    updated.themeSpecificAccentColors = themeSpecificAccentColors
+                                    updated.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+                                    return updated
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {
@@ -387,7 +413,7 @@ public final class ThemeAccentColorController: ViewController {
         }
         self.controllerNode.requestSectionUpdate = { [weak self] section in
             if let strongSelf = self {
-                strongSelf.segmentedTitleView.index = section.rawValue
+                strongSelf.segmentedTitleView.index = strongSelf.sections.firstIndex(of: section) ?? 0
             }
         }
         

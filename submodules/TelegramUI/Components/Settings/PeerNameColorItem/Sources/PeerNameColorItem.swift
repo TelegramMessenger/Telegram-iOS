@@ -19,8 +19,10 @@ private class PeerNameColorIconItem {
     let selected: Bool
     let isLocked: Bool
     let action: (PeerNameColor?) -> Void
+    let accessibilityLabel: String
     
-    public init(index: PeerNameColor?, colors: PeerNameColors.Colors?, isDark: Bool, selected: Bool, isLocked: Bool, action: @escaping (PeerNameColor?) -> Void) {
+    public init(index: PeerNameColor?, colors: PeerNameColors.Colors?, isDark: Bool, selected: Bool, isLocked: Bool, accessibilityLabel: String, action: @escaping (PeerNameColor?) -> Void) {
+        self.accessibilityLabel = accessibilityLabel
         self.index = index
         self.colors = colors
         self.isDark = isDark
@@ -204,6 +206,11 @@ private final class PeerNameColorIconItemNode : ASDisplayNode {
         item.action(item.index)
     }
     
+    override func accessibilityActivate() -> Bool {
+        self.tapped()
+        return true
+    }
+    
     func setSelected(_ selected: Bool, animated: Bool = false) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
         if selected {
@@ -229,6 +236,11 @@ private final class PeerNameColorIconItemNode : ASDisplayNode {
         }
         
         self.item = item
+        
+        // VoiceOver: each swatch is a button ("Color 3", or "No Color"), the current one selected.
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = item.accessibilityLabel
+        self.accessibilityTraits = item.selected ? [.button, .selected] : .button
         
         if updatedAccentColor {
             self.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark, isLocked: item.selected && item.isLocked, isEmpty: item.colors == nil, bounds: size, size: size)
@@ -269,8 +281,11 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
     public let currentColor: PeerNameColor?
     public let updated: (PeerNameColor?) -> Void
     public let tag: ItemListItemTag?
+    /// For the swatches' VoiceOver labels ("Color 3", "No Color").
+    public let strings: PresentationStrings
     
-    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, colors: PeerNameColors, mode: Mode, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, colors: PeerNameColors, mode: Mode, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, strings: PresentationStrings) {
+        self.strings = strings
         self.theme = theme
         self.systemStyle = systemStyle
         self.colors = colors
@@ -509,11 +524,11 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                             colors = item.colors.getChatFolderTag(color, dark: item.theme.overallDarkAppearance)
                         }
                         
-                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, action: action))
+                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, accessibilityLabel: item.strings.VoiceOver_Common_ColorNumber("\(i + 1)").string, action: action))
                         i += 1
                     }
                     if item.displayEmptyColor {
-                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, action: action))
+                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, accessibilityLabel: item.strings.VoiceOver_Common_NoColor, action: action))
                         i += 1
                     }
                     strongSelf.items = items

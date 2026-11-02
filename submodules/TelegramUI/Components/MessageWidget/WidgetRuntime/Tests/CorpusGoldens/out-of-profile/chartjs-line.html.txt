@@ -1,0 +1,43 @@
+stop -
+drive idle
+diagnostic script-skipped external script not available: https://cdn.jsdelivr.net/npm/chart.js
+diagnostic uncaught-exception Uncaught ReferenceError: Chart is not defined (about:srcdoc:3:19)
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style></style>
+</head><body>
+<div class="wrap"><canvas id="c"></canvas></div>
+<p id="note" style="font-size:12px;color:#666;margin:6px 0 0">Hover a point for a tooltip. <button id="add">Add point</button></p>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 278.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 10 340 258.8
+    div 10 10 340 220
+      canvas 10 10 300 150
+    p 10 236 340 32.8
+      button 256 244 72 16.8
+
+== paint
+root 360x278.8 items=10
+  solid-fill bounds=(0,0,360,279) layer=(border=(0,0,360,279),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,279),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(2,236,56,32) pos=(10,244,40,16) color=#666666ff text="Hover" font=f1 glyphs=5 advance=40
+  text bounds=(50,236,24,32) pos=(58,244,8,16) color=#666666ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(66,236,56,32) pos=(74,244,40,16) color=#666666ff text="point" font=f1 glyphs=5 advance=40
+  text bounds=(114,236,40,32) pos=(122,244,24,16) color=#666666ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(146,236,24,32) pos=(154,244,8,16) color=#666666ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(162,236,80,32) pos=(170,244,64,16) color=#666666ff text="tooltip." font=f1 glyphs=8 advance=64
+  solid-fill bounds=(242,236,100,33) layer=(border=(242,236,100,33),radius=(8,8,8,8,8,8,8,8),clip=(242,236,100,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(248,236,40,32) pos=(256,244,24,16) color=#666666ff text="Add" font=f2 glyphs=3 advance=24
+  text bounds=(280,236,56,32) pos=(288,244,40,16) color=#666666ff text="point" font=f2 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

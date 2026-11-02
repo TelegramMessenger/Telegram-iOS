@@ -451,6 +451,12 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         transition.setFrame(layer: self.tintBackgroundLayer, frame: backgroundFrame)
         
         transition.setFrame(view: self.cancelButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX, y: 0.0), size: CGSize(width: cancelButtonSpacing + cancelTextSize.width, height: size.height)))
+        // VoiceOver: Cancel only while it is shown (it waits off the field's trailing edge otherwise); the clear
+        // glyph is "Clear".
+        self.cancelButton.accessibilityLabel = strings.Common_Cancel
+        self.cancelButton.accessibilityElementsHidden = !isActiveWithText
+        self.cancelButton.isAccessibilityElement = isActiveWithText
+        self.clearIconButton.accessibilityLabel = strings.WebSearch_RecentSectionClear
         
         let textX: CGFloat = backgroundFrame.minX + sideTextInset
         let textFrame = CGRect(origin: CGPoint(x: textX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
@@ -483,6 +489,8 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let iconFrame = CGRect(origin: CGPoint(x: textFrame.minX - statusSize.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - statusSize.height) / 2.0)), size: statusSize)
         if let statusIconView = self.statusIcon.view as? EmojiSearchStatusComponent.View {
             if statusIconView.superview == nil {
+                // The loupe (or a progress glyph) beside "Search": decoration.
+                statusIconView.accessibilityElementsHidden = true
                 self.addSubview(statusIconView)
                 self.tintContainerView.addSubview(statusIconView.tintContainerView)
             }

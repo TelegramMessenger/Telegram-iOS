@@ -1,0 +1,100 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Weekend in Lisbon</title>
+<style></style>
+</head><body><div class="card">
+  <div class="an"><b>The row runs into the time's band</b> beside the time and ends before its corner: no button under your time.</div>
+  <div class="k">Tap Air · 3 nights</div>
+  <h1>Weekend in Lisbon</h1>
+  <div class="d">14–17 November · hotel in Alfama · breakfast</div>
+  <div class="p">€420 <small>per person</small></div>
+  <div class="row"><button id="b">Book</button><button class="g" id="s">Save</button><span class="s" id="st">2 seats left</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 279.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 279.4
+    div 16 16 328 263.4
+      div 26 22 308 50.4
+        b 26 22 0 0
+      div 16 90.4 328 16.2
+      h1 16 110.6 328 26.4
+      div 16 139 328 37.8
+      div 16 190.8 328 37.8
+        small 16 190.8 0 0
+      div 16 242.6 328 30.8
+        button 32 249.6 32 16.8
+        button 103 249.6 32 16.8
+        span 158 249.9 186 16.2
+
+== paint
+root 360x279.4 items=48
+  linear-gradient bounds=(0,0,360,279) layer=(border=(0,0,360,279),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,279),origin=(0,0,360,279),attachment=0,repeat=0,root=0) points=((0,#3390ecff,-),(1,#3390ecff,-)) space=0 hue=0 start=(114.11,-41.5325) end=(245.89,320.532)
+  solid-fill bounds=(16,16,328,62) layer=(border=(16,16,328,62),radius=(8,8,8,8,8,8,8,8),clip=(16,16,328,62),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.8 matrix=(1,0,0,1,0,0) backface=0 bounds=(6,80.4,340,36) exact=1
+    text bounds=(8,82,40,32) pos=(16,90,24,16) color=#ffffffff text="TAP" font=f1 glyphs=3 advance=24
+    text bounds=(40,82,40,32) pos=(48,90,24,16) color=#ffffffff text="AIR" font=f1 glyphs=3 advance=24
+    text bounds=(72,82,32,32) pos=(80,90,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+    text bounds=(96,82,24,32) pos=(104,90,8,16) color=#ffffffff text="3" font=f1 glyphs=1 advance=8
+    text bounds=(112,82,64,32) pos=(120,90,48,16) color=#ffffffff text="NIGHTS" font=f1 glyphs=6 advance=48
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(6,129,340,55.9) exact=1
+    text bounds=(8,132,72,32) pos=(16,140,56,16) color=#ffffffff text="14–17" font=f2 glyphs=7 advance=56
+    text bounds=(72,132,80,32) pos=(80,140,64,16) color=#ffffffff text="November" font=f2 glyphs=8 advance=64
+    text bounds=(144,132,32,32) pos=(152,140,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(168,132,56,32) pos=(176,140,40,16) color=#ffffffff text="hotel" font=f2 glyphs=5 advance=40
+    text bounds=(216,132,32,32) pos=(224,140,16,16) color=#ffffffff text="in" font=f2 glyphs=2 advance=16
+    text bounds=(240,132,64,32) pos=(248,140,48,16) color=#ffffffff text="Alfama" font=f2 glyphs=6 advance=48
+    text bounds=(296,132,32,32) pos=(304,140,16,16) color=#ffffffff text="·" font=f2 glyphs=2 advance=16
+    text bounds=(8,151,88,32) pos=(16,159,72,16) color=#ffffffff text="breakfast" font=f2 glyphs=9 advance=72
+  solid-fill bounds=(16,243,64,30) layer=(border=(16,243,64,30),radius=(8,8,8,8,8,8,8,8),clip=(16,243,64,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(88,243,62,30) borders=(left=(1,4,#ffffffff),top=(1,4,#ffffffff),right=(1,4,#ffffffff),bottom=(1,4,#ffffffff),radius=(8,8,8,8,8,8,8,8)) pos=(88,243,62,30) root=0
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(156,239.9,198,36) exact=1
+    text bounds=(240,242,24,32) pos=(248,250,8,16) color=#ffffffff text="2" font=f3 glyphs=1 advance=8
+    text bounds=(256,242,56,32) pos=(264,250,40,16) color=#ffffffff text="seats" font=f3 glyphs=5 advance=40
+    text bounds=(304,242,48,32) pos=(312,250,32,16) color=#ffffffff text="left" font=f3 glyphs=4 advance=32
+  text bounds=(18,14,40,32) pos=(26,22,24,16) color=#000000ff text="The" font=f4 glyphs=3 advance=24
+  text bounds=(50,14,40,32) pos=(58,22,24,16) color=#000000ff text="row" font=f4 glyphs=3 advance=24
+  text bounds=(82,14,48,32) pos=(90,22,32,16) color=#000000ff text="runs" font=f4 glyphs=4 advance=32
+  text bounds=(122,14,48,32) pos=(130,22,32,16) color=#000000ff text="into" font=f4 glyphs=4 advance=32
+  text bounds=(162,14,40,32) pos=(170,22,24,16) color=#000000ff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(194,14,64,32) pos=(202,22,48,16) color=#000000ff text="time's" font=f4 glyphs=6 advance=48
+  text bounds=(250,14,48,32) pos=(258,22,32,16) color=#000000ff text="band" font=f4 glyphs=4 advance=32
+  text bounds=(18,31,64,32) pos=(26,39,48,16) color=#707579ff text="beside" font=f3 glyphs=6 advance=48
+  text bounds=(74,31,40,32) pos=(82,39,24,16) color=#707579ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(106,31,48,32) pos=(114,39,32,16) color=#707579ff text="time" font=f3 glyphs=4 advance=32
+  text bounds=(146,31,40,32) pos=(154,39,24,16) color=#707579ff text="and" font=f3 glyphs=3 advance=24
+  text bounds=(178,31,48,32) pos=(186,39,32,16) color=#707579ff text="ends" font=f3 glyphs=4 advance=32
+  text bounds=(218,31,64,32) pos=(226,39,48,16) color=#707579ff text="before" font=f3 glyphs=6 advance=48
+  text bounds=(274,31,40,32) pos=(282,39,24,16) color=#707579ff text="its" font=f3 glyphs=3 advance=24
+  text bounds=(18,48,72,32) pos=(26,56,56,16) color=#707579ff text="corner:" font=f3 glyphs=7 advance=56
+  text bounds=(82,48,32,32) pos=(90,56,16,16) color=#707579ff text="no" font=f3 glyphs=2 advance=16
+  text bounds=(106,48,64,32) pos=(114,56,48,16) color=#707579ff text="button" font=f3 glyphs=6 advance=48
+  text bounds=(162,48,56,32) pos=(170,56,40,16) color=#707579ff text="under" font=f3 glyphs=5 advance=40
+  text bounds=(210,48,48,32) pos=(218,56,32,16) color=#707579ff text="your" font=f3 glyphs=4 advance=32
+  text bounds=(250,48,56,32) pos=(258,56,40,16) color=#707579ff text="time." font=f3 glyphs=5 advance=40
+  text bounds=(8,108,72,32) pos=(16,116,56,16) color=#ffffffff text="Weekend" font=f5 glyphs=7 advance=56
+  text bounds=(72,108,32,32) pos=(80,116,16,16) color=#ffffffff text="in" font=f5 glyphs=2 advance=16
+  text bounds=(96,108,64,32) pos=(104,116,48,16) color=#ffffffff text="Lisbon" font=f5 glyphs=6 advance=48
+  text bounds=(8,193,64,32) pos=(16,201,48,16) color=#ffffffff text="€420" font=f6 glyphs=6 advance=48
+  group opacity=0.85 matrix=(1,0,0,1,0,0) backface=0 bounds=(14,188.8,148,38) exact=1
+    text bounds=(64,193,40,32) pos=(72,201,24,16) color=#ffffffff text="per" font=f7 glyphs=3 advance=24
+    text bounds=(96,193,64,32) pos=(104,201,48,16) color=#ffffffff text="person" font=f7 glyphs=6 advance=48
+  text bounds=(24,242,48,32) pos=(32,250,32,16) color=#000000ff text="Book" font=f8 glyphs=4 advance=32
+  text bounds=(95,242,48,32) pos=(103,250,32,16) color=#ffffffff text="Save" font=f8 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.72,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=28,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

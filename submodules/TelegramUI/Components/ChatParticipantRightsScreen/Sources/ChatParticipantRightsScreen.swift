@@ -247,6 +247,7 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                     initialText: state.initialRank ?? "",
                     resetText: nil,
                     placeholder: strings.EditRank_Placeholder,
+                    clearButtonAccessibilityLabel: strings.WebSearch_RecentSectionClear,
                     characterLimit: Int(rankMaxLength),
                     autocapitalizationType: .sentences,
                     autocorrectionType: .default,

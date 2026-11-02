@@ -11,6 +11,9 @@ import LocalizedPeerData
 final class ChatListInputActivitiesNode: ASDisplayNode {
     private let activityNode: ChatTitleActivityNode
     
+    /// The activity line as shown ("typing…", "Alice is recording a voice message"), for the row's VoiceOver value.
+    private(set) var displayedText: String?
+    
     override init() {
         self.activityNode = ChatTitleActivityNode()
         
@@ -156,6 +159,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
             
             return (boundingSize, {
                 if let strongSelf = self {
+                    switch state {
+                    case .none:
+                        strongSelf.displayedText = nil
+                    case let .info(text, _), let .typingText(text, _), let .uploading(text, _), let .recordingVoice(text, _), let .recordingVideo(text, _), let .playingGame(text, _), let .choosingSticker(text, _), let .interactingWithEmoji(text, _):
+                        strongSelf.displayedText = text.string.isEmpty ? nil : text.string
+                    }
                     let _ = strongSelf.activityNode.transitionToState(state, animation: .none)
                     let size = strongSelf.activityNode.updateLayout(CGSize(width: boundingSize.width - 12.0, height: boundingSize.height), alignment: .left)
                     strongSelf.activityNode.frame = CGRect(origin: CGPoint(x: -3.0, y: 1.0), size: size)

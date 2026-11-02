@@ -72,6 +72,7 @@ final class QrStudioGiftsTabView: UIView, UIScrollViewDelegate {
         self.addSubview(self.scrollView)
 
         self.titleLabel.textAlignment = .center
+        self.titleLabel.accessibilityTraits = .header
         self.scrollView.addSubview(self.titleLabel)
 
         self.fadeMask.colors = [UIColor.clear.cgColor, UIColor.black.cgColor, UIColor.black.cgColor]

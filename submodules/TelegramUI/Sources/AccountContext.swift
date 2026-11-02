@@ -30,6 +30,7 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import MessageWidget
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -138,6 +139,7 @@ public final class AccountContextImpl: AccountContext {
     public let tonContext: StarsContext?
     public let walletContext: WalletContext?
     private let walletTonConnectDisposable = MetaDisposable()
+    private let widgetWalletDisposable = MetaDisposable()
     private let walletTonConnectDecisionDisposable = MetaDisposable()
     private var walletTonConnectState: WalletContext.TonConnectState?
     private var walletTonConnectController: ViewController?
@@ -413,6 +415,7 @@ public final class AccountContextImpl: AccountContext {
         let updatedAppConfiguration = getAppConfiguration(engine: self.engine)
         self.currentAppConfiguration = Atomic(value: appConfiguration)
         self._appConfiguration.set(.single(appConfiguration) |> then(updatedAppConfiguration))
+        MessageWidgetKillSwitch.isEngaged = appConfiguration.data?[MessageWidgetKillSwitch.appConfigurationKey] != nil
                 
         let currentAppConfiguration = self.currentAppConfiguration
         self.appConfigurationDisposable = (self._appConfiguration.get()
@@ -422,6 +425,9 @@ public final class AccountContextImpl: AccountContext {
             // Switches off the on-disk archive of compiled Metal pipelines (now, and on later launches until the key
             // is removed); pipelines are then compiled on first use as before.
             MetalEngine.shared.pipelineCache.setArchiveDisabled(value.data?["ios_killswitch_disable_metal_pipeline_cache"] != nil)
+            
+            // Read here once per configuration: bubble layout reads the flag on every pass, on any thread.
+            MessageWidgetKillSwitch.isEngaged = value.data?[MessageWidgetKillSwitch.appConfigurationKey] != nil
             
             guard let data = appConfiguration.data else {
                 return
@@ -633,6 +639,17 @@ public final class AccountContextImpl: AccountContext {
 
         if let walletContext = self.walletContext {
             self.account.walletTransferTasksRunning.set(walletContext.hasTransferBackgroundTasks)
+            // widget-sandbox v0.5.0 (sdk-v1 §5.13): message widgets get the wallet where it is available to this user
+            // (wallet_available) and this device can sign for it (the user's call of 2026-10-30).
+            let widgetWalletAccountId = self.account.peerId.id._internalGetInt64Value()
+            let widgetWalletOwner = ObjectIdentifier(self)
+            self.widgetWalletDisposable.set((combineLatest(
+                self._appConfiguration.get() |> map { WalletConfiguration.with(appConfiguration: $0).isAvailable } |> distinctUntilChanged,
+                walletContext.widgetWalletReady
+            )
+            |> deliverOnMainQueue).start(next: { isAvailable, isReady in
+                MessageWidgetWalletAvailability.set(isAvailable && isReady, accountId: widgetWalletAccountId, owner: widgetWalletOwner)
+            }))
             self.walletTonConnectDisposable.set((walletContext.tonConnectState
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 self?.updateWalletTonConnectPresentation(state)
@@ -670,6 +687,10 @@ public final class AccountContextImpl: AccountContext {
             self.account.walletTransferTasksRunning.set(.single(false))
         }
         self.walletTonConnectDisposable.dispose()
+        self.widgetWalletDisposable.dispose()
+        if self.walletContext != nil {
+            MessageWidgetWalletAvailability.release(accountId: self.account.peerId.id._internalGetInt64Value(), owner: ObjectIdentifier(self))
+        }
         self.walletTonConnectDecisionDisposable.dispose()
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()

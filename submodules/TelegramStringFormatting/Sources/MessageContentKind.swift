@@ -31,6 +31,7 @@ public enum MessageContentKindKey {
     case story
     case giveaway
     case paidContent
+    case widget
 }
 
 public enum MessageContentKind: Equatable {
@@ -58,6 +59,7 @@ public enum MessageContentKind: Equatable {
     case invoice(String)
     case story
     case giveaway
+    case widget
     
     public func isSemanticallyEqual(to other: MessageContentKind) -> Bool {
         switch self {
@@ -205,6 +207,12 @@ public enum MessageContentKind: Equatable {
             } else {
                 return false
             }
+        case .widget:
+            if case .widget = other {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -258,6 +266,8 @@ public enum MessageContentKind: Equatable {
             return .story
         case .giveaway:
             return .giveaway
+        case .widget:
+            return .widget
         }
     }
 }
@@ -395,6 +405,13 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         return .story
     case .giveaway, .giveawayResults:
         return .giveaway
+    case .widget:
+        // The caption is a widget's preview text; without one, the "Widget" stub (widget-sandbox v0.1.0, integration.md
+        // "Caption and preview").
+        if let message, !message.text.isEmpty {
+            return .text(messageTextWithAttributes(message: message))
+        }
+        return .widget
     case let .webpage(webpage):
         if let message, message.text.isEmpty, case let .Loaded(content) = webpage.content {
             return .text(NSAttributedString(string: content.displayUrl))
@@ -483,6 +500,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (NSAttributedString(string: strings.Message_Story), true)
     case .giveaway:
         return (NSAttributedString(string: strings.Message_Giveaway), true)
+    case .widget:
+        return (NSAttributedString(string: strings.Message_Widget), true)
     }
 }
 

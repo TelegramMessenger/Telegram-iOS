@@ -15,10 +15,12 @@ import WallpaperBackgroundNode
 import ChatControllerInteraction
 import AvatarVideoNode
 import ChatMessageItem
+import ChatMessageItemCommon
 import AvatarNode
 import ComponentFlow
 import EmojiStatusComponent
 import AppBundle
+import GlassBackgroundComponent
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -245,6 +247,15 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var text: String
     
+    private var stickDistanceFactor: CGFloat = 0.0
+    private var lastBackgroundFrame: CGRect?
+    // Bubble mode off: the date is gray text on the page; parked at the top while the chat scrolls it stands on a glass
+    // island in the primary text colour, made the first time it parks (spec 5.7, 6.10).
+    private var hasBubblelessState = false
+    private var isFlashing = true
+    private var glassView: GlassBackgroundView?
+    private var parkedLabelNode: TextNode?
+    
     init(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, localTimestamp: Int32, scheduled: Bool) {
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
@@ -323,6 +334,8 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
+        
+        self.updateBubblelessIsland(transition: .immediate)
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
@@ -347,6 +360,90 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
         if presentationData.fontSize != previousPresentationData.fontSize {
             self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
         }
+        
+        if let parkedLabelNode = self.parkedLabelNode {
+            self.layoutParkedLabel(parkedLabelNode)
+        }
+        self.updateBubblelessIsland(transition: .immediate)
+    }
+    
+    /// The parked date's label: the date in the primary text colour, where the gray one is.
+    private func layoutParkedLabel(_ parkedLabelNode: TextNode) {
+        let titleFont = Font.medium(min(18.0, floor(self.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        let (layout, apply) = TextNode.asyncLayout(parkedLabelNode)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.text, font: titleFont, textColor: self.presentationData.theme.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        parkedLabelNode.bounds = CGRect(origin: CGPoint(), size: layout.size)
+        parkedLabelNode.position = self.labelNode.position
+    }
+    
+    /// Without bubbles the pill never shows: in the history the date is the gray label, parked it stands on the glass
+    /// island in the primary text colour, and once scrolling stops the island dematerialises (glass under a fading parent
+    /// breaks) while its label fades. With bubbles this only restores what it changed.
+    private func updateBubblelessIsland(transition: ComponentTransition) {
+        guard !self.presentationData.chatBubbleCorners.bubbleMode else {
+            if self.hasBubblelessState {
+                self.hasBubblelessState = false
+                self.backgroundNode.alpha = 1.0
+                self.backgroundContent?.alpha = 1.0
+                self.labelNode.alpha = 1.0
+                self.glassView?.removeFromSuperview()
+                self.glassView = nil
+                self.parkedLabelNode?.removeFromSupernode()
+                self.parkedLabelNode = nil
+            }
+            return
+        }
+        self.hasBubblelessState = true
+        self.backgroundNode.alpha = 0.0
+        self.backgroundContent?.alpha = 0.0
+        
+        let state = chatMessageBubblelessDateState(stickDistanceFactor: self.stickDistanceFactor, isFlashing: self.isFlashing)
+        var materialisesLater = false
+        if state.showsIsland, self.glassView == nil {
+            let glassView = GlassBackgroundView()
+            glassView.isUserInteractionEnabled = false
+            self.glassView = glassView
+            self.view.insertSubview(glassView, belowSubview: self.labelNode.view)
+            let parkedLabelNode = TextNode()
+            parkedLabelNode.isUserInteractionEnabled = false
+            parkedLabelNode.displaysAsynchronously = false
+            parkedLabelNode.alpha = 0.0
+            self.parkedLabelNode = parkedLabelNode
+            self.addSubnode(parkedLabelNode)
+            self.layoutParkedLabel(parkedLabelNode)
+            if let lastBackgroundFrame = self.lastBackgroundFrame {
+                glassView.frame = lastBackgroundFrame.insetBy(dx: -6.0, dy: -3.0)
+            }
+            // Glass animates from the state it was last committed in: it materialises a frame later.
+            materialisesLater = true
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0 / 60.0) { [weak self] in
+                self?.updateBubblelessIsland(transition: transition)
+            }
+        }
+        if let glassView = self.glassView {
+            glassView.update(size: glassView.bounds.size, cornerRadius: glassView.bounds.height * 0.5, isDark: self.presentationData.theme.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isVisible: state.showsIsland && !materialisesLater, transition: materialisesLater ? .immediate : transition)
+        }
+        transition.setAlpha(view: self.labelNode.view, alpha: state.showsHistoryLabel ? 1.0 : 0.0)
+        if let parkedLabelNode = self.parkedLabelNode {
+            transition.setAlpha(view: parkedLabelNode.view, alpha: state.showsParkedLabel ? 1.0 : 0.0)
+        }
+    }
+    
+    /// Without bubbles: whether the chat is scrolling (or the date is in the history), from the header's flashing.
+    func updateBubblelessFlashing(_ isFlashing: Bool, animated: Bool) {
+        if self.isFlashing == isFlashing {
+            return
+        }
+        self.isFlashing = isFlashing
+        self.updateBubblelessIsland(transition: animated ? .easeInOut(duration: isFlashing ? 0.3 : 0.4) : .immediate)
+    }
+    
+    /// Without bubbles the parked date that has gone takes no taps.
+    var bubblelessTakesTaps: Bool? {
+        guard !self.presentationData.chatBubbleCorners.bubbleMode else {
+            return nil
+        }
+        return chatMessageBubblelessDateState(stickDistanceFactor: self.stickDistanceFactor, isFlashing: self.isFlashing).takesTaps
     }
     
     func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
@@ -369,6 +466,15 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
         
         transition.updatePosition(node: self.labelNode, position: labelFrame.center)
         self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
+        self.lastBackgroundFrame = backgroundFrame
+        if let parkedLabelNode = self.parkedLabelNode {
+            transition.updatePosition(node: parkedLabelNode, position: labelFrame.center)
+        }
+        if let glassView = self.glassView {
+            let glassFrame = backgroundFrame.insetBy(dx: -6.0, dy: -3.0)
+            transition.updateFrame(view: glassView, frame: glassFrame)
+            glassView.update(size: glassFrame.size, cornerRadius: glassFrame.height * 0.5, isDark: self.presentationData.theme.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isVisible: chatMessageBubblelessDateState(stickDistanceFactor: self.stickDistanceFactor, isFlashing: self.isFlashing).showsIsland, transition: ComponentTransition(transition))
+        }
                 
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
@@ -388,6 +494,11 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
     
     func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
         self.stickBackgroundNode.alpha = factor
+        let wasParked = chatMessageBubblelessDateIsParked(stickDistanceFactor: self.stickDistanceFactor)
+        self.stickDistanceFactor = factor
+        if self.hasBubblelessState, wasParked != chatMessageBubblelessDateIsParked(stickDistanceFactor: factor) {
+            self.updateBubblelessIsland(transition: transition.isAnimated ? .easeInOut(duration: 0.25) : .immediate)
+        }
     }
 }
 
@@ -409,6 +520,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var text: String
+    private var labelMaxWidth: CGFloat = 320.0
     
     init(context: AccountContext, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, displayHeader: ChatMessageDateHeader.HeaderData) {
         self.context = context
@@ -473,7 +585,8 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             let avatarIconContent: EmojiStatusComponent.Content
             if id != 1 {
                 if let fileId = info.icon, fileId != 0 {
-                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.theme.list.itemAccentColor, loopMode: .count(0))
+                    // A template emoji takes the header's text colour, as the General icon does.
+                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper), loopMode: .count(0))
                 } else {
                     avatarIconContent = .topic(title: String(info.title.prefix(1)), color: info.iconColor, size: CGSize(width: 16.0, height: 16.0))
                 }
@@ -502,15 +615,9 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             }
         }
         self.addSubnode(self.labelNode)
-                
-        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
-        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
-                
-        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let _ = apply()
-        self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
+        let labelSize = self.layoutLabel()
+        self.labelNode.frame = CGRect(origin: CGPoint(), size: labelSize)
         
         let arrowIcon = UIImageView(image: ChatMessagePeerContentNode.arrowImage)
         self.arrowIcon = arrowIcon
@@ -528,17 +635,22 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
-        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
-        
-        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let _ = apply()
+        let labelSize = self.layoutLabel()
         
         if presentationData.fontSize != previousPresentationData.fontSize {
-            self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelSize)
         }
+    }
+    
+    private func layoutLabel() -> CGSize {
+        let titleFont = Font.medium(min(18.0, floor(self.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
+        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: self.presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: self.presentationData.theme.wallpaper))
+        let labelLayout = TextNode.asyncLayout(self.labelNode)
+        
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: self.labelMaxWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        return size.size
     }
     
     func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
@@ -560,6 +672,12 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             avatarInset = 4.0
         }
         let avatarSpacing: CGFloat = 4.0
+        
+        let labelMaxWidth = chatMessageHeaderTitleMaxWidth(width: size.width, leftInset: leftInset, rightInset: rightInset, chromeWidth: avatarInset + avatarDiameter + avatarSpacing + chatDateInset + arrowSpacing, margin: 8.0)
+        if self.labelMaxWidth != labelMaxWidth {
+            self.labelMaxWidth = labelMaxWidth
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: self.layoutLabel())
+        }
         
         let labelSize = self.labelNode.bounds.size
         let backgroundSize = CGSize(width: avatarInset + avatarDiameter + avatarSpacing + labelSize.width + chatDateInset + arrowSpacing, height: chatDateSize)
@@ -685,6 +803,8 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
         if let peerContentNode = self.peerContentNode {
             peerContentNode.updatePresentationData(presentationData, context: context)
         }
+        // A switch of bubble mode changes who hides the date (its alpha, or its glass): it takes the current flashing.
+        self.updateFlashing(animated: false)
 
         self.setNeedsLayout()
     }
@@ -785,13 +905,22 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
         let alpha: CGFloat = flashing ? 1.0 : 0.0
         
         if let dateContentNode = self.dateContentNode {
-            let previousAlpha = dateContentNode.alpha
-            
-            if !previousAlpha.isEqual(to: alpha) {
-                dateContentNode.alpha = alpha
-                if animated {
-                    let duration: Double = flashing ? 0.3 : 0.4
-                    dateContentNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
+            if dateContentNode.bubblelessTakesTaps != nil {
+                // Without bubbles the date shows or hides its parts itself: its island is glass.
+                if dateContentNode.alpha != 1.0 {
+                    dateContentNode.layer.removeAnimation(forKey: "opacity")
+                    dateContentNode.alpha = 1.0
+                }
+                dateContentNode.updateBubblelessFlashing(flashing, animated: animated)
+            } else {
+                let previousAlpha = dateContentNode.alpha
+                
+                if !previousAlpha.isEqual(to: alpha) {
+                    dateContentNode.alpha = alpha
+                    if animated {
+                        let duration: Double = flashing ? 0.3 : 0.4
+                        dateContentNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
+                    }
                 }
             }
         }
@@ -826,6 +955,9 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
     
     override public func getEffectiveAlpha() -> CGFloat {
         if let dateContentNode = self.dateContentNode {
+            if let takesTaps = dateContentNode.bubblelessTakesTaps {
+                return takesTaps ? 1.0 : 0.0
+            }
             return dateContentNode.alpha
         }
         if let peerContentNode = self.peerContentNode {
@@ -840,7 +972,7 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
         }
         if let dateContentNode = self.dateContentNode {
             if dateContentNode.frame.contains(point) {
-                if dateContentNode.alpha.isZero {
+                if dateContentNode.alpha.isZero || dateContentNode.bubblelessTakesTaps == false {
                     return nil
                 }
                 
@@ -875,7 +1007,7 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
 }
 
 private func avatarHeaderSize() -> CGFloat {
-    return 34.0
+    return chatMessageAvatarHeaderSize
 }
 
 public final class ChatMessageAvatarHeader: ListViewItemHeader {
@@ -921,7 +1053,13 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
         
         let isRotated = controllerInteraction?.chatIsRotated ?? true
         
-        self.stickDirection = isRotated ? .top : .bottom
+        if presentationData.chatBubbleCorners.bubbleMode {
+            self.stickDirection = isRotated ? .top : .bottom
+        } else {
+            // Without bubbles the avatar heads its run beside the author's name and sticks to the top of the
+            // chat while the rest of the run scrolls by.
+            self.stickDirection = isRotated ? .bottom : .top
+        }
     }
     
     public let stickDirection: ListViewItemHeaderStickDirection
@@ -931,7 +1069,7 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
 
     public func combinesWith(other: ListViewItemHeader) -> Bool {
         if let other = other as? ChatMessageAvatarHeader, other.id == self.id {
-            if abs(self.effectiveTimestamp - other.effectiveTimestamp) >= 10 * 60 {
+            if abs(self.effectiveTimestamp - other.effectiveTimestamp) >= chatMessageBubblelessRunInterval {
                 return false
             }
             return true
@@ -1230,7 +1368,10 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     }
 
     override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: leftInset + 7.0, y: -3.0), size: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize())))
+        // Without bubbles the message rows trim the run so that its top edge is already where the avatar
+        // belongs, level with the author's name and first line.
+        let avatarOriginY: CGFloat = self.presentationData.chatBubbleCorners.bubbleMode ? -3.0 : 0.0
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: leftInset + chatMessageAvatarHeaderInset, y: avatarOriginY), size: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize())))
         let avatarFrame = CGRect(origin: CGPoint(), size: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
         self.avatarNode.position = avatarFrame.center
         self.avatarNode.bounds = CGRect(origin: CGPoint(), size: avatarFrame.size)

@@ -231,6 +231,27 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
         self.activateArea.accessibilityLabel = item.label
+        self.activateArea.accessibilityValue = item.text
+        // Tap = the item's action; the long-press menu is a custom action while the gesture is on.
+        if let action = item.action {
+            self.activateArea.applyPeerInfoRowAction(action)
+        } else {
+            self.activateArea.accessibilityTraits = .staticText
+            self.activateArea.activate = nil
+        }
+        if item.contextAction != nil {
+            if self.activateArea.view.accessibilityCustomActions?.first?.name != presentationData.strings.Common_More {
+                self.activateArea.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: presentationData.strings.Common_More, actionHandler: { [weak self] _ in
+                    guard let self, let contextAction = self.item?.contextAction else {
+                        return false
+                    }
+                    contextAction(self.contextSourceNode, nil, nil)
+                    return true
+                })]
+            }
+        } else {
+            self.activateArea.view.accessibilityCustomActions = nil
+        }
         
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)

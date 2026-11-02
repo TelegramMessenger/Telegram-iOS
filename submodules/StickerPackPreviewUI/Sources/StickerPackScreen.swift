@@ -1206,7 +1206,7 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .reference(StickerPackContextReferenceContentSource(controller: controller, sourceView: view)),
+            source: .reference(StickerPackContextReferenceContentSource(controller: controller, sourceView: (view as? GlassBarButtonComponent.View)?.menuSourceView ?? view)),
             items: .single(ContextController.Items(content: .list(items))),
             recognizer: nil,
             gesture: gesture

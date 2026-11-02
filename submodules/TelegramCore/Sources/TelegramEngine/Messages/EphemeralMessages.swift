@@ -459,7 +459,7 @@ private func performPreparedEphemeralMessageSend(account: Account, prepared: Pre
         case let .text(text):
             media = nil
             if let richTextAttribute = prepared.message.attributes.first(where: { $0 is RichTextMessageAttribute }) as? RichTextMessageAttribute {
-                richMessage = richTextAttribute.apiInputRichMessage()
+                richMessage = richTextAttribute.apiInputRichMessage(users: apiInputRichMessageUsers(richTextAttribute.instantPage, peer: { prepared.message.peers[$0] }))
                 flags |= (1 << 4)
             } else {
                 richMessage = nil

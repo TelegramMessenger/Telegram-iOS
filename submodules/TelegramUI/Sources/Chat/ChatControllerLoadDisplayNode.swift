@@ -128,6 +128,7 @@ import GlobalControlPanelsContext
 import ComponentFlow
 import ComponentDisplayAdapters
 import UIKitRuntimeUtils
+import ChatHistoryListViewBackend
 
 extension ChatControllerImpl {
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {
@@ -5552,8 +5553,19 @@ extension ChatControllerImpl {
                     chatLocation = .peer(peer)
                 }
 
+                let previousController = ObjectIdentifier(strongSelf)
+                // Bubble-free mode: the panel holding the "next channel" island (nil without one).
+                let overscrollIslandPanel = snapshotState.inputPanelOverscrollIslandHandOver != nil ? strongSelf.chatDisplayNode.inputPanelNode : nil
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
-                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
+                    let nextController = nextController as! ChatControllerImpl
+                    if let overscrollIslandPanel, nextController.didAppear {
+                        // The next chat is already on screen: this controller switched in place (a forum's next
+                        // topic), or one deeper in the stack was popped to. Its snapshot will not animate until a
+                        // later appearance, so the island does not wait for it: it sinks into this panel, or, off
+                        // screen, goes at once.
+                        let _ = overscrollIslandPanel.updateOverscrollIsland(nil, animated: ObjectIdentifier(nextController) == previousController)
+                    }
+                    nextController.animateFromPreviousController(snapshotState: snapshotState)
                 }, customChatNavigationStack: strongSelf.customChatNavigationStack))
                 // Navigation started: the caller may keep the overscroll control frozen, and the
                 // snapshot taken above now owns it.

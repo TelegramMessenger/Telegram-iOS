@@ -15,6 +15,7 @@ public final class HarnessSharedAccountContext: SharedAccountContext {
     private let accountManagerValue: AccountManager<TelegramAccountManagerTypes>
     private let presentationDataValue: Atomic<PresentationData>
     private let chatSettingsValue: Atomic<ChatSettings>
+    private let applicationBindingsValue: TelegramApplicationBindings
 
     public init(settings: HarnessSettings, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         self.settings = settings
@@ -29,6 +30,24 @@ public final class HarnessSharedAccountContext: SharedAccountContext {
         }
         self.presentationDataValue = Atomic(value: presentationData)
         self.chatSettingsValue = Atomic(value: ChatSettings.defaultSettings)
+        // Real bindings for a foreground app with nothing to open: the widget bubble reads `applicationIsActive`
+        // (`feedMessageWidgetApplicationState`) on every pass on main. Every action is a no-op; nothing here may open a URL.
+        self.applicationBindingsValue = TelegramApplicationBindings(
+            isMainApp: true, appBundleId: Bundle.main.bundleIdentifier ?? "org.telegram.Harness", appBuildType: .internal,
+            containerPath: NSTemporaryDirectory(), appSpecificScheme: "tg",
+            openUrl: { _ in }, openUniversalUrl: { _, _ in }, canOpenUrl: { _ in false }, getTopWindow: { nil },
+            displayNotification: { _ in }, applicationInForeground: .single(true), applicationIsActive: .single(true),
+            clearMessageNotifications: { _ in }, pushIdleTimerExtension: { EmptyDisposable }, openSettings: {},
+            openAppStorePage: {}, openSubscriptions: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in },
+            siriAuthorization: { .notDetermined }, getWindowHost: { nil }, presentNativeController: { _ in },
+            dismissNativeController: {}, getAvailableAlternateIcons: { [] }, getAlternateIconName: { nil },
+            requestSetAlternateIconName: { _, completion in completion(false) }, forceOrientation: { _ in }
+        )
+    }
+
+    /// Read by the widget bubble (`feedMessageWidgetApplicationState`: `applicationIsActive`).
+    public var applicationBindings: TelegramApplicationBindings {
+        return self.applicationBindingsValue
     }
 
     /// Read by `EmojiSuggestionsComponent.suggestionData` (from `ChatTextInputPanelNode.updateInputField`)

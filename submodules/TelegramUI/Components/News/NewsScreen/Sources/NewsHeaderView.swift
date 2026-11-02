@@ -23,9 +23,10 @@ private final class NewsHeaderRowContentView: UIView {
 
 /// The News header, one instance over both pages (Feed2 FeedScreen.swift:203-272). Back to front:
 /// - the search block, which scrolls with the active list (above everything while search is open);
-/// - the tab-switch shutter;
 /// - the soft scroll edge (blur and whitening, shown once content scrolls under the header);
 /// - the mockup's static header gradient;
+/// - page overlays, a page's content drawn above the edges (Added's New posts pill);
+/// - the tab-switch shutter, over the edges too: they only blend towards its colour, so it looks the same there;
 /// - the top row (the tabs island and "…"), which never moves.
 ///
 /// The view covers the screen and takes only its children's touches. In a navigation transition the top row is the
@@ -88,6 +89,15 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
     private var lentIslandContent: UIView?
     var transitionContentFrameUpdated: ((CGRect) -> Void)?
     private(set) var searchContentNode: NavigationBarSearchContentNode?
+    /// The search node's last layout, for re-laying it out as it folds.
+    private var searchLayout: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
+    /// The search field's frame in its node, measured while the field was whole: what the header's geometry is built
+    /// on (`newsHeaderWholeSearchField`).
+    private var wholeSearchFieldFrame: CGRect?
+    /// Holes in the edge effects for the floating avatars stuck under the header's edge (`updateEdgeHoles`).
+    private let softEdgeMask = CAShapeLayer()
+    private let gradientMask = CAShapeLayer()
+    private var edgeHoles: [CGRect] = []
     private(set) var geometry: NewsHeaderGeometry?
     private(set) var blockOffset: CGFloat = 0.0
     private var params: Params?
@@ -100,14 +110,14 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        self.shutterView.isUserInteractionEnabled = false
-        self.shutterView.alpha = 0.0
-        self.addSubview(self.shutterView)
         self.softEdgeView.isUserInteractionEnabled = false
         self.softEdgeView.alpha = 0.0
         self.addSubview(self.softEdgeView)
         self.gradientView.isUserInteractionEnabled = false
         self.addSubview(self.gradientView)
+        self.shutterView.isUserInteractionEnabled = false
+        self.shutterView.alpha = 0.0
+        self.addSubview(self.shutterView)
         self.addSubview(self.rowContentView)
         self.buttonsContainer.layer.anchorPoint = CGPoint()
         self.rowContentView.addSubview(self.buttonsContainer)
@@ -119,6 +129,12 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
 
     required init?(coder: NSCoder) {
         preconditionFailure()
+    }
+
+    /// Adds a page's content above the edges and under the tab-switch shutter, which whitens it with the lists. The
+    /// caller lays it out; it should take no touches of its own.
+    func addPageOverlay(_ view: UIView) {
+        self.insertSubview(view, belowSubview: self.shutterView)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -178,8 +194,9 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
                 self?.activateSearch?()
             })
             searchContentNode.view.layer.anchorPoint = CGPoint()
-            // Under the shutter, so a tab switch whitens it with the lists (the mockup's search is a list row).
-            self.insertSubview(searchContentNode.view, belowSubview: self.shutterView)
+            // Under the edges and the shutter, so a tab switch whitens it with the lists (the mockup's search is a
+            // list row).
+            self.insertSubview(searchContentNode.view, belowSubview: self.softEdgeView)
             self.searchContentNode = searchContentNode
         }
         self.searchTheme = theme
@@ -187,7 +204,15 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         // An active search takes the top row, so it ends left of a status island like the row's buttons (as in
         // ChatListNavigationBar).
         let searchRightInset = layout.safeInsets.right + (params.isSearchActive ? layout.navigationBarTrailingButtonsInset : 0.0)
+        self.searchLayout = (CGSize(width: width, height: navigationBarSearchContentHeight), layout.safeInsets.left, searchRightInset)
         let _ = searchContentNode.updateLayout(size: CGSize(width: width, height: navigationBarSearchContentHeight), leftInset: layout.safeInsets.left, rightInset: searchRightInset, transition: transition.containedViewLayoutTransition)
+        // A layout pass may come with the search folded (a tab switch or a pager swipe away from a scrolled list, a
+        // theme change, any container layout): the field's place is taken only from a whole field, as when the node
+        // is made (expansion 1).
+        let measuredSearchField = searchContentNode.placeholderNode.frame
+        if searchContentNode.expansionProgress > 0.9999 {
+            self.wholeSearchFieldFrame = measuredSearchField
+        }
 
         // The "…" button, laid out by the chat list's header component exactly as before (where it sits, its glass,
         // its morph into the menu).
@@ -208,7 +233,10 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
                             id: "more",
                             content: .more,
                             action: { [weak self] sourceView in
-                                self?.openMoreMenu?(sourceView)
+                                guard let self else {
+                                    return
+                                }
+                                self.openMoreMenu?(self.headerComponentView?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView)
                             }
                         )
                     ],
@@ -241,7 +269,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             islandFittingWidth: self.segmentNode.fittingWidth(context: params.context, theme: theme, strings: params.strings),
             moreButtonMinX: moreButtonMinX,
             searchNodeHeight: navigationBarSearchContentHeight,
-            searchFieldFrameInNode: searchContentNode.placeholderNode.frame
+            searchFieldFrameInNode: newsHeaderWholeSearchField(measured: measuredSearchField, expansion: searchContentNode.expansionProgress, whole: self.wholeSearchFieldFrame)
         )
         self.geometry = geometry
 
@@ -265,8 +293,8 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
             if searchContentNode.view.superview === self, self.subviews.last !== searchContentNode.view {
                 self.bringSubviewToFront(searchContentNode.view)
             }
-        } else if let index = self.subviews.firstIndex(of: searchContentNode.view), let shutterIndex = self.subviews.firstIndex(of: self.shutterView), index > shutterIndex {
-            self.insertSubview(searchContentNode.view, belowSubview: self.shutterView)
+        } else if let index = self.subviews.firstIndex(of: searchContentNode.view), let softEdgeIndex = self.subviews.firstIndex(of: self.softEdgeView), index > softEdgeIndex {
+            self.insertSubview(searchContentNode.view, belowSubview: self.softEdgeView)
         }
 
         // Search takes the top row, as in the chat list: the row's content leaves upwards.
@@ -353,7 +381,7 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         self.isContentLifted = false
         self.transitionContentFrameUpdated = nil
         self.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
-        self.insertSubview(self.rowContentView, aboveSubview: self.gradientView)
+        self.insertSubview(self.rowContentView, aboveSubview: self.shutterView)
         self.rowContentView.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         // An open search field stays above the row, as `update` puts it.
         if let params = self.params, params.isSearchActive, let searchContentNode = self.searchContentNode, searchContentNode.view.superview === self {
@@ -438,20 +466,54 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
         )
     }
 
-    /// Moves the search block for the list's scroll offset (0 at rest, positive scrolled, negative overscrolled).
+    /// Cuts the edge effects out over `circles` (in this view), the floating avatars stuck at the header's edge,
+    /// so they stay crisp; the effects lie over everything else, an avatar passing under the header included.
+    func updateEdgeHoles(_ circles: [CGRect]) {
+        guard circles != self.edgeHoles else {
+            return
+        }
+        self.edgeHoles = circles
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (view, mask) in [(self.softEdgeView, self.softEdgeMask), (self.gradientView, self.gradientMask)] {
+            guard !circles.isEmpty else {
+                view.layer.mask = nil
+                continue
+            }
+            let path = UIBezierPath(rect: CGRect(origin: CGPoint(), size: view.bounds.size))
+            for circle in circles {
+                path.append(UIBezierPath(ovalIn: self.convert(circle, to: view).insetBy(dx: -1.0, dy: -1.0)))
+            }
+            mask.frame = view.bounds
+            mask.fillRule = .evenOdd
+            mask.path = path.cgPath
+            view.layer.mask = mask
+        }
+        CATransaction.commit()
+    }
+
+    /// Folds the search block for the list's scroll offset (0 at rest, positive scrolled, negative overscrolled), as
+    /// the chat list folds its field: the field shrinks and fades while the node lifts a little.
     func applyScroll(listOffset: CGFloat, transition: ComponentTransition) {
         guard let geometry = self.geometry, let params = self.params, let searchContentNode = self.searchContentNode else {
             return
         }
         transition.setAlpha(view: self.softEdgeView, alpha: newsHeaderSoftEdgeAlpha(listOffset: listOffset, isSearchActive: params.isSearchActive))
         let frame: CGRect
+        let expansion: CGFloat
         if params.isSearchActive {
             self.blockOffset = 0.0
+            expansion = 1.0
             let statusBarHeight = params.layout.navigationBarStatusBarHeight ?? 0.0
             frame = CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight + NewsHeaderMetrics.activeSearchNodeOffset), size: geometry.searchNodeAtRest.size)
         } else {
             self.blockOffset = newsHeaderBlockOffset(listOffset: listOffset, blockHeight: geometry.blockHeight)
-            frame = geometry.searchNodeAtRest.offsetBy(dx: 0.0, dy: -newsHeaderSearchTravel(listOffset: listOffset, geometry: geometry))
+            expansion = newsHeaderSearchExpansion(listOffset: listOffset, blockHeight: geometry.blockHeight)
+            frame = geometry.searchNodeAtRest.offsetBy(dx: 0.0, dy: -newsHeaderSearchLift(listOffset: listOffset, blockHeight: geometry.blockHeight))
+        }
+        if abs(searchContentNode.expansionProgress - expansion) > 0.0001, let searchLayout = self.searchLayout {
+            searchContentNode.expansionProgress = expansion
+            let _ = searchContentNode.updateLayout(size: searchLayout.size, leftInset: searchLayout.leftInset, rightInset: searchLayout.rightInset, transition: transition.containedViewLayoutTransition)
         }
         transition.setFrameWithAdditivePosition(view: searchContentNode.view, frame: frame)
     }

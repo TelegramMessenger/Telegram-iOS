@@ -35,7 +35,9 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         let pixelBufferOptions: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA as NSNumber,
             kCVPixelBufferWidthKey as String: UInt32(width),
-            kCVPixelBufferHeightKey as String: UInt32(height)
+            kCVPixelBufferHeightKey as String: UInt32(height),
+            kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
+            kCVPixelBufferMetalCompatibilityKey as String: true
         ]
         
         var pool: CVPixelBufferPool?

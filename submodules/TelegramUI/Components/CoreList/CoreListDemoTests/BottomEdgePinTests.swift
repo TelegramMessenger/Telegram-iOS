@@ -551,6 +551,84 @@ final class BottomEdgePinTests: XCTestCase {
                        "the slack stays declared — the pin is still reachable")
     }
 
+    /// A target that only keeps a row where it is (the chat backend's message-widget resize target,
+    /// `CoreListChatHistoryBackend.keepingEdge`) is not a scroll TO the pin. Aimed at the pinned row after a drag released
+    /// the latch, it must not arm the latch again: the next pass would pull the row back to the edge, up to a screen away
+    /// from where the user scrolled it.
+    func testATargetThatDoesNotPinLeavesAReleasedLatchReleased() throws {
+        let fixture = self.fixture()
+        self.armPin(fixture)
+        XCTAssertTrue(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the pin is armed")
+        fixture.beginUserDrag()
+        XCTAssertFalse(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the drag released the pin")
+        fixture.scroll(to: -140)   // 100 up from the -240 min edge
+        let before = try XCTUnwrap(fixture.settledScreenY(identity: pinnedId))
+        XCTAssertEqual(before, 240, accuracy: 1e-6, "precondition: moved 100 off the pin")
+
+        // Keeps the pinned row exactly where it is (zero insets: the returned value is its screen Y).
+        fixture.listView.applyChanges(
+            scrollTo: CoreListScrollTarget(index: 1, pinsRow: false) { _, _ in before },
+            transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: pinnedId)), before, accuracy: 1e-6,
+                       "precondition: the target kept the row")
+        XCTAssertFalse(fixture.listView.holdsPinnedRowAtBottomEdge, "the target armed the pin again")
+
+        var items = fixture.listView.items
+        items.append(IdentifiableFixedHeightItem(id: UUID(), height: 50))
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: pinnedId)), before, accuracy: 1e-6,
+                       "the later pass pulled the row back to the pin: the target armed the latch again")
+    }
+
+    /// A jump the list holds (the chat's jump to a replied-to message, `hold: .always`) ends the pin: the user went
+    /// somewhere else, and the list keeps them there. Under a pin the next pass used to put the pinned row back on the
+    /// edge, a screen or more away from the row the jump landed (the user's call, 2026-10-29: while a scrolled-to message
+    /// is held, a widget resizing keeps its own edge, which a pin pulling the list back would undo).
+    func testAHeldJumpToAnotherRowReleasesThePin() throws {
+        let fixture = self.fixture()
+        self.armPin(fixture)
+        XCTAssertTrue(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the pin is armed")
+        let jumpedId = try XCTUnwrap(fixture.listView.items[10].identity.base as? UUID)
+
+        fixture.listView.applyChanges(
+            scrollTo: CoreListScrollTarget(index: 10, hold: CoreListScrollHold(edge: .topInset) { _, _ in 0 }) { _, _ in 100 },
+            transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: jumpedId)), 100, accuracy: 1e-6,
+                       "precondition: the jump landed")
+        XCTAssertTrue(fixture.listView.isHoldingScrollTarget, "precondition: the jump is held")
+        XCTAssertFalse(fixture.listView.holdsPinnedRowAtBottomEdge, "a held jump to another row left the pin armed")
+
+        var items = fixture.listView.items
+        items.append(IdentifiableFixedHeightItem(id: UUID(), height: 50))
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: jumpedId)), 100, accuracy: 1e-6,
+                       "the later pass moved the held row: the pin took the list back")
+    }
+
+    /// A jump that yields to the newest edge and lands there holds nothing, so it leaves the pin as it was: only a jump
+    /// the list goes on holding ends it.
+    func testAJumpThatHoldsNothingLeavesThePin() throws {
+        let fixture = self.fixture()
+        self.armPin(fixture)
+        XCTAssertTrue(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the pin is armed")
+
+        // Asked past the newest edge, so the list rests on it.
+        fixture.listView.applyChanges(
+            scrollTo: CoreListScrollTarget(index: 0, hold: CoreListScrollHold(edge: .topInset, yieldsToNewestEdge: true) { _, _ in 0 }) { _, _ in 1000 },
+            transition: .easeInOut(duration: 0))
+        XCTAssertFalse(fixture.listView.isHoldingScrollTarget, "precondition: a landing on the newest edge holds nothing")
+        XCTAssertTrue(fixture.listView.holdsPinnedRowAtBottomEdge, "a jump that holds nothing released the pin")
+
+        var items = fixture.listView.items
+        items.append(IdentifiableFixedHeightItem(id: UUID(), height: 50))
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: pinnedId)) + 60, 400, accuracy: 1e-6,
+                       "the pin no longer holds its row on the edge")
+    }
+
     // MARK: - Inset compensation against the EFFECTIVE edge
 
     /// The anchor keeps its distance from the effective top edge, not the raw one. While the pin is

@@ -14,6 +14,11 @@ public enum PresentationBuiltinThemeReference: Int32 {
     case night = 1
     case day = 2
     case nightAccent = 3
+    // Neutral gray bubbles for your own messages on a plain page: a light theme and its night pair. They are built on
+    // Day and Night and report those as their base theme, which is all the server knows of; nothing about them is
+    // synced.
+    case neutral = 4
+    case neutralNight = 5
     
     public init(baseTheme: TelegramBaseTheme) {
         switch baseTheme {
@@ -32,13 +37,17 @@ public enum PresentationBuiltinThemeReference: Int32 {
         switch self {
             case .dayClassic:
                 return .classic
-            case .day:
+            case .day, .neutral:
                 return .day
-            case .night:
+            case .night, .neutralNight:
                 return .night
             case .nightAccent:
                 return .tinted
         }
+    }
+    
+    public var isNeutral: Bool {
+        return self == .neutral || self == .neutralNight
     }
 }
 
@@ -144,7 +153,8 @@ public enum PresentationThemeReference: EnginePostboxCoding, Equatable {
     public init(decoder: EnginePostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
-                self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
+                // A theme added by a later version falls back to Classic rather than failing to decode.
+                self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0)) ?? .dayClassic)
             case 1:
                 if let localTheme = decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as? PresentationLocalTheme {
                     self = .local(localTheme)
@@ -381,7 +391,7 @@ public struct AutomaticThemeSwitchSetting: Codable, Equatable {
         try container.encode(self.force, forKey: "force")
         try container.encode(self.trigger, forKey: "trigger")
 
-        let themeData = EnginePostboxEncoder().encodeObjectToRawData(self.theme)
+        let themeData = EnginePostboxEncoder().encodeObjectToRawData(self.theme.legacyStorable)
         try container.encode(themeData, forKey: "theme_v2")
     }
 }
@@ -557,13 +567,25 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
     public var mainRadius: Int32
     public var auxiliaryRadius: Int32
     public var mergeBubbleCorners: Bool
+    // The bubble-free mode and its own theme choices (nil: Neutral, or Neutral Night after a dark bubbles theme; Neutral
+    // Night at night). Older builds never read these keys; read and write the choices through
+    // `PresentationThemeSettings.currentModeTheme` / `currentModeAutomaticThemeSwitchSetting`.
+    public var bubbleMode: Bool
+    public var bubblelessTheme: PresentationThemeReference?
+    public var bubblelessAutomaticTheme: PresentationThemeReference?
+    // Message text in New York instead of the system font, picked in Text Size (both modes).
+    public var serifMessageFont: Bool
     
     public static var `default`: PresentationChatBubbleSettings = PresentationChatBubbleSettings(mainRadius: 16, auxiliaryRadius: 8, mergeBubbleCorners: true)
     
-    public init(mainRadius: Int32, auxiliaryRadius: Int32, mergeBubbleCorners: Bool) {
+    public init(mainRadius: Int32, auxiliaryRadius: Int32, mergeBubbleCorners: Bool, bubbleMode: Bool = true, bubblelessTheme: PresentationThemeReference? = nil, bubblelessAutomaticTheme: PresentationThemeReference? = nil, serifMessageFont: Bool = false) {
         self.mainRadius = mainRadius
         self.auxiliaryRadius = auxiliaryRadius
         self.mergeBubbleCorners = mergeBubbleCorners
+        self.bubbleMode = bubbleMode
+        self.bubblelessTheme = bubblelessTheme
+        self.bubblelessAutomaticTheme = bubblelessAutomaticTheme
+        self.serifMessageFont = serifMessageFont
     }
     
     public init(from decoder: Decoder) throws {
@@ -572,6 +594,18 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
         self.mainRadius = try container.decodeIfPresent(Int32.self, forKey: "mainRadius") ?? 16
         self.auxiliaryRadius = try container.decodeIfPresent(Int32.self, forKey: "auxiliaryRadius") ?? 8
         self.mergeBubbleCorners = (try container.decodeIfPresent(Int32.self, forKey: "mergeBubbleCorners") ?? 1) != 0
+        self.bubbleMode = (try container.decodeIfPresent(Int32.self, forKey: "bubbleMode") ?? 1) != 0
+        if let themeData = try container.decodeIfPresent(EngineAdaptedPostboxDecoder.RawObjectData.self, forKey: "bubblelessTheme") {
+            self.bubblelessTheme = PresentationThemeReference(decoder: EnginePostboxDecoder(buffer: EngineMemoryBuffer(data: themeData.data)))
+        } else {
+            self.bubblelessTheme = nil
+        }
+        if let themeData = try container.decodeIfPresent(EngineAdaptedPostboxDecoder.RawObjectData.self, forKey: "bubblelessAutoTheme") {
+            self.bubblelessAutomaticTheme = PresentationThemeReference(decoder: EnginePostboxDecoder(buffer: EngineMemoryBuffer(data: themeData.data)))
+        } else {
+            self.bubblelessAutomaticTheme = nil
+        }
+        self.serifMessageFont = (try container.decodeIfPresent(Int32.self, forKey: "smf") ?? 0) != 0
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -580,6 +614,20 @@ public struct PresentationChatBubbleSettings: Codable, Equatable {
         try container.encode(self.mainRadius, forKey: "mainRadius")
         try container.encode(self.auxiliaryRadius, forKey: "auxiliaryRadius")
         try container.encode((self.mergeBubbleCorners ? 1 : 0) as Int32, forKey: "mergeBubbleCorners")
+        // Written only when they differ from the defaults, so that with bubbles on the stored bytes stay what they were
+        // before the bubble-free mode existed.
+        if !self.bubbleMode {
+            try container.encode(0 as Int32, forKey: "bubbleMode")
+        }
+        if let bubblelessTheme = self.bubblelessTheme {
+            try container.encode(EnginePostboxEncoder().encodeObjectToRawData(bubblelessTheme), forKey: "bubblelessTheme")
+        }
+        if let bubblelessAutomaticTheme = self.bubblelessAutomaticTheme {
+            try container.encode(EnginePostboxEncoder().encodeObjectToRawData(bubblelessAutomaticTheme), forKey: "bubblelessAutoTheme")
+        }
+        if self.serifMessageFont {
+            try container.encode(1 as Int32, forKey: "smf")
+        }
     }
 }
 
@@ -647,6 +695,21 @@ public struct PresentationThemeSettings: Codable {
                 if let chatWallpaper = theme.resolvedWallpaper {
                     resources.append(contentsOf: wallpaperResources(chatWallpaper))
                 }
+        }
+        if let bubblelessTheme = self.chatBubbleSettings.bubblelessTheme {
+            switch bubblelessTheme {
+                case .builtin:
+                    break
+                case let .local(theme):
+                    resources.append(theme.resource.id)
+                case let .cloud(theme):
+                    if let file = theme.theme.file {
+                        resources.append(file.resource.id)
+                    }
+                    if let chatWallpaper = theme.resolvedWallpaper {
+                        resources.append(contentsOf: wallpaperResources(chatWallpaper))
+                    }
+            }
         }
         return resources
     }
@@ -718,7 +781,7 @@ public struct PresentationThemeSettings: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(EnginePostboxEncoder().encodeObjectToRawData(self.theme), forKey: "t")
+        try container.encode(EnginePostboxEncoder().encodeObjectToRawData(self.theme.legacyStorable), forKey: "t")
 
         var mappedThemePreferredBaseTheme: [Int64: Int64] = [:]
         for (key, value) in self.themePreferredBaseTheme {

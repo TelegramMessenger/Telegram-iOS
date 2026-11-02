@@ -50,28 +50,36 @@ public enum SynchronizeAppLogEventsOperationContent: Codable {
 
 public final class SynchronizeAppLogEventsOperation: Codable, PostboxCoding {
     public let content: SynchronizeAppLogEventsOperationContent
+    public let collectionId: String?
     
-    public init(content: SynchronizeAppLogEventsOperationContent) {
+    public init(content: SynchronizeAppLogEventsOperationContent, collectionId: String? = nil) {
         self.content = content
+        self.collectionId = collectionId
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.content = try container.decode(SynchronizeAppLogEventsOperationContent.self, forKey: "c")
+        self.collectionId = try container.decodeIfPresent(String.self, forKey: "a")
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.content, forKey: "c")
+        try container.encodeIfPresent(self.collectionId, forKey: "a")
     }
 
     public init(decoder: PostboxDecoder) {
         self.content = decoder.decode(SynchronizeAppLogEventsOperationContent.self, forKey: "c")!
+        self.collectionId = decoder.decodeOptionalStringForKey("a")
     }
 
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encode(self.content, forKey: "c")
+        if let collectionId = self.collectionId {
+            encoder.encodeString(collectionId, forKey: "a")
+        }
     }
 }

@@ -351,6 +351,88 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.linkItemProgressDisposable?.dispose()
     }
     
+    private var accessibilityActionsKey: (moreLabel: String?, linkTexts: [String])?
+    
+    /// The row, then its own controls (the icon button, "more", the action button) in reading order: they share the
+    /// row's origin, so the frame sort would read the icon first. The row's custom actions are built here, so nothing
+    /// runs while no accessibility client asks.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard let item = self.item, let presentationData = self.validLayout?.presentationData else {
+                return []
+            }
+            var links: [(text: String, item: TextLinkItem)] = []
+            if item.linkItemAction != nil, let attributedText = self.textNode.attributedText {
+                for link in accessibilityTextLinks(in: attributedText, attribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)) {
+                    if let url = link.value as? String {
+                        links.append((link.text, .url(url: url, concealed: false)))
+                    }
+                }
+                for link in accessibilityTextLinks(in: attributedText, attribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)) {
+                    if let peerName = link.value as? String {
+                        links.append((link.text, .mention(peerName)))
+                    }
+                }
+                for link in accessibilityTextLinks(in: attributedText, attribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)) {
+                    if let hashtag = link.value as? TelegramHashtag {
+                        links.append((link.text, .hashtag(hashtag.peerName, hashtag.hashtag)))
+                    }
+                }
+            }
+            // The long press opens the context menu when the item has one (the gesture is enabled only then), otherwise
+            // the item's long-tap action.
+            let moreLabel: String? = (item.contextAction != nil || item.longTapAction != nil) ? presentationData.strings.Common_More : nil
+            // Keyed by text and target: an edit that keeps a link's text but changes where it goes rebuilds the action.
+            let linkTexts = links.map { "\($0.text)\u{0}\(String(describing: $0.item))" }
+            if let key = self.accessibilityActionsKey, key.moreLabel == moreLabel, key.linkTexts == linkTexts {
+            } else {
+                self.accessibilityActionsKey = (moreLabel, linkTexts)
+                var actions: [UIAccessibilityCustomAction] = []
+                for link in links {
+                    let linkItem = link.item
+                    actions.append(UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                        guard let self, let item = self.item, let linkItemAction = item.linkItemAction else {
+                            return false
+                        }
+                        linkItemAction(.tap, linkItem, self, nil, nil)
+                        return true
+                    }))
+                }
+                if let moreLabel {
+                    actions.append(UIAccessibilityCustomAction(name: moreLabel, actionHandler: { [weak self] _ in
+                        guard let self, let item = self.item else {
+                            return false
+                        }
+                        if let contextAction = item.contextAction {
+                            contextAction(self.contextSourceNode, nil, nil)
+                            return true
+                        } else if let longTapAction = item.longTapAction {
+                            longTapAction(self)
+                            return true
+                        }
+                        return false
+                    }))
+                }
+                self.activateArea.view.accessibilityCustomActions = actions.isEmpty ? nil : actions
+            }
+            
+            var elements: [Any] = [self.activateArea.view]
+            if !self.iconButtonNode.isHidden {
+                elements.append(self.iconButtonNode.view)
+            }
+            if !self.expandButonNode.isHidden {
+                self.expandButonNode.accessibilityLabel = presentationData.strings.PeerInfo_BioExpand
+                self.expandButonNode.accessibilityTraits = .button
+                elements.append(self.expandButonNode.view)
+            }
+            if let actionButtonView = self.actionButton?.view {
+                elements.append(actionButtonView)
+            }
+            return elements
+        } set(value) {
+        }
+    }
+    
     @objc private func expandPressed() {
         self.isExpanded = true
         self.item?.requestLayout(true)
@@ -519,7 +601,13 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.iconNode.image = generateTintedImage(image: iconImage, color: presentationData.theme.list.itemAccentColor)
             self.iconNode.isHidden = false
             self.iconButtonNode.isHidden = false
-            self.iconButtonNode.accessibilityLabel = presentationData.strings.InviteLink_QRCode_Share
+            switch icon {
+            case .qrCode:
+                self.iconButtonNode.accessibilityLabel = presentationData.strings.InviteLink_QRCode_Share
+            case .premiumGift:
+                self.iconButtonNode.accessibilityLabel = presentationData.strings.Profile_SendGift
+            }
+            self.iconButtonNode.accessibilityTraits = .button
         } else {
             self.iconNode.isHidden = true
             self.iconButtonNode.isHidden = true
@@ -819,6 +907,21 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
         self.activateArea.accessibilityLabel = item.label
         self.activateArea.accessibilityValue = item.text
+        // Activation runs the tap's own path (`item.action`); a row without one is static text. The long-press menu and
+        // the text's links become custom actions when VoiceOver asks (`accessibilityElements`).
+        if let action = item.action {
+            self.activateArea.accessibilityTraits = .button
+            self.activateArea.activate = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                action(self.contextSourceNode, nil)
+                return true
+            }
+        } else {
+            self.activateArea.accessibilityTraits = .staticText
+            self.activateArea.activate = nil
+        }
         
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)

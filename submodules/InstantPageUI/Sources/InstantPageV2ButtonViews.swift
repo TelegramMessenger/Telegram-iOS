@@ -161,7 +161,11 @@ final class InstantPageV2ButtonPillView: UIView {
 
     private func applyColors() {
         let colors = instantPageButtonColors(self.attachment.button.color, theme: self.theme, isInline: self.isInline, isDisabled: self.isDisabled, isLink: self.attachment.button.isLink)
-        self.backgroundColor = self.isPressed ? self.theme.panelHighlightedBackgroundColor : colors.fill
+        if self.isPressed {
+            self.backgroundColor = instantPageButtonHighlightedFill(self.attachment.button.color, theme: self.theme, isInline: self.isInline, isLink: self.attachment.button.isLink)
+        } else {
+            self.backgroundColor = colors.fill
+        }
 
         let mutableLabel = self.attachment.labelString.mutableCopy() as! NSMutableAttributedString
         if mutableLabel.length != 0 {

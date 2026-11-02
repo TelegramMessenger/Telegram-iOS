@@ -169,6 +169,7 @@ func _internal_enqueueNetworkTelemetryEvents(postbox: Postbox, events: [NetworkT
 /// Reports the account's network telemetry through `help.saveAppLog` while `network_telemetry_enabled`
 /// is set. Checks a minute after start, which also sends what earlier launches left, then every 15 minutes.
 func managedNetworkTelemetryReports(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    guard AppLogEventCollection.allowsLegacyEvents else { return .complete() }
     guard let telemetry = network.telemetry else {
         return .complete()
     }

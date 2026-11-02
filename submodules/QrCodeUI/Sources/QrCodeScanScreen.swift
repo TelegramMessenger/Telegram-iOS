@@ -18,6 +18,7 @@ import LegacyUI
 import LegacyComponents
 import LegacyMediaPickerUI
 import ImageContentAnalysis
+import ChatMediaSend
 import PresentationDataUtils
 import BundleIconComponent
 import GlassBarButtonComponent
@@ -531,6 +532,10 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
             self.addSubnode(self.galleryButtonNode)
         }
         self.addSubnode(self.torchButtonNode)
+        self.galleryButtonNode.buttonAccessibilityLabel = presentationData.strings.Media_ChooseFromGallery
+        self.torchButtonNode.buttonAccessibilityLabel = presentationData.strings.VoiceOver_QrCodeScan_Flashlight
+        // The camera's picture is not content VoiceOver can read.
+        self.previewView.accessibilityElementsHidden = true
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.errorTextNode)
@@ -726,15 +731,10 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         let titleSpacing: CGFloat = 48.0
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
 
-        // The camera preview follows the device into landscape where this screen can be landscape: an iPad, and iPhone
-        // Duo's unfolded screen (regular width, so this portrait-only-on-phones screen rotates there too).
-        var previewFollowsDeviceOrientation = false
+        // The camera preview follows the device into landscape on an iPad. iPhone Duo's unfolded screen, where this
+        // screen rotates too, needs nothing here: the preview's connection already takes the body's orientation there
+        // (`CameraVideoOrientation`), and `UIDevice.orientation` is a quarter turn from that screen's.
         if case .tablet = layout.deviceMetrics.type {
-            previewFollowsDeviceOrientation = true
-        } else if case .iPhoneDuo = layout.deviceMetrics, case .regular = layout.metrics.widthClass {
-            previewFollowsDeviceOrientation = true
-        }
-        if previewFollowsDeviceOrientation {
             if UIDevice.current.orientation == .landscapeLeft {
                 self.previewView.layer.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
             } else if UIDevice.current.orientation == .landscapeRight {
@@ -789,7 +789,8 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                     } else {
                         self.controller?.dismiss()
                     }
-                }
+                },
+                accessibility: ComponentAccessibility(label: isCustom ? self.presentationData.strings.Common_Close : self.presentationData.strings.Common_Back)
             )),
             environment: {},
             containerSize: topNavigationButtonSide
@@ -954,6 +955,35 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         let presentError = { [weak self] in
             let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Contacts_QrCode_NoCodeFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
             self?.present(alertController)
+        }
+        
+        if context.routesToChatMediaEditorV2(.qrPhotoPicker) {
+            let pickerController = context.sharedContext.makeQrCodePhotoPickerScreen(context: context, completion: { [weak self] asset in
+                let _ = (chatMediaQrPhotoImage(asset: asset)
+                |> mapToSignal { image -> Signal<String?, NoError> in
+                    guard let image else {
+                        return .single(nil)
+                    }
+                    return recognizeQRCode(in: image)
+                }
+                |> deliverOnMainQueue).start(next: { result in
+                    if let result, let self {
+                        self.resolveCode(code: result, completion: { result in
+                            if !result {
+                                presentError()
+                            }
+                        })
+                    } else {
+                        presentError()
+                    }
+                })
+            })
+            if let controller = self.controller, controller.navigationController != nil {
+                controller.push(pickerController)
+            } else {
+                self.present(pickerController)
+            }
+            return
         }
         
         let _ = legacyWallpaperPicker(context: context, presentationData: presentationData, subject: .qrCode).start(next: { [weak self] generator in

@@ -65,8 +65,11 @@ extension ChatControllerImpl {
     // the modal `OverlayStatusController` while the thread is fetched, so a topic link in a message never puts a
     // spinner over the whole chat; `displayModalProgress` is then ignored. Callers without a link to shimmer
     // (peer info, instant view) keep passing nil and get the modal as before.
-    static func openMessageReplies(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, navigationController: NavigationController, present: @escaping (ViewController, Any?) -> Void, messageId: EngineMessage.Id, isChannelPost: Bool, atMessage atMessageId: EngineMessage.Id?, displayModalProgress: Bool, progress: Promise<Bool>? = nil) -> Signal<Never, NoError> {
+    // `resolvedThread` is a thread the caller has already fetched (a resolved comment link): it is preloaded and
+    // opened without fetching it again.
+    static func openMessageReplies(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, navigationController: NavigationController, present: @escaping (ViewController, Any?) -> Void, messageId: EngineMessage.Id, isChannelPost: Bool, atMessage atMessageId: EngineMessage.Id?, displayModalProgress: Bool, progress: Promise<Bool>? = nil, resolvedThread: ChatReplyThreadMessage? = nil) -> Signal<Never, NoError> {
         return Signal { subscriber in
+            Logger.shared.log("ReplyThreadOpen", "open start message=\(messageId) atMessage=\(String(describing: atMessageId))")
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
             var cancelImpl: (() -> Void)?
@@ -81,7 +84,14 @@ extension ChatControllerImpl {
                 present(statusController, nil)
             }
 
-            let disposable = (fetchAndPreloadReplyThreadInfo(context: context, subject: isChannelPost ? .channelPost(messageId) : .groupMessage(messageId), atMessageId: atMessageId, preload: true)
+            let replyThreadSubject: ReplyThreadSubject = isChannelPost ? .channelPost(messageId) : .groupMessage(messageId)
+            let threadInfo: Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError>
+            if let resolvedThread {
+                threadInfo = preloadReplyThreadInfo(context: context, replyThreadMessage: resolvedThread, subject: replyThreadSubject, atMessageId: atMessageId, preload: true)
+            } else {
+                threadInfo = fetchAndPreloadReplyThreadInfo(context: context, subject: replyThreadSubject, atMessageId: atMessageId, preload: true)
+            }
+            let disposable = (threadInfo
             |> deliverOnMainQueue).startStrict(next: { [weak statusController] result in
                 inlineProgressDisposable.dispose()
                 if progress == nil && displayModalProgress {
@@ -99,6 +109,7 @@ extension ChatControllerImpl {
                     subject = nil
                 }
                 
+                Logger.shared.log("ReplyThreadOpen", "push")
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty ? .text : nil, keepStack: .always))
                 subscriber.putCompletion()
             }, error: { [weak statusController] _ in

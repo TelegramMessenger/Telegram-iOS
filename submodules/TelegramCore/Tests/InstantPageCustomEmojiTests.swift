@@ -31,4 +31,24 @@ final class InstantPageCustomEmojiTests: XCTestCase {
         ]).customEmojiFileIds
         XCTAssertEqual(result, [1, 2, 3, 4, 5, 6, 7, 8])
     }
+
+    func testTextRunsKeepPlainTextRepeatsAndAltText() {
+        let result = page([
+            .paragraph(.concat([.textCustomEmoji(fileId: 1, alt: "🙂"), .plain(" a "), .bold(.textCustomEmoji(fileId: 2, alt: "🔥"))])),
+            .list(items: [.text(.textCustomEmoji(fileId: 1, alt: "🙂"), nil, nil)], ordered: false)
+        ]).customEmojiTextRuns
+        // Each block-level text unit (the paragraph, the list item) starts with a "\n" run.
+        XCTAssertEqual(result.map(\.customEmojiFileId), [nil, 1, nil, 2, nil, 1])
+        XCTAssertEqual(result.map(\.text), ["\n", "🙂", " a ", "🔥", "\n", "🙂"])
+    }
+
+    /// A rendered rich message carries its stored emoji files as associated media, which is where the chat list
+    /// preview looks for them.
+    func testAttributeAssociatesTheEmojiOfBothPages() {
+        let attribute = RichTextMessageAttribute(
+            instantPage: page([.paragraph(.concat([emoji(1), emoji(2)]))]),
+            fullInstantPage: page([.paragraph(emoji(2)), .paragraph(emoji(3))])
+        )
+        XCTAssertEqual(attribute.associatedMediaIds, [1, 2, 3].map { MediaId(namespace: Namespaces.Media.CloudFile, id: $0) })
+    }
 }

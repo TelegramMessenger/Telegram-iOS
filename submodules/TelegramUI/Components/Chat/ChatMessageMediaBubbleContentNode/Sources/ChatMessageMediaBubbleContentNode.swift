@@ -321,7 +321,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             
             switch preparePosition {
                 case .linear:
-                    if case .color = item.presentationData.theme.wallpaper {
+                    if item.bubbleStyle == .bubbleless {
+                        // Without bubbles there is no bubble stroke to keep clear of: the media spans the text column.
+                        bubbleInsets = layoutConstants.image.bubbleInsets
+                    } else if case .color = item.presentationData.theme.wallpaper {
                         let colors: PresentationThemeBubbleColorComponents
                         if item.message.effectivelyIncoming(item.context.account.peerId) {
                             colors = item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper
@@ -388,7 +391,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if item.message.effectivelyIncoming(item.context.account.peerId) {
-                        statusType = .ImageIncoming
+                        statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .ImageIncoming
                     } else {
                         if item.message.flags.contains(.Failed) {
                             statusType = .ImageOutgoing(.Failed)
@@ -441,7 +444,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var updatedPosition: ChatMessageBubbleContentPosition = position
-                if forceFullCorners, case .linear = updatedPosition {
+                if item.bubbleStyle == .bubbleless, case .linear = updatedPosition {
+                    // Without bubbles media has no bubble to tuck into, so it keeps all four corners round.
+                    updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
+                } else if forceFullCorners, case .linear = updatedPosition {
                     updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
                 } else if hasReplyMarkup, case let .linear(top, _) = updatedPosition {
                     updatedPosition = .linear(top: top, bottom: .BubbleNeighbour)

@@ -107,6 +107,10 @@ public extension TelegramEngine {
         public func renameStickerSet(packReference: StickerPackReference, title: String) -> Signal<Never, RenameStickerSetError> {
             return _internal_renameStickerSet(account: self.account, packReference: packReference, title: title)
         }
+
+        public func renameStickerSetWithResult(packReference: StickerPackReference, title: String) -> Signal<Bool, RenameStickerSetError> {
+            return _internal_renameStickerSetWithResult(account: self.account, packReference: packReference, title: title)
+        }
         
         public func deleteStickerSet(packReference: StickerPackReference) -> Signal<Never, DeleteStickerSetError> {
             return _internal_deleteStickerSet(account: self.account, packReference: packReference)
@@ -127,6 +131,10 @@ public extension TelegramEngine {
         public func replaceSticker(previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Never, ReplaceStickerError> {
             return _internal_replaceSticker(account: self.account, previousSticker: previousSticker, sticker: sticker)
         }
+
+        public func replaceStickerWithResult(previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Bool, ReplaceStickerError> {
+            return _internal_replaceStickerWithResult(account: self.account, previousSticker: previousSticker, sticker: sticker)
+        }
         
         public func getMyStickerSets() -> Signal<[(StickerPackCollectionInfo, StickerPackItem?)], NoError> {
             return _internal_getMyStickerSets(account: self.account)
@@ -138,6 +146,10 @@ public extension TelegramEngine {
         
         public func toggleStickerSaved(file: TelegramMediaFile, saved: Bool) -> Signal<SavedStickerResult, AddSavedStickerError> {
             return _internal_toggleStickerSaved(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, file: file, saved: saved)
+        }
+
+        public func saveStickerWithResult(file: TelegramMediaFile) -> Signal<SavedStickerUpdateResult, AddSavedStickerError> {
+            return _internal_saveStickerWithResult(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, file: file)
         }
         
         public func validateStickerSetShortNameInteractive(shortName: String) -> Signal<AddressNameValidationStatus, NoError> {

@@ -1222,7 +1222,9 @@ private final class WalletSendScreenComponent: Component {
                 self.abandonRestoration()
                 self.cancelPendingSend()
                 self.isVisible = false
-                self.peerAddressResolution.state = .cancelled
+                if self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading {
+                    self.peerAddressResolution.state = .cancelled
+                }
                 self.peerAddressDisposable.set(nil)
                 if let parentController = controller.parentController() {
                     parentController.dismiss(animated: true)
@@ -2228,10 +2230,10 @@ private final class WalletSendScreenComponent: Component {
                                 action: { [weak self] in
                                     guard let self,
                                           let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
-                                          let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
+                                          let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
                                         return
                                     }
-                                    self.openMoreMenu(sourceView: sourceView)
+                                    self.openMoreMenu(sourceView: rightItemView.menuSourceView)
                                 }
                             )
                         ],
@@ -2321,6 +2323,7 @@ private final class WalletSendScreenComponent: Component {
             var recipientFrame: CGRect?
             if !isLandscape && (component.peer != nil || !self.recipientAddress.isEmpty) {
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let recipientDisplay = self.peerAddressResolution.display(recipientAddress: self.recipientAddress)
                 let recipientSize = self.recipient.update(
                     transition: transition,
                     component: AnyComponent(WalletSendRecipientComponent(
@@ -2330,7 +2333,8 @@ private final class WalletSendScreenComponent: Component {
                         nameDisplayOrder: presentationData.nameDisplayOrder,
                         peer: component.peer,
                         address: self.recipientAddress,
-                        isLoading: self.recipientAddress.isEmpty && (self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading),
+                        isLoading: recipientDisplay == .loading,
+                        unavailableText: recipientDisplay == .unavailable ? environment.strings.Wallet_Recipient_Error : nil,
                         openChat: self.canOpenRecipientChat ? { [weak self] in
                             self?.openRecipientChat()
                         } : nil,
@@ -2373,11 +2377,20 @@ private final class WalletSendScreenComponent: Component {
             }
 
             let isKeyboardVisible = !isInAttachmentMenu || self.hasActivatedAmountInput
+            // In portrait the keyboard at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at
+            // the bottom. In landscape its keys are a fixed-width block under the band-centred Send button, so they keep
+            // the band and that button's axis.
+            var keyboardSafeInsets = environment.safeInsets
+            if !isLandscape {
+                let keyboardSideInsets = environment.bottomEdgeSideInsets()
+                keyboardSafeInsets.left = keyboardSideInsets.left
+                keyboardSafeInsets.right = keyboardSideInsets.right
+            }
             let keyboardSize = self.keyboard.update(
                 transition: transition,
                 component: AnyComponent(WalletSendKeyboardComponent(
                     theme: theme,
-                    safeInsets: environment.safeInsets,
+                    safeInsets: keyboardSafeInsets,
                     isLandscape: isLandscape,
                     mode: .decimal(separator: environment.dateTimeFormat.decimalSeparator),
                     deleteTitle: environment.strings.Common_Delete,

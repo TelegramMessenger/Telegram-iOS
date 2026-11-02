@@ -178,11 +178,21 @@ private final class AlertScreenComponent: Component {
         }
         
         @objc private func dimTapped() {
-            guard let component = self.component, component.configuration.dismissOnOutsideTap else {
-                return
+            let _ = self.dismissWithoutAction()
+        }
+        
+        /// A dismissal that is not one of the alert's actions — a tap outside, the Escape key, VoiceOver's escape
+        /// gesture — follows the outside-tap rule: allowed only when the configuration allows it, and reported as
+        /// "by outside tap" (hosts such as web `alert`/`confirm` panels finish their request only then).
+        private func dismissWithoutAction() -> Bool {
+            guard let component = self.component else {
+                return false
             }
-            self.dismissedByTapOutside = true
-            self.requestDismiss()
+            return AlertOutsideDismissal.perform(configuration: component.configuration, markDismissedByOutsideTap: { [weak self] in
+                self?.dismissedByTapOutside = true
+            }, dismiss: { [weak self] in
+                self?.requestDismiss()
+            })
         }
         
         func animateIn() {
@@ -212,6 +222,11 @@ private final class AlertScreenComponent: Component {
                 return self.dimView
             }
             return result
+        }
+        
+        /// VoiceOver's escape gesture: as a tap outside the alert.
+        override func accessibilityPerformEscape() -> Bool {
+            return self.dismissWithoutAction()
         }
         
         func requestDismiss() {
@@ -244,7 +259,7 @@ private final class AlertScreenComponent: Component {
                 }
                 self.updateActionHighlight(previous: false)
             case .escape:
-                self.requestDismiss()
+                let _ = self.dismissWithoutAction()
             case .enter:
                 self.performHighlightedAction()
             }
@@ -533,6 +548,15 @@ private final class AlertScreenComponent: Component {
                     }
                     itemView.applySize(size: itemFrame.size, transition: itemTransition)
                     itemTransition.setFrame(view: itemView, frame: itemFrame)
+                    let actionId = AnyHashable(action.id)
+                    itemView.accessibilityPerform = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.highlightedAction = actionId
+                        self.performHighlightedAction()
+                        self.highlightedAction = nil
+                    }
                 }
                 
                 var removeActionIds: [AnyHashable] = []
@@ -569,10 +593,12 @@ private final class AlertScreenComponent: Component {
                 availableHeight -= environment.inputHeight
             }
                         
-            // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this
-            // is the full width's center.
-            let alertX = environment.safeInsets.left + floorToScreenPixels((availableSize.width - environment.safeInsets.left - environment.safeInsets.right - alertSize.width) / 2.0)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: alertX, y: environment.statusBarHeight +  floorToScreenPixels((availableHeight - alertSize.height) / 2.0)), size: alertSize))
+            let alertY = environment.statusBarHeight + floorToScreenPixels((availableHeight - alertSize.height) / 2.0)
+            // Beside iPhone Duo's side strip (`centeredAlertSideInsets`): the screen's center in portrait unless the alert
+            // reaches a corner block, the band's in landscape, as the sheets; with equal insets the full width's center.
+            let sideInsets = centeredAlertSideInsets(alertWidth: alertSize.width, alertMinY: alertY, alertMaxY: alertY + alertSize.height, containerSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners)
+            let alertX = sideInsets.left + floorToScreenPixels((availableSize.width - sideInsets.left - sideInsets.right - alertSize.width) / 2.0)
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: alertX, y: alertY), size: alertSize))
             self.backgroundView.update(size: alertSize, cornerRadius: 35.0, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
             
             return availableSize
@@ -694,6 +720,8 @@ open class AlertScreen: ViewControllerComponentContainer, KeyShortcutResponder {
             updatedPresentationData: updatedPresentationData
         )
         self.navigationPresentation = .flatModal
+        // VoiceOver reads only the alert while it shows, as UIKit does for an alert (the screens under it are hidden).
+        self.blocksBackgroundWhenInOverlay = true
         
         //self.readyValue.set(componentReady.get() |> timeout(1.0, queue: .mainQueue(), alternate: .single(true)))
     }
@@ -968,5 +996,17 @@ public final class ActionSelectionGestureRecognizer: UIGestureRecognizer {
             return CGPoint(x: currentLocation.x - initialLocation.x, y: currentLocation.y - initialLocation.y)
         }
         return CGPoint()
+    }
+}
+
+/// The rule for dismissing an alert without choosing one of its actions (outside tap, Escape key, VoiceOver escape).
+enum AlertOutsideDismissal {
+    static func perform(configuration: AlertScreen.Configuration, markDismissedByOutsideTap: () -> Void, dismiss: () -> Void) -> Bool {
+        guard configuration.dismissOnOutsideTap else {
+            return false
+        }
+        markDismissedByOutsideTap()
+        dismiss()
+        return true
     }
 }

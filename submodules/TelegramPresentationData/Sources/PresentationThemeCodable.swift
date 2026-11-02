@@ -2056,13 +2056,13 @@ extension PresentationBuiltinThemeReference: @retroactive Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-            case .day:
+            case .day, .neutral:
                 try container.encode("day")
             case .dayClassic:
                 try container.encode("classic")
             case .nightAccent:
                 try container.encode("nighttinted")
-            case .night:
+            case .night, .neutralNight:
                 try container.encode("night")
         }
     }

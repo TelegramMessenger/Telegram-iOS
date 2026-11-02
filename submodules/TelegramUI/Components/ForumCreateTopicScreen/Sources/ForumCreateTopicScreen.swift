@@ -226,7 +226,7 @@ private final class TitleFieldComponent: Component {
                 self.textField.becomeFirstResponder()
             }
             
-            self.textField.frame = CGRect(x: 15.0 + iconSize.width + 15.0, y: 0.0, width: availableSize.width - 46.0 - iconSize.width, height: 44.0)
+            self.textField.frame = CGRect(x: 15.0 + iconSize.width + 15.0, y: 0.0, width: availableSize.width - 46.0 - iconSize.width, height: availableSize.height)
                         
             return availableSize
         }
@@ -684,6 +684,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             let bandCenterX = environment.safeInsets.left + (context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let headerSpacing: CGFloat = 6.0
             let sectionSpacing: CGFloat = 30.0
+            // Glass sections, as the app's lists draw them: 26 pt corners, a 52 pt row.
+            let sectionCornerRadius: CGFloat = 26.0
+            let rowHeight: CGFloat = 52.0
             
             var contentHeight = topInset
             
@@ -712,9 +715,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             let titleBackground = titleBackground.update(
                 component: RoundedRectangle(
                     color: environment.theme.list.itemBlocksBackgroundColor,
-                    cornerRadius: 10.0
+                    cornerRadius: sectionCornerRadius
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: rowHeight),
                 transition: context.transition
             )
             context.add(titleBackground
@@ -745,7 +748,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         state?.switchIcon()
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: rowHeight),
                 transition: context.transition
             )
             context.add(titleField
@@ -758,9 +761,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 let hideBackground = hideBackground.update(
                     component: RoundedRectangle(
                         color: environment.theme.list.itemBlocksBackgroundColor,
-                        cornerRadius: 10.0
+                        cornerRadius: sectionCornerRadius
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: rowHeight),
                     transition: context.transition
                 )
                 context.add(hideBackground
@@ -855,7 +858,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 let iconBackground = iconBackground.update(
                     component: RoundedRectangle(
                         color: environment.theme.list.itemBlocksBackgroundColor,
-                        cornerRadius: 10.0
+                        cornerRadius: sectionCornerRadius
                     ),
                     availableSize: CGSize(
                         width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
@@ -885,7 +888,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     )
                     context.add(iconSelector
                         .position(CGPoint(x: bandCenterX, y: contentHeight + iconSelector.size.height / 2.0))
-                        .cornerRadius(10.0)
+                        .cornerRadius(sectionCornerRadius)
                         .clipsToBounds(true)
                     )
                     
@@ -919,7 +922,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                                 }
                             })
                         },
-                        clearGroup: { _ in
+                        clearGroup: { _, _, _ in
                         },
                         editAction: { _ in
                         },

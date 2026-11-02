@@ -12,7 +12,7 @@ public enum TelegramShareTheme: Equatable {
 public enum TelegramShareThemeUpdate: Equatable {
     case `default`
     case emojiBackdrop(emojis: [MessageReaction.Reaction]?, backdropId: Int32?)
-    case gift(StarGiftReference)
+    case gift(gift: StarGift.UniqueGift, reference: StarGiftReference)
 }
 
 public enum SetShareThemeError {
@@ -111,7 +111,7 @@ extension TelegramShareTheme {
     }
 }
 
-private func _internal_localShareTheme(postbox: Postbox, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
+func _internal_localShareTheme(postbox: Postbox, peerId: PeerId) -> Signal<TelegramShareTheme?, NoError> {
     let key = PostboxViewKey.cachedPeerData(peerId: peerId)
     return postbox.combinedView(keys: [key])
     |> map { views -> TelegramShareTheme? in
@@ -207,19 +207,34 @@ func _internal_preloadShareTheme(account: Account, peerId: PeerId) -> Signal<Nev
     |> ignoreValues
 }
 
+private func _internal_updateCachedShareTheme(transaction: Transaction, peerId: PeerId, update: (TelegramShareTheme?) -> TelegramShareTheme?) {
+    transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+        if let current = current as? CachedUserData {
+            return current.withUpdatedShareTheme(update(current.shareTheme))
+        }
+        if let current = current as? CachedChannelData {
+            return current.withUpdatedShareTheme(update(current.shareTheme))
+        }
+        return current
+    })
+}
+
 func _internal_setShareTheme(account: Account, peerId: PeerId, theme: TelegramShareThemeUpdate) -> Signal<Never, SetShareThemeError> {
-    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.ShareTheme)? in
+    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.ShareTheme, TelegramShareTheme, TelegramShareTheme?)? in
         guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {
             return nil
         }
         let apiTheme: Api.ShareTheme
+        let localTheme: TelegramShareTheme
         switch theme {
         case .default:
             apiTheme = .shareThemeDefault
+            localTheme = .default
         case let .emojiBackdrop(emojis, backdropId):
             let emojis = emojis.flatMap { $0.isEmpty ? nil : $0 }
             if emojis == nil && backdropId == nil {
                 apiTheme = .shareThemeDefault
+                localTheme = .default
             } else {
                 var flags: Int32 = 0
                 if backdropId != nil {
@@ -229,23 +244,39 @@ func _internal_setShareTheme(account: Account, peerId: PeerId, theme: TelegramSh
                     flags |= 1 << 1
                 }
                 apiTheme = .shareThemeEmojiBackdrop(.init(flags: flags, backdropId: backdropId, emojis: emojis?.map(\.apiReaction)))
+                localTheme = .emojiBackdrop(emojis: emojis, backdropId: backdropId)
             }
-        case let .gift(reference):
+        case let .gift(gift, reference):
             guard let input = reference.apiStarGiftReference(transaction: transaction) else {
                 return nil
             }
             apiTheme = .inputShareThemeGift(.init(stargift: input))
+            localTheme = .gift(.unique(gift))
         }
-        return (inputPeer, apiTheme)
+        var previousTheme: TelegramShareTheme?
+        _internal_updateCachedShareTheme(transaction: transaction, peerId: peerId, update: { current in
+            previousTheme = current
+            return localTheme
+        })
+        return (inputPeer, apiTheme, localTheme, previousTheme)
     }
     |> castError(SetShareThemeError.self)
     |> mapToSignal { input -> Signal<Never, SetShareThemeError> in
-        guard let (inputPeer, apiTheme) = input else {
+        guard let (inputPeer, apiTheme, localTheme, previousTheme) = input else {
             return .fail(.generic)
         }
         return account.network.request(Api.functions.messages.setShareTheme(peer: inputPeer, theme: apiTheme))
-        |> mapError { _ -> SetShareThemeError in
-            return .generic
+        |> `catch` { error -> Signal<Api.Bool, SetShareThemeError> in
+            Logger.shared.log("ShareTheme", "messages.setShareTheme(\(peerId)) failed: \(error.errorDescription ?? "")")
+            return account.postbox.transaction { transaction -> Void in
+                _internal_updateCachedShareTheme(transaction: transaction, peerId: peerId, update: { current in
+                    return current == localTheme ? previousTheme : current
+                })
+            }
+            |> castError(SetShareThemeError.self)
+            |> mapToSignal { _ -> Signal<Api.Bool, SetShareThemeError> in
+                return .fail(.generic)
+            }
         }
         |> ignoreValues
         |> then(

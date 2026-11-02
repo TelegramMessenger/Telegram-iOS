@@ -1253,6 +1253,10 @@ public class Account {
     private var resetPeerHoleManagement: ((PeerId) -> Void)?
     
     public private(set) var pendingMessageManager: PendingMessageManager!
+    var storyViewRefreshContext: StoryViewRefreshContext { self.stateManager.storyViewRefreshContext }
+    let storyReactionReconciliationContext = StoryReactionReconciliationContext()
+    var storyReactionContext: StoryReactionContext { self.stateManager.storyReactionContext }
+    var storyRefreshContext: StoryRefreshContext { self.stateManager.storyRefreshContext }
     private(set) var pendingStoryManager: PendingStoryManager?
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
@@ -1351,9 +1355,7 @@ public class Account {
         
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         
-        self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
-            self?.contactSyncManager?.addIsContactUpdates(updates)
-        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, ignoresShortSentMessages: supplementary)
+        self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, ignoresShortSentMessages: supplementary)
         
         self.viewTracker = AccountViewTracker(account: self)
         self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in
@@ -1482,7 +1484,7 @@ public class Account {
             
             if value {
                 Logger.shared.log("Account", "Became master")
-                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, pendingReferences: strongSelf.viewTracker.pendingMessageReferences)
                 
                 let resetPeerHoles = data.resetPeerHoles
                 strongSelf.resetPeerHoleManagement = { peerId in
@@ -1661,6 +1663,7 @@ public class Account {
     }
     
     private func postSmallLogIfNeeded() {
+        #if !os(macOS)
         let timestamp = CFAbsoluteTimeGetCurrent()
         if self.lastSmallLogPostTimestamp == nil || self.lastSmallLogPostTimestamp! < timestamp - 30.0 {
             self.lastSmallLogPostTimestamp = timestamp
@@ -1681,6 +1684,7 @@ public class Account {
                 }
             }).start())
         }
+        #endif
     }
     
     public func resetStateManagement() {
@@ -1924,8 +1928,6 @@ public func standaloneStateManager(
                                         postbox: postbox,
                                         network: network,
                                         callSessionManager: nil,
-                                        addIsContactUpdates: { _ in
-                                        },
                                         shouldKeepOnlinePresence: .single(false),
                                         peerInputActivityManager: nil,
                                         auxiliaryMethods: auxiliaryMethods,

@@ -270,6 +270,15 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.subtitle
+                    // The checked language is the current one (its checkmark), and the row is picked by tapping it.
+                    var accessibilityTraits: UIAccessibilityTraits = .button
+                    if item.checked {
+                        accessibilityTraits.insert(.selected)
+                    }
+                    if !item.enabled {
+                        accessibilityTraits.insert(.notEnabled)
+                    }
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
                     let revealOffset = strongSelf.revealOffset
                     
@@ -387,9 +396,13 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing.editable, item.removeItem != nil {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
+                        let revealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]
+                        strongSelf.setRevealOptions((left: [], right: revealOptions))
+                        // The swipe's "Delete" as a VoiceOver custom action (cached by the helper).
+                        strongSelf.activateArea.view.accessibilityCustomActions = strongSelf.revealOptionsAccessibilityCustomActions(revealOptions)
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
+                        strongSelf.activateArea.view.accessibilityCustomActions = nil
                     }
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                     

@@ -299,16 +299,18 @@ final class CurvesScreenComponent: Component {
     let value: CurvesValue
     let section: CurvesSection
     let valueUpdated: (CurvesValue) -> Void
+    let isTrackingUpdated: ((Bool) -> Void)?
     
     init(
         value: CurvesValue,
         section: CurvesSection,
-        valueUpdated: @escaping (CurvesValue) -> Void
-        
+        valueUpdated: @escaping (CurvesValue) -> Void,
+        isTrackingUpdated: ((Bool) -> Void)? = nil
     ) {
         self.value = value
         self.section = section
         self.valueUpdated = valueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: CurvesScreenComponent, rhs: CurvesScreenComponent) -> Bool {
@@ -411,6 +413,7 @@ final class CurvesScreenComponent: Component {
         }
                 
         private var selectedField: Field?
+        private var isTracking = false
         @objc func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let component = self.component else {
                 return
@@ -435,6 +438,10 @@ final class CurvesScreenComponent: Component {
                     self.selectedField = .whites
                 default:
                     break
+                }
+                if !self.isTracking {
+                    self.isTracking = true
+                    component.isTrackingUpdated?(true)
                 }
             case .changed:
                 guard let selectedField = self.selectedField else {
@@ -486,6 +493,10 @@ final class CurvesScreenComponent: Component {
                 gestureRecognizer.setTranslation(.zero, in: gestureRecognizer.view)
             default:
                 self.selectedField = nil
+                if self.isTracking {
+                    self.isTracking = false
+                    component.isTrackingUpdated?(false)
+                }
             }
         }
         

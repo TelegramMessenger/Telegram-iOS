@@ -31,6 +31,11 @@ public struct NavigationBarLentCapsule {
     public let content: UIView?
 }
 
+/// How far a tap on a navigation bar's buttons may drift before the screen's swipe back takes the touch, as for the chat
+/// title: the swipe otherwise begins after 2pt to the right and cancels the tap. A swipe back that starts on the bar
+/// still navigates, from 10pt on.
+public let navigationBarTapMovement: CGFloat = 10.0
+
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -111,8 +116,12 @@ public final class NavigationBarComponent: Component {
         return true
     }
 
-    public final class View: UIView {
+    public final class View: UIView, InteractiveTransitionGestureRecognizerTapTarget {
         private var component: NavigationBarComponent?
+
+        public var interactiveTransitionMinimumMovement: CGFloat {
+            return navigationBarTapMovement
+        }
 
         private(set) var primaryContentView: NavigationBarContentView?
         private(set) var secondaryContentView: NavigationBarContentView?
@@ -862,6 +871,8 @@ public final class NavigationBarComponent: Component {
                 var secondaryWeight: CGFloat = 0.0
                 var primaryTint: NavigationBarComponent.Button.Tint = .generic
                 var secondaryTint: NavigationBarComponent.Button.Tint = .generic
+                var primaryCornerRadius: CGFloat?
+                var secondaryCornerRadius: CGFloat?
                 if let index = owners.primary, let contentView = self.primaryContentView {
                     let container = contentView.rightPillContainer(at: index)
                     if container.superview !== pill.itemsContainer {
@@ -879,6 +890,7 @@ public final class NavigationBarComponent: Component {
                     }
                     primaryWeight = width * (secondaryPills == nil ? 1.0 : 1.0 - component.secondaryTransition)
                     primaryTint = contentView.rightPillTints[index]
+                    primaryCornerRadius = contentView.rightPillCornerRadii[index]
                 }
                 if let index = owners.secondary, let contentView = self.secondaryContentView {
                     let container = contentView.rightPillContainer(at: index)
@@ -897,11 +909,13 @@ public final class NavigationBarComponent: Component {
                     }
                     secondaryWeight = width * component.secondaryTransition
                     secondaryTint = contentView.rightPillTints[index]
+                    secondaryCornerRadius = contentView.rightPillCornerRadii[index]
                 }
                 // The tint of the content the pill mostly belongs to (a forum sliding over Chats has no compose circle,
                 // so Chats' keeps its accent glass while it narrows).
                 let tint = secondaryWeight > primaryWeight ? secondaryTint : primaryTint
                 pill.appliedTint = tint
+                let pillCornerRadius = (secondaryWeight > primaryWeight ? secondaryCornerRadius : primaryCornerRadius) ?? frame.height * 0.5
                 let tintColor = navigationBarGlassTintColor(tint, theme: component.theme)
 
                 guard metrics.width != 0.0 else {
@@ -936,7 +950,7 @@ public final class NavigationBarComponent: Component {
                     pill.background = background
                     self.addSubview(background)
                     background.contentView.addSubview(pill.itemsContainer)
-                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
+                    background.update(size: frame.size, cornerRadius: pillCornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 // A pill that comes grows out of the nearest previous pill nearer the edge (UIKit's sections are
                 // contiguous, so that is every one).
@@ -956,7 +970,7 @@ public final class NavigationBarComponent: Component {
                     self.retargetInPlace(inPlace, frame: frame, tintColor: tintColor, isDark: isDark, transition: transition)
                 } else {
                     backgroundTransition.setFrame(view: background, frame: frame)
-                    background.update(size: frame.size, cornerRadius: frame.height * 0.5, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
+                    background.update(size: frame.size, cornerRadius: pillCornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: true, transition: transition)
                     backgroundTransition.setFrame(view: pill.itemsContainer, frame: CGRect(origin: CGPoint(), size: frame.size))
                 }
                 // A menu from any of its buttons morphs the whole pill, its other buttons with it, and closes back into it:
@@ -1126,7 +1140,10 @@ public final class NavigationBarComponent: Component {
                     capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 capsuleTransition.setFrame(view: capsuleBackgroundContainer, frame: capsuleFrame)
-                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
+                // A last button with glass of its own (a forum's square avatar): the capsule's bottom follows its corners,
+                // the capsule being wider than the 44 pt button by as much on each side.
+                let bottomCornerRadius = self.effectiveContentView?.columnLastButtonGlassCornerRadius.flatMap { $0 + max(0.0, capsuleFrame.width - 44.0) * 0.5 }
+                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, bottomCornerRadius: bottomCornerRadius, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
                 capsuleBackgroundContainer.morphsIntoContextMenu = self.effectiveContentView?.columnLayout?.cellFrames.count == 1
                 capsuleTransition.setFrame(view: self.columnButtonsContainer, frame: CGRect(origin: CGPoint(), size: capsuleFrame.size))
                 for (contentView, _) in contents {

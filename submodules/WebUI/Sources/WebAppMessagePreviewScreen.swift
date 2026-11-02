@@ -173,6 +173,11 @@ private final class SheetContent: CombinedComponent {
                     text = textValue
                     entities = entitiesValue
                     replyMarkup = replyMarkupValue
+                case let .widget(_, textValue, entitiesValue, replyMarkupValue):
+                    // A widget result's text alone, as before widget results existed (its preview is the results lists').
+                    text = textValue
+                    entities = entitiesValue
+                    replyMarkup = replyMarkupValue
                 }
             case let .externalReference(reference):
                 switch reference.message {
@@ -200,6 +205,11 @@ private final class SheetContent: CombinedComponent {
                     media = [invoice]
                     replyMarkup = replyMarkupValue
                 case let .webpage(textValue, entitiesValue, _, _, replyMarkupValue):
+                    text = textValue
+                    entities = entitiesValue
+                    replyMarkup = replyMarkupValue
+                case let .widget(_, textValue, entitiesValue, replyMarkupValue):
+                    // A widget result's text alone, as before widget results existed (its preview is the results lists').
                     text = textValue
                     entities = entitiesValue
                     replyMarkup = replyMarkupValue

@@ -275,7 +275,7 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 flags |= 1 << 9
                 // The rich content (text + structure) is fully carried by `richMessage`; the flat
                 // `message`/`entities` would duplicate the text the InstantPage already holds, and the
-                // receiver ignores them when `richMessage` is present (AccountStateManagementUtils draft
+                // receiver ignores them when `richMessage` is present (UpdateInterpreter draft
                 // parse builds `.instantPage` purely from `richMessage`). Send them empty + clear the
                 // entities flag, mirroring the send path's `.message(text: "", ...)` for rich content.
                 flags &= ~(Int32(1) << 3)

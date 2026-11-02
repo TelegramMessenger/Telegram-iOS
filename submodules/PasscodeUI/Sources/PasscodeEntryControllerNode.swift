@@ -81,6 +81,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.backgroundImageNode = ASImageNode()
         self.backgroundImageNode.contentMode = .scaleToFill
+        self.backgroundImageNode.accessibilityElementsHidden = true
 
         self.backgroundDimNode = ASDisplayNode()
         self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
@@ -148,9 +149,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             switch biometricsType {
                 case .touchId:
                     self.biometricButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeTouchId"), color: .white), for: .normal)
+                    self.biometricButtonNode.accessibilityLabel = strings.PasscodeSettings_UnlockWithTouchId
                 case .faceId:
                     self.biometricButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeFaceId"), color: .white), for: .normal)
+                    self.biometricButtonNode.accessibilityLabel = strings.PasscodeSettings_UnlockWithFaceId
             }
+            self.biometricButtonNode.accessibilityTraits = [.button]
         }
         
         self.addSubnode(self.coverNode)
@@ -196,6 +200,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         super.didLoad()
         
         self.view.disablesInteractiveKeyboardGestureRecognizer = true
+        
+        self.updateAccessibilityElements()
         
         self.view.insertSubview(self.effectView, at: 0)
         
@@ -312,6 +318,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.backgroundDimNode.isHidden = true
             } else if let customBackgroundNode = background.makeBackgroundNode() {
                 self.backgroundCustomNode = customBackgroundNode
+                customBackgroundNode.accessibilityElementsHidden = true
                 self.insertSubnode(customBackgroundNode, aboveSubnode: self.backgroundImageNode)
                 if let background = background as? CustomPasscodeBackground, background.inverted {
                     self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.75)
@@ -379,6 +386,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             text = ""
         }
         self.subtitleNode.setAttributedText(NSAttributedString(string: text, font: subtitleFont, textColor: .white), animation: animated ? .crossFade : .none)
+        self.updateAccessibilityElements()
     }
     
     func hideBiometrics() {
@@ -511,6 +519,33 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.inputFieldNode.reset()
     }
 
+    /// VoiceOver order: the prompt, the field, the notice (when it shows text), then the keypad and its buttons. The
+    /// view is a plain UIView (UITracingLayerView), whose own traversal read the keys before the prompt. Called on load
+    /// and when the notice changes.
+    private func updateAccessibilityElements() {
+        guard self.isNodeLoaded else {
+            return
+        }
+        let nodes: [ASDisplayNode] = [self.titleNode, self.inputFieldNode, self.subtitleNode, self.keyboardNode, self.biometricButtonNode, self.cancelButtonNode, self.deleteButtonNode]
+        self.view.accessibilityElements = nodes.filter { node in
+            if node === self.biometricButtonNode && self.biometricsType == nil {
+                return false
+            }
+            if node === self.subtitleNode && !self.subtitleNode.isAccessibilityElement {
+                return false
+            }
+            return node.supernode === self
+        }.map { $0.view }
+    }
+    
+    /// A rejected passcode only shakes the dots: VoiceOver says it. Called only where the passcode was checked and
+    /// rejected (not on the cooldown, biometric or domain-state paths that also shake).
+    func announceIncorrectPasscode() {
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .announcement, argument: self.strings.VoiceOver_Passcode_Incorrect)
+        }
+    }
+    
     func animateError() {
         self.inputFieldNode.reset()
         self.inputFieldNode.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)

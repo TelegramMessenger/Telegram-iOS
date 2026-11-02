@@ -296,6 +296,13 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode, ItemL
                         }
                     }
                     
+                    // VoiceOver: the slider is the one element, "Data Usage" = the position's word on screen.
+                    var valueTexts: [String] = [item.strings.AutoDownloadSettings_DataUsageLow, item.strings.AutoDownloadSettings_DataUsageMedium, item.strings.AutoDownloadSettings_DataUsageHigh]
+                    if let customPosition = item.customPosition, customPosition <= valueTexts.count {
+                        valueTexts.insert(item.strings.AutoDownloadSettings_DataUsageCustom, at: customPosition)
+                    }
+                    let accessibilityValue: String? = value >= 0 && value < valueTexts.count ? valueTexts[value] : nil
+                    
                     let sliderSize = strongSelf.slider.update(
                         transition: .immediate,
                         component: AnyComponent(
@@ -325,7 +332,9 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode, ItemL
                                 )),
                                 useNative: true,
                                 trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
-                                trackForegroundColor: item.theme.list.itemAccentColor
+                                trackForegroundColor: item.theme.list.itemAccentColor,
+                                accessibilityLabel: item.strings.AutoDownloadSettings_DataUsage,
+                                accessibilityValue: accessibilityValue
                             )
                         ),
                         environment: {},
@@ -342,6 +351,12 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode, ItemL
                     }
                     
                     strongSelf.activateArea.accessibilityLabel = item.strings.AutoDownloadSettings_DataUsage
+                    // The slider itself is the element (adjustable); the row area would only repeat the label.
+                    strongSelf.activateArea.isAccessibilityElement = false
+                    strongSelf.lowTextNode.isAccessibilityElement = false
+                    strongSelf.mediumTextNode.isAccessibilityElement = false
+                    strongSelf.highTextNode.isAccessibilityElement = false
+                    strongSelf.customTextNode.isAccessibilityElement = false
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                 }

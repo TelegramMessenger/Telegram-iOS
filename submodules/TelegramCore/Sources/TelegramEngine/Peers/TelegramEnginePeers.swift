@@ -1345,8 +1345,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool, displayForumAsTabs: Bool) -> Signal<Never, NoError> {
-            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum, displayForumAsTabs: displayForumAsTabs)
+        public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool, displayForumAsTabs: Bool, displayForumAsSidebar: Bool) -> Signal<Never, NoError> {
+            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum, displayForumAsTabs: displayForumAsTabs, displayForumAsSidebar: displayForumAsSidebar)
         }
         
         public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
@@ -1453,6 +1453,10 @@ public extension TelegramEngine {
 
         public func getShareTheme(peerId: EnginePeer.Id) -> Signal<TelegramShareTheme?, NoError> {
             return _internal_getShareTheme(account: self.account, peerId: peerId)
+        }
+
+        public func localShareTheme(peerId: EnginePeer.Id) -> Signal<TelegramShareTheme?, NoError> {
+            return _internal_localShareTheme(postbox: self.account.postbox, peerId: peerId)
         }
 
         public func preloadShareTheme(peerId: EnginePeer.Id) -> Signal<Never, NoError> {

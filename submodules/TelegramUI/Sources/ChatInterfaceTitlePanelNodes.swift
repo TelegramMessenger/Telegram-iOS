@@ -291,7 +291,11 @@ func managingBotTitlePanelForChatPresentationInterfaceState(_ chatPresentationIn
     return panel
 }
 
-func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> AnyComponent<Empty>? {
+func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool, sideListActive: Bool) -> AnyComponent<Empty>? {
+    // The side list replaces the strip.
+    if sideListActive {
+        return nil
+    }
     guard let peerId = chatPresentationInterfaceState.chatLocation.peerId else {
         return nil
     }
@@ -409,7 +413,11 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
     return nil
 }
 
-func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> ChatFloatingTopicsPanel? {
+func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool, sideListActive: Bool) -> ChatFloatingTopicsPanel? {
+    // The side list replaces the strip.
+    if sideListActive {
+        return nil
+    }
     guard let peerId = chatPresentationInterfaceState.chatLocation.peerId else {
         return nil
     }

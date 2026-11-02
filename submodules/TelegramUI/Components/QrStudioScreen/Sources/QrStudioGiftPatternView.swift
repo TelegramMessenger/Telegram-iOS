@@ -134,7 +134,7 @@ final class QrStudioGiftPatternView: UIView, QrStudioBackgroundContent {
     private static let velocity = CGVector(dx: -2.5, dy: -4.0)
     private static let symbols = QrStudioLattice(dx: 44.0, dy: 38.0, velocity: QrStudioGiftPatternView.velocity, lag: 0.03 ... 0.16, orbit: 2.0 ... 7.0)
     private static let stickers = QrStudioLattice(dx: 170.0, dy: 150.0, velocity: QrStudioGiftPatternView.velocity, lag: 0.06 ... 0.2, orbit: 5.0 ... 12.0)
-    private static let modelSide: CGFloat = 94.0
+    static let modelSide: CGFloat = 94.0
 
     private let context: AccountContext
     private let gift: QrStudioGift

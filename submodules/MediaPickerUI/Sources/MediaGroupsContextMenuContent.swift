@@ -18,13 +18,14 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
     private final class GroupsListNode: ASDisplayNode, ASScrollViewDelegate {
         private final class ItemNode: HighlightTrackingButtonNode {
             let context: AccountContext
-            let highlightBackgroundNode: ASDisplayNode
+            let highlightBackgroundView: UIView
             let titleLabelNode: ImmediateTextNode
             let subtitleLabelNode: ImmediateTextNode
             let iconNode: ImageNode
             let separatorNode: ASDisplayNode
 
             let action: () -> Void
+            var highlightChanged: ((Bool) -> Void)?
 
             private var item: MediaGroupItem?
 
@@ -32,9 +33,10 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
                 self.action = action
                 self.context = context
 
-                self.highlightBackgroundNode = ASDisplayNode()
-                self.highlightBackgroundNode.isAccessibilityElement = false
-                self.highlightBackgroundNode.alpha = 0.0
+                self.highlightBackgroundView = UIView()
+                self.highlightBackgroundView.isAccessibilityElement = false
+                self.highlightBackgroundView.isUserInteractionEnabled = false
+                self.highlightBackgroundView.alpha = 0.0
 
                 self.titleLabelNode = ImmediateTextNode()
                 self.titleLabelNode.isAccessibilityElement = false
@@ -53,28 +55,31 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
 
                 self.separatorNode = ASDisplayNode()
                 self.separatorNode.isAccessibilityElement = false
+                self.separatorNode.isUserInteractionEnabled = false
 
                 super.init()
 
                 self.isAccessibilityElement = true
 
                 self.addSubnode(self.separatorNode)
-                self.addSubnode(self.highlightBackgroundNode)
+                self.view.addSubview(self.highlightBackgroundView)
                 self.addSubnode(self.titleLabelNode)
                 self.addSubnode(self.subtitleLabelNode)
                 self.addSubnode(self.iconNode)
 
                 self.highligthedChanged = { [weak self] highlighted in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return
                     }
                     if highlighted {
-                        strongSelf.highlightBackgroundNode.alpha = 1.0
+                        self.highlightBackgroundView.layer.removeAnimation(forKey: "opacity")
+                        self.highlightBackgroundView.alpha = 0.1
                     } else {
-                        let previousAlpha = strongSelf.highlightBackgroundNode.alpha
-                        strongSelf.highlightBackgroundNode.alpha = 0.0
-                        strongSelf.highlightBackgroundNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
+                        let currentAlpha = self.highlightBackgroundView.alpha
+                        self.highlightBackgroundView.alpha = 0.0
+                        self.highlightBackgroundView.layer.animateAlpha(from: currentAlpha, to: 0.0, duration: 0.3)
                     }
+                    self.highlightChanged?(highlighted)
                 }
 
                 self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
@@ -84,48 +89,39 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
                 self.action()
             }
             
-            func update(size: CGSize, presentationData: PresentationData, item: MediaGroupItem, isLast: Bool, syncronousLoad: Bool) {
-                let leftInset: CGFloat = 16.0
-                let rightInset: CGFloat = 48.0
-
+            func update(size: CGSize, presentationData: PresentationData, fonts: (title: UIFont, subtitle: UIFont), item: MediaGroupItem, isSeparatorHidden: Bool, syncronousLoad: Bool) {
                 if self.item?.collection.localIdentifier != item.collection.localIdentifier {
                     self.item = item
                     
                     self.accessibilityLabel = item.collection.localizedTitle
                     
                     if let asset = item.firstItem {
-                        self.iconNode.setSignal(assetImage(asset: asset, targetSize: CGSize(width: 24.0, height: 24.0), exact: false))
+                        self.iconNode.setSignal(assetImage(asset: asset, targetSize: MediaGroupsContextMenuLayout.iconSize, exact: false))
                     }
                 }
                 
-                self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+                self.highlightBackgroundView.backgroundColor = presentationData.theme.overallDarkAppearance ? UIColor.white : UIColor.black
+                self.highlightBackgroundView.setMonochromaticEffect(tintColor: self.highlightBackgroundView.backgroundColor)
+                let highlightFrame = MediaGroupsContextMenuLayout.highlightFrame(itemSize: size)
+                self.highlightBackgroundView.frame = highlightFrame
+                self.highlightBackgroundView.layer.cornerRadius = MediaGroupsContextMenuLayout.highlightCornerRadius(highlightHeight: highlightFrame.height)
 
-                self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+                self.titleLabelNode.attributedText = NSAttributedString(string: item.collection.localizedTitle ?? "", font: fonts.title, textColor: presentationData.theme.contextMenu.primaryColor)
+                self.subtitleLabelNode.attributedText = NSAttributedString(string: "\(item.count)", font: fonts.subtitle, textColor: presentationData.theme.contextMenu.secondaryColor)
 
-                self.titleLabelNode.attributedText = NSAttributedString(string: item.collection.localizedTitle ?? "", font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
-                
-                self.subtitleLabelNode.attributedText = NSAttributedString(string: "\(item.count)", font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
-                let maxTextWidth: CGFloat = size.width - leftInset - rightInset
-
+                let maxTextWidth = MediaGroupsContextMenuLayout.maxTextWidth(itemWidth: size.width)
                 let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
                 let subtitleSize = self.subtitleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
                 
-                let spacing: CGFloat = 2.0
-                let contentHeight = titleSize.height + spacing + subtitleSize.height
+                let textFrames = MediaGroupsContextMenuLayout.textFrames(itemSize: size, titleSize: titleSize, subtitleSize: subtitleSize)
+                self.titleLabelNode.frame = textFrames.title
+                self.subtitleLabelNode.frame = textFrames.subtitle
                 
-                let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - contentHeight) / 2.0)), size: titleSize)
-                self.titleLabelNode.frame = titleFrame
-                
-                let subtitleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + spacing), size: titleSize)
-                self.subtitleLabelNode.frame = subtitleFrame
-                
-                let iconSize = CGSize(width: 24.0, height: 24.0)
-                let iconFrame = CGRect(origin: CGPoint(x: size.width - leftInset - iconSize.width, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-                self.iconNode.frame = iconFrame
+                self.iconNode.frame = MediaGroupsContextMenuLayout.iconFrame(itemSize: size)
 
                 self.separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
-                self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize(width: size.width, height: UIScreenPixel))
-                self.separatorNode.isHidden = isLast
+                self.separatorNode.frame = MediaGroupsContextMenuLayout.separatorFrame(itemSize: size, thickness: UIScreenPixel)
+                self.separatorNode.isHidden = isSeparatorHidden
             }
         }
 
@@ -145,6 +141,11 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
         private var apparentHeight: CGFloat = 0.0
 
         private var itemNodes: [Int: ItemNode] = [:]
+        private var highlightedIndex: Int?
+        private var itemHeight: CGFloat = 0.0
+        private var fonts: (title: UIFont, subtitle: UIFont)?
+        private let titleMeasureNode = ImmediateTextNode()
+        private let subtitleMeasureNode = ImmediateTextNode()
 
         init(
             context: AccountContext,
@@ -199,42 +200,37 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
             guard let size = self.currentSize else {
                 return
             }
-            guard let presentationData = self.presentationData else {
+            guard let presentationData = self.presentationData, let fonts = self.fonts else {
                 return
             }
-            let itemHeight: CGFloat = 54.0
+            let itemHeight = self.itemHeight
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -180.0)
 
             var validIds = Set<Int>()
 
-            let minVisibleIndex = max(0, Int(floor(visibleBounds.minY / itemHeight)))
-            let maxVisibleIndex = Int(ceil(visibleBounds.maxY / itemHeight))
-            
-            if minVisibleIndex <= maxVisibleIndex {
-                for index in minVisibleIndex ... maxVisibleIndex {
-                    if index < self.items.count {
-                        let height = itemHeight
-                        let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: height))
+            for index in MediaGroupsContextMenuLayout.visibleIndices(minY: visibleBounds.minY, maxY: visibleBounds.maxY, itemHeight: itemHeight, itemCount: self.items.count) {
+                let itemFrame = MediaGroupsContextMenuLayout.itemFrame(index: index, itemHeight: itemHeight, width: size.width)
 
-                        let item = self.items[index]
-                        validIds.insert(index)
-                        
-                        let itemNode: ItemNode
-                        if let current = self.itemNodes[index] {
-                            itemNode = current
-                        } else {
-                            let selectGroup = self.selectGroup
-                            itemNode = ItemNode(context: self.context, action: {
-                                selectGroup(item.collection)
-                            })
-                            self.itemNodes[index] = itemNode
-                            self.scrollNode.addSubnode(itemNode)
-                        }
-                        
-                        itemNode.update(size: itemFrame.size, presentationData: presentationData, item: item, isLast: index == self.items.count - 1, syncronousLoad: syncronousLoad)
-                        itemNode.frame = itemFrame
+                let item = self.items[index]
+                validIds.insert(index)
+                
+                let itemNode: ItemNode
+                if let current = self.itemNodes[index] {
+                    itemNode = current
+                } else {
+                    let selectGroup = self.selectGroup
+                    itemNode = ItemNode(context: self.context, action: {
+                        selectGroup(item.collection)
+                    })
+                    itemNode.highlightChanged = { [weak self] highlighted in
+                        self?.updateHighlightedIndex(index, highlighted: highlighted)
                     }
+                    self.itemNodes[index] = itemNode
+                    self.scrollNode.addSubnode(itemNode)
                 }
+                
+                itemNode.update(size: itemFrame.size, presentationData: presentationData, fonts: fonts, item: item, isSeparatorHidden: MediaGroupsContextMenuLayout.isSeparatorHidden(index: index, itemCount: self.items.count, highlightedIndex: self.highlightedIndex), syncronousLoad: syncronousLoad)
+                itemNode.frame = itemFrame
             }
 
             var removeIds: [Int] = []
@@ -246,6 +242,19 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
             }
             for id in removeIds {
                 self.itemNodes.removeValue(forKey: id)
+            }
+        }
+
+        private func updateHighlightedIndex(_ index: Int, highlighted: Bool) {
+            if highlighted {
+                self.highlightedIndex = index
+            } else if self.highlightedIndex == index {
+                self.highlightedIndex = nil
+            } else {
+                return
+            }
+            for (id, itemNode) in self.itemNodes {
+                itemNode.separatorNode.isHidden = MediaGroupsContextMenuLayout.isSeparatorHidden(index: id, itemCount: self.items.count, highlightedIndex: self.highlightedIndex)
             }
         }
 
@@ -261,11 +270,21 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
         }
 
         func update(presentationData: PresentationData, constrainedSize: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
-            let itemHeight: CGFloat = 54.0
-
             self.presentationData = presentationData
+
+            let fonts = (
+                title: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                subtitle: Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
+            )
+            self.fonts = fonts
+            self.titleMeasureNode.attributedText = NSAttributedString(string: "A", font: fonts.title, textColor: .black)
+            self.subtitleMeasureNode.attributedText = NSAttributedString(string: "0", font: fonts.subtitle, textColor: .black)
+            let titleHeight = self.titleMeasureNode.updateLayout(CGSize(width: 1000.0, height: 100.0)).height
+            let subtitleHeight = self.subtitleMeasureNode.updateLayout(CGSize(width: 1000.0, height: 100.0)).height
+            let itemHeight = MediaGroupsContextMenuLayout.itemHeight(titleHeight: titleHeight, subtitleHeight: subtitleHeight)
+            self.itemHeight = itemHeight
             
-            let contentHeight = CGFloat(self.items.count) * itemHeight
+            let contentHeight = MediaGroupsContextMenuLayout.contentHeight(itemCount: self.items.count, itemHeight: itemHeight)
             let size = CGSize(width: constrainedSize.width, height: contentHeight)
 
             let containerSize = CGSize(width: size.width, height: min(constrainedSize.height, size.height))
@@ -333,7 +352,7 @@ final class MediaGroupsContextMenuContent: ContextControllerItemsContent {
         }
 
         func update(presentationData: PresentationData, constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat) {
-            let constrainedSize = CGSize(width: min(190.0, constrainedWidth), height: min(295.0, maxHeight))
+            let constrainedSize = CGSize(width: min(MediaGroupsContextMenuLayout.maxWidth, constrainedWidth), height: min(MediaGroupsContextMenuLayout.maxHeight, maxHeight))
 
             let topContentHeight: CGFloat = 0.0
 

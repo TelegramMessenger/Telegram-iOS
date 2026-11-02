@@ -44,6 +44,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
     ],
     visibility = [
         "//visibility:public",

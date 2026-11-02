@@ -121,6 +121,13 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var maxScale: CGSize
         let blurRadius: CGFloat
         var isLeaving = false
+        /// Centred in their capsule wherever it is, rather than where their bar has them: a title pill its bar moved
+        /// (`switchTo`). They keep their size; the lent title lays itself out about their centre.
+        var ridesPlatter = false
+        /// While riding: how far they still are from their capsule's centre, easing to nothing, so that they take up
+        /// from where they were.
+        var rideOffsetX = NavigationSpringCurve.constant(0.0, rest: .glass(0.01))
+        var rideOffsetY = NavigationSpringCurve.constant(0.0, rest: .glass(0.01))
 
         init(side: SideKind, view: UIView, frame: CGRect, appearance: CGFloat, motion: NavigationBarGlassMotion) {
             self.side = side
@@ -129,6 +136,23 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.appearance = .constant(appearance, rest: .glass(0.001))
             self.maxScale = motion.materializeScale(size: frame.size)
             self.blurRadius = motion.blurRadius
+        }
+
+        /// Where the items are in their capsule at `time`, the capsule being at `platterFrame`.
+        func center(inPlatterAt platterFrame: CGRect, time: Double) -> CGPoint {
+            if self.ridesPlatter {
+                return CGPoint(x: platterFrame.width * 0.5 + self.rideOffsetX.value(at: time), y: platterFrame.height * 0.5 + self.rideOffsetY.value(at: time))
+            }
+            return CGPoint(x: self.frame.midX - platterFrame.minX, y: self.frame.midY - platterFrame.minY)
+        }
+
+        /// From now on centred in their capsule, now at `platterFrame` with its centre moving at `platterVelocity`: they
+        /// start where they are, at rest, and ease into the centre.
+        func startRiding(platterFrame: CGRect, platterVelocity: CGPoint, spring: NavigationTransitionSpring, at time: Double) {
+            let center = self.center(inPlatterAt: platterFrame, time: time)
+            self.ridesPlatter = true
+            self.rideOffsetX = NavigationSpringCurve(startTime: time, from: center.x - platterFrame.width * 0.5, velocity: -platterVelocity.x, target: 0.0, spring: spring, rest: .glass(0.01))
+            self.rideOffsetY = NavigationSpringCurve(startTime: time, from: center.y - platterFrame.height * 0.5, velocity: -platterVelocity.y, target: 0.0, spring: spring, rest: .glass(0.01))
         }
     }
 
@@ -154,6 +178,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var y: NavigationSpringCurve
         var width: NavigationSpringCurve
         var height: NavigationSpringCurve
+        /// The glass's corner radius over a circle's (half its shorter side): 1 for a capsule or circle, less for a
+        /// button with its own radius (`Button.glassCornerRadius`, a forum's square avatar).
+        var roundness: NavigationSpringCurve
         /// 0: present, 1: dematerialized (transparent, blurred, scaled up).
         var dematerialization: NavigationSpringCurve
         var maxScale = CGSize(width: 1.0, height: 1.0)
@@ -184,6 +211,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.y = .constant(frame.minY, rest: .glass(0.01))
             self.width = .constant(frame.width, rest: .glass(0.01))
             self.height = .constant(frame.height, rest: .glass(0.01))
+            self.roundness = .constant(1.0, rest: .glass(0.001))
             self.dematerialization = .constant(0.0, rest: .glass(0.001))
             self.tint = tint
             self.isDark = isDark
@@ -215,6 +243,11 @@ public final class NavigationBarPlatterTransitionView: UIView {
             return CGAffineTransform(a: frame.width > 0.0 ? glassFrame.width / frame.width : 1.0, b: 0.0, c: 0.0, d: frame.height > 0.0 ? glassFrame.height / frame.height : 1.0, tx: glassFrame.midX - frame.midX, ty: glassFrame.midY - frame.midY)
         }
 
+        /// The glass's corner radius drawn at `size`, now.
+        func cornerRadius(size: CGSize, at time: Double) -> CGFloat {
+            return min(size.width, size.height) * 0.5 * max(0.0, self.roundness.value(at: time))
+        }
+
         func animateFrame(to frame: CGRect, spring: NavigationTransitionSpring, at time: Double) {
             self.x = self.x.retargeted(at: time, to: frame.minX, spring: spring)
             self.y = self.y.retargeted(at: time, to: frame.minY, spring: spring)
@@ -224,7 +257,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
 
         /// When every curve of this capsule rests.
         var restTime: Double {
-            var result = max(self.x.restTime, self.y.restTime, self.width.restTime, self.height.restTime, self.dematerialization.restTime, self.press.restTime, self.glow.restTime, self.tintFade.restTime)
+            var result = max(self.x.restTime, self.y.restTime, self.width.restTime, self.height.restTime, self.roundness.restTime, self.dematerialization.restTime, self.press.restTime, self.glow.restTime, self.tintFade.restTime)
             if let pulse = self.pulse {
                 result = max(result, pulse.restTime)
             }
@@ -232,7 +265,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 result = max(result, kick.restTime)
             }
             for items in self.items {
-                result = max(result, items.appearance.restTime)
+                result = max(result, items.appearance.restTime, items.rideOffsetX.restTime, items.rideOffsetY.restTime)
             }
             return result
         }
@@ -243,6 +276,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.y = self.y.rebased(by: time)
             self.width = self.width.rebased(by: time)
             self.height = self.height.rebased(by: time)
+            self.roundness = self.roundness.rebased(by: time)
             self.dematerialization = self.dematerialization.rebased(by: time)
             self.press = self.press.rebased(by: time)
             self.glow = self.glow.rebased(by: time)
@@ -251,6 +285,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.kick = self.kick?.rebased(by: time)
             for items in self.items {
                 items.appearance = items.appearance.rebased(by: time)
+                items.rideOffsetX = items.rideOffsetX.rebased(by: time)
+                items.rideOffsetY = items.rideOffsetY.rebased(by: time)
             }
         }
 
@@ -263,6 +299,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.y = settled(self.y)
             self.width = settled(self.width)
             self.height = settled(self.height)
+            self.roundness = settled(self.roundness)
             self.dematerialization = settled(self.dematerialization)
             self.press = settled(self.press)
             self.glow = settled(self.glow)
@@ -271,6 +308,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.kick = nil
             for items in self.items {
                 items.appearance = settled(items.appearance)
+                items.rideOffsetX = settled(items.rideOffsetX)
+                items.rideOffsetY = settled(items.rideOffsetY)
             }
         }
 
@@ -291,6 +330,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var frames: [Role: CGRect] = [:]
         var itemViews: [Role: UIView] = [:]
         var tints: [Role: GlassBackgroundView.TintColor] = [:]
+        /// A platter's `Platter.roundness`, where it is not 1.
+        var roundness: [Role: CGFloat] = [:]
         var signatures: [Role: [AnyHashable]] = [:]
         var isDark = false
         /// The slot the bar's title pill takes, if it has one there.
@@ -452,6 +493,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
             container.frame = CGRect(origin: CGPoint(), size: CGSize(width: pill.width, height: 44.0))
             layout.itemViews[role] = container
             layout.tints[role] = navigationBarGlassTintColor(contentView.rightPillTints[index], theme: side.theme)
+            if let cornerRadius = contentView.rightPillCornerRadii[index] {
+                layout.roundness[role] = cornerRadius / 22.0
+            }
             layout.signatures[role] = navigationBarCapsuleSignature(side.content, role: role, columnLength: side.columnFrame?.height, hidesColumnButtons: side.hidesColumnButtons)
         }
         if let pill = side.titlePill, layout.frames[.trailing(1)] == nil, layout.frames.keys.filter({ $0.rightIndex != nil }).count <= 1 {
@@ -571,6 +615,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 continue
             }
             let platter = Platter(role: role, frame: frame, tint: tint, isDark: from.isDark)
+            platter.roundness = .constant(from.roundness[role] ?? 1.0, rest: .glass(0.001))
             // The bar measures UIKit's press on its row capsules only; iPhone Duo's column capsules start at rest.
             let pressScale: CGFloat
             let pressGlow: CGFloat
@@ -654,10 +699,18 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     platter.isLeaving = false
                     platter.isTitlePill = target.titlePillRole == role
                     platter.animateFrame(to: frame, spring: motion.transition, at: self.time)
+                    platter.roundness = platter.roundness.retargeted(at: self.time, to: target.roundness[role] ?? 1.0, spring: motion.transition)
                     platter.dematerialization = platter.dematerialization.retargeted(at: self.time, to: 0.0, spring: motion.transition)
                     platter.isDark = target.isDark
                     let otherSignature = self.layout(side == .bottom ? .top : .bottom).signatures[role]
                     let currentItems = platter.items.first(where: { !$0.isLeaving })
+                    if platter.isTitlePill, let currentItems, currentItems.side == side, !currentItems.ridesPlatter, currentItems.frame != frame {
+                        // The bar moved its title pill (the chat header re-centred once the push has ended): what the
+                        // pill shows rides the shape to the new place instead of staying behind and snapping at the
+                        // hand-over, taking up from where it is.
+                        let platterVelocity = CGPoint(x: platter.x.velocity(at: self.time) + platter.width.velocity(at: self.time) * 0.5, y: platter.y.velocity(at: self.time) + platter.height.velocity(at: self.time) * 0.5)
+                        currentItems.startRiding(platterFrame: platter.frame(at: self.time), platterVelocity: platterVelocity, spring: motion.transition, at: self.time)
+                    }
                     if currentItems?.side != side {
                         if otherSignature == target.signatures[role], let currentItems {
                             // The same items: swap to this bar's identical copies.
@@ -694,6 +747,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     // Only this bar has it: it materializes in place, on the transition spring (bouncy; measured on
                     // iOS 27, glass RE §2.2: not the critically damped `.materialize` resolution).
                     let platter = Platter(role: role, frame: frame, tint: tint, isDark: target.isDark)
+                    platter.roundness = .constant(target.roundness[role] ?? 1.0, rest: .glass(0.001))
                     platter.isTitlePill = target.titlePillRole == role
                     let oldPartners = oldRight.filter { ($0.role.rightIndex ?? 0) < (role.rightIndex ?? 0) }
                     if role.rightIndex != nil, !motion.reduce, !platter.isTitlePill, let partnerIndex = navigationBarNearestPartner(of: frame, among: oldPartners.map { $0.platter.frame(at: self.time) }) {
@@ -724,6 +778,14 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     let own = platter.frame(at: self.time)
                     let start = self.startMatchedMorph(platter, source: own, target: partner.frame, appearing: false, containerWidth: containerWidth)
                     platter.partner = partner.role
+                    if let partnerTint = target.tints[partner.role], platter.tint != partnerTint {
+                        // Its glass merges with the partner's, where a shape's own opacity does not hide it, until it
+                        // rests: it takes the partner's tint, the old one fading out above it as on a capsule both bars
+                        // have. Keeping the leaving bar's (a profile's coloured bar into a plain one) left a patch of that
+                        // colour inside the partner for as long.
+                        self.startTintFade(platter, from: platter.tint)
+                        platter.tint = partnerTint
+                    }
                     if let partnerPlatter = self.platters[partner.role] {
                         self.pulseMatchedPair(platter, ownSize: own.size, start: start, partner: partnerPlatter, partnerFrame: partner.frame, rowFrame: rowFrame)
                     }
@@ -940,7 +1002,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
             add(platter.glass.layer, "position", glassCenters)
             add(platter.glass.layer, "bounds", bounds)
         }
-        platter.glass.animateShape(sizes: glassFrames.map { CGSize(width: max(0.0, $0.width), height: max(0.0, $0.height)) }, timing: timing, isDark: platter.isDark, tintColor: platter.tint)
+        let glassSizes = glassFrames.map { CGSize(width: max(0.0, $0.width), height: max(0.0, $0.height)) }
+        platter.glass.animateShape(sizes: glassSizes, cornerRadii: zip(glassSizes, times).map { platter.cornerRadius(size: $0.0, at: $0.1) }, timing: timing, isDark: platter.isDark, tintColor: platter.tint)
         if let fadingContainer = platter.fadingContainer, let fadingGlass = platter.fadingGlass, let fadingTint = platter.fadingTint {
             add(fadingContainer.layer, "opacity", zip(times, dematerializations).map { NSNumber(value: Float(max(0.0, min(1.0, platter.tintFade.value(at: $0.0))) * (1.0 - $0.1))) })
             fadingContainer.animateSize(width: platter.width, height: platter.height, timing: timing, isDark: platter.isDark)
@@ -952,10 +1015,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
             glowView.animate(sizes: glassFrames.map { $0.size }, glows: times.map { platter.glow.value(at: $0) }, timing: timing, isDark: platter.isDark)
         }
         for items in platter.items {
-            // Each bar's items stay where that bar has them while the shape morphs around them.
+            // Each bar's items stay where that bar has them while the shape morphs around them (unless they ride it).
             let appearances = times.map { max(0.0, min(1.0, items.appearance.value(at: $0))) }
             let scales = times.map { items.appearance.value(at: $0) }
-            add(items.view.layer, "position", frames.map { NSValue(cgPoint: CGPoint(x: items.frame.midX - $0.minX, y: items.frame.midY - $0.minY)) })
+            add(items.view.layer, "position", zip(times, frames).map { NSValue(cgPoint: items.center(inPlatterAt: $0.1, time: $0.0)) })
             add(items.view.layer, "transform", scales.map { a in NSValue(caTransform3D: CATransform3DMakeScale(1.0 + a * (items.maxScale.width - 1.0), 1.0 + a * (items.maxScale.height - 1.0), 1.0)) })
             add(items.view.layer, "opacity", appearances.map { NSNumber(value: Float(1.0 - $0)) })
             self.addBlurKeyframes(to: items.view.layer, radii: appearances.map { items.blurRadius * $0 }, timing: timing)
@@ -1063,7 +1126,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             glassFrame = frame
             platter.glass.frame = bounds
         }
-        platter.glass.update(size: glassFrame.size, cornerRadius: min(glassFrame.width, glassFrame.height) * 0.5, isDark: platter.isDark, tintColor: platter.tint, isInteractive: false, transition: .immediate)
+        platter.glass.update(size: glassFrame.size, cornerRadius: platter.cornerRadius(size: glassFrame.size, at: self.time), isDark: platter.isDark, tintColor: platter.tint, isInteractive: false, transition: .immediate)
         if let fadingContainer = platter.fadingContainer, let fadingGlass = platter.fadingGlass, let fadingTint = platter.fadingTint {
             fadingContainer.layer.opacity = Float(max(0.0, min(1.0, platter.tintFade.value(at: self.time))) * (1.0 - d))
             fadingContainer.update(size: frame.size, isDark: platter.isDark, transition: .immediate)
@@ -1077,10 +1140,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
         }
         ComponentTransition.immediate.setBlur(layer: platter.itemsHost.layer, radius: platter.blurRadius * d)
         for items in platter.items {
-            // Each bar's items stay where that bar has them while the shape morphs around them.
+            // Each bar's items stay where that bar has them while the shape morphs around them (unless they ride it).
             let a = max(0.0, min(1.0, items.appearance.value(at: self.time)))
             items.view.bounds = CGRect(origin: CGPoint(), size: items.frame.size)
-            items.view.center = CGPoint(x: items.frame.midX - frame.minX, y: items.frame.midY - frame.minY)
+            items.view.center = items.center(inPlatterAt: frame, time: self.time)
             items.view.transform = CGAffineTransform(scaleX: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.width - 1.0), y: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.height - 1.0))
             items.view.alpha = 1.0 - a
             ComponentTransition.immediate.setBlur(layer: items.view.layer, radius: items.blurRadius * a)
@@ -1101,6 +1164,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var press: CGFloat
         var glow: CGFloat
         var fadingTintAlpha: CGFloat?
+        var tint: GlassBackgroundView.TintColor
         /// The translation kick's offset now.
         var kick: CGSize
     }
@@ -1122,8 +1186,22 @@ public final class NavigationBarPlatterTransitionView: UIView {
             press: platter.press.value(at: time),
             glow: platter.glow.value(at: time),
             fadingTintAlpha: platter.fadingContainer != nil ? platter.tintFade.value(at: time) : nil,
+            tint: platter.tint,
             kick: platter.kick?.translation(at: time) ?? CGSize()
         )
+    }
+
+    /// Where a capsule's present items are now, in this view.
+    func currentItemsFramesForTesting(_ role: Role) -> [CGRect] {
+        guard let platter = self.platters[role] else {
+            return []
+        }
+        let frame = platter.frame(at: self.now)
+        return platter.items.filter { !$0.isLeaving }.map { items in
+            let center = items.center(inPlatterAt: frame, time: self.now)
+            let size = items.frame.size
+            return CGRect(x: frame.minX + center.x - size.width * 0.5, y: frame.minY + center.y - size.height * 0.5, width: size.width, height: size.height)
+        }
     }
 
     func leavingItemsViewsForTesting(_ role: Role) -> [UIView] {

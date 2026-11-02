@@ -202,7 +202,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
 }
 
-private struct Month: Equatable {
+struct VisualMediaMonth: Equatable {
     var packedValue: Int32
 
     init(packedValue: Int32) {
@@ -229,8 +229,8 @@ private struct Month: Equatable {
     }
 }
 
-private let durationFont = Font.semibold(11.0)
-private let minDurationImage: UIImage = {
+let visualMediaDurationFont = Font.semibold(11.0)
+let visualMediaMinDurationImage: UIImage = {
     let image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
@@ -244,7 +244,7 @@ private let minDurationImage: UIImage = {
     return image!
 }()
 
-private let rightShadowImage: UIImage = {
+let visualMediaRightShadowImage: UIImage = {
     let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
     let image = generateImage(baseImage.size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -256,7 +256,7 @@ private let rightShadowImage: UIImage = {
     return image!
 }()
 
-private final class DurationLayer: CALayer {
+final class VisualMediaDurationLayer: CALayer {
     override init() {
         super.init()
 
@@ -274,9 +274,9 @@ private final class DurationLayer: CALayer {
 
     func update(duration: Int32, isMin: Bool) {
         if isMin {
-            self.contents = minDurationImage.cgImage
+            self.contents = visualMediaMinDurationImage.cgImage
         } else {
-            let string = NSAttributedString(string: stringForDuration(duration), font: durationFont, textColor: .white)
+            let string = NSAttributedString(string: stringForDuration(duration), font: visualMediaDurationFont, textColor: .white)
             let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
             let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
             let sideInset: CGFloat = 6.0
@@ -299,7 +299,7 @@ private final class DurationLayer: CALayer {
 
 private protocol ItemLayer: SparseItemGridLayer {
     var item: VisualMediaItem? { get set }
-    var durationLayer: DurationLayer? { get set }
+    var durationLayer: VisualMediaDurationLayer? { get set }
     var minFactor: CGFloat { get set }
     var selectionLayer: GridMessageSelectionLayer? { get set }
     var disposable: Disposable? { get set }
@@ -318,7 +318,7 @@ private protocol ItemLayer: SparseItemGridLayer {
 private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
     var livePhotoLayer: SimpleLayer?
-    var durationLayer: DurationLayer?
+    var durationLayer: VisualMediaDurationLayer?
     var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
@@ -379,9 +379,9 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 let livePhotoLayer = SimpleLayer()
                 livePhotoLayer.contentsGravity = .topLeft
                 livePhotoLayer.contentsScale = UIScreenScale
-                livePhotoLayer.contents = livePhotoImage.cgImage
+                livePhotoLayer.contents = visualMediaLivePhotoImage.cgImage
                 self.addSublayer(livePhotoLayer)
-                livePhotoLayer.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: livePhotoImage.size)
+                livePhotoLayer.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: visualMediaLivePhotoImage.size)
                 livePhotoLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
                 self.livePhotoLayer = livePhotoLayer
             }
@@ -394,7 +394,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
-                let durationLayer = DurationLayer()
+                let durationLayer = VisualMediaDurationLayer()
                 durationLayer.update(duration: duration, isMin: isMin)
                 self.addSublayer(durationLayer)
                 durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
@@ -413,8 +413,8 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 let rightShadowLayer = SimpleLayer()
                 self.rightShadowLayer = rightShadowLayer
                 self.insertSublayer(rightShadowLayer, at: 0)
-                rightShadowLayer.contents = rightShadowImage.cgImage
-                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.contents = visualMediaRightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, visualMediaRightShadowImage.size.width), height: min(size.height, visualMediaRightShadowImage.size.height))
                 rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
             }
         } else {
@@ -486,7 +486,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         }
         
         if let rightShadowLayer = self.rightShadowLayer {
-            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            let shadowSize = CGSize(width: min(size.width, visualMediaRightShadowImage.size.width), height: min(size.height, visualMediaRightShadowImage.size.height))
             rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
         }
     }
@@ -525,6 +525,62 @@ private final class ItemView: UIView, SparseItemGridView {
         self.disposable?.dispose()
     }
 
+    // VoiceOver: the row is one element that reads as the list row it hosts (`ListMessageNode`) and activates as its
+    // tap does; the full-size button around that row would otherwise be an unlabelled element hiding it.
+    override var isAccessibilityElement: Bool {
+        get {
+            return self.messageItemNode != nil
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityLabel: String? {
+        get {
+            return self.messageItemNode?.accessibilityLabel
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityValue: String? {
+        get {
+            return self.messageItemNode?.accessibilityValue
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            var traits: UIAccessibilityTraits = self.messageItemNode?.accessibilityTraits ?? .button
+            if let messageItem = self.messageItem, case .selectable(true, _) = messageItem.selection {
+                traits.insert(.selected)
+            }
+            return traits
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            return self.messageItemNode?.view.accessibilityCustomActions
+        } set(value) {
+        }
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        guard self.messageItemNode != nil else {
+            return false
+        }
+        self.pressed()
+        return true
+    }
+    
+    var accessibilityFocused: ((UIView) -> Void)?
+    
+    override func accessibilityElementDidBecomeFocused() {
+        super.accessibilityElementDidBecomeFocused()
+        self.accessibilityFocused?(self)
+    }
+    
     @objc func pressed() {
         guard let itemNode = self.messageItemNode else {
             return
@@ -831,8 +887,14 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         if !self.useListItems {
             return nil
         }
-        return ItemView()
+        let view = ItemView()
+        view.accessibilityFocused = { [weak self] view in
+            self?.accessibilityViewFocusedImpl?(view)
+        }
+        return view
     }
+    
+    var accessibilityViewFocusedImpl: ((UIView) -> Void)?
 
     func createShimmerLayer() -> SparseItemGridShimmerLayer? {
         if self.useListItems {
@@ -892,7 +954,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
                 let message = item.message._asMessage()
                 var hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !self.revealedSpoilerMessageIds.contains(message.id)
-                if message.isSensitiveContent(platform: "ios") {
+                if message.isSensitiveContent(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) {
                     hasSpoiler = true
                 }
                 layer.updateHasSpoiler(hasSpoiler: hasSpoiler)
@@ -1019,7 +1081,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     }
 
     func scrollerTextForTag(tag: Int32) -> String? {
-        let month = Month(packedValue: tag)
+        let month = VisualMediaMonth(packedValue: tag)
         return stringForMonth(strings: self.strings, month: month.month, ofYear: month.year)
     }
 
@@ -1039,6 +1101,53 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
             return
         }
         self.onTapImpl?(item)
+    }
+    
+    var accessibilityContextActionImpl: ((VisualMediaItem, CALayer) -> Bool)?
+    
+    /// VoiceOver: a tile reads its kind (the same words the chat list uses for media), then a video's duration (the
+    /// tile shows it) and the date; selection is `.selected`; the long-press menu is "More" while the gesture is on (grid mode).
+    func accessibilityItem(item: SparseItemGrid.Item) -> SparseItemGrid.AccessibilityItem? {
+        guard let item = item as? VisualMediaItem else {
+            return nil
+        }
+        let message = item.message._asMessage()
+        var label = self.strings.Message_Photo
+        var value: String?
+        for media in message.effectiveMedia {
+            if media is TelegramMediaImage {
+                break
+            } else if let file = media as? TelegramMediaFile {
+                if file.isAnimated {
+                    label = self.strings.Message_Animation
+                } else if file.isInstantVideo {
+                    label = self.strings.Message_VideoMessage
+                } else if file.isVideo {
+                    label = self.strings.Message_Video
+                    if let duration = file.duration {
+                        value = stringForDuration(Int32(floor(duration)))
+                    }
+                } else {
+                    label = self.strings.Message_File
+                }
+                break
+            }
+        }
+        // The date tells otherwise identical tiles apart (the scroller shows it while scrolling).
+        let date = stringForMediumDate(timestamp: message.timestamp, strings: self.strings, dateTimeFormat: self.chatPresentationData.dateTimeFormat, withTime: false)
+        value = [value, date].compactMap { $0 }.joined(separator: ", ")
+        var traits: UIAccessibilityTraits = .button
+        if let selectionState = self.chatControllerInteraction.selectionState, selectionState.selectedIds.contains(message.id) {
+            traits.insert(.selected)
+        }
+        return SparseItemGrid.AccessibilityItem(label: label, value: value, traits: traits, contextActionName: self.useListItems ? nil : self.strings.Common_More)
+    }
+    
+    func accessibilityPerformContextAction(item: SparseItemGrid.Item, itemLayer: CALayer) -> Bool {
+        guard let item = item as? VisualMediaItem else {
+            return false
+        }
+        return self.accessibilityContextActionImpl?(item, itemLayer) ?? false
     }
 
     func onTagTap() {
@@ -1070,7 +1179,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     }
 }
 
-private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> EngineMessage.Tags {
+func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> EngineMessage.Tags {
     switch type {
     case .photoOrVideo:
         return .photoOrVideo
@@ -1181,6 +1290,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
+    /// Brings a rect of the pane on screen (the profile scrolls the pane up). Used for VoiceOver focus.
+    public var ensureRectVisible: ((UIView, CGRect) -> Void)?
 
     private let stateTag: EngineMessage.Tags
     private var storedStateDisposable: Disposable?
@@ -1277,6 +1388,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         self.listBackgroundView = UIImageView()
         self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
         self.listMaskView = UIImageView()
+        // The rounded list background and its mask are decoration.
+        self.listBackgroundView.accessibilityElementsHidden = true
+        self.listMaskView.accessibilityElementsHidden = true
         self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(UIColor.white.cgColor)
@@ -1329,7 +1443,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 }
                 strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)
             } else {
-                if item.message._asMessage().isSensitiveContent(platform: "ios") {
+                if item.message._asMessage().isSensitiveContent(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) {
 //                    strongSelf.context.currentContentSettings.with { $0 }.ignoreContentRestrictionReasons
                 } else {
                     let _ = strongSelf.chatControllerInteraction.openMessage(item.message._asMessage(), OpenMessageParams(mode: .default))
@@ -1512,6 +1626,24 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             }
         }
 
+        self.itemGrid.accessibilityItemFocused = { [weak self] rect in
+            guard let self else {
+                return
+            }
+            self.ensureRectVisible?(self.itemGrid.view, rect)
+        }
+        self.itemGridBinding.accessibilityViewFocusedImpl = { [weak self] view in
+            self?.ensureRectVisible?(view, view.bounds)
+        }
+        self.itemGridBinding.accessibilityContextActionImpl = { [weak self] item, itemLayer in
+            guard let self, let itemLayer = itemLayer as? ItemLayer else {
+                return false
+            }
+            let rect = self.itemGrid.frameForItem(layer: itemLayer)
+            self.chatControllerInteraction.openMessageContextActions(item.message._asMessage(), self, rect, nil)
+            return true
+        }
+        
         self.contextGestureContainerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let currentGestureItem = strongSelf.currentGestureItem else {
                 return
@@ -1806,12 +1938,12 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 for item in list.items {
                     switch item.content {
                     case let .message(message, isLocal):
-                        mappedItems.append(VisualMediaItem(index: item.index, message: EngineMessage(message), localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                        mappedItems.append(VisualMediaItem(index: item.index, message: EngineMessage(message), localMonthTimestamp: VisualMediaMonth(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         if !isLocal {
-                            mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                            mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: VisualMediaMonth(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         }
                     case let .placeholder(id, timestamp):
-                        mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
+                        mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: VisualMediaMonth(localTimestamp: timestamp + timezoneOffset).packedValue))
                     }
                 }
             }
@@ -2519,7 +2651,7 @@ private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
     }
 }
 
-private let livePhotoImage: UIImage = {
+let visualMediaLivePhotoImage: UIImage = {
     let baseImage = UIImage(bundleImageName: "Chat/Message/LivePhoto")!
     let image = generateImage(baseImage.size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

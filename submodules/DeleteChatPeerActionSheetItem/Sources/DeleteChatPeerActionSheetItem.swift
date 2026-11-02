@@ -21,6 +21,70 @@ public enum DeleteChatPeerAction {
     case deleteSavedPeer
 }
 
+public func deleteChatPeerConfirmationText(context: AccountContext, peer: EnginePeer, chatPeer: EnginePeer, action: DeleteChatPeerAction, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> PresentationStrings.FormattedString? {
+    var text: PresentationStrings.FormattedString?
+    switch action {
+    case .clearCache:
+        text = PresentationStrings.FormattedString(string: strings.ClearCache_Description, ranges: [])
+    case .clearCacheSuggestion:
+        text = PresentationStrings.FormattedString(string: strings.ClearCache_FreeSpaceDescription, ranges: [])
+    case .delete:
+        if peer.id == context.account.peerId {
+            text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+        } else if case let .legacyGroup(chatPeer) = peer {
+            text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
+        } else if case let .channel(chatPeer) = peer {
+            text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
+        } else if case .secretChat = chatPeer {
+            text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        } else {
+            text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        }
+    case .deleteAndLeave:
+        if chatPeer.id == context.account.peerId {
+            text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+        } else if case let .legacyGroup(chatPeer) = chatPeer {
+            text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
+        } else if case .channel = chatPeer {
+            text = strings.ChatList_DeleteAndLeaveGroupConfirmation(peer.compactDisplayTitle)
+        } else if case .secretChat = chatPeer {
+            text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        } else {
+            text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        }
+    case .deleteSavedPeer:
+        if peer.id == context.account.peerId {
+            text = strings.ChatList_DeleteSavedPeerMyNotesConfirmation(strings.ChatList_DeleteSavedPeerMyNotesConfirmationTitle)
+        } else {
+            let peerTitle = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+            text = strings.ChatList_DeleteSavedPeerConfirmation(peerTitle)
+        }
+    case let .clearHistory(canClearCache):
+        if peer.id == context.account.peerId {
+            text = PresentationStrings.FormattedString(string: strings.ChatList_ClearSavedMessagesConfirmation, ranges: [])
+        } else if case .user = peer {
+            text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        } else {
+            text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        }
+        
+        if canClearCache {
+            if let textValue = text {
+                text = PresentationStrings.FormattedString(string: textValue.string + "\n\n\(strings.Conversation_AlsoClearCacheTitle)", ranges: textValue.ranges)
+            }
+        }
+    case .removeFromGroup:
+        if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+            text = strings.LiveStream_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        } else {
+            text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        }
+    case .removeFromChannel:
+        text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+    }
+    return text
+}
+
 private let avatarFont = avatarPlaceholderFont(size: 26.0)
 
 public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
@@ -100,82 +164,12 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
         
         var attributedText: NSAttributedString?
-        switch action {
-        case .clearCache, .clearCacheSuggestion:
-            switch action {
-            case .clearCache:
-                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: textFont, textColor: theme.primaryTextColor)
-            case .clearCacheSuggestion:
-                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: textFont, textColor: theme.primaryTextColor)
-            default:
-                break
+        if let text = deleteChatPeerConfirmationText(context: context, peer: peer, chatPeer: chatPeer, action: action, strings: strings, nameDisplayOrder: nameOrder) {
+            let formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.string, font: textFont, textColor: theme.primaryTextColor))
+            for range in text.ranges {
+                formattedAttributedText.addAttribute(.font, value: boldFont, range: range.range)
             }
-        default:
-            var text: PresentationStrings.FormattedString?
-            switch action {
-            case .delete:
-                if peer.id == context.account.peerId {
-                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
-                } else if case let .legacyGroup(chatPeer) = peer {
-                    text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
-                } else if case let .channel(chatPeer) = peer {
-                    text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
-                } else if case .secretChat = chatPeer {
-                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                } else {
-                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                }
-            case .deleteAndLeave:
-                if chatPeer.id == context.account.peerId {
-                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
-                } else if case let .legacyGroup(chatPeer) = chatPeer {
-                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
-                } else if case .channel = chatPeer {
-                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(peer.compactDisplayTitle)
-                } else if case .secretChat = chatPeer {
-                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                } else {
-                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                }
-            case .deleteSavedPeer:
-                if peer.id == context.account.peerId {
-                    text = strings.ChatList_DeleteSavedPeerMyNotesConfirmation(strings.ChatList_DeleteSavedPeerMyNotesConfirmationTitle)
-                } else {
-                    let peerTitle = peer.displayTitle(strings: strings, displayOrder: nameOrder)
-                    text = strings.ChatList_DeleteSavedPeerConfirmation(peerTitle)
-                }
-            case let .clearHistory(canClearCache):
-                if peer.id == context.account.peerId {
-                    text = PresentationStrings.FormattedString(string: strings.ChatList_ClearSavedMessagesConfirmation, ranges: [])
-                } else if case .user = peer {
-                    text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                } else {
-                    text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-                }
-                
-                if canClearCache {
-                    if let textValue = text {
-                        text = PresentationStrings.FormattedString(string: textValue.string + "\n\n\(strings.Conversation_AlsoClearCacheTitle)", ranges: textValue.ranges)
-                    }
-                }
-            case .removeFromGroup:
-                if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
-                    text = strings.LiveStream_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
-                } else {
-                    text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
-                }
-            case .removeFromChannel:
-                text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-            default:
-                break
-            }
-            if let text = text {
-                let formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.string, font: textFont, textColor: theme.primaryTextColor))
-                for range in text.ranges {
-                    formattedAttributedText.addAttribute(.font, value: boldFont, range: range.range)
-                }
-                attributedText = formattedAttributedText
-            }
+            attributedText = formattedAttributedText
         }
         
         if let attributedText = attributedText {
@@ -212,6 +206,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         
         if let textComponentView = self.textView.view {
             if textComponentView.superview == nil {
+                // The accessibility area over the item reads this text; the text view is not a second element.
+                textComponentView.isAccessibilityElement = false
                 self.view.addSubview(textComponentView)
             }
             textComponentView.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: topInset + avatarSize + textSpacing), size: textSize)

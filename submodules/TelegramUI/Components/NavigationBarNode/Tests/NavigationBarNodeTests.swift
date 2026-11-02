@@ -45,7 +45,11 @@ private final class PillTitleView: UIView, NavigationBarGlassPillTitleView {
             }
         }
     }
-    let pillFrame = CGRect(x: 10.0, y: 6.0, width: 120.0, height: 44.0)
+    /// Where the pill starts in the view; it ends 10 pt before the view's end.
+    var pillX: CGFloat = 10.0
+    var pillFrame: CGRect {
+        return CGRect(x: self.pillX, y: 6.0, width: self.size.width - 10.0 - self.pillX, height: 44.0)
+    }
     var glassPillFrame: CGRect? {
         return self.pillFrame
     }
@@ -59,8 +63,10 @@ private final class PillTitleView: UIView, NavigationBarGlassPillTitleView {
     }
     func animateLayoutTransition() {
     }
+    /// The size it reports: the bar centres it, so another width moves the pill.
+    var size = CGSize(width: 140.0, height: 56.0)
     func updateLayout(availableSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        return CGSize(width: 140.0, height: 56.0)
+        return self.size
     }
 }
 
@@ -160,6 +166,32 @@ final class NavigationBarNodeTests: XCTestCase {
         node.previousItem = .item(UINavigationItem())
         self.layout(node)
         XCTAssertFalse(node.isBackInSideColumn)
+    }
+
+    // A tap on any of the bar's buttons may drift `navigationBarTapMovement` before the screen's swipe back takes it:
+    // the swipe asks the touched view and its ancestors (`InteractiveTransitionGestureRecognizerTapTarget`), as here.
+    func test_barButtons_letATapDriftBeforeTheSwipeBack() {
+        let node = self.makeNode()
+        let target = ActionCounter()
+        let item = UINavigationItem(title: "Blocked")
+        item.rightBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: target, action: #selector(ActionCounter.fire))
+        node.item = item
+        node.previousItem = .item(UINavigationItem(title: "Privacy"))
+        self.layout(node)
+
+        func slack(at point: CGPoint) -> CGFloat? {
+            var current = node.view.hitTest(point, with: nil)
+            while let view = current {
+                if let tapTarget = view as? InteractiveTransitionGestureRecognizerTapTarget {
+                    return tapTarget.interactiveTransitionMinimumMovement
+                }
+                current = view.superview
+            }
+            return nil
+        }
+        XCTAssertEqual(slack(at: CGPoint(x: 38.0, y: 79.0)), navigationBarTapMovement)
+        XCTAssertEqual(slack(at: CGPoint(x: 352.0, y: 79.0)), navigationBarTapMovement)
+        XCTAssertEqual(navigationBarTapMovement, 10.0)
     }
 
     // ComposePoll, ComposeTodo and the article editor put their own top buttons over the bar.
@@ -824,6 +856,78 @@ final class NavigationBarNodeTests: XCTestCase {
         node.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
         XCTAssertFalse(titleView.isGlassPillDetached)
         XCTAssertNil(titleView.lentContent)
+    }
+
+    // A layout that moves the pill under the glass lingering after a transition (the chat header re-centred once the
+    // push has ended) keeps the hold and asks the glass to follow the pill there, rather than settle where the bar no
+    // longer draws it and snap sideways at the hand-over; the pill stays detached meanwhile (issue #88).
+    func test_heldGlass_aMovedTitlePill_isFollowed() {
+        let (node, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
+        var interruptions = 0
+        var moves = 0
+        let _ = node.holdGlass(true, interrupted: {
+            interruptions += 1
+        }, titlePillMoved: {
+            moves += 1
+        })
+        let pillBefore = node.componentTransitionState?.titlePill?.frame
+        self.layout(node)
+        XCTAssertEqual(moves, 0, "a layout that changes nothing")
+        titleView.size = CGSize(width: 100.0, height: 56.0)
+        self.layout(node)
+        XCTAssertNotEqual(node.componentTransitionState?.titlePill?.frame, pillBefore)
+        XCTAssertEqual(moves, 1)
+        XCTAssertEqual(interruptions, 0)
+        XCTAssertTrue(titleView.isGlassPillDetached)
+        let _ = node.holdGlass(false, interrupted: nil)
+        XCTAssertFalse(titleView.isGlassPillDetached)
+    }
+
+    // The renderer's capsules follow a pill that moved once the transition has run (the glass lingering above the bar):
+    // what the pill shows takes up from where it was, with no step, rides the shape on the way and comes to rest centred
+    // where the bar draws the pill.
+    func test_renderer_aMovedTitlePill_movesItsPlatter() {
+        let bottom = self.makeLaidOutNode(title: "List", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        let (top, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
+        guard let renderer = makeNavigationBarTransitionRenderer(bottom: bottom, top: top) as? NavigationBarTransitionRendererImpl else {
+            return XCTFail("no renderer")
+        }
+        let frame = CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0)
+        renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        renderer.beginTransition(isInteractive: false, toTop: true)
+        self.time.advance(by: 0.3)
+        guard let platterView = renderer.platterViewForTesting, let restingFrame = platterView.platterStateForTesting(.trailing(1))?.frame else {
+            return XCTFail("no pill platter")
+        }
+        let itemsBefore = platterView.currentItemsFramesForTesting(.trailing(1))
+        titleView.size = CGSize(width: 100.0, height: 56.0)
+        titleView.pillX = 0.0
+        self.layout(top)
+        let movedFrame = titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY)
+        XCTAssertNotEqual(restingFrame, movedFrame)
+        renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 1.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        let itemsAtFollow = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertEqual(itemsAtFollow.count, 1)
+        XCTAssertEqual(itemsAtFollow.first?.midX ?? 0.0, itemsBefore.first?.midX ?? -1.0, accuracy: 0.001, "no step where it starts to follow")
+        self.time.advance(by: 0.1)
+        let midwayItems = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertLessThan(midwayItems.first?.midX ?? 0.0, itemsBefore.first?.midX ?? 0.0, "on its way")
+        XCTAssertGreaterThan(midwayItems.first?.midX ?? 0.0, movedFrame.midX, "on its way")
+        // The contents keep their size while the shape's changes: the lent title lays itself out about their centre, so
+        // no change of its width, immediate or animated, moves it sideways.
+        XCTAssertEqual(midwayItems.first?.size, itemsBefore.first?.size)
+        self.time.advance(by: 1.5)
+        XCTAssertEqual(platterView.platterStateForTesting(.trailing(1))?.frame, movedFrame)
+        let restingItems = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertEqual(restingItems.map { CGPoint(x: $0.midX, y: $0.midY) }, [CGPoint(x: movedFrame.midX, y: movedFrame.midY)])
+        XCTAssertEqual(restingItems.first?.size, itemsBefore.first?.size)
+        // The view itself, as the capsules' layout placed it.
+        if let lentContent = titleView.lentContent {
+            let lentFrame = lentContent.convert(lentContent.bounds, to: platterView)
+            XCTAssertEqual(CGPoint(x: lentFrame.midX, y: lentFrame.midY), CGPoint(x: movedFrame.midX, y: movedFrame.midY))
+        } else {
+            XCTFail("nothing lent")
+        }
     }
 
     // With two right platters already (an accent circle and a capsule) the pill has no slot: not reported, never hidden.

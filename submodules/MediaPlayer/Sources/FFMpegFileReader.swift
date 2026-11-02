@@ -240,12 +240,15 @@ public final class FFMpegFileReader {
     private var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
     private var lastReadPts: (streamIndex: Int, pts: Int64)?
     private var isWaitingForMoreData: Bool = false
-    
+    // While set, the video decoder skips non-reference frames, until the first packet at or after the pts (frames before
+    // it are only decoded to be hidden).
+    private var skipNonReferenceFrames: (codecContext: FFMpegAVCodecContext, beforePts: Int64)?
+
     public convenience init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?) {
         self.init(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, skipLoopFilter: skipLoopFilter, selectedStream: selectedStream, seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: false)
     }
 
-    init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?, ignoreEditList: Bool) {
+    init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, skipLoopFilter: Bool = false, selectedStream: SelectedStream, seek: Seek?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?, ignoreEditList: Bool, skipNonReferenceFramesBefore: Double? = nil, probeOnlySelectedMediaType: Bool = false) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         switch source {
@@ -275,7 +278,13 @@ public final class FFMpegFileReader {
             self.readingError = true
             return nil
         }
-        
+
+        // The probe below otherwise analyses every stream: an audio reader would decode video frames to describe a
+        // stream it never reads.
+        if probeOnlySelectedMediaType, case let .mediaType(mediaType) = selectedStream {
+            avFormatContext.discardStreams(notOf: mediaType == .video ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio)
+        }
+
         if !avFormatContext.findStreamInfo() {
             self.readingError = true
             return nil
@@ -365,6 +374,10 @@ public final class FFMpegFileReader {
                                 }
                                 
                                 if codecContext.open() {
+                                    if let skipNonReferenceFramesBefore {
+                                        codecContext.setSkipNonReferenceFrames(true)
+                                        self.skipNonReferenceFrames = (codecContext, CMTimeMakeWithSeconds(skipNonReferenceFramesBefore, preferredTimescale: info.timeScale).value)
+                                    }
                                     stream = Stream(
                                         info: info,
                                         decoder: .video(FFMpegMediaVideoFrameDecoder(codecContext: codecContext))
@@ -403,7 +416,26 @@ public final class FFMpegFileReader {
             case let .stream(streamIndex, pts):
                 avFormatContext.seekFrame(forStreamIndex: Int32(streamIndex), pts: pts, positionOnKeyframe: true)
             case let .direct(position):
-                avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: CMTimeMakeWithSeconds(Float64(position), preferredTimescale: stream.info.timeScale).value, positionOnKeyframe: true)
+                let target = CMTimeMakeWithSeconds(Float64(position), preferredTimescale: stream.info.timeScale).value
+                avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: target, positionOnKeyframe: true)
+                if skipNonReferenceFramesBefore != nil {
+                    // The seek searches decode times, so a target in the decoder delay before a keyframe lands on that
+                    // keyframe, after frames of the previous group that present at or after the target. Then seek
+                    // again to just before the keyframe's decode time, which lands on the keyframe before it.
+                    let packet = FFMpegPacket()
+                    var keyframe: (pts: Int64, dts: Int64)?
+                    while avFormatContext.readFrame(into: packet) {
+                        if Int(packet.streamIndex) == stream.info.index {
+                            keyframe = (packet.pts, packet.dts)
+                            break
+                        }
+                    }
+                    if let keyframe, keyframe.pts != Int64.min, keyframe.dts != Int64.min, keyframe.pts > target {
+                        avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: keyframe.dts - 1, positionOnKeyframe: true)
+                    } else {
+                        avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: target, positionOnKeyframe: true)
+                    }
+                }
             }
         } else {
             avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: 0, positionOnKeyframe: true)
@@ -502,6 +534,12 @@ public final class FFMpegFileReader {
             
             if !self.isWaitingForMoreData && !self.readingError && !self.hasReadToEnd {
                 if let decodableFrame = self.readDecodableFrame() {
+                    // Every frame at or after the target is this packet's or a later one's: a B-frame at or after it
+                    // follows, in decode order, the reference frame it is predicted from.
+                    if let skip = self.skipNonReferenceFrames, decodableFrame.pts.value >= skip.beforePts {
+                        skip.codecContext.setSkipNonReferenceFrames(false)
+                        self.skipNonReferenceFrames = nil
+                    }
                     let _ = stream.decoder.send(frame: decodableFrame)
                 }
             } else if self.hasReadToEnd && !self.didSendEndToDecoder {

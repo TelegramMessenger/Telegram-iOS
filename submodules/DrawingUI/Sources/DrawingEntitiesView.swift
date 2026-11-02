@@ -82,6 +82,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
     public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
+    public var newEntityPrepared: (DrawingEntity) -> Void = { _ in }
     
     public var getAvailableReactions: () -> [ReactionItem] = { return [] }
     public var present: (ViewController) -> Void = { _ in }
@@ -411,6 +412,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 weather.width = floor(self.size.width * 0.85)
                 weather.scale = zoomScale
             }
+        }
+        if setup {
+            self.newEntityPrepared(entity)
         }
     }
     

@@ -109,15 +109,14 @@ extension MediaEditorScreenImpl {
             }
         }
         
-        if let resultImage = mediaEditor.resultImage {
+        if let resultTexture = mediaEditor.resultTexture() {
             if !isEdit {
                 mediaEditor.seek(0.0, andPlay: false)
             }
             
             makeEditorImageComposition(
-                context: self.node.ciContext,
                 postbox: self.context.account.postbox,
-                inputImage: resultImage,
+                input: .editorResult(resultTexture),
                 dimensions: storyDimensions,
                 values: values,
                 time: .zero,
@@ -284,7 +283,7 @@ extension MediaEditorScreenImpl {
             return
         }
         self.updateMediaEditorEntities()
-        guard let image = mediaEditor.getResultCIImage() else {
+        guard let resultTexture = mediaEditor.resultTexture() else {
             completion(.failure(.mediaUnavailable))
             return
         }
@@ -323,10 +322,9 @@ extension MediaEditorScreenImpl {
         }
         let now = Int32(Date().timeIntervalSince1970)
         let expiresOn = id == nil ? now + 7 * 24 * 3600 : ((previousDraftIsSource ? previousDraft?.expiresOn : nil) ?? now + Int32(privacy.timeout))
-        let context = self.node.ciContext
         let postbox = self.context.account.postbox
         Queue.concurrentDefaultQueue().async { [weak self] in
-            makeEditorImageComposition(context: context, postbox: postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: CGSize(width: 270.0, height: 480.0), values: values, time: .zero, textScale: 2.0, completion: { [weak self] preview in
+            makeEditorImageComposition(postbox: postbox, input: .editorResult(resultTexture), dimensions: storyDimensions, outputDimensions: CGSize(width: 270.0, height: 480.0), values: values, time: .zero, textScale: 2.0, completion: { [weak self] preview in
                 guard let self, self.collageSaveGeneration == generation, self.collageDraftPreparing else {
                     return
                 }

@@ -4,56 +4,10 @@ import SwiftSignalKit
 internal import TelegramApi
 import MtProtoKit
 
-private enum AccountStateManagerOperationContent {
-    case pollDifference(Int32, AccountFinalStateEvents)
-    case collectUpdateGroups([UpdateGroup], Double)
-    case processUpdateGroups([UpdateGroup])
-    case custom(Int32, Signal<Void, NoError>)
-    case pollCompletion(Int32, [MessageId], [(Int32, ([MessageId]) -> Void)])
-    case processEvents(Int32, AccountFinalStateEvents)
-    case replayAsynchronouslyBuiltFinalState(AccountFinalState, () -> Void)
-}
-
-private final class AccountStateManagerOperation {
-    var isRunning: Bool = false
-    let content: AccountStateManagerOperationContent
-    
-    init(content: AccountStateManagerOperationContent) {
-        self.content = content
-    }
-}
-
-private enum AccountStateManagerAddOperationPosition {
-    case first
-    case last
-}
-
-private typealias SignalKitTimer = SwiftSignalKit.Timer
-
 private enum CustomOperationEvent<T, E> {
     case Next(T)
     case Error(E)
     case Completion
-}
-
-private final class UpdatedWebpageSubscriberContext {
-    let subscribers = Bag<(TelegramMediaWebpage?) -> Void>()
-}
-
-private final class UpdatedStarsBalanceSubscriberContext {
-    let subscribers = Bag<([PeerId: StarsAmount]) -> Void>()
-}
-
-private final class UpdatedStarsRevenueStatusSubscriberContext {
-    let subscribers = Bag<([PeerId: StarsRevenueStats.Balances]) -> Void>()
-}
-
-private final class UpdatedStarGiftAuctionStateSubscriberContext {
-    let subscribers = Bag<([Int64: GiftAuctionContext.State.AuctionState]) -> Void>()
-}
-
-private final class UpdatedStarGiftAuctionMyStateSubscriberContext {
-    let subscribers = Bag<([Int64: GiftAuctionContext.State.MyState]) -> Void>()
 }
 
 public enum DeletedMessageId: Hashable {
@@ -128,6 +82,23 @@ final class MessagesRemovedContext {
 }
 
 public final class AccountStateManager {
+    /// How long a pushed batch with a common pts/qts/seq hole waits before the getDifference that fills it (the
+    /// `gapWait` operation queued by `processBatch`) when `init` is not given another `gapWaitTimeout`;
+    /// `Tests/StateSync` passes a shorter one. Production: 2 s.
+    static let defaultGapWaitTimeout: Double = 2.0
+
+    /// How long the poll waits before the `n`-th differenceTooLong reset in a row of one poll cycle (`n` from
+    /// 1; the count starts over after a poll that needed no reset). The first reset runs at once, then 1 s,
+    /// doubling up to 60 s (MTContext's reconnect curve), so a server that keeps answering differenceTooLong,
+    /// or a reset that keeps getting messages.dialogsNotModified, cannot make the cycle a hot loop. The cycle
+    /// never gives up. `Tests/StateSync` replaces it.
+    static var consecutiveResetDelay: (Int) -> Double = { n in
+        if n <= 1 {
+            return 0.0
+        }
+        return min(60.0, Double(1 << min(n - 2, 6)))
+    }
+
     public final class IncomingCallUpdate {
         public let callId: Int64
         public let callAccessHash: Int64
@@ -153,60 +124,25 @@ public final class AccountStateManager {
         }
     }
     
-    private final class Impl {
-        private final class ChannelOperationData {
-            let pts: Int32?
-            let disposable: Disposable
-            var isCompleted: Bool = false
-            
-            init(pts: Int32?, disposable: Disposable) {
-                self.pts = pts
-                self.disposable = disposable
-            }
-            
-            deinit {
-                self.disposable.dispose()
-            }
-        }
-        
-        private final class ChannelOperationsContext {
-            let associatedDifferenceId: Int32
-            
-            var pendingChannels: [PeerId: ChannelOperationData] = [:]
-            var channelResults: [PeerId: AccountMutableState] = [:]
-            
-            var events: AccountFinalStateEvents = AccountFinalStateEvents()
-            
-            var canComplete: Bool = false
-            
-            var isInternallyComplete: Bool {
-                return !self.pendingChannels.contains(where: { !$0.value.isCompleted })
-            }
-            
-            init(associatedDifferenceId: Int32) {
-                self.associatedDifferenceId = associatedDifferenceId
-            }
-        }
-        
-        private let queue: Queue
+    final class Impl {
+        let queue: Queue
         public let accountPeerId: PeerId
         private let accountManager: AccountManager<TelegramAccountManagerTypes>
         public let postbox: Postbox
         public let network: Network
         private let callSessionManager: CallSessionManager?
-        private let addIsContactUpdates: ([(PeerId, Bool)]) -> Void
         private let shouldKeepOnlinePresence: Signal<Bool, NoError>
         
-        private let peerInputActivityManager: PeerInputActivityManager?
         let auxiliaryMethods: AccountAuxiliaryMethods
         private let ignoresShortSentMessages: Bool
-        var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
         
         private var updateService: UpdateMessageService?
         private let updateServiceDisposable = MetaDisposable()
         
-        private var operations_: [AccountStateManagerOperation] = []
-        private var operations: [AccountStateManagerOperation] {
+        /// The operation queue (Sync/StateOperationQueue.swift), which decides where each operation goes. Only its head
+        /// runs, started by `startFirstOperation()`.
+        private var operations_ = StateOperationQueue()
+        var operations: StateOperationQueue {
             get {
                 assert(self.queue.isCurrent())
                 return self.operations_
@@ -215,23 +151,53 @@ public final class AccountStateManager {
                 self.operations_ = value
             }
         }
-        private let operationDisposable = MetaDisposable()
-        private var operationTimer: SignalKitTimer?
+        var operationTimer: SwiftSignalKit.Timer?
+        /// How long a `gapWait` waits (`AccountStateManager.defaultGapWaitTimeout`, unless the manager was built with
+        /// another).
+        let gapWaitTimeout: Double
         
-        private var currentChannelOperationsContext: ChannelOperationsContext?
+        /// The asynchronous channel resets of the running poll cycle (ChannelResetCoordinator.swift, state-sync spec
+        /// 3.5). Built on first use, which is on the queue like every use, from the constants above and `replayer`;
+        /// only this Impl holds it, and it holds this Impl only weakly (`cycleEnded`).
+        private lazy var channelResetCoordinator: ChannelResetCoordinator = ChannelResetCoordinator(
+            queue: self.queue,
+            accountPeerId: self.accountPeerId,
+            postbox: self.postbox,
+            network: self.network,
+            currentValidityMarker: self.currentValidityMarker,
+            replayer: self.replayer,
+            cycleEnded: { [weak self] events, startsFirstOperation in
+                self?.channelResetsEnded(events: events, startsFirstOperation: startsFirstOperation)
+            }
+        )
+
+        /// differenceTooLong resets in a row in the running poll cycle, for
+        /// `AccountStateManager.consecutiveResetDelay`; a poll that needed no reset sets it back to 0.
+        var consecutiveResetCount: Int = 0
+
+        /// The differenceTooLong reset of the running poll, its wait on `consecutiveResetDelay` included. Disposed
+        /// only in `deinit`: a reset still waiting (up to 60 s) when the account's manager goes is cancelled
+        /// instead of resetting a torn-down account's storage. `reset()` leaves it running, because it keeps the
+        /// running poll at the head of the queue and only the reset's completion removes that poll.
+        let accountResetDisposable = MetaDisposable()
+
+        /// The getDifference chain being logged (DifferenceChainLog.swift); nil between poll cycles.
+        var differenceChainLog: DifferenceChainLog?
         
-        private var removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId] = [:]
+        var removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId] = [:]
         
         private let currentValidityMarker: Int64 = Int64.random(in: Int64.min ... Int64.max)
         
         private var nextId: Int32 = 0
-        private func getNextId() -> Int32 {
+        func getNextId() -> Int32 {
             self.nextId += 1
             return self.nextId
         }
         
         private let isUpdatingValue = ValuePromise<Bool>(true)
-        private var currentIsUpdatingValue = true {
+        /// Whether a getDifference cycle is running (`isUpdating`). It starts true, is set true when a
+        /// `fetchDifference` operation starts, and is set false only in `finishPollCycle`, the cycle's end (spec 3.6).
+        var currentIsUpdatingValue = true {
             didSet {
                 if self.currentIsUpdatingValue != oldValue {
                     self.isUpdatingValue.set(self.currentIsUpdatingValue)
@@ -242,196 +208,205 @@ public final class AccountStateManager {
             return self.isUpdatingValue.get()
         }
         
-        private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)]>()
+        /// The account's event outputs (state-sync spec 3.4, AccountStateEventHub.swift): the pipes, promises and
+        /// subscriber contexts every accessor below forwards to, unchanged, and the fan-out of a `dispatchEvents`
+        /// operation. Built in `init` and held only here, so it lives exactly as long as this Impl.
+        let eventHub: AccountStateEventHub
+        
         public var notificationMessages: Signal<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)], NoError> {
-            return self.notificationMessagesPipe.signal()
+            return self.eventHub.notificationMessages
         }
         
-        private let reactionNotificationsPipe = ValuePipe<[(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)]>()
         public var reactionNotifications: Signal<[(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], NoError> {
-            return self.reactionNotificationsPipe.signal()
+            return self.eventHub.reactionNotifications
         }
         
-        private let displayAlertsPipe = ValuePipe<[(text: String, isDropAuth: Bool)]>()
         public var displayAlerts: Signal<[(text: String, isDropAuth: Bool)], NoError> {
-            return self.displayAlertsPipe.signal()
+            return self.eventHub.displayAlerts
         }
         
-        private let dismissBotWebViewsPipe = ValuePipe<[Int64]>()
         public var dismissBotWebViews: Signal<[Int64], NoError> {
-            return self.dismissBotWebViewsPipe.signal()
+            return self.eventHub.dismissBotWebViews
         }
 
-        private let joinChatWebViewDecisionsPipe = ValuePipe<[JoinChatWebViewDecision]>()
         public var joinChatWebViewDecisions: Signal<[JoinChatWebViewDecision], NoError> {
-            return self.joinChatWebViewDecisionsPipe.signal()
+            return self.eventHub.joinChatWebViewDecisions
         }
         
-        private let externallyUpdatedPeerIdsPipe = ValuePipe<[PeerId]>()
         var externallyUpdatedPeerIds: Signal<[PeerId], NoError> {
-            return self.externallyUpdatedPeerIdsPipe.signal()
+            return self.eventHub.externallyUpdatedPeerIds
         }
         
-        private let termsOfServiceUpdateValue = Atomic<TermsOfServiceUpdate?>(value: nil)
-        private let termsOfServiceUpdatePromise = Promise<TermsOfServiceUpdate?>(nil)
         public var termsOfServiceUpdate: Signal<TermsOfServiceUpdate?, NoError> {
-            return self.termsOfServiceUpdatePromise.get()
+            return self.eventHub.termsOfServiceUpdate
         }
         
-        private let appUpdateInfoValue = Atomic<AppUpdateInfo?>(value: nil)
-        private let appUpdateInfoPromise = Promise<AppUpdateInfo?>(nil)
         public var appUpdateInfo: Signal<AppUpdateInfo?, NoError> {
-            return self.appUpdateInfoPromise.get()
+            return self.eventHub.appUpdateInfo
         }
         
-        private let contactBirthdaysValue = Atomic<[EnginePeer.Id: TelegramBirthday]>(value: [:])
-        private let contactBirthdaysPromise = Promise<[EnginePeer.Id: TelegramBirthday]>([:])
         public var contactBirthdays: Signal<[EnginePeer.Id: TelegramBirthday], NoError> {
-            return self.contactBirthdaysPromise.get()
+            return self.eventHub.contactBirthdays
         }
         
-        private let appliedIncomingReadMessagesPipe = ValuePipe<[MessageId]>()
         public var appliedIncomingReadMessages: Signal<[MessageId], NoError> {
-            return self.appliedIncomingReadMessagesPipe.signal()
+            return self.eventHub.appliedIncomingReadMessages
         }
         
-        private let significantStateUpdateCompletedPipe = ValuePipe<Void>()
         var significantStateUpdateCompleted: Signal<Void, NoError> {
-            return self.significantStateUpdateCompletedPipe.signal()
+            return self.eventHub.significantStateUpdateCompleted
         }
         
-        private let authorizationListUpdatesPipe = ValuePipe<Void>()
         var authorizationListUpdates: Signal<Void, NoError> {
-            return self.authorizationListUpdatesPipe.signal()
+            return self.eventHub.authorizationListUpdates
         }
         
-        private let threadReadStateUpdatesPipe = ValuePipe<(incoming: [PeerAndBoundThreadId: MessageId.Id], outgoing: [PeerAndBoundThreadId: MessageId.Id])>()
         var threadReadStateUpdates: Signal<(incoming: [PeerAndBoundThreadId: MessageId.Id], outgoing: [PeerAndBoundThreadId: MessageId.Id]), NoError> {
-            return self.threadReadStateUpdatesPipe.signal()
+            return self.eventHub.threadReadStateUpdates
         }
         
-        private let groupCallParticipantUpdatesPipe = ValuePipe<[(Int64, GroupCallParticipantsContext.Update)]>()
         public var groupCallParticipantUpdates: Signal<[(Int64, GroupCallParticipantsContext.Update)], NoError> {
-            return self.groupCallParticipantUpdatesPipe.signal()
+            return self.eventHub.groupCallParticipantUpdates
         }
         
-        private let groupCallMessageUpdatesPipe = ValuePipe<[GroupCallMessageUpdate]>()
         public var groupCallMessageUpdates: Signal<[GroupCallMessageUpdate], NoError> {
-            return self.groupCallMessageUpdatesPipe.signal()
+            return self.eventHub.groupCallMessageUpdates
         }
         
-        private let deletedMessagesPipe = ValuePipe<[DeletedMessageId]>()
         public var deletedMessages: Signal<[DeletedMessageId], NoError> {
-            return self.deletedMessagesPipe.signal()
+            return self.eventHub.deletedMessages
         }
         
         let messagesRemovedContext: MessagesRemovedContext
+        let storyReactionContext: StoryReactionContext
+        let storyRefreshContext: StoryRefreshContext
+        let storyViewRefreshContext: StoryViewRefreshContext
+
+        /// What every replay of this account's final states needs (seam 5, `FinalStateReplayer.applyReplay`). Built
+        /// from the constants above, so it is the same value whenever and wherever it is read.
+        var replayer: FinalStateReplayer {
+            return FinalStateReplayer(accountManager: self.accountManager, postbox: self.postbox, accountPeerId: self.accountPeerId, encryptionProvider: self.network.encryptionProvider, auxiliaryMethods: self.auxiliaryMethods, messagesRemovedContext: self.messagesRemovedContext, storyReactionContext: self.storyReactionContext, storyRefreshContext: self.storyRefreshContext, storyViewRefreshContext: self.storyViewRefreshContext)
+        }
         
-        fileprivate let storyUpdatesPipe = ValuePipe<[InternalStoryUpdate]>()
+        fileprivate var storyUpdatesPipe: ValuePipe<[InternalStoryUpdate]> {
+            return self.eventHub.storyUpdatesPipe
+        }
         public var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
-            return self.storyUpdatesPipe.signal()
+            return self.eventHub.storyUpdates
         }
 
-        fileprivate let walletTransferUpdatesPipe = ValuePipe<[WalletTransferUpdate]>()
-        fileprivate let walletTonConnectUpdatesPipe = ValuePipe<[WalletTonConnectEvent]>()
+        fileprivate var walletTransferUpdatesPipe: ValuePipe<[WalletTransferUpdate]> {
+            return self.eventHub.walletTransferUpdatesPipe
+        }
+        fileprivate var walletTonConnectUpdatesPipe: ValuePipe<[WalletTonConnectEvent]> {
+            return self.eventHub.walletTonConnectUpdatesPipe
+        }
 
-        fileprivate let walletStateUpdatesPipe = ValuePipe<Api.WalletState>()
         var walletStateUpdates: Signal<Api.WalletState, NoError> {
-            return self.walletStateUpdatesPipe.signal()
+            return self.eventHub.walletStateUpdates
+        }
+
+        var agentSettingsUpdates: Signal<EngineAgentSettings, NoError> {
+            return self.eventHub.agentSettingsUpdates
         }
         
-        fileprivate let botPreviewUpdatesPipe = ValuePipe<[InternalBotPreviewUpdate]>()
+        fileprivate var botPreviewUpdatesPipe: ValuePipe<[InternalBotPreviewUpdate]> {
+            return self.eventHub.botPreviewUpdatesPipe
+        }
         public var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
-            return self.botPreviewUpdatesPipe.signal()
+            return self.eventHub.botPreviewUpdates
         }
         
-        fileprivate let forceSendPendingStarsReactionPipe = ValuePipe<MessageId>()
+        fileprivate var forceSendPendingStarsReactionPipe: ValuePipe<MessageId> {
+            return self.eventHub.forceSendPendingStarsReactionPipe
+        }
         public var forceSendPendingStarsReaction: Signal<MessageId, NoError> {
-            return self.forceSendPendingStarsReactionPipe.signal()
+            return self.eventHub.forceSendPendingStarsReaction
         }
         
-        fileprivate let forceSendPendingPaidMessagePipe = ValuePipe<PeerId>()
+        fileprivate var forceSendPendingPaidMessagePipe: ValuePipe<PeerId> {
+            return self.eventHub.forceSendPendingPaidMessagePipe
+        }
         public var forceSendPendingPaidMessage: Signal<PeerId, NoError> {
-            return self.forceSendPendingPaidMessagePipe.signal()
+            return self.eventHub.forceSendPendingPaidMessage
         }
         
-        fileprivate let commitSendPendingPaidMessagePipe = ValuePipe<MessageId>()
+        fileprivate var commitSendPendingPaidMessagePipe: ValuePipe<MessageId> {
+            return self.eventHub.commitSendPendingPaidMessagePipe
+        }
         public var commitSendPendingPaidMessage: Signal<MessageId, NoError> {
-            return self.commitSendPendingPaidMessagePipe.signal()
+            return self.eventHub.commitSendPendingPaidMessage
         }
         
-        fileprivate let sentScheduledMessageIdsPipe = ValuePipe<Set<MessageId>>()
         public var sentScheduledMessageIds: Signal<Set<MessageId>, NoError> {
-            return self.sentScheduledMessageIdsPipe.signal()
+            return self.eventHub.sentScheduledMessageIds
         }
         
-        fileprivate let starRefBotConnectionEventsPipe = ValuePipe<StarRefBotConnectionEvent>()
+        fileprivate var starRefBotConnectionEventsPipe: ValuePipe<StarRefBotConnectionEvent> {
+            return self.eventHub.starRefBotConnectionEventsPipe
+        }
         public var starRefBotConnectionEvents: Signal<StarRefBotConnectionEvent, NoError> {
-            return self.starRefBotConnectionEventsPipe.signal()
+            return self.eventHub.starRefBotConnectionEvents
         }
         
-        fileprivate let installedStickerPacksArchivedEventsPipe = ValuePipe<Int>()
+        fileprivate var installedStickerPacksArchivedEventsPipe: ValuePipe<Int> {
+            return self.eventHub.installedStickerPacksArchivedEventsPipe
+        }
         var installedStickerPacksArchivedEvents: Signal<Int, NoError> {
-            return self.installedStickerPacksArchivedEventsPipe.signal()
+            return self.eventHub.installedStickerPacksArchivedEvents
         }
         
-        private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
-        private var updatedStarsBalanceContext = UpdatedStarsBalanceSubscriberContext()
-        private var updatedTonBalanceContext = UpdatedStarsBalanceSubscriberContext()
-        private var updatedStarsRevenueStatusContext = UpdatedStarsRevenueStatusSubscriberContext()
-        private var updatedStarGiftAuctionStateContext = UpdatedStarGiftAuctionStateSubscriberContext()
-        private var updatedStarGiftAuctionMyStateContext = UpdatedStarGiftAuctionMyStateSubscriberContext()
-        
-        private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
-        private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
-        private let appliedMaxMessageIdDisposable = MetaDisposable()
-        private let appliedQtsPromise = Promise<Int32?>(nil)
+        let appliedQtsPromise = Promise<Int32?>(nil)
         private let appliedQtsDisposable = MetaDisposable()
-        private let reportMessageDeliveryDisposable = DisposableSet()
-        private let updateEmojiGameInfoDisposable = MetaDisposable()
-        
-        let updateConfigRequested: (() -> Void)?
-        let isPremiumUpdated: (() -> Void)?
         
         init(
             queue: Queue,
+            gapWaitTimeout: Double,
             accountPeerId: PeerId,
             accountManager: AccountManager<TelegramAccountManagerTypes>,
             postbox: Postbox,
             network: Network,
             callSessionManager: CallSessionManager?,
-            addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void,
             shouldKeepOnlinePresence: Signal<Bool, NoError>,
             peerInputActivityManager: PeerInputActivityManager?,
             auxiliaryMethods: AccountAuxiliaryMethods,
             ignoresShortSentMessages: Bool,
             updateConfigRequested: (() -> Void)?,
             isPremiumUpdated: (() -> Void)?,
-            messagesRemovedContext: MessagesRemovedContext
+            messagesRemovedContext: MessagesRemovedContext,
+            storyReactionContext: StoryReactionContext,
+            storyRefreshContext: StoryRefreshContext,
+            storyViewRefreshContext: StoryViewRefreshContext
         ) {
             self.queue = queue
+            self.gapWaitTimeout = gapWaitTimeout
             self.accountPeerId = accountPeerId
             self.accountManager = accountManager
             self.postbox = postbox
             self.network = network
             self.callSessionManager = callSessionManager
-            self.addIsContactUpdates = addIsContactUpdates
             self.shouldKeepOnlinePresence = shouldKeepOnlinePresence
-            self.peerInputActivityManager = peerInputActivityManager
             self.auxiliaryMethods = auxiliaryMethods
             self.ignoresShortSentMessages = ignoresShortSentMessages
-            self.updateConfigRequested = updateConfigRequested
-            self.isPremiumUpdated = isPremiumUpdated
             self.messagesRemovedContext = messagesRemovedContext
+            self.storyReactionContext = storyReactionContext
+            self.storyRefreshContext = storyRefreshContext
+            self.storyViewRefreshContext = storyViewRefreshContext
+            self.eventHub = AccountStateEventHub(
+                queue: queue,
+                postbox: postbox,
+                network: network,
+                callSessionManager: callSessionManager,
+                peerInputActivityManager: peerInputActivityManager,
+                updateConfigRequested: updateConfigRequested,
+                isPremiumUpdated: isPremiumUpdated
+            )
         }
         
         deinit {
             self.updateServiceDisposable.dispose()
-            self.operationDisposable.dispose()
-            self.appliedMaxMessageIdDisposable.dispose()
             self.appliedQtsDisposable.dispose()
-            self.reportMessageDeliveryDisposable.dispose()
-            self.updateEmojiGameInfoDisposable.dispose()
+            self.accountResetDisposable.dispose()
         }
         
         public func reset() {
@@ -445,49 +420,32 @@ public final class AccountStateManager {
                     }))
                     self.network.addUpdateSink(self.updateService!)
                 }
-                self.operationDisposable.set(nil)
-                self.replaceOperations(with: .pollDifference(self.getNextId(), AccountFinalStateEvents()))
+                self.replaceOperations(with: .fetchDifference(self.getNextId(), AccountFinalStateEvents()))
                 self.startFirstOperation()
                 
-                let appliedValues: [(MetaDisposable, Signal<Int32?, NoError>, Bool)] = [
-                    (self.appliedMaxMessageIdDisposable, self.appliedMaxMessageIdPromise.get(), true),
-                    (self.appliedQtsDisposable, self.appliedQtsPromise.get(), false)
-                ]
-                
-                for (disposable, value, isMaxMessageId) in appliedValues {
-                    let network = self.network
-                    disposable.set((combineLatest(queue: self.queue, self.shouldKeepOnlinePresence, value)
-                    |> mapToSignal { shouldKeepOnlinePresence, value -> Signal<Int32, NoError> in
-                        guard let value = value else {
-                            return .complete()
-                        }
-                        if !shouldKeepOnlinePresence {
-                            return .complete()
-                        }
-                        return .single(value)
+                let network = self.network
+                self.appliedQtsDisposable.set((combineLatest(queue: self.queue, self.shouldKeepOnlinePresence, self.appliedQtsPromise.get())
+                |> mapToSignal { shouldKeepOnlinePresence, value -> Signal<Int32, NoError> in
+                    guard let value = value else {
+                        return .complete()
                     }
-                    |> distinctUntilChanged
-                    |> mapToSignal { value -> Signal<Never, NoError> in
-                        if isMaxMessageId {
-                            return .complete()
-                            /*return network.request(Api.functions.messages.receivedMessages(maxId: value))
-                            |> ignoreValues
-                            |> `catch` { _ -> Signal<Never, NoError> in
-                                return .complete()
-                            }*/
-                        } else {
-                            if value == 0 {
-                                return .complete()
-                            } else {
-                                return network.request(Api.functions.messages.receivedQueue(maxQts: value))
-                                |> ignoreValues
-                                |> `catch` { _ -> Signal<Never, NoError> in
-                                    return .complete()
-                                }
-                            }
-                        }
-                    }).start())
+                    if !shouldKeepOnlinePresence {
+                        return .complete()
+                    }
+                    return .single(value)
                 }
+                |> distinctUntilChanged
+                |> mapToSignal { value -> Signal<Never, NoError> in
+                    if value == 0 {
+                        return .complete()
+                    } else {
+                        return network.request(Api.functions.messages.receivedQueue(maxQts: value))
+                        |> ignoreValues
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
+                    }
+                }).start())
             }
         }
         
@@ -499,18 +457,10 @@ public final class AccountStateManager {
         
         func addUpdateGroups(_ groups: [UpdateGroup]) {
             self.queue.async {
-                if let last = self.operations.last {
-                    switch last.content {
-                    case .pollDifference, .processUpdateGroups, .custom, .pollCompletion, .processEvents, .replayAsynchronouslyBuiltFinalState:
-                        self.addOperation(.collectUpdateGroups(groups, 0.0), position: .last)
-                    case let .collectUpdateGroups(currentGroups, timeout):
-                        let operation = AccountStateManagerOperation(content: .collectUpdateGroups(currentGroups + groups, timeout))
-                        operation.isRunning = last.isRunning
-                        self.operations[self.operations.count - 1] = operation
-                        self.startFirstOperation()
-                    }
+                if self.operations.absorbUpdateGroups(groups) {
+                    self.startFirstOperation()
                 } else {
-                    self.addOperation(.collectUpdateGroups(groups, 0.0), position: .last)
+                    self.addOperation(.batchUpdates(groups), position: .last)
                 }
             }
         }
@@ -518,7 +468,7 @@ public final class AccountStateManager {
         func addReplayAsynchronouslyBuiltFinalState(_ finalState: AccountFinalState) -> Signal<Bool, NoError> {
             return Signal { subscriber in
                 self.queue.async {
-                    self.addOperation(.replayAsynchronouslyBuiltFinalState(finalState, {
+                    self.addOperation(.replayPrebuilt(finalState, {
                         subscriber.putNext(true)
                         subscriber.putCompletion()
                     }), position: .last)
@@ -559,841 +509,98 @@ public final class AccountStateManager {
             } |> runOn(self.queue)
         }
         
-        private func replaceOperations(with content: AccountStateManagerOperationContent) {
-            var collectedProcessUpdateGroups: [AccountStateManagerOperationContent] = []
-            var collectedMessageIds: [MessageId] = []
-            var collectedPollCompletionSubscribers: [(Int32, ([MessageId]) -> Void)] = []
-            var collectedReplayAsynchronouslyBuiltFinalState: [(AccountFinalState, () -> Void)] = []
-            var processEvents: [(Int32, AccountFinalStateEvents)] = []
-            var customOperations: [(Int32, Signal<Void, NoError>)] = []
-            
-            var replacedOperations: [AccountStateManagerOperation] = []
-            
-            for i in 0 ..< self.operations.count {
-                if self.operations[i].isRunning {
-                    replacedOperations.append(self.operations[i])
-                } else {
-                    switch self.operations[i].content {
-                    case .processUpdateGroups:
-                        collectedProcessUpdateGroups.append(self.operations[i].content)
-                    case let .pollCompletion(_, messageIds, subscribers):
-                        collectedMessageIds.append(contentsOf: messageIds)
-                        collectedPollCompletionSubscribers.append(contentsOf: subscribers)
-                    case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
-                        collectedReplayAsynchronouslyBuiltFinalState.append((finalState, completion))
-                    case let .processEvents(operationId, events):
-                        processEvents.append((operationId, events))
-                    case let .custom(operationId, customSignal):
-                        customOperations.append((operationId, customSignal))
-                    default:
-                        break
-                    }
-                }
-            }
-            
-            replacedOperations.append(contentsOf: collectedProcessUpdateGroups.map { AccountStateManagerOperation(content: $0) })
-            
-            replacedOperations.append(AccountStateManagerOperation(content: content))
-            
-            if !collectedPollCompletionSubscribers.isEmpty || !collectedMessageIds.isEmpty {
-                replacedOperations.append(AccountStateManagerOperation(content: .pollCompletion(self.getNextId(), collectedMessageIds, collectedPollCompletionSubscribers)))
-            }
-            
-            for (finalState, completion) in collectedReplayAsynchronouslyBuiltFinalState {
-                replacedOperations.append(AccountStateManagerOperation(content: .replayAsynchronouslyBuiltFinalState(finalState, completion)))
-            }
-            
-            for (operationId, events) in processEvents {
-                replacedOperations.append(AccountStateManagerOperation(content: .processEvents(operationId, events)))
-            }
-            
-            for (operationId, customSignal) in customOperations {
-                replacedOperations.append(AccountStateManagerOperation(content: .custom(operationId, customSignal)))
-            }
-            
-            self.operations.removeAll()
-            self.operations.append(contentsOf: replacedOperations)
+        func replaceOperations(with content: StateOperation) {
+            self.operations.replace(with: content, nextId: { self.getNextId() })
         }
         
-        private func addOperation(_ content: AccountStateManagerOperationContent, position: AccountStateManagerAddOperationPosition) {
-            self.queue.async {
-                let operation = AccountStateManagerOperation(content: content)
-                switch position {
-                case .first:
-                    if self.operations.isEmpty || !self.operations[0].isRunning {
-                        self.operations.insert(operation, at: 0)
-                        self.startFirstOperation()
-                    } else {
-                        self.operations.insert(operation, at: 1)
-                    }
-                case .last:
-                    let begin = self.operations.isEmpty
-                    self.operations.append(operation)
-                    if begin {
-                        self.startFirstOperation()
-                    }
-                }
+        /// Adds `content` and starts the head when the queue says it must. Every caller runs on `queue`: the ingress
+        /// blocks after their hop (`addUpdateGroups`, `addReplayAsynchronouslyBuiltFinalState`, `addCustomOperation`),
+        /// `addPollCompletion` and `postponeStateBarrier`, and runner completions that run on the queue (after
+        /// `deliverOn(queue)`, in `handleResult`'s hop, or on a queue timer). The direct call keeps the order a slice
+        /// continuation and a reset follow-up depend on: their next attempt is queued first and started before update
+        /// groups whose ingress block is already waiting on the queue.
+        func addOperation(_ content: StateOperation, position: StateOperationQueue.Position) {
+            assert(self.queue.isCurrent())
+            if self.operations.add(content, at: position) {
+                self.startFirstOperation()
             }
         }
         
         private func addAsyncResetChannels(peers: [(peer: Peer, pts: Int32?)]) {
             //TODO:pts
-            guard let operation = self.operations.first, case let .pollDifference(initialId, _) = operation.content else {
+            guard let operation = self.operations.first, case .fetchDifference = operation.content else {
                 assertionFailure("Invalid state")
                 return
             }
-            let channelOperationsContext: ChannelOperationsContext
-            if let current = self.currentChannelOperationsContext {
-                channelOperationsContext = current
-            } else {
-                channelOperationsContext = ChannelOperationsContext(associatedDifferenceId: initialId)
-                self.currentChannelOperationsContext = channelOperationsContext
-            }
-            
-            for peer in peers {
-                let replaceChannelOperation: Bool
-                if let current = channelOperationsContext.pendingChannels[peer.peer.id] {
-                    if let pts = peer.pts, let currentPts = current.pts {
-                        replaceChannelOperation = currentPts > pts
-                    } else {
-                        replaceChannelOperation = false
-                    }
-                } else {
-                    replaceChannelOperation = true
-                }
-                if replaceChannelOperation {
-                    let currentValidityMarker = self.currentValidityMarker
-                    let _ = (self.postbox.transaction { transaction -> Void in
-                        if let state = transaction.getState() as? AuthorizedAccountState {
-                            var invalidatedChannels = state.invalidatedChannels.filter({ $0.peerId != peer.peer.id })
-                            invalidatedChannels.append(AuthorizedAccountState.InvalidatedChannel(
-                                peerId: peer.peer.id,
-                                pts: peer.pts,
-                                validityMarker: currentValidityMarker
-                            ))
-                            transaction.setState(state.withInvalidatedChannels(invalidatedChannels))
-                        }
-                    }).start()
-                    
-                    let channelDisposable = MetaDisposable()
-                    channelOperationsContext.pendingChannels[peer.peer.id] = ChannelOperationData(pts: peer.pts, disposable: channelDisposable)
-                    channelDisposable.set((self.postbox.transaction { transaction -> AccountMutableState in
-                        return initialStateWithPeerIds(
-                            transaction,
-                            peerIds: Set([peer.peer.id]),
-                            activeChannelIds: Set(),
-                            referencedReplyMessageIds: ReferencedReplyMessageIds(),
-                            referencedGeneralMessageIds: Set(),
-                            peerIdsRequiringLocalChatState: Set(),
-                            locallyGeneratedMessageTimestamps: [:],
-                            storedStories: [:]
-                        )
-                    }
-                    |> mapToSignal { state -> Signal<AccountMutableState, NoError> in
-                        return resetChannels(
-                            accountPeerId: self.accountPeerId,
-                            postbox: self.postbox,
-                            network: self.network, peers: [peer.peer],
-                            state: state
-                        )
-                    }
-                    |> deliverOn(self.queue)).start(next: { [weak self] result in
-                        guard let self = self else {
-                            return
-                        }
-                        guard let channelOperationsContext = self.currentChannelOperationsContext else {
-                            assertionFailure("Invalid state")
-                            return
-                        }
-                        if let pendingChannelData = channelOperationsContext.pendingChannels[peer.peer.id] {
-                            pendingChannelData.isCompleted = true
-                        } else {
-                            assertionFailure("Invalid state")
-                        }
-                        
-                        channelOperationsContext.channelResults[peer.peer.id] = result
-                        
-                        self.checkChannelOperationsCompletion()
-                    }))
-                }
+            self.channelResetCoordinator.addAsyncResetChannels(peers: peers)
+        }
+        
+        /// The end of a poll cycle whose difference chain ended into pending channel resets
+        /// (`ChannelResetCoordinator.cycleEnded`), after the coordinator dropped its context: `events` (the cycle's,
+        /// with the resets' replay merged in; nil when the replay returned nothing) end the cycle through
+        /// `finishPollCycle`, which finds no context and so queues them, clears isUpdating and fires
+        /// significantStateUpdateCompleted. After an asynchronous replay nothing else starts the queue, which may be
+        /// idle (Q12), so `startFirstOperation` is true; a context with nothing to replay ends inside the
+        /// `finishPollCycle` that handed it the chain's events, whose caller starts the queue.
+        private func channelResetsEnded(events: AccountFinalStateEvents?, startsFirstOperation: Bool) {
+            self.finishPollCycle(events: events ?? AccountFinalStateEvents())
+            if startsFirstOperation {
+                self.startFirstOperation()
             }
         }
         
-        private func checkChannelOperationsCompletion() {
-            guard let channelOperationsContext = self.currentChannelOperationsContext else {
-                return
-            }
-            if !channelOperationsContext.canComplete {
-                return
-            }
-            if !channelOperationsContext.isInternallyComplete {
-                return
-            }
-            
-            let states = channelOperationsContext.channelResults.sorted(by: { $0.key < $1.key }).map(\.value)
-            if !states.isEmpty {
-                var finalMutableState = states[0]
-                if states.count > 1 {
-                    for i in 1 ..< states.count {
-                        finalMutableState.merge(states[i])
-                    }
-                }
-                
-                let accountManager = self.accountManager
-                let postbox = self.postbox
-                let accountPeerId = self.accountPeerId
-                let mediaBox = self.postbox.mediaBox
-                let network = self.network
-                let auxiliaryMethods = self.auxiliaryMethods
-                let events = channelOperationsContext.events
-                let messagesRemovedContext = self.messagesRemovedContext
-                
-                let _ = (self.postbox.transaction { transaction -> AccountReplayedFinalState? in
-                    if let state = transaction.getState() as? AuthorizedAccountState {
-                        transaction.setState(state.withInvalidatedChannels([]))
-                    }
-                    
-                    let result = replayFinalState(
-                        accountManager: accountManager,
-                        postbox: postbox,
-                        accountPeerId: accountPeerId,
-                        mediaBox: mediaBox,
-                        encryptionProvider: network.encryptionProvider,
-                        transaction: transaction,
-                        auxiliaryMethods: auxiliaryMethods,
-                        finalState: AccountFinalState(
-                            state: finalMutableState,
-                            shouldPoll: false,
-                            incomplete: false,
-                            missingUpdatesFromChannels: Set(),
-                            discard: false
-                        ),
-                        removePossiblyDeliveredMessagesUniqueIds: [:],
-                        ignoreDate: false,
-                        skipVerification: true
-                    )
-                    
-                    if let result = result, !result.deletedMessageIds.isEmpty {
-                        messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
-                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
-                    }
-                    
-                    return result
-                }
-                |> deliverOn(self.queue)).start(next: { [weak self] finalState in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.currentChannelOperationsContext = nil
-                    if let finalState = finalState {
-                        var mergedEvents = events
-                        mergedEvents = mergedEvents.union(with: AccountFinalStateEvents(state: finalState))
-                        if !mergedEvents.isEmpty {
-                            strongSelf.insertProcessEvents(mergedEvents)
-                        }
-                    }
-                    strongSelf.currentIsUpdatingValue = false
-                    strongSelf.significantStateUpdateCompletedPipe.putNext(Void())
-                })
-            } else {
-                self.currentChannelOperationsContext = nil
-                let events = channelOperationsContext.events
+        /// Ends a getDifference cycle, however its chain ended, and is the only place isUpdating goes false (spec 3.6).
+        /// A pending channel-reset context takes the events (`ChannelResetCoordinator.endDifferenceChain`); once its
+        /// resets are done (replayed, or none were asked for) the coordinator drops it and the cycle ends here after
+        /// all (`channelResetsEnded`). Without a context the events are queued, isUpdating goes false and
+        /// significantStateUpdateCompleted fires.
+        func finishPollCycle(events: AccountFinalStateEvents) {
+            if !self.channelResetCoordinator.endDifferenceChain(events: events) {
                 if !events.isEmpty {
-                    self.insertProcessEvents(events)
+                    self.insertDispatchEvents(events)
                 }
                 self.currentIsUpdatingValue = false
-                self.significantStateUpdateCompletedPipe.putNext(Void())
+                self.eventHub.notifySignificantStateUpdateCompleted()
             }
         }
         
-        private func startFirstOperation() {
-            guard let operation = self.operations.first else {
+        /// Takes the running poll off the head of the queue once an attempt ended without a differenceTooLong reset,
+        /// so the next differenceTooLong is a first one again (`consecutiveResetCount`). Returns false when the head
+        /// was not a poll (the count is reset all the same); the caller then acts on nothing it popped, as every
+        /// completion does on such a mismatch.
+        func removeFinishedPoll() -> Bool {
+            self.consecutiveResetCount = 0
+            return self.operations.popFetchDifference()
+        }
+        
+        /// Starts the operation at the head of the queue unless it is running already: the one place an operation
+        /// starts. Each kind runs in its own `run<Kind>` (AccountStateManager+<Kind>.swift), and every run ends the
+        /// same way, on the queue: it takes the operation off the head and checks that it is the one that ran (on a
+        /// mismatch it starts nothing, and most kinds assert), does what the outcome asks, and calls this again for the
+        /// next one. The state barrier's first step does so at once; every other run ends in the completion of what it
+        /// waits for. Two runs differ: a barrier with entries behind it steps aside without a check
+        /// (`barrierStepsAside`), and `runReplayPrebuilt` calls `completion()` after a mismatch too.
+        func startFirstOperation() {
+            guard let operation = self.operations.startHead() else {
                 return
             }
-            guard !operation.isRunning else {
-                return
-            }
-            operation.isRunning = true
-            let currentValidityMarker = self.currentValidityMarker
             switch operation.content {
-            case let .pollDifference(_, currentEvents):
-                self.operationTimer?.invalidate()
-                self.currentIsUpdatingValue = true
-                let queue = self.queue
-                let accountManager = self.accountManager
-                let postbox = self.postbox
-                let network = self.network
-                let mediaBox = postbox.mediaBox
-                let accountPeerId = self.accountPeerId
-                let auxiliaryMethods = self.auxiliaryMethods
-                let messagesRemovedContext = self.messagesRemovedContext
-                
-                let signal = postbox.transaction { transaction -> (AuthorizedAccountState?, [(peer: Peer, pts: Int32?)], Bool) in
-                    let state = transaction.getState() as? AuthorizedAccountState
-                    
-                    var disableParallelChannelReset = false
-                    if let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self), let data = appConfig.data {
-                        if let _ = data["ios_disable_parallel_channel_reset_v2"] {
-                            disableParallelChannelReset = true
-                        }
-                    }
-                    
-                    var invalidatedChannels: [(peer: Peer, pts: Int32?)] = []
-                    if let state = state, !disableParallelChannelReset {
-                        for record in state.invalidatedChannels {
-                            if record.validityMarker != currentValidityMarker {
-                                if let peer = transaction.getPeer(record.peerId) {
-                                    invalidatedChannels.append((peer, record.pts))
-                                }
-                            }
-                        }
-                    }
-                    
-                    return (state, invalidatedChannels, disableParallelChannelReset)
-                }
-                |> deliverOn(self.queue)
-                |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
-                    if let state = state, let authorizedState = state.state {
-                        var flags: Int32 = 0
-                        var ptsTotalLimit: Int32?
-                        
-                        if !"".isEmpty {
-                            flags |= 1 << 0
-                            ptsTotalLimit = 1000
-                        }
-                        
-                        flags = 0
-                        ptsTotalLimit = nil
-                        
-                        if let strongSelf = self {
-                            if !invalidatedChannels.isEmpty {
-                                strongSelf.addAsyncResetChannels(peers: invalidatedChannels)
-                            }
-                        }
-                        
-                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts, qtsLimit: nil))
-                        |> map(Optional.init)
-                        |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
-                            if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
-                                return .single(nil)
-                            } else {
-                                return .fail(error)
-                            }
-                        }
-                        |> retryRequest
-                        
-                        return request
-                        |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
-                            guard let difference = difference else {
-                                return .single((nil, nil, true, false))
-                            }
-                            switch difference {
-                            case .differenceTooLong:
-                                return .single((nil, nil, false, true))
-                            default:
-                                return initialStateWithDifference(postbox: postbox, difference: difference)
-                                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
-                                    if state.initialState.state != authorizedState {
-                                        Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                        return .single((nil, nil, false, false))
-                                    } else {
-                                        return finalStateWithDifference(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, difference: difference, asyncResetChannels: disableParallelChannelReset ? nil : { peers in
-                                            queue.async {
-                                                self?.addAsyncResetChannels(peers: peers)
-                                            }
-                                        })
-                                        |> deliverOn(queue)
-                                        |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
-                                            if !finalState.state.preCachedResources.isEmpty {
-                                                for (resource, data) in finalState.state.preCachedResources {
-                                                    mediaBox.storeResourceData(resource.id, data: data)
-                                                }
-                                            }
-                                            let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
-                                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
-                                                let startTime = CFAbsoluteTimeGetCurrent()
-                                                let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
-                                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                                                if deltaTime > 1.0 {
-                                                    Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
-                                                }
-                                                
-                                                if let replayedState = replayedState {
-                                                    if !replayedState.deletedMessageIds.isEmpty {
-                                                        messagesRemovedContext.addIsMessagesDeletedInteractively(ids: replayedState.deletedMessageIds)
-                                                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: replayedState.deletedMessageIds)
-                                                    }
-                                                    
-                                                    return (difference, replayedState, false, false)
-                                                } else {
-                                                    return (nil, nil, false, false)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        let appliedState = network.request(Api.functions.updates.getState())
-                        |> retryRequest
-                        |> mapToSignal { state in
-                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
-                                if let currentState = transaction.getState() as? AuthorizedAccountState {
-                                    switch state {
-                                    case let .state(stateData):
-                                        let (pts, qts, date, seq) = (stateData.pts, stateData.qts, stateData.date, stateData.seq)
-                                        transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
-                                    }
-                                }
-                                return (nil, nil, false, false)
-                            }
-                        }
-                        return appliedState
-                    }
-                }
-                |> deliverOn(self.queue)
-                
-                let _ = signal.start(next: { [weak self] difference, finalState, skipBecauseOfError, resetState in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if resetState {
-                        let _ = (_internal_resetAccountState(postbox: postbox, network: network, accountPeerId: accountPeerId)
-                        |> deliverOn(strongSelf.queue)).start(completed: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            if case .pollDifference = strongSelf.operations.removeFirst().content {
-                                strongSelf.startFirstOperation()
-                            }
-                        })
-                    } else {
-                        if case .pollDifference = strongSelf.operations.removeFirst().content {
-                            let events: AccountFinalStateEvents
-                            if let finalState = finalState {
-                                events = currentEvents.union(with: AccountFinalStateEvents(state: finalState))
-                            } else {
-                                events = currentEvents
-                            }
-                            if let difference = difference {
-                                switch difference {
-                                case .differenceSlice:
-                                    strongSelf.addOperation(.pollDifference(strongSelf.getNextId(), events), position: .first)
-                                default:
-                                    if let currentChannelOperationsContext = strongSelf.currentChannelOperationsContext {
-                                        currentChannelOperationsContext.canComplete = true
-                                        currentChannelOperationsContext.events = currentChannelOperationsContext.events.union(with: events)
-                                        
-                                        strongSelf.checkChannelOperationsCompletion()
-                                    } else {
-                                        if !events.isEmpty {
-                                            strongSelf.insertProcessEvents(events)
-                                        }
-                                        strongSelf.currentIsUpdatingValue = false
-                                        strongSelf.significantStateUpdateCompletedPipe.putNext(Void())
-                                    }
-                                }
-                            } else if skipBecauseOfError {
-                                if !events.isEmpty {
-                                    strongSelf.insertProcessEvents(events)
-                                }
-                            } else {
-                                if !events.isEmpty {
-                                    strongSelf.insertProcessEvents(events)
-                                }
-                                strongSelf.replaceOperations(with: .pollDifference(strongSelf.getNextId(), AccountFinalStateEvents()))
-                            }
-                            strongSelf.startFirstOperation()
-                        }
-                    }
-                })
-            case let .collectUpdateGroups(_, timeout):
-                self.operationTimer?.invalidate()
-                let operationTimer = SignalKitTimer(timeout: timeout, repeat: false, completion: { [weak self] in
-                    if let strongSelf = self {
-                        let firstOperation = strongSelf.operations.removeFirst()
-                        if case let .collectUpdateGroups(groups, _) = firstOperation.content {
-                            if timeout.isEqual(to: 0.0) {
-                                strongSelf.addOperation(.processUpdateGroups(groups), position: .first)
-                            } else {
-                                Logger.shared.log("AccountStateManager", "timeout while waiting for updates")
-                                strongSelf.replaceOperations(with: .pollDifference(strongSelf.getNextId(), AccountFinalStateEvents()))
-                            }
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                }, queue: self.queue)
-                self.operationTimer = operationTimer
-                operationTimer.start()
-            case let .processUpdateGroups(groups):
-                self.operationTimer?.invalidate()
-                let accountManager = self.accountManager
-                let postbox = self.postbox
-                let network = self.network
-                let auxiliaryMethods = self.auxiliaryMethods
-                let accountPeerId = self.accountPeerId
-                let mediaBox = postbox.mediaBox
-                let queue = self.queue
-                let messagesRemovedContext = self.messagesRemovedContext
-                
-                let signal = initialStateWithUpdateGroups(postbox: postbox, groups: groups)
-                |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
-                    return finalStateWithUpdateGroups(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, groups: groups, asyncResetChannels: nil)
-                    |> deliverOn(queue)
-                    |> mapToSignal { finalState in
-                        if !finalState.discard && !finalState.state.preCachedResources.isEmpty {
-                            for (resource, data) in finalState.state.preCachedResources {
-                                postbox.mediaBox.storeResourceData(resource.id, data: data)
-                            }
-                        }
-                        
-                        let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
-                        
-                        return postbox.transaction { transaction -> AccountReplayedFinalState? in
-                            if finalState.discard {
-                                return nil
-                            } else {
-                                let startTime = CFAbsoluteTimeGetCurrent()
-                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
-                                
-                                if let result = result, !result.deletedMessageIds.isEmpty {
-                                    messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
-                                    messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
-                                }
-                                
-                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                                if deltaTime > 1.0 {
-                                    Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
-                                }
-                                return result
-                            }
-                        }
-                        |> map({ ($0, finalState) })
-                        |> deliverOn(queue)
-                    }
-                }
-                let _ = signal.start(next: { [weak self] replayedState, finalState in
-                    if let strongSelf = self {
-                        if case let .processUpdateGroups(groups) = strongSelf.operations.removeFirst().content {
-                            if let replayedState = replayedState, !finalState.shouldPoll {
-                                let events = AccountFinalStateEvents(state: replayedState)
-                                if !events.isEmpty {
-                                    strongSelf.insertProcessEvents(events)
-                                }
-                                if finalState.incomplete || !finalState.missingUpdatesFromChannels.isEmpty {
-                                    strongSelf.addOperation(.collectUpdateGroups(groups, 2.0), position: .last)
-                                }
-                            } else {
-                                if let replayedState = replayedState {
-                                    let events = AccountFinalStateEvents(state: replayedState)
-                                    if !events.displayAlerts.isEmpty {
-                                        strongSelf.insertProcessEvents(AccountFinalStateEvents(displayAlerts: events.displayAlerts))
-                                    }
-                                }
-                                strongSelf.replaceOperations(with: .pollDifference(strongSelf.getNextId(), AccountFinalStateEvents()))
-                            }
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                })
+            case let .fetchDifference(_, currentEvents):
+                self.runFetchDifference(currentEvents: currentEvents)
+            case .batchUpdates:
+                self.runBatchUpdates()
+            case .gapWait:
+                self.runGapWait()
+            case let .processBatch(groups):
+                self.runProcessBatch(groups: groups)
             case let .custom(operationId, signal):
-                self.operationTimer?.invalidate()
-                let completed: () -> Void = { [weak self] in
-                    if let strongSelf = self {
-                        let topOperation = strongSelf.operations.removeFirst()
-                        if case .custom(operationId, _) = topOperation.content {
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                }
-                let _ = (signal |> deliverOn(self.queue)).start(completed: {
-                    completed()
-                })
-            case let .processEvents(operationId, events):
-                self.operationTimer?.invalidate()
-                let completed: () -> Void = { [weak self] in
-                    if let strongSelf = self {
-                        let topOperation = strongSelf.operations.removeFirst()
-                        if case .processEvents(operationId, _) = topOperation.content {
-                            if !events.updatedTypingActivities.isEmpty {
-                                strongSelf.peerInputActivityManager?.transaction { manager in
-                                    for (chatPeerId, peerActivities) in events.updatedTypingActivities {
-                                        for (peerId, activity) in peerActivities {
-                                            if let activity = activity {
-                                                manager.addActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity)
-                                            } else {
-                                                manager.removeAllActivities(chatPeerId: chatPeerId, peerId: peerId)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if !events.updatedWebpages.isEmpty {
-                                strongSelf.notifyUpdatedWebpages(events.updatedWebpages)
-                            }
-                            if !events.updatedStarsBalance.isEmpty {
-                                strongSelf.notifyUpdatedStarsBalance(events.updatedStarsBalance)
-                            }
-                            if !events.updatedTonBalance.isEmpty {
-                                strongSelf.notifyUpdatedTonBalance(events.updatedTonBalance)
-                            }
-                            if !events.walletTransferUpdates.isEmpty {
-                                strongSelf.walletTransferUpdatesPipe.putNext(events.walletTransferUpdates)
-                            }
-                            if !events.walletTonConnectEvents.isEmpty {
-                                strongSelf.walletTonConnectUpdatesPipe.putNext(events.walletTonConnectEvents)
-                            }
-                            if let updatedWalletState = events.updatedWalletState {
-                                strongSelf.walletStateUpdatesPipe.putNext(updatedWalletState)
-                            }
-                            if !events.updatedStarsRevenueStatus.isEmpty {
-                                strongSelf.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)
-                            }
-                            if !events.updatedStarGiftAuctionState.isEmpty {
-                                strongSelf.notifyUpdatedStarGiftAuctionState(events.updatedStarGiftAuctionState)
-                            }
-                            if !events.updatedStarGiftAuctionMyState.isEmpty {
-                                strongSelf.notifyUpdatedStarGiftAuctionMyState(events.updatedStarGiftAuctionMyState)
-                            }
-                            if let updatedEmojiGameInfo = events.updatedEmojiGameInfo {
-                                strongSelf.updateEmojiGameInfoDisposable.set(strongSelf.postbox.transaction({ transaction in
-                                    updateEmojiGameInfo(transaction: transaction, { _ in return updatedEmojiGameInfo })
-                                }).start())
-                            }
-                            if !events.updatedCalls.isEmpty {
-                                for call in events.updatedCalls {
-                                    strongSelf.callSessionManager?.updateSession(call, completion: { _ in })
-                                }
-                            }
-                            if !events.addedCallSignalingData.isEmpty {
-                                for (id, data) in events.addedCallSignalingData {
-                                    strongSelf.callSessionManager?.addCallSignalingData(id: id, data: data)
-                                }
-                            }
-                            if !events.updatedGroupCallParticipants.isEmpty {
-                                strongSelf.groupCallParticipantUpdatesPipe.putNext(events.updatedGroupCallParticipants)
-                            }
-                            if !events.groupCallMessageUpdates.isEmpty {
-                                strongSelf.groupCallMessageUpdatesPipe.putNext(events.groupCallMessageUpdates)
-                            }
-                            if !events.storyUpdates.isEmpty {
-                                strongSelf.storyUpdatesPipe.putNext(events.storyUpdates)
-                            }
-                            if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
-                                strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))
-                            }
-                            if !events.sentScheduledMessageIds.isEmpty {
-                                strongSelf.sentScheduledMessageIdsPipe.putNext(events.sentScheduledMessageIds)
-                            }
-                            if !events.reportMessageDelivery.isEmpty {
-                                strongSelf.reportMessageDeliveryDisposable.add(_internal_reportMessageDelivery(postbox: strongSelf.postbox, network: strongSelf.network, messageIds: Array(events.reportMessageDelivery), fromPushNotification: false).start())
-                            }
-                            if !events.addedConferenceInvitationMessagesIds.isEmpty {
-                                strongSelf.callSessionManager?.addConferenceInvitationMessages(ids: events.addedConferenceInvitationMessagesIds.map { ($0, nil) })
-                            }
-                            if !events.isContactUpdates.isEmpty {
-                                strongSelf.addIsContactUpdates(events.isContactUpdates)
-                            }
-                            if let updatedMaxMessageId = events.updatedMaxMessageId {
-                                strongSelf.appliedMaxMessageIdPromise.set(.single(updatedMaxMessageId))
-                            }
-                            if let updatedQts = events.updatedQts {
-                                strongSelf.appliedQtsPromise.set(.single(updatedQts))
-                            }
-                            var pollCount = 0
-                            for i in 0 ..< strongSelf.operations.count {
-                                if case let .pollCompletion(pollId, messageIds, subscribers) = strongSelf.operations[i].content {
-                                    pollCount += 1
-                                    var updatedMessageIds = messageIds
-                                    updatedMessageIds.append(contentsOf: events.addedIncomingMessageIds)
-                                    let operation = AccountStateManagerOperation(content: .pollCompletion(pollId, updatedMessageIds, subscribers))
-                                    operation.isRunning = strongSelf.operations[i].isRunning
-                                    strongSelf.operations[i] = operation
-                                }
-                            }
-                            assert(pollCount <= 1)
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                }
-                
-                if events.delayNotificatonsUntil != nil {
-                    let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
-                }
-                
-                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] in
-                    var messageList: [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] = []
-                    
-                    for id in events.addedIncomingMessageIds {
-                        let (messages, notify, _, _, threadData) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
-                        if !messages.isEmpty {
-                            messageList.append((messages, .root, notify, threadData))
-                        }
-                    }
-                    var wasScheduledMessages: [Message] = []
-                    for id in events.wasScheduledMessageIds {
-                        if let message = transaction.getMessage(id) {
-                            wasScheduledMessages.append(message)
-                        }
-                    }
-                    if !wasScheduledMessages.isEmpty {
-                        var threadData: MessageHistoryThreadData?
-                        let first = wasScheduledMessages[0]
-                        for attr in first.attributes {
-                            if let attribute = attr as? ReplyMessageAttribute {
-                                if let threadId = attribute.threadMessageId {
-                                    threadData = transaction.getMessageHistoryThreadInfo(peerId: first.id.peerId, threadId: Int64(threadId.id))?.data.get(MessageHistoryThreadData.self)
-                                }
-                            }
-                        }
-                        messageList.append((wasScheduledMessages, .root, true, threadData))
-                    }
-                    return messageList
-                }
-                
-                let _ = (signal
-                |> deliverOn(self.queue)).start(next: { [weak self] messages in
-                    if let strongSelf = self {
-                        strongSelf.notificationMessagesPipe.putNext(messages)
-                    }
-                }, completed: {
-                    completed()
-                })
-                
-                let timestamp = Int32(Date().timeIntervalSince1970)
-                let minReactionTimestamp = timestamp - 20
-                let reactionEvents = events.addedReactionEvents.compactMap { event -> (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)? in
-                    if event.timestamp >= minReactionTimestamp {
-                        return (event.reactionAuthor, event.reaction, event.message, event.timestamp)
-                    } else {
-                        return nil
-                    }
-                }
-                self.reactionNotificationsPipe.putNext(reactionEvents)
-                
-                if !events.displayAlerts.isEmpty {
-                    self.displayAlertsPipe.putNext(events.displayAlerts)
-                }
-                
-                if !events.dismissBotWebViews.isEmpty {
-                    self.dismissBotWebViewsPipe.putNext(events.dismissBotWebViews)
-                }
-                
-                if !events.joinChatWebViewDecisions.isEmpty {
-                    self.joinChatWebViewDecisionsPipe.putNext(events.joinChatWebViewDecisions)
-                }
-
-                if !events.externallyUpdatedPeerId.isEmpty {
-                    self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
-                }
-                
-                if events.authorizationListUpdated {
-                    self.authorizationListUpdatesPipe.putNext(Void())
-                }
-                
-                if !events.deletedMessageIds.isEmpty {
-                    self.deletedMessagesPipe.putNext(events.deletedMessageIds)
-                }
-                
-                if events.updateConfig {
-                    self.updateConfigRequested?()
-                }
-                
-                if events.isPremiumUpdated {
-                    self.isPremiumUpdated?()
-                }
-            case let .pollCompletion(pollId, preMessageIds, preSubscribers):
-                if self.operations.count > 1 {
-                    self.operations.removeFirst()
-                    self.postponePollCompletionOperation(messageIds: preMessageIds, subscribers: preSubscribers)
-                    self.startFirstOperation()
-                } else {
-                    self.operationTimer?.invalidate()
-                    let signal = self.network.request(Api.functions.help.test())
-                    |> deliverOn(self.queue)
-                    let completed: () -> Void = { [weak self] in
-                        if let strongSelf = self {
-                            let topOperation = strongSelf.operations.removeFirst()
-                            if case let .pollCompletion(topPollId, messageIds, subscribers) = topOperation.content {
-                                assert(topPollId == pollId)
-                                
-                                if strongSelf.operations.isEmpty {
-                                    for (_, f) in subscribers {
-                                        f(messageIds)
-                                    }
-                                } else {
-                                    strongSelf.postponePollCompletionOperation(messageIds: messageIds, subscribers: subscribers)
-                                }
-                                strongSelf.startFirstOperation()
-                            } else {
-                                assertionFailure()
-                            }
-                        }
-                    }
-                    let _ = (signal |> deliverOn(self.queue)).start(error: { _ in
-                        completed()
-                    }, completed: {
-                        completed()
-                    })
-                }
-            case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
-                if !finalState.state.preCachedResources.isEmpty {
-                    for (resource, data) in finalState.state.preCachedResources {
-                        self.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    }
-                }
-                
-                let accountPeerId = self.accountPeerId
-                let accountManager = self.accountManager
-                let postbox = self.postbox
-                let mediaBox = self.postbox.mediaBox
-                let network = self.network
-                let auxiliaryMethods = self.auxiliaryMethods
-                let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
-                let messagesRemovedContext = self.messagesRemovedContext
-                let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
-                    let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                    if deltaTime > 1.0 {
-                        Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
-                    }
-                    
-                    if let result = result, !result.deletedMessageIds.isEmpty {
-                        messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
-                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
-                    }
-                    
-                    return result
-                }
-                |> map({ ($0, finalState) })
-                |> deliverOn(self.queue)
-                
-                let _ = signal.start(next: { [weak self] replayedState, finalState in
-                    if let strongSelf = self {
-                        if case .replayAsynchronouslyBuiltFinalState = strongSelf.operations.removeFirst().content {
-                            if let replayedState = replayedState {
-                                let events = AccountFinalStateEvents(state: replayedState)
-                                if !events.isEmpty {
-                                    strongSelf.insertProcessEvents(events)
-                                }
-                            }
-                            strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
-                        }
-                        completion()
-                    }
-                })
+                self.runCustom(operationId: operationId, signal: signal)
+            case let .dispatchEvents(operationId, events):
+                self.runDispatchEvents(operationId: operationId, events: events)
+            case let .stateBarrier(pollId, preMessageIds, preSubscribers):
+                self.runStateBarrier(pollId: pollId, preMessageIds: preMessageIds, preSubscribers: preSubscribers)
+            case let .replayPrebuilt(finalState, completion):
+                self.runReplayPrebuilt(finalState: finalState, completion: completion)
             }
         }
         
@@ -1404,185 +611,200 @@ public final class AccountStateManager {
                 }
             }
             
-            let accountPeerId = self.accountPeerId
-            let accountManager = self.accountManager
-            let postbox = self.postbox
-            let mediaBox = self.postbox.mediaBox
-            let network = self.network
-            let auxiliaryMethods = self.auxiliaryMethods
+            let replayer = self.replayer
             let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
-            let messagesRemovedContext = self.messagesRemovedContext
             
             let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
-                let startTime = CFAbsoluteTimeGetCurrent()
-                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
-                
-                if let result = result, !result.deletedMessageIds.isEmpty {
-                    messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
-                    messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
-                }
-                
-                let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                if deltaTime > 1.0 {
-                    Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
-                }
-                return result
+                return replayer.applyReplay(finalState, policy: .verified, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, transaction: transaction)
             }
-            |> map({ ($0, finalState) })
             |> deliverOn(self.queue)
             
             return signal
             |> ignoreValues
         }
         
-        public func standalonePollDifference() -> Signal<Bool, NoError> {
+        /// One getDifference attempt for either poller (spec 3.3; `DifferencePolicy` lists what differs): reads the
+        /// stored state, requests the difference from it and replays the answer (`applyDifferenceAnswer`), to one
+        /// `DifferenceOutcome`. The stored state and the request are built per policy because their Signal shapes
+        /// differ: the app reads its state in one transaction and hops to `queue`, and its `pts_total_limit` is fixed
+        /// for the attempt; the extension reads `stateView` once without a hop, and reads the limit again before every
+        /// try of the request. The caller delivers the outcome and makes its own hop to `queue` for it (Q13). Called
+        /// on `queue`; nothing runs until the returned signal is started.
+        func fetchAndApplyDifference(policy: DifferencePolicy) -> Signal<DifferenceOutcome, NoError> {
             let queue = self.queue
-            let accountManager = self.accountManager
             let postbox = self.postbox
             let network = self.network
-            let mediaBox = postbox.mediaBox
             let accountPeerId = self.accountPeerId
-            let auxiliaryMethods = self.auxiliaryMethods
-            let messagesRemovedContext = self.messagesRemovedContext
-            
-            let signal = postbox.stateView()
-            |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
-                if let state = view.state as? AuthorizedAccountState {
-                    return .single(state)
-                } else {
-                    return .complete()
-                }
-            }
-            |> take(1)
-            |> mapToSignal { [weak self] state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
-                if let authorizedState = state.state {
-                    let flags: Int32 = 0
-                    let ptsTotalLimit: Int32? = nil
-                    
-                    let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts, qtsLimit: nil))
-                    |> map(Optional.init)
-                    |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
-                        if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
-                            return .single(nil)
-                        } else {
-                            return .fail(error)
+            let replayer = self.replayer
+
+            switch policy {
+            case .mainApp:
+                let currentValidityMarker = self.currentValidityMarker
+
+                // The pts_total_limit this poll sends (audit Q14). The state transaction below reads it beside the
+                // other app-configuration switches, and the getDifference request it starts sends it.
+                let ptsTotalLimitBox = Atomic<Int32?>(value: nil)
+
+                return postbox.transaction { transaction -> (AuthorizedAccountState?, [(peer: Peer, pts: Int32?)], Bool) in
+                    let state = transaction.getState() as? AuthorizedAccountState
+
+                    var disableParallelChannelReset = false
+                    if let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self), let data = appConfig.data {
+                        if let _ = data["ios_disable_parallel_channel_reset_v2"] {
+                            disableParallelChannelReset = true
                         }
                     }
-                    |> retryRequest
-                    
-                    return request
-                    |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
-                        guard let difference = difference else {
-                            return .single((nil, nil, true))
-                        }
-                        switch difference {
-                        case .differenceTooLong:
-                            preconditionFailure()
-                        default:
-                            return initialStateWithDifference(postbox: postbox, difference: difference)
-                            |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
-                                if state.initialState.state != authorizedState {
-                                    Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                    return .single((nil, nil, false))
-                                } else {
-                                    return finalStateWithDifference(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, difference: difference, asyncResetChannels: nil)
-                                    |> deliverOn(queue)
-                                    |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
-                                        if !finalState.state.preCachedResources.isEmpty {
-                                            for (resource, data) in finalState.state.preCachedResources {
-                                                mediaBox.storeResourceData(resource.id, data: data)
-                                            }
-                                        }
-                                        let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
-                                        return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
-                                            let startTime = CFAbsoluteTimeGetCurrent()
-                                            let replayedState = replayFinalState(
-                                                accountManager: accountManager,
-                                                postbox: postbox,
-                                                accountPeerId: accountPeerId,
-                                                mediaBox: mediaBox,
-                                                encryptionProvider: network.encryptionProvider,
-                                                transaction: transaction,
-                                                auxiliaryMethods: auxiliaryMethods,
-                                                finalState: finalState,
-                                                removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds,
-                                                ignoreDate: true,
-                                                skipVerification: false
-                                            )
-                                            
-                                            if let replayedState = replayedState, !replayedState.deletedMessageIds.isEmpty {
-                                                messagesRemovedContext.addIsMessagesDeletedInteractively(ids: replayedState.deletedMessageIds)
-                                                messagesRemovedContext.addIsMessagesDeletedRemotely(ids: replayedState.deletedMessageIds)
-                                            }
-                                            
-                                            let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                                            if deltaTime > 1.0 {
-                                                Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
-                                            }
-                                            
-                                            if let replayedState = replayedState {
-                                                return (difference, replayedState, false)
-                                            } else {
-                                                return (nil, nil, false)
-                                            }
-                                        }
-                                    }
+
+                    let _ = ptsTotalLimitBox.swap(currentPtsTotalLimit(transaction: transaction))
+
+                    var invalidatedChannels: [(peer: Peer, pts: Int32?)] = []
+                    if let state = state, !disableParallelChannelReset {
+                        for record in state.invalidatedChannels {
+                            if record.validityMarker != currentValidityMarker {
+                                if let peer = transaction.getPeer(record.peerId) {
+                                    invalidatedChannels.append((peer, record.pts))
                                 }
                             }
                         }
                     }
-                } else {
-                    return .single((nil, nil, false))
+
+                    return (state, invalidatedChannels, disableParallelChannelReset)
+                }
+                |> deliverOn(self.queue)
+                |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<DifferenceOutcome, NoError> in
+                    if let state = state, let authorizedState = state.state {
+                        // pts_total_limit (audit Q14) goes with every getDifference, slices included: a gap larger than the
+                        // limit answers differenceTooLong on the first call (`requestDifference` sends it with flags.0).
+                        let ptsTotalLimit: Int32? = ptsTotalLimitBox.with { $0 }
+
+                        if let strongSelf = self {
+                            if strongSelf.differenceChainLog == nil {
+                                strongSelf.differenceChainLog = DifferenceChainLog(startPts: authorizedState.pts, startTime: CFAbsoluteTimeGetCurrent())
+                            }
+                            strongSelf.differenceChainLog?.noteRequest(pts: authorizedState.pts)
+                            if !invalidatedChannels.isEmpty {
+                                strongSelf.addAsyncResetChannels(peers: invalidatedChannels)
+                            }
+                        }
+                        // The wall time of this request, for the State log.
+                        let requestStartTime = CFAbsoluteTimeGetCurrent()
+
+                        let request = retryingDifferenceRequest(requestDifference(network: network, from: authorizedState, ptsTotalLimit: ptsTotalLimit, policy: policy))
+
+                        return request
+                        |> mapToSignal { answer -> Signal<DifferenceOutcome, NoError> in
+                            if let difference = answer {
+                                logDifferenceAnswer(difference, requestPts: authorizedState.pts, requestStartTime: requestStartTime)
+                            }
+                            return applyDifferenceAnswer(answer, requestedFrom: authorizedState, policy: policy, accountPeerId: accountPeerId, postbox: postbox, network: network, queue: queue, replayer: replayer, asyncResetChannels: disableParallelChannelReset ? nil : { peers in
+                                queue.async {
+                                    self?.addAsyncResetChannels(peers: peers)
+                                }
+                            }, possiblyDeliveredMessagesUniqueIds: {
+                                return self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
+                            })
+                        }
+                    } else {
+                        let appliedState = network.request(Api.functions.updates.getState())
+                        |> retryRequest
+                        |> mapToSignal { state in
+                            return postbox.transaction { transaction -> DifferenceOutcome in
+                                if let currentState = transaction.getState() as? AuthorizedAccountState {
+                                    switch state {
+                                    case let .state(stateData):
+                                        let (pts, qts, date, seq) = (stateData.pts, stateData.qts, stateData.date, stateData.seq)
+                                        transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
+                                    }
+                                }
+                                return .noInnerState
+                            }
+                        }
+                        return appliedState
+                    }
+                }
+            case .notificationExtension:
+                return postbox.stateView()
+                |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
+                    if let state = view.state as? AuthorizedAccountState {
+                        return .single(state)
+                    } else {
+                        return .complete()
+                    }
+                }
+                |> take(1)
+                |> mapToSignal { [weak self] state -> Signal<DifferenceOutcome, NoError> in
+                    if let authorizedState = state.state {
+                        // pts_total_limit (audit Q14): the value the app sends, read before each request. A gap larger than the
+                        // limit answers differenceTooLong, which the extension leaves to the app (Q3).
+                        let request = retryingDifferenceRequest(postbox.transaction { transaction -> Int32? in
+                            return currentPtsTotalLimit(transaction: transaction)
+                        }
+                        |> castError(MTRpcError.self)
+                        |> mapToSignal { ptsTotalLimit -> Signal<Api.updates.Difference, MTRpcError> in
+                            return requestDifference(network: network, from: authorizedState, ptsTotalLimit: ptsTotalLimit, policy: policy)
+                        })
+
+                        return request
+                        |> mapToSignal { answer -> Signal<DifferenceOutcome, NoError> in
+                            if let difference = answer, case .differenceTooLong = difference {
+                                // Q3: the extension leaves the account reset to the app, whose next poll gets
+                                // this answer again because nothing here changes the stored state. Reported as
+                                // done, so the extension goes on with the push's own content instead of asking
+                                // again until its time budget runs out.
+                                Logger.shared.log("State", "standalonePollDifference: differenceTooLong, leaving the reset to the app")
+                            }
+                            return applyDifferenceAnswer(answer, requestedFrom: authorizedState, policy: policy, accountPeerId: accountPeerId, postbox: postbox, network: network, queue: queue, replayer: replayer, asyncResetChannels: nil, possiblyDeliveredMessagesUniqueIds: {
+                                return self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
+                            })
+                        }
+                    } else {
+                        // No inner state: the extension does not bootstrap it (the app's poll does) and reports done.
+                        return .single(.noInnerState)
+                    }
                 }
             }
-            |> deliverOn(self.queue)
-            
-            return signal
-            |> mapToSignal { difference, _, _ -> Signal<Bool, NoError> in
-                if let difference = difference {
-                    switch difference {
-                    case .differenceSlice:
-                        return .single(false)
-                    default:
-                        return .single(true)
+        }
+
+        public func standalonePollDifference() -> Signal<Bool, NoError> {
+            let queue = self.queue
+
+            return self.fetchAndApplyDifference(policy: .notificationExtension)
+            |> mapToSignal { outcome -> Signal<Bool, NoError> in
+                // Done, except after an applied slice: the extension then asks again for the rest of the chain. A
+                // differenceTooLong is done here too (Q3).
+                let result: Bool
+                switch outcome {
+                case .applied(_, isSlice: true):
+                    result = false
+                case .applied(_, isSlice: false), .tooLong, .authKeyDuplicated, .stateChangedMeanwhile, .replayRejected, .noInnerState:
+                    result = true
+                }
+                // Q13: the hop to `queue` is made here, inside the last inner signal, with the value and
+                // the completion in one block. A `deliverOn(queue)` in front of this mapToSignal could
+                // lose the value: after a replay, the chain can complete inline on `queue` (through the
+                // `deliverOn(queue)` after `finalStateWithDifference`) while the result, dispatched there
+                // from the Postbox thread, is still waiting, and the completed subscriber drops it; the
+                // extension then stops paging a differenceSlice early. Here the outer completion cannot
+                // end the signal first, because mapToSignal waits for this inner signal to complete.
+                return Signal { subscriber in
+                    queue.async {
+                        subscriber.putNext(result)
+                        subscriber.putCompletion()
                     }
-                } else {
-                    return .single(true)
+                    return EmptyDisposable
                 }
             }
         }
         
-        private func insertProcessEvents(_ events: AccountFinalStateEvents) {
+        func insertDispatchEvents(_ events: AccountFinalStateEvents) {
             if !events.isEmpty {
-                let operation = AccountStateManagerOperation(content: .processEvents(self.getNextId(), events))
-                var inserted = false
-                for i in 0 ..< self.operations.count {
-                    if self.operations[i].isRunning {
-                        continue
-                    }
-                    if case .processEvents = self.operations[i].content {
-                        continue
-                    }
-                    self.operations.insert(operation, at: i)
-                    inserted = true
-                    break
-                }
-                if !inserted {
-                    self.operations.append(operation)
-                }
+                self.operations.insertEvents(id: self.getNextId(), events: events)
             }
         }
         
-        private func postponePollCompletionOperation(messageIds: [MessageId], subscribers: [(Int32, ([MessageId]) -> Void)]) {
-            self.addOperation(.pollCompletion(self.getNextId(), messageIds, subscribers), position: .last)
-            
-            for i in 0 ..< self.operations.count {
-                if case .pollCompletion = self.operations[i].content {
-                    if i != self.operations.count - 1 {
-                        assertionFailure()
-                    }
-                }
-            }
+        func postponeStateBarrier(messageIds: [MessageId], subscribers: [(Int32, ([MessageId]) -> Void)]) {
+            self.addOperation(.stateBarrier(self.getNextId(), messageIds, subscribers), position: .last)
+            self.operations.assertBarrierIsLast()
         }
         
         private func addPollCompletion(_ f: @escaping ([MessageId]) -> Void) -> Int32 {
@@ -1590,37 +812,17 @@ public final class AccountStateManager {
             
             let updatedId: Int32 = self.getNextId()
             
-            for i in 0 ..< self.operations.count {
-                if case let .pollCompletion(pollId, messageIds, subscribers) = self.operations[i].content {
-                    var subscribers = subscribers
-                    subscribers.append((updatedId, f))
-                    let operation = AccountStateManagerOperation(content: .pollCompletion(pollId, messageIds, subscribers))
-                    operation.isRunning = self.operations[i].isRunning
-                    self.operations[i] = operation
-                    return updatedId
-                }
+            if self.operations.addBarrierSubscriber(id: updatedId, f) {
+                return updatedId
             }
             
-            self.addOperation(.pollCompletion(self.getNextId(), [], [(updatedId, f)]), position: .last)
+            self.addOperation(.stateBarrier(self.getNextId(), [], [(updatedId, f)]), position: .last)
             
             return updatedId
         }
         
         private func removePollCompletion(_ id: Int32) {
-            for i in 0 ..< self.operations.count {
-                if case let .pollCompletion(pollId, messages, subscribers) = self.operations[i].content {
-                    for j in 0 ..< subscribers.count {
-                        if subscribers[j].0 == id {
-                            var subscribers = subscribers
-                            subscribers.remove(at: j)
-                            let operation = AccountStateManagerOperation(content: .pollCompletion(pollId, messages, subscribers))
-                            operation.isRunning = self.operations[i].isRunning
-                            self.operations[i] = operation
-                            break
-                        }
-                    }
-                }
-            }
+            self.operations.removeBarrierSubscriber(id: id)
         }
         
         public func pollStateUpdateCompletion() -> Signal<[MessageId], NoError> {
@@ -1647,228 +849,51 @@ public final class AccountStateManager {
         }
         
         public func updatedWebpage(_ webpageId: MediaId) -> Signal<TelegramMediaWebpage?, NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let context: UpdatedWebpageSubscriberContext
-                        if let current = strongSelf.updatedWebpageContexts[webpageId] {
-                            context = current
-                        } else {
-                            context = UpdatedWebpageSubscriberContext()
-                            strongSelf.updatedWebpageContexts[webpageId] = context
-                        }
-                        
-                        let index = context.subscribers.add({ media in
-                            subscriber.putNext(media)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                if let context = strongSelf.updatedWebpageContexts[webpageId] {
-                                    context.subscribers.remove(index)
-                                    if context.subscribers.isEmpty {
-                                        strongSelf.updatedWebpageContexts.removeValue(forKey: webpageId)
-                                    }
-                                }
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-        
-        private func notifyUpdatedWebpages(_ updatedWebpages: [MediaId: TelegramMediaWebpage?]) {
-            for (id, context) in self.updatedWebpageContexts {
-                // Unwraps the lookup only: a key holding nil is a removal and is delivered.
-                if let media = updatedWebpages[id] {
-                    for subscriber in context.subscribers.copyItems() {
-                        subscriber(media)
-                    }
-                }
-            }
+            return self.eventHub.updatedWebpage(webpageId)
         }
         
         func notifyAppliedIncomingReadMessages(_ ids: [MessageId]) {
-            self.appliedIncomingReadMessagesPipe.putNext(ids)
-        }
-        
-        public func getDelayNotificatonsUntil() -> Int32? {
-            return self.delayNotificatonsUntil.with { $0 }
+            self.eventHub.notifyAppliedIncomingReadMessages(ids)
         }
         
         func modifyTermsOfServiceUpdate(_ f: @escaping (TermsOfServiceUpdate?) -> (TermsOfServiceUpdate?)) {
-            self.queue.async {
-                let current = self.termsOfServiceUpdateValue.with { $0 }
-                let updated = f(current)
-                if (current != updated) {
-                    let _ = self.termsOfServiceUpdateValue.swap(updated)
-                    self.termsOfServiceUpdatePromise.set(.single(updated))
-                }
-            }
+            self.eventHub.modifyTermsOfServiceUpdate(f)
         }
         
         func modifyAppUpdateInfo(_ f: @escaping (AppUpdateInfo?) -> (AppUpdateInfo?)) {
-            self.queue.async {
-                let current = self.appUpdateInfoValue.with { $0 }
-                let updated = f(current)
-                if (current != updated) {
-                    let _ = self.appUpdateInfoValue.swap(updated)
-                    self.appUpdateInfoPromise.set(.single(updated))
-                }
-            }
+            self.eventHub.modifyAppUpdateInfo(f)
         }
         
         func modifyContactBirthdays(_ f: @escaping ([EnginePeer.Id: TelegramBirthday]) -> ([EnginePeer.Id: TelegramBirthday])) {
-            self.queue.async {
-                let current = self.contactBirthdaysValue.with { $0 }
-                let updated = f(current)
-                if (current != updated) {
-                    let _ = self.contactBirthdaysValue.swap(updated)
-                    self.contactBirthdaysPromise.set(.single(updated))
-                }
-            }
+            self.eventHub.modifyContactBirthdays(f)
         }
                 
         public func updatedStarsBalance() -> Signal<[PeerId: StarsAmount], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedStarsBalanceContext.subscribers.add({ starsBalance in
-                            subscriber.putNext(starsBalance)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedStarsBalanceContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-                
-        private func notifyUpdatedStarsBalance(_ updatedStarsBalance: [PeerId: StarsAmount]) {
-            for subscriber in self.updatedStarsBalanceContext.subscribers.copyItems() {
-                subscriber(updatedStarsBalance)
-            }
+            return self.eventHub.updatedStarsBalance()
         }
                 
         public func updatedTonBalance() -> Signal<[PeerId: StarsAmount], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedTonBalanceContext.subscribers.add({ starsBalance in
-                            subscriber.putNext(starsBalance)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedTonBalanceContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-        
-        private func notifyUpdatedTonBalance(_ updatedTonBalance: [PeerId: StarsAmount]) {
-            for subscriber in self.updatedTonBalanceContext.subscribers.copyItems() {
-                subscriber(updatedTonBalance)
-            }
+            return self.eventHub.updatedTonBalance()
         }
         
         public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedStarsRevenueStatusContext.subscribers.add({ revenueBalances in
-                            subscriber.putNext(revenueBalances)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedStarsRevenueStatusContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-        
-        private func notifyUpdatedStarsRevenueStatus(_ updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances]) {
-            for subscriber in self.updatedStarsRevenueStatusContext.subscribers.copyItems() {
-                subscriber(updatedStarsRevenueStatus)
-            }
+            return self.eventHub.updatedStarsRevenueStatus()
         }
         
         public func updatedStarGiftAuctionState() -> Signal<[Int64: GiftAuctionContext.State.AuctionState], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedStarGiftAuctionStateContext.subscribers.add({ starsBalance in
-                            subscriber.putNext(starsBalance)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedStarGiftAuctionStateContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-                
-        private func notifyUpdatedStarGiftAuctionState(_ updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState]) {
-            for subscriber in self.updatedStarGiftAuctionStateContext.subscribers.copyItems() {
-                subscriber(updatedStarGiftAuctionState)
-            }
+            return self.eventHub.updatedStarGiftAuctionState()
         }
         
         public func updatedStarGiftAuctionMyState() -> Signal<[Int64: GiftAuctionContext.State.MyState], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedStarGiftAuctionMyStateContext.subscribers.add({ starsBalance in
-                            subscriber.putNext(starsBalance)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedStarGiftAuctionMyStateContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-                
-        private func notifyUpdatedStarGiftAuctionMyState(_ updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState]) {
-            for subscriber in self.updatedStarGiftAuctionMyStateContext.subscribers.copyItems() {
-                subscriber(updatedStarGiftAuctionMyState)
-            }
+            return self.eventHub.updatedStarGiftAuctionMyState()
         }
                 
         func notifyDeletedMessages(messageIds: [MessageId]) {
-            self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
+            self.eventHub.notifyDeletedMessages(messageIds: messageIds)
+        }
+
+        func notifyConfirmedDeletions(_ ids: [DeletedMessageId]) {
+            self.eventHub.notifyConfirmedDeletions(ids)
         }
         
         public func processIncomingCallUpdate(data: Data, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
@@ -1916,7 +941,7 @@ public final class AccountStateManager {
         }
         
         func addStarRefBotConnectionEvent(event: StarRefBotConnectionEvent) {
-            self.starRefBotConnectionEventsPipe.putNext(event)
+            self.eventHub.addStarRefBotConnectionEvent(event: event)
         }
     }
     
@@ -1926,7 +951,6 @@ public final class AccountStateManager {
     public let postbox: Postbox
     public let network: Network
     let auxiliaryMethods: AccountAuxiliaryMethods
-    //var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     public var isUpdating: Signal<Bool, NoError> {
         return self.impl.signalWith { impl, subscriber in
@@ -2113,6 +1137,13 @@ public final class AccountStateManager {
     var isPremiumUpdated: (() -> Void)?
     
     let messagesRemovedContext = MessagesRemovedContext()
+    let storyReactionContext = StoryReactionContext()
+    let storyRefreshContext = StoryRefreshContext()
+    let storyViewRefreshContext = StoryViewRefreshContext()
+
+    /// This manager's registration with `StoredMessageConfirmationDeletionReporters` (owner decision D1),
+    /// disposed in `deinit`.
+    private var storedMessageConfirmationDeletionsRegistration: Disposable?
     
     public weak var starsContext: StarsContext?
     public weak var tonContext: StarsContext?
@@ -2123,11 +1154,11 @@ public final class AccountStateManager {
         postbox: Postbox,
         network: Network,
         callSessionManager: CallSessionManager?,
-        addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void,
         shouldKeepOnlinePresence: Signal<Bool, NoError>,
         peerInputActivityManager: PeerInputActivityManager?,
         auxiliaryMethods: AccountAuxiliaryMethods,
-        ignoresShortSentMessages: Bool
+        ignoresShortSentMessages: Bool,
+        gapWaitTimeout: Double = AccountStateManager.defaultGapWaitTimeout
     ) {
         let queue = Queue(name: "AccountStateManager")
         
@@ -2137,6 +1168,9 @@ public final class AccountStateManager {
         self.auxiliaryMethods = auxiliaryMethods
         
         let messagesRemovedContext = self.messagesRemovedContext
+        let storyReactionContext = self.storyReactionContext
+        let storyRefreshContext = self.storyRefreshContext
+        let storyViewRefreshContext = self.storyViewRefreshContext
         
         var updateConfigRequestedImpl: (() -> Void)?
         var isPremiumUpdatedImpl: (() -> Void)?
@@ -2144,12 +1178,12 @@ public final class AccountStateManager {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(
                 queue: queue,
+                gapWaitTimeout: gapWaitTimeout,
                 accountPeerId: accountPeerId,
                 accountManager: accountManager,
                 postbox: postbox,
                 network: network,
                 callSessionManager: callSessionManager,
-                addIsContactUpdates: addIsContactUpdates,
                 shouldKeepOnlinePresence: shouldKeepOnlinePresence,
                 peerInputActivityManager: peerInputActivityManager,
                 auxiliaryMethods: auxiliaryMethods,
@@ -2160,7 +1194,10 @@ public final class AccountStateManager {
                 isPremiumUpdated: {
                     isPremiumUpdatedImpl?()
                 },
-                messagesRemovedContext: messagesRemovedContext
+                messagesRemovedContext: messagesRemovedContext,
+                storyReactionContext: storyReactionContext,
+                storyRefreshContext: storyRefreshContext,
+                storyViewRefreshContext: storyViewRefreshContext
             )
         })
         
@@ -2170,6 +1207,16 @@ public final class AccountStateManager {
         isPremiumUpdatedImpl = { [weak self] in
             self?.isPremiumUpdated?()
         }
+
+        // Owner decision D1: the messages a stored-message confirmation of this account deletes fire this manager's
+        // deletion events. Every confirmation is applied with the account Postbox's media box.
+        self.storedMessageConfirmationDeletionsRegistration = StoredMessageConfirmationDeletionReporters.shared.register(mediaBox: postbox.mediaBox, report: { [weak self] ids, transaction in
+            self?.noteStoredMessageConfirmationDeletions(ids, transaction: transaction)
+        })
+    }
+
+    deinit {
+        self.storedMessageConfirmationDeletionsRegistration?.dispose()
     }
     
     func reset() {
@@ -2231,6 +1278,26 @@ public final class AccountStateManager {
             impl.notifyDeletedMessages(messageIds: messageIds)
         }
     }
+
+    /// Owner decision D1: messages `deleteStoredMessagesAsReceivedDeletion` deleted (the account reset's ghost tail,
+    /// what a history fill's confirmation found missing) fire the events a received deletion fires, under the names
+    /// the replay gives its deletions (`DeletedMessageId(receivedDeletionOf:)`).
+    /// `messagesRemovedContext` gets them at once, inside the deleting `transaction`, as the replay adds its
+    /// deletions inside its own, so a history view updated by that transaction already finds them there.
+    /// `deletedMessages` gets them once that transaction has committed (`afterCommit`), from this manager's queue,
+    /// so no receiver hears of a deletion it cannot read yet; a fill is not part of a poll cycle whose events they
+    /// could join. Called on the Postbox queue.
+    private func noteStoredMessageConfirmationDeletions(_ ids: [MessageId], transaction: Transaction) {
+        let deletedIds = ids.map(DeletedMessageId.init(receivedDeletionOf:))
+        self.messagesRemovedContext.addIsMessagesDeletedInteractively(ids: deletedIds)
+        self.messagesRemovedContext.addIsMessagesDeletedRemotely(ids: deletedIds)
+        let impl = self.impl
+        transaction.afterCommit {
+            impl.with { impl in
+                impl.notifyConfirmedDeletions(deletedIds)
+            }
+        }
+    }
     
     func removePossiblyDeliveredMessages(uniqueIds: [Int64: PeerId]) {
         self.impl.with { impl in
@@ -2265,6 +1332,12 @@ public final class AccountStateManager {
     func walletStateUpdates() -> Signal<Api.WalletState, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.walletStateUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    func agentSettingsUpdates() -> Signal<EngineAgentSettings, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.agentSettingsUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

@@ -1,0 +1,142 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Delivery FAQ</title>
+<style></style>
+</head><body><div class="an"><b>Anchor: top</b> (the default, no call). Tap a question: its answer opens below, the bubble grows downward and the messages under it move; its top stays.</div>
+<h1>📦 Delivery questions</h1>
+<p class="sub">Parcel Express · answers from our help centre</p>
+<div id="faq"><div class="q"><div class="t" role="button"><span>When will my parcel arrive?</span></div><div class="a">Most parcels arrive in <b>2–4 working days</b>. The evening before, we send the courier’s two-hour window.</div></div><div class="q"><div class="t" role="button"><span>Can I change the address?</span></div><div class="a">Yes, until the parcel leaves the depot: open the tracking page and tap <b>Change address</b>. After that the courier can only redirect it to a pickup point.</div></div><div class="q"><div class="t" role="button"><span>What if I am not at home?</span></div><div class="a">The courier tries once more the next working day, then the parcel waits <b>7 days</b> at the nearest pickup point. Bring the code from your message.</div></div><div class="q"><div class="t" role="button"><span>How do I return an item?</span></div><div class="a">Pack it, print the label from your order page and drop it at any pickup point within <b>30 days</b>. The refund arrives 3–5 days after we scan it.</div></div><div class="q"><div class="t" role="button"><span>Is there a fee for heavy parcels?</span></div><div class="a">Up to 20 kg delivery is included. Above that we add <b>€4.90</b> for a two-person delivery, shown before you pay.</div></div></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 368.05
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 12 332 350.05
+    div 24 18 312 67.2
+      b 24 18 0 0
+    h1 14 101.2 332 21.25
+    p 14 124.45 332 35.1
+    div 14 163.55 332 198.5
+      div 14 163.55 332 38.9
+        div 14 173.55 332 18.9
+          span 14 173.55 314 18.9
+          -tag-after 338 173.55 8 18
+        div 0 0 0 0
+          b 0 0 0 0
+      div 14 203.45 332 38.9
+        div 14 213.45 332 18.9
+          span 14 213.45 314 18.9
+          -tag-after 338 213.45 8 18
+        div 0 0 0 0
+          b 0 0 0 0
+      div 14 243.35 332 38.9
+        div 14 253.35 332 18.9
+          span 14 253.35 314 18.9
+          -tag-after 338 253.35 8 18
+        div 0 0 0 0
+          b 0 0 0 0
+      div 14 283.25 332 38.9
+        div 14 293.25 332 18.9
+          span 14 293.25 314 18.9
+          -tag-after 338 293.25 8 18
+        div 0 0 0 0
+          b 0 0 0 0
+      div 14 323.15 332 38.9
+        div 14 333.15 332 18.9
+          span 14 333.15 314 18.9
+          -tag-after 338 333.15 8 18
+        div 0 0 0 0
+          b 0 0 0 0
+
+== paint
+root 360x368.05 items=77
+  solid-fill bounds=(14,12,332,79) layer=(border=(14,12,332,79),radius=(8,8,8,8,8,8,8,8),clip=(14,12,332,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(14,164,332,39) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,164,332,39) root=0
+  borders bounds=(14,203,332,40) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,203,332,40) root=0
+  borders bounds=(14,243,332,40) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,243,332,40) root=0
+  borders bounds=(14,283,332,40) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(14,283,332,40) root=0
+  text bounds=(16,10,72,32) pos=(24,18,56,16) color=#000000ff text="Anchor:" font=f1 glyphs=7 advance=56
+  text bounds=(80,10,40,32) pos=(88,18,24,16) color=#000000ff text="top" font=f1 glyphs=3 advance=24
+  text bounds=(112,10,48,32) pos=(120,18,32,16) color=#707579ff text="(the" font=f2 glyphs=4 advance=32
+  text bounds=(152,10,80,32) pos=(160,18,64,16) color=#707579ff text="default," font=f2 glyphs=8 advance=64
+  text bounds=(224,10,32,32) pos=(232,18,16,16) color=#707579ff text="no" font=f2 glyphs=2 advance=16
+  text bounds=(248,10,64,32) pos=(256,18,48,16) color=#707579ff text="call)." font=f2 glyphs=6 advance=48
+  text bounds=(304,10,40,32) pos=(312,18,24,16) color=#707579ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(16,27,24,32) pos=(24,35,8,16) color=#707579ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(32,27,88,32) pos=(40,35,72,16) color=#707579ff text="question:" font=f2 glyphs=9 advance=72
+  text bounds=(112,27,40,32) pos=(120,35,24,16) color=#707579ff text="its" font=f2 glyphs=3 advance=24
+  text bounds=(144,27,64,32) pos=(152,35,48,16) color=#707579ff text="answer" font=f2 glyphs=6 advance=48
+  text bounds=(200,27,56,32) pos=(208,35,40,16) color=#707579ff text="opens" font=f2 glyphs=5 advance=40
+  text bounds=(248,27,64,32) pos=(256,35,48,16) color=#707579ff text="below," font=f2 glyphs=6 advance=48
+  text bounds=(304,27,40,32) pos=(312,35,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(16,44,64,32) pos=(24,52,48,16) color=#707579ff text="bubble" font=f2 glyphs=6 advance=48
+  text bounds=(72,44,56,32) pos=(80,52,40,16) color=#707579ff text="grows" font=f2 glyphs=5 advance=40
+  text bounds=(120,44,80,32) pos=(128,52,64,16) color=#707579ff text="downward" font=f2 glyphs=8 advance=64
+  text bounds=(192,44,40,32) pos=(200,52,24,16) color=#707579ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(224,44,40,32) pos=(232,52,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(256,44,80,32) pos=(264,52,64,16) color=#707579ff text="messages" font=f2 glyphs=8 advance=64
+  text bounds=(16,60,56,32) pos=(24,68,40,16) color=#707579ff text="under" font=f2 glyphs=5 advance=40
+  text bounds=(64,60,32,32) pos=(72,68,16,16) color=#707579ff text="it" font=f2 glyphs=2 advance=16
+  text bounds=(88,60,56,32) pos=(96,68,40,16) color=#707579ff text="move;" font=f2 glyphs=5 advance=40
+  text bounds=(136,60,40,32) pos=(144,68,24,16) color=#707579ff text="its" font=f2 glyphs=3 advance=24
+  text bounds=(168,60,40,32) pos=(176,68,24,16) color=#707579ff text="top" font=f2 glyphs=3 advance=24
+  text bounds=(200,60,64,32) pos=(208,68,48,16) color=#707579ff text="stays." font=f2 glyphs=6 advance=48
+  text bounds=(6,95,48,32) pos=(14,103,32,16) color=#000000ff text="📦" font=f3 glyphs=4 advance=32
+  text bounds=(46,95,80,32) pos=(54,103,64,16) color=#000000ff text="Delivery" font=f3 glyphs=8 advance=64
+  text bounds=(118,95,88,32) pos=(126,103,72,16) color=#000000ff text="questions" font=f3 glyphs=9 advance=72
+  text bounds=(6,116,64,32) pos=(14,124,48,16) color=#707579ff text="Parcel" font=f4 glyphs=6 advance=48
+  text bounds=(62,116,72,32) pos=(70,124,56,16) color=#707579ff text="Express" font=f4 glyphs=7 advance=56
+  text bounds=(126,116,32,32) pos=(134,124,16,16) color=#707579ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(150,116,72,32) pos=(158,124,56,16) color=#707579ff text="answers" font=f4 glyphs=7 advance=56
+  text bounds=(214,116,48,32) pos=(222,124,32,16) color=#707579ff text="from" font=f4 glyphs=4 advance=32
+  text bounds=(254,116,40,32) pos=(262,124,24,16) color=#707579ff text="our" font=f4 glyphs=3 advance=24
+  text bounds=(286,116,48,32) pos=(294,124,32,16) color=#707579ff text="help" font=f4 glyphs=4 advance=32
+  text bounds=(6,134,64,32) pos=(14,142,48,16) color=#707579ff text="centre" font=f4 glyphs=6 advance=48
+  text bounds=(6,167,48,32) pos=(14,175,32,16) color=#000000ff text="When" font=f5 glyphs=4 advance=32
+  text bounds=(46,167,48,32) pos=(54,175,32,16) color=#000000ff text="will" font=f5 glyphs=4 advance=32
+  text bounds=(86,167,32,32) pos=(94,175,16,16) color=#000000ff text="my" font=f5 glyphs=2 advance=16
+  text bounds=(110,167,64,32) pos=(118,175,48,16) color=#000000ff text="parcel" font=f5 glyphs=6 advance=48
+  text bounds=(166,167,72,32) pos=(174,175,56,16) color=#000000ff text="arrive?" font=f5 glyphs=7 advance=56
+  text bounds=(330,167,24,32) pos=(338,175,8,16) color=#3390ecff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(6,206,40,32) pos=(14,214,24,16) color=#000000ff text="Can" font=f5 glyphs=3 advance=24
+  text bounds=(38,206,24,32) pos=(46,214,8,16) color=#000000ff text="I" font=f5 glyphs=1 advance=8
+  text bounds=(54,206,64,32) pos=(62,214,48,16) color=#000000ff text="change" font=f5 glyphs=6 advance=48
+  text bounds=(110,206,40,32) pos=(118,214,24,16) color=#000000ff text="the" font=f5 glyphs=3 advance=24
+  text bounds=(142,206,80,32) pos=(150,214,64,16) color=#000000ff text="address?" font=f5 glyphs=8 advance=64
+  text bounds=(330,206,24,32) pos=(338,214,8,16) color=#3390ecff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(6,246,48,32) pos=(14,254,32,16) color=#000000ff text="What" font=f5 glyphs=4 advance=32
+  text bounds=(46,246,32,32) pos=(54,254,16,16) color=#000000ff text="if" font=f5 glyphs=2 advance=16
+  text bounds=(70,246,24,32) pos=(78,254,8,16) color=#000000ff text="I" font=f5 glyphs=1 advance=8
+  text bounds=(86,246,32,32) pos=(94,254,16,16) color=#000000ff text="am" font=f5 glyphs=2 advance=16
+  text bounds=(110,246,40,32) pos=(118,254,24,16) color=#000000ff text="not" font=f5 glyphs=3 advance=24
+  text bounds=(142,246,32,32) pos=(150,254,16,16) color=#000000ff text="at" font=f5 glyphs=2 advance=16
+  text bounds=(166,246,56,32) pos=(174,254,40,16) color=#000000ff text="home?" font=f5 glyphs=5 advance=40
+  text bounds=(330,246,24,32) pos=(338,254,8,16) color=#3390ecff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(6,286,40,32) pos=(14,294,24,16) color=#000000ff text="How" font=f5 glyphs=3 advance=24
+  text bounds=(38,286,32,32) pos=(46,294,16,16) color=#000000ff text="do" font=f5 glyphs=2 advance=16
+  text bounds=(62,286,24,32) pos=(70,294,8,16) color=#000000ff text="I" font=f5 glyphs=1 advance=8
+  text bounds=(78,286,64,32) pos=(86,294,48,16) color=#000000ff text="return" font=f5 glyphs=6 advance=48
+  text bounds=(134,286,32,32) pos=(142,294,16,16) color=#000000ff text="an" font=f5 glyphs=2 advance=16
+  text bounds=(158,286,56,32) pos=(166,294,40,16) color=#000000ff text="item?" font=f5 glyphs=5 advance=40
+  text bounds=(330,286,24,32) pos=(338,294,8,16) color=#3390ecff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(6,326,32,32) pos=(14,334,16,16) color=#000000ff text="Is" font=f5 glyphs=2 advance=16
+  text bounds=(30,326,56,32) pos=(38,334,40,16) color=#000000ff text="there" font=f5 glyphs=5 advance=40
+  text bounds=(78,326,24,32) pos=(86,334,8,16) color=#000000ff text="a" font=f5 glyphs=1 advance=8
+  text bounds=(94,326,40,32) pos=(102,334,24,16) color=#000000ff text="fee" font=f5 glyphs=3 advance=24
+  text bounds=(126,326,40,32) pos=(134,334,24,16) color=#000000ff text="for" font=f5 glyphs=3 advance=24
+  text bounds=(158,326,56,32) pos=(166,334,40,16) color=#000000ff text="heavy" font=f5 glyphs=5 advance=40
+  text bounds=(206,326,80,32) pos=(214,334,64,16) color=#000000ff text="parcels?" font=f5 glyphs=8 advance=64
+  text bounds=(330,326,24,32) pos=(338,334,8,16) color=#3390ecff text="+" font=f6 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

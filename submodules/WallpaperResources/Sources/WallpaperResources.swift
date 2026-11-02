@@ -1407,7 +1407,7 @@ private let messageImage: UIImage = {
     return messageBubbleImage(maxCornerRadius: 16.0, minCornerRadius: 16.0, incoming: true, fillColor: .white, strokeColor: .clear, neighbors: .none, shadow: nil, wallpaper: .color(0x000000), knockout: false)
 }()
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, channelMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false, plain: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, channelMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false, plain: Bool = false, bubbleless: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1425,7 +1425,12 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         if let color = color {
             let editing = color.accentColor == nil
             let accentColor: UIColor = color.accentColor.flatMap { UIColor(rgb: $0) } ?? color.colorFor(baseTheme: theme.baseTheme)
-            defaultTheme = customizePresentationTheme(defaultTheme, editing: editing, accentColor: accentColor, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
+            if theme.isNeutral && color.bubbleColors.isEmpty {
+                // Drawn the way the chat draws it, which keeps Neutral's gray bubbles under an accent.
+                defaultTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(theme), accentColor: accentColor, baseColor: color.baseColor) ?? defaultTheme
+            } else {
+                defaultTheme = customizePresentationTheme(defaultTheme, editing: editing, accentColor: accentColor, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
+            }
         } else if case .night = theme {
             defaultTheme = customizePresentationTheme(defaultTheme, editing: true, accentColor: UIColor(rgb: 0x3e88f7), outgoingAccentColor: nil, backgroundColors: [], bubbleColors: [], animateBubbleColors: nil)
         }
@@ -1451,6 +1456,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         themeSignal = .never()
     }
         
+    var isNeutral = false
+    if case let .builtin(reference) = theme {
+        isNeutral = reference.isNeutral
+    }
+        
     colorsSignal = themeSignal
     |> mapToSignal { theme -> Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError> in
         if let theme = theme {
@@ -1458,7 +1468,17 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
             var rotation: Int32?
             var backgroundColor: (UIColor, UIColor?, [UInt32])
             let incomingColors = theme.chat.message.incoming.bubble.withoutWallpaper.fill
-            let outgoingColors = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+            var outgoingColors = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+            if bubbleless {
+                // A plain page with an outgoing bubble; the incoming message is drawn as bare text lines, so its
+                // colors carry the line tint. Neutral's gray is already the bubble the mode wants.
+                if !isNeutral, color == nil || color?.baseColor == .theme, case .builtin = theme.name {
+                    outgoingColors = bubblelessDefaultOutgoingBubbleColors(dark: theme.overallDarkAppearance).map(UIColor.init(rgb:))
+                }
+                // As soft as the chat draws them (see `bubblelessPresentationTheme`).
+                outgoingColors = bubblelessOutgoingBubbleColors(outgoingColors, dark: theme.overallDarkAppearance)
+                return .single(((bubblelessPageColor(theme), nil, []), [theme.chat.message.incoming.primaryTextColor.withMultipliedAlpha(0.22)], outgoingColors, nil, true, false, 1.0, nil))
+            }
             let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
             switch wallpaper {
                 case .builtin, .emoticon:
@@ -1736,6 +1756,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                             }
                             
                             c.restoreGState()
+                        } else if bubbleless {
+                            c.setFillColor(incomingColors[0].cgColor)
+                            c.addPath(UIBezierPath(roundedRect: CGRect(x: 10.0, y: 47.0, width: 44.0, height: 6.0), cornerRadius: 3.0).cgPath)
+                            c.addPath(UIBezierPath(roundedRect: CGRect(x: 10.0, y: 58.0, width: 30.0, height: 6.0), cornerRadius: 3.0).cgPath)
+                            c.fillPath()
                         } else {
                             let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
                             c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)

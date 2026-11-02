@@ -374,6 +374,15 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
     }
     
+    // Along the bottom unless its layout places it at a side. A bar hidden for a moment (search, selection) still counts,
+    // so that what lines up with it does not move meanwhile.
+    override open var showsBottomTabBar: Bool {
+        guard let layout = self.validLayout else {
+            return false
+        }
+        return self.tabBarControllerNode.sidePlacement(for: layout) == nil
+    }
+    
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

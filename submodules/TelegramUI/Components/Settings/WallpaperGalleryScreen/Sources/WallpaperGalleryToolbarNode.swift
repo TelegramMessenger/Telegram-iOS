@@ -431,7 +431,9 @@ public final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalle
         let cancelFrame = CGRect(x: sideInset + stripInsets.left, y: buttonY, width: buttonWidth, height: buttonHeight)
         let doneFrame = CGRect(x: cancelFrame.maxX + spacing, y: buttonY, width: max(1.0, size.width - sideInset - stripInsets.right - cancelFrame.maxX - spacing), height: buttonHeight)
 
-        let glassColor = UIColor(white: 1.0, alpha: 0.0)
+        // ButtonComponent's `.actualGlass` takes its dark/light glass from this colour's brightness, so the clear
+        // colour carries the theme's appearance.
+        let glassColor = UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.0)
         let foregroundColor = self.theme.list.itemPrimaryTextColor
         let componentTransition = ComponentTransition(transition)
 

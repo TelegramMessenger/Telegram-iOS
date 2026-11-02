@@ -53,16 +53,26 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
         self.init(content: content, isVideo: isVideo, codecName: codecName, ignoreEditList: false)
     }
 
-    public init(content: Content, isVideo: Bool, codecName: String?, ignoreEditList: Bool) {
+    // `startAt` (a file's own time): the reader starts at the keyframe before it and decodes no non-reference frame
+    // before it, since frames before it are only decoded to be hidden.
+    public init(content: Content, isVideo: Bool, codecName: String?, ignoreEditList: Bool, startAt: Double? = nil) {
         self.content = content
         self.isVideo = isVideo
         
         let source: FFMpegFileReader.SourceDescription
         var seek: FFMpegFileReader.Seek?
         var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
+        var skipNonReferenceFramesBefore: Double?
+        // An HLS part's two readers each describe only their own stream.
+        var probeOnlySelectedMediaType = false
         switch content {
         case let .tempFile(tempFile):
             source = .file(tempFile.file.path)
+            probeOnlySelectedMediaType = true
+            if let startAt {
+                seek = .direct(position: startAt)
+                skipNonReferenceFramesBefore = startAt
+            }
         case let .directStream(directStream):
             let mappedRanges: [Range<Int64>]
             #if DEBUG && false
@@ -109,14 +119,14 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
             }
             #endif*/
             
-            if let videoSource = FFMpegFileReader(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, selectedStream: .mediaType(.video), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList) {
+            if let videoSource = FFMpegFileReader(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, selectedStream: .mediaType(.video), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList, skipNonReferenceFramesBefore: skipNonReferenceFramesBefore, probeOnlySelectedMediaType: probeOnlySelectedMediaType) {
                 self.videoSource = videoSource
             } else {
                 self.videoSource = nil
             }
             self.audioSource = nil
         } else {
-            if let audioSource = FFMpegFileReader(source: source, passthroughDecoder: false, useHardwareAcceleration: false, selectedStream: .mediaType(.audio), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList) {
+            if let audioSource = FFMpegFileReader(source: source, passthroughDecoder: false, useHardwareAcceleration: false, selectedStream: .mediaType(.audio), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList, probeOnlySelectedMediaType: probeOnlySelectedMediaType) {
                 self.audioSource = audioSource
             } else {
                 self.audioSource = nil

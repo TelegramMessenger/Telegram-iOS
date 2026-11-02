@@ -16,6 +16,11 @@ struct NavigationInteractivePopTracker {
     static let projectionTime: CGFloat = 0.35
     /// A finish needs the projected position past this many points, or half the width if that is less.
     static let finishPoints: CGFloat = 187.5
+    /// With fewer than three samples a swipe finishes on its direction alone, but only once the finger has moved this
+    /// many points since the swipe began. Not UIKit's: its pan waits out a hysteresis before it begins, while the
+    /// container's swipe begins after 2pt, so a tap that drifts a few points right would otherwise navigate back
+    /// whenever its events are handled back to back behind a busy main thread (and dropped as samples).
+    static let minimumFewSampleTravel: CGFloat = 10.0
 
     /// The target progress for a raw one (translation over width). It stops at either end: UIKit rubber-bands it toward
     /// an extra half width (`rubberBandExtent` 0.5, finger coefficient 0.55), which this does not (a decision, 2026-10-14).
@@ -31,6 +36,7 @@ struct NavigationInteractivePopTracker {
     private(set) var averageAcceleration: CGFloat = 0.0
     private(set) var lastAcceleration: CGFloat = 0.0
     private var sawChange = false
+    private var lastTranslation: CGFloat = 0.0
     private var previousTime: Double = 0.0
     private var skipTime: Double = 0.0
     private var previousDisplacement: CGFloat = 0.0
@@ -47,6 +53,7 @@ struct NavigationInteractivePopTracker {
         if isChange {
             self.sawChange = true
         }
+        self.lastTranslation = translation
         let displacement = translation < 0.0 ? 0.0 : translation / self.totalDistance
         let v = velocity / self.totalDistance
         if self.sampleCount == 0 {
@@ -103,7 +110,7 @@ struct NavigationInteractivePopTracker {
             finish = projected > min(NavigationInteractivePopTracker.finishPoints / self.totalDistance, 0.5)
             handOff = self.totalDistance * self.previousVelocity
         } else {
-            finish = self.averageVelocity > 0.0 && self.sawChange
+            finish = self.averageVelocity > 0.0 && self.sawChange && self.lastTranslation >= NavigationInteractivePopTracker.minimumFewSampleTravel
             handOff = velocity
         }
         if self.isInEdgeFlickPhase {

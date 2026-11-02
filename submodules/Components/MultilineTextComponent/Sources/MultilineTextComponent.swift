@@ -137,6 +137,61 @@ public final class MultilineTextComponent: Component {
     }
     
     public final class View: ImmediateTextView {
+        // VoiceOver: a visible text is a static-text element reading exactly what it shows, unless a call site
+        // decides otherwise (anything it sets wins). A parent that is itself an element (a button, a merged row) hides
+        // it as usual. Computed in the getters, so nothing runs while no accessibility client asks.
+        private var explicitIsAccessibilityElement: Bool?
+        private var explicitAccessibilityLabel: String??
+        private var explicitAccessibilityTraits: UIAccessibilityTraits?
+        
+        override public var isAccessibilityElement: Bool {
+            get {
+                if let explicitIsAccessibilityElement = self.explicitIsAccessibilityElement {
+                    return explicitIsAccessibilityElement
+                }
+                if self.isHidden || self.alpha < 0.01 {
+                    return false
+                }
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
+            } set(value) {
+                self.explicitIsAccessibilityElement = value
+            }
+        }
+        
+        override public var accessibilityLabel: String? {
+            get {
+                if let explicitAccessibilityLabel = self.explicitAccessibilityLabel {
+                    return explicitAccessibilityLabel
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    // Turned off by the call site: nothing to announce from here either.
+                    return nil
+                }
+                return self.attributedText != nil ? self.accessibilityDisplayedText : nil
+            } set(value) {
+                self.explicitAccessibilityLabel = .some(value)
+            }
+        }
+        
+        override public var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                if let explicitAccessibilityTraits = self.explicitAccessibilityTraits {
+                    return explicitAccessibilityTraits
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    return []
+                }
+                // A text with tappable links: activation follows the first one (ImmediateTextView), so it says so.
+                return self.accessibilityLinks().isEmpty ? .staticText : [.staticText, .link]
+            } set(value) {
+                self.explicitAccessibilityTraits = value
+            }
+        }
+        
         public func update(component: MultilineTextComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let attributedString: NSAttributedString
             switch component.text {

@@ -155,7 +155,9 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.item = item
                         
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityTraits = []
+                    // The row component below is the element (name, reason, date, amount as its value; activation opens
+                    // the transaction): this unlabelled area would be an empty stop.
+                    strongSelf.activateArea.isAccessibilityElement = false
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

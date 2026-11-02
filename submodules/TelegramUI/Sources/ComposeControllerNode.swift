@@ -41,7 +41,7 @@ final class ComposeControllerNode: ASDisplayNode {
         var openCreateContactImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: [
+        let options = [
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
             }),
@@ -51,7 +51,18 @@ final class ComposeControllerNode: ASDisplayNode {
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
             })
-        ], includeChatList: false, topPeers: .none)), onlyWriteable: false, isGroupInvitation: false, displayPermissionPlaceholder: false)
+        ]
+        // The contacts follow the sort order the Sort button sets, as the Contacts screen's do.
+        let presentation = contactsSortOrder(context: context)
+        |> map { sortOrder -> ContactListPresentation in
+            switch sortOrder {
+            case .presence:
+                return .orderedByPresence(options: options)
+            case .natural:
+                return .natural(options: options, includeChatList: false, topPeers: .none)
+            }
+        }
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, onlyWriteable: false, isGroupInvitation: false, displayPermissionPlaceholder: false)
         
         super.init()
         
@@ -142,9 +153,12 @@ final class ComposeControllerNode: ASDisplayNode {
                 }
             }
         }, placeholder: placeholderNode)
+        // The search results cover the list: VoiceOver must not read the list behind them.
+        self.contactListNode.accessibilityElementsHidden = true
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        self.contactListNode.accessibilityElementsHidden = false
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil

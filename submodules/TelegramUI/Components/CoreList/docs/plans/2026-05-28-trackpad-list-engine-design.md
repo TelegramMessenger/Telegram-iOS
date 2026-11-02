@@ -21,7 +21,8 @@ has: a faithful replica of `UIScrollView`'s continuous indirect-scroll handling,
 - **In scope:** continuous two-finger trackpad scroll on the list engine — drag-follow, edge
   rubber-band with the correct trackpad coefficient, post-lift inertia (Approach-2 momentum), and
   **catch-on-finger-rest** (resting fingers over a decelerating list stops it at once).
-- **Out of scope:** discrete mouse-wheel, pointer/scrollbar drag, the X-axis directional lock
+- **Out of scope:** discrete mouse-wheel (since 2026-10-23 the pan allows `.discrete` too, on this
+  same path: CHANGELOG), pointer/scrollbar drag, the X-axis directional lock
   (decoded but unmodeled), and `applyChanges` during a keyframe decel (increment 4c).
 - **Non-negotiable:** the reverse-engineered physics (`ScrollPhysics`, `Trajectory`, `RubberBand`)
   are **not** modified — the trackpad coefficient (`RubberBand.trackpadCoefficient = 0.715`) and the

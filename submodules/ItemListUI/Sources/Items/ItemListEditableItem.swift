@@ -58,6 +58,8 @@ public final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognize
     }
 }
 
+/// `ItemListRevealOptionsItemView` (ItemListRevealOptionsItemView.swift) is this class's plain-view twin, ported line by
+/// line. Keep the two in step: a change to one's mechanics belongs in the other.
 open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
@@ -73,6 +75,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     private var animationCompletion: (() -> Void)?
     private var suppressGestureEvents = false
     private var deliveringAction = false
+    private var holdsRevealOptionsUntilClosed = false
     private var lastSurfaceProgress: CGFloat = 0
     public private(set) var revealOffset: CGFloat = 0.0
     public private(set) var isRevealOptionsActive: Bool = false
@@ -202,7 +205,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         }
         transition.updateFrame(node: highlightedBackgroundNode, frame: frame)
         highlightedBackgroundNode.layer.cornerCurve = .continuous
-        highlightedBackgroundNode.cornerRadius = min(self.revealOptionsHighlightedBackgroundActiveCornerRadius, baseFrame.height / 2) * (self.revealOptionsAllowsHighlight ? self.revealOptionsHighlightProgress : 0)
+        let activeCornerRadius = min(self.revealOptionsHighlightedBackgroundActiveCornerRadius, baseFrame.height / 2) * (self.revealOptionsAllowsHighlight ? self.revealOptionsHighlightProgress : 0)
+        highlightedBackgroundNode.cornerRadius = max(self.revealOptionsHighlightedBackgroundRestingCornerRadius, activeCornerRadius)
     }
 
     public func updateRevealOptionsSeparatorNodes(top: ASDisplayNode?, bottom: ASDisplayNode?, topIsHidden: Bool, bottomIsHidden: Bool, topHiddenByPreviousRevealOptions: Bool = false, bottomHiddenByNextRevealOptions: Bool = false) {
@@ -225,6 +229,9 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         self.revealOptionsHighlightedBackgroundActiveCornerRadius = activeCornerRadius
         self.updateRevealOptionsHighlightedBackgroundGeometry(transition: transition)
     }
+
+    /// The highlight's corner radius outside the reveal gesture (the chat side list's inset rounded plate).
+    public var revealOptionsHighlightedBackgroundRestingCornerRadius: CGFloat = 0.0
 
     public var revealOptionsHighlightProgress: CGFloat {
         return CGFloat(min(1, max(0, self.motion.surface.value)))
@@ -371,7 +378,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
 
     override open func didExitHierarchy() {
         super.didExitHierarchy()
-        self.resetRevealInteraction(notify: true)
+        // The list reinserts a row it is removing, which must not cut the row's fill short. The host still hears of the
+        // close now: the row may be gone before the fill ends, and undoing its removal would bring it back open.
+        if self.motion.state == .filling {
+            self.revealOptionsInteractivelyClosed()
+        } else {
+            self.resetRevealInteraction(notify: true)
+        }
     }
 
     private var activeRevealNode: ItemListRevealOptionsNode? {
@@ -390,6 +403,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         if self.isNodeLoaded {
             self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
         }
+        self.revealRecognizerAvailabilityUpdated()
+    }
+
+    /// The control has just set `disablesInteractiveTransitionGestureRecognizer` (it does on every render): with left
+    /// options, or while open, a screen's pager keeps only its edge directions over the row. A host that decides the
+    /// pager's access itself sets the flag again here. (`ItemListRevealOptionsItemView`'s twin.)
+    open func revealRecognizerAvailabilityUpdated() {
     }
 
     open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption]), enableAnimations: Bool = true) {
@@ -402,7 +422,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         }
         self.revealOptions = options
         self.enableAnimations = enableAnimations
-        if let node = self.activeRevealNode {
+        // A fill keeps showing the option it was started for, whatever its action has since made of the row's options.
+        if let node = self.activeRevealNode, self.motion.state != .filling, !self.holdsRevealOptionsUntilClosed {
             node.setOptions(self.activeOptions, isLeft: self.revealDirection > 0, enableAnimations: enableAnimations)
             self.updateActiveRevealMetrics()
             // Appearance changes (mute/read toggles, themes, localization) keep
@@ -494,6 +515,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
                 }
                 guard self.setupRevealNode(direction: newDirection) else { return }
             }
+            self.releaseHeldRevealOptions()
             self.animationCompletion = nil
             let highlightAlpha = self.revealOptionsHighlightedBackgroundNode.flatMap { node -> CGFloat? in
                 guard node.supernode != nil, !node.isHidden else { return nil }
@@ -623,6 +645,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
             self.revealOptionsSurfaceUpdated(progress: progress)
         }
         if self.motion.state == .closed {
+            self.holdsRevealOptionsUntilClosed = false
             self.leftRevealNode?.removeFromSupernode()
             self.rightRevealNode?.removeFromSupernode()
             self.leftRevealNode = nil
@@ -718,6 +741,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         guard self.motion.state != .filling, value != self.motion.wantsOpen else { return }
         if value {
             guard self.setupRevealNode(direction: -1) else { return }
+            self.releaseHeldRevealOptions()
         } else {
             self.cancelRevealRecognizers()
         }
@@ -740,7 +764,49 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         self.startRevealAnimation()
     }
 
+    // Closes the row still showing the chosen option, for an action that replaces it
+    // with one of another look (unhide, then hide) while the row would be closing.
+    public func closeRevealOptionsHoldingOptions() {
+        self.holdsRevealOptionsUntilClosed = self.activeRevealNode != nil
+        self.setRevealOptionsOpened(false, animated: true)
+    }
+
+    private func releaseHeldRevealOptions() {
+        guard self.holdsRevealOptionsUntilClosed else { return }
+        self.holdsRevealOptionsUntilClosed = false
+        self.activeRevealNode?.setOptions(self.activeOptions, isLeft: self.revealDirection > 0, enableAnimations: self.enableAnimations)
+        self.updateActiveRevealMetrics()
+    }
+
+    // A fill stays filled, which suits a row on its way out. A row that remains in
+    // the list (one that is only hidden) ends it here once the fill has finished.
+    public func resetRevealOptionsAfterFill() {
+        self.resetRevealInteraction(notify: false)
+    }
+
     open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+    }
+    
+    private var revealOptionsAccessibilityCache: (names: [String], actions: [UIAccessibilityCustomAction])?
+    
+    /// VoiceOver: the swipe options as custom actions, each going through `revealOptionSelected`, as the swipe does.
+    /// Called from layout; the actions are rebuilt only when the options' names change.
+    public func revealOptionsAccessibilityCustomActions(_ options: [ItemListRevealOption]) -> [UIAccessibilityCustomAction] {
+        let names = options.map { "\($0.key):\($0.title)" }
+        if let cache = self.revealOptionsAccessibilityCache, cache.names == names {
+            return cache.actions
+        }
+        let actions = options.map { option in
+            return UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak self] _ in
+                guard let self else {
+                    return false
+                }
+                self.revealOptionSelected(option, animated: false)
+                return true
+            })
+        }
+        self.revealOptionsAccessibilityCache = (names, actions)
+        return actions
     }
 
     override open var preventsTouchesToOtherItems: Bool {

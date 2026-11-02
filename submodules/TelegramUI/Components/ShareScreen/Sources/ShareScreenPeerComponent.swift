@@ -69,6 +69,9 @@ final class ShareScreenPeerComponent: Component {
             super.init(frame: frame)
             self.addSubview(self.ring)
             self.addSubview(self.communityShadow)
+            // Decoration behind a community's avatar.
+            self.communityShadow.isAccessibilityElement = false
+            self.communityShadow.accessibilityElementsHidden = true
             self.addSubview(self.avatar.view)
             self.addSubview(self.online)
             self.addSubview(self.messagingBadge)
@@ -178,7 +181,8 @@ final class ShareScreenPeerComponent: Component {
                 self.chatAvatars.view?.removeFromSuperview()
             }
             let hasIcon = topicData != nil || !component.communityChats.isEmpty
-            let titleColor = component.selected ? component.theme.list.itemAccentColor : component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(component.requirement.requiresPremium ? 0.4 : 1.0)
+            let defaultTitleColor = component.peer?.id.namespace == Namespaces.Peer.SecretChat ? component.theme.chatList.secretTitleColor : component.theme.list.itemPrimaryTextColor
+            let titleColor = component.selected ? component.theme.list.itemAccentColor : defaultTitleColor.withMultipliedAlpha(component.requirement.requiresPremium ? 0.4 : 1.0)
             let iconWidth = hasIcon ? iconSize.width + 2.0 : 0.0
             let titleSize = self.title.update(
                 transition: .immediate,

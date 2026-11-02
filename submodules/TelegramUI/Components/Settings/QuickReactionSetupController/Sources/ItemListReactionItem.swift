@@ -242,8 +242,13 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = item.title
-                    
-                    strongSelf.activateArea.accessibilityTraits = []
+                    // The value is the reaction the row shows (an emoji; a custom one has no words).
+                    if case let .builtin(value) = item.reaction {
+                        strongSelf.activateArea.accessibilityValue = value
+                    } else {
+                        strongSelf.activateArea.accessibilityValue = nil
+                    }
+                    strongSelf.activateArea.accessibilityTraits = item.action != nil ? .button : []
                     
                     if let icon = item.icon {
                         if strongSelf.iconNode.supernode == nil {

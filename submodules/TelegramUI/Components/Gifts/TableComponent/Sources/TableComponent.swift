@@ -262,6 +262,7 @@ public final class TableComponent: CombinedComponent {
                 )
                 context.add(rightColumnBackground
                     .position(CGPoint(x: leftColumnWidth + rightColumnWidth / 2.0, y: innerTotalOffset + innerTotalHeight / 2.0))
+                    .accessibilityHidden(true)
                 )
             }
             
@@ -334,6 +335,7 @@ public final class TableComponent: CombinedComponent {
             )
             context.add(leftColumnBackground
                 .position(CGPoint(x: leftColumnWidth / 2.0, y: innerTotalOffset + innerTotalHeight / 2.0))
+                .accessibilityHidden(true)
             )
             
             let borderImage: UIImage
@@ -365,6 +367,7 @@ public final class TableComponent: CombinedComponent {
             )
             context.add(outerBorder
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: totalHeight / 2.0))
+                .accessibilityHidden(true)
             )
             
             let verticalBorder = verticalBorder.update(

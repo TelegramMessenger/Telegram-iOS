@@ -57,7 +57,7 @@ public final class StoryPeerListComponent: Component {
     public let unlocked: Bool
     public let uploadProgress: [EnginePeer.Id: Float]
     public let peerAction: (EnginePeer?) -> Void
-    public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
+    public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void
     public let openStatusSetup: (UIView) -> Void
     public let lockAction: () -> Void
     public let composeAction: (CGFloat) -> Void
@@ -81,7 +81,7 @@ public final class StoryPeerListComponent: Component {
         unlocked: Bool,
         uploadProgress: [EnginePeer.Id: Float],
         peerAction: @escaping (EnginePeer?) -> Void,
-        contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
+        contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
         lockAction: @escaping () -> Void,
         composeAction: @escaping (CGFloat) -> Void
@@ -367,8 +367,10 @@ public final class StoryPeerListComponent: Component {
         /// coming in Edit mode), the collapsed content eases from where it stood to where the new band places it, on a
         /// spring as long as the update's animation: this is the remaining distance, springing to zero.
         private var titleOriginOffsetCurve: NavigationSpringCurve?
-        /// The row and content widths the collapsed content was last placed with.
-        private var titleOriginWidths: (container: CGFloat, content: CGFloat)?
+        /// The same for the expanded title, which the band places too (`StoryPeerListTitleLayout.expandedTitleOrigin`).
+        private var expandedTitleOriginOffsetCurve: NavigationSpringCurve?
+        /// The row and content widths the collapsed content and the expanded title were last placed with.
+        private var titleOriginWidths: (container: CGFloat, content: CGFloat, expandedTitle: CGFloat)?
         
         /// Whether the collapsed title shows its text (`StoryPeerListTitleLayout.showsTitleText`), and the fade between.
         private var showsTitleText: Bool?
@@ -449,6 +451,46 @@ public final class StoryPeerListComponent: Component {
             self.loadMoreDisposable.dispose()
             self.previewedItemDisposable?.dispose()
             self.loadingItemDisposable?.dispose()
+        }
+        
+        /// VoiceOver order: the title (or the button it becomes) before the stories under it, which UIKit would read
+        /// first (their scroll views are the first subviews).
+        public override var accessibilityElements: [Any]? {
+            get {
+                // Views listed here are read even when they are not elements, so hidden ones are left out.
+                let scrollViews: [UIView] = [self.scrollView, self.scrollContainerView]
+                let ordered = self.subviews.filter { view in !scrollViews.contains(where: { $0 === view }) } + scrollViews
+                return ordered.filter { view in
+                    return !view.isHidden && view.alpha >= 0.01 && !view.accessibilityElementsHidden
+                }
+            } set(value) {
+            }
+        }
+        
+        /// The chat list's title for VoiceOver. It is drawn here as an image (`titleView`), so it is labelled here: a
+        /// header, which is also the button that shows the stories while they are collapsed beside it (the tap on
+        /// the title), or the passcode lock button when the title has a lock.
+        private func updateTitleAccessibility(component: StoryPeerListComponent) {
+            let titleShowsStories = self.collapsedButton.isUserInteractionEnabled && !self.sortedItems.isEmpty && !component.titleHasLock
+            
+            self.collapsedButton.isAccessibilityElement = titleShowsStories
+            self.collapsedButton.accessibilityElementsHidden = !titleShowsStories
+            self.collapsedButton.accessibilityLabel = component.title
+            self.collapsedButton.accessibilityHint = component.strings.VoiceOver_ChatList_ShowStoriesHint
+            self.collapsedButton.accessibilityTraits = [.header, .button]
+            
+            self.titleView.isAccessibilityElement = !titleShowsStories && !component.titleHasLock
+            // Hidden outright while the button above speaks for it: a labelled header image is otherwise still listed.
+            self.titleView.accessibilityElementsHidden = titleShowsStories || component.titleHasLock
+            self.titleView.accessibilityLabel = component.title
+            self.titleView.accessibilityTraits = .header
+            
+            if let titleLockButton = self.titleLockButton {
+                titleLockButton.isAccessibilityElement = true
+                titleLockButton.accessibilityLabel = component.title
+                titleLockButton.accessibilityHint = component.strings.DialogList_PasscodeLockHelp
+                titleLockButton.accessibilityTraits = [.header, .button]
+            }
         }
         
         @objc private func collapsedButtonPressed() {
@@ -951,7 +993,7 @@ public final class StoryPeerListComponent: Component {
             let hiddenTitleWidth = titleSize.width * (1.0 - titleTextFraction)
             let titleWidth = collapsedState.titleWidth - hiddenTitleWidth
             let placedContentWidth = centralContentWidth - hiddenTitleWidth
-            self.titleOriginWidths = (itemLayout.containerSize.width, placedContentWidth)
+            self.titleOriginWidths = (itemLayout.containerSize.width, placedContentWidth, titleWidth)
             collapsedContentOrigin = StoryPeerListTitleLayout.contentOrigin(containerWidth: itemLayout.containerSize.width, contentWidth: placedContentWidth, minX: component.minTitleX, maxX: component.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: CACurrentMediaTime()) ?? 0.0)
             
             let collapsedContentOriginOffset: CGFloat = 0.0
@@ -1445,7 +1487,8 @@ public final class StoryPeerListComponent: Component {
             if self.sortedItems.isEmpty {
                 titleContentOffset = collapsedTitleOffset
             } else {
-                titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
+                let expandedTitleOrigin = StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: itemLayout.containerSize.width, titleWidth: titleWidth, minX: component.minTitleX, maxX: component.maxTitleX) + (self.expandedTitleOriginOffsetCurve?.value(at: CACurrentMediaTime()) ?? 0.0)
+                titleContentOffset = titleMinContentOffset.interpolate(to: expandedTitleOrigin, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
                 titleContentOffset += -expandBoundsFraction * 4.0
             }
             
@@ -1519,6 +1562,8 @@ public final class StoryPeerListComponent: Component {
                     titleLockView = current
                 } else {
                     titleLockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
+                    // The lock glyph is drawn beside the title; the lock button (the title) speaks for it.
+                    titleLockView.accessibilityElementsHidden = true
                     self.titleLockView = titleLockView
                     self.addSubview(titleLockView)
                 }
@@ -1626,6 +1671,16 @@ public final class StoryPeerListComponent: Component {
             return result
         }
         
+        /// The offset left to spring away when a band change moves a title origin from `from` (where it stood under the old
+        /// band, excluding an offset still in flight) to `to`, carrying over that in-flight offset and its velocity.
+        private static func bandChangeCurve(from: CGFloat, to: CGFloat, current: NavigationSpringCurve?, now: Double, duration: Double) -> NavigationSpringCurve? {
+            let from = from + (current?.value(at: now) ?? 0.0)
+            if from == to {
+                return nil
+            }
+            return NavigationSpringCurve(startTime: now, from: from - to, velocity: current?.velocity(at: now) ?? 0.0, target: 0.0, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+        }
+
         func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let incomingAnimation = transition.animation
             var transition = transition
@@ -1639,15 +1694,30 @@ public final class StoryPeerListComponent: Component {
                     // Where the content stands now, against where the new band places it. Only the content's actual
                     // movement springs: a band change that does not move it (content centred far from both sides)
                     // starts nothing.
-                    let from = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX) + (self.titleOriginOffsetCurve?.value(at: now) ?? 0.0)
-                    let to = StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: component.minTitleX, maxX: component.maxTitleX)
-                    self.titleOriginOffsetCurve = from == to ? nil : NavigationSpringCurve(startTime: now, from: from - to, velocity: self.titleOriginOffsetCurve?.velocity(at: now) ?? 0.0, target: 0.0, spring: NavigationTransitionSpring(duration: CGFloat(duration), bounce: 0.0), rest: .glass(0.01))
+                    self.titleOriginOffsetCurve = View.bandChangeCurve(
+                        from: StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX),
+                        to: StoryPeerListTitleLayout.contentOrigin(containerWidth: widths.container, contentWidth: widths.content, minX: component.minTitleX, maxX: component.maxTitleX),
+                        current: self.titleOriginOffsetCurve,
+                        now: now,
+                        duration: duration
+                    )
+                    self.expandedTitleOriginOffsetCurve = View.bandChangeCurve(
+                        from: StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: widths.container, titleWidth: widths.expandedTitle, minX: previousComponent.minTitleX, maxX: previousComponent.maxTitleX),
+                        to: StoryPeerListTitleLayout.expandedTitleOrigin(containerWidth: widths.container, titleWidth: widths.expandedTitle, minX: component.minTitleX, maxX: component.maxTitleX),
+                        current: self.expandedTitleOriginOffsetCurve,
+                        now: now,
+                        duration: duration
+                    )
                 } else {
                     self.titleOriginOffsetCurve = nil
+                    self.expandedTitleOriginOffsetCurve = nil
                 }
             }
             if let titleOriginOffsetCurve = self.titleOriginOffsetCurve, now >= titleOriginOffsetCurve.restTime {
                 self.titleOriginOffsetCurve = nil
+            }
+            if let expandedTitleOriginOffsetCurve = self.expandedTitleOriginOffsetCurve, now >= expandedTitleOriginOffsetCurve.restTime {
+                self.expandedTitleOriginOffsetCurve = nil
             }
 
             var useAnimation = false
@@ -1742,7 +1812,7 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.titleOriginOffsetCurve != nil || self.titleTextAnimation != nil {
+            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty || self.titleOriginOffsetCurve != nil || self.expandedTitleOriginOffsetCurve != nil || self.titleTextAnimation != nil {
                 self.startAnimatorIfNeeded()
             } else if let animator = self.animator {
                 self.animator = nil
@@ -1830,6 +1900,8 @@ public final class StoryPeerListComponent: Component {
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
+            
+            self.updateTitleAccessibility(component: component)
             
             return availableSize
         }

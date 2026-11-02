@@ -1,0 +1,89 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Parcel on its way</title>
+<style></style>
+</head><body><div class="an"><b>Posted three times.</b> <span id="m">A caption below: the time is in its line, every value 0.</span></div>
+<h2>Parcel on its way</h2>
+<div class="sub">From Lisbon · arrives Friday 14:00–16:00</div>
+<div class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+<div class="steps"><span>Packed</span><span>Sent</span><span>In your city</span><span>Delivered</span></div>
+<div class="row"><b>Courier: Marta</b><span>LX-4821-PT</span></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 211.35
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 12 332 199.35
+    div 24 18 312 33.6
+      b 24 18 0 0
+      span 24 18 0 0
+    h2 14 67.6 332 21.25
+    div 14 90.85 332 35.1
+    div 14 137.95 332 6
+      i 14 137.95 80 6
+      i 98 137.95 80 6
+      i 182 137.95 80 6
+      i 266 137.95 80 6
+    div 14 149.95 332 14.85
+      span 14 149.95 48 14.85
+      span 90 149.95 32 14.85
+      span 150 149.95 96 14.85
+      span 274 149.95 72 14.85
+    div 14 185.8 332 17.55
+      b 14 185.8 244 17.55
+      span 266 185.8 80 17.55
+
+== paint
+root 360x211.35 items=40
+  solid-fill bounds=(14,12,332,46) layer=(border=(14,12,332,46),radius=(8,8,8,8,8,8,8,8),clip=(14,12,332,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(14,138,80,6) layer=(border=(14,138,80,6),radius=(3,3,3,3,3,3,3,3),clip=(14,138,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(98,138,80,6) layer=(border=(98,138,80,6),radius=(3,3,3,3,3,3,3,3),clip=(98,138,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(182,138,80,6) layer=(border=(182,138,80,6),radius=(3,3,3,3,3,3,3,3),clip=(182,138,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  solid-fill bounds=(266,138,80,6) layer=(border=(266,138,80,6),radius=(3,3,3,3,3,3,3,3),clip=(266,138,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(0,177,360,34) borders=(left=(0,0,#000000ff),top=(1,4,#e7e7e7ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(0,177,360,34) root=0
+  text bounds=(16,10,64,32) pos=(24,18,48,16) color=#000000ff text="Posted" font=f1 glyphs=6 advance=48
+  text bounds=(72,10,56,32) pos=(80,18,40,16) color=#000000ff text="three" font=f1 glyphs=5 advance=40
+  text bounds=(120,10,64,32) pos=(128,18,48,16) color=#000000ff text="times." font=f1 glyphs=6 advance=48
+  text bounds=(176,10,24,32) pos=(184,18,8,16) color=#707579ff text="A" font=f1 glyphs=1 advance=8
+  text bounds=(192,10,72,32) pos=(200,18,56,16) color=#707579ff text="caption" font=f1 glyphs=7 advance=56
+  text bounds=(256,10,64,32) pos=(264,18,48,16) color=#707579ff text="below:" font=f1 glyphs=6 advance=48
+  text bounds=(16,27,40,32) pos=(24,35,24,16) color=#707579ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(48,27,48,32) pos=(56,35,32,16) color=#707579ff text="time" font=f1 glyphs=4 advance=32
+  text bounds=(88,27,32,32) pos=(96,35,16,16) color=#707579ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(112,27,32,32) pos=(120,35,16,16) color=#707579ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(136,27,40,32) pos=(144,35,24,16) color=#707579ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(168,27,56,32) pos=(176,35,40,16) color=#707579ff text="line," font=f1 glyphs=5 advance=40
+  text bounds=(216,27,56,32) pos=(224,35,40,16) color=#707579ff text="every" font=f1 glyphs=5 advance=40
+  text bounds=(264,27,56,32) pos=(272,35,40,16) color=#707579ff text="value" font=f1 glyphs=5 advance=40
+  text bounds=(312,27,32,32) pos=(320,35,16,16) color=#707579ff text="0." font=f1 glyphs=2 advance=16
+  text bounds=(6,62,64,32) pos=(14,70,48,16) color=#000000ff text="Parcel" font=f2 glyphs=6 advance=48
+  text bounds=(62,62,32,32) pos=(70,70,16,16) color=#000000ff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(86,62,40,32) pos=(94,70,24,16) color=#000000ff text="its" font=f2 glyphs=3 advance=24
+  text bounds=(118,62,40,32) pos=(126,70,24,16) color=#000000ff text="way" font=f2 glyphs=3 advance=24
+  text bounds=(6,83,48,32) pos=(14,91,32,16) color=#707579ff text="From" font=f3 glyphs=4 advance=32
+  text bounds=(46,83,64,32) pos=(54,91,48,16) color=#707579ff text="Lisbon" font=f3 glyphs=6 advance=48
+  text bounds=(102,83,32,32) pos=(110,91,16,16) color=#707579ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(126,83,72,32) pos=(134,91,56,16) color=#707579ff text="arrives" font=f3 glyphs=7 advance=56
+  text bounds=(190,83,64,32) pos=(198,91,48,16) color=#707579ff text="Friday" font=f3 glyphs=6 advance=48
+  text bounds=(6,100,120,32) pos=(14,108,104,16) color=#707579ff text="14:00–16:00" font=f3 glyphs=13 advance=104
+  text bounds=(6,142,64,32) pos=(14,150,48,16) color=#707579ff text="Packed" font=f4 glyphs=6 advance=48
+  text bounds=(82,142,48,32) pos=(90,150,32,16) color=#707579ff text="Sent" font=f4 glyphs=4 advance=32
+  text bounds=(142,142,32,32) pos=(150,150,16,16) color=#707579ff text="In" font=f4 glyphs=2 advance=16
+  text bounds=(166,142,48,32) pos=(174,150,32,16) color=#707579ff text="your" font=f4 glyphs=4 advance=32
+  text bounds=(206,142,48,32) pos=(214,150,32,16) color=#707579ff text="city" font=f4 glyphs=4 advance=32
+  text bounds=(266,142,88,32) pos=(274,150,72,16) color=#707579ff text="Delivered" font=f4 glyphs=9 advance=72
+  text bounds=(6,178,80,32) pos=(14,186,64,16) color=#000000ff text="Courier:" font=f5 glyphs=8 advance=64
+  text bounds=(78,178,56,32) pos=(86,186,40,16) color=#000000ff text="Marta" font=f5 glyphs=5 advance=40
+  text bounds=(258,178,96,32) pos=(266,186,80,16) color=#3390ecff text="LX-4821-PT" font=f3 glyphs=10 advance=80
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

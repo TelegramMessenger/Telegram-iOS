@@ -151,7 +151,7 @@ private final class PeerWalletOverlayComponent: Component {
         private var cardFrame = CGRect.zero
         private var buttonFrame = CGRect.zero
         private var animationSize = CGSize.zero
-        private var animator: DisplayLinkAnimator?
+        private var animator: SharedDisplayLinkDriver.Link?
         private var progress: CGFloat = 0.0
         private var usesFlight = false
         private var backgroundHidden = false
@@ -416,24 +416,28 @@ private final class PeerWalletOverlayComponent: Component {
             self.animator?.invalidate()
             let from = self.progress
             let initialBackground = self.backgroundProgress
-            self.animator = DisplayLinkAnimator(duration: duration, from: from, to: target, update: { [weak self] value in
+            let startTime = CACurrentMediaTime()
+            self.animator = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max) { [weak self] _ in
                 guard let self else { return }
-                self.progress = value
-                let elapsed = abs(value - from) / max(0.0001, abs(target - from)) * CGFloat(duration)
+                let timestamp = SharedDisplayLinkDriver.shared.lastTargetTimestamp ?? CACurrentMediaTime()
+                let t = max(0.0, min(1.0, (timestamp - startTime) / duration))
+                let elapsed = CGFloat(t * duration)
+                self.progress = from + (target - from) * CGFloat(t)
                 let backgroundFraction = min(1.0, elapsed / (target == 0.0 ? min(0.32, CGFloat(duration)) : 0.25))
                 self.backgroundProgress = initialBackground + (target - initialBackground) * backgroundFraction
                 self.applyProgress()
                 if target == 1.0 && elapsed >= 0.3 {
                     self.setNoticeVisible(true, duration: 0.2)
                 }
-            }, completion: { [weak self] in
-                guard let self else { return }
-                self.animator = nil
-                if target == 0.0 {
-                    self.restoreSource()
+                if t >= 1.0 {
+                    self.animator?.invalidate()
+                    self.animator = nil
+                    if target == 0.0 {
+                        self.restoreSource()
+                    }
+                    completion()
                 }
-                completion()
-            })
+            }
         }
 
         func setDimHidden() {
@@ -679,13 +683,14 @@ private final class PeerWalletOverlayComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, min(430.0, availableSize.width - 60.0)), height: 52.0)
+                containerSize: CGSize(width: max(1.0, min(430.0, contentWidth - 60.0)), height: 52.0)
             )
             if let buttonView = self.sendButton.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                self.buttonFrame = CGRect(x: floor((availableSize.width - buttonSize.width) * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
+                // A small centred control under band-centred content: it keeps the card's band and axis.
+                self.buttonFrame = CGRect(x: floor(centerX - buttonSize.width * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
                 transition.setFrame(view: buttonView, frame: self.buttonFrame)
             }
             self.animationSize = availableSize

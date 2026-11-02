@@ -53,7 +53,7 @@ func instantPageV2FitWidthMaxX(_ item: InstantPageV2LaidOutItem) -> CGFloat {
     if let languageItem = block.languageItem {
         maxX = max(maxX, block.frame.minX + languageItem.frame.maxX)
     }
-    return maxX
+    return maxX + block.standalonePadding
 }
 
 /// Re-widens every code band to the width that SURVIVED the `fitToWidth` shrink.

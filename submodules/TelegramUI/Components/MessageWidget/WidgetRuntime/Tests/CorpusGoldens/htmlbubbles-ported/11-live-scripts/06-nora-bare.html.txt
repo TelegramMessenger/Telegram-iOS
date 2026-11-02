@@ -1,0 +1,145 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad ttt" id="root">
+  <div class="row between"><b>Tic-tac-toe</b><span class="small muted" id="status">Your move (✕)</span></div>
+  <div class="opts">
+    <span class="seg"><span class="" data-level="easy">Easy</span><span class="on" data-level="hard">Hard</span></span>
+    <span class="seg"><span class="on" data-first="you">✕ first</span><span class="" data-first="pixel">◯ first</span></span>
+  </div>
+  <table id="board" class="intro">
+    <tbody><tr><td data-i="0" class="free"><span class="ghost x" style="animation-delay: 0ms;">✕</span></td><td data-i="1" class="free"><span class="ghost o" style="animation-delay: 110ms;">◯</span></td><td data-i="2" class="free"><span class="ghost x" style="animation-delay: 220ms;">✕</span></td></tr>
+    <tr><td data-i="3" class="free"><span class="ghost o" style="animation-delay: 110ms;">◯</span></td><td data-i="4" class="free"><span class="ghost x" style="animation-delay: 220ms;">✕</span></td><td data-i="5" class="free"><span class="ghost o" style="animation-delay: 330ms;">◯</span></td></tr>
+    <tr><td data-i="6" class="free"><span class="ghost x" style="animation-delay: 220ms;">✕</span></td><td data-i="7" class="free"><span class="ghost o" style="animation-delay: 330ms;">◯</span></td><td data-i="8" class="free"><span class="ghost x" style="animation-delay: 440ms;">✕</span></td></tr>
+  </tbody></table>
+  <div class="score"><span id="sX"><b class="x">You</b> 0</span><span class="muted" id="sD">Draws 0</span><span id="sO"><b class="o">Pixel</b> 0</span></div>
+  <div class="foot" id="foot"><button id="hintBtn">💡 Hint</button><button id="restart">↻ Restart</button></div>
+  <div class="result" id="result" hidden=""><div class="t" id="resT"></div><div class="small muted" id="resS"></div>
+    <button class="primary" id="again" style="margin-top: 8px">Play again</button></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 350.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 350.6
+    div 15 13 300 324.6
+      div 15 13 300 18.2
+        b 15 13 88 18.2
+        span 195 14.3 120 15.6
+      div 15 39.2 300 19.6
+        span 15 39.2 106 19.6
+          span 24 41.2 32 15.6
+          span 77 41.2 32 15.6
+        span 129 39.2 186 19.6
+          span 138 41.2 72 15.6
+          span 231 41.2 72 15.6
+      table 64 68.8 202 202
+        tbody 0 0 0 0
+          tr 0 0 0 0
+            td 64 68.8 66 66
+              span 85 68.8 24 66
+            td 132 68.8 66 66
+              span 153 68.8 24 66
+            td 200 68.8 66 66
+              span 221 68.8 24 66
+          tr 0 0 0 0
+            td 64 136.8 66 66
+              span 85 136.8 24 66
+            td 132 136.8 66 66
+              span 153 136.8 24 66
+            td 200 136.8 66 66
+              span 221 136.8 24 66
+          tr 0 0 0 0
+            td 64 204.8 66 66
+              span 85 204.8 24 66
+            td 132 204.8 66 66
+              span 153 204.8 24 66
+            td 200 204.8 66 66
+              span 221 204.8 24 66
+      div 15 278.8 300 24
+        span 39.6667 282.35 40 16.9
+          b 39.6667 282.35 0 0
+        span 129 282.35 56 16.9
+        span 234.333 282.35 56 16.9
+          b 234.333 282.35 0 0
+      div 15 310.8 300 26.8
+        button 69 315.8 72 16.8
+        button 173 315.8 88 16.8
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+        button 0 0 0 0
+
+== paint
+root 360x350.6 items=48
+  solid-fill bounds=(0,0,330,351) layer=(border=(0,0,330,351),radius=(14,14,14,14,14,14,14,14),clip=(0,0,330,351),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,330,351) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,330,351) root=0
+  borders bounds=(64,69,68,68) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(2,4,#7f7f7f59),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(64,69,68,68) root=0
+  borders bounds=(130,69,70,68) borders=(left=(2,4,#7f7f7f59),top=(0,0,#000000ff),right=(2,4,#7f7f7f59),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(130,69,70,68) root=0
+  borders bounds=(198,69,68,68) borders=(left=(2,4,#7f7f7f59),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(198,69,68,68) root=0
+  borders bounds=(64,135,68,70) borders=(left=(0,0,#000000ff),top=(2,4,#7f7f7f59),right=(2,4,#7f7f7f59),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(64,135,68,70) root=0
+  borders bounds=(130,135,70,70) borders=(left=(2,4,#7f7f7f59),top=(2,4,#7f7f7f59),right=(2,4,#7f7f7f59),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(130,135,70,70) root=0
+  borders bounds=(198,135,68,70) borders=(left=(2,4,#7f7f7f59),top=(2,4,#7f7f7f59),right=(0,0,#000000ff),bottom=(2,4,#7f7f7f59),radius=(0,0,0,0,0,0,0,0)) pos=(198,135,68,70) root=0
+  borders bounds=(64,203,68,68) borders=(left=(0,0,#000000ff),top=(2,4,#7f7f7f59),right=(2,4,#7f7f7f59),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(64,203,68,68) root=0
+  borders bounds=(130,203,70,68) borders=(left=(2,4,#7f7f7f59),top=(2,4,#7f7f7f59),right=(2,4,#7f7f7f59),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(130,203,70,68) root=0
+  borders bounds=(198,203,68,68) borders=(left=(2,4,#7f7f7f59),top=(2,4,#7f7f7f59),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(198,203,68,68) root=0
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="Tic-" font=f1 glyphs=4 advance=32
+  text bounds=(39,6,48,32) pos=(47,14,32,16) color=#000000ff text="tac-" font=f1 glyphs=4 advance=32
+  text bounds=(71,6,40,32) pos=(79,14,24,16) color=#000000ff text="toe" font=f1 glyphs=3 advance=24
+  text bounds=(187,6,48,32) pos=(195,14,32,16) color=#6e6e73ff text="Your" font=f2 glyphs=4 advance=32
+  text bounds=(227,6,48,32) pos=(235,14,32,16) color=#6e6e73ff text="move" font=f2 glyphs=4 advance=32
+  text bounds=(267,6,56,32) pos=(275,14,40,16) color=#6e6e73ff text="(✕)" font=f2 glyphs=5 advance=40
+  solid-fill bounds=(15,39,50,20) layer=(border=(15,39,50,20),radius=(7,7,7,7,7,7,7,7),clip=(15,39,50,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(16,33,48,32) pos=(24,41,32,16) color=#000000ff text="Easy" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(68,39,50,20) layer=(border=(68,39,50,20),radius=(7,7,7,7,7,7,7,7),clip=(68,39,50,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5e5ce6ff
+  text bounds=(69,33,48,32) pos=(77,41,32,16) color=#ffffffff text="Hard" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(129,39,90,20) layer=(border=(129,39,90,20),radius=(7,7,7,7,7,7,7,7),clip=(129,39,90,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5e5ce6ff
+  text bounds=(130,33,40,32) pos=(138,41,24,16) color=#ffffffff text="✕" font=f3 glyphs=3 advance=24
+  text bounds=(162,33,56,32) pos=(170,41,40,16) color=#ffffffff text="first" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(222,39,90,20) layer=(border=(222,39,90,20),radius=(7,7,7,7,7,7,7,7),clip=(222,39,90,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(223,33,40,32) pos=(231,41,24,16) color=#000000ff text="◯" font=f3 glyphs=3 advance=24
+  text bounds=(255,33,56,32) pos=(263,41,40,16) color=#000000ff text="first" font=f3 glyphs=5 advance=40
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(75,66.8,44,70) exact=1
+    text bounds=(77,86,40,32) pos=(85,94,24,16) color=#ff2d55ff text="✕" font=f4 glyphs=3 advance=24
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(143,66.8,44,70) exact=1
+    text bounds=(145,86,40,32) pos=(153,94,24,16) color=#5e5ce6ff text="◯" font=f4 glyphs=3 advance=24
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(211,66.8,44,70) exact=1
+    text bounds=(213,86,40,32) pos=(221,94,24,16) color=#ff2d55ff text="✕" font=f4 glyphs=3 advance=24
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(75,134.8,44,70) exact=1
+    text bounds=(77,154,40,32) pos=(85,162,24,16) color=#5e5ce6ff text="◯" font=f4 glyphs=3 advance=24
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(143,134.8,44,70) exact=1
+    text bounds=(145,154,40,32) pos=(153,162,24,16) color=#ff2d55ff text="✕" font=f4 glyphs=3 advance=24
+  group opacity=0.0049 matrix=(1,0,0,1,0,0) backface=0 bounds=(211,134.8,44,70) exact=1
+    text bounds=(213,154,40,32) pos=(221,162,24,16) color=#5e5ce6ff text="◯" font=f4 glyphs=3 advance=24
+  group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(75,202.8,44,70) exact=1
+    text bounds=(77,222,40,32) pos=(85,230,24,16) color=#ff2d55ff text="✕" font=f4 glyphs=3 advance=24
+  group opacity=0.0049 matrix=(1,0,0,1,0,0) backface=0 bounds=(143,202.8,44,70) exact=1
+    text bounds=(145,222,40,32) pos=(153,230,24,16) color=#5e5ce6ff text="◯" font=f4 glyphs=3 advance=24
+  group opacity=0.2693 matrix=(1,0,0,1,0,0) backface=0 bounds=(211,202.8,44,70) exact=1
+    text bounds=(213,222,40,32) pos=(221,230,24,16) color=#ff2d55ff text="✕" font=f4 glyphs=3 advance=24
+  text bounds=(31.6667,274,40,32) pos=(39.6667,282,24,16) color=#ff2d55ff text="You" font=f5 glyphs=3 advance=24
+  text bounds=(63.6667,274,24,32) pos=(71.6667,282,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
+  text bounds=(121,274,56,32) pos=(129,282,40,16) color=#6e6e73ff text="Draws" font=f6 glyphs=5 advance=40
+  text bounds=(169,274,24,32) pos=(177,282,8,16) color=#6e6e73ff text="0" font=f6 glyphs=1 advance=8
+  text bounds=(226.333,274,56,32) pos=(234.333,282,40,16) color=#5e5ce6ff text="Pixel" font=f5 glyphs=5 advance=40
+  text bounds=(274.333,274,24,32) pos=(282.333,282,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
+  solid-fill bounds=(56,311,98,27) layer=(border=(56,311,98,27),radius=(8,8,8,8,8,8,8,8),clip=(56,311,98,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(61,308,48,32) pos=(69,316,32,16) color=#000000ff text="💡" font=f1 glyphs=4 advance=32
+  text bounds=(101,308,48,32) pos=(109,316,32,16) color=#000000ff text="Hint" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(160,311,114,27) layer=(border=(160,311,114,27),radius=(8,8,8,8,8,8,8,8),clip=(160,311,114,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(165,308,40,32) pos=(173,316,24,16) color=#000000ff text="↻" font=f1 glyphs=3 advance=24
+  text bounds=(197,308,72,32) pos=(205,316,56,16) color=#000000ff text="Restart" font=f1 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=40,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

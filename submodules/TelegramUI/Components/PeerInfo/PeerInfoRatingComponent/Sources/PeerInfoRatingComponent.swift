@@ -140,6 +140,7 @@ public final class PeerInfoRatingComponent: Component {
     let level: Int
     let action: () -> Void
     let debugLevel: Bool
+    let accessibilityLabel: String?
     
     public init(
         backgroundColor: UIColor,
@@ -147,7 +148,8 @@ public final class PeerInfoRatingComponent: Component {
         foregroundColor: UIColor,
         level: Int,
         action: @escaping () -> Void,
-        debugLevel: Bool = false
+        debugLevel: Bool = false,
+        accessibilityLabel: String? = nil
     ) {
         self.backgroundColor = backgroundColor
         self.borderColor = borderColor
@@ -155,6 +157,7 @@ public final class PeerInfoRatingComponent: Component {
         self.level = level
         self.action = action
         self.debugLevel = debugLevel
+        self.accessibilityLabel = accessibilityLabel
     }
     
     public static func ==(lhs: PeerInfoRatingComponent, rhs: PeerInfoRatingComponent) -> Bool {
@@ -171,6 +174,9 @@ public final class PeerInfoRatingComponent: Component {
             return false
         }
         if lhs.debugLevel != rhs.debugLevel {
+            return false
+        }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
             return false
         }
         return true
@@ -212,6 +218,14 @@ public final class PeerInfoRatingComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component, !component.debugLevel else {
+                return false
+            }
+            component.action()
+            return true
+        }
+        
         @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
             guard let component = self.component else {
                 return
@@ -248,6 +262,12 @@ public final class PeerInfoRatingComponent: Component {
             } else {
                 level = component.level
             }
+            
+            // VoiceOver: one button, labelled by the host, whose value is the level the badge shows.
+            self.isAccessibilityElement = component.accessibilityLabel != nil
+            self.accessibilityLabel = component.accessibilityLabel
+            self.accessibilityValue = "\(level)"
+            self.accessibilityTraits = .button
             
             let iconSize = CGSize(width: 26.0, height: 26.0)
             

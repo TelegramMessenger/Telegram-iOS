@@ -31,6 +31,8 @@ import TelegramCallsUI
 import AutomaticBusinessMessageSetupScreen
 import MediaEditorScreen
 import CameraScreen
+import ChatScheduleTimeController
+import Camera
 import ComposeTodoScreen
 import ComposePollScreen
 import Photos
@@ -41,6 +43,9 @@ import ChatRichTextEditorComposer
 import Postbox
 import WalletContext
 import WalletSendScreen
+import ChatMediaEditorScreen
+import ChatMediaSend
+import BrowserUI
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -538,6 +543,12 @@ extension ChatControllerImpl {
                                 completion()
                             } else {
                                 self?.enqueueMediaMessages(fromGallery: fromGallery, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            }
+                        }, preparedCompletion: { [weak self] fromGallery, messages, count, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
+                            if let self {
+                                self.sendAttachmentPreparedMediaMessages(messages, count: count, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, fromGallery: fromGallery, getAnimatedTransitionSource: getAnimatedTransitionSource, inputText: inputText, isEditingMessage: isEditingMessage, completion: completion)
+                            } else if isEditingMessage {
+                                completion()
                             }
                         })
                         return true
@@ -1230,7 +1241,7 @@ extension ChatControllerImpl {
                                 self.presentFormulaEditor(initialValue: initialValue, completion: completion)
                             },
                             pastedMarkdownParser: { context, text in
-                                return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+                                return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: false)
                             }
                         )
                         completion(controller, controller.mediaPickerContext)
@@ -1346,6 +1357,23 @@ extension ChatControllerImpl {
             mode = .default
         }
         let initialCaption = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+        if self.context.routesToChatMediaEditorV2(mode == .default ? .animatedFileEditor : .messageMediaEditor), let initialTool = chatMediaEditorInitialTool(mode) {
+            presentChatMediaEditor(context: self.context, media: mediaReference, initialTool: initialTool, initialCaption: initialCaption, recipientName: chatMediaEditorRecipientName(context: self.context, peer: EnginePeer(peer), threadTitle: self.contentData?.state.threadInfo?.title), getCaptionPanelView: { [weak self] in
+                return self?.getCaptionPanelView(isFile: false, hasTimer: false)
+            }, hasSilentPosting: false, hasSchedule: false, reminder: false, presentSchedulePicker: { _ in
+            }, isAnimation: chatMediaEditorIsAnimation(mode: mode, mediaIsAnimated: (mediaReference.media as? TelegramMediaFile)?.isAnimated ?? false), originalMediaReference: nil, sendMessages: { [weak self] messages, _, _, _ in
+                guard let self else {
+                    return
+                }
+                if !initialCaption.string.isEmpty {
+                    self.clearInputText()
+                }
+                self.editMessageMediaWithPreparedMessages(messages)
+            }, present: { [weak self] c, a in
+                self?.present(c, in: .window(.root), with: a)
+            })
+            return
+        }
         legacyMediaEditor(context: self.context, peer: EnginePeer(peer), threadTitle: self.contentData?.state.threadInfo?.title, media: mediaReference, mode: mode, initialCaption: initialCaption, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
             return self?.getCaptionPanelView(isFile: false, hasTimer: false)
         }, photoToolbarView: { [context = self.context] backButton, doneButton, solidBackground, hasSendStarsButton in
@@ -1364,6 +1392,16 @@ extension ChatControllerImpl {
     }
 
     func presentFileGallery(editingMessage: Bool = false) {
+        if self.context.routesToChatMediaEditorV2(.filePicker) {
+            self.presentFileMediaPicker(editingMedia: editingMessage, completion: { [weak self] signals, silentPosting, scheduleTime, parameters in
+                if editingMessage {
+                    self?.editMessageMediaWithLegacySignals(signals)
+                } else {
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, parameters: parameters)
+                }
+            })
+            return
+        }
         self.presentOldMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { [weak self] signals, silentPosting, scheduleTime in
             if editingMessage {
                 self?.editMessageMediaWithLegacySignals(signals)
@@ -1515,7 +1553,7 @@ extension ChatControllerImpl {
         self.present(actionSheet, in: .window(.root))
     }
 
-    func presentMediaPicker(subject: MediaPickerScreenImpl.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, enableMultiselection: Bool, isEditingMessage: Bool = false, mainButton: (state: AttachmentMainButtonState, action: () -> Void)? = nil, present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping (Bool, [Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    func presentMediaPicker(subject: MediaPickerScreenImpl.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, enableMultiselection: Bool, isEditingMessage: Bool = false, mainButton: (state: AttachmentMainButtonState, action: () -> Void)? = nil, present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping (Bool, [Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void, preparedCompletion: ((Bool, Signal<[LegacyAssetPickerEnqueueMessage], Void>, Int32, Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void)? = nil) {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
@@ -1553,19 +1591,17 @@ extension ChatControllerImpl {
             }
         }
         let mediaPickerContext = controller.mediaPickerContext
+        controller.opensChatCameraWithHolder = true
         controller.openCamera = { [weak self] cameraView in
-            self?.openCamera(cameraView: cameraView as? TGAttachmentCameraView, isEditingMessage: isEditingMessage)
+            guard let self else {
+                (cameraView as? CameraHolder)?.restore()
+                return
+            }
+            self.openCamera(cameraView: cameraView as? TGAttachmentCameraView, cameraHolder: cameraView as? CameraHolder, entry: cameraView == nil ? .placeholder : .inlineCell, isEditingMessage: isEditingMessage)
         }
         controller.presentSchedulePicker = { [weak self] media, done in
             if let strongSelf = self {
-                strongSelf.presentScheduleTimePicker(style: media ? .media : .default, completion: { [weak self] result in
-                    if let strongSelf = self {
-                        done(result.time, result.silentPosting)
-                        if strongSelf.presentationInterfaceState.subject != .scheduledMessages && result.time != scheduleWhenOnlineTimestamp {
-                            strongSelf.openScheduledMessages()
-                        }
-                    }
-                })
+                strongSelf.presentMediaScheduleTimePicker(style: media ? .media : .default, presentInOverlay: media && strongSelf.context.routesToChatMediaEditorV2(.pickerGallery), done: done)
             }
         }
         controller.presentTimerPicker = { [weak self] done in
@@ -1581,57 +1617,96 @@ extension ChatControllerImpl {
         controller.legacyCompletion = { fromGallery, signals, silently, scheduleTime, parameters, getAnimatedTransitionSource, sendCompletion in
             completion(fromGallery, signals, silently, scheduleTime, parameters, getAnimatedTransitionSource, sendCompletion)
         }
+        controller.preparedCompletion = preparedCompletion
         controller.editCover = { [weak self] dimensions, completion in
-            guard let self else {
-                return
-            }
-            var dismissImpl: (() -> Void)?
-            let mainController = coverMediaPickerController(
-                context: self.context,
-                completion: { result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
-                    let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
-                    if let asset = result as? PHAsset {
-                        subject = .single(.asset(asset))
-                    } else {
-                        return
-                    }
+            self?.presentAttachmentCoverEditor(dimensions: dimensions, inOverlay: false, completion: completion)
+        }
+        controller.editCoverInOverlay = { [weak self] dimensions, completion, dismissed in
+            self?.presentAttachmentCoverEditor(dimensions: dimensions, inOverlay: true, completion: completion, dismissed: dismissed)
+        }
+        present(controller, mediaPickerContext)
+    }
 
-                    let editorController = MediaEditorScreenImpl(
-                        context: self.context,
-                        mode: .coverEditor(dimensions: dimensions),
-                        subject: subject,
-                        transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
-                            MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
-                                sourceView: $0,
-                                sourceRect: transitionRect,
-                                sourceImage: transitionImage
-                            )
-                        ) }),
-                        transitionOut: { finished, isNew in
-                            if !finished, let transitionView {
-                                return MediaEditorScreenImpl.TransitionOut(
-                                    destinationView: transitionView,
-                                    destinationRect: transitionView.bounds,
-                                    destinationCornerRadius: 0.0
-                                )
-                            }
-                            return nil
-                        }, completion: { results, commit in
-                            if case let .image(image, _) = results.first?.media {
-                                completion(image)
-                                commit({})
-                            }
-                            dismissImpl?()
-                        } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
-                    )
-                    editorController.cancelled = { _ in
-                        cancelled()
-                    }
-                    self.push(editorController)
-                }, dismissed: {
-
+    private func presentAttachmentCoverEditor(dimensions: CGSize, inOverlay: Bool, completion: @escaping (UIImage) -> Void, dismissed: @escaping () -> Void = {}) {
+        var dismissImpl: (() -> Void)?
+        weak var overlayNavigationController: NavigationController?
+        let mainController = coverMediaPickerController(
+            context: self.context,
+            completion: { result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
+                let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+                if let asset = result as? PHAsset {
+                    subject = .single(.asset(asset))
+                } else {
+                    return
                 }
-            )
+
+                let editorController = MediaEditorScreenImpl(
+                    context: self.context,
+                    mode: .coverEditor(dimensions: dimensions),
+                    subject: subject,
+                    transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
+                        MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
+                            sourceView: $0,
+                            sourceRect: transitionRect,
+                            sourceImage: transitionImage
+                        )
+                    ) }),
+                    transitionOut: { finished, isNew in
+                        if !finished, let transitionView {
+                            return MediaEditorScreenImpl.TransitionOut(
+                                destinationView: transitionView,
+                                destinationRect: transitionView.bounds,
+                                destinationCornerRadius: 0.0
+                            )
+                        }
+                        return nil
+                    }, completion: { results, commit in
+                        if case let .image(image, _) = results.first?.media {
+                            completion(image)
+                            commit({})
+                        }
+                        dismissImpl?()
+                    } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
+                )
+                editorController.cancelled = { _ in
+                    cancelled()
+                }
+                if let overlayNavigationController {
+                    overlayNavigationController.pushViewController(editorController)
+                } else {
+                    self.push(editorController)
+                }
+            }, dismissed: {
+                dismissed()
+            }
+        )
+        if inOverlay {
+            let navigationTheme = NavigationControllerTheme(presentationTheme: defaultDarkColorPresentationTheme)
+            let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(statusBar: navigationTheme.statusBar, navigationBar: navigationTheme.navigationBar, emptyAreaColor: .clear, separatorColor: navigationTheme.separatorColor, opaqueBackgroundColor: navigationTheme.opaqueBackgroundColor))
+            navigationController.isOpaqueWhenInOverlay = false
+            overlayNavigationController = navigationController
+            var hadControllers = false
+            var isDismissed = false
+            let _ = (navigationController.viewControllersSignal
+            |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] controllers in
+                if isDismissed {
+                    return
+                }
+                if !controllers.isEmpty {
+                    hadControllers = true
+                } else if hadControllers {
+                    isDismissed = true
+                    navigationController?.dismiss(animated: false, completion: nil)
+                }
+            })
+            navigationController.setViewControllers([mainController], animated: false)
+            self.context.sharedContext.mainWindow?.present(navigationController, on: .root, blockInteraction: false, completion: {})
+            dismissImpl = { [weak navigationController, weak mainController] in
+                if let navigationController, let mainController {
+                    navigationController.filterController(mainController, animated: false)
+                }
+            }
+        } else {
             (self.navigationController as? NavigationController)?.pushViewController(mainController, animated: true)
             dismissImpl = { [weak self, weak mainController] in
                 if let self, let navigationController = self.navigationController, let mainController {
@@ -1644,7 +1719,97 @@ extension ChatControllerImpl {
 
             }
         }
-        present(controller, mediaPickerContext)
+    }
+
+    private func presentFileMediaPicker(editingMedia: Bool, completion: @escaping ([Any], Bool, Int32, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
+        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
+            return transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self) ?? GeneratedMediaStoreSettings.defaultSettings
+        }
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
+            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+                return
+            }
+            let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+            var slowModeEnabled = false
+            if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                slowModeEnabled = true
+            }
+            let controller = fileMediaPickerController(
+                context: self.context,
+                updatedPresentationData: self.updatedPresentationData,
+                peer: EnginePeer(peer),
+                threadTitle: self.contentData?.state.threadInfo?.title,
+                chatLocation: self.chatLocation,
+                isScheduledMessages: self.presentationInterfaceState.subject == .scheduledMessages,
+                isEditingMessage: editingMedia,
+                isSlowMode: slowModeEnabled,
+                initialCaption: inputText,
+                saveEditedPhotos: settings.storeEditedPhotos,
+                customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable,
+                presentSelectionLimitExceeded: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let text: String
+                    if slowModeEnabled {
+                        text = self.presentationData.strings.Chat_SlowmodeAttachmentLimitReached
+                    } else {
+                        text = self.presentationData.strings.Chat_AttachmentLimitReached
+                    }
+                    self.present(textAlertController(context: self.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                },
+                presentSchedulePicker: { [weak self] media, done in
+                    self?.presentMediaScheduleTimePicker(style: media ? .media : .default, presentInOverlay: media, done: done)
+                },
+                presentTimerPicker: { [weak self] done in
+                    self?.presentTimerPicker(style: .media, completion: { time in
+                        done(time)
+                    })
+                },
+                getCaptionPanelView: { [weak self] in
+                    return self?.getCaptionPanelView(isFile: true)
+                },
+                completion: completion
+            )
+            self.chatDisplayNode.dismissInput()
+            self.push(controller)
+        })
+    }
+
+    func presentEditMessageMediaPicker(messageId: EngineMessage.Id) {
+        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
+            return transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self) ?? GeneratedMediaStoreSettings.defaultSettings
+        }
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
+            guard let self else {
+                return
+            }
+            let controller = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: self.chatLocation, isEditingMessage: true, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
+                return nil
+            })
+            controller.requestController = { [weak self, weak controller] _, present in
+                guard let self else {
+                    return false
+                }
+                self.presentMediaPicker(saveEditedPhotos: settings.storeEditedPhotos, bannedSendPhotos: nil, bannedSendVideos: nil, enableMultiselection: false, isEditingMessage: true, present: { mediaPicker, mediaPickerContext in
+                    present(mediaPicker, mediaPickerContext)
+                }, updateMediaPickerContext: { [weak controller] mediaPickerContext in
+                    controller?.mediaPickerContext = mediaPickerContext
+                }, completion: { [weak self] _, signals, _, _, _, _, completion in
+                    self?.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                    self?.editMessageMediaWithLegacySignals(signals)
+                    completion()
+                }, preparedCompletion: { [weak self] _, messages, _, _, _, _, _, completion in
+                    self?.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                    self?.editMessageMediaWithPreparedMessages(messages)
+                    completion()
+                })
+                return true
+            }
+            controller.navigationPresentation = .flatModal
+            self.chatDisplayNode.dismissInput()
+            self.push(controller)
+        })
     }
 
     func presentOldMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool, Int32) -> Void) {
@@ -1699,14 +1864,7 @@ extension ChatControllerImpl {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak self] media, done in
                         if let strongSelf = self {
-                            strongSelf.presentScheduleTimePicker(style: media ? .media : .default, completion: { [weak self] result in
-                                if let strongSelf = self {
-                                     done(result.time, result.silentPosting)
-                                     if strongSelf.presentationInterfaceState.subject != .scheduledMessages && result.time != scheduleWhenOnlineTimestamp {
-                                         strongSelf.openScheduledMessages()
-                                     }
-                                 }
-                            })
+                            strongSelf.presentMediaScheduleTimePicker(style: media ? .media : .default, presentInOverlay: false, done: done)
                         }
                     }, presentTimerPicker: { [weak self] done in
                         if let strongSelf = self {
@@ -1953,20 +2111,24 @@ extension ChatControllerImpl {
 
     /// `isEditingMessage` comes from the attachment menu that hosts the camera: a capture then replaces
     /// the edited message's media instead of sending a new message.
-    func openCamera(cameraView: TGAttachmentCameraView? = nil, isEditingMessage: Bool = false) {
+    func openCamera(cameraView: TGAttachmentCameraView? = nil, cameraHolder: CameraHolder? = nil, entry: ChatCameraEntry, isEditingMessage: Bool = false) {
+        let opensChatCamera = cameraView == nil && self.context.routesToChatMediaEditorV2(entry.chatMediaV2Entry)
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
             guard let strongSelf = self else {
+                cameraHolder?.restore()
                 return
             }
 
             var enablePhoto = true
             var enableVideo = true
 
+            var hasActiveCall = false
             if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveCall {
+                hasActiveCall = true
                 enableVideo = false
             }
 
@@ -2002,11 +2164,51 @@ extension ChatControllerImpl {
             var hasSchedule = false
             if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                 storeCapturedMedia = peer.id.namespace != Namespaces.Peer.SecretChat
-                hasSchedule = strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat && strongSelf.presentationInterfaceState.sendPaidMessageStars == nil && !isEditingMessage
+                hasSchedule = chatCameraHasSchedule(isScheduledMessages: strongSelf.presentationInterfaceState.subject == .scheduledMessages, isSecretChat: peer.id.namespace == Namespaces.Peer.SecretChat, hasPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars != nil, isEditingMessage: isEditingMessage)
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
 
             let cameraPeer: EnginePeer? = strongSelf.presentationInterfaceState.renderedPeer?.peer.map { EnginePeer($0) }
+            let recognizedQRCode: (String) -> Bool = { [weak self] code in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if let webSettings = parseWebProxySettingsLink(code), case let .web(secret, path) = webSettings.connection {
+                    strongSelf.openResolved(result: ResolvedUrl.webProxy(host: webSettings.host, path: path, secret: secret), sourceMessageId: nil)
+                    return true
+                } else if let (host, port, username, password, secret) = parseProxyUrl(sharedContext: strongSelf.context.sharedContext, url: code) {
+                    strongSelf.openResolved(result: ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret), sourceMessageId: nil)
+                    return true
+                }
+                return false
+            }
+
+            if opensChatCamera {
+                guard let modes = chatCameraModes(isPhotoBanned: bannedSendPhotos != nil, isVideoBanned: bannedSendVideos != nil, hasActiveCall: hasActiveCall) else {
+                    cameraHolder?.restore()
+                    strongSelf.presentChatCameraUnavailableAlert(hasActiveCall: hasActiveCall)
+                    return
+                }
+                let options = chatCameraSessionOptions(entry: entry, isEditingMessage: isEditingMessage)
+                strongSelf.presentAttachmentChatCamera(
+                    cameraHolder: cameraHolder,
+                    peer: cameraPeer,
+                    isEditingMessage: isEditingMessage,
+                    mediaGrouping: options.mediaGrouping,
+                    params: ChatCameraParams(
+                        allowPhoto: modes.allowPhoto,
+                        allowVideo: modes.allowVideo,
+                        isSingleShot: options.isSingleShot,
+                        hasAudio: modes.hasAudio,
+                        saveCapturedMedia: storeCapturedMedia,
+                        recognizedQRCode: recognizedQRCode
+                    ),
+                    inputText: inputText,
+                    hasSchedule: hasSchedule
+                )
+                return
+            }
+
             presentedLegacyCamera(context: strongSelf.context, peer: cameraPeer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: isEditingMessage, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: !isEditingMessage, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars?.value ?? 0, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, parameters in
                 if let strongSelf = self {
                     if isEditingMessage {
@@ -2020,24 +2222,11 @@ extension ChatControllerImpl {
                         strongSelf.clearInputText()
                     }
                 }
-            }, recognizedQRCode: { [weak self] code in
-                if let strongSelf = self {
-                    if let webSettings = parseWebProxySettingsLink(code), case let .web(secret, path) = webSettings.connection {
-                        strongSelf.openResolved(result: ResolvedUrl.webProxy(host: webSettings.host, path: path, secret: secret), sourceMessageId: nil)
-                    } else if let (host, port, username, password, secret) = parseProxyUrl(sharedContext: strongSelf.context.sharedContext, url: code) {
-                        strongSelf.openResolved(result: ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret), sourceMessageId: nil)
-                    }
-                }
+            }, recognizedQRCode: { code in
+                let _ = recognizedQRCode(code)
             }, presentSchedulePicker: { [weak self] _, done in
                 if let strongSelf = self {
-                    strongSelf.presentScheduleTimePicker(style: .media, presentInOverlay: true, completion: { [weak self] result in
-                        if let strongSelf = self {
-                            done(result.time, result.silentPosting)
-                            if strongSelf.presentationInterfaceState.subject != .scheduledMessages && result.time != scheduleWhenOnlineTimestamp {
-                                strongSelf.openScheduledMessages()
-                            }
-                        }
-                    })
+                    strongSelf.presentMediaScheduleTimePicker(style: .media, presentInOverlay: true, done: done)
                 }
             }, presentTimerPicker: { [weak self] done in
                 if let strongSelf = self {
@@ -2055,6 +2244,99 @@ extension ChatControllerImpl {
                 self?.attachmentController?.scrollToTop?()
             })
         })
+    }
+
+    private func sendAttachmentPreparedMediaMessages(_ messages: Signal<[LegacyAssetPickerEnqueueMessage], Void>, count: Int32, silentPosting: Bool, scheduleTime: Int32?, parameters: ChatSendMessageActionSheetController.SendParameters?, fromGallery: Bool, getAnimatedTransitionSource: @escaping (String) -> UIView?, inputText: NSAttributedString, isEditingMessage: Bool, completion: @escaping () -> Void) {
+        if !inputText.string.isEmpty {
+            self.clearInputText()
+        }
+        if isEditingMessage {
+            self.editMessageMediaWithPreparedMessages(messages)
+            completion()
+        } else {
+            self.enqueuePreparedMediaMessages(messages, count: count, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: nil, parameters: parameters, fromGallery: fromGallery, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+        }
+    }
+
+    private func presentMediaScheduleTimePicker(style: ChatScheduleTimeControllerStyle, presentInOverlay: Bool, done: @escaping (Int32, Bool) -> Void) {
+        self.presentScheduleTimePicker(style: style, presentInOverlay: presentInOverlay, completion: { [weak self] result in
+            guard let self else {
+                return
+            }
+            done(result.time, result.silentPosting)
+            if self.presentationInterfaceState.subject != .scheduledMessages && result.time != scheduleWhenOnlineTimestamp {
+                self.openScheduledMessages()
+            }
+        })
+    }
+
+    private func presentChatCameraUnavailableAlert(hasActiveCall: Bool) {
+        let strings = self.presentationData.strings
+        let title: String? = hasActiveCall ? strings.Call_CallInProgressTitle : nil
+        let text = self.restrictedSendingContentsText()
+        self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), in: .window(.root))
+    }
+
+    private func presentAttachmentChatCamera(cameraHolder: CameraHolder?, peer: EnginePeer?, isEditingMessage: Bool, mediaGrouping: Bool, params: ChatCameraParams, inputText: NSAttributedString, hasSchedule: Bool) {
+        let parameters = ChatCameraFlowParameters(
+            camera: params,
+            peer: peer,
+            threadTitle: self.contentData?.state.threadInfo?.title,
+            isEditingMessage: isEditingMessage,
+            mediaGrouping: mediaGrouping,
+            initialCaption: inputText,
+            hasSchedule: hasSchedule,
+            sendPaidMessageStars: self.presentationInterfaceState.sendPaidMessageStars?.value ?? 0,
+            getCaptionPanelView: { [weak self] in
+                return self?.getCaptionPanelView(isFile: false)
+            },
+            presentSchedulePicker: { [weak self] done in
+                self?.presentMediaScheduleTimePicker(style: .media, presentInOverlay: true, done: done)
+            },
+            presentTimerPicker: { [weak self] done in
+                self?.presentTimerPicker(style: .media, completion: { time in
+                    done(time)
+                })
+            }
+        )
+        var transitionIn: CameraScreenImpl.TransitionIn?
+        if let cameraHolder {
+            transitionIn = CameraScreenImpl.TransitionIn(
+                sourceView: cameraHolder.parentView,
+                sourceRect: cameraHolder.parentView.bounds,
+                sourceCornerRadius: 0.0,
+                useFillAnimation: false
+            )
+        }
+        let camera = makeChatCameraScreen(
+            context: self.context,
+            parameters: parameters,
+            holder: cameraHolder,
+            transitionIn: transitionIn,
+            transitionOut: { [weak cameraHolder] _ in
+                guard let cameraHolder, cameraHolder.parentView.window != nil else {
+                    return nil
+                }
+                return CameraScreenImpl.TransitionOut(
+                    destinationView: cameraHolder.parentView,
+                    destinationRect: cameraHolder.parentView.bounds,
+                    destinationCornerRadius: 0.0
+                )
+            },
+            completion: { [weak self] fromGallery, messages, count, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
+                guard let self else {
+                    return
+                }
+                self.sendAttachmentPreparedMediaMessages(messages, count: count, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, fromGallery: fromGallery, getAnimatedTransitionSource: getAnimatedTransitionSource, inputText: inputText, isEditingMessage: isEditingMessage, completion: completion)
+                self.attachmentController?.dismiss(animated: false, completion: nil)
+            }
+        )
+        if let cameraHolder {
+            camera.transitionedOut = { [weak cameraHolder] in
+                cameraHolder?.restore()
+            }
+        }
+        self.push(camera)
     }
 
     func openStickerEditor() {

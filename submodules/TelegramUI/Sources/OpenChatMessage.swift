@@ -386,8 +386,6 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
 
                 let _ = (gallery
                 |> deliverOnMainQueue).startStandalone(next: { gallery in
-                    params.blockInteraction.set(.single(false))
-                    
                     gallery.centralItemUpdated = { messageId in
                         params.centralItemUpdated?(messageId)
                     }
@@ -405,6 +403,16 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     
                     params.present(gallery, arguments, presentInCurrent ? .current : .window(.root))
+                    
+                    // The presentation shows the gallery once it is ready (its first item loaded, or after 2 s), and
+                    // until then the media can be tapped again: interaction stays blocked until it is on screen.
+                    let _ = (gallery.ready.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
+                    |> deliverOnMainQueue).startStandalone(next: { _ in
+                        params.blockInteraction.set(.single(false))
+                    })
                 })
                 return true
             case let .secretGallery(gallery):

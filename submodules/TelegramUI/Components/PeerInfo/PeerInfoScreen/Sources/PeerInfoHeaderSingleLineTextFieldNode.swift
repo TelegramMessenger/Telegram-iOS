@@ -67,6 +67,18 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         }
     }
     
+    /// The field, then its clear button (the button's frame starts higher, so by frame it would read first).
+    override var accessibilityElements: [Any]? {
+        get {
+            var elements: [Any] = [self.textNode.textField]
+            if !self.clearButtonNode.isHidden {
+                elements.append(self.clearButtonNode.view)
+            }
+            return elements
+        } set(value) {
+        }
+    }
+    
     @objc private func clearButtonPressed() {
         self.textNode.textField.text = ""
         self.updateClearButtonVisibility()
@@ -84,7 +96,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         let isHidden = !self.textNode.textField.isFirstResponder || self.text.isEmpty
         self.clearIconNode.isHidden = isHidden
         self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
+        self.clearButtonNode.isAccessibilityElement = !isHidden
     }
     
     func update(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
@@ -106,8 +118,11 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
         if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
             self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
-            self.textNode.textField.accessibilityHint = attributedPlaceholderText.string
         }
+        // The field is named by its placeholder ("First Name"), which is hidden once there is text.
+        self.textNode.textField.accessibilityLabel = placeholder
+        self.clearButtonNode.accessibilityLabel = presentationData.strings.WebSearch_RecentSectionClear
+        self.clearButtonNode.accessibilityTraits = .button
         
         if let updateText = updateText {
             self.textNode.textField.text = updateText

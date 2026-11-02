@@ -16,6 +16,7 @@ public final class TabSelectionRecognizer: UIGestureRecognizer {
         super.reset()
         
         self.initialLocation = nil
+        self.currentLocation = nil
     }
     
     public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -47,6 +48,19 @@ public final class TabSelectionRecognizer: UIGestureRecognizer {
         self.currentLocation = touches.first?.location(in: self.view)
         
         self.state = .changed
+    }
+    
+    /// Where the touch was last seen, in `view`'s coordinates; nil when no touch has arrived since the last reset.
+    /// Use it instead of `location(in:)`, which answers `.zero` once the recognizer holds no touches: a callback
+    /// that runs after the touch is gone cannot tell that from a real point.
+    public func trackedLocation(in view: UIView?) -> CGPoint? {
+        guard let currentLocation = self.currentLocation else {
+            return nil
+        }
+        guard let ownView = self.view else {
+            return currentLocation
+        }
+        return ownView.convert(currentLocation, to: view)
     }
     
     public func translation(in: UIView?) -> CGPoint {

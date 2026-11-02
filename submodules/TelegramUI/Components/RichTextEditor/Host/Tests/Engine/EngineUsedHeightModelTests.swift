@@ -16,7 +16,7 @@ import RichTextEditorUIKit
 /// measures `fontBox + (n-1) * pitch` and is `ceil(fontBox) - fontBox` short per block, which is what
 /// `.safe` and `.exactWithTrailingSpacing` each answer differently.
 ///
-/// See the RichTextEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
+/// See the RichTextEngineEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
 @available(iOS 18.4, *)
 final class EngineUsedHeightModelTests: XCTestCase {
     private var window: UIWindow!

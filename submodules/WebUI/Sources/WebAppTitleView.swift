@@ -11,11 +11,14 @@ public struct WebAppTitle: Equatable {
     public var title: String
     public var counter: String
     public var isVerified: Bool
+    /// The bot's third-party verification icon (a custom emoji), drawn left of the title as in the chat header.
+    public var verificationIconFileId: Int64?
     
-    public init(title: String, counter: String, isVerified: Bool) {
+    public init(title: String, counter: String, isVerified: Bool, verificationIconFileId: Int64? = nil) {
         self.title = title
         self.counter = counter
         self.isVerified = isVerified
+        self.verificationIconFileId = verificationIconFileId
     }
 }
 
@@ -25,6 +28,7 @@ public final class WebAppTitleView: UIView {
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private var titleCredibilityIconView: ComponentHostView<Empty>?
+    private var titleVerificationIconView: ComponentHostView<Empty>?
     
     public var title: WebAppTitle = WebAppTitle(title: "", counter: "", isVerified: false) {
         didSet {
@@ -112,17 +116,41 @@ public final class WebAppTitleView: UIView {
         let size = self.bounds.size
         let spacing: CGFloat = 0.0
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
-        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
-        let combinedHeight = titleSize.height + subtitleSize.height + spacing
+        // As the chat header's third-party verification icon: 20pt, 4pt before the title.
+        let verificationIconSpacing: CGFloat = 4.0
+        var verificationIconSize: CGSize?
+        if let verificationIconFileId = self.title.verificationIconFileId {
+            let titleVerificationIconView: ComponentHostView<Empty>
+            if let current = self.titleVerificationIconView {
+                titleVerificationIconView = current
+            } else {
+                titleVerificationIconView = ComponentHostView<Empty>()
+                titleVerificationIconView.isUserInteractionEnabled = false
+                self.titleVerificationIconView = titleVerificationIconView
+                self.addSubview(titleVerificationIconView)
+            }
+            verificationIconSize = titleVerificationIconView.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.context.animationCache,
+                    animationRenderer: self.context.animationRenderer,
+                    content: .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2)),
+                    isVisibleForAnimations: true,
+                    action: nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 20.0, height: 20.0)
+            )
+        } else if let titleVerificationIconView = self.titleVerificationIconView {
+            self.titleVerificationIconView = nil
+            titleVerificationIconView.removeFromSuperview()
+        }
         
-        
-        var totalWidth = titleSize.width
-        let topOffset = self.isAttachMenu ? 3.0 : 0.0
-        
+        let credibilityIconSpacing: CGFloat = 2.0
+        var credibilityIconSize: CGSize?
         if self.title.isVerified {
             let statusContent: EmojiStatusComponent.Content = .verified(fillColor: self.theme.list.itemCheckColors.fillColor, foregroundColor: self.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
-            let titleCredibilityIconTransition: ComponentTransition = .immediate
             
             let titleCredibilityIconView: ComponentHostView<Empty>
             if let current = self.titleCredibilityIconView {
@@ -133,8 +161,8 @@ public final class WebAppTitleView: UIView {
                 self.addSubview(titleCredibilityIconView)
             }
             
-            let titleIconSize = titleCredibilityIconView.update(
-                transition: titleCredibilityIconTransition,
+            credibilityIconSize = titleCredibilityIconView.update(
+                transition: .immediate,
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.context.animationCache,
@@ -147,14 +175,27 @@ public final class WebAppTitleView: UIView {
                 environment: {},
                 containerSize: CGSize(width: 20.0, height: 20.0)
             )
-            
-            totalWidth += titleIconSize.width + 2.0
-            
-            titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x:floorToScreenPixels((size.width - totalWidth) / 2.0) + titleSize.width + 2.0, y: topOffset + floorToScreenPixels(floorToScreenPixels((size.height - combinedHeight) / 2.0 + titleSize.height / 2.0) - titleIconSize.height / 2.0)), size: titleIconSize))
         }
         
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0), y: topOffset + floorToScreenPixels((size.height - combinedHeight) / 2.0)), size: titleSize)
+        let leadingIconsWidth: CGFloat = verificationIconSize.flatMap { $0.width + verificationIconSpacing } ?? 0.0
+        let trailingIconsWidth: CGFloat = credibilityIconSize.flatMap { $0.width + credibilityIconSpacing } ?? 0.0
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - leadingIconsWidth - trailingIconsWidth), height: size.height))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
+        let combinedHeight = titleSize.height + subtitleSize.height + spacing
+        
+        let totalWidth = leadingIconsWidth + titleSize.width + trailingIconsWidth
+        let topOffset = self.isAttachMenu ? 3.0 : 0.0
+        
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0) + leadingIconsWidth, y: topOffset + floorToScreenPixels((size.height - combinedHeight) / 2.0)), size: titleSize)
         self.titleNode.frame = titleFrame
+        
+        if let verificationIconSize, let titleVerificationIconView = self.titleVerificationIconView {
+            titleVerificationIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX - verificationIconSpacing - verificationIconSize.width, y: floorToScreenPixels(titleFrame.midY - verificationIconSize.height / 2.0)), size: verificationIconSize)
+        }
+        if let credibilityIconSize, let titleCredibilityIconView = self.titleCredibilityIconView {
+            titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + credibilityIconSpacing, y: topOffset + floorToScreenPixels(floorToScreenPixels((size.height - combinedHeight) / 2.0 + titleSize.height / 2.0) - credibilityIconSize.height / 2.0)), size: credibilityIconSize)
+        }
         
         let subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - subtitleSize.width) / 2.0), y: topOffset + floorToScreenPixels((size.height - combinedHeight) / 2.0) + titleSize.height + spacing), size: subtitleSize)
         self.subtitleNode.frame = subtitleFrame

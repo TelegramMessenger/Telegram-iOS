@@ -93,6 +93,16 @@ public final class InstantPageV2RenderContext {
     /// this context — is not rebuilt. The host refreshes the flag before each `update(layout:…)`
     /// and every media view re-reads it from the context in its own `update(…)`.
     public private(set) var captureProtected: Bool
+    /// Whether the host bubble is drawn as incoming, which picks the incoming or outgoing bubble palette
+    /// for rows styled like chat media (audio, document). Set by the chat bubble from
+    /// `effectivelyIncoming`, the rule the bubble and the rest of the page use; `message?.isIncoming`
+    /// (the raw `.Incoming` flag) disagrees with it for a Saved Messages forward of one of the user's
+    /// own outgoing messages and for a post in the user's own channel, and drew the row in the other
+    /// side's palette (an accent title on an accent bubble). `false` for the send preview.
+    ///
+    /// Mutable for the same reason as `captureProtected`: the host refreshes it before each update, as
+    /// the view (and this context) outlives updates of its message, the Local→Cloud send flip included.
+    public private(set) var isIncoming: Bool
 
     public init(
         context: AccountContext,
@@ -109,6 +119,7 @@ public final class InstantPageV2RenderContext {
         shouldAutoplayVideo: @escaping (TelegramMediaFile) -> Bool = { _ in false },
         wallpaperBackgroundNode: @escaping () -> WallpaperBackgroundNode? = { nil },
         captureProtected: Bool = false,
+        isIncoming: Bool = false,
         message: MessageReference?
     ) {
         self.context = context
@@ -126,6 +137,7 @@ public final class InstantPageV2RenderContext {
         self.shouldAutoplayVideo = shouldAutoplayVideo
         self.wallpaperBackgroundNode = wallpaperBackgroundNode
         self.captureProtected = captureProtected
+        self.isIncoming = isIncoming
     }
 
     /// Refresh the copy-protection state. See `captureProtected`; the host calls this before each
@@ -133,6 +145,11 @@ public final class InstantPageV2RenderContext {
     /// up in their own `update(…)`.
     public func updateCaptureProtected(_ captureProtected: Bool) {
         self.captureProtected = captureProtected
+    }
+
+    /// Refresh the host bubble's direction. See `isIncoming`.
+    public func updateIsIncoming(_ isIncoming: Bool) {
+        self.isIncoming = isIncoming
     }
 
     /// Update the content-bearing webpage for a later chunk of the SAME message with the SAME
@@ -223,6 +240,22 @@ public final class InstantPageV2View: UIView {
     /// route this to the App Store page; hosts that leave it nil still render the button (the tap
     /// is inert) so the pill's width does not change between preview and sent message.
     public var unsupportedActionTapped: (() -> Void)?
+
+    /// The host sets `buttonTapped`, `documentTapped` and `unsupportedActionTapped` on the page view
+    /// it owns, but a table cell and a `<details>` body are page views of their own, built by their
+    /// container and replaced as it lays out. So an item's tap looks its callback up when it fires,
+    /// on the nearest page view that has one: without this, a URL pill in a table cell did nothing.
+    /// The walk is not bounded by `trueRegistryRoot`: a body built on expand is its own registry root.
+    private func hostCallback<T>(_ keyPath: KeyPath<InstantPageV2View, T?>) -> T? {
+        var current: UIView? = self
+        while let view = current {
+            if let pageView = view as? InstantPageV2View, let callback = pageView[keyPath: keyPath] {
+                return callback
+            }
+            current = view.superview
+        }
+        return nil
+    }
 
     var itemViews: [InstantPageItemView] = []
     private var itemViewStableIds: [InstantPageV2StableItemId] = []
@@ -988,14 +1021,14 @@ public final class InstantPageV2View: UIView {
             // Re-wire on reuse: the closure captures self, and a reused view may have been created
             // against a previous InstantPageV2View.
             v.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return v
         case let .buttonRow(row):
             guard let v = existingView as? InstantPageV2ButtonRowView else { return nil }
             v.update(item: row, theme: theme)
             v.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return v
         case let .mediaImage(media):
@@ -1022,7 +1055,7 @@ public final class InstantPageV2View: UIView {
             guard let v = existingView as? InstantPageV2DocumentView, let rc = self.renderContext else { return nil }
             // Re-wire: a recycled view may belong to a previous InstantPageV2View (see onDocumentTapped).
             v.onDocumentTapped = { [weak self] file in
-                self?.documentTapped?(file)
+                self?.hostCallback(\.documentTapped)?(file)
             }
             v.update(item: document, theme: theme, renderContext: rc)
             return v
@@ -1040,7 +1073,7 @@ public final class InstantPageV2View: UIView {
             // Re-wire on reuse: the closure captures self, and a reused view may have been created
             // against a previous InstantPageV2View.
             v.onActionTapped = { [weak self] in
-                self?.unsupportedActionTapped?()
+                self?.hostCallback(\.unsupportedActionTapped)?()
             }
             return v
         }
@@ -1179,7 +1212,7 @@ public final class InstantPageV2View: UIView {
             if let renderContext = self.renderContext {
                 let view = InstantPageV2DocumentView(item: document, renderContext: renderContext, theme: theme)
                 view.onDocumentTapped = { [weak self] file in
-                    self?.documentTapped?(file)
+                    self?.hostCallback(\.documentTapped)?(file)
                 }
                 return view
             } else {
@@ -1190,19 +1223,19 @@ public final class InstantPageV2View: UIView {
         case let .inlineButton(button):
             let view = InstantPageV2InlineButtonView(item: button, theme: theme)
             view.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return view
         case let .buttonRow(row):
             let view = InstantPageV2ButtonRowView(item: row, theme: theme)
             view.onButtonTapped = { [weak self] button, progress in
-                self?.buttonTapped?(button, progress)
+                self?.hostCallback(\.buttonTapped)?(button, progress)
             }
             return view
         case let .unsupportedContent(unsupported):
             let view = InstantPageV2UnsupportedView(item: unsupported, theme: theme, renderContext: self.renderContext)
             view.onActionTapped = { [weak self] in
-                self?.unsupportedActionTapped?()
+                self?.hostCallback(\.unsupportedActionTapped)?()
             }
             return view
         case let .thinking(thinking):
@@ -2500,8 +2533,11 @@ final class InstantPageV2CodeBlockView: UIView, InstantPageItemView {
 
         // A plain band. No fill image, no bar, no corner radius: a code block reads as a highlighted
         // table row. Corners at a bubble edge are clipped by the rounded container the page sits in,
-        // exactly as they are for full-width media.
+        // exactly as they are for full-width media. A band with nothing around it rounds itself.
         self.backgroundColor = item.backgroundColor
+        if self.layer.cornerRadius != item.cornerRadius {
+            self.layer.cornerRadius = item.cornerRadius
+        }
 
         if let languageItem = item.languageItem {
             let inner = InstantPageV2TextItem(frame: languageItem.frame, textItem: languageItem)

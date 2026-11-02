@@ -405,7 +405,8 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
                 )),
                 action: { [weak self] _ in
                     self?.cancelPressed()
-                }
+                },
+                accessibility: ComponentAccessibility(label: self.strings.Common_Close)
             ))
         )
         
@@ -427,7 +428,8 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
                     action: { [weak self] _ in
                         self?.controllerNode.isSearching = true
                         self?.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: self.strings.Common_Search)
                 ))
             )
         } else {
@@ -442,6 +444,8 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
             closeButtonNode = BarComponentHostNode(component: closeComponent, size: barButtonSize)
             self.closeButtonNode = closeButtonNode
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: closeButtonNode)
+            // The bar wraps the node in its own button, which VoiceOver names from the item.
+            self.navigationItem.leftBarButtonItem?.accessibilityLabel = self.strings.Common_Close
         }
          
         if !self.glass {
@@ -453,6 +457,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
                 searchButtonNode = BarComponentHostNode(component: searchComponent, size: barButtonSize)
                 self.searchButtonNode = searchButtonNode
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: searchButtonNode)
+                self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.strings.Common_Search
             }
         }
     }

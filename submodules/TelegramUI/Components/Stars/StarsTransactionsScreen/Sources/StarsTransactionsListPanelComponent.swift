@@ -151,6 +151,9 @@ final class StarsTransactionsListPanelComponent: Component {
 
             super.init(frame: frame)
 
+            // The list's rounded background and corner mask: shapes, not read by VoiceOver.
+            self.listBackgroundView.accessibilityElementsHidden = true
+            self.listMaskView.accessibilityElementsHidden = true
             self.addSubview(self.listBackgroundView)
 
             self.scrollView.delaysContentTouches = true

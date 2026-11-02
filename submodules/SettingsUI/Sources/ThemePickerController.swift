@@ -255,7 +255,7 @@ private enum ThemePickerControllerEntry: ItemListNodeEntry {
                     baseTheme = nil
                 }
             
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
+                return ThemeSettingsAccentColorItem(theme: theme, strings: presentationData.strings, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
                     if let color = color {
                         switch color {
                             case let .accentColor(color):
@@ -989,6 +989,12 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         if presentationData.autoNightModeTriggered {
             themeReference = settings.automaticThemeSwitchSetting.theme
         }
+        
+        // VoiceOver: the moon/sun button previews the themes at night; it reads "Night Mode" with its state.
+        switchNode?.isAccessibilityElement = true
+        switchNode?.accessibilityLabel = presentationData.strings.Appearance_NightTheme
+        switchNode?.accessibilityValue = nightModePreview ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+        switchNode?.accessibilityTraits = .button
         
         let rightNavigationButton: ItemListNavigationButton?
         if !presentationData.autoNightModeTriggered, let switchNode = switchNode {

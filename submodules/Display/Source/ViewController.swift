@@ -163,6 +163,11 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open var previousItem: NavigationPreviousAction?
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
+    /// Whether the controller shows a horizontal tab bar along its bottom edge. As the top of a split view's master pane,
+    /// it tells the detail pane beside it (`ContainerViewLayout.isBesideBottomTabBar`).
+    open var showsBottomTabBar: Bool {
+        return false
+    }
     open var _presentedInModal: Bool = false
     open var _hasGlassStyle: Bool = false
     open var flatReceivesModalTransition: Bool = false

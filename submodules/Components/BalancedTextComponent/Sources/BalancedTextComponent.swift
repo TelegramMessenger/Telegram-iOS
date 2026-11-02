@@ -148,6 +148,100 @@ public final class BalancedTextComponent: Component {
             self.addSubview(self.textView)
         }
         
+        // VoiceOver: one static-text element reading the text shown (see MultilineTextComponent.View); a call site's
+        // own settings win.
+        private var explicitIsAccessibilityElement: Bool?
+        private var explicitAccessibilityLabel: String??
+        private var explicitAccessibilityTraits: UIAccessibilityTraits?
+        
+        override public var isAccessibilityElement: Bool {
+            get {
+                if let explicitIsAccessibilityElement = self.explicitIsAccessibilityElement {
+                    return explicitIsAccessibilityElement
+                }
+                if self.isHidden || self.alpha < 0.01 {
+                    return false
+                }
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
+            } set(value) {
+                self.explicitIsAccessibilityElement = value
+            }
+        }
+        
+        override public var accessibilityLabel: String? {
+            get {
+                if let explicitAccessibilityLabel = self.explicitAccessibilityLabel {
+                    return explicitAccessibilityLabel
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    // Turned off by the call site: nothing to announce from here either.
+                    return nil
+                }
+                return self.textView.attributedText.flatMap { accessibilityDisplayedText($0) }
+            } set(value) {
+                self.explicitAccessibilityLabel = .some(value)
+            }
+        }
+        
+        override public var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                if let explicitAccessibilityTraits = self.explicitAccessibilityTraits {
+                    return explicitAccessibilityTraits
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    return []
+                }
+                // A link only when activating it does something (a tap handler is set). Inside the chat's history
+                // subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
+                if self.textView.tapAttributeAction == nil || self.textView.accessibilityLinks().isEmpty || accessibilityIsInsideViewElementsSubtree(self) {
+                    return .staticText
+                }
+                return [.staticText, .link]
+            } set(value) {
+                self.explicitAccessibilityTraits = value
+            }
+        }
+        
+        /// Activating a text with links follows its first link, as a tap on it does (the inner text view handles taps).
+        override public func accessibilityActivate() -> Bool {
+            if self.isAccessibilityElement, let tapAttributeAction = self.textView.tapAttributeAction, let link = self.textView.accessibilityLinks().first, !accessibilityIsInsideViewElementsSubtree(self) {
+                tapAttributeAction(link.attributes, link.index)
+                return true
+            }
+            return super.accessibilityActivate()
+        }
+        
+        /// Several links: each one as a custom action named by its text. Built only when VoiceOver asks.
+        override public var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                if let explicit = super.accessibilityCustomActions, !explicit.isEmpty {
+                    return explicit
+                }
+                guard self.textView.tapAttributeAction != nil, !accessibilityIsInsideViewElementsSubtree(self) else {
+                    return nil
+                }
+                let links = self.textView.accessibilityLinks()
+                if links.count < 2 {
+                    return nil
+                }
+                return links.map { link in
+                    return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                        guard let self, let tapAttributeAction = self.textView.tapAttributeAction else {
+                            return false
+                        }
+                        tapAttributeAction(link.attributes, link.index)
+                        return true
+                    })
+                }
+            } set(value) {
+                super.accessibilityCustomActions = value
+            }
+        }
+        
         required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }

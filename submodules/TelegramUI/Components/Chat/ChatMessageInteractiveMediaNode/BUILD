@@ -10,6 +10,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/ShimmerEffect",
         "//submodules/AsyncDisplayKit",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/Display",
@@ -44,6 +45,7 @@ swift_library(
         "//submodules/Utils/RangeSet",
         "//submodules/MediaResources",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -4,6 +4,34 @@ import Postbox
 import TelegramUIPreferences
 import TelegramCore
 
+/// Neutral: your own messages in quiet gray bubbles.
+public func neutralOutgoingBubbleColor(dark: Bool) -> UInt32 {
+    return dark ? 0x2f2f2f : 0xf4f4f4
+}
+
+/// Only the bubbles are gray: the night half keeps Telegram's blue accent instead of Night's white.
+private let neutralNightAccentColor = UIColor(rgb: 0x3e88f7)
+
+private func makeDefaultNeutralPresentationTheme(dark: Bool, extendingThemeReference: PresentationThemeReference?, serviceBackgroundColor: UIColor?, preview: Bool) -> PresentationTheme {
+    let reference = extendingThemeReference ?? .builtin(dark ? .neutralNight : .neutral)
+    let theme: PresentationTheme
+    if dark {
+        theme = customizeDefaultDarkPresentationTheme(theme: makeDefaultDarkPresentationTheme(extendingThemeReference: reference, preview: preview), editing: true, title: nil, accentColor: neutralNightAccentColor, backgroundColors: [], bubbleColors: [neutralOutgoingBubbleColor(dark: true)], animateBubbleColors: false, wallpaper: .color(0x000000))
+    } else {
+        theme = customizeDefaultDayTheme(theme: makeDefaultDayPresentationTheme(extendingThemeReference: reference, serviceBackgroundColor: serviceBackgroundColor, day: true, preview: preview), editing: true, title: nil, accentColor: nil, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: [neutralOutgoingBubbleColor(dark: false)], animateBubbleColors: false, serviceBackgroundColor: serviceBackgroundColor)
+    }
+    return neutralizedOutgoingColors(theme)
+}
+
+/// Gives your own messages the colors the other side's have: tints derived from a gray bubble are too pale for text,
+/// links and controls. The bubble itself keeps its own fill; read checks take the accent, as on Telegram's light bubbles.
+func neutralizedOutgoingColors(_ theme: PresentationTheme) -> PresentationTheme {
+    let message = theme.chat.message
+    let incoming = message.incoming
+    let outgoing = message.outgoing.withUpdated(primaryTextColor: incoming.primaryTextColor, secondaryTextColor: incoming.secondaryTextColor, linkTextColor: incoming.linkTextColor, linkHighlightColor: incoming.linkHighlightColor, scamColor: incoming.scamColor, textHighlightColor: incoming.textHighlightColor, accentTextColor: incoming.accentTextColor, accentControlColor: incoming.accentControlColor, accentControlDisabledColor: incoming.accentControlDisabledColor, mediaActiveControlColor: incoming.mediaActiveControlColor, mediaInactiveControlColor: incoming.mediaInactiveControlColor, pendingActivityColor: incoming.pendingActivityColor, fileTitleColor: incoming.fileTitleColor, fileDescriptionColor: incoming.fileDescriptionColor, fileDurationColor: incoming.fileDurationColor, mediaPlaceholderColor: incoming.mediaPlaceholderColor, polls: incoming.polls, textSelectionColor: incoming.textSelectionColor, textSelectionKnobColor: incoming.textSelectionKnobColor)
+    return theme.withUpdated(chat: theme.chat.withUpdated(message: message.withUpdated(outgoing: outgoing, outgoingCheckColor: incoming.accentControlColor)))
+}
+
 public func makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference, extendingThemeReference: PresentationThemeReference? = nil, serviceBackgroundColor: UIColor?, preview: Bool = false) -> PresentationTheme {
     let theme: PresentationTheme
     switch reference {
@@ -15,6 +43,10 @@ public func makeDefaultPresentationTheme(reference: PresentationBuiltinThemeRefe
             theme = makeDefaultDarkPresentationTheme(extendingThemeReference: extendingThemeReference, preview: preview)
         case .nightAccent:
             theme = makeDefaultDarkTintedPresentationTheme(extendingThemeReference: extendingThemeReference, preview: preview)
+        case .neutral:
+            theme = makeDefaultNeutralPresentationTheme(dark: false, extendingThemeReference: extendingThemeReference, serviceBackgroundColor: serviceBackgroundColor, preview: preview)
+        case .neutralNight:
+            theme = makeDefaultNeutralPresentationTheme(dark: true, extendingThemeReference: extendingThemeReference, serviceBackgroundColor: serviceBackgroundColor, preview: preview)
     }
     return theme
 }
@@ -24,9 +56,9 @@ public func customizePresentationTheme(_ theme: PresentationTheme, editing: Bool
         return theme
     }
     switch theme.referenceTheme {
-        case .day, .dayClassic:
+        case .day, .dayClassic, .neutral:
             return customizeDefaultDayTheme(theme: theme, editing: editing, title: title, accentColor: accentColor, outgoingAccentColor: outgoingAccentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors ?? false, wallpaper: wallpaper, serviceBackgroundColor: nil)
-        case .night:
+        case .night, .neutralNight:
             return customizeDefaultDarkPresentationTheme(theme: theme, editing: editing, title: title, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors ?? false, wallpaper: wallpaper, baseColor: baseColor)
         case .nightAccent:
             return customizeDefaultDarkTintedPresentationTheme(theme: theme, editing: editing, title: title, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors ?? false, wallpaper: wallpaper, baseColor: baseColor)
@@ -102,7 +134,13 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
     switch themeReference {
         case let .builtin(reference):
             let defaultTheme = makeDefaultPresentationTheme(reference: reference, extendingThemeReference: extendingThemeReference, serviceBackgroundColor: serviceBackgroundColor, preview: preview)
-            theme = customizePresentationTheme(defaultTheme, editing: true, accentColor: accentColor, outgoingAccentColor: outgoingAccentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors, wallpaper: wallpaper, baseColor: baseColor)
+            // Neutral keeps its gray bubbles under a picked accent, which would otherwise color them.
+            if reference.isNeutral && bubbleColors.isEmpty && accentColor != nil {
+                let customizedTheme = customizePresentationTheme(defaultTheme, editing: true, accentColor: accentColor, outgoingAccentColor: outgoingAccentColor, backgroundColors: backgroundColors, bubbleColors: [neutralOutgoingBubbleColor(dark: reference == .neutralNight)], animateBubbleColors: animateBubbleColors, wallpaper: wallpaper ?? (reference == .neutralNight ? .color(0x000000) : nil), baseColor: baseColor)
+                theme = neutralizedOutgoingColors(customizedTheme)
+            } else {
+                theme = customizePresentationTheme(defaultTheme, editing: true, accentColor: accentColor, outgoingAccentColor: outgoingAccentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors, wallpaper: wallpaper, baseColor: baseColor)
+            }
         case let .local(info):
             if let path = mediaBox.completedResourcePath(info.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data, themeReference: themeReference, resolvedWallpaper: info.resolvedWallpaper) {
                 theme = customizePresentationTheme(loadedTheme, editing: false, accentColor: accentColor, outgoingAccentColor: outgoingAccentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, animateBubbleColors: animateBubbleColors, wallpaper: wallpaper)
@@ -131,4 +169,52 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
             }
     }
     return theme
+}
+
+/// The theme with bubble mode off, built once from the mode's own theme choice and recoloured for the plain page. Both
+/// presentation-data entry points call it, so the first frame and every later update show the same theme.
+public func makeBubblelessPresentationTheme(mediaBox: MediaBox, themeSettings: PresentationThemeSettings, autoNightModeTriggered: Bool) -> PresentationTheme {
+    let reference: PresentationThemeReference
+    var preferredBaseTheme: TelegramBaseTheme?
+    if autoNightModeTriggered {
+        reference = themeSettings.currentModeAutomaticThemeSwitchSetting.theme
+        if let baseTheme = themeSettings.themePreferredBaseTheme[reference.index], [.night, .tinted].contains(baseTheme) {
+            preferredBaseTheme = baseTheme
+        } else {
+            preferredBaseTheme = .night
+        }
+    } else {
+        reference = themeSettings.currentModeTheme
+        if let baseTheme = themeSettings.themePreferredBaseTheme[reference.index], [.classic, .day].contains(baseTheme) {
+            preferredBaseTheme = baseTheme
+        }
+    }
+    
+    let storedColors = themeSettings.themeSpecificAccentColors[reference.index]
+    var colors = storedColors
+    // As with bubbles, Night at night without colours of its own takes Telegram's blue.
+    if autoNightModeTriggered && reference == .builtin(.night) && colors == nil {
+        colors = PresentationThemeAccentColor(baseColor: .blue)
+    }
+    if let current = colors, current.baseColor == .theme {
+        colors = nil
+    }
+    
+    // Outgoing bubbles: the theme's own bubble colours; a builtin theme without colours of its own is light green
+    // rather than the colour its wallpaper was made for; Neutral keeps its gray.
+    let bubbleColors: [UInt32]
+    var wallpaper = colors?.wallpaper
+    if let colors, !colors.customBubbleColors.isEmpty {
+        bubbleColors = colors.customBubbleColors
+    } else if case let .builtin(builtin) = reference, !builtin.isNeutral, storedColors == nil || storedColors?.baseColor == .theme {
+        bubbleColors = bubblelessDefaultOutgoingBubbleColors(dark: builtin == .night || builtin == .nightAccent)
+        wallpaper = nil
+    } else {
+        bubbleColors = []
+    }
+    
+    // The recolouring replaces every service colour the plain page shows, so no service colour is derived from a
+    // wallpaper here.
+    let theme = makePresentationTheme(mediaBox: mediaBox, themeReference: reference, baseTheme: preferredBaseTheme, accentColor: colors?.colorFor(baseTheme: preferredBaseTheme ?? .day), bubbleColors: bubbleColors, wallpaper: wallpaper, baseColor: colors?.baseColor, serviceBackgroundColor: nil) ?? defaultPresentationTheme
+    return bubblelessPresentationTheme(theme)
 }

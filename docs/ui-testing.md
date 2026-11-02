@@ -77,6 +77,12 @@ app.staticTexts["Welcome"]        // static text
 app.navigationBars["Settings"]    // navigation bar
 ```
 
+**The tree holds only what is on screen.** The app's own accessibility collector culls hidden, alpha-0, zero-size
+and clipped/off-screen nodes, so an element that is not visible cannot be queried; a list (`ListView`) exposes only
+one loaded row beyond each edge, so scroll before looking further down. Button components (`Button`,
+`PlainButtonComponent`, `ButtonComponent`) are single elements: query the button by its identifier or
+label, not an identifier set on a view inside it. What each screen exposes: `docs/accessibility/voiceover-inventory.md`.
+
 **Relaunch between tests** if needed. Each `app.launch()` call with `--ui-test` wipes the database, so every test method that calls `launch()` gets a fresh app state.
 
 **Type text** into fields:

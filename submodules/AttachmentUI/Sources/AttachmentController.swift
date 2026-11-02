@@ -483,6 +483,7 @@ public class AttachmentController: ViewController, MinimizableController {
     }
 
     public weak var attachmentButton: UIView?
+    public var attachmentButtonContentSnapshot: (() -> UIView?)?
 
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
@@ -947,6 +948,8 @@ public class AttachmentController: ViewController, MinimizableController {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
+            // The minimized card captures the sheet where it belongs, not half-grown inside the appearance's views.
+            self.finishGlassAppearance()
             navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, beforeMaximize: { [weak self, weak controller] navigationController, completion in
                 self?.didMaximizeOnce = true
                 controller?.mainController.beforeMaximize(navigationController: navigationController, completion: completion)
@@ -1145,6 +1148,98 @@ public class AttachmentController: ViewController, MinimizableController {
         private var isAnimating = false
         private var pendingRegularLayoutAnimateIn = false
 
+        /// The attach-button morph of a glass appearance while it runs. Every dismissal that starts before it
+        /// ends takes its views over (`takeOverGlassAppearance`) and moves them from where they are, instead of
+        /// leaving them to finish growing to the full sheet on top of the dismissal.
+        private final class GlassAppearanceTransition {
+            let containerView: ClipContainerView
+            let localGlassView: GlassBackgroundView
+            let buttonIcon: UIView
+            let sourceGlassView: GlassBackgroundView
+            let targetFrame: CGRect
+            let initialContainerBounds: CGRect
+            let initialContainerFrame: CGRect
+            let startTime: Double
+
+            init(containerView: ClipContainerView, localGlassView: GlassBackgroundView, buttonIcon: UIView, sourceGlassView: GlassBackgroundView, targetFrame: CGRect, initialContainerBounds: CGRect, initialContainerFrame: CGRect, startTime: Double) {
+                self.containerView = containerView
+                self.localGlassView = localGlassView
+                self.buttonIcon = buttonIcon
+                self.sourceGlassView = sourceGlassView
+                self.targetFrame = targetFrame
+                self.initialContainerBounds = initialContainerBounds
+                self.initialContainerFrame = initialContainerFrame
+                self.startTime = startTime
+            }
+        }
+        private var glassAppearanceTransition: GlassAppearanceTransition?
+
+        // The glass appearance's curves, which a dismissal that takes it over reverses (`reversalSpringVelocity`).
+        private static let glassAppearancePositionCurve: ContainedViewLayoutTransitionCurve = .customSpring(damping: 110.0, initialVelocity: 1.1)
+        private static let glassAppearancePositionDuration: Double = 0.4
+        private static let glassAppearanceScaleCurve: ContainedViewLayoutTransitionCurve = .customSpring(damping: 110.0, initialVelocity: 0.0)
+        private static let glassAppearanceScaleDuration: Double = 0.45
+        private static let glassAppearanceCornersCurve: ContainedViewLayoutTransitionCurve = .easeInOut
+        private static let glassAppearanceCornersDuration: Double = 0.2
+        
+        // The glass dismissal's springs (`.customSpring(damping:initialVelocity:)`), whose initial velocity a reversal computes.
+        private static let glassDismissalPositionDamping: CGFloat = 110.0
+        private static let glassDismissalPositionDuration: Double = 0.4
+        private static let glassDismissalCornersDamping: CGFloat = 124.0
+        private static let glassDismissalCornersDuration: Double = 0.2
+        private static let glassDismissalScaleDamping: CGFloat = 124.0
+        private static let glassDismissalScaleDuration: Double = 0.3
+        
+        /// Stops a running glass appearance where it is on screen, for an animated dismissal: its completion no longer
+        /// puts the sheet back and the attach button's own glass shows again. Its views hold the sheet until the
+        /// dismissal ends (`restoreAfterGlassAppearance`). `elapsed` is how long it has been on screen.
+        private func takeOverGlassAppearance() -> (transition: GlassAppearanceTransition, elapsed: Double)? {
+            guard let appearanceTransition = self.glassAppearanceTransition else {
+                return nil
+            }
+            self.glassAppearanceTransition = nil
+            
+            // Its animations begin at the commit after `animateIn`, which a heavy first layout delays.
+            let layer = appearanceTransition.containerView.layer
+            var elapsed = CACurrentMediaTime() - appearanceTransition.startTime
+            for key in layer.animationKeys() ?? [] {
+                if let animation = layer.animation(forKey: key), animation.beginTime > 0.0 {
+                    elapsed = layer.convertTime(CACurrentMediaTime(), from: nil) - animation.beginTime
+                    break
+                }
+            }
+            
+            self.container.suppressesBottomCorners = false
+            appearanceTransition.containerView.pinToPresentation()
+            appearanceTransition.sourceGlassView.isHidden = false
+            return (appearanceTransition, elapsed)
+        }
+        
+        /// What a glass appearance's completion does: the sheet back in place at its full size, the appearance's views
+        /// gone, the attach button's glass shown. A dismissal that ends with the sheet off screen does not put it back
+        /// (`reattach`): the controller removes it, and the next layout adds it again.
+        private func restoreAfterGlassAppearance(_ appearanceTransition: GlassAppearanceTransition, reattach: Bool = true) {
+            self.container.suppressesBottomCorners = false
+            self.container.bounds = appearanceTransition.initialContainerBounds
+            self.container.frame = appearanceTransition.initialContainerFrame
+            if reattach {
+                self.wrapperNode.addSubnode(self.container)
+            }
+            appearanceTransition.containerView.removeFromSuperview()
+            appearanceTransition.sourceGlassView.isHidden = false
+            self.isAnimating = false
+        }
+        
+        /// Ends a running glass appearance at once, as its completion would: for a minimize and a dismissal without
+        /// animation, which both need the sheet where it belongs.
+        fileprivate func finishGlassAppearance() {
+            guard let appearanceTransition = self.glassAppearanceTransition else {
+                return
+            }
+            self.glassAppearanceTransition = nil
+            self.restoreAfterGlassAppearance(appearanceTransition)
+        }
+
         override func didEnterHierarchy() {
             super.didEnterHierarchy()
 
@@ -1167,6 +1262,7 @@ public class AttachmentController: ViewController, MinimizableController {
             }
 
             self.isAnimating = true
+            self.container.isUserInteractionEnabled = true
             if case .regular = layout.metrics.widthClass {
                 if controller.animateAppearance {
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1196,9 +1292,9 @@ public class AttachmentController: ViewController, MinimizableController {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
 
                 if case .glass = controller.style, let attachmentButton = controller.attachmentButton {
-                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .customSpring(damping: 110.0, initialVelocity: 1.1))
-                    let cornersTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-                    let scaleTransition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .customSpring(damping: 110.0, initialVelocity: 0.0))
+                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassAppearancePositionDuration, curve: Node.glassAppearancePositionCurve)
+                    let cornersTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassAppearanceCornersDuration, curve: Node.glassAppearanceCornersCurve)
+                    let scaleTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassAppearanceScaleDuration, curve: Node.glassAppearanceScaleCurve)
 
                     let buttonTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
 
@@ -1234,29 +1330,25 @@ public class AttachmentController: ViewController, MinimizableController {
                         self.container.suppressesBottomCorners = true
                         containerView.contentView.addSubnode(self.container)
 
-                        let buttonIcon = GlassBackgroundView.ContentImageView()
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                        buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
-                        buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
-                        if let image = buttonIcon.image {
-                            buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
-                            buttonIcon.center = CGPoint(x: targetFrame.width * 0.5, y: targetFrame.height * 0.5)
-                            buttonIcon.transform = CGAffineTransformMakeScale(1.0 / sourceButtonScale, 1.0 / sourceButtonScale)
-                        }
+                        let buttonIcon = controller.attachmentButtonMorphContent(size: sourceButtonFrame.size)
+                        buttonIcon.center = CGPoint(x: targetFrame.width * 0.5, y: targetFrame.height * 0.5)
+                        buttonIcon.transform = CGAffineTransformMakeScale(1.0 / sourceButtonScale, 1.0 / sourceButtonScale)
                         localGlassView.contentView.addSubview(buttonIcon)
                         ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: 0.0, toRadius: 10.0)
+
+                        let appearanceTransition = GlassAppearanceTransition(containerView: containerView, localGlassView: localGlassView, buttonIcon: buttonIcon, sourceGlassView: sourceGlassView, targetFrame: targetFrame, initialContainerBounds: initialContainerBounds, initialContainerFrame: initialContainerFrame, startTime: CACurrentMediaTime())
+                        self.glassAppearanceTransition = appearanceTransition
 
                         containerView.update(bounds: CGRect(origin: .zero, size: targetFrame.size), cornerRadii: self.container.sheetCornerRadii, boundsTransition: scaleTransition, cornersTransition: cornersTransition)
                         scaleTransition.animateBounds(layer: containerView.layer, from: CGRect(origin: .zero, size: CGSize(width: targetFrame.width, height: targetFrame.width)))
                         scaleTransition.animateTransformScale(view: containerView, from: sourceButtonScale)
                         positionTransition.animatePosition(layer: containerView.layer, from: sourceButtonFrame.center, to: containerView.center, completion: { _ in
-                            self.container.suppressesBottomCorners = false
-                            self.container.bounds = initialContainerBounds
-                            self.container.frame = initialContainerFrame
-                            self.wrapperNode.addSubnode(self.container)
-                            containerView.removeFromSuperview()
-                            sourceGlassView.isHidden = false
-                            self.isAnimating = false
+                            guard self.glassAppearanceTransition === appearanceTransition else {
+                                // A dismiss took the morph over (see animateOut).
+                                return
+                            }
+                            self.glassAppearanceTransition = nil
+                            self.restoreAfterGlassAppearance(appearanceTransition)
                         })
                         sourceGlassView.isHidden = true
                     }
@@ -1286,39 +1378,68 @@ public class AttachmentController: ViewController, MinimizableController {
             }
 
             self.isAnimating = true
+            
+            // A dismissal during the glass appearance moves the appearance's views, which hold the sheet, from
+            // where they are, whichever way it goes.
+            let takenOverAppearance = self.takeOverGlassAppearance()
+            let appearanceTransition = takenOverAppearance?.transition
 
             switch layout.metrics.widthClass {
             case .regular:
                 self.layer.allowsGroupOpacity = true
                 self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+                    if let appearanceTransition {
+                        self?.restoreAfterGlassAppearance(appearanceTransition, reattach: false)
+                    }
                     let _ = self?.container.dismiss(transition: .immediate, completion: completion)
                     self?.isAnimating = false
                     self?.layer.removeAllAnimations()
                 })
             case .compact:
                 let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
 
-                if case .glass = controller.style, let attachmentButton = controller.attachmentButton {
-                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .customSpring(damping: 110.0, initialVelocity: initialVelocity ?? 0.0))
-                    let cornersTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity ?? 0.0))
-                    let scaleTransition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity ?? 0.0))
+                if case .glass = controller.style, let attachmentButton = controller.attachmentButton, let sourceGlassView = appearanceTransition?.sourceGlassView ?? findParentGlassBackgroundView(attachmentButton), let glassParams = sourceGlassView.params {
+                    // Reversing an appearance goes on with its motion and unblurs the icon from where its blur got to;
+                    // otherwise the morph starts at the gesture's velocity from the full sheet.
+                    var positionVelocity = initialVelocity ?? 0.0
+                    var cornersVelocity = initialVelocity ?? 0.0
+                    var scaleVelocity = initialVelocity ?? 0.0
+                    var buttonBlurRadius: CGFloat = 10.0
+                    if let (appearanceTransition, elapsed) = takenOverAppearance {
+                        positionVelocity = reversalSpringVelocity(interrupted: Node.glassAppearancePositionCurve, duration: Node.glassAppearancePositionDuration, elapsed: elapsed, damping: Node.glassDismissalPositionDamping, reversalDuration: Node.glassDismissalPositionDuration)
+                        cornersVelocity = reversalSpringVelocity(interrupted: Node.glassAppearanceCornersCurve, duration: Node.glassAppearanceCornersDuration, elapsed: elapsed, damping: Node.glassDismissalCornersDamping, reversalDuration: Node.glassDismissalCornersDuration)
+                        scaleVelocity = reversalSpringVelocity(interrupted: Node.glassAppearanceScaleCurve, duration: Node.glassAppearanceScaleDuration, elapsed: elapsed, damping: Node.glassDismissalScaleDamping, reversalDuration: Node.glassDismissalScaleDuration)
+                        if let radius = appearanceTransition.buttonIcon.layer.presentation()?.value(forKeyPath: "filters.gaussianBlur.inputRadius") as? NSNumber {
+                            buttonBlurRadius = CGFloat(radius.doubleValue)
+                        }
+                    }
+                    
+                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassDismissalPositionDuration, curve: .customSpring(damping: Node.glassDismissalPositionDamping, initialVelocity: positionVelocity))
+                    let cornersTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassDismissalCornersDuration, curve: .customSpring(damping: Node.glassDismissalCornersDamping, initialVelocity: cornersVelocity))
+                    let scaleTransition: ContainedViewLayoutTransition = .animated(duration: Node.glassDismissalScaleDuration, curve: .customSpring(damping: Node.glassDismissalScaleDamping, initialVelocity: scaleVelocity))
 
                     let buttonTransition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
 
-                    let initialFrame = self.container.clipNode.view.convert(self.container.clipNode.view.bounds, to: self.view)
+                    let initialFrame = appearanceTransition?.targetFrame ?? self.container.clipNode.view.convert(self.container.clipNode.view.bounds, to: self.view)
 
                     let targetButtonFrame = attachmentButton.convert(attachmentButton.bounds, to: self.view)
                     let targetButtonScale = targetButtonFrame.width / initialFrame.width
 
-                    if let sourceGlassView = findParentGlassBackgroundView(attachmentButton), let glassParams = sourceGlassView.params {
-                        let containerView = ClipContainerView()
+                    let containerView: ClipContainerView
+                    let localGlassView: GlassBackgroundView
+                    if let appearanceTransition {
+                        containerView = appearanceTransition.containerView
+                        localGlassView = appearanceTransition.localGlassView
+                        appearanceTransition.buttonIcon.removeFromSuperview()
+                    } else {
+                        containerView = ClipContainerView()
                         containerView.frame = initialFrame
-                        
+
                         containerView.update(bounds: CGRect(origin: .zero, size: initialFrame.size), cornerRadii: self.container.sheetCornerRadii, boundsTransition: .immediate, cornersTransition: .immediate)
                         self.view.addSubview(containerView)
 
-                        let localGlassView = GlassBackgroundView()
+                        localGlassView = GlassBackgroundView()
                         localGlassView.update(
                             size: initialFrame.size,
                             cornerRadius: 0.0,
@@ -1328,47 +1449,56 @@ public class AttachmentController: ViewController, MinimizableController {
                         )
                         localGlassView.frame = CGRect(origin: .zero, size: initialFrame.size)
                         containerView.contentView.addSubview(localGlassView)
-
-                        let clipInnerFrame = self.container.container.view.convert(self.container.container.view.bounds, to: self.container.view)
-                        self.container.bounds = CGRect(origin: .zero, size: self.container.bounds.size)
-                        self.container.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((initialFrame.width - self.container.frame.width) / 2.0), y: -clipInnerFrame.minY), size: self.container.frame.size)
-                        self.container.isUserInteractionEnabled = false
-                        self.container.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
-                        containerView.contentView.addSubnode(self.container)
-
-                        let buttonIcon = GlassBackgroundView.ContentImageView()
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                        buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
-                        buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
-                        if let image = buttonIcon.image {
-                            buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
-                            buttonIcon.center = CGPoint(x: initialFrame.width * 0.5, y: initialFrame.height * 0.5)
-                            buttonIcon.transform = CGAffineTransformMakeScale(1.0 / targetButtonScale, 1.0 / targetButtonScale)
-                        }
-                        localGlassView.contentView.addSubview(buttonIcon)
-                        ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: 10.0, toRadius: 0.0)
-                        ComponentTransition(buttonTransition).animateBlur(layer: sourceGlassView.contentView.layer, fromRadius: 10.0, toRadius: 0.0)
-
-                        containerView.update(bounds: CGRect(origin: CGPoint(x: 0.0, y: (initialFrame.height - initialFrame.width) * 0.5), size: CGSize(width: initialFrame.width, height: initialFrame.width)), cornerRadii: CornerRadii(uniform: initialFrame.width * 0.5), boundsTransition: scaleTransition, cornersTransition: cornersTransition)
-                        scaleTransition.updateBounds(layer: containerView.layer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: initialFrame.width, height: initialFrame.width)))
-
-                        scaleTransition.updateTransformScale(layer: containerView.layer, scale: targetButtonScale)
-                        positionTransition.updatePosition(layer: containerView.layer, position: targetButtonFrame.center, completion: { [weak self] _ in
-                            let _ = self?.container.dismiss(transition: .immediate, completion: completion)
-                            self?.isAnimating = false
-                        })
-
-                        localGlassView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
-                        scaleTransition.animateTransformScale(view: sourceGlassView, from: 1.0 / targetButtonScale)
-
-                        positionTransition.animatePosition(layer: sourceGlassView.layer, from: self.view.convert(initialFrame.center, to: sourceGlassView.superview), to: sourceGlassView.center)
                     }
-                } else {
-                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                    positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0), completion: { [weak self] _ in
+                    // What the morph starts from on screen: the full sheet, or wherever an interrupted appearance had got to.
+                    let startTransform = containerView.layer.transform
+                    let startScale = sqrt((startTransform.m11 * startTransform.m11) + (startTransform.m12 * startTransform.m12) + (startTransform.m13 * startTransform.m13))
+                    let startWidth = containerView.layer.bounds.width * startScale
+                    let startCenter = containerView.layer.position
+
+                    let clipInnerFrame = self.container.container.view.convert(self.container.container.view.bounds, to: self.container.view)
+                    self.container.bounds = CGRect(origin: .zero, size: self.container.bounds.size)
+                    self.container.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((initialFrame.width - self.container.frame.width) / 2.0), y: -clipInnerFrame.minY), size: self.container.frame.size)
+                    self.container.isUserInteractionEnabled = false
+                    self.container.view.layer.animateAlpha(from: CGFloat(self.container.view.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: 0.12, removeOnCompletion: false)
+                    containerView.contentView.addSubnode(self.container)
+
+                    let buttonIcon = controller.attachmentButtonMorphContent(size: targetButtonFrame.size)
+                    buttonIcon.center = CGPoint(x: initialFrame.width * 0.5, y: initialFrame.height * 0.5)
+                    buttonIcon.transform = CGAffineTransformMakeScale(1.0 / targetButtonScale, 1.0 / targetButtonScale)
+                    localGlassView.contentView.addSubview(buttonIcon)
+                    ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: buttonBlurRadius, toRadius: 0.0)
+                    ComponentTransition(buttonTransition).animateBlur(layer: sourceGlassView.contentView.layer, fromRadius: buttonBlurRadius, toRadius: 0.0)
+
+                    containerView.update(bounds: CGRect(origin: CGPoint(x: 0.0, y: (initialFrame.height - initialFrame.width) * 0.5), size: CGSize(width: initialFrame.width, height: initialFrame.width)), cornerRadii: CornerRadii(uniform: initialFrame.width * 0.5), boundsTransition: scaleTransition, cornersTransition: cornersTransition)
+                    scaleTransition.updateBounds(layer: containerView.layer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: initialFrame.width, height: initialFrame.width)))
+
+                    scaleTransition.updateTransformScale(layer: containerView.layer, scale: targetButtonScale)
+                    positionTransition.updatePosition(layer: containerView.layer, position: targetButtonFrame.center, completion: { [weak self] _ in
                         let _ = self?.container.dismiss(transition: .immediate, completion: completion)
                         self?.isAnimating = false
                     })
+
+                    localGlassView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
+                    scaleTransition.animateTransformScale(view: sourceGlassView, from: startWidth / targetButtonFrame.width)
+
+                    positionTransition.animatePosition(layer: sourceGlassView.layer, from: self.view.convert(startCenter, to: sourceGlassView.superview), to: sourceGlassView.center)
+                } else {
+                    let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                    if let appearanceTransition {
+                        // The sheet is inside the appearance's views: they go down together, from where they stopped.
+                        let containerView = appearanceTransition.containerView
+                        positionTransition.updatePosition(layer: containerView.layer, position: CGPoint(x: containerView.layer.position.x, y: self.bounds.height + containerView.frame.height / 2.0), completion: { [weak self] _ in
+                            self?.restoreAfterGlassAppearance(appearanceTransition, reattach: false)
+                            let _ = self?.container.dismiss(transition: .immediate, completion: completion)
+                            self?.isAnimating = false
+                        })
+                    } else {
+                        positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0), completion: { [weak self] _ in
+                            let _ = self?.container.dismiss(transition: .immediate, completion: completion)
+                            self?.isAnimating = false
+                        })
+                    }
 
                     if controller.style != .glass || self.didMaximizeOnce {
                         self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
@@ -1376,7 +1506,10 @@ public class AttachmentController: ViewController, MinimizableController {
 
                     if controller.fromMenu && self.hasButton, let (_, _, getTransition) = controller.getInputContainerNode(), let inputTransition = getTransition() {
                         self.panel.animateTransitionOut(inputTransition: inputTransition, dismissed: true, transition: positionTransition)
-                        self.containerLayoutUpdated(layout, transition: positionTransition)
+                        // Not with the sheet still inside an appearance's views: laying it out would move it within them.
+                        if appearanceTransition == nil {
+                            self.containerLayoutUpdated(layout, transition: positionTransition)
+                        }
                     }
                 }
             }
@@ -1673,6 +1806,13 @@ public class AttachmentController: ViewController, MinimizableController {
         self.node.updateSelectionCount(count, animated: false)
     }
 
+    public func updatePillIsLight(_ isLight: Bool, for controller: AttachmentContainable, transition: ContainedViewLayoutTransition) {
+        guard self.isNodeLoaded else {
+            return
+        }
+        self.node.container.updatePillIsLight(isLight, owner: controller, transition: transition)
+    }
+
     private var node: Node {
         return self.displayNode as! Node
     }
@@ -1711,6 +1851,7 @@ public class AttachmentController: ViewController, MinimizableController {
                 })
             }
         } else {
+            self.node.finishGlassAppearance()
             self.didDismiss()
             self._dismiss()
             completion?()
@@ -1836,6 +1977,25 @@ public class AttachmentController: ViewController, MinimizableController {
     }
 }
 
+extension AttachmentController {
+    func attachmentButtonMorphContent(size: CGSize) -> UIView {
+        if let snapshot = self.attachmentButtonContentSnapshot?() {
+            snapshot.bounds = CGRect(origin: .zero, size: size)
+            snapshot.clipsToBounds = true
+            snapshot.layer.cornerRadius = min(size.width, size.height) * 0.5
+            return snapshot
+        }
+        let buttonIcon = GlassBackgroundView.ContentImageView()
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
+        buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
+        if let image = buttonIcon.image {
+            buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
+        }
+        return buttonIcon
+    }
+}
+
 private func findParentGlassBackgroundView(_ view: UIView) -> GlassBackgroundView? {
     if let view = view as? GlassBackgroundView {
         return view
@@ -1885,4 +2045,58 @@ private final class ClipContainerView: UIView {
         boundsTransition.updatePosition(layer: self.contentView.layer, position: CGPoint(x: bounds.size.width * 0.5, y: bounds.size.height * 0.5))
         boundsTransition.updateBounds(layer: self.contentView.layer, bounds: bounds)
     }
+
+    /// Stops the running morph where it is on screen, so the next `update` and transitions start from there.
+    func pinToPresentation() {
+        for layer in [self.layer, self.clipView.layer, self.contentView.layer] {
+            if let presentation = layer.presentation(), let keys = layer.animationKeys() {
+                for key in keys {
+                    // A value the presentation layer cannot give is left as it is, never cleared.
+                    if let animation = layer.animation(forKey: key) as? CAPropertyAnimation, let keyPath = animation.keyPath, let value = presentation.value(forKeyPath: keyPath) {
+                        layer.setValue(value, forKeyPath: keyPath)
+                    }
+                }
+            }
+            layer.removeAllAnimations()
+        }
+    }
+}
+
+/// The `initialVelocity` of a `.customSpring` that, over `reversalDuration`, sends a property back to where an
+/// animation of it on `curve` over `duration` started, `elapsed` seconds into that animation: the reversal goes on
+/// with the motion the property has, away from its target, instead of starting from rest.
+///
+/// `CALayer.makeAnimation` runs a custom spring for its `settlingDuration`, sped up to fit the duration asked for, and
+/// `solve(at:)` samples that same normalized curve, so a speed converts through both durations.
+private func reversalSpringVelocity(interrupted curve: ContainedViewLayoutTransitionCurve, duration: Double, elapsed: Double, damping: CGFloat, reversalDuration: Double) -> CGFloat {
+    let durationFactor = Double(UIView.animationDurationFactor())
+    let interruptedDuration = duration * durationFactor
+    let t = elapsed / interruptedDuration
+    if t <= 0.0 || t >= 1.0 {
+        return 0.0
+    }
+    let progress = curve.solve(at: CGFloat(t))
+    // Too short a way back to give it a speed.
+    if progress < 0.02 {
+        return 0.0
+    }
+    let step = 0.004
+    let t0 = max(0.0, t - step)
+    let t1 = min(1.0, t + step)
+    // Of the interrupted animation's distance, per second.
+    let speed = (curve.solve(at: CGFloat(t1)) - curve.solve(at: CGFloat(t0))) / CGFloat((t1 - t0) * interruptedDuration)
+    // Of the reversal's distance (the `progress` covered so far), per second; negative is away from its target.
+    let reversalSpeed = -speed / progress
+    let realReversalDuration = reversalDuration * durationFactor
+    // The settling duration depends on the velocity itself; a second pass makes it consistent.
+    var velocity: CGFloat = 0.0
+    for _ in 0 ..< 2 {
+        let spring = CASpringAnimation()
+        spring.mass = 5.0
+        spring.stiffness = 900.0
+        spring.damping = damping
+        spring.initialVelocity = velocity
+        velocity = reversalSpeed * CGFloat(realReversalDuration / spring.settlingDuration)
+    }
+    return velocity
 }

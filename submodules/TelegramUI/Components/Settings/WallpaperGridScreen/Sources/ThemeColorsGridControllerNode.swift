@@ -74,6 +74,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     let ready = ValuePromise<Bool>()
     
     private var topBackgroundNode: ASDisplayNode
+    private let bottomBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
     private let customColorItemNode: ItemListActionItemNode
@@ -105,6 +106,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.topBackgroundNode = ASDisplayNode()
         self.topBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
+        self.bottomBackgroundNode = ASDisplayNode()
+        self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
@@ -124,6 +128,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         if case .default = controller.mode {
             self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
             self.gridNode.addSubnode(self.topBackgroundNode)
+            self.gridNode.addSubnode(self.bottomBackgroundNode)
             self.gridNode.addSubnode(self.customColorItemNode)
         } else {
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
@@ -246,7 +251,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                     maskY = 0.0
                 }
 
-                transition.updateFrame(node: strongSelf.maskNode, frame: CGRect(origin: CGPoint(x: maskSideInsets.left, y: maskY), size: CGSize(width: layout.size.width - maskSideInsets.left - maskSideInsets.right, height: gridLayout.contentSize.height + 10.0)))
+                let maskFrame = CGRect(origin: CGPoint(x: maskSideInsets.left, y: maskY), size: CGSize(width: layout.size.width - maskSideInsets.left - maskSideInsets.right, height: gridLayout.contentSize.height + 10.0))
+                transition.updateFrame(node: strongSelf.maskNode, frame: maskFrame)
+                // Below the card the node's own background (the card's color) would show between the side
+                // overlays: in the bottom inset and when scrolled past the end.
+                transition.updateFrame(node: strongSelf.bottomBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: maskFrame.maxY), size: CGSize(width: layout.size.width, height: 10000.0)))
             }
         }
     }
@@ -285,6 +294,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
         self.topBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.maskNode.image = PresentationResourcesItemList.cornersImage(presentationData.theme, top: true, bottom: true, glass: true)
         
         self.customColorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), systemStyle: .glass, title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in

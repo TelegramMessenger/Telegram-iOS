@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import TextFormat
 import RichTextEditorCore
 
 /// Map a single text run to inline `RichText`, applying its character attributes as nested wrappers.
@@ -49,7 +50,22 @@ func richText(from run: TextRun) -> RichText? {
         result = .marked(result)
     }
     if let link = attributes.link {
-        result = .url(text: result, url: link, webpageId: nil)
+        // The editor keeps mentions and dates as `tg://user?id=` / `tg://timestamp?t=` links
+        // (`MentionDateMarkers`); they go out as a mention and a date, not as links, as from the composer
+        // (`ChatInputContentInstantPage`, which nests the styles outside them). A mention marker is always a
+        // user's, by its raw id.
+        switch classifyChatLink(link) {
+        case let .mention(peerId):
+            result = .textMentionName(text: result, peerId: peerId.id._internalGetInt64Value())
+        case let .date(date):
+            result = .textDate(text: result, date: date, format: nil)
+        case let .url(url):
+            result = .url(text: result, url: url, webpageId: nil)
+        }
+    }
+    // Outermost, as the composer's (`ChatInputContentInstantPage`): a link or mention inside a spoiler is hidden too.
+    if attributes.spoiler {
+        result = .textSpoiler(text: result)
     }
     return result
 }

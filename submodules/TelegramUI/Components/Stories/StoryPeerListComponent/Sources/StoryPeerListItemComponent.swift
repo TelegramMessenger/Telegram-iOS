@@ -15,6 +15,7 @@ import StoryContainerScreen
 import MultilineTextComponent
 import HierarchyTrackingLayer
 import EmojiStatusComponent
+import TelegramStringFormatting
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -318,6 +319,17 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
 
 private var sharedAvatarBackgroundImage: UIImage?
 
+private final class AccessibilityItemButton: HighlightTrackingButton {
+    var customActionsProvider: (() -> [UIAccessibilityCustomAction]?)?
+    
+    override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            return self.customActionsProvider?()
+        } set(value) {
+        }
+    }
+}
+
 public final class StoryPeerListItemComponent: Component {
     public final class TransitionView: UIView {
         private weak var itemView: StoryPeerListItemComponent.View?
@@ -384,7 +396,7 @@ public final class StoryPeerListItemComponent: Component {
     public let rightNeighborDistance: CGPoint?
     public let composeContentOffset: CGFloat?
     public let action: (EnginePeer) -> Void
-    public let contextGesture: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
+    public let contextGesture: (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void
     
     public init(
         context: AccountContext,
@@ -405,7 +417,7 @@ public final class StoryPeerListItemComponent: Component {
         rightNeighborDistance: CGPoint?,
         composeContentOffset: CGFloat?,
         action: @escaping (EnginePeer) -> Void,
-        contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
+        contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -490,7 +502,7 @@ public final class StoryPeerListItemComponent: Component {
         private let containerNode: ContextControllerSourceNode
         private let extractedBackgroundView: UIImageView
         
-        private let button: HighlightTrackingButton
+        private let button: AccessibilityItemButton
         private let titleContainer: UIView
         
         fileprivate var composeLayer: StoryComposeLayer?
@@ -522,7 +534,7 @@ public final class StoryPeerListItemComponent: Component {
             self.backgroundContainer = UIView()
             self.backgroundContainer.isUserInteractionEnabled = false
             
-            self.button = HighlightTrackingButton()
+            self.button = AccessibilityItemButton()
             
             self.titleContainer = UIView()
             self.titleContainer.isUserInteractionEnabled = false
@@ -531,6 +543,8 @@ public final class StoryPeerListItemComponent: Component {
             self.containerNode = ContextControllerSourceNode()
             self.extractedBackgroundView = UIImageView()
             self.extractedBackgroundView.alpha = 0.0
+            // The backdrop drawn under the avatar while its menu is open.
+            self.extractedBackgroundView.accessibilityElementsHidden = true
             
             self.avatarContent = PortalSourceView()
             self.avatarContent.isUserInteractionEnabled = false
@@ -632,6 +646,21 @@ public final class StoryPeerListItemComponent: Component {
                 component.contextGesture(self.extractedContainerNode, gesture, component.peer)
             }
             self.containerNode.additionalActivationProgressLayer = self.avatarBackgroundContainer.layer
+            
+            // VoiceOver: the long-press menu, opened without a gesture as other menus are from VoiceOver. Built when
+            // VoiceOver asks, and only where the chat list opens a menu (it opens none for service accounts).
+            self.button.customActionsProvider = { [weak self] in
+                guard let self, let component = self.component, !component.peer.isService, self.containerNode.isGestureEnabled else {
+                    return nil
+                }
+                return [UIAccessibilityCustomAction(name: component.strings.Common_More, actionHandler: { [weak self] _ in
+                    guard let self, let component = self.component else {
+                        return false
+                    }
+                    component.contextGesture(self.extractedContainerNode, nil, component.peer)
+                    return true
+                })]
+            }
             
             self.extractedContainerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
                 guard let self, let component = self.component else {
@@ -1129,6 +1158,29 @@ public final class StoryPeerListItemComponent: Component {
                 }
             }
             
+            // VoiceOver: one button per peer reading the name under the ring and what the ring shows (new stories,
+            // the upload's progress, or the add badge on your own avatar). Hidden while the strip is collapsed into
+            // the title, which then speaks for it.
+            self.button.isAccessibilityElement = true
+            self.button.accessibilityElementsHidden = component.expandedAlphaFraction < 0.5
+            self.button.accessibilityLabel = titleString
+            var accessibilityValue: String?
+            if let ringAnimation = component.ringAnimation, case let .progress(progress) = ringAnimation {
+                accessibilityValue = storyUploadProgressAccessibilityValue(Double(max(0.0, min(1.0, progress))), strings: component.strings)
+            } else if component.peer.id == component.context.account.peerId && !component.hasItems {
+                accessibilityValue = component.strings.StoryFeed_AddStory
+            } else if component.peer.id != component.context.account.peerId && (component.unseenCount != 0 || component.hasLiveItems) {
+                if component.hasUnseenCloseFriendsItems {
+                    accessibilityValue = component.strings.VoiceOver_Stories_Unseen + ", " + component.strings.Story_Privacy_CategoryCloseFriends
+                } else {
+                    accessibilityValue = component.strings.VoiceOver_Stories_Unseen
+                }
+            }
+            self.button.accessibilityValue = accessibilityValue
+            self.button.accessibilityTraits = .button
+            // The ring's backdrop image under the avatar.
+            self.backgroundContainer.accessibilityElementsHidden = true
+            
             let extractedBackgroundWidth = max(size.width + 8.0, titleSize.width + 10.0)
             transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
             transition.setFrame(view: self.extractedBackgroundView, frame: CGRect(origin: CGPoint(x: floor((size.width - extractedBackgroundWidth) * 0.5), y: -4.0), size: CGSize(width: extractedBackgroundWidth, height: size.height + 8.0)))
@@ -1175,4 +1227,24 @@ public final class StoryPeerListItemComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+/// The upload's progress as VoiceOver reads it, a whole percentage in the interface language's format ("42 %" in some).
+/// Main thread only (component updates).
+private var storyUploadProgressFormatter: (localeIdentifier: String, formatter: NumberFormatter)?
+
+private func storyUploadProgressAccessibilityValue(_ fraction: Double, strings: PresentationStrings) -> String {
+    let locale = localeWithStrings(strings)
+    let formatter: NumberFormatter
+    if let current = storyUploadProgressFormatter, current.localeIdentifier == locale.identifier {
+        formatter = current.formatter
+    } else {
+        formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.maximumFractionDigits = 0
+        formatter.roundingMode = .down
+        formatter.locale = locale
+        storyUploadProgressFormatter = (locale.identifier, formatter)
+    }
+    return formatter.string(from: NSNumber(value: fraction)) ?? "\(Int(fraction * 100.0))%"
 }

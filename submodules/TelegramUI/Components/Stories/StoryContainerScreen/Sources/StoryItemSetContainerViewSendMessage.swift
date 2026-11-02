@@ -22,6 +22,7 @@ import PremiumUI
 import ICloudResources
 import LegacyComponents
 import LegacyCamera
+import Camera
 import StoryFooterPanelComponent
 import TelegramPresentationData
 import LegacyInstantVideoController
@@ -57,6 +58,7 @@ import UrlEscaping
 import AlertComponent
 import ShareController
 import UrlWhitelist
+import ChatMediaSend
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -610,8 +612,32 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             totalAmount: nil,
             hasCheck: false,
             navigationController: component.controller()?.navigationController as? NavigationController,
-            completion: { _ in
-                completion()
+            completion: { [weak view] _ in
+                guard let view, let component = view.component, let starsContext = component.context.starsContext else {
+                    return
+                }
+                let peerId = component.slice.effectivePeer.id
+                let totalAmount = sendPaidMessageStars.value
+                if let currentState = starsContext.currentState, currentState.balance.value < totalAmount {
+                    let _ = (component.context.engine.payments.starsTopUpOptions()
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak view] options in
+                        guard let view, let component = view.component, let navigationController = component.controller()?.navigationController as? NavigationController else {
+                            return
+                        }
+                        let controller = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .sendMessage(peerId: peerId, requiredStars: totalAmount), targetPeerId: nil, customTheme: component.theme, completion: { stars in
+                            starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                            let _ = (starsContext.onUpdate
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: {
+                                completion()
+                            })
+                        })
+                        navigationController.pushViewController(controller)
+                    })
+                } else {
+                    completion()
+                }
             }
         )
         component.controller()?.present(controller, in: .window(.root))
@@ -1928,6 +1954,14 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                                     self.clearInputText(view: view)
                                 }
                                 self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            }, preparedCompletion: { [weak self, weak view] messages, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
+                                guard let self, let view else {
+                                    return
+                                }
+                                if !inputText.string.isEmpty {
+                                    self.clearInputText(view: view)
+                                }
+                                self.enqueuePreparedMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             }
                         )
                         return true
@@ -2220,7 +2254,8 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         bannedSendVideos: (Int32, Bool)?,
         present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void,
         updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void,
-        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
+        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void,
+        preparedCompletion: ((Signal<[LegacyAssetPickerEnqueueMessage], Void>, Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void)? = nil
     ) {
         guard let component = view.component else {
             return
@@ -2228,12 +2263,23 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         let theme = component.theme
         let controller = MediaPickerScreenImpl(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), style: .glass, peer: peer, threadTitle: nil, chatLocation: .peer(id: peer.id), bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
         let mediaPickerContext = controller.mediaPickerContext
+        controller.opensChatCameraWithHolder = true
         controller.openCamera = { [weak self, weak view] cameraView in
             guard let self, let view else {
+                (cameraView as? CameraHolder)?.restore()
                 return
             }
             if let cameraView = cameraView as? TGAttachmentCameraView {
                 self.openCamera(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, cameraView: cameraView)
+            } else if let cameraHolder = cameraView as? CameraHolder {
+                if view.component?.context.routesToChatMediaEditorV2(.storyReplyCamera) ?? false {
+                    self.openCamera(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, cameraView: nil, cameraHolder: cameraHolder)
+                } else {
+                    cameraHolder.restore()
+                    self.openCamera(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, cameraView: nil)
+                }
+            } else if cameraView == nil && (view.component?.context.routesToChatMediaEditorV2(.storyReplyCamera) ?? false) {
+                self.openCamera(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, cameraView: nil)
             }
         }
         controller.presentSchedulePicker = { [weak self, weak view] media, done in
@@ -2261,7 +2307,90 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         controller.legacyCompletion = { _, signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
             completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
         }
+        if let preparedCompletion {
+            controller.preparedCompletion = { _, messages, _, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
+                preparedCompletion(messages, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
+            }
+        }
         present(controller, mediaPickerContext)
+    }
+
+    private func presentFileMediaPicker(view: StoryItemSetContainerComponent.View, peer: EnginePeer, editingMedia: Bool, completion: @escaping ([Any], Bool, Int32, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
+        guard let component = view.component else {
+            return
+        }
+        guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
+            return
+        }
+        var inputText = NSAttributedString(string: "")
+        switch inputPanelView.getSendMessageInput() {
+        case let .text(text):
+            inputText = text
+        }
+
+        let _ = (component.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
+            return transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self) ?? GeneratedMediaStoreSettings.defaultSettings
+        }
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] settings in
+            guard let self, let view, let component = view.component, let parentController = component.controller() else {
+                return
+            }
+            var slowModeEnabled = false
+            if case let .channel(channel) = peer, channel.isRestrictedBySlowmode {
+                slowModeEnabled = true
+            }
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let controller = fileMediaPickerController(
+                context: component.context,
+                updatedPresentationData: nil,
+                peer: peer,
+                threadTitle: nil,
+                chatLocation: .peer(id: peer.id),
+                isScheduledMessages: false,
+                isEditingMessage: editingMedia,
+                isSlowMode: slowModeEnabled,
+                initialCaption: inputText,
+                saveEditedPhotos: settings.storeEditedPhotos,
+                customEmojiAvailable: true,
+                presentSelectionLimitExceeded: { [weak view] in
+                    guard let view, let component = view.component else {
+                        return
+                    }
+                    let text: String
+                    if slowModeEnabled {
+                        text = presentationData.strings.Chat_SlowmodeAttachmentLimitReached
+                    } else {
+                        text = presentationData.strings.Chat_AttachmentLimitReached
+                    }
+                    component.controller()?.present(textAlertController(context: component.context, updatedPresentationData: (presentationData, .single(presentationData)), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                },
+                presentSchedulePicker: { [weak self, weak view] media, done in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.presentScheduleTimePicker(view: view, peer: peer, style: media ? .media : .default, completion: { time, repeatPeriod, silentPosting in
+                        done(time, silentPosting)
+                    })
+                },
+                presentTimerPicker: { [weak self, weak view] done in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.presentTimerPicker(view: view, peer: peer, style: .media, completion: { time in
+                        done(time)
+                    })
+                },
+                getCaptionPanelView: { [weak self, weak view] in
+                    guard let self, let view else {
+                        return nil
+                    }
+                    return self.getCaptionPanelView(view: view, peer: peer)
+                },
+                completion: completion
+            )
+            view.endEditing(true)
+            parentController.push(controller)
+        })
     }
 
     private func presentOldMediaPicker(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, fileMode: Bool, editingMedia: Bool, push: @escaping (ViewController) -> Void, completion: @escaping ([Any], Bool, Int32) -> Void) {
@@ -2365,6 +2494,19 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
     }
 
     private func presentFileGallery(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, editingMessage: Bool = false) {
+        if view.component?.context.routesToChatMediaEditorV2(.filePicker) ?? false {
+            self.presentFileMediaPicker(view: view, peer: peer, editingMedia: editingMessage, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters in
+                guard let self, let view else {
+                    return
+                }
+                if editingMessage {
+                    self.editMessageMediaWithLegacySignals(view: view, signals: signals)
+                } else {
+                    self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: replyMessageId, replyToStoryId: replyToStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, parameters: parameters)
+                }
+            })
+            return
+        }
         self.presentOldMediaPicker(view: view, peer: peer, replyMessageId: replyMessageId, replyToStoryId: replyToStoryId, fileMode: true, editingMedia: editingMessage, push: { [weak view] c in
             view?.component?.controller()?.push(c)
         }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime in
@@ -2635,13 +2777,16 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         }) as? TGCaptionPanelView
     }
 
-    private func openCamera(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, cameraView: TGAttachmentCameraView? = nil) {
+    private func openCamera(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, cameraView: TGAttachmentCameraView? = nil, cameraHolder: CameraHolder? = nil) {
         guard let component = view.component else {
+            cameraHolder?.restore()
             return
         }
         guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
+            cameraHolder?.restore()
             return
         }
+        let opensChatCamera = cameraView == nil && component.context.routesToChatMediaEditorV2(.storyReplyCamera)
 
         var inputText = NSAttributedString(string: "")
         switch inputPanelView.getSendMessageInput() {
@@ -2655,13 +2800,16 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         }
         |> deliverOnMainQueue).start(next: { [weak self, weak view] settings in
             guard let self, let view, let component = view.component, let parentController = component.controller() else {
+                cameraHolder?.restore()
                 return
             }
 
             var enablePhoto = true
             var enableVideo = true
 
+            var hasActiveCall = false
             if let callManager = component.context.sharedContext.callManager, callManager.hasActiveCall {
+                hasActiveCall = true
                 enableVideo = false
             }
 
@@ -2692,6 +2840,16 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             }
 
             let storeCapturedMedia = peer.id.namespace != Namespaces.Peer.SecretChat
+
+            if opensChatCamera {
+                guard let modes = chatCameraModes(isPhotoBanned: bannedSendPhotos != nil, isVideoBanned: bannedSendVideos != nil, hasActiveCall: hasActiveCall) else {
+                    cameraHolder?.restore()
+                    self.presentChatCameraUnavailableAlert(view: view, hasActiveCall: hasActiveCall)
+                    return
+                }
+                self.presentChatCamera(view: view, parentController: parentController, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, cameraHolder: cameraHolder, modes: modes, storeCapturedMedia: storeCapturedMedia, inputText: inputText)
+                return
+            }
 
             presentedLegacyCamera(context: component.context, peer: peer, chatLocation: .peer(id: peer.id), cameraView: cameraView, menuController: nil, parentController: parentController, attachmentController: self.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: peer.id.namespace != Namespaces.Peer.SecretChat, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters in
                 guard let self, let view else {
@@ -2740,6 +2898,111 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                 self.attachmentController?.scrollToTop?()
             })
         })
+    }
+
+    private func presentChatCameraUnavailableAlert(view: StoryItemSetContainerComponent.View, hasActiveCall: Bool) {
+        guard let component = view.component, let controller = component.controller() else {
+            return
+        }
+        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+        let strings = presentationData.strings
+        let title: String? = hasActiveCall ? strings.Call_CallInProgressTitle : nil
+        let text = strings.Conversation_DefaultRestrictedMedia
+        controller.present(textAlertController(context: component.context, updatedPresentationData: (presentationData, .single(presentationData)), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), in: .window(.root))
+    }
+
+    private func presentChatCamera(view: StoryItemSetContainerComponent.View, parentController: ViewController, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, cameraHolder: CameraHolder?, modes: ChatCameraModes, storeCapturedMedia: Bool, inputText: NSAttributedString) {
+        guard let component = view.component else {
+            cameraHolder?.restore()
+            return
+        }
+        let options = chatCameraSessionOptions(entry: .storyReply, isEditingMessage: false)
+        let parameters = ChatCameraScreenParameters(
+            camera: ChatCameraParams(
+                allowPhoto: modes.allowPhoto,
+                allowVideo: modes.allowVideo,
+                isSingleShot: options.isSingleShot,
+                hasAudio: modes.hasAudio,
+                saveCapturedMedia: storeCapturedMedia,
+                recognizedQRCode: { _ in
+                    return false
+                }
+            ),
+            peer: peer,
+            isEditingMessage: false,
+            mediaGrouping: options.mediaGrouping,
+            initialCaption: inputText,
+            hasSchedule: peer.id.namespace != Namespaces.Peer.SecretChat,
+            sendPaidMessageStars: 0,
+            getCaptionPanelView: { [weak self, weak view] in
+                guard let self, let view else {
+                    return nil
+                }
+                return self.getCaptionPanelView(view: view, peer: peer)
+            },
+            presentSchedulePicker: { [weak self, weak view] done in
+                guard let self, let view else {
+                    return
+                }
+                self.presentScheduleTimePicker(view: view, peer: peer, style: .media, completion: { time, _, silentPosting in
+                    done(time, silentPosting)
+                })
+            },
+            presentTimerPicker: { [weak self, weak view] done in
+                guard let self, let view else {
+                    return
+                }
+                self.presentTimerPicker(view: view, peer: peer, style: .media, completion: { time in
+                    done(time)
+                })
+            },
+            completion: { [weak self, weak view] messages, _, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
+                guard let self, let view, let messages = messages as? Signal<[LegacyAssetPickerEnqueueMessage], Void> else {
+                    return
+                }
+                self.presentPaidMessageAlertIfNeeded(view: view, completion: { [weak self, weak view] in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.enqueuePreparedMediaMessages(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                    if !inputText.string.isEmpty {
+                        self.clearInputText(view: view)
+                    }
+                })
+                self.attachmentController?.dismiss(animated: false, completion: nil)
+            }
+        )
+        var transitionIn: CameraScreenTransitionIn?
+        if let cameraHolder {
+            transitionIn = CameraScreenTransitionIn(
+                sourceView: cameraHolder.parentView,
+                sourceRect: cameraHolder.parentView.bounds,
+                sourceCornerRadius: 0.0,
+                useFillAnimation: false
+            )
+        }
+        let camera = component.context.sharedContext.makeChatCameraScreen(
+            context: component.context,
+            parameters: parameters,
+            cameraHolder: cameraHolder,
+            transitionIn: transitionIn,
+            transitionOut: { [weak cameraHolder] _ in
+                guard let cameraHolder, cameraHolder.parentView.window != nil else {
+                    return nil
+                }
+                return CameraScreenTransitionOut(
+                    destinationView: cameraHolder.parentView,
+                    destinationRect: cameraHolder.parentView.bounds,
+                    destinationCornerRadius: 0.0
+                )
+            },
+            transitionedOut: cameraHolder.flatMap { cameraHolder in
+                return { [weak cameraHolder] in
+                    cameraHolder?.restore()
+                }
+            }
+        )
+        parentController.push(camera)
     }
 
     private func presentScheduleTimePicker(
@@ -2875,8 +3138,11 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         guard let component = view.component else {
             return
         }
+        self.enqueuePreparedMediaMessages(view: view, peer: peer, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, messages: legacyAssetPickerEnqueueMessages(context: component.context, account: component.context.account, signals: signals!), silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+    }
 
-        self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: component.context, account: component.context.account, signals: signals!)
+    private func enqueuePreparedMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: EngineStoryId?, messages: Signal<[LegacyAssetPickerEnqueueMessage], Void>, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+        self.enqueueMediaMessageDisposable.set((messages
         |> deliverOnMainQueue).start(next: { [weak self, weak view] items in
             if let strongSelf = self, let view {
                 var mappedMessages: [EnqueueMessage] = []

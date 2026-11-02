@@ -10,18 +10,6 @@ import Vision
 import ImageBlur
 import Camera
 
-private extension UIInterfaceOrientation {
-   var videoOrientation: AVCaptureVideoOrientation {
-       switch self {
-       case .portraitUpsideDown: return .portraitUpsideDown
-       case .landscapeRight: return .landscapeRight
-       case .landscapeLeft: return .landscapeLeft
-       case .portrait: return .portrait
-       default: return .portrait
-       }
-   }
-}
-
 private class SimpleCapturePreviewLayer: AVCaptureVideoPreviewLayer {
     var didEnterHierarchy: (() -> Void)?
     var didExitHierarchy: (() -> Void)?
@@ -60,8 +48,11 @@ final class LegacyCameraSimplePreviewView: UIView, CameraSimplePreviewView {
         }
         let windowScene = self.window?.windowScene ?? UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene
         let statusBarOrientation = windowScene?.interfaceOrientation ?? .portrait
-        let videoOrientation = statusBarOrientation.videoOrientation
-        self.videoPreviewLayer.connection?.videoOrientation = videoOrientation
+        // The window's orientation is measured against its screen, the connection's against the body that holds the
+        // camera: a quarter turn apart on iPhone Duo's inner screen.
+        let windowSize = self.window?.bounds.size ?? windowScene?.coordinateSpace.bounds.size ?? .zero
+        let videoOrientation = CameraVideoOrientation(interfaceOrientation: CameraVideoOrientation(statusBarOrientation), screenPortrait: CameraVideoOrientation(screenPortraitDeviceOrientationForWindow(size: windowSize)))
+        self.videoPreviewLayer.connection?.videoOrientation = videoOrientation.avCaptureVideoOrientation
         self.videoPreviewLayer.removeAllAnimations()
     }
     
@@ -189,9 +180,22 @@ final class LegacyCameraSimplePreviewView: UIView, CameraSimplePreviewView {
         }
     }
     
+    var sessionQueue: Queue?
+
     var isEnabled: Bool = true {
         didSet {
-            self.videoPreviewLayer.connection?.isEnabled = self.isEnabled
+            let isEnabled = self.isEnabled
+            let layer = self.videoPreviewLayer
+            let apply = {
+                if let connection = layer.connection, connection.isEnabled != isEnabled {
+                    connection.isEnabled = isEnabled
+                }
+            }
+            if let sessionQueue = self.sessionQueue {
+                sessionQueue.async(apply)
+            } else {
+                apply()
+            }
         }
     }
     

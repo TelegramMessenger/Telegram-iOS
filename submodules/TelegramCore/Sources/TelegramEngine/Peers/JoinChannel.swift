@@ -29,8 +29,8 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forN
 #if TELEGRAM_NEWS_FEED_API
             request = account.network.request(Api.functions.channels.joinChannel(flags: forNews ? (1 << 0) : 0, channel: inputChannel))
 #else
-            // The feed API is parked (layer 232): there is no News-only join; with News hidden nothing asks for one.
-            assert(!forNews, "a News-only join while the feed API is parked would be a full join")
+            // The feed API is parked (layer 233 has none): there is no News-only join; with News hidden nothing asks for one.
+            assert(!forNews, "A News-only join while the feed API is parked would be sent as a full join")
             request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
 #endif
         } else {

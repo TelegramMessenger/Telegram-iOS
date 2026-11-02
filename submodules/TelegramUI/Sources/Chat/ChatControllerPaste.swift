@@ -42,6 +42,11 @@ extension ChatControllerImpl {
                                     self?.clearInputText()
                                 }
                                 self?.enqueueMediaMessages(fromGallery: fromGallery, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            }, preparedCompletion: { [weak self] fromGallery, messages, count, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
+                                if !inputText.string.isEmpty {
+                                    self?.clearInputText()
+                                }
+                                self?.enqueuePreparedMediaMessages(messages, count: count, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: nil, parameters: parameters, fromGallery: fromGallery, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             })
                         }
                     },
@@ -195,6 +200,7 @@ extension ChatControllerImpl {
             cropRotation: 1.0,
             cropMirroring: false,
             cropOrientation: .up,
+            cropPerspective: .zero,
             gradientColors: [.clear, .clear],
             videoTrimRange: nil,
             videoBounce: false,

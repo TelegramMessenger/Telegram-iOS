@@ -26,8 +26,11 @@ public struct ButtonRef: Codable, Equatable {
     public var labelText: String { label.map(\.text).joined() }
 }
 
-/// What a button does. Only `.url` is authorable in the editor; the rest exist to PRESERVE an
-/// incoming button through the edit round-trip.
+/// What a button does. `.url`, `.copyText` and `.userProfile` are authorable in the editor; the rest
+/// exist to PRESERVE an incoming button through the edit round-trip.
+///
+/// `.userProfile`'s `peerId` is the user's whole peer id as `ButtonActionCodec` writes it (TelegramCore's
+/// `PeerId.toInt64()`); Core never interprets it.
 ///
 /// `.unsupported` is how this Telegram-free module carries the actions it cannot name (callback,
 /// web view, payment, …). `kind` and `payload` are produced and consumed EXCLUSIVELY by
@@ -35,17 +38,19 @@ public struct ButtonRef: Codable, Equatable {
 public enum ButtonAction: Codable, Equatable {
     case url(String)
     case copyText(String)
+    case userProfile(peerId: Int64)
     case disabled
     case unsupported(kind: String, payload: String)
 
     private enum CodingKeys: String, CodingKey { case type, value, kind }
-    private enum Kind: String, Codable { case url, copyText, disabled, unsupported }
+    private enum Kind: String, Codable { case url, copyText, userProfile, disabled, unsupported }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         switch try c.decode(Kind.self, forKey: .type) {
         case .url:         self = .url(try c.decode(String.self, forKey: .value))
         case .copyText:    self = .copyText(try c.decode(String.self, forKey: .value))
+        case .userProfile: self = .userProfile(peerId: try c.decode(Int64.self, forKey: .value))
         case .disabled:    self = .disabled
         case .unsupported: self = .unsupported(kind: try c.decode(String.self, forKey: .kind),
                                                payload: try c.decode(String.self, forKey: .value))
@@ -61,6 +66,9 @@ public enum ButtonAction: Codable, Equatable {
         case let .copyText(value):
             try c.encode(Kind.copyText, forKey: .type)
             try c.encode(value, forKey: .value)
+        case let .userProfile(peerId):
+            try c.encode(Kind.userProfile, forKey: .type)
+            try c.encode(peerId, forKey: .value)
         case .disabled:
             try c.encode(Kind.disabled, forKey: .type)
         case let .unsupported(kind, payload):
@@ -115,7 +123,8 @@ public extension Document {
     /// original actions verbatim, which is the whole point of the opaque carrier. That path goes through
     /// the `document` setter, not a fragment splice.
     ///
-    /// `.copyText` is left alone — its payload is self-contained text that still works anywhere.
+    /// `.copyText` and `.userProfile` are left alone — their payloads are self-contained (text, a user id)
+    /// and still work anywhere.
     /// PUBLIC because the engine editor's clipboard is a second consumer of this rule — a pasted
     /// button must not carry an opaque action there either.
     public func convertingUnsupportedButtonActions() -> Document {

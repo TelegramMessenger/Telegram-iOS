@@ -155,6 +155,7 @@ public final class EmptyStateIndicatorComponent: Component {
                     transition: transition,
                     component: AnyComponent(ButtonComponent(
                         background: ButtonComponent.Background(
+                            style: .glass,
                             color: component.theme.list.itemCheckColors.fillColor,
                             foreground: component.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
@@ -172,7 +173,7 @@ public final class EmptyStateIndicatorComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 260.0, height: 50.0)
+                    containerSize: CGSize(width: 260.0, height: 52.0)
                 )
             } else {
                 if let button = self.button {

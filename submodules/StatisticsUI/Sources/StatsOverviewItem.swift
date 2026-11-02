@@ -277,6 +277,13 @@ private final class ValueItemNode: ASDisplayNode {
                 targetNode.titleNode.frame = titleFrame
                 targetNode.deltaNode.frame = deltaFrame
                 
+                // VoiceOver: one element per figure, named by its caption ("Followers" = "14"), the change beside it
+                // in the value. The text nodes were not read at all.
+                targetNode.isAccessibilityElement = true
+                targetNode.accessibilityLabel = title
+                targetNode.accessibilityValue = [value, delta?.0].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+                targetNode.accessibilityTraits = .staticText
+                
                 return targetNode
             })
         }

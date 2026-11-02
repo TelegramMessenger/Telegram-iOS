@@ -88,12 +88,30 @@ final class ModeComponent: Component {
         private var state: EmptyComponentState?
         
         final class ItemView: HighlightTrackingButton {
+            var accessibilityActivateAction: (() -> Void)?
+            
             init() {
                 super.init(frame: .zero)
             }
             
             required init(coder: NSCoder) {
                 preconditionFailure()
+            }
+            
+            // The button is the element; its title label is not a second one.
+            override var accessibilityElements: [Any]? {
+                get {
+                    return []
+                } set(value) {
+                }
+            }
+            
+            override func accessibilityActivate() -> Bool {
+                guard let accessibilityActivateAction = self.accessibilityActivateAction else {
+                    return false
+                }
+                accessibilityActivateAction()
+                return true
             }
             
             func update(isTablet: Bool, value: String, selected: Bool, tintColor: UIColor) -> CGSize {
@@ -144,7 +162,7 @@ final class ModeComponent: Component {
         init() {
             super.init(frame: CGRect())
             
-            self.backgroundView.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11)
+            self.backgroundView.backgroundColor = UIColor(rgb: 0xffffff, alpha: cameraScreenModeControlUnderlayAlpha)
             self.backgroundView.layer.cornerRadius = 24.0
                         
             self.layer.allowsGroupOpacity = true
@@ -178,19 +196,56 @@ final class ModeComponent: Component {
             preconditionFailure()
         }
         
-        private var animatedOut = false
+        func editorHandoffSlot() -> CameraScreenEditorHandoffSlot? {
+            guard let component = self.component, let layoutData = self.layoutData, !layoutData.isTablet, self.backgroundView.alpha > 0.0, self.window != nil else {
+                return nil
+            }
+            var contentViews: [UIView] = []
+            let pillFrame = self.scrollView.convert(layoutData.selectedFrame, to: self.backgroundView)
+            let pillView = UIView(frame: pillFrame)
+            pillView.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.15)
+            pillView.layer.cornerRadius = pillFrame.height * 0.5
+            contentViews.append(pillView)
+            let selectedId = AnyHashable(component.currentMode.rawValue)
+            for (id, itemView) in self.itemViews {
+                let sourceView: UIView = id == selectedId ? (self.selectedItemViews[id] ?? itemView) : itemView
+                guard let snapshot = sourceView.snapshotView(afterScreenUpdates: false) else {
+                    continue
+                }
+                snapshot.frame = self.scrollView.convert(itemView.frame, to: self.backgroundView)
+                contentViews.append(snapshot)
+            }
+            return CameraScreenEditorHandoffSlot(frame: self.backgroundView.convert(self.backgroundView.bounds, to: nil), hasGlass: true, contentViews: contentViews)
+        }
+
+        func editorReturnTarget() -> CGRect? {
+            guard let layoutData = self.layoutData, !layoutData.isTablet, self.window != nil else {
+                return nil
+            }
+            return self.backgroundView.convert(self.backgroundView.bounds, to: nil)
+        }
+
+        func setHandedOffToEditor() {
+            self.backgroundView.layer.removeAllAnimations()
+            self.backgroundView.alpha = 0.0
+        }
+
+        func restoreFromEditorHandoff(delay: Double) {
+            self.backgroundView.alpha = 1.0
+            self.backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+            cameraScreenAnimateBlur(layer: self.backgroundView.layer, fromRadius: cameraScreenEditorHandoffBlurRadius, toRadius: 0.0, delay: delay)
+        }
+
         func animateOutToEditor(transition: ComponentTransition) {
-            self.animatedOut = true
             
             transition.setAlpha(view: self.backgroundView, alpha: 0.0)
-            transition.setSublayerTransform(view: self, transform: CATransform3DMakeTranslation(0.0, -buttonSize.height, 0.0))
+            cameraScreenAnimateBlur(layer: self.backgroundView.layer, fromRadius: 0.0, toRadius: cameraScreenEditorHandoffBlurRadius)
         }
         
         func animateInFromEditor(transition: ComponentTransition) {
-            self.animatedOut = false
             
             transition.setAlpha(view: self.backgroundView, alpha: 1.0)
-            transition.setSublayerTransform(view: self, transform: CATransform3DIdentity)
+            cameraScreenAnimateBlur(layer: self.backgroundView.layer, fromRadius: cameraScreenEditorHandoffBlurRadius, toRadius: 0.0)
         }
         
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -337,7 +392,7 @@ final class ModeComponent: Component {
                 liquidLensView.selectedContentView.addSubview(self.selectedScrollView)
             }
             
-            self.backgroundView.backgroundColor = component.isTablet ? .clear : UIColor(rgb: 0xffffff, alpha: 0.11)
+            self.backgroundView.backgroundColor = component.isTablet ? .clear : UIColor(rgb: 0xffffff, alpha: cameraScreenModeControlUnderlayAlpha)
         
             var inset: CGFloat = 23.0
             let spacing: CGFloat
@@ -387,6 +442,17 @@ final class ModeComponent: Component {
                 
                 let _ = selectedItemView.update(isTablet: component.isTablet, value: mode.title(strings: component.strings), selected: true, tintColor: component.tintColor)
                 selectedItemView.bounds = CGRect(origin: .zero, size: itemSize)
+                
+                // VoiceOver: one button per mode, the current one `.selected`; activation picks it as tapping does.
+                // The highlighted copy drawn through the lens is not read.
+                itemView.isAccessibilityElement = true
+                itemView.accessibilityLabel = mode.title(strings: component.strings)
+                itemView.accessibilityTraits = mode == component.currentMode ? [.button, .selected] : .button
+                itemView.accessibilityActivateAction = { [weak self] in
+                    self?.component?.updatedMode(mode)
+                }
+                selectedItemView.isAccessibilityElement = false
+                selectedItemView.accessibilityElementsHidden = true
                 
                 itemFrame = CGRect(origin: itemFrame.origin, size: itemSize)
                 

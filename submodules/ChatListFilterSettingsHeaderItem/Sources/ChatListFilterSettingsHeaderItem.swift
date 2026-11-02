@@ -91,6 +91,10 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)
+        
+        // The text is the element; the illustration is decoration.
+        self.accessibilityTraits = .staticText
+        self.animationNode.accessibilityElementsHidden = true
     }
     
     override func didLoad() {
@@ -158,6 +162,8 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
+                    // Without text (the new-folder header is only the illustration) there is nothing to read.
+                    strongSelf.accessibilityElementsHidden = attributedText.string.isEmpty
                                         
                     let iconSize = CGSize(width: CGFloat(size) / 2.0, height: CGFloat(size) / 2.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
@@ -168,6 +174,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.animationNode.alpha = isHidden ? 0.0 : 1.0
                     strongSelf.titleNode.alpha = isHidden ? 0.0 : 1.0
+                    strongSelf.isAccessibilityElement = !isHidden && !attributedText.string.isEmpty
                 }
             })
         }

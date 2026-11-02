@@ -33,6 +33,11 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TextFormat",
         "//submodules/ListSectionHeaderNode",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/ActivityIndicator",
+        "//submodules/AppBundle",
     ],
     visibility = [
         "//visibility:public",

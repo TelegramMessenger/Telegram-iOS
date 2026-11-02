@@ -12,7 +12,7 @@ import TelegramPresentationData
 import AccountContext
 import BundleIconComponent
 
-final class LivePhotoButton: UIView, TGLivePhotoButton {
+public final class LivePhotoButton: UIView, TGLivePhotoButton {
     private let backgroundView: GlassContextExtractableContainer
     private let icon = ComponentView<Empty>()
     private let label = ComponentView<Empty>()
@@ -24,20 +24,21 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
     public var modeUpdated: ((TGMediaLivePhotoMode) -> Void)?
     
     let context: AccountContext
-    var present: ((ViewController, Any?) -> Void)?
+    public var present: ((ViewController, Any?) -> Void)?
     
-    var view: UIView {
+    public var view: UIView {
         return self
     }
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         return self.bounds.insetBy(dx: -16.0, dy: -16.0).contains(point)
     }
         
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.backgroundView = GlassContextExtractableContainer()
+        self.backgroundView.morphsIntoContextMenu = true
         
         super.init(frame: .zero)
         
@@ -128,7 +129,7 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
         self.present?(controller, nil)
     }
     
-    func updateFrame(_ frame: CGRect) {
+    public func updateFrame(_ frame: CGRect) {
         let transition: ContainedViewLayoutTransition
         if self.frame.width.isZero {
             transition = .immediate
@@ -138,7 +139,7 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
         transition.updateFrame(view: self, frame: frame)
     }
     
-    func setLivePhotoMode(_ mode: TGMediaLivePhotoMode) {
+    public func setLivePhotoMode(_ mode: TGMediaLivePhotoMode) {
         self.mode = mode
         self.update()
     }

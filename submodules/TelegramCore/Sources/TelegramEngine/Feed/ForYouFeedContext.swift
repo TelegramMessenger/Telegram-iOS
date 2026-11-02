@@ -5,12 +5,18 @@ internal import TelegramApi
 
 private let forYouSnapshotLimit = 300
 
-/// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error.
-private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
+/// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error. With a
+/// `query` the batch is the server's search results instead of the feed's next batch.
+private func fetchForYouBatch(account: Account, query: String?, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
 #if TELEGRAM_NEWS_FEED_API
-    return account.network.request(Api.functions.feed.getForYou(flags: 0, query: nil, limit: limit))
+    var flags: Int32 = 0
+    if query != nil {
+        flags |= 1 << 0
+    }
+    return account.network.request(Api.functions.feed.getForYou(flags: flags, query: query, limit: limit))
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.feed.ForYouFeed?, NoError> in
+    |> `catch` { error -> Signal<Api.feed.ForYouFeed?, NoError> in
+        Logger.shared.log("ForYouFeed", "getForYou(\(query == nil ? "" : "query, ")limit: \(limit)): \(error.errorDescription ?? "error")")
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<[EngineForYouItem]?, NoError> in
@@ -30,7 +36,7 @@ private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineF
                 }
             }
             let stored = storeFeedMessages(transaction: transaction, accountPeerId: account.peerId, messages: apiMessages, chats: parsed.chats, users: parsed.users)
-            Logger.shared.log("ForYouFeed", "getForYou(limit: \(limit)): \(parsed.elements.count) items (\(apiMessages.count) messages), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
+            Logger.shared.log("ForYouFeed", "getForYou(\(query == nil ? "" : "query, ")limit: \(limit)): \(parsed.elements.count) items (\(apiMessages.count) messages), \(parsed.chats.count) chats, \(parsed.users.count) users; stored \(stored.count)")
             var storedById: [MessageId: FeedPageMessage] = [:]
             for message in stored {
                 storedById[message.id] = message
@@ -39,9 +45,23 @@ private func fetchForYouBatch(account: Account, limit: Int32) -> Signal<[EngineF
         }
     }
 #else
-    // The feed API is parked (layer 232): an empty batch, nothing sent.
+    // The feed API is parked (layer 233 has none): an empty batch, nothing sent.
     return .single([])
 #endif
+}
+
+/// The posts `feed.getForYou` finds for `query`, in server order. nil on a network error. They are stored as the
+/// feed's are, so their rows resolve the same way; the For you feed's own list is untouched.
+func _internal_searchForYouPosts(account: Account, query: String, limit: Int32) -> Signal<[EngineFeedEntry]?, NoError> {
+    return fetchForYouBatch(account: account, query: query, limit: limit)
+    |> map { items -> [EngineFeedEntry]? in
+        return items?.compactMap { item -> EngineFeedEntry? in
+            if case let .post(entry) = item {
+                return entry
+            }
+            return nil
+        }
+    }
 }
 
 private final class ForYouFeedContextImpl {
@@ -98,7 +118,7 @@ private final class ForYouFeedContextImpl {
         self.state.isLoadingMore = true
         self.state.hasError = false
         self.pushState()
-        self.loadMoreDisposable.set((fetchForYouBatch(account: self.account, limit: forYouBatchLimit(for: self.state.items))
+        self.loadMoreDisposable.set((fetchForYouBatch(account: self.account, query: nil, limit: forYouBatchLimit(for: self.state.items))
         |> deliverOn(self.queue)).start(next: { [weak self] batch in
             guard let self else {
                 return
@@ -128,7 +148,7 @@ private final class ForYouFeedContextImpl {
         self.state.isRefreshing = true
         self.state.hasError = false
         self.pushState()
-        self.refreshDisposable.set((fetchForYouBatch(account: self.account, limit: forYouBatchLimit(for: self.state.items))
+        self.refreshDisposable.set((fetchForYouBatch(account: self.account, query: nil, limit: forYouBatchLimit(for: self.state.items))
         |> deliverOn(self.queue)).start(next: { [weak self] batch in
             guard let self else {
                 return

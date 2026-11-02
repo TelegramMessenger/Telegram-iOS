@@ -126,6 +126,16 @@ final class GlassButtonNode: ASDisplayNode {
     var isSelected: Bool = false {
         didSet {
             self.updateState(selected: self.isSelected)
+            self.button.accessibilityTraits = self.isSelected ? [.button, .selected] : .button
+        }
+    }
+    
+    /// VoiceOver label for a button that shows only its icon.
+    var buttonAccessibilityLabel: String? {
+        get {
+            return self.button.accessibilityLabel
+        } set(value) {
+            self.button.accessibilityLabel = value
         }
     }
     

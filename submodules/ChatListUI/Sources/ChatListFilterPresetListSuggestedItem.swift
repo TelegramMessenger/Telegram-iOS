@@ -244,6 +244,8 @@ public class ChatListFilterPresetListSuggestedItemNode: ListViewItemNode, ItemLi
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.label
                     strongSelf.activateArea.accessibilityTraits = []
+                    strongSelf.buttonNode.accessibilityLabel = item.presentationData.strings.ChatListFolderSettings_AddRecommended
+                    strongSelf.buttonNode.accessibilityTraits = .button
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

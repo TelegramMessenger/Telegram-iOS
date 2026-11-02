@@ -70,7 +70,12 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         }
         if let action = self.action {
             self.updateActionTitle()
-            self.actionButton?.accessibilityLabel = action
+            // A trailing "<" is drawn as a disclosure arrow, not read.
+            var accessibilityLabel = action
+            if accessibilityLabel.hasSuffix("<") {
+                accessibilityLabel = String(accessibilityLabel.dropLast()).trimmingCharacters(in: .whitespaces)
+            }
+            self.actionButton?.accessibilityLabel = accessibilityLabel
             self.actionButton?.accessibilityTraits = [.button]
         }
         
@@ -89,6 +94,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.isAccessibilityElement = true
+        self.label.accessibilityTraits = .header
         self.label.displaysAsynchronously = false
         
         self.labelBackgroundView = UIImageView()

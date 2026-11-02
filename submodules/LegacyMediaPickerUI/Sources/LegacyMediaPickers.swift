@@ -365,6 +365,12 @@ public struct LegacyAssetPickerEnqueueMessage {
     public var message: EnqueueMessage
     public var uniqueId: String?
     public var isFile: Bool
+    
+    public init(message: EnqueueMessage, uniqueId: String?, isFile: Bool) {
+        self.message = message
+        self.uniqueId = uniqueId
+        self.isFile = isFile
+    }
 }
 
 public func legacyAssetPickerEnqueueMessages(

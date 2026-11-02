@@ -119,6 +119,10 @@ final class DataButtonComponent: Component {
             let themeUpdated = self.component?.theme !== component.theme
             
             self.component = component
+            
+            // VoiceOver: one button reading its title.
+            self.accessibilityLabel = component.title
+            self.accessibilityTraits = .button
 
             if themeUpdated {
                 self.backgroundColor = component.theme.list.itemBlocksBackgroundColor

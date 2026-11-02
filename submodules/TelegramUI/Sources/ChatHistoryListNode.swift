@@ -24,11 +24,13 @@ import ChatControllerInteraction
 import TranslateUI
 import ChatHistoryEntry
 import ChatOverscrollControl
+import ChatInputPanelNode
 import ChatBotInfoItem
 import ChatUserInfoItem
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatMessageItemView
+import ChatMessageItemCommon
 import ChatMessageBubbleItemNode
 import ChatMessageTransitionNode
 import ChatControllerInteraction
@@ -37,6 +39,7 @@ import UrlHandling
 import TextFormat
 import ChatNewThreadInfoItem
 import PhoneNumberFormat
+import ChatHistoryListViewBackend
 import Postbox
 
 struct ChatTopVisibleMessageRange: Equatable {
@@ -134,40 +137,6 @@ struct ChatHistoryViewTransition {
     var flashIndicators: Bool
     var pinnedAnchor: MessageIndex?
     var keepInPlaceAnchor: MessageIndex?
-}
-
-public struct ChatHistoryListViewInsertItem {
-    public let index: Int
-    public let previousIndex: Int?
-    public let stableId: UInt64
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    public let forceAnimateInsertion: Bool
-    
-    public init(index: Int, previousIndex: Int?, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, forceAnimateInsertion: Bool = false) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.stableId = stableId
-        self.item = item
-        self.directionHint = directionHint
-        self.forceAnimateInsertion = forceAnimateInsertion
-    }
-}
-
-public struct ChatHistoryListViewUpdateItem {
-    public let index: Int
-    public let previousIndex: Int
-    public let stableId: UInt64
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    
-    public init(index: Int, previousIndex: Int, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.stableId = stableId
-        self.item = item
-        self.directionHint = directionHint
-    }
 }
 
 struct ChatHistoryListViewTransition {
@@ -581,10 +550,6 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
     let canReadHistory = Promise<Bool>()
-    /// The chat reads nothing while its peer is suspicious (`CachedUserData.isSuspiciousPeer`), or
-    /// may still turn out to be: a non-contact user whose settings have not been fetched yet, as on
-    /// the first open of a chat they started. A read cannot be taken back. From the latest history view.
-    private let holdsReadsForSender = ValuePromise<Bool>(ignoreRepeated: true)
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
     
@@ -776,6 +741,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     var isSelectionGestureEnabled = true
 
     private var overscrollView: ComponentHostView<Empty>?
+    // Bubble-free mode: the input panel the "next channel" island was handed to; the panel owns the island.
+    private weak var overscrollIslandPanel: ChatInputPanelNode?
     var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
     var offerNextChannelToRead: Bool = false
     var nextChannelToReadDisplayName: Bool = false
@@ -855,11 +822,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
 
     // Configures the rotation on the concrete backend before it is upcast to the protocol, so the
     // construction-only `rotated` flag need not appear on the ChatHistoryListViewBackend contract.
-    private static func makeListView(rotated: Bool, useCoreListBackend: Bool) -> ChatHistoryListViewBackend {
+    private static func makeListView(rotated: Bool, useCoreListBackend: Bool, scrollTrace: Bool) -> ChatHistoryListViewBackend {
         if useCoreListBackend {
-            let backend = CoreListChatHistoryBackend()
-            backend.rotated = rotated
-            return backend
+            return makeCoreListChatHistoryBackend(rotated: rotated, scrollTrace: scrollTrace)
         }
         let listView = ListViewImpl()
         listView.rotated = rotated
@@ -1035,7 +1000,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             useCoreListBackend = false
         }
         self.usesCoreListBackend = useCoreListBackend
-        self.listView = ChatHistoryListNodeImpl.makeListView(rotated: rotated, useCoreListBackend: useCoreListBackend)
+        self.listView = ChatHistoryListNodeImpl.makeListView(rotated: rotated, useCoreListBackend: useCoreListBackend, scrollTrace: context.sharedContext.immediateExperimentalUISettings.coreListScrollTrace)
 
         super.init()
         
@@ -1205,6 +1170,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.listView.visibleContentOffsetChanged = { [weak self] offset, _ in
             if let strongSelf = self {
                 strongSelf.contentPositionChanged(offset)
+                strongSelf.updateBubblelessSelectionVisibleTops()
                 
                 if strongSelf.tag == nil {
                     var atBottom = false
@@ -1230,70 +1196,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
                 }
                 
-                var lastMessageId: MessageId?
-                if let historyView = (strongSelf.listView.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
-                    if historyView.originalView.laterId == nil && !historyView.originalView.holeLater {
-                        lastMessageId = historyView.originalView.entries.last?.message.id
-                    }
-                }
-                
-                var maxMessage: MessageIndex?
-                strongSelf.forEachVisibleMessageItemNode { itemNode in
-                    if let item = itemNode.item, let itemFrame = strongSelf.listView.itemNodeFrame(itemNode) {
-                        var matches = false
-                        if itemFrame.maxY < strongSelf.insets.top {
-                            return
-                        }
-                        if itemFrame.minY >= strongSelf.insets.top {
-                            matches = true
-                        } else if itemFrame.minY >= strongSelf.insets.top - 100.0 {
-                            matches = true
-                        } else if let lastMessageId {
-                            for (message, _) in item.content {
-                                if message.id == lastMessageId {
-                                    matches = true
-                                }
-                            }
-                        }
-                        
-                        if matches {
-                            for (message, _) in item.content {
-                                if strongSelf.chatLocation.threadId != nil {
-                                    if message.id.namespace != Namespaces.Message.Cloud {
-                                        matches = false
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if matches {
-                            var maxItemIndex: MessageIndex?
-                            for (message, _) in item.content {
-                                if let maxItemIndexValue = maxItemIndex {
-                                    if maxItemIndexValue < message.index {
-                                        maxItemIndex = message.index
-                                    }
-                                } else {
-                                    maxItemIndex = message.index
-                                }
-                            }
-                            
-                            if let maxItemIndex {
-                                if let maxMessageValue = maxMessage {
-                                    if maxMessageValue < maxItemIndex {
-                                        maxMessage = maxItemIndex
-                                    }
-                                } else {
-                                    maxMessage = maxItemIndex
-                                }
-                            }
-                        }
-                    }
-                }
-                if let maxMessage {
-                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
-                }
+                strongSelf.updateMaxVisibleReadIncomingMessageIndexFromVisibleItems()
                 
                 strongSelf.messageReadMetricsTracker?.reportUserActivity()
                 strongSelf.updateMessageReadTracker()
@@ -2326,17 +2229,6 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 }
                 
                 let isSuspiciousPeer = (data.cachedData as? CachedUserData)?.isSuspiciousPeer ?? false
-                var holdsReadsForSender = isSuspiciousPeer
-                if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser, peerId != context.account.peerId, (data.cachedData as? CachedUserData)?.peerStatusSettings == nil {
-                    let isContact = view.additionalData.contains(where: { entry in
-                        if case let .peerIsContact(entryPeerId, value) = entry, entryPeerId == peerId {
-                            return value
-                        }
-                        return false
-                    })
-                    holdsReadsForSender = !isContact
-                }
-                self?.holdsReadsForSender.set(holdsReadsForSender)
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, preferredStoryHighQuality: preferredStoryHighQuality, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, premiumGiftStickers: premiumGiftStickers, tonGiftStickers: tonGiftStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, availableMessageEffects: availableMessageEffects, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction.0, areStarReactionsEnabled: defaultReaction.1, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage?.toLang, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: !rotated, showSensitiveContent: contentSettings.ignoreContentRestrictionReasons.contains("sensitive"), isSuspiciousPeer: isSuspiciousPeer, accountCountry: accountCountry)
                 
@@ -2693,13 +2585,13 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     private func beginReadHistoryManagement() {
         let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
-        let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get(), self.holdsReadsForSender.get())
+        let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
         
-        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).startStrict(next: { [weak self] messageIndex, canRead, holdsReadsForSender in
+        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).startStrict(next: { [weak self] messageIndex, canRead in
             guard let strongSelf = self else {
                 return
             }
-            if !canRead || holdsReadsForSender {
+            if !canRead {
                 return
             }
             
@@ -2727,24 +2619,27 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }).strict())
         
         self.canReadHistoryDisposable?.dispose()
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
                     strongSelf.controllerInteraction.canReadHistory = value
                     strongSelf.updateReadHistoryActions()
                     strongSelf.messageReadMetricsTracker?.setIsActive(strongSelf.canReadHistoryValue)
-
-                    if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
-                        let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
-                        strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
-                    }
                     
+                    strongSelf.attemptReadingMentions()
                     strongSelf.attemptReadingReactions()
                 }
             }
         }).strict()
+    }
+    
+    private func attemptReadingMentions() {
+        if self.canReadHistoryValue && !self.suspendReadingReactions && !self.messageIdsScheduledForMarkAsSeen.isEmpty {
+            let messageIds = self.messageIdsScheduledForMarkAsSeen
+            self.messageIdsScheduledForMarkAsSeen.removeAll()
+            self.context.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+        }
     }
     
     private func beginPresentationDataManagement(updated: Signal<PresentationData, NoError>) {
@@ -2906,6 +2801,24 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         if self.freezeOverscrollControl {
             return
         }
+        // Bubble-free mode: the next channel is an island growing out of the input panel's glass, when the panel has
+        // glass to grow it from; otherwise, and with bubbles, the control below.
+        if !self.currentPresentationData.chatBubbleCorners.bubbleMode, let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions, let inputPanelNode = chatControllerNode.inputPanelNode, self.updateOverscrollIsland(offset: offset, inputPanelNode: inputPanelNode) {
+            if let overscrollView = self.overscrollView {
+                self.overscrollView = nil
+                overscrollView.removeFromSuperview()
+            }
+            return
+        }
+        if !self.currentPresentationData.chatBubbleCorners.bubbleMode, self.overscrollIslandPanel != nil {
+            // Released or no longer offered: the island sinks back, and the hold goes with it as it does with the
+            // control's removal below (the control's branch sets its own hold if it takes over).
+            if self.overscrollView == nil, self.isDraggingForOverscrollAction, self.listView.holdsOverscrollActionDuringDrag,
+               !self.freezeOverscrollControlProgress {
+                self.listView.holdOverscrollAction(distance: 0.0, movesContent: false)
+            }
+            self.dismissOverscrollIsland(animated: true)
+        }
         if let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
             let overscrollView: ComponentHostView<Empty>
             if let current = self.overscrollView {
@@ -2989,6 +2902,70 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             self.overscrollView = nil
             overscrollView.removeFromSuperview()
         }
+    }
+    
+    /// Hands the island to the input panel at the pull's progress; false when the panel has no glass to grow it from.
+    /// The progress, the haptic at full and the hold while the finger is down are the control's (above).
+    private func updateOverscrollIsland(offset: CGFloat, inputPanelNode: ChatInputPanelNode) -> Bool {
+        let expandDistance = max(-offset - 12.0, 0.0)
+        let expandProgress: CGFloat = min(1.0, expandDistance / 94.0)
+
+        let title: String
+        if let threadData = self.nextChannelToRead?.threadData {
+            title = threadData.data.info.title
+        } else if let peer = self.nextChannelToRead?.peer {
+            title = peer.compactDisplayTitle
+        } else if self.chatLocation.threadId != nil {
+            title = self.currentPresentationData.strings.Chat_NavigationNoTopics
+        } else {
+            title = self.currentPresentationData.strings.Chat_NavigationNoChannels
+        }
+        let island = ChatInputPanelOverscrollIsland(
+            context: self.context,
+            peer: self.nextChannelToRead?.peer,
+            title: title,
+            unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
+            // Held at full while the release lands (no next channel: the island stays until the content is back).
+            progress: self.freezeOverscrollControlProgress ? 1.0 : expandProgress
+        )
+        if let previousPanel = self.overscrollIslandPanel, previousPanel !== inputPanelNode {
+            // The panel was replaced mid-pull: its island goes with it, and the new panel grows its own.
+            self.overscrollIslandPanel = nil
+            let _ = previousPanel.updateOverscrollIsland(nil, animated: false)
+        }
+        guard inputPanelNode.updateOverscrollIsland(island, animated: true) else {
+            return false
+        }
+        self.overscrollIslandPanel = inputPanelNode
+
+        if (self.currentOverscrollExpandProgress >= 1.0) != (expandProgress >= 1.0), expandProgress >= 1.0 {
+            if self.feedback == nil {
+                self.feedback = HapticFeedback()
+            }
+            if let _ = self.nextChannelToRead {
+                self.feedback?.tap()
+            } else {
+                self.feedback?.success()
+            }
+        }
+        self.currentOverscrollExpandProgress = expandProgress
+
+        if self.isDraggingForOverscrollAction, self.listView.holdsOverscrollActionDuringDrag,
+           !self.freezeOverscrollControlProgress {
+            self.listView.holdOverscrollAction(
+                distance: expandProgress >= 1.0 ? ChatHistoryListNodeImpl.overscrollActionHoldDistance : 0.0,
+                movesContent: false
+            )
+        }
+        return true
+    }
+    
+    private func dismissOverscrollIsland(animated: Bool) {
+        guard let panel = self.overscrollIslandPanel else {
+            return
+        }
+        self.overscrollIslandPanel = nil
+        let _ = panel.updateOverscrollIsland(nil, animated: animated)
     }
     
     func refreshPollActionsForVisibleMessages() {
@@ -3972,6 +3949,23 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         return self.liveItemNode(containingMessageId: messageId).flatMap { self.listView.itemNodeRelativeOffset($0) }
     }
     
+    /// Without bubbles a selected message taller than the screen keeps its checkmark under the visible top. The rows'
+    /// rendered frames carry it: CoreList's model frames park at a fling's destination (spec 5.8, 6.7).
+    public func updateBubblelessSelectionVisibleTops() {
+        guard self.controllerInteraction.selectionState != nil, !self.currentPresentationData.chatBubbleCorners.bubbleMode else {
+            return
+        }
+        let visibleTop = self.rotated ? self.bounds.height - self.insets.bottom : self.insets.top
+        self.forEachVisibleMessageItemNode { itemNode in
+            guard let stickyCheck = itemNode as? ChatMessageBubblelessStickySelectionCheck, let itemFrame = self.itemNodeFrame(itemNode) else {
+                return
+            }
+            // A rotated list's rows are upright: a row's top is its frame's far edge.
+            let distanceFromRowTop = self.rotated ? itemFrame.maxY - visibleTop : visibleTop - itemFrame.minY
+            stickyCheck.updateBubblelessSelectionVisibleTop(itemNode.bounds.minY + distanceFromRowTop)
+        }
+    }
+    
     public func forEachVisibleMessageItemNode(_ f: (ChatMessageItemView) -> Void) {
         self.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
@@ -4090,6 +4084,35 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
+    // Reads the messages on screen now (presented geometry, mid-pass included).
+    private func updateMaxVisibleReadIncomingMessageIndexFromVisibleItems() {
+        var lastMessageId: MessageId?
+        if let historyView = (self.listView.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
+            if historyView.originalView.laterId == nil && !historyView.originalView.holeLater {
+                lastMessageId = historyView.originalView.entries.last?.message.id
+            }
+        }
+        
+        var rows: [ChatHistoryVisibleReadRow] = []
+        self.forEachVisibleMessageItemNode { itemNode in
+            if let item = itemNode.item, let itemFrame = self.listView.itemNodeFrame(itemNode) {
+                rows.append(ChatHistoryVisibleReadRow(frame: itemFrame, messages: item.content.map { $0.0.index }))
+            }
+        }
+        if let maxMessage = chatHistoryMaxVisibleReadIndex(rows: rows, topInset: self.insets.top, lastMessageId: lastMessageId, isThread: self.chatLocation.threadId != nil) {
+            self.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
+        }
+    }
+    
+    // Call right before the chat stops reading because it is leaving the screen (`canReadHistory` turning false, or the
+    // node being replaced by another chat location's). The chat reads what it
+    // shows when the list reports its content offset, and an animated pass reports its landed rows only when its whole
+    // duration has elapsed (1.15s for the go-down button's scroll, which looks finished well before that). Leaving
+    // in between, e.g. back to a forum's topic list, would otherwise leave what the pass brought on screen unread.
+    public func readVisibleMessagesBeforeLeaving() {
+        self.updateMaxVisibleReadIncomingMessageIndexFromVisibleItems()
+    }
+    
     private func updateMaxVisibleReadIncomingMessageIndex(_ index: MessageIndex) {
         self.maxVisibleIncomingMessageIndex.set(index)
     }
@@ -4160,6 +4183,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             // A view still loading reports loading, as in `dequeueHistoryViewTransitions`.
             let historyState: ChatHistoryNodeHistoryState = transition.historyView.originalView.isLoading ? .loading : .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
             if self.currentHistoryState != historyState {
+                if case .loaded = historyState, self.chatLocation.threadId != nil {
+                    Logger.shared.log("ReplyThreadOpen", "history loaded thread=\(String(describing: self.chatLocation.threadId)) entries=\(transition.historyView.originalView.entries.count)")
+                }
                 self.currentHistoryState = historyState
                 self.historyState.set(historyState)
             }
@@ -4506,7 +4532,12 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        if historyView.originalView.isLoading {
+                        // The topic's root is stored but not displayed (chatHistoryEntriesForView).
+                        let originalView = historyView.originalView
+                        let holdsOnlyForumTopicRoot = !originalView.entries.isEmpty && originalView.entries.allSatisfy { entry in
+                            return isUndisplayedForumTopicRoot(entry.message, location: strongSelf.chatLocation, additionalData: originalView.additionalData)
+                        }
+                        if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater, holdsOnlyForumTopicRoot: holdsOnlyForumTopicRoot) {
                             loadState = .loading(false)
                         } else if let firstEntry = historyView.originalView.entries.first {
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
@@ -4664,6 +4695,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 // other open.
                 let historyState: ChatHistoryNodeHistoryState = transition.historyView.originalView.isLoading ? .loading : .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
                 if strongSelf.currentHistoryState != historyState {
+                    if case .loaded = historyState, strongSelf.chatLocation.threadId != nil {
+                        Logger.shared.log("ReplyThreadOpen", "history loaded thread=\(String(describing: strongSelf.chatLocation.threadId)) entries=\(transition.historyView.originalView.entries.count)")
+                    }
                     strongSelf.currentHistoryState = historyState
                     strongSelf.historyState.set(historyState)
                 }
@@ -5157,11 +5191,15 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     func requestMessageUpdate(_ id: MessageId, andScrollToItem scroll: Bool = false, customTransition: ControlledTransition? = nil) {
         if let historyView = self.historyView {
             var messageItem: ChatMessageItem?
+            // The edge the message keeps on screen through this height change (a message widget's resize anchor); a
+            // scroll to the message places it instead.
+            var resizeAnchor: ListViewItemResizeAnchor?
             self.forEachItemNode({ itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                     for (message, _) in item.content {
                         if message.id == id {
                             messageItem = item
+                            resizeAnchor = scroll ? nil : itemNode.resizeAnchor
                             break
                         }
                     }
@@ -5193,7 +5231,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                 }
                                 item = ListMessageItem(presentationData: presentationData, systemStyle: self.systemStyle, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                             }
-                            let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil)
+                            let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil, resizeAnchor: resizeAnchor)
                             
                             var scrollToItem: ListViewScrollToItem?
                             if scroll {
@@ -5214,7 +5252,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                                 assertionFailure()
                                 item = ListMessageItem(presentationData: presentationData, systemStyle: self.systemStyle, context: self.context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
                             }
-                            let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil)
+                            let updateItem = ChatHistoryListViewUpdateItem(index: index, previousIndex: index, stableId: historyView.filteredEntries[i].stableId, item: item, directionHint: nil, resizeAnchor: resizeAnchor)
                             
                             var scrollToItem: ListViewScrollToItem?
                             if scroll {
@@ -5544,6 +5582,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
         }*/
         //self.view.addSubview(snapshotView)
+
+        // Bubble-free mode: the island stays on the input panel until the panel's outgoing snapshot is on screen and
+        // takes it (`ChatInputPanelNode.overscrollIslandHandOver`); this history no longer drives it.
+        self.overscrollIslandPanel = nil
 
         let overscrollView = self.overscrollView
         if let overscrollView = overscrollView {

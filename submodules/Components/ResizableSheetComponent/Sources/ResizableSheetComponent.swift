@@ -521,6 +521,29 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             self.updateScrolling(transition: transition)
         }
 
+        // VoiceOver order: the bar items (close, title, right item), the content, then the bottom button. The bar and
+        // bottom containers are zero-sized sparse views whose items VoiceOver did not reach on its own; the dimmed
+        // area is not an element.
+        override public var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = []
+                for itemView in [self.leftItemView?.view, self.titleItemView?.view, self.rightItemView?.view, self.bottomItemView?.view] {
+                    guard let itemView, itemView.superview != nil, !itemView.isHidden, itemView.alpha > 0.01 else {
+                        continue
+                    }
+                    if itemView === self.bottomItemView?.view {
+                        elements.append(self.scrollContentClippingView)
+                    }
+                    elements.append(itemView)
+                }
+                if !elements.contains(where: { ($0 as AnyObject) === self.scrollContentClippingView }) {
+                    elements.append(self.scrollContentClippingView)
+                }
+                return elements
+            } set(value) {
+            }
+        }
+        
         public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if !self.bounds.contains(point) {
                 return nil

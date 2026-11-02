@@ -21,6 +21,16 @@ final class NewsAddedFeedBinding {
         var hasPostRows: Bool = false
     }
 
+    /// Going to the top while the newest posts are not loaded: the list shows a skeleton until the newest page
+    /// replaces the window, or until the server refuses it and the posts the feed had come back.
+    enum Jump: Equatable {
+        case loading
+        /// The newest page replaced the window (with its own messages).
+        case newest
+        /// The server refused the page; the window is unchanged.
+        case localTop
+    }
+
     let feed: AddedFeedContext
     private(set) var state: AddedFeedContext.State?
     private var messages: [EngineMessage.Id: EngineMessage] = [:]
@@ -29,6 +39,9 @@ final class NewsAddedFeedBinding {
     private var appliedGeneration = -1
     private var isReloading = false
     private var reloadGeneration = 0
+    /// The jump in progress, until the list has shown its outcome (`endJump`).
+    private(set) var jump: Jump?
+    private let jumpGeneration = NewsGeneration()
     private var stateDisposable: Disposable?
     /// A pull to refresh in flight: the window's top when it began, and its request.
     private var pullRefresh: (top: EngineFeedPosition, request: NewsAddedPullRequest)?
@@ -42,7 +55,9 @@ final class NewsAddedFeedBinding {
     var updated: ((_ windowReplaced: Bool) -> Void)?
 
     init(context: AccountContext) {
-        self.feed = context.engine.feed.addedFeedContext(filterId: 0)
+        // Without the server's feed (not a dev account) the page is built on the device from the subscribed channels.
+        let serverAvailable = isNewsFeedServerAvailable(appConfiguration: context.currentAppConfiguration.with { $0 })
+        self.feed = context.engine.feed.addedFeedContext(filterId: 0, source: serverAvailable ? .server : .localChannels)
         let engine = context.engine
         let state = self.feed.state
         let ids = state
@@ -72,6 +87,9 @@ final class NewsAddedFeedBinding {
                 self.appliedGeneration = state.windowGeneration
                 self.readMarkPosition = state.windowReadMarkPosition
             }
+            if self.jump == .loading, windowReplaced, state.windowAnchor == .top {
+                self.jump = .newest
+            }
             // A reload ends once its page has replaced the window (with its own messages) or has failed.
             if self.isReloading && !state.isLoadingInitial && (windowReplaced || state.hasError) {
                 self.isReloading = false
@@ -90,6 +108,9 @@ final class NewsAddedFeedBinding {
         guard self.state != nil else {
             return
         }
+        // The reload's skeleton takes over from a jump's.
+        self.jump = nil
+        let _ = self.jumpGeneration.begin()
         self.isReloading = true
         self.reloadGeneration += 1
         let generation = self.reloadGeneration
@@ -105,12 +126,30 @@ final class NewsAddedFeedBinding {
         })
     }
 
-    /// The posts the window holds, for the search.
-    var searchCorpus: NewsSearchCorpus {
-        guard let state = self.state else {
-            return NewsSearchCorpus()
+    /// Starts a jump to the newest posts when newer posts exist above the window; false when there are none, or while
+    /// a jump or a reload runs. Offline the request waits for the connection; only the server's refusal ends it early.
+    func beginJump() -> Bool {
+        guard self.jump == nil, !self.isReloading, let state = self.state, state.hasNewer, !state.isLoadingInitial else {
+            return false
         }
-        return NewsSearchCorpus(entries: state.entries, messages: self.messages)
+        self.jump = .loading
+        let generation = self.jumpGeneration.begin()
+        self.feed.jumpToNewest(completion: { [weak self] success in
+            guard let self, !success, self.jumpGeneration.isCurrent(generation), self.jump == .loading else {
+                return
+            }
+            self.jump = .localTop
+            self.updated?(false)
+        })
+        self.updated?(false)
+        return true
+    }
+
+    /// The list has shown the jump's outcome.
+    func endJump() {
+        if self.jump != .loading {
+            self.jump = nil
+        }
     }
 
     func beginPullRefresh() {
@@ -139,11 +178,6 @@ final class NewsAddedFeedBinding {
         })
     }
 
-    /// The feed's posts in order, with their channels, for the "Post hidden" flow.
-    var feedbackPosts: [(post: AnyHashable, channel: EnginePeer.Id)] {
-        return (self.state?.entries ?? []).map { (newsPostIdentity($0), $0.peerId) }
-    }
-
     func rows(environment: NewsFeedItemEnvironment) -> Rows {
         let presentationData = environment.presentationData
         let theme = presentationData.theme
@@ -153,7 +187,11 @@ final class NewsAddedFeedBinding {
         if self.isReloading {
             return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
         }
-        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys)).filter { !self.heldBack.contains(newsPostIdentity($0)) && (environment.feedback?.isShown($0) ?? true) }
+        if self.jump == .loading {
+            // The list the jump slides in shows its skeleton.
+            return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
+        }
+        let entries = newsResolvedEntries(state.entries, availableMessageIds: Set(self.messages.keys)).filter { !self.heldBack.contains(newsPostIdentity($0)) }
         if entries.isEmpty {
             if state.isLoadingInitial {
                 return Rows(items: [], positions: [:], firstUnreadItemIndex: nil, isLoading: true)
@@ -173,16 +211,13 @@ final class NewsAddedFeedBinding {
         // CoreList rejects a repeated identity with a precondition failure; never hand it one.
         var usedIdentities = Set<AnyHashable>()
         let freshKeys = self.freshReveal?.keys ?? []
-        let segments = newsFreshSegments(isFresh: entries.map { freshKeys.contains(newsPostIdentity($0)) && !(environment.feedback?.hasPanel($0) ?? false) }, revealTime: self.freshReveal?.time ?? 0.0)
+        let segments = newsFreshSegments(isFresh: entries.map { freshKeys.contains(newsPostIdentity($0)) }, revealTime: self.freshReveal?.time ?? 0.0)
         for (entryIndex, entry) in entries.enumerated() {
             if let item = newsPostItem(entry: entry, messages: self.messages, environment: environment, fresh: segments[entryIndex]), usedIdentities.insert(item.identity).inserted {
                 if entryIndex == firstUnreadEntryIndex {
                     firstUnreadItemIndex = items.count
                 }
-                // A panel row is no post: it carries no read position.
-                if environment.feedback?.state.hasPanel(newsPostIdentity(entry)) != true {
-                    positions[items.count] = entry.position
-                }
+                positions[items.count] = entry.position
                 items.append(item)
             }
         }

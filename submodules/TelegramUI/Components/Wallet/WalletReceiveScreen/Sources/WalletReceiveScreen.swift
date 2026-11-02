@@ -18,6 +18,7 @@ import GlassBarButtonComponent
 import ButtonComponent
 import QrCode
 import PremiumDiamondComponent
+import WalletContext
 
 private final class WalletReceiveQrComponent: Component {
     let address: String
@@ -1559,7 +1560,9 @@ private final class WalletReceiveSheetContent: Component {
                         fitToContentWidth: true,
                         isEnabled: true,
                         displaysProgress: false,
-                        action: copyButtonAction
+                        action: copyButtonAction,
+                        // VoiceOver: the address drawn around the code (a ring of text that is not read) as the value.
+                        accessibility: ComponentAccessibility(value: component.address)
                     )),
                     environment: {},
                     containerSize: CGSize(width: max(1.0, cardWidth - 32.0), height: copyButtonHeight)
@@ -1758,7 +1761,8 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
                 provider: "wallet",
                 cryptoCurrency: "gram",
                 address: address,
-                paymentMethod: nil
+                paymentMethod: nil,
+                baseCurrency: self.context.walletContext?.stateValue.fiat.selectedCurrency.code
             )
             |> deliverOnMainQueue).start(next: { [weak self] session in
                 guard let self else {

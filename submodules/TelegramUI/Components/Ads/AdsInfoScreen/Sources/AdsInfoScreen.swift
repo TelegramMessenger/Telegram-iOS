@@ -980,7 +980,7 @@ public final class AdsInfoScreen: ViewControllerComponentContainer {
             source: .reference(
                 AdsInfoContextReferenceContentSource(
                     controller: self,
-                    sourceView: referenceView,
+                    sourceView: (referenceView as? GlassBarButtonComponent.View)?.menuSourceView ?? referenceView,
                     insets: .zero,
                     contentInsets: .zero
                 )

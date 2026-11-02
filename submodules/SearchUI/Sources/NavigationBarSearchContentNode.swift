@@ -58,7 +58,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         
         self.placeholderNode.isAccessibilityElement = true
         self.placeholderNode.accessibilityLabel = placeholder
-        self.placeholderNode.accessibilityTraits = .searchField
+        self.placeholderNode.accessibilityTraits = .button
         
         self.addSubnode(self.placeholderNode)
         self.placeholderNode.activate = activate

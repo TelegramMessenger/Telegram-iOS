@@ -10,6 +10,7 @@ import ItemListPeerItem
 import AccountContext
 import TelegramIntents
 import AccountUtils
+import PresentationDataUtils
 
 public enum IntentsEntryTag: ItemListItemTag, Equatable {
     case suggested
@@ -300,19 +301,19 @@ public func intentsSettingsController(context: AccountContext, focusOnItemTag: I
         })
     }, resetAll: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.IntentsSettings_Reset, color: .destructive, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                
-                deleteAllSendMessageIntents()
-            })
-        ]), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
-        presentControllerImpl?(actionSheet)
+        let alertController = textAlertController(
+            context: context,
+            title: presentationData.strings.IntentsSettings_ResetAll,
+            text: "",
+            actions: [
+                TextAlertAction(type: .defaultDestructiveAction, title: presentationData.strings.IntentsSettings_Reset, action: {
+                    deleteAllSendMessageIntents()
+                }),
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+            ],
+            actionLayout: .vertical
+        )
+        presentControllerImpl?(alertController)
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), activeAccountsAndPeers(context: context, includePrimary: true))

@@ -86,7 +86,7 @@ final class QrStudioEmojiTabView: UIView {
                 },
                 addGroupAction: { _, _, _ in
                 },
-                clearGroup: { _ in
+                clearGroup: { _, _, _ in
                 },
                 editAction: { _ in
                 },
@@ -123,6 +123,7 @@ final class QrStudioEmojiTabView: UIView {
                 stateContext: nil,
                 addImage: nil
             )
+            emojiContent.inputInteractionHolder.inputInteraction?.exposesItemsToAccessibility = true
             self.requestLayout?()
         })
     }

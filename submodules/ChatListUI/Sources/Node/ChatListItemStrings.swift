@@ -516,6 +516,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                             richTextPreview = nil
                             messageText = content.displayUrl
                         }
+                    case _ as TelegramMediaWidget:
+                        // The caption is the preview text; without one, the "Widget" stub.
+                        if message.text.isEmpty {
+                            richTextPreview = nil
+                            messageText = strings.Message_Widget
+                        }
                     case let todo as TelegramMediaTodo:
                         richTextPreview = nil
                         messageText = todo.text

@@ -182,6 +182,7 @@ class ContactListActionItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = .button
         
         super.init(layerBacked: false)
         
@@ -262,6 +263,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.subtitle
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     
                     if let _ = updatedTheme {

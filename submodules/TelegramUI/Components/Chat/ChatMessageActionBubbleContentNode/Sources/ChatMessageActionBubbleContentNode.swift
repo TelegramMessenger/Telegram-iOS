@@ -36,6 +36,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     public let labelNode: TextNodeWithEntities
     private var dustNode: InvisibleInkDustNode?
     public var backgroundNode: WallpaperBubbleBackgroundNode?
+    /// Whether the plate is hidden because the message has no bubble (bubble mode off).
+    private var hidesPlateWithoutBubbles = false
     public var backgroundColorNode: ASDisplayNode
     public let backgroundMaskNode: ASImageNode
     public var linkHighlightingNode: LinkHighlightingNode?
@@ -82,6 +84,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
         self.labelNode.textNode.displaysAsynchronously = false
+        // A service message's emoji (a topic's icon) stays still: animated, it keeps drawing the eye to a notice.
+        self.labelNode.enableLooping = false
 
         self.backgroundColorNode = ASDisplayNode()
         self.backgroundMaskNode = ASImageNode()
@@ -97,6 +101,19 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func bubblelessLiftParts() -> [ChatMessageBubblelessLiftPart] {
+        // A service message lifts alone, by its plate.
+        return [.standalone(self.backgroundNode?.frame ?? self.backgroundMaskNode.frame)]
+    }
+    
+    override public func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        super.willUpdateIsExtractedToContextPreview(value)
+        // Without bubbles its plate is hidden on the page; it comes back while the message is lifted.
+        if self.hidesPlateWithoutBubbles {
+            self.backgroundNode?.isHidden = !value
+        }
     }
     
     deinit {
@@ -792,6 +809,10 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.backgroundMaskNode.image = nil
 
                                 animation.animator.updateFrame(layer: strongSelf.backgroundColorNode.layer, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size), completion: nil)
+                                if strongSelf.hidesPlateWithoutBubbles {
+                                    strongSelf.hidesPlateWithoutBubbles = false
+                                    strongSelf.backgroundNode?.isHidden = false
+                                }
 
                                 strongSelf.cachedMaskBackgroundImage = nil
                                 
@@ -846,6 +867,15 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.backgroundMaskNode.image = image
 
                                 animation.animator.updateFrame(layer: strongSelf.backgroundColorNode.layer, frame: CGRect(origin: CGPoint(), size: image.size), completion: nil)
+                                
+                                if item.bubbleStyle == .bubblelessService {
+                                    // Without bubbles service text stands on the plain page, without a plate.
+                                    strongSelf.hidesPlateWithoutBubbles = true
+                                    strongSelf.backgroundNode?.isHidden = true
+                                } else if strongSelf.hidesPlateWithoutBubbles {
+                                    strongSelf.hidesPlateWithoutBubbles = false
+                                    strongSelf.backgroundNode?.isHidden = false
+                                }
 
                                 strongSelf.cachedMaskBackgroundImage = (offset, image, labelRects)
                                 

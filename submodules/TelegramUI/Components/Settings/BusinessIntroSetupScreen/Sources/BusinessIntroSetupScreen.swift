@@ -321,7 +321,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                         },
                         addGroupAction: { _, _, _ in
                         },
-                        clearGroup: { _ in
+                        clearGroup: { _, _, _ in
                         },
                         editAction: { _ in
                         },
@@ -698,6 +698,8 @@ final class BusinessIntroSetupScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        // VoiceOver: the bar reads this title where its own is (NavigationBarNode), as the heading.
+                        navigationTitleView.accessibilityTraits = [.staticText, .header]
                         navigationBar.view.addSubview(navigationTitleView)
                     }
                 }

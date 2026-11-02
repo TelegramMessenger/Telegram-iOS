@@ -69,12 +69,24 @@ public struct PresentationChatBubbleCorners: Equatable, Hashable {
     public var auxiliaryRadius: CGFloat
     public var mergeBubbleCorners: Bool
     public var hasTails: Bool
+    // Mirrors PresentationChatBubbleSettings.bubbleMode. Only the app's presentation data carries false: every other
+    // constructor keeps the default, so surfaces outside the chat keep their bubbles.
+    public var bubbleMode: Bool
+    // Mirrors PresentationChatBubbleSettings.serifMessageFont: message text is set in New York.
+    public var serifMessageText: Bool
     
-    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool, hasTails: Bool = true) {
+    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool, hasTails: Bool = true, bubbleMode: Bool = true, serifMessageText: Bool = false) {
         self.mainRadius = mainRadius
         self.auxiliaryRadius = auxiliaryRadius
         self.mergeBubbleCorners = mergeBubbleCorners
         self.hasTails = hasTails
+        self.bubbleMode = bubbleMode
+        self.serifMessageText = serifMessageText
+    }
+    
+    /// The corners the app's presentation data takes from the stored settings.
+    public init(settings: PresentationChatBubbleSettings) {
+        self.init(mainRadius: CGFloat(settings.mainRadius), auxiliaryRadius: CGFloat(settings.auxiliaryRadius), mergeBubbleCorners: settings.mergeBubbleCorners, bubbleMode: settings.bubbleMode, serifMessageText: settings.serifMessageFont)
     }
 }
 
@@ -383,6 +395,12 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let contactSettings: ContactSynchronizationSettings = internalData.contactSynchronizationSettings?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
+        if !themeSettings.chatBubbleSettings.bubbleMode {
+            let autoNightModeTriggered = automaticThemeShouldSwitchNow(AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting), systemUserInterfaceStyle: systemUserInterfaceStyle)
+            let presentationData = bubblelessPresentationData(mediaBox: accountManager.mediaBox, themeSettings: themeSettings, autoNightModeTriggered: autoNightModeTriggered, localizationSettings: localizationSettings, nameDisplayOrder: contactSettings.nameDisplayOrder)
+            return InitialPresentationDataAndSettings(presentationData: presentationData, automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, chatSettings: chatSettings, experimentalUISettings: experimentalUISettings)
+        }
+        
         let effectiveTheme: PresentationThemeReference
         var preferredBaseTheme: TelegramBaseTheme?
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
@@ -425,7 +443,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
         
-        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+        let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
         
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, chatSettings: chatSettings, experimentalUISettings: experimentalUISettings)
     }
@@ -734,6 +752,22 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
         
         let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
+        if !themeSettings.chatBubbleSettings.bubbleMode {
+            return applicationInForeground
+            |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
+                if inForeground {
+                    return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: systemUserInterfaceStyle)
+                    |> distinctUntilChanged
+                    |> map { autoNightModeTriggered in
+                        let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings]?.get(LocalizationSettings.self)
+                        return bubblelessPresentationData(mediaBox: accountManager.mediaBox, themeSettings: themeSettings, autoNightModeTriggered: autoNightModeTriggered, localizationSettings: localizationSettings, nameDisplayOrder: contactSettings.nameDisplayOrder)
+                    }
+                } else {
+                    return .complete()
+                }
+            }
+        }
+        
         var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
         if let colors = currentColors, colors.baseColor == .theme {
             currentColors = nil
@@ -832,7 +866,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         
                         let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
                         
-                        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+                        let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
                         
                         return PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
                     }
@@ -842,6 +876,27 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
             }
         }
     }
+}
+
+// The presentation data with bubble mode off: the bubble-free theme on its plain page. Strings, formats, font sizes and
+// corners as with bubbles; no wallpaper or service colour is read.
+private func bubblelessPresentationData(mediaBox: MediaBox, themeSettings: PresentationThemeSettings, autoNightModeTriggered: Bool, localizationSettings: LocalizationSettings?, nameDisplayOrder: PresentationPersonNameOrder) -> PresentationData {
+    let theme = makeBubblelessPresentationTheme(mediaBox: mediaBox, themeSettings: themeSettings, autoNightModeTriggered: autoNightModeTriggered)
+    
+    let dateTimeFormat = currentDateTimeFormat()
+    let stringsValue: PresentationStrings
+    if let localizationSettings = localizationSettings {
+        stringsValue = PresentationStrings(primaryComponent: PresentationStrings.Component(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStrings.Component(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }), groupingSeparator: dateTimeFormat.groupingSeparator)
+    } else {
+        stringsValue = defaultPresentationStrings
+    }
+    let nameSortOrder = currentPersonNameSortOrder()
+    
+    let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
+    
+    let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
+    
+    return PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: bubblelessChatWallpaper(theme: theme), chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
 }
 
 private func resolveFontSize(settings: PresentationThemeSettings) -> (chat: PresentationFontSize, lists: PresentationFontSize) {
@@ -867,7 +922,7 @@ public func defaultPresentationData() -> PresentationData {
     
     let (chatFontSize, listsFontSize) = resolveFontSize(settings: themeSettings)
     
-    let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
+    let chatBubbleCorners = PresentationChatBubbleCorners(settings: themeSettings.chatBubbleSettings)
     
     return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: defaultPresentationTheme.chat.defaultWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
 }
@@ -899,6 +954,10 @@ public func themeDisplayName(strings: PresentationStrings, reference: Presentati
             name = strings.Appearance_ThemeCarouselNewNight
         case .nightAccent:
             name = strings.Appearance_ThemeCarouselTintedNight
+        case .neutral:
+            name = strings.Appearance_ThemeCarouselNeutral
+        case .neutralNight:
+            name = strings.Appearance_ThemeCarouselNeutralNight
         }
     case let .local(theme):
         name = theme.title

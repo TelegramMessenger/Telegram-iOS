@@ -143,6 +143,11 @@ private final class TokenNode: ASDisplayNode {
             self.categoryAvatarNode.image = image
         }
         
+        // One element per token: its title (the avatar and the remove glyph are decoration).
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = token.title
+        self.accessibilityTraits = [.button]
+        
         self.updateIsSelected(isSelected, animated: false)
     }
     
@@ -170,6 +175,7 @@ private final class TokenNode: ASDisplayNode {
             return
         }
         self.isSelected = isSelected
+        self.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0
@@ -262,6 +268,9 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.list.itemPlaceholderTextColor)
+        // The field is labelled by the placeholder; the placeholder text itself is not a separate element.
+        self.placeholderNode.isAccessibilityElement = false
+        self.placeholderNode.accessibilityElementsHidden = true
         
         self.textFieldScrollNode = ASScrollNode()
         self.textFieldScrollNode.view.scrollsToTop = false
@@ -273,6 +282,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.returnKeyType = .done
         self.textFieldNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
+        self.textFieldNode.textField.accessibilityLabel = placeholder
         
         super.init()
         
@@ -313,6 +323,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 placeholderSnapshot?.frame = self.placeholderNode.frame
             }
             self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: self.theme.list.itemPlaceholderTextColor)
+            self.textFieldNode.textField.accessibilityLabel = placeholder
         }
         
         for i in (0 ..< self.tokenNodes.count).reversed() {
@@ -353,6 +364,19 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 tokenNode = currentNode
             } else {
                 tokenNode = TokenNode(context: self.context, theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
+                // VoiceOver: removing a token takes two taps (select, then tap again) or backspace; "Delete" does it in
+                // one step through the same `deleteToken` the second tap calls. Built once per token.
+                let deleteTitle = self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Delete
+                tokenNode.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: deleteTitle, actionHandler: { [weak self, weak tokenNode] _ in
+                    guard let self, let tokenNode, let deleteToken = self.deleteToken else {
+                        return false
+                    }
+                    if self.selectedTokenId == tokenNode.token.id {
+                        self.updateSelectedTokenId(nil)
+                    }
+                    deleteToken(tokenNode.token.id)
+                    return true
+                })]
                 self.tokenNodes.append(tokenNode)
                 self.scrollNode.addSubnode(tokenNode)
                 animateIn = true

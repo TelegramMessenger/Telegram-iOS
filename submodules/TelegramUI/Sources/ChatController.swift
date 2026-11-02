@@ -111,6 +111,7 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatMessageBubbleContentNode
 import ChatNavigationButton
+import ChatSideListPanel
 import WebsiteType
 import PeerInfoScreen
 import MediaEditor
@@ -148,6 +149,8 @@ import GlobalControlPanelsContext
 import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
 import TextProcessingScreen
+import ChatMediaEditorScreen
+import OpenUserGeneratedUrl
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -314,6 +317,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var moreBarButton: MoreHeaderButton
     var moreInfoNavigationButton: ChatNavigationButton?
+    
+    var sideListPanel: ChatSideListPanelNode?
+    /// The layout the chat's container gave it, before a docked side list narrows it (`sideListDockedChatLayout`).
+    var sideListFullLayout: ContainerViewLayout?
+    var sideListOpenFraction: CGFloat = 0.0
+    var sideListEdgePanHandler: ChatSideListEdgePanHandler?
+    /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
+    var sideListAppeared = false
+    var sideListButtonKind: ChatSideListKind?
     
     var historyStateDisposable: Disposable?
     
@@ -1428,21 +1440,55 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             senderName = nil
                                         }
                                         
-                                        legacyAvatarEditor(context: self.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
-                                            self?.present(c, in: .window(.root), with: a)
-                                        }, imageCompletion: { [weak self] image in
-                                            if let self {
-                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
-                                                }
+                                        if self.context.routesToChatMediaEditorV2(.suggestedAvatar), let controller = self.context.sharedContext.makeSuggestedAvatarEditor(context: self.context, message: EngineMessage(message), image: image, senderName: senderName ?? "", sourceView: transitionView, completion: { [weak self] result, release in
+                                            guard let self, let result = result as? MediaEditorScreenImpl.MediaResult, let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl else {
+                                                release()
+                                                return
                                             }
-                                        }, videoCompletion: { [weak self] image, url, adjustments in
-                                            if let self {
-                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.oldUpdateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                            switch result {
+                                            case let .image(image, _):
+                                                release()
+                                                settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
+                                            case let .video(video, coverImage, values, _, _):
+                                                guard let coverImage else {
+                                                    release()
+                                                    return
                                                 }
+                                                let uploadStatus = Promise<PeerInfoAvatarUploadStatus>()
+                                                let _ = (uploadStatus.get()
+                                                |> filter { status in
+                                                    if case .done = status {
+                                                        return true
+                                                    }
+                                                    return false
+                                                }
+                                                |> take(1)
+                                                |> deliverOnMainQueue).startStandalone(next: { _ in
+                                                    release()
+                                                })
+                                                settingsController.updateProfileVideo(coverImage, video: video, values: values, markup: nil, mode: .accept, uploadStatus: uploadStatus)
+                                            default:
+                                                release()
                                             }
-                                        })
+                                        }) {
+                                            self.push(controller)
+                                        } else {
+                                            legacyAvatarEditor(context: self.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
+                                                self?.present(c, in: .window(.root), with: a)
+                                            }, imageCompletion: { [weak self] image in
+                                                if let self {
+                                                    if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                        settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
+                                                    }
+                                                }
+                                            }, videoCompletion: { [weak self] image, url, adjustments in
+                                                if let self {
+                                                    if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                        settingsController.oldUpdateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                                    }
+                                                }
+                                            })
+                                        }
                                     }
                                 } else {
                                     openMessageByAction = true
@@ -1697,6 +1743,40 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                                 let hasSilentPosting = peer.id != self.context.account.peerId
                                 let hasSchedule = self.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat && self.presentationInterfaceState.sendPaidMessageStars == nil
+                                let isAnimated = (mediaReference.media as? TelegramMediaFile)?.isAnimated ?? false
+                                if self.context.routesToChatMediaEditorV2(isAnimated ? .animatedFileEditor : .messageMediaEditor), let initialTool = chatMediaEditorInitialTool(.draw) {
+                                    presentChatMediaEditor(context: self.context, media: mediaReference, initialTool: initialTool, initialCaption: NSAttributedString(), recipientName: chatMediaEditorRecipientName(context: self.context, peer: EnginePeer(peer), threadTitle: self.contentData?.state.threadInfo?.title), getCaptionPanelView: { [weak self] in
+                                        return self?.getCaptionPanelView(isFile: false)
+                                    }, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == self.context.account.peerId, presentSchedulePicker: { [weak self] done in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.presentScheduleTimePicker(style: .media, presentInOverlay: true, completion: { [weak self] result in
+                                            guard let self else {
+                                                return
+                                            }
+                                            done(result.time, result.silentPosting)
+                                            if self.presentationInterfaceState.subject != .scheduledMessages && result.time != scheduleWhenOnlineTimestamp {
+                                                self.openScheduledMessages()
+                                            }
+                                        })
+                                    }, isAnimation: chatMediaEditorIsAnimation(mode: .draw, mediaIsAnimated: isAnimated), originalMediaReference: nil, sendMessages: { [weak self] messages, silentPosting, scheduleTime, isCaptionAbove in
+                                        guard let self else {
+                                            return
+                                        }
+                                        var parameters: ChatSendMessageActionSheetController.SendParameters?
+                                        if isCaptionAbove {
+                                            parameters = ChatSendMessageActionSheetController.SendParameters(effect: nil, textIsAboveMedia: true)
+                                        }
+                                        self.enqueuePreparedMediaMessages(messages, count: 1, silentPosting: silentPosting, scheduleTime: scheduleTime == 0 ? nil : scheduleTime, replyToSubject: .init(messageId: message.id, quote: nil, innerSubject: nil), parameters: parameters)
+                                    }, present: { [weak self] c, a in
+                                        self?.present(c, in: .window(.root), with: a)
+                                        Queue.mainQueue().after(0.35) {
+                                            transitionCompletion()
+                                        }
+                                    })
+                                    return
+                                }
                                 legacyMediaEditor(context: self.context, peer: EnginePeer(peer), threadTitle: self.contentData?.state.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                                     transitionCompletion()
                                 }, getCaptionPanelView: { [weak self] in
@@ -3388,9 +3468,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let performOpenURL = strongSelf.performOpenURL {
-                performOpenURL(message, url, progress)
+                if !urlData.forceConcealed { performOpenURL(message, url, progress) } // a link that must be confirmed (a widget's) gets no preview fetched here
             } else {
-                strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
+                strongSelf.openUrl(url, concealed: concealed, forceConcealed: urlData.forceConcealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress, fullUrl: urlData.fullUrl, alertDisplayUpdated: urlData.alertDisplayUpdated)
             }
         }, openExternalInstantPage: { [weak self] instantPage in
             guard let self else {
@@ -4904,6 +4984,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                         let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+                        if strongSelf.context.routesToChatMediaEditorV2(.messageMediaEditor), let initialTool = chatMediaEditorInitialTool(.draw) {
+                            presentChatMediaEditor(context: strongSelf.context, media: mediaReference, initialTool: initialTool, initialCaption: inputText, recipientName: chatMediaEditorRecipientName(context: strongSelf.context, peer: EnginePeer(peer), threadTitle: strongSelf.contentData?.state.threadInfo?.title), getCaptionPanelView: { [weak self] in
+                                return self?.getCaptionPanelView(isFile: true)
+                            }, hasSilentPosting: false, hasSchedule: false, reminder: false, presentSchedulePicker: { _ in
+                            }, isAnimation: false, originalMediaReference: nil, sendMessages: { [weak self] messages, _, _, _ in
+                                if let strongSelf = self {
+                                    strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                                    strongSelf.editMessageMediaWithPreparedMessages(messages)
+                                }
+                            }, present: { [weak self] c, a in
+                                self?.present(c, in: .window(.root), with: a)
+                            })
+                            return
+                        }
                         legacyMediaEditor(context: strongSelf.context, peer: EnginePeer(peer), threadTitle: strongSelf.contentData?.state.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView(isFile: true)
                         }, photoToolbarView: { [context = strongSelf.context] backButton, doneButton, solidBackground, hasSendStarsButton in
@@ -4918,6 +5012,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     }
                 })
+            } else if strongSelf.context.routesToChatMediaEditorV2(.pickerGallery) {
+                strongSelf.presentEditMessageMediaPicker(messageId: messageId)
             } else {
                 strongSelf.presentOldMediaPicker(fileMode: false, editingMedia: true, completion: { signals, _, _ in
                     self?.interfaceInteraction?.setupEditMessage(messageId, { _ in })
@@ -6446,7 +6542,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else if peerId.namespace == Namespaces.Peer.CloudUser {
                 self.openBotForumMoreMenu(sourceView: self.navigationBar?.navigationButtonContextContainer(sourceView: sourceNode.view) ?? sourceNode.view, gesture: gesture)
             } else {
-                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: sourceNode.view, gesture: gesture)
+                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: self.navigationBar?.navigationButtonContextContainer(sourceView: sourceNode.view) ?? sourceNode.view, gesture: gesture)
             }
         }
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
@@ -6780,6 +6876,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     chatTheme = nil
                 }
                                 
+                let modeTheme = presentationData.theme
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
 
@@ -6826,6 +6923,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 })
                             }
                         }
+                    } else if let darkAppearancePreview = darkAppearancePreview, !presentationData.chatBubbleCorners.bubbleMode {
+                        // Without bubbles the preview is the bubble-free theme of the other appearance, already
+                        // recoloured; its page is set below.
+                        useDarkAppearance = darkAppearancePreview
+                        let previewTheme = makeBubblelessPresentationTheme(mediaBox: accountManager.mediaBox, themeSettings: themeSettings, autoNightModeTriggered: darkAppearancePreview)
+                        previewTheme.forceSync = true
+                        Queue.mainQueue().after(1.0, {
+                            previewTheme.forceSync = false
+                        })
+                        presentationData = presentationData.withUpdated(theme: previewTheme)
                     } else if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
                         let lightTheme: PresentationTheme
@@ -6911,6 +7018,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let forcedWallpaper = strongSelf.forcedWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
+                } else if !presentationData.chatBubbleCorners.bubbleMode {
+                    // Without bubbles a chat's own wallpaper gives way to the plain page, and a chat theme is
+                    // recoloured for it (the mode's own theme already is; recolouring twice would shift its accent).
+                    if chatTheme != nil && presentationData.theme !== modeTheme {
+                        presentationData = presentationData.withUpdated(theme: bubblelessPresentationTheme(presentationData.theme))
+                    }
+                    presentationData = presentationData.withUpdated(chatWallpaper: bubblelessChatWallpaper(theme: presentationData.theme))
                 } else if let chatWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: chatWallpaper)
                 }
@@ -7697,6 +7811,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        self.forwardSideListAppearance(.willAppear, animated: animated)
 
         self.walletTransferAnimationsVisible = true
         self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
@@ -7869,6 +7984,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.forwardSideListAppearance(.didAppear, animated: animated)
         
         self.didAppear = true
         
@@ -8313,8 +8429,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        self.forwardSideListAppearance(.didDisappear, animated: animated)
+    }
+    
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        self.forwardSideListAppearance(.willDisappear, animated: animated)
 
         self.walletTransferAnimationsVisible = false
         
@@ -8322,6 +8444,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             //TODO:release
         }
+        // Before endEditing, which can relayout the history with the keyboard's inset gone.
+        self.chatDisplayNode.historyNode.readVisibleMessagesBeforeLeaving()
         UIView.performWithoutAnimation {
             self.view.endEditing(true)
         }
@@ -8454,6 +8578,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.sideListFullLayout = layout
+        // A docked side list takes the right of the screen: the chat lays out in what is left.
+        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(layout), transition: transition)
+    }
+
+    private func chatContainerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.suspendNavigationBarLayout = true
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -8517,6 +8647,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
+        
+        self.updateSideListLayout(transition: transition)
+        // The strip is chosen per layout; keep the button in step when the width class or the flag changed.
+        if self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != self.sideListButtonKind {
+            self.updateRightNavigationButtons(presentationInterfaceState: self.presentationInterfaceState, transition: .immediate)
+        }
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
@@ -8547,6 +8683,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 avatarNode.updateSelectionState(animated: animated)
             }
         }
+        self.chatDisplayNode.historyNode.updateBubblelessSelectionVisibleTops()
     }
     
     func updatePollTooltipMessageState(animated: Bool) {
@@ -8612,7 +8749,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
 
+    /// While the side list is open its header is the one on screen (the chat's own is off to the left, under the strip),
+    /// so a screen pushed from it morphs out of that header.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0, !self.isSideListDocked {
+            return sideListPanel.listController.navigationBarTransitionSource
+        }
+        return super.navigationBarTransitionSource
+    }
+
     override public func navigationExpansionSource(above controller: ViewController, operation: NavigationExpansionOperation) -> NavigationExpansionSource? {
+        // While the side list is open its header is the one on screen, as for `navigationBarTransitionSource`.
+        if let sideListPanel = self.sideListPanel, self.sideListOpenFraction == 1.0, !self.isSideListDocked {
+            return sideListPanel.listController.navigationExpansionSource(above: controller, operation: operation)
+        }
         switch operation {
         case .push:
             guard let profile = self.expansionProfileToPush, profile === controller else {
@@ -8718,7 +8868,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func editMessageMediaWithLegacySignals(_ signals: [Any]) {
-        let _ = (legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals)
+        self.editMessageMediaWithPreparedMessages(legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals))
+    }
+    
+    func editMessageMediaWithPreparedMessages(_ messages: Signal<[LegacyAssetPickerEnqueueMessage], Void>) {
+        let _ = (messages
         |> deliverOnMainQueue).startStandalone(next: { [weak self] messages in
             self?.editMessageMediaWithMessages(messages.map { $0.message })
         })
@@ -9185,7 +9339,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return .single(false)
     }
     
-    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
+    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false, presentSchedulePickerInOverlay: Bool = false) {
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -9245,7 +9399,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
             } else {
-                self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] result in
+                self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, presentInOverlay: presentSchedulePickerInOverlay, completion: { [weak self] result in
                     if let strongSelf = self {
                         strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: result.silentPosting, scheduleTime: result.time, repeatPeriod: result.repeatPeriod, postpone: postpone), commit: true)
                     }
@@ -9267,22 +9421,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     ) {
         if let _ = self.presentationInterfaceState.sendPaidMessageStars {
             self.presentPaidMessageAlertIfNeeded(count: Int32(signals?.count ?? 1), forceDark: fromGallery, completion: { [weak self] postpone in
-                self?.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                guard let self else {
+                    return
+                }
+                self.commitEnqueueMediaMessages(messages: legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!, originalMediaReference: nil), silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
             })
         } else {
-            self.commitEnqueueMediaMessages(signals: signals, originalMediaReference: originalMediaReference, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+            self.commitEnqueueMediaMessages(messages: legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!, originalMediaReference: originalMediaReference), silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+        }
+    }
+    
+    func enqueuePreparedMediaMessages(
+        _ messages: Signal<[LegacyAssetPickerEnqueueMessage], Void>,
+        count: Int32,
+        silentPosting: Bool,
+        scheduleTime: Int32?,
+        replyToSubject: ChatInterfaceState.ReplyMessageSubject?,
+        parameters: ChatSendMessageActionSheetController.SendParameters?,
+        fromGallery: Bool = false,
+        getAnimatedTransitionSource: ((String) -> UIView?)? = nil,
+        completion: @escaping () -> Void = {}
+    ) {
+        if let _ = self.presentationInterfaceState.sendPaidMessageStars {
+            self.presentPaidMessageAlertIfNeeded(count: count, forceDark: fromGallery, completion: { [weak self] postpone in
+                self?.commitEnqueueMediaMessages(messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, presentSchedulePickerInOverlay: fromGallery, completion: completion)
+            })
+        } else {
+            self.commitEnqueueMediaMessages(messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, presentSchedulePickerInOverlay: fromGallery, completion: completion)
         }
     }
     
     private func commitEnqueueMediaMessages(
-        signals: [Any]?,
-        originalMediaReference: AnyMediaReference? = nil,
+        messages: Signal<[LegacyAssetPickerEnqueueMessage], Void>,
         silentPosting: Bool,
         scheduleTime: Int32? = nil,
         postpone: Bool = false,
         replyToSubject: ChatInterfaceState.ReplyMessageSubject? = nil,
         parameters: ChatSendMessageActionSheetController.SendParameters? = nil,
         getAnimatedTransitionSource: ((String) -> UIView?)? = nil,
+        presentSchedulePickerInOverlay: Bool = false,
         completion: @escaping () -> Void = {}
     ) {
         var animateTransition = true
@@ -9292,7 +9469,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!, originalMediaReference: originalMediaReference)
+        self.enqueueMediaMessageDisposable.set((messages
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             guard let strongSelf = self else {
                 return
@@ -9490,7 +9667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }, usedCorrelationId)
 
                     addTransitionNodes()
-                    strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) }, media: true)
+                    strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) }, media: true, presentSchedulePickerInOverlay: presentSchedulePickerInOverlay)
                 }
                 
                 if let targetThreadId {
@@ -10083,6 +10260,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func openUrl(
         _ url: String,
         concealed: Bool,
+        forceConcealed: Bool = false,
         forceExternal: Bool = false,
         forceUpdate: Bool = false,
         skipUrlAuth: Bool = false,
@@ -10090,6 +10268,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         message: Message? = nil,
         allowInlineWebpageResolution: Bool = false,
         progress: Promise<Bool>? = nil,
+        fullUrl: Bool = false,
+        alertDisplayUpdated: ((ViewController?) -> Void)? = nil,
         commit: @escaping () -> Void = {}
     ) {
         self.commitPurposefulAction()
@@ -10122,11 +10302,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let disposable = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: false, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
+            let disposable = OpenUserGeneratedUrl.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id, progress: progress, forceExternal: forceExternal, concealed: concealed, commit: commit)
-            }, progress: progress, alertDisplayUpdated: nil, concealedAlertOption: nil)
+            }, progress: progress, alertDisplayUpdated: alertDisplayUpdated, concealedAlertOption: nil, fullUrl: fullUrl)
             self.navigationActionDisposable.set(disposable)
         }, performAction: true)
     }
@@ -10691,20 +10871,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if remainingTime == 0 {
                 self.updateSlowmodeStatusTimerValue = nil
                 self.updateSlowmodeStatusDisposable.set(nil)
-                self.updateChatPresentationInterfaceState(interactive: false, {
-                    $0.updatedSlowmodeState(nil)
-                })
+                // Not from inside the update that called this, which would then lay out the finished countdown after
+                // the nested update cleared it. The next update drops it (updateChatPresentationInterfaceStateImpl).
+                Queue.mainQueue().justDispatch { [weak self] in
+                    self?.updateChatPresentationInterfaceState(interactive: false, { $0 })
+                }
             } else {
                 if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
                     self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
+                    // Fires when the countdown reaches zero, not a whole number of seconds after a truncated now,
+                    // which left "0:00" on screen for up to a second.
+                    let delay = max(0.0, Double(slowmodeActiveUntilTimestamp) - Date().timeIntervalSince1970)
                     self.updateSlowmodeStatusDisposable.set((Signal<Never, NoError>.complete()
-                    |> suspendAwareDelay(Double(remainingTime), granularity: 1.0, queue: .mainQueue())
+                    |> suspendAwareDelay(delay, granularity: 1.0, queue: .mainQueue())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.updateSlowmodeStatusTimerValue = nil
-                        strongSelf.updateSlowmodeStatus()
+                        // Drops the finished countdown in this run loop turn, and re-arms the timer if it fired early.
+                        strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0 })
                     }))
                 }
             }
@@ -11345,6 +11531,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion?()
                 return
             }
+            Logger.shared.log("ReplyThreadOpen", "inline switch start peer=\(peerId.id._internalGetInt64Value()) thread=\(String(describing: threadId))")
             guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
                 completion?()
                 return

@@ -9,7 +9,8 @@ public struct NewsRefreshDropPose: Equatable {
     public var top: CGFloat = 0.0
     public var iconScale: CGFloat = 1.0
     public var iconAlpha: CGFloat = 0.0
-    /// Seconds into the sticker's 60 fps file.
+    /// Seconds into the icon's motion at the tab bar's timing (60 fps; the drop's file is a slower copy of it,
+    /// `NewsStickerFrames`).
     public var iconTime: Double = 0.0
     /// Radians.
     public var iconAngle: CGFloat = 0.0

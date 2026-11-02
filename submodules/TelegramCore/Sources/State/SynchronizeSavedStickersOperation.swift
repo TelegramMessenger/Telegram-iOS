@@ -38,6 +38,24 @@ public func getIsStickerSaved(transaction: Transaction, fileId: MediaId) -> Bool
 }
 
 public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMediaFile, limit: Int = 5) -> Signal<Void, AddSavedStickerError> {
+    return addSavedSticker(postbox: postbox, network: network, file: file, limit: limit, locallyApplied: nil)
+}
+
+func addSavedStickerWithResult(postbox: Postbox, network: Network, file: TelegramMediaFile, limit: Int = 5) -> Signal<Bool, AddSavedStickerError> {
+    return Signal { subscriber in
+        let locallyApplied = Atomic<Bool>(value: false)
+        return addSavedSticker(postbox: postbox, network: network, file: file, limit: limit, locallyApplied: { applied in
+            let _ = locallyApplied.swap(applied)
+        }).start(error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putNext(locallyApplied.with { $0 })
+            subscriber.putCompletion()
+        })
+    }
+}
+
+private func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMediaFile, limit: Int, locallyApplied: ((Bool) -> Void)?) -> Signal<Void, AddSavedStickerError> {
     return postbox.transaction { transaction -> Signal<Void, AddSavedStickerError> in
         for attribute in file.attributes {
             if case let .Sticker(_, maybePackReference, _) = attribute {
@@ -54,7 +72,8 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                             if stickerItem.file.fileId == file.fileId {
                                 let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
                                 found = true
-                                addSavedSticker(transaction: transaction, file: stickerItem.file._parse(), stringRepresentations: stringRepresentations)
+                                let applied = addSavedStickerWithResult(transaction: transaction, file: stickerItem.file._parse(), stringRepresentations: stringRepresentations)
+                                locallyApplied?(applied)
                                 break inner
                             }
                         }
@@ -96,7 +115,8 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                             }
                             if let stickerStringRepresentations = stickerStringRepresentations {
                                 return postbox.transaction { transaction -> Void in
-                                    addSavedSticker(transaction: transaction, file: file, stringRepresentations: stickerStringRepresentations)
+                                    let applied = addSavedStickerWithResult(transaction: transaction, file: file, stringRepresentations: stickerStringRepresentations)
+                                    locallyApplied?(applied)
                                 } |> mapError { _ -> AddSavedStickerError in }
                             } else {
                                 return .fail(.notFound)
@@ -106,7 +126,8 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                     return .complete()
                 } else {
                     return postbox.transaction { transaction -> Void in
-                        addSavedSticker(transaction: transaction, file: file, stringRepresentations: [])
+                        let applied = addSavedStickerWithResult(transaction: transaction, file: file, stringRepresentations: [])
+                        locallyApplied?(applied)
                     } |> mapError { _ -> AddSavedStickerError in }
                 }
             }
@@ -116,12 +137,19 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
 }
 
 public func addSavedSticker(transaction: Transaction, file: TelegramMediaFile, stringRepresentations: [String], limit: Int = 5) {
+    let _ = addSavedStickerWithResult(transaction: transaction, file: file, stringRepresentations: stringRepresentations, limit: limit)
+}
+
+func addSavedStickerWithResult(transaction: Transaction, file: TelegramMediaFile, stringRepresentations: [String], limit: Int = 5) -> Bool {
+    var locallyApplied = false
     if let resource = file.resource as? CloudDocumentMediaResource {
         if let entry = CodableEntry(SavedStickerItem(file: file, stringRepresentations: stringRepresentations)) {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: limit)
+            locallyApplied = true
         }
         addSynchronizeSavedStickersOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: .standalone(media: file)))
     }
+    return locallyApplied
 }
 
 public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {

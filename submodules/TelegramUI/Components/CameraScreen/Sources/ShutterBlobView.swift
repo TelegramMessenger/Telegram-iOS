@@ -1,30 +1,115 @@
 import Foundation
+import UIKit
 import Metal
-import MetalKit
 import ComponentFlow
 import Display
-import MetalImageView
+import MetalEngine
 import AnimatableProperty
 
-private class ShutterBlobLayer: MetalImageLayer {
-    override public init() {
-        super.init()
+private final class ShutterBlobLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    struct Parameters: Equatable {
+        var primaryParameters: SIMD4<Float>
+        var primaryOffset: SIMD2<Float>
+        var primaryColor: SIMD4<Float>
+        var secondaryParameters: SIMD4<Float>
+        var secondaryOffset: SIMD2<Float>
+    }
+    
+    final class RenderState: RenderToLayerState {
+        let pipelineState: MTLRenderPipelineState
         
-        self.renderer.imageUpdated = { [weak self] image in
-            self?.contents = image
+        required init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
+            guard let vertexFunction = library.makeFunction(name: "cameraBlobVertex"), let fragmentFunction = library.makeFunction(name: "cameraBlobFragment") else {
+                return nil
+            }
+            
+            let pipelineDescriptor = MTLRenderPipelineDescriptor()
+            pipelineDescriptor.vertexFunction = vertexFunction
+            pipelineDescriptor.fragmentFunction = fragmentFunction
+            pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
+            pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = .one
+            pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+            pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
+            pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
+            pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+            pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
+            
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+                return nil
+            }
+            self.pipelineState = pipelineState
         }
     }
     
-    override public init(layer: Any) {
-        super.init()
-        
-        if let layer = layer as? ShutterBlobLayer {
-            self.contents = layer.contents
+    var internalData: MetalEngineSubjectInternalData?
+    
+    var parameters: Parameters? {
+        didSet {
+            if self.parameters != oldValue {
+                self.setNeedsUpdate()
+            }
         }
     }
     
-    required public init?(coder: NSCoder) {
+    override init() {
+        super.init()
+        
+        self.isOpaque = false
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override var bounds: CGRect {
+        didSet {
+            if self.bounds.size != oldValue.size {
+                self.setNeedsUpdate()
+            }
+        }
+    }
+    
+    func update(context: MetalEngineSubjectContext) {
+        guard let parameters = self.parameters else {
+            return
+        }
+        let scale = UIScreen.main.scale
+        let renderSize = RenderSize(width: Int(self.bounds.width * scale), height: Int(self.bounds.height * scale))
+        if renderSize.width <= 0 || renderSize.height <= 0 {
+            return
+        }
+        
+        context.renderToLayer(spec: RenderLayerSpec(size: renderSize, prefersDedicatedSurface: true), state: RenderState.self, layer: self, commands: { encoder, placement in
+            let effectiveRect = placement.effectiveRect
+            
+            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
+            encoder.setVertexBytes(&rect, length: MemoryLayout<SIMD4<Float>>.size, index: 0)
+            
+            var resolution = SIMD2<Float>(Float(renderSize.width), Float(renderSize.height))
+            encoder.setVertexBytes(&resolution, length: MemoryLayout<SIMD2<Float>>.size, index: 1)
+            encoder.setFragmentBytes(&resolution, length: MemoryLayout<SIMD2<Float>>.size, index: 0)
+            
+            var primaryParameters = parameters.primaryParameters
+            encoder.setFragmentBytes(&primaryParameters, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
+            var primaryOffset = parameters.primaryOffset
+            encoder.setFragmentBytes(&primaryOffset, length: MemoryLayout<SIMD2<Float>>.size, index: 2)
+            var primaryColor = parameters.primaryColor
+            encoder.setFragmentBytes(&primaryColor, length: MemoryLayout<SIMD4<Float>>.size, index: 3)
+            var secondaryParameters = parameters.secondaryParameters
+            encoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<SIMD4<Float>>.size, index: 4)
+            var secondaryOffset = parameters.secondaryOffset
+            encoder.setFragmentBytes(&secondaryOffset, length: MemoryLayout<SIMD2<Float>>.size, index: 5)
+            
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        })
     }
 }
 
@@ -104,8 +189,7 @@ final class ShutterBlobView: UIView {
         }
     }
     
-    private let commandQueue: MTLCommandQueue
-    private let drawPassthroughPipelineState: MTLRenderPipelineState
+    private let blobLayer: ShutterBlobLayer
     
     private var displayLink: SharedDisplayLinkDriver.Link?
     
@@ -123,63 +207,16 @@ final class ShutterBlobView: UIView {
     
     private(set) var state: BlobState = .generic
 
-    static override var layerClass: AnyClass {
-        return ShutterBlobLayer.self
-    }
-    
-    public init?(test: Bool) {
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            return nil
-        }
-
-        guard let library = metalLibrary(device: device) else {
-            return nil
-        }
-
-        guard let commandQueue = device.makeCommandQueue() else {
-            return nil
-        }
-        self.commandQueue = commandQueue
-
-        guard let loadedVertexProgram = library.makeFunction(name: "cameraBlobVertex") else {
-            return nil
-        }
-
-        guard let loadedFragmentProgram = library.makeFunction(name: "cameraBlobFragment") else {
-            return nil
-        }
-                
-        let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
-        pipelineStateDescriptor.vertexFunction = loadedVertexProgram
-        pipelineStateDescriptor.fragmentFunction = loadedFragmentProgram
-        pipelineStateDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+    init() {
+        self.blobLayer = ShutterBlobLayer()
         
-        pipelineStateDescriptor.colorAttachments[0].isBlendingEnabled = true
-        pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor = .one
-        pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-        pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation = .add
-        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
-        pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
-        pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation = .add
-        
-//        pipelineStateDescriptor.colorAttachments[0].isBlendingEnabled = true
-//        pipelineStateDescriptor.colorAttachments[0].rgbBlendOperation = .add
-//        pipelineStateDescriptor.colorAttachments[0].alphaBlendOperation = .add
-//        pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
-//        pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
-//        pipelineStateDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-//        pipelineStateDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
-        
-        self.drawPassthroughPipelineState = try! device.makeRenderPipelineState(descriptor: pipelineStateDescriptor)
-  
         super.init(frame: CGRect())
-        
-        (self.layer as! ShutterBlobLayer).renderer.device = device
         
         self.isOpaque = false
         self.backgroundColor = .clear
+        self.layer.addSublayer(self.blobLayer)
         
-        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
+        self.displayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max) { [weak self] _ in
             self?.tick()
         }
         self.displayLink?.isPaused = true
@@ -277,103 +314,40 @@ final class ShutterBlobView: UIView {
 
     private func tick() {
         self.updateAnimations()
-        self.draw()
+        self.updateLayerParameters()
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         
+        self.blobLayer.frame = self.bounds
         self.tick()
     }
     
-    private func getNextDrawable(layer: MetalImageLayer, drawableSize: CGSize) -> MetalImageLayer.Drawable? {
-        layer.renderer.drawableSize = drawableSize
-        return layer.renderer.nextDrawable()
-    }
-    
-    func draw() {
-        guard let layer = self.layer as? MetalImageLayer else {
-            return
-        }
-        self.updateAnimations()
-        
-        let drawableSize = CGSize(width: self.bounds.width * UIScreen.main.scale, height: self.bounds.height * UIScreen.main.scale)
-        
-        guard let drawable = self.getNextDrawable(layer: layer, drawableSize: drawableSize) else {
-            return
-        }
-
-        let renderPassDescriptor = MTLRenderPassDescriptor()
-        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
-        renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-        
-        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
-            return
-        }
-        
-        guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
-            return
-        }
-        
-        renderEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: drawableSize.width, height: drawableSize.height, znear: -1.0, zfar: 1.0))
-        renderEncoder.setRenderPipelineState(self.drawPassthroughPipelineState)
-        
-        var vertices: [Float] = [
-             1,  -1,
-            -1,  -1,
-            -1,   1,
-             1,  -1,
-            -1,   1,
-             1,   1
-        ]
-        renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
-        
-        var resolution = simd_uint2(UInt32(drawableSize.width), UInt32(drawableSize.height))
-        renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
-        
-        var primaryParameters = simd_float4(
-            Float(self.primaryWidth.presentationValue),
-            Float(self.primaryHeight.presentationValue),
-            Float(0.0),
-            Float(self.primaryCornerRadius.presentationValue)
+    private func updateLayerParameters() {
+        let primaryColor = self.primaryColor.presentationValue
+        self.blobLayer.parameters = ShutterBlobLayer.Parameters(
+            primaryParameters: SIMD4<Float>(
+                Float(self.primaryWidth.presentationValue),
+                Float(self.primaryHeight.presentationValue),
+                0.0,
+                Float(self.primaryCornerRadius.presentationValue)
+            ),
+            primaryOffset: SIMD2<Float>(
+                Float(self.primaryOffsetX.presentationValue),
+                Float(self.primaryOffsetY.presentationValue)
+            ),
+            primaryColor: SIMD4<Float>(Float(primaryColor.minX), Float(primaryColor.minY), Float(primaryColor.width), 1.0),
+            secondaryParameters: SIMD4<Float>(
+                Float(self.secondarySize.presentationValue),
+                Float(self.secondaryRedness.presentationValue),
+                0.0,
+                0.0
+            ),
+            secondaryOffset: SIMD2<Float>(
+                Float(self.secondaryOffsetX.presentationValue),
+                Float(self.secondaryOffsetY.presentationValue)
+            )
         )
-        renderEncoder.setFragmentBytes(&primaryParameters, length: MemoryLayout<simd_float3>.size, index: 1)
-
-        var primaryOffset = simd_float2(
-            Float(self.primaryOffsetX.presentationValue),
-            Float(self.primaryOffsetY.presentationValue)
-        )
-        renderEncoder.setFragmentBytes(&primaryOffset, length: MemoryLayout<simd_float2>.size, index: 2)
-        
-        var primaryColor = simd_float3(Float(self.primaryColor.presentationValue.minX), Float(self.primaryColor.presentationValue.minY), Float(self.primaryColor.presentationValue.width))
-        renderEncoder.setFragmentBytes(&primaryColor, length: MemoryLayout<simd_float3>.stride, index: 3)
-        
-        var secondaryParameters = simd_float2(
-            Float(self.secondarySize.presentationValue),
-            Float(self.secondaryRedness.presentationValue)
-        )
-        renderEncoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<simd_float4>.size, index: 4)
-        
-        var secondaryOffset = simd_float2(
-            Float(self.secondaryOffsetX.presentationValue),
-            Float(self.secondaryOffsetY.presentationValue)
-        )
-        renderEncoder.setFragmentBytes(&secondaryOffset, length: MemoryLayout<simd_float2>.size, index: 5)
-        
-        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
-        renderEncoder.endEncoding()
-
-        var storedDrawable: MetalImageLayer.Drawable? = drawable
-        commandBuffer.addCompletedHandler { _ in
-            DispatchQueue.main.async {
-                autoreleasepool {
-                    storedDrawable?.present(completion: {})
-                    storedDrawable = nil
-                }
-            }
-        }
-        
-        commandBuffer.commit()
     }
 }

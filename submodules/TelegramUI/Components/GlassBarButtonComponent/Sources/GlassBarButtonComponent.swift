@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import ComponentFlow
 import GlassBackgroundComponent
+import BundleIconComponent
 
 public final class GlassBarButtonComponent: Component {
     public enum DisplayState: Equatable {
@@ -22,6 +23,7 @@ public final class GlassBarButtonComponent: Component {
     public let component: AnyComponentWithIdentity<Empty>
     public let action: ((UIView) -> Void)?
     public let tag: AnyObject?
+    public let accessibility: ComponentAccessibility?
 
     public init(
         size: CGSize?,
@@ -33,7 +35,8 @@ public final class GlassBarButtonComponent: Component {
         animateScale: Bool = true,
         component: AnyComponentWithIdentity<Empty>,
         action: ((UIView) -> Void)?,
-        tag: AnyObject? = nil
+        tag: AnyObject? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.size = size
         self.backgroundColor = backgroundColor
@@ -45,6 +48,7 @@ public final class GlassBarButtonComponent: Component {
         self.component = component
         self.action = action
         self.tag = tag
+        self.accessibility = accessibility
     }
 
     public static func ==(lhs: GlassBarButtonComponent, rhs: GlassBarButtonComponent) -> Bool {
@@ -75,6 +79,9 @@ public final class GlassBarButtonComponent: Component {
         if lhs.tag !== rhs.tag {
             return false
         }
+        if lhs.accessibility != rhs.accessibility {
+            return false
+        }
         return true
     }
 
@@ -97,6 +104,13 @@ public final class GlassBarButtonComponent: Component {
         private var componentView: ComponentView<Empty>?
         
         private var component: GlassBarButtonComponent?
+        private var inferredAccessibilityLabel: String?
+        
+        /// The source for a context menu this button opens: its glass, which morphs into the menu, or the button itself
+        /// in the generic state.
+        public var menuSourceView: UIView {
+            return self.glassBackgroundView ?? self
+        }
         
         public override init(frame: CGRect) {
             self.containerView = HighlightTrackingButton()
@@ -142,6 +156,14 @@ public final class GlassBarButtonComponent: Component {
             action(self)
         }
         
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component, component.isEnabled, let action = component.action else {
+                return false
+            }
+            action(self)
+            return true
+        }
+        
         @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 guard let component = self.component, let action = component.action else {
@@ -166,6 +188,18 @@ public final class GlassBarButtonComponent: Component {
             self.component = component
             
             self.containerView.isEnabled = component.isEnabled
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
+            if component.accessibility == nil {
+                // An icon-only button showing a standard navigation glyph reads its name ("Close") unless the call
+                // site labelled the view itself.
+                let inferredLabel = (component.component.component.wrapped as? BundleIconComponent).flatMap { ComponentAccessibilityStrings.label(navigationIconName: $0.name) }
+                if self.accessibilityLabel == nil || self.accessibilityLabel == self.inferredAccessibilityLabel {
+                    self.accessibilityLabel = inferredLabel
+                }
+                self.inferredAccessibilityLabel = inferredLabel
+            } else {
+                self.inferredAccessibilityLabel = nil
+            }
             
             var componentView: ComponentView<Empty>
             var animateAppearance = false
@@ -264,6 +298,7 @@ public final class GlassBarButtonComponent: Component {
                 } else {
                     glassBackgroundTransition = .immediate
                     glassBackgroundView = GlassBackgroundView()
+                    glassBackgroundView.morphsIntoContextMenu = true
                     self.glassContainerView.addSubview(glassBackgroundView)
                     self.glassBackgroundView = glassBackgroundView
                     
@@ -281,6 +316,7 @@ public final class GlassBarButtonComponent: Component {
                 } else {
                     glassBackgroundTransition = .immediate
                     glassBackgroundView = GlassBackgroundView()
+                    glassBackgroundView.morphsIntoContextMenu = true
                     self.glassContainerView.addSubview(glassBackgroundView)
                     self.glassBackgroundView = glassBackgroundView
                     
@@ -451,7 +487,7 @@ private class SimpleGlassView: UIView {
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, transition: ComponentTransition) {
         let colorValue: UIColor
         switch tintColor.kind {
-        case .clear, .panel:
+        case .clear, .panel, .untinted:
             if isDark {
                 colorValue = UIColor(white: 1.0, alpha: 0.025)
             } else {

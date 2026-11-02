@@ -1,0 +1,104 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><ul>
+  <li>Level 1 (disc)
+    <ul>
+      <li>Level 2 (circle)
+        <ul>
+          <li>Level 3 (square)
+            <ol style="list-style-type: lower-roman"><li>lower-roman i</li><li>lower-roman ii</li><li>lower-roman iii</li></ol>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+<ol style="list-style-type: upper-alpha"><li>upper-alpha</li><li>second</li></ol>
+<ol start="9"><li>starts at 9</li><li>ten</li><li>eleven — marker gets wider</li></ol>
+<ul style="list-style-type: none; padding-left: 0"><li>✅ list-style: none</li><li>✅ with emoji bullets</li></ul>
+</body></html>
+
+== layout
+html 0 0 360 288.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 2 360 284.6
+    ul 22 2 338 125.2
+      li 22 2 338 125.2
+        ul 44 24.2 316 103
+          li 44 24.2 316 103
+            ul 66 46.4 294 80.8
+              li 66 46.4 294 80.8
+                ol 88 68.6 272 58.6
+                  li 88 68.6 272 18.2
+                  li 88 88.8 272 18.2
+                  li 88 109 272 18.2
+    ol 22 135.2 338 38.4
+      li 22 135.2 338 18.2
+      li 22 155.4 338 18.2
+    ol 22 181.6 338 58.6
+      li 22 181.6 338 18.2
+      li 22 201.8 338 18.2
+      li 22 222 338 18.2
+    ul 0 248.2 360 38.4
+      li 0 248.2 360 18.2
+      li 0 268.4 360 18.2
+
+== paint
+root 360x288.6 items=49
+  list-marker bounds=(8,8.76667,4.66667,4.66667) marker=(type=2,color=#000000ff,pos=(8,8.76667,4.66667,4.66667),index=-1) font=1 image=-
+  list-marker bounds=(30,30.9667,4.66667,4.66667) marker=(type=1,color=#000000ff,pos=(30,30.9667,4.66667,4.66667),index=-1) font=1 image=-
+  list-marker bounds=(52,53.1667,4.66667,4.66667) marker=(type=1,color=#000000ff,pos=(52,53.1667,4.66667,4.66667),index=-1) font=1 image=-
+  text bounds=(56,62,32,32) pos=(64,70,16,16) color=#000000ff text="i." font=f1 glyphs=2 advance=16
+  text bounds=(48,82,40,32) pos=(56,90,24,16) color=#000000ff text="ii." font=f1 glyphs=3 advance=24
+  text bounds=(40,102,48,32) pos=(48,110,32,16) color=#000000ff text="iii." font=f1 glyphs=4 advance=32
+  text bounds=(-10,128,32,32) pos=(-2,136,16,16) color=#000000ff text="A." font=f1 glyphs=2 advance=16
+  text bounds=(-10,148,32,32) pos=(-2,156,16,16) color=#000000ff text="B." font=f1 glyphs=2 advance=16
+  text bounds=(-10,175,32,32) pos=(-2,183,16,16) color=#000000ff text="9." font=f1 glyphs=2 advance=16
+  text bounds=(-18,195,40,32) pos=(-10,203,24,16) color=#000000ff text="10." font=f1 glyphs=3 advance=24
+  text bounds=(-18,215,40,32) pos=(-10,223,24,16) color=#000000ff text="11." font=f1 glyphs=3 advance=24
+  text bounds=(14,-5,56,32) pos=(22,3,40,16) color=#000000ff text="Level" font=f1 glyphs=5 advance=40
+  text bounds=(62,-5,24,32) pos=(70,3,8,16) color=#000000ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(78,-5,64,32) pos=(86,3,48,16) color=#000000ff text="(disc)" font=f1 glyphs=6 advance=48
+  text bounds=(36,17,56,32) pos=(44,25,40,16) color=#000000ff text="Level" font=f1 glyphs=5 advance=40
+  text bounds=(84,17,24,32) pos=(92,25,8,16) color=#000000ff text="2" font=f1 glyphs=1 advance=8
+  text bounds=(100,17,80,32) pos=(108,25,64,16) color=#000000ff text="(circle)" font=f1 glyphs=8 advance=64
+  text bounds=(58,39,56,32) pos=(66,47,40,16) color=#000000ff text="Level" font=f1 glyphs=5 advance=40
+  text bounds=(106,39,24,32) pos=(114,47,8,16) color=#000000ff text="3" font=f1 glyphs=1 advance=8
+  text bounds=(122,39,80,32) pos=(130,47,64,16) color=#000000ff text="(square)" font=f1 glyphs=8 advance=64
+  text bounds=(80,62,64,32) pos=(88,70,48,16) color=#000000ff text="lower-" font=f1 glyphs=6 advance=48
+  text bounds=(128,62,56,32) pos=(136,70,40,16) color=#000000ff text="roman" font=f1 glyphs=5 advance=40
+  text bounds=(176,62,24,32) pos=(184,70,8,16) color=#000000ff text="i" font=f1 glyphs=1 advance=8
+  text bounds=(80,82,64,32) pos=(88,90,48,16) color=#000000ff text="lower-" font=f1 glyphs=6 advance=48
+  text bounds=(128,82,56,32) pos=(136,90,40,16) color=#000000ff text="roman" font=f1 glyphs=5 advance=40
+  text bounds=(176,82,32,32) pos=(184,90,16,16) color=#000000ff text="ii" font=f1 glyphs=2 advance=16
+  text bounds=(80,102,64,32) pos=(88,110,48,16) color=#000000ff text="lower-" font=f1 glyphs=6 advance=48
+  text bounds=(128,102,56,32) pos=(136,110,40,16) color=#000000ff text="roman" font=f1 glyphs=5 advance=40
+  text bounds=(176,102,40,32) pos=(184,110,24,16) color=#000000ff text="iii" font=f1 glyphs=3 advance=24
+  text bounds=(14,128,64,32) pos=(22,136,48,16) color=#000000ff text="upper-" font=f1 glyphs=6 advance=48
+  text bounds=(62,128,56,32) pos=(70,136,40,16) color=#000000ff text="alpha" font=f1 glyphs=5 advance=40
+  text bounds=(14,148,64,32) pos=(22,156,48,16) color=#000000ff text="second" font=f1 glyphs=6 advance=48
+  text bounds=(14,175,64,32) pos=(22,183,48,16) color=#000000ff text="starts" font=f1 glyphs=6 advance=48
+  text bounds=(70,175,32,32) pos=(78,183,16,16) color=#000000ff text="at" font=f1 glyphs=2 advance=16
+  text bounds=(94,175,24,32) pos=(102,183,8,16) color=#000000ff text="9" font=f1 glyphs=1 advance=8
+  text bounds=(14,195,40,32) pos=(22,203,24,16) color=#000000ff text="ten" font=f1 glyphs=3 advance=24
+  text bounds=(14,215,64,32) pos=(22,223,48,16) color=#000000ff text="eleven" font=f1 glyphs=6 advance=48
+  text bounds=(70,215,40,32) pos=(78,223,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(102,215,64,32) pos=(110,223,48,16) color=#000000ff text="marker" font=f1 glyphs=6 advance=48
+  text bounds=(158,215,48,32) pos=(166,223,32,16) color=#000000ff text="gets" font=f1 glyphs=4 advance=32
+  text bounds=(198,215,56,32) pos=(206,223,40,16) color=#000000ff text="wider" font=f1 glyphs=5 advance=40
+  text bounds=(-8,241,40,32) pos=(0,249,24,16) color=#000000ff text="✅" font=f1 glyphs=3 advance=24
+  text bounds=(24,241,56,32) pos=(32,249,40,16) color=#000000ff text="list-" font=f1 glyphs=5 advance=40
+  text bounds=(64,241,64,32) pos=(72,249,48,16) color=#000000ff text="style:" font=f1 glyphs=6 advance=48
+  text bounds=(120,241,48,32) pos=(128,249,32,16) color=#000000ff text="none" font=f1 glyphs=4 advance=32
+  text bounds=(-8,261,40,32) pos=(0,269,24,16) color=#000000ff text="✅" font=f1 glyphs=3 advance=24
+  text bounds=(24,261,48,32) pos=(32,269,32,16) color=#000000ff text="with" font=f1 glyphs=4 advance=32
+  text bounds=(64,261,56,32) pos=(72,269,40,16) color=#000000ff text="emoji" font=f1 glyphs=5 advance=40
+  text bounds=(112,261,72,32) pos=(120,269,56,16) color=#000000ff text="bullets" font=f1 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

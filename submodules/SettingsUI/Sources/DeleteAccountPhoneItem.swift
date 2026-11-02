@@ -11,39 +11,47 @@ import PresentationDataUtils
 import PhoneInputNode
 import CountrySelectionUI
 
-private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 56, height: 44.0 + 6.0), rotatedContext: { size, context in
+private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor, separatorRightInset: CGFloat = 0.0, rowHeight: CGFloat = 44.0, drawsTopSeparator: Bool = true) -> UIImage? {
+    let arrowWidth: CGFloat = 56.0
+    let image = generateImage(CGSize(width: arrowWidth + separatorRightInset, height: rowHeight + 6.0), rotatedContext: { size, context in
         let arrowSize: CGFloat = 6.0
         let lineWidth = UIScreenPixel
         
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
-        context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
-        context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
-        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height))
-        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
+        context.move(to: CGPoint(x: arrowWidth, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0, y: size.height - arrowSize))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0 - arrowSize, y: size.height))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
         context.closePath()
         context.fillPath()
         
         context.setStrokeColor(strokeColor.cgColor)
         context.setLineWidth(lineWidth)
         
-        context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
-        context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
-        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height - lineWidth / 2.0))
-        context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
+        context.move(to: CGPoint(x: size.width - separatorRightInset, y: size.height - arrowSize - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0 - arrowSize, y: size.height - lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: arrowWidth - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
         context.addLine(to: CGPoint(x: 15.0, y: size.height - arrowSize - lineWidth / 2.0))
         context.strokePath()
         
-        context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
-        context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
-        context.strokePath()
-    })?.stretchableImage(withLeftCapWidth: 55, topCapHeight: 1)
+        if drawsTopSeparator {
+            context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
+            context.strokePath()
+        }
+    })
+    if separatorRightInset > 0.0 {
+        return image?.resizableImage(withCapInsets: UIEdgeInsets(top: 1.0, left: arrowWidth - 1.0, bottom: rowHeight + 6.0 - 2.0, right: separatorRightInset), resizingMode: .stretch)
+    } else {
+        return image?.stretchableImage(withLeftCapWidth: 55, topCapHeight: 1)
+    }
 }
 
-private func generateCountryButtonHighlightedBackground(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 56.0, height: 44.0 + 6.0), rotatedContext: { size, context in
+private func generateCountryButtonHighlightedBackground(color: UIColor, rowHeight: CGFloat = 44.0) -> UIImage? {
+    return generateImage(CGSize(width: 56.0, height: rowHeight + 6.0), rotatedContext: { size, context in
         let arrowSize: CGFloat = 6.0
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
@@ -57,8 +65,8 @@ private func generateCountryButtonHighlightedBackground(color: UIColor) -> UIIma
     })?.stretchableImage(withLeftCapWidth: 55, topCapHeight: 2)
 }
 
-private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 82.0, height: 44.0), rotatedContext: { size, context in
+private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor, rowHeight: CGFloat = 44.0) -> UIImage? {
+    return generateImage(CGSize(width: 82.0, height: rowHeight), rotatedContext: { size, context in
         let lineWidth = UIScreenPixel
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
@@ -77,14 +85,16 @@ private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor) 
 
 final class DeleteAccountPhoneItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let systemStyle: ItemListSystemStyle
     let strings: PresentationStrings
     let value: (Int32?, String?, String)
     let sectionId: ItemListSectionId
     let selectCountryCode: () -> Void
     let updated: (Int) -> Void
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, value: (Int32?, String?, String), sectionId: ItemListSectionId, selectCountryCode: @escaping () -> Void, updated: @escaping (Int) -> Void) {
+    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, strings: PresentationStrings, value: (Int32?, String?, String), sectionId: ItemListSectionId, selectCountryCode: @escaping () -> Void, updated: @escaping (Int) -> Void) {
         self.theme = theme
+        self.systemStyle = systemStyle
         self.strings = strings
         self.value = value
         self.sectionId = sectionId
@@ -287,18 +297,22 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
             var updatedCountryButtonHighlightedBackground: UIImage?
             var updatedPhoneBackground: UIImage?
             
-            if currentItem?.theme !== item.theme {
-                updatedCountryButtonBackground = generateCountryButtonBackground(color: item.theme.list.itemBlocksBackgroundColor, strokeColor: item.theme.list.itemBlocksSeparatorColor)
-                updatedCountryButtonHighlightedBackground = generateCountryButtonHighlightedBackground(color: item.theme.list.itemHighlightedBackgroundColor)
-                updatedPhoneBackground = generatePhoneInputBackground(color: item.theme.list.itemBlocksBackgroundColor, strokeColor: item.theme.list.itemBlocksSeparatorColor)
+            let isGlass = item.systemStyle == .glass
+            let separatorRightInset: CGFloat = isGlass ? 16.0 : 0.0
+            let rowHeight: CGFloat = isGlass ? 57.0 : 44.0
+            
+            if currentItem?.theme !== item.theme || currentItem?.systemStyle != item.systemStyle {
+                updatedCountryButtonBackground = generateCountryButtonBackground(color: item.theme.list.itemBlocksBackgroundColor, strokeColor: item.theme.list.itemBlocksSeparatorColor, separatorRightInset: separatorRightInset, rowHeight: rowHeight, drawsTopSeparator: !isGlass)
+                updatedCountryButtonHighlightedBackground = generateCountryButtonHighlightedBackground(color: item.theme.list.itemHighlightedBackgroundColor, rowHeight: rowHeight)
+                updatedPhoneBackground = generatePhoneInputBackground(color: item.theme.list.itemBlocksBackgroundColor, strokeColor: item.theme.list.itemBlocksSeparatorColor, rowHeight: rowHeight)
             }
             
             let contentSize: CGSize
             var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let countryButtonHeight: CGFloat = 44.0
-            let inputFieldsHeight: CGFloat = 44.0
+            let countryButtonHeight: CGFloat = rowHeight
+            let inputFieldsHeight: CGFloat = rowHeight
             
             contentSize = CGSize(width: params.width, height: countryButtonHeight + inputFieldsHeight)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -352,12 +366,12 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - separatorRightInset, height: separatorHeight))
                     
                     if let updatedCountryButtonBackground = updatedCountryButtonBackground {
                         strongSelf.countryButton.setBackgroundImage(updatedCountryButtonBackground, for: [])
@@ -378,14 +392,14 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 15.0, bottom: 4.0, right: 0.0)
                     
-                    strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: 44.0 + 6.0))
+                    strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: rowHeight + 6.0))
                     let leftShift = max(0.0, params.leftInset - params.rightInset)
-                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: leftShift, y: 44.0), size: CGSize(width: params.width - leftShift, height: 44.0))
+                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: leftShift, y: rowHeight), size: CGSize(width: params.width - leftShift, height: rowHeight))
                     
                     let rightShift = max(0.0, params.rightInset - params.leftInset)
-                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0 + leftShift, y: 44.0), size: CGSize(width: 67.0, height: 44.0))
-                    let numberFrame = CGRect(origin: CGPoint(x: 92.0 + leftShift, y: 44.0), size: CGSize(width: layout.size.width - 70.0 - 8.0 - leftShift - rightShift, height: 44.0))
-                    let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0)
+                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0 + leftShift, y: rowHeight), size: CGSize(width: 67.0, height: rowHeight))
+                    let numberFrame = CGRect(origin: CGPoint(x: 92.0 + leftShift, y: rowHeight), size: CGSize(width: layout.size.width - 70.0 - 8.0 - leftShift - rightShift, height: rowHeight))
+                    let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0 + floorToScreenPixels((rowHeight - 44.0) / 2.0))
                     
                     let phoneInputFrame = countryCodeFrame.union(numberFrame)
                     

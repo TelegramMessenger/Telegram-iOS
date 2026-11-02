@@ -204,6 +204,8 @@ public class PremiumLimitDisplayComponent: Component {
             
             self.badgeIcon = UIImageView()
             self.badgeIcon.contentMode = .center
+            // The badge's icon illustrates the count beside it, which is read.
+            self.badgeIcon.accessibilityElementsHidden = true
                         
             self.badgeLabel = BadgeLabelView()
             let _ = self.badgeLabel.update(value: "0", suffix: nil, transition: .immediate)

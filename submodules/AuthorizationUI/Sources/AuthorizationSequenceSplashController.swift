@@ -9,6 +9,7 @@ import TelegramPresentationData
 import LegacyComponents
 import SolidRoundedButtonNode
 import RMIntro
+import AuthorizationUtils
 
 public final class AuthorizationSequenceSplashController: ViewController {
     private var controllerNode: AuthorizationSequenceSplashControllerNode {
@@ -72,6 +73,12 @@ public final class AuthorizationSequenceSplashController: ViewController {
         
         self.controller = RMIntroViewController(backgroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.intro.startButtonColor, accentColor: theme.list.itemAccentColor, regularDotColor: theme.intro.dotColor, highlightedDotColor: theme.list.itemAccentColor, suggestedLocalizationSignal: localizationSignal)
         
+        // The tour is shown in English (it reads the en bundle); the page indicator's VoiceOver label follows it.
+        self.controller.pageAccessibilityLabel = defaultPresentationStrings.VoiceOver_Common_Page
+        self.controller.pageAccessibilityValue = { page, count in
+            return defaultPresentationStrings.Items_NOfM("\(page)", "\(count)").string
+        }
+
         self.startButton = SolidRoundedButtonNode(title: "Start Messaging", theme: SolidRoundedButtonTheme(theme: theme), glass: false, height: 50.0, cornerRadius: 50.0 * 0.5, isShimmering: true)
         self.startButton.accessibilityIdentifier = "Auth.Welcome.StartButton"
 
@@ -148,12 +155,11 @@ public final class AuthorizationSequenceSplashController: ViewController {
     }
     
     // iPhone Duo: beside a side strip the intro (logo, pages, Start Messaging) keeps to the band between the
-    // side insets. With equal insets (every other phone) it fills the window as before.
+    // side insets, centered on the full width on the unfolded screen (authorizationContentBand). With equal insets
+    // (every other phone) it fills the window as before.
     private func introFrame(layout: ContainerViewLayout) -> CGRect {
-        if layout.safeInsets.left != layout.safeInsets.right {
-            return CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
-        }
-        return CGRect(origin: CGPoint(), size: layout.size)
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
+        return CGRect(origin: CGPoint(x: bandMinX, y: 0.0), size: CGSize(width: bandWidth, height: layout.size.height))
     }
     
     private func addControllerIfNeeded() {

@@ -58,6 +58,51 @@ private func alignPartFetchRange(partRange: Range<Int64>, minPartSize: Int64, ma
     return (partRange, fetchRange)
 }
 
+// The bytes of a file still to fetch, one set per priority (`MediaBoxFetchPriority.rawValue`). A range asked for at several
+// priorities is only in the highest one, so it is fetched once.
+func fetchV2PriorityRanges(required: [(range: Range<Int64>, priority: Int)], knownSize: Int64?, excluded: RangeSet<Int64>) -> [RangeSet<Int64>] {
+    var result: [RangeSet<Int64>] = Array(repeating: RangeSet<Int64>(), count: 3)
+    for item in required {
+        result[item.priority].formUnion(RangeSet<Int64>(item.range))
+    }
+    var inHigherPriorities = RangeSet<Int64>()
+    for i in (0 ..< result.count).reversed() {
+        if let knownSize {
+            result[i].remove(contentsOf: knownSize ..< Int64.max)
+        }
+        result[i].subtract(inHigherPriorities)
+        result[i].subtract(excluded)
+        inHigherPriorities.formUnion(result[i])
+    }
+    return result
+}
+
+// The next part: from the first range of the highest priority that has one, aligned for the request. Its bytes leave every
+// priority's ranges. A higher priority is never made to wait for a lower one: a playing video's range is not shared
+// round-robin with a preload of the same file.
+func fetchV2TakeNextPart(ranges: inout [RangeSet<Int64>], partSize: Int64, minPartSize: Int64, maxPartSize: Int64, alignment: Int64, boundaryLimit: Int64) -> (partRange: Range<Int64>, fetchRange: Range<Int64>)? {
+    for priorityIndex in (0 ..< ranges.count).reversed() {
+        guard let firstRange = ranges[priorityIndex].ranges.first else {
+            continue
+        }
+        let part = alignPartFetchRange(
+            partRange: firstRange.lowerBound ..< min(firstRange.upperBound, firstRange.lowerBound + partSize),
+            minPartSize: minPartSize,
+            maxPartSize: maxPartSize,
+            alignment: alignment,
+            boundaryLimit: boundaryLimit
+        )
+        for i in 0 ..< ranges.count {
+            ranges[i].remove(contentsOf: part.fetchRange)
+        }
+        return part
+    }
+    return nil
+}
+
+// The resources this process has refreshed a file reference of, for the log only.
+private let fetchV2RefreshedFileReferences = Atomic<Set<String>>(value: Set())
+
 private let fastDownloadMasterPendingParts = 16
 private let fastDownloadCdnPendingParts = 32
 private let fastDownloadInitialWindow = 6
@@ -274,8 +319,6 @@ private final class FetchImpl {
         var window: Int = fastDownloadInitialWindow
         var lastWindowDecrease: Double = 0.0
         var recentParts: [(time: Double, bytes: Int64)] = []
-        
-        var nextRangePriorityIndex: Int = 0
         
         init(
             fetchLocation: FetchLocation,
@@ -630,35 +673,21 @@ private final class FetchImpl {
                     state.pendingHashRanges.append(FetchImpl.PendingHashRange(range: hashRange))
                 }
                 
-                var filteredRequiredRanges: [RangeSet<Int64>] = []
-                for _ in 0 ..< 3 {
-                    filteredRequiredRanges.append(RangeSet<Int64>())
+                var excludedRanges = state.completedRanges
+                for pendingPart in state.pendingParts {
+                    excludedRanges.insert(contentsOf: pendingPart.partRange)
                 }
-                
-                for range in self.requiredRanges {
-                    filteredRequiredRanges[Int(range.priority.rawValue)].formUnion(RangeSet<Int64>(range.value))
+                for pendingReadyPart in state.pendingReadyParts {
+                    excludedRanges.insert(contentsOf: pendingReadyPart.partRange)
                 }
-                var excludedInHigherPriorities = RangeSet<Int64>()
-                for i in (0 ..< filteredRequiredRanges.count).reversed() {
-                    if let knownSize = self.knownSize {
-                        for i in 0 ..< filteredRequiredRanges.count {
-                            filteredRequiredRanges[i].remove(contentsOf: knownSize ..< Int64.max)
-                        }
-                    }
-                    filteredRequiredRanges[i].subtract(excludedInHigherPriorities)
-                    filteredRequiredRanges[i].subtract(state.completedRanges)
-                    for pendingPart in state.pendingParts {
-                        filteredRequiredRanges[i].remove(contentsOf: pendingPart.partRange)
-                    }
-                    for pendingReadyPart in state.pendingReadyParts {
-                        filteredRequiredRanges[i].remove(contentsOf: pendingReadyPart.partRange)
-                    }
-                    for pendingCdnReupload in state.pendingCdnReuploads {
-                        filteredRequiredRanges[i].subtract(pendingCdnReupload.ranges)
-                    }
-                    
-                    excludedInHigherPriorities.subtract(filteredRequiredRanges[i])
+                for pendingCdnReupload in state.pendingCdnReuploads {
+                    excludedRanges.formUnion(pendingCdnReupload.ranges)
                 }
+                var filteredRequiredRanges = fetchV2PriorityRanges(
+                    required: self.requiredRanges.map { (range: $0.value, priority: Int($0.priority.rawValue)) },
+                    knownSize: self.knownSize,
+                    excluded: excludedRanges
+                )
                 
                 var maxPendingParts = state.maxPendingParts
                 if self.fastDownloads {
@@ -697,49 +726,25 @@ private final class FetchImpl {
                     }
                     
                     while state.pendingParts.count < maxPendingParts && state.pendingReadyParts.count < state.maxPendingParts {
-                        var found = false
-                        inner: for i in 0 ..< filteredRequiredRanges.count {
-                            let priorityIndex = (state.nextRangePriorityIndex + i) % filteredRequiredRanges.count
-                            
-                            guard let firstRange = filteredRequiredRanges[priorityIndex].ranges.first else {
-                                continue
-                            }
-                            
-                            state.nextRangePriorityIndex += 1
-                            
-                            let (partRange, alignedRange) = alignPartFetchRange(
-                                partRange: firstRange.lowerBound ..< min(firstRange.upperBound, firstRange.lowerBound + state.partSize),
-                                minPartSize: state.minPartSize,
-                                maxPartSize: state.maxPartSize,
-                                alignment: state.partAlignment,
-                                boundaryLimit: state.partDivision
-                            )
-                            
-                            var storePartRange = partRange
-                            do {
-                                storePartRange = alignedRange
-                                Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (store aligned as \(storePartRange)")
-                            }
-                            /*if case .cdn = state.fetchLocation {
-                                storePartRange = alignedRange
-                                Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (store aligned as \(storePartRange)")
-                            } else {
-                                Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (aligned as \(alignedRange))")
-                            }*/
-                            
-                            let pendingPart = PendingPart(
-                                partRange: storePartRange,
-                                fetchRange: alignedRange
-                            )
-                            state.pendingParts.append(pendingPart)
-                            filteredRequiredRanges[priorityIndex].remove(contentsOf: storePartRange)
-                            
-                            found = true
-                            break inner
-                        }
-                        if !found {
+                        guard let (partRange, alignedRange) = fetchV2TakeNextPart(
+                            ranges: &filteredRequiredRanges,
+                            partSize: state.partSize,
+                            minPartSize: state.minPartSize,
+                            maxPartSize: state.maxPartSize,
+                            alignment: state.partAlignment,
+                            boundaryLimit: state.partDivision
+                        ) else {
                             break
                         }
+                        
+                        let storePartRange = alignedRange
+                        Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (store aligned as \(storePartRange)")
+                        
+                        let pendingPart = PendingPart(
+                            partRange: storePartRange,
+                            fetchRange: alignedRange
+                        )
+                        state.pendingParts.append(pendingPart)
                     }
                 }
                 
@@ -798,7 +803,17 @@ private final class FetchImpl {
                 }
             case let .refreshingFileReference(state):
                 if state.disposable == nil {
-                    Logger.shared.log("FetchV2", "\(self.loggingIdentifier): refreshing file reference")
+                    // Each fetch of a file starts from its caller's reference, so a second refresh of one in a process is a
+                    // later fetch that began with the stale reference again (a long video's segment loads, say).
+                    let resourceId = self.resource.id.stringRepresentation
+                    var isRepeat = false
+                    let _ = fetchV2RefreshedFileReferences.modify { resourceIds in
+                        isRepeat = resourceIds.contains(resourceId)
+                        var resourceIds = resourceIds.count >= 1000 ? Set<String>() : resourceIds
+                        resourceIds.insert(resourceId)
+                        return resourceIds
+                    }
+                    Logger.shared.log("FetchV2", "\(self.loggingIdentifier): refreshing file reference\(isRepeat ? " again in this process" : "")")
                     
                     if let info = self.parameters?.info as? TelegramCloudMediaResourceFetchInfo, let mediaReferenceRevalidationContext = self.mediaReferenceRevalidationContext {
                         let fetchLocation = state.fetchLocation
@@ -886,7 +901,8 @@ private final class FetchImpl {
             case let .cdn(cdnData):
                 let requestedOffset = part.fetchRange.lowerBound
                 
-                filePartRequest = self.network.multiplexedRequestManager.request(
+                let throughputMeter = self.network.downloadThroughputMeter
+                filePartRequest = self.network.multiplexedRequestManager.requestWithAdditionalInfo(
                     to: .cdn(cdnData.id),
                     consumerId: self.consumerId,
                     resourceId: self.resource.id.stringRepresentation,
@@ -899,10 +915,15 @@ private final class FetchImpl {
                     continueInBackground: self.continueInBackground,
                     expectedResponseSize: Int32(requestedLength)
                 )
-                |> map { result -> FilePartResult in
+                |> mapError { error -> MTRpcError in
+                    return error.0
+                }
+                |> map { resultAndInfo -> FilePartResult in
+                    let (result, info) = resultAndInfo
                     switch result {
                     case let .cdnFile(cdnFileData):
                         let bytes = cdnFileData.bytes
+                        throughputMeter.add(bytes: Int64(bytes.size), networkDuration: info.networkDuration, isWifi: info.networkType == .wifi, completedAt: CFAbsoluteTimeGetCurrent())
                         if bytes.size == 0 {
                             return .data(data: Data(), verifyPartHashData: nil)
                         } else {
@@ -944,7 +965,8 @@ private final class FetchImpl {
                     }
                     if let inputLocation = cloudResource.apiInputLocation(fileReference: fileReference) {
                         let queue = self.queue
-                        filePartRequest = self.network.multiplexedRequestManager.request(
+                        let throughputMeter = self.network.downloadThroughputMeter
+                        filePartRequest = self.network.multiplexedRequestManager.requestWithAdditionalInfo(
                             to: .main(sourceDatacenterId),
                             consumerId: self.consumerId,
                             resourceId: self.resource.id.stringRepresentation,
@@ -964,10 +986,15 @@ private final class FetchImpl {
                                 }
                             }, expectedResponseSize: Int32(requestedLength)
                         )
-                        |> map { result -> FilePartResult in
+                        |> mapError { error -> MTRpcError in
+                            return error.0
+                        }
+                        |> map { resultAndInfo -> FilePartResult in
+                            let (result, info) = resultAndInfo
                             switch result {
                             case let .file(fileData):
                                 let bytes = fileData.bytes
+                                throughputMeter.add(bytes: Int64(bytes.size), networkDuration: info.networkDuration, isWifi: info.networkType == .wifi, completedAt: CFAbsoluteTimeGetCurrent())
                                 return .data(data: bytes.makeData(), verifyPartHashData: nil)
                             case let .fileCdnRedirect(fileCdnRedirectData):
                                 let (dcId, fileToken, encryptionKey, encryptionIv, fileHashes) = (fileCdnRedirectData.dcId, fileCdnRedirectData.fileToken, fileCdnRedirectData.encryptionKey.makeData(), fileCdnRedirectData.encryptionIv.makeData(), fileCdnRedirectData.fileHashes)

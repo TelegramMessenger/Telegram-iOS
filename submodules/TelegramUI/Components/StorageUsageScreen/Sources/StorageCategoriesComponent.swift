@@ -251,7 +251,8 @@ final class StorageCategoriesComponent: Component {
                                     return
                                 }
                                 component.clearAction()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: clearTitle, value: label)
                         )
                     ),
                     environment: {},

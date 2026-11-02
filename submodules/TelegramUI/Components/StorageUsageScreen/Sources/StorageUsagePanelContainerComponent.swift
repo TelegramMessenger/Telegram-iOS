@@ -184,6 +184,19 @@ final class StorageUsagePanelContainerComponent: Component {
             return panel.view
         }
         
+        // VoiceOver: the tabs, then the current panel only; the neighbouring panels kept beside it for paging are not
+        // read.
+        override var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = [self.tabsBackgroundContainer]
+                if let currentPanelView = self.currentPanelView {
+                    elements.append(currentPanelView)
+                }
+                return elements
+            } set(value) {
+            }
+        }
+        
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return false
         }

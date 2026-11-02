@@ -34,10 +34,11 @@ func _internal_exportNoPaidMessagesToken(account: Account, revoke: Bool, tempora
         return .single(nil)
     }
     |> map { result -> ExportedNoPaidMessagesToken? in
-        guard let result, case let .exportedNoPaidMessagesToken(data) = result else {
-            return nil
+        guard let result else { return nil }
+        switch result {
+        case let .exportedNoPaidMessagesToken(data):
+            return ExportedNoPaidMessagesToken(token: data.token, url: data.url, expires: data.expires)
         }
-        return ExportedNoPaidMessagesToken(token: data.token, url: data.url, expires: data.expires)
     }
 }
 

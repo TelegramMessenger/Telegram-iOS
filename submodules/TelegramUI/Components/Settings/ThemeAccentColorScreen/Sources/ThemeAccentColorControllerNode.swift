@@ -464,6 +464,17 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
         self.backgroundNode.update(wallpaper: self.wallpaper, animated: false)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: self.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
 
+        // Without bubbles a theme's colours are previewed as the chats will show them: recoloured, on the plain page.
+        var bubblelessPreview = false
+        if !bubbleCorners.bubbleMode {
+            switch mode {
+            case .colors, .edit:
+                bubblelessPreview = true
+            case .background:
+                break
+            }
+        }
+        
         self.stateDisposable = (self.statePromise.get()
         |> deliverOn(self.queue)
         |> mapToThrottled { next -> Signal<ThemeColorState, NoError> in
@@ -518,7 +529,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
             }
 
             let serviceBackgroundColor = serviceColor(for: (wallpaper, nil))
-            let updatedTheme: PresentationTheme?
+            var updatedTheme: PresentationTheme?
 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
@@ -527,6 +538,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                     updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, outgoingAccentColor: outgoingAccentColor?.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors)
                 } else {
                     updatedTheme = theme
+                }
+                
+                if bubblelessPreview, let previewTheme = updatedTheme {
+                    updatedTheme = bubblelessPresentationTheme(previewTheme)
+                    wallpaper = bubblelessChatWallpaper(theme: previewTheme)
                 }
 
                 let _ = PresentationResourcesChat.principalGraphics(theme: updatedTheme!, wallpaper: wallpaper, bubbleCorners: bubbleCorners)

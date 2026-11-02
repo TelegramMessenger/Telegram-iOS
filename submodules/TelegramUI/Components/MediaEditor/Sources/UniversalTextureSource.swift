@@ -327,7 +327,7 @@ final class EntityInputContext: NSObject, InputContext, AVPlayerItemOutputPullDe
         return entity
     }
     
-    private let ciContext: CIContext
+    private let colorSpace = CGColorSpaceCreateDeviceRGB()
     private let startTime: Double
     
     init(input: Input, renderTarget: RenderTarget, queue: DispatchQueue) {
@@ -335,7 +335,6 @@ final class EntityInputContext: NSObject, InputContext, AVPlayerItemOutputPullDe
             fatalError()
         }
         self.input = input
-        self.ciContext = CIContext(options: [.workingColorSpace : CGColorSpaceCreateDeviceRGB()])
         self.startTime = CACurrentMediaTime()
         super.init()
         
@@ -349,7 +348,9 @@ final class EntityInputContext: NSObject, InputContext, AVPlayerItemOutputPullDe
     func asyncOutput(time: Double, completion: @escaping (Output?) -> Void) {
         let deltaTime = max(0.0, time - self.startTime)
         let timestamp = CMTime(seconds: deltaTime, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        self.entity.image(for: timestamp, frameRate: 30, context: self.ciContext, completion: { image in
+        let colorSpace = self.colorSpace
+        self.entity.frame(for: timestamp, frameRate: 30, completion: { frame in
+            let image = frame.flatMap { mediaEditorEntityFrameCIImage($0, colorSpace: colorSpace) }
             Queue.mainQueue().async {
                 completion(image.flatMap { .ciImage($0, timestamp) })
             }
@@ -370,4 +371,30 @@ final class EntityInputContext: NSObject, InputContext, AVPlayerItemOutputPullDe
     var useAsyncOutput: Bool {
         return true
     }
+}
+
+func mediaEditorEntityFrameCIImage(_ frame: MediaEditorComposerEntityFrame, colorSpace: CGColorSpace) -> CIImage? {
+    var image: CIImage
+    switch frame.content {
+    case let .pixelBuffer(pixelBuffer):
+        if CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_32BGRA {
+            var imageColorSpace = colorSpace
+            if let attachment = CVBufferCopyAttachment(pixelBuffer, kCVImageBufferCGColorSpaceKey, nil), CFGetTypeID(attachment) == CGColorSpace.typeID {
+                imageColorSpace = attachment as! CGColorSpace
+            }
+            image = CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: imageColorSpace])
+        } else {
+            image = CIImage(cvPixelBuffer: pixelBuffer)
+        }
+    case let .image(cgImage):
+        image = CIImage(cgImage: cgImage)
+    }
+    if let alphaMask = frame.alphaMask, let filter = CIFilter(name: "CIBlendWithAlphaMask") {
+        filter.setValue(image, forKey: kCIInputImageKey)
+        filter.setValue(CIImage(cgImage: alphaMask), forKey: kCIInputMaskImageKey)
+        if let output = filter.outputImage {
+            image = output
+        }
+    }
+    return image
 }

@@ -8,17 +8,28 @@ public final class PageIndicatorComponent: Component {
     private let position: CGFloat
     private let inactiveColor: UIColor
     private let activeColor: UIColor
+    /// VoiceOver: when set, the indicator is an adjustable element with this label and "N of M" as its value;
+    /// swiping up or down calls `showPage` with the next or previous index, as swiping the pages does.
+    private let accessibilityLabel: String?
+    private let accessibilityValue: ((Int, Int) -> String)?
+    private let showPage: ((Int) -> Void)?
     
     public init(
         pageCount: Int,
         position: CGFloat,
         inactiveColor: UIColor,
-        activeColor: UIColor
+        activeColor: UIColor,
+        accessibilityLabel: String? = nil,
+        accessibilityValue: ((Int, Int) -> String)? = nil,
+        showPage: ((Int) -> Void)? = nil
     ) {
         self.pageCount = pageCount
         self.position = position
         self.inactiveColor = inactiveColor
         self.activeColor = activeColor
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityValue = accessibilityValue
+        self.showPage = showPage
     }
     
     public static func ==(lhs: PageIndicatorComponent, rhs: PageIndicatorComponent) -> Bool {
@@ -34,11 +45,99 @@ public final class PageIndicatorComponent: Component {
         if !lhs.activeColor.isEqual(rhs.activeColor) {
             return false
         }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private var component: PageIndicatorComponent?
+        
+        /// The page VoiceOver asked for: the pager reports its new position a run loop turn later, and VoiceOver reads the
+        /// value right after the swipe.
+        private var pendingPageIndex: Int?
+        /// The page shown when that request was made.
+        private var pendingFromPageIndex: Int?
+        
+        private var positionPageIndex: Int {
+            guard let component = self.component, component.pageCount > 1 else {
+                return 0
+            }
+            return max(0, min(component.pageCount - 1, Int(round(component.position * CGFloat(component.pageCount - 1)))))
+        }
+        
+        private var currentPageIndex: Int {
+            return self.pendingPageIndex ?? self.positionPageIndex
+        }
+        
+        /// The pager reports its new position on the next run loop turns; if by then it has not moved (it could not
+        /// show the page), the request is dropped so the value says the page that is shown.
+        private func clearPendingPageIfNotShown() {
+            let requestedIndex = self.pendingPageIndex
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: { [weak self] in
+                guard let self, let requestedIndex, self.pendingPageIndex == requestedIndex else {
+                    return
+                }
+                if self.positionPageIndex != requestedIndex {
+                    self.pendingPageIndex = nil
+                    self.pendingFromPageIndex = nil
+                }
+            })
+        }
+        
+        public override var isAccessibilityElement: Bool {
+            get {
+                return self.component?.accessibilityLabel != nil
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityLabel: String? {
+            get {
+                return self.component?.accessibilityLabel
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityValue: String? {
+            get {
+                guard let component = self.component, let accessibilityValue = component.accessibilityValue else {
+                    return nil
+                }
+                return accessibilityValue(self.currentPageIndex + 1, component.pageCount)
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return self.component?.showPage != nil ? .adjustable : []
+            } set(value) {
+            }
+        }
+        
+        public override func accessibilityIncrement() {
+            guard let component = self.component, let showPage = component.showPage, self.currentPageIndex + 1 < component.pageCount else {
+                return
+            }
+            let index = self.currentPageIndex + 1
+            self.pendingFromPageIndex = self.positionPageIndex
+            self.pendingPageIndex = index
+            showPage(index)
+            self.clearPendingPageIfNotShown()
+        }
+        
+        public override func accessibilityDecrement() {
+            guard let component = self.component, let showPage = component.showPage, self.currentPageIndex > 0 else {
+                return
+            }
+            let index = self.currentPageIndex - 1
+            self.pendingFromPageIndex = self.positionPageIndex
+            self.pendingPageIndex = index
+            showPage(index)
+            self.clearPendingPageIfNotShown()
+        }
         
         private let indicatorView: PageIndicatorView
         
@@ -57,6 +156,21 @@ public final class PageIndicatorComponent: Component {
         public func update(component: PageIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
             self.component = component
+            
+            if let pendingPageIndex = self.pendingPageIndex, pendingPageIndex == self.positionPageIndex {
+                // The pager is on the page VoiceOver asked for: say so, as a three-finger page scroll does.
+                self.pendingPageIndex = nil
+                self.pendingFromPageIndex = nil
+                if let accessibilityValue = component.accessibilityValue {
+                    UIAccessibility.post(notification: .pageScrolled, argument: accessibilityValue(pendingPageIndex + 1, component.pageCount))
+                }
+            }
+            
+            if self.pendingPageIndex != nil, let pendingFromPageIndex = self.pendingFromPageIndex, self.positionPageIndex != pendingFromPageIndex {
+                // The pages moved elsewhere (a swipe by hand): the request no longer applies.
+                self.pendingPageIndex = nil
+                self.pendingFromPageIndex = nil
+            }
             
             self.indicatorView.pageCount = component.pageCount
             self.indicatorView.setProgress(progress: component.position, animated: !isFirstTime)

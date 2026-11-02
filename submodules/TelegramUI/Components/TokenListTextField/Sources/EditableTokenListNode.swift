@@ -172,6 +172,12 @@ private final class TokenNode: ASDisplayNode {
             self.emojiTextNode.attributedText = countryFlagAttributedString(countryId: countryId, font: Font.regular(17.0), textColor: .white)
         }
         
+        // One element per token: its title (the avatar and the remove glyph are decoration), as the chat module's copy
+        // of this field (Chat/EditableTokenListNode) reads it.
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = token.title
+        self.accessibilityTraits = [.button]
+        
         self.updateIsSelected(isSelected, animated: false)
     }
     
@@ -211,6 +217,7 @@ private final class TokenNode: ASDisplayNode {
             return
         }
         self.isSelected = isSelected
+        self.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0
@@ -314,6 +321,9 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
+        // The field is labelled by the placeholder; the placeholder text itself is not a separate element.
+        self.placeholderNode.isAccessibilityElement = false
+        self.placeholderNode.accessibilityElementsHidden = true
         
         self.textFieldScrollNode = ASScrollNode()
         self.textFieldScrollNode.view.scrollsToTop = false
@@ -325,6 +335,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.returnKeyType = .done
         self.textFieldNode.textField.keyboardAppearance = theme.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.tintColor = theme.accentColor
+        self.textFieldNode.textField.accessibilityLabel = placeholder
         
         self.caretIndicatorNode = CaretIndicatorNode()
         self.caretIndicatorNode.isLayerBacked = true
@@ -384,6 +395,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         let sideInset: CGFloat = 12.0 + leftInset
+        let rightSideInset: CGFloat = 12.0 + rightInset
         let verticalInset: CGFloat = 6.0
         
         var animationDelay = 0.0
@@ -407,8 +419,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 animateIn = true
             }
             
-            let tokenSize = tokenNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
-            if tokenSize.width + currentOffset.x >= width - sideInset && !currentOffset.x.isEqual(to: sideInset) {
+            let tokenSize = tokenNode.measure(CGSize(width: max(1.0, width - sideInset - rightSideInset), height: CGFloat.greatestFiniteMagnitude))
+            if tokenSize.width + currentOffset.x >= width - rightSideInset && !currentOffset.x.isEqual(to: sideInset) {
                 currentOffset.x = sideInset
                 currentOffset.y += tokenSize.height
             }
@@ -452,14 +464,15 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             }
         }
         
-        let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
-        if width - currentOffset.x < placeholderSize.width {
+        let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - rightSideInset), height: CGFloat.greatestFiniteMagnitude))
+        // The right inset's excess over the left one (iPhone Duo's side strip) is not room for the placeholder.
+        if width - currentOffset.x - max(0.0, rightSideInset - sideInset) < placeholderSize.width {
             currentOffset.y += 28.0
             currentOffset.x = sideInset
         }
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + floor((28.0 - placeholderSize.height) / 2.0)), size: placeholderSize))
         
-        let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - sideInset - 8.0, height: 28.0))
+        let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - rightSideInset - 8.0, height: 28.0))
         let caretNodeFrame = CGRect(origin: CGPoint(x: textNodeFrame.minX, y: textNodeFrame.minY + 4.0 - UIScreenPixel), size: CGSize(width: 2.0, height: 19.0 + UIScreenPixel))
         if case .immediate = transition {
             transition.updateFrame(node: self.textFieldScrollNode, frame: textNodeFrame)

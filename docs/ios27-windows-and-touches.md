@@ -105,6 +105,33 @@ in `-[ASDisplayNode setFrame:]` (debug) or a skipped frame and a misplaced anima
 animate inside the item node and never cross windows; so do sticker sends, which are the other users of the
 file's layer-level `convertAnimatingSourceRect…` helpers.
 
+The third victim did not crash, it was only late: a context menu whose content is a controller (the chat
+preview of a long press on a chat-list search result) is a global overlay too, and with the keyboard up
+`ContextControllerExtractedPresentationNode` converted the source row's centre straight into it to animate
+the preview in and out (and to place it as a popover on layouts that present floating panels). The point
+came back as (inf, inf), so the preview and its actions sprang in from an infinite offset: the screen blurred,
+stayed empty until the 0.42 s spring ended, and the menu then appeared at its final place at once. Those three
+sites use `convertAcrossWindows` now.
+
+The fourth was a morph: a context menu that morphs out of its source (`LensTransitionContainer`, UIKit's liquid
+morph), opened with the keyboard up, as the article editor's bottom-bar menus are. Two things fail between the two
+windows. The morph's attachment point, the source's centre converted into the menu, came back as (inf, inf), so
+`LiquidMorphTransition.animate` refused the morph and the menu faded in and out next to the bar instead. And UIKit
+draws the source inside the morph through a portal, which does not render from the app's window into the keyboard's
+scene: with the point fixed, the morph started and ended on an empty shape, and after the close the source stayed
+hidden until UIKit completed the morph, 1.2 s later. `LensTransitionContainer` now converts with
+`convertAcrossWindows`, and while its menu is in another window than its source it moves the source into the menu's
+window for the menu's lifetime (`CrossWindowSourceTake`: below the menu, at the same place on screen, back in its
+parent when the menu is gone), as the context controller does with an extracted source.
+
+The source stays taken until UIKit completes the close, about 1.4 s after it starts, so a second menu can open from it
+in the meantime. Two things followed from that. Code that recognises its source by where it sits in its own hierarchy
+no longer recognises it: the article editor found the bar's glass by asking whether the tapped item was inside the bar,
+and while the glass was in the keyboard's window the menu opened from the item, which does not morph, with the plain
+scale animation. It now asks whether the item is inside the glass. And the second menu found its source already in its
+window and took nothing, so the first menu's cleanup would have moved the source back to the app's window under it;
+overlapping menus now share the source's take, which ends with the last of them.
+
 ## A layer that renders nothing receives no touches
 
 **`-hitTest:` is not the whole story.** A view whose layer renders nothing at all — `backgroundColor`

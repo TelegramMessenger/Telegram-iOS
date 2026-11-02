@@ -45,6 +45,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     let overflowHeight: CGFloat
     let topInset: CGFloat
     let height: CGFloat
+    /// iPhone Duo's side strips (`entityKeyboardSideStrips`): the pack rows scroll sideways and are clipped to the
+    /// band inside them, while the background spans the strip.
+    let sideStrips: (left: CGFloat, right: CGFloat)
     let displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     
     init(
@@ -52,12 +55,14 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         overflowHeight: CGFloat,
         topInset: CGFloat,
         height: CGFloat,
+        sideStrips: (left: CGFloat, right: CGFloat),
         displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     ) {
         self.theme = theme
         self.overflowHeight = overflowHeight
         self.topInset = topInset
         self.height = height
+        self.sideStrips = sideStrips
         self.displayBackground = displayBackground
     }
     
@@ -72,6 +77,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             return false
         }
         if lhs.topInset != rhs.topInset {
+            return false
+        }
+        if lhs.sideStrips != rhs.sideStrips {
             return false
         }
         if lhs.displayBackground != rhs.displayBackground {
@@ -144,7 +152,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                     let panel = panelEnvironment.contentTopPanels[index]
                     let indexOffset = index - centralIndex
                     
-                    let panelFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * availableSize.width, y: component.topInset - component.overflowHeight), size: CGSize(width: availableSize.width, height: intrinsicHeight + component.overflowHeight))
+                    let panelFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * availableSize.width + component.sideStrips.left, y: component.topInset - component.overflowHeight), size: CGSize(width: availableSize.width - component.sideStrips.left - component.sideStrips.right, height: intrinsicHeight + component.overflowHeight))
                     
                     let isInBounds = visibleBounds.intersects(panelFrame)
                     let isPartOfTransition: Bool
@@ -166,6 +174,8 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             panelView = PanelView()
                             self.panelViews[panel.id] = panelView
                             self.addSubview(panelView.view)
+                            // Clipped like the panel itself, so the mirrored icons stay out of a side strip.
+                            panelView.tintContentView.clipsToBounds = true
                             self.tintContentMask.addSubview(panelView.tintContentView)
                         }
                         

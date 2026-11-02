@@ -85,6 +85,69 @@ public struct TelegramMessageReadMetric {
     }
 }
 
+final class StoryViewRefreshContext {
+    struct Request {
+        let id: UUID
+        let storyIds: [StoryId]
+    }
+
+    private let pending = Atomic<[StoryId: [UUID]]>(value: [:])
+
+    func begin(peerId: PeerId, ids: [Int32]) -> Request {
+        let request = Request(id: UUID(), storyIds: ids.map { StoryId(peerId: peerId, id: $0) })
+        _ = self.pending.modify { pending in
+            var pending = pending
+            for id in request.storyIds { pending[id, default: []].append(request.id) }
+            return pending
+        }
+        return request
+    }
+
+    func contains(peerId: PeerId, id: Int32, request: Request) -> Bool {
+        return self.pending.with { $0[StoryId(peerId: peerId, id: id)]?.contains(request.id) == true }
+    }
+
+    func take(_ ids: Set<Int32>, for request: Request) -> Set<Int32> {
+        var accepted = Set<Int32>()
+        _ = self.pending.modify { pending in
+            var pending = pending
+            for id in request.storyIds where ids.contains(id.id) {
+                guard var requests = pending[id], let index = requests.firstIndex(of: request.id) else { continue }
+                accepted.insert(id.id)
+                requests.removeSubrange(...index)
+                if requests.isEmpty { pending.removeValue(forKey: id) } else { pending[id] = requests }
+            }
+            return pending
+        }
+        return accepted
+    }
+
+    func take(_ views: [Int32: Stories.Item.Views], for request: Request) -> [Int32: Stories.Item.Views] {
+        let accepted = self.take(Set(views.keys), for: request)
+        return views.filter { accepted.contains($0.key) }
+    }
+
+    func invalidate(peerId: PeerId, ids: [Int32]) {
+        _ = self.pending.modify { pending in
+            var pending = pending
+            for id in ids { pending.removeValue(forKey: StoryId(peerId: peerId, id: id)) }
+            return pending
+        }
+    }
+
+    func finish(_ request: Request) {
+        _ = self.pending.modify { pending in
+            var pending = pending
+            for id in request.storyIds {
+                guard var requests = pending[id], let index = requests.firstIndex(of: request.id) else { continue }
+                requests.remove(at: index)
+                if requests.isEmpty { pending.removeValue(forKey: id) } else { pending[id] = requests }
+            }
+            return pending
+        }
+    }
+}
+
 public extension TelegramEngine {
     final class Messages {
         // Module-internal rather than private: the MediaPreupload facade lives in its own file and
@@ -262,9 +325,21 @@ public extension TelegramEngine {
             return _internal_requestUnpinAllMessages(account: self.account, peerId: peerId, threadId: threadId)
         }
 
-        public func fetchChannelReplyThreadMessage(messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
+        /// `atMessageId` is a comment's id in the discussion group's id space (a link's `?comment=`): the group
+        /// may not be known before the thread is fetched.
+        public func fetchChannelReplyThreadMessage(messageId: MessageId, atMessageId: MessageId.Id?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
             return _internal_fetchChannelReplyThreadMessage(account: self.account, messageId: messageId, atMessageId: atMessageId)
         }
+
+        #if DEBUG
+        public func debugResetDiscussionCaches(posts: [(username: String, postId: Int32)], dropPosts: Bool) -> Signal<Never, NoError> {
+            return _internal_debugResetDiscussionCaches(account: self.account, posts: posts, dropPosts: dropPosts)
+        }
+        
+        public func debugResetForumHistory(usernames: [String]) -> Signal<Never, NoError> {
+            return _internal_debugResetForumHistory(account: self.account, usernames: usernames)
+        }
+        #endif
 
         public func requestStartBot(botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
             return _internal_requestStartBot(account: self.account, botPeerId: botPeerId, payload: payload)
@@ -1025,6 +1100,25 @@ public extension TelegramEngine {
             return _internal_getMessagesFactCheck(account: self.account, messageIds: messageIds)
         }
         
+        /// Debug: inserts `posts` into `peerId` as local widget messages (each post, then its photos), returning how many
+        /// messages were added.
+        public func debugInsertLocalWidgetMessages(peerId: EnginePeer.Id, posts: [EngineLocalWidgetPost]) -> Signal<Int, NoError> {
+            return _internal_debugInsertLocalWidgetMessages(account: self.account, peerId: peerId, posts: posts)
+        }
+
+        /// widget-sandbox v0.2: polls the shared state of the widget `widgetId` (`messages.getWidgetPublicData`) while
+        /// subscribed, with `messageId` as a carrier: a subscription is one widget on screen that watches. A new state is
+        /// written into the stored widget of each registered message.
+        public func pollWidgetPublicData(messageId: EngineMessage.Id, widgetId: Int64) -> Signal<Never, NoError> {
+            return self.account.viewTracker.widgetPublicDataPolling.poll(messageId: messageId, widgetId: widgetId)
+        }
+
+        /// A message widget's query to its bot (widget-sandbox v0.2; its type since v0.5.0): the answer's `result`, or
+        /// why there is none.
+        public func requestBotWidgetQueryAnswer(messageId: EngineMessage.Id, queryType: BotWidgetQueryType, data: Data) -> Signal<Data?, BotWidgetQueryError> {
+            return _internal_requestBotWidgetQueryAnswer(postbox: self.account.postbox, network: self.account.network, messageId: messageId, queryType: queryType, data: data)
+        }
+
         public func debugAddHoles() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
@@ -1571,48 +1665,65 @@ public extension TelegramEngine {
                 return .complete()
             }
             
-            return _internal_getStoryViews(account: self.account, peerId: peerId, ids: ids)
-            |> mapToSignal { views -> Signal<Never, NoError> in
-                return self.account.postbox.transaction { transaction -> Void in
-                    var currentItems = transaction.getStoryItems(peerId: peerId)
-                    for i in 0 ..< currentItems.count {
-                        if ids.contains(currentItems[i].id) {
-                            if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self) {
-                                let updatedItem: Stories.StoredItem = .item(Stories.Item(
-                                    id: item.id,
-                                    timestamp: item.timestamp,
-                                    expirationTimestamp: item.expirationTimestamp,
-                                    media: item.media,
-                                    alternativeMediaList: item.alternativeMediaList,
-                                    mediaAreas: item.mediaAreas,
-                                    text: item.text,
-                                    entities: item.entities,
-                                    views: views[currentItems[i].id],
-                                    privacy: item.privacy,
-                                    isPinned: item.isPinned,
-                                    isExpired: item.isExpired,
-                                    isPublic: item.isPublic,
-                                    isCloseFriends: item.isCloseFriends,
-                                    isContacts: item.isContacts,
-                                    isSelectedContacts: item.isSelectedContacts,
-                                    isForwardingDisabled: item.isForwardingDisabled,
-                                    isEdited: item.isEdited,
-                                    isMy: item.isMy,
-                                    myReaction: item.myReaction,
-                                    forwardInfo: item.forwardInfo,
-                                    music: item.music,
-                                    authorId: item.authorId,
-                                    folderIds: item.folderIds
-                                ))
-                                if let entry = CodableEntry(updatedItem) {
-                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends, isLiveStream: updatedItem.isLiveStream)
-                                }
+            var seenIds = Set<Int32>()
+            let ids = ids.filter { $0 > 0 && seenIds.insert($0).inserted }
+            guard !ids.isEmpty else { return .complete() }
+
+            let account = self.account
+            return Signal { subscriber in
+                let lifecycle = Atomic<(cancelled: Bool, committed: Bool)>(value: (false, false))
+                let request = account.storyViewRefreshContext.begin(peerId: peerId, ids: ids)
+                let disposable = (_internal_getStoryViews(account: account, peerId: peerId, ids: ids)
+                |> mapToSignal { views -> Signal<Never, NoError> in
+                    guard !views.isEmpty else { return .complete() }
+                    return account.postbox.transaction { transaction -> [Int32: Stories.Item.Views] in
+                        var canCommit = false
+                        _ = lifecycle.modify { state in
+                            guard !state.cancelled else { return state }
+                            canCommit = true
+                            return (false, true)
+                        }
+                        guard canCommit else { return [:] }
+                        let eligible = views.filter {
+                            let storyId = StoryId(peerId: peerId, id: $0.key)
+                            guard !account.storyReactionContext.isPending(storyId) else {
+                                if account.storyViewRefreshContext.contains(peerId: peerId, id: $0.key, request: request) { account.storyReactionContext.requireRefresh(for: storyId) }
+                                return false
+                            }
+                            return true
+                        }
+                        let accepted = account.storyViewRefreshContext.take(eligible, for: request)
+                        var snapshots: [Int32: StoryRefreshSnapshot] = [:]
+                        for id in accepted.keys where account.storyRefreshContext.isPending(StoryId(peerId: peerId, id: id)) {
+                            snapshots[id] = StoryRefreshSnapshot(transaction: transaction, peerId: peerId, id: id)
+                        }
+                        _internal_applyStoryViews(transaction: transaction, peerId: peerId, views: accepted)
+                        for (id, value) in accepted {
+                            if let previous = snapshots[id] {
+                                account.storyRefreshContext.advance(peerId: peerId, id: id, from: previous, to: StoryRefreshSnapshot(transaction: transaction, peerId: peerId, id: id), views: value)
                             }
                         }
+                        return accepted
                     }
-                    transaction.setStoryItems(peerId: peerId, items: currentItems)
+                    |> beforeNext { accepted in
+                        if !accepted.isEmpty {
+                            account.stateManager.injectStoryUpdates(updates: [.updateViews(peerId: peerId, views: accepted)])
+                        }
+                    }
+                    |> ignoreValues
+                }).start(completed: {
+                    account.storyViewRefreshContext.finish(request)
+                    subscriber.putCompletion()
+                })
+                return ActionDisposable {
+                    var committed = false
+                    _ = lifecycle.modify { state in
+                        committed = state.committed
+                        return (true, state.committed)
+                    }
+                    account.storyViewRefreshContext.finish(request)
+                    if !committed { disposable.dispose() }
                 }
-                |> ignoreValues
             }
         }
         
@@ -1671,7 +1782,7 @@ public extension TelegramEngine {
             return _internal_editStory(account: self.account, peerId: peerId, id: id, media: media, mediaAreas: mediaAreas, text: text, entities: entities, privacy: privacy)
         }
         
-        public func editStoryPrivacy(id: Int32, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+        public func editStoryPrivacy(id: Int32, privacy: EngineStoryPrivacy) -> Signal<Never, EditStoryPrivacyError> {
             return _internal_editStoryPrivacy(account: self.account, id: id, privacy: privacy)
         }
         
@@ -1679,7 +1790,7 @@ public extension TelegramEngine {
             return _internal_checkStoriesUploadAvailability(account: self.account, target: target)
         }
         
-        public func deleteStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
+        public func deleteStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, DeleteStoriesError> {
             return _internal_deleteStories(account: self.account, peerId: peerId, ids: ids)
         }
         
@@ -1687,11 +1798,11 @@ public extension TelegramEngine {
             return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id, asPinned: asPinned)
         }
         
-        public func updateStoriesArePinned(peerId: EnginePeer.Id, ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
+        public func updateStoriesArePinned(peerId: EnginePeer.Id, ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, UpdateStoriesArePinnedError> {
             return _internal_updateStoriesArePinned(account: self.account, peerId: peerId, ids: ids, isPinned: isPinned)
         }
         
-        public func updatePinnedToTopStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
+        public func updatePinnedToTopStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, UpdatePinnedToTopStoriesError> {
             return _internal_updatePinnedToTopStories(account: self.account, peerId: peerId, ids: ids)
         }
         
@@ -1711,6 +1822,10 @@ public extension TelegramEngine {
             return _internal_setStoryReaction(account: self.account, peerId: peerId, id: id, reaction: reaction)
         }
         
+        public func setStoryReaction(peerId: EnginePeer.Id, id: Int32, reaction: MessageReaction.Reaction?, previousReaction: MessageReaction.Reaction?) -> Signal<Never, NoError> {
+            return _internal_setStoryReaction(account: self.account, peerId: peerId, id: id, reaction: reaction, knownPreviousReaction: .some(previousReaction))
+        }
+
         public func sendStoryStars(peerId: EnginePeer.Id, id: Int32, count: Int) -> Signal<Never, NoError> {
             return _internal_sendStoryStars(account: self.account, peerId: peerId, id: id, count: count)
         }
@@ -1783,8 +1898,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func searchLocalSavedMessagesPeers(query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
-            return _internal_searchLocalSavedMessagesPeers(account: self.account, query: query, indexNameMapping: indexNameMapping)
+        public func searchLocalSavedMessagesPeers(peerId: EnginePeer.Id, query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
+            return _internal_searchLocalSavedMessagesPeers(account: self.account, peerId: peerId, query: query, indexNameMapping: indexNameMapping)
         }
         
         public func internalReindexSavedMessagesCustomTagsIfNeeded(threadId: Int64?, tag: MemoryBuffer) {

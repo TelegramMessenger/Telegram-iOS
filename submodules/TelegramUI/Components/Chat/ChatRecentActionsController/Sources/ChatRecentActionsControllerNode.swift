@@ -32,6 +32,7 @@ import ChatLoadingNode
 import GlassBackgroundComponent
 import ComponentFlow
 import UrlWhitelist
+import OpenUserGeneratedUrl
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -491,7 +492,20 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 self.expandedDeletedMessages.insert(message.id)
             }
         }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url in
-            self?.openUrl(url.url, progress: url.progress)
+            guard let self else {
+                return
+            }
+            if url.forceConcealed {
+                // A link that must be confirmed (a message widget's, which the bubble lays out here when a pass runs
+                // on main): "Open link?" first, then the log's own opener.
+                let _ = OpenUserGeneratedUrl.openUserGeneratedUrl(context: self.context, peerId: nil, url: url.url, webpage: nil, concealed: true, forceConcealed: true, skipUrlAuth: true, skipConcealedAlert: false, forceDark: false, present: { [weak self] c in
+                    self?.presentController(c, .window(.root), nil)
+                }, openResolved: { [weak self] _ in
+                    self?.openUrl(url.url, progress: url.progress)
+                }, progress: url.progress, alertDisplayUpdated: url.alertDisplayUpdated, concealedAlertOption: nil, fullUrl: url.fullUrl)
+                return
+            }
+            self.openUrl(url.url, progress: url.progress)
         }, openExternalInstantPage: { _ in
         }, shareCurrentLocation: { _ in }, shareAccountContact: { _ in }, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {

@@ -29,7 +29,10 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     private let titleNode: ASTextNode
     private let currentOptionNode: ASTextNode
+    private let titleActivateAreaNode: AccessibilityAreaNode
+    private let currentOptionActivateAreaNode: AccessibilityAreaNode
     private let termsNode: ImmediateTextNode
+    private let termsActivateAreaNode: AccessibilityAreaNode
     
     private let firstNameField: TextFieldNode
     private let lastNameField: TextFieldNode
@@ -91,11 +94,19 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.accessibilityIdentifier = "Auth.SetName.Title"
+        // VoiceOver: the title and the text through area nodes positioned in layout, as on the phone, code and
+        // password screens.
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityLabel = self.strings.Login_InfoTitle
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
 
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.currentOptionActivateAreaNode = AccessibilityAreaNode()
+        self.currentOptionActivateAreaNode.accessibilityLabel = self.strings.Login_InfoHelp
+        self.currentOptionActivateAreaNode.accessibilityTraits = .staticText
         
         self.termsNode = ImmediateTextNode()
         self.termsNode.textAlignment = .center
@@ -104,6 +115,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         self.termsNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+        
+        // VoiceOver: one link element over the text; activating it opens the Terms of Service, as a tap on the link does.
+        self.termsActivateAreaNode = AccessibilityAreaNode()
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
@@ -127,6 +141,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.firstNameField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.firstNameField.textField.tintColor = theme.list.itemAccentColor
         self.firstNameField.textField.accessibilityIdentifier = "Auth.SetName.FirstNameField"
+        self.firstNameField.textField.accessibilityLabel = self.strings.UserInfo_FirstNamePlaceholder
 
         self.lastNameField = TextFieldNode()
         self.lastNameField.textField.font = Font.regular(20.0)
@@ -142,6 +157,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.lastNameField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.lastNameField.textField.tintColor = theme.list.itemAccentColor
         self.lastNameField.textField.accessibilityIdentifier = "Auth.SetName.LastNameField"
+        self.lastNameField.textField.accessibilityLabel = self.strings.UserInfo_LastNamePlaceholder
 
         self.currentPhotoNode = ASImageNode()
         self.currentPhotoNode.isUserInteractionEnabled = false
@@ -154,6 +170,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
                 
         self.addPhotoButton.addSubnode(self.currentPhotoNode)
         self.addPhotoButton.allowsGroupOpacity = true
+        // The camera icon (or the chosen photo) has no text: it reads as the action it starts.
+        self.addPhotoButton.accessibilityLabel = self.strings.Settings_SetProfilePhoto
+        self.addPhotoButton.accessibilityTraits = .button
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), glass: false, height: 50.0, cornerRadius: 50.0 * 0.5)
         self.proceedNode.progressType = .embedded
@@ -178,6 +197,13 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addSubnode(self.currentOptionNode)
         self.addSubnode(self.termsNode)
         self.termsNode.isHidden = true
+        self.addSubnode(self.termsActivateAreaNode)
+        self.addSubnode(self.titleActivateAreaNode)
+        self.addSubnode(self.currentOptionActivateAreaNode)
+        self.termsActivateAreaNode.isHidden = true
+        self.termsActivateAreaNode.applyAccessibilityText(self.termsNode.attributedText ?? NSAttributedString(), linkAttribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), open: { [weak self] _ in
+            self?.openTermsOfService?()
+        })
         self.addSubnode(self.addPhotoButton)
         self.addSubnode(self.proceedNode)
         
@@ -207,6 +233,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     func updateData(firstName: String, lastName: String, hasTermsOfService: Bool) {
         self.termsNode.isHidden = !hasTermsOfService
+        self.termsActivateAreaNode.isHidden = !hasTermsOfService
         self.firstNameField.textField.attributedText = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         self.lastNameField.textField.attributedText = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         
@@ -226,18 +253,16 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
             layout = layout.withUpdatedInputHeight(previousInputHeight)
         }
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
-        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let maximumWidth: CGFloat = min(430.0, bandWidth)
         
-        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        // iPhone Duo: the bottom button keeps to the content's axis (authorizationBottomBand): unfolded it spans the
+        // side strip, clear only of a corner block at the bottom; folded it keeps to the content band.
+        let (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
         let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         var insets = layout.insets(options: [.statusBar])
@@ -287,6 +312,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         }
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: bandMinX, y: insets.top), size: CGSize(width: bandWidth, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
+        self.termsActivateAreaNode.frame = self.termsNode.frame
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.currentOptionActivateAreaNode.frame = self.currentOptionNode.frame
     }
     
     func activateInput() {

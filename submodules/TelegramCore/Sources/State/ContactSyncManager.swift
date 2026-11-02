@@ -30,7 +30,6 @@ private enum ContactSyncOperationContent {
     case waitForUpdatedState
     case updatePresences
     case sync(importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]?)
-    case updateIsContact([(PeerId, Bool)])
 }
 
 private final class ContactSyncManagerImpl {
@@ -102,10 +101,6 @@ private final class ContactSyncManagerImpl {
         }))
     }
     
-    func addIsContactUpdates(_ updates: [(PeerId, Bool)]) {
-        self.addOperation(.updateIsContact(updates))
-    }
-    
     func addOperation(_ content: ContactSyncOperationContent) {
         let id = self.nextId
         self.nextId += 1
@@ -131,26 +126,6 @@ private final class ContactSyncManagerImpl {
                     }
                 }
                 self.operations.append(operation)
-            case let .updateIsContact(updates):
-                var mergedUpdates: [(PeerId, Bool)] = []
-                var removeIndices: [Int] = []
-                for i in 0 ..< self.operations.count {
-                    if case let .updateIsContact(operationUpdates) = self.operations[i].content {
-                        if !self.operations[i].isRunning {
-                            mergedUpdates.append(contentsOf: operationUpdates)
-                            removeIndices.append(i)
-                        }
-                    }
-                }
-                mergedUpdates.append(contentsOf: updates)
-                for index in removeIndices.reversed() {
-                    self.operations.remove(at: index)
-                }
-                if self.operations.isEmpty || !self.operations[0].isRunning {
-                    self.operations.insert(operation, at: 0)
-                } else {
-                    self.operations.insert(operation, at: 1)
-                }
         }
         self.updateOperations()
     }
@@ -210,21 +185,6 @@ private final class ContactSyncManagerImpl {
                         strongSelf.reimportAttempts[identifier] = timestamp
                     }
                     
-                    completion()
-                }))
-            case let .updateIsContact(updates):
-                disposable.add((self.postbox.transaction { transaction -> Void in
-                    var contactPeerIds = transaction.getContactPeerIds()
-                    for (peerId, isContact) in updates {
-                        if isContact {
-                            contactPeerIds.insert(peerId)
-                        } else {
-                            contactPeerIds.remove(peerId)
-                        }
-                    }
-                    transaction.replaceContactPeerIds(contactPeerIds)
-                }
-                |> deliverOnMainQueue).start(completed: {
                     completion()
                 }))
         }
@@ -433,12 +393,6 @@ final class ContactSyncManager {
     func beginSync(importableContacts: Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError>) {
         self.impl.with { impl in
             impl.beginSync(importableContacts: importableContacts)
-        }
-    }
-    
-    func addIsContactUpdates(_ updates: [(PeerId, Bool)]) {
-        self.impl.with { impl in
-            impl.addIsContactUpdates(updates)
         }
     }
 }

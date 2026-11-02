@@ -21,6 +21,20 @@ public enum ItemListNavigationButtonStyle {
     }
 }
 
+/// VoiceOver: an icon-only bar button is named by what it does.
+func itemListNavigationIconAccessibilityLabel(_ icon: ItemListNavigationButtonContentIcon, strings: PresentationStrings) -> String? {
+    switch icon {
+    case .search:
+        return strings.Common_Search
+    case .add:
+        return strings.VoiceOver_Common_Add
+    case .action:
+        return strings.Conversation_ContextMenuShare
+    case .close, .done:
+        return nil
+    }
+}
+
 public enum ItemListNavigationButtonContentIcon {
     case search
     case add
@@ -455,6 +469,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                             image = nil
                                         }
                                         item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                                        item.accessibilityLabel = itemListNavigationIconAccessibilityLabel(icon, strings: controllerState.presentationData.strings)
                                     }
                                 case let .node(node):
                                     item = UIBarButtonItem(customDisplayNode: node)
@@ -529,6 +544,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                                 image = nil
                                             }
                                             item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                            item.accessibilityLabel = itemListNavigationIconAccessibilityLabel(icon, strings: controllerState.presentationData.strings)
                                         }
                                     case let .node(node):
                                         item = UIBarButtonItem(customDisplayNode: node)

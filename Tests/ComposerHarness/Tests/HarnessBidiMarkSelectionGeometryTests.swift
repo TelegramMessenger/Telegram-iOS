@@ -18,7 +18,7 @@ import ChatInputTextNode
 /// range.
 ///
 /// **Suspected cause.** The per-line selection-fill rule decides RTL from the LINE and flips the covered
-/// side (RichTextEditor `CLAUDE.md`, "Block selection rectangles": "the sides are LOGICAL and the
+/// side (RichTextEngineEditor `CLAUDE.md`, "Block selection rectangles": "the sides are LOGICAL and the
 /// direction is the LINE's"); for a line whose base direction is RTL while every glyph is LTR the fill
 /// comes out zero-width or inverted, is reported as "failed to measure", and the coordinator discards the
 /// whole answer. Narrow in practice (a paragraph must start with the mark), but the whole selection vanishes.

@@ -239,7 +239,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                     arguments.openTimeBasedManual(.to)
                 })
             case let .brightnessValue(theme, value):
-                return ThemeSettingsBrightnessItem(theme: theme, value: Int32(value * 100.0), sectionId: self.section, updated: { value in
+                return ThemeSettingsBrightnessItem(systemStyle: .glass, theme: theme, value: Int32(value * 100.0), sectionId: self.section, updated: { value in
                     arguments.updateAutomaticBrightness(Double(value) / 100.0)
                 })
             case let .settingInfo(_, text):
@@ -372,12 +372,12 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         |> take(1)
         |> deliverOnMainQueue).start(next: { stagingSettings, sharedData in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
-            let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
+            let updated = f(stagingSettings ?? settings.currentModeAutomaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
                 let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     var current = current
-                    current.automaticThemeSwitchSetting = updated
+                    current.currentModeAutomaticThemeSwitchSetting = updated
                     return current
                 }).start()
             }
@@ -585,14 +585,15 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         
-        let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]
+        // Without bubbles Neutral Night leads, as Neutral leads Appearance.
+        let defaultThemes: [PresentationThemeReference] = settings.chatBubbleSettings.bubbleMode ? [.builtin(.night), .builtin(.nightAccent)] : [.builtin(.neutralNight), .builtin(.night), .builtin(.nightAccent)]
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }
         
         var availableThemes = defaultThemes
         availableThemes.append(contentsOf: cloudThemes)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, settings: settings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, availableThemes: availableThemes, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, settings: settings, switchSetting: stagingSettings ?? settings.currentModeAutomaticThemeSwitchSetting, availableThemes: availableThemes, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

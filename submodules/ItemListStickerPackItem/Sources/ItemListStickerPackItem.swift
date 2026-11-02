@@ -555,11 +555,16 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = titleAttributedString?.string ?? ""
                     strongSelf.activateArea.accessibilityValue = statusAttributedString?.string ?? ""
-                    if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = []
-                    } else {
-                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    var accessibilityTraits: UIAccessibilityTraits = []
+                    if item.action != nil {
+                        accessibilityTraits.insert(.button)
                     }
+                    if !item.enabled {
+                        accessibilityTraits.insert(.notEnabled)
+                    }
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
+                    let accessibilityCustomActions = strongSelf.revealOptionsAccessibilityCustomActions(packRevealOptions)
+                    strongSelf.activateArea.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     
                     if fileUpdated {
                         strongSelf.currentThumbnailItem = thumbnailItem

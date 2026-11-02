@@ -189,6 +189,7 @@ private final class ProxySettingsActionItemNode: ListViewItemNode, ItemListItemN
                     strongSelf.item = item
                     
                     strongSelf.accessibilityLabel = item.title
+                    strongSelf.accessibilityTraits = .button
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor

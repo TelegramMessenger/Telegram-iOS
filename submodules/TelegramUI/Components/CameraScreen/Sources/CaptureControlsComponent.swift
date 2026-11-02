@@ -25,7 +25,18 @@ enum ShutterButtonState: Equatable {
     case live(active: Bool, progress: Bool)
 }
 
-private let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
+let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
+
+struct CaptureControlsBottomRowPlacement: Equatable {
+    var sideInset: CGFloat
+    var topInset: CGFloat
+
+    init(rowCenterOffsetFromShutter: CGFloat, buttonSideCenterInset: CGFloat) {
+        let buttonSide: CGFloat = 48.0
+        self.sideInset = buttonSideCenterInset - buttonSide / 2.0
+        self.topInset = rowCenterOffsetFromShutter - maximumShutterSize.height / 2.0 - buttonSide / 2.0
+    }
+}
 
 private extension SimpleShapeLayer {
     func animateStrokeStart(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
@@ -104,7 +115,7 @@ private final class ShutterButtonContentComponent: Component {
     final class View: UIView {
         private var component: ShutterButtonContentComponent?
         
-        private let backgroundView = BlurredBackgroundView(color: UIColor(rgb: 0x222222, alpha: 0.3))
+        private let backgroundView = GlassBackgroundView()
         
         private let underRingLayer = SimpleShapeLayer()
         private let ringLayer = SimpleShapeLayer()
@@ -123,6 +134,7 @@ private final class ShutterButtonContentComponent: Component {
         init() {
             super.init(frame: CGRect())
             
+            self.backgroundView.isUserInteractionEnabled = false
             self.addSubview(self.backgroundView)
                         
             self.layer.allowsGroupOpacity = true
@@ -199,7 +211,7 @@ private final class ShutterButtonContentComponent: Component {
             self.component = component
             
             if component.hasAppeared && self.blobView == nil {
-                self.blobView = ShutterBlobView(test: false)
+                self.blobView = ShutterBlobView()
                 self.insertSubview(self.blobView!, aboveSubview: self.backgroundView)
                 self.insertSubview(self.chromeView, aboveSubview: self.blobView!)
                 
@@ -328,7 +340,6 @@ private final class ShutterButtonContentComponent: Component {
                 }
             }
 
-            transition.setAlpha(view: self.backgroundView, alpha: glassAlpha)
             transition.setAlpha(view: self.chromeView, alpha: chromeAlpha)
             
             if let labelView = self.label.view {
@@ -456,7 +467,7 @@ private final class ShutterButtonContentComponent: Component {
             self.progressLayer.animateStrokeEnd(from: previousValue, to: self.progressLayer.strokeEnd, duration: 0.33)
             
             let backgroundFrame = buttonFrame.insetBy(dx: -6.0, dy: -6.0)
-            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, isDark: true, tintColor: .init(kind: .custom(style: .default, color: UIColor(white: 0.0, alpha: 0.5))), isVisible: glassAlpha > 0.0, transition: transition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
                         
             return maximumShutterSize
@@ -655,6 +666,18 @@ final class LockContentComponent: Component {
     }
 }
 
+private func captureControlsBottomGlassButton(content: AnyComponentWithIdentity<Empty>, action: @escaping (UIView) -> Void, accessibility: ComponentAccessibility? = nil) -> GlassBarButtonComponent {
+    return GlassBarButtonComponent(
+        size: CGSize(width: cameraScreenBottomButtonSize, height: cameraScreenBottomButtonSize),
+        backgroundColor: nil,
+        isDark: true,
+        state: .glass,
+        component: content,
+        action: action,
+        accessibility: accessibility
+    )
+}
+
 private let galleryImageQueue = Queue(name: "CameraGalleryThumbnail")
 private let cachedGalleryImage = Atomic<UIImage?>(value: nil)
 
@@ -701,15 +724,19 @@ final class CaptureControlsComponent: Component {
     let isTablet: Bool
     let isSticker: Bool
     let hasGallery: Bool
+    let isChat: Bool
+    let holdMinimumPressDuration: Double
     let hasAppeared: Bool
     let hasAccess: Bool
     let hideControls: Bool
     let controlsBottomInset: CGFloat
+    let bottomRowPlacement: CaptureControlsBottomRowPlacement?
     let collageProgress: Float
     let collageCount: Int?
     let tintColor: UIColor
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
+    let chatTrailingButton: CameraScreenChatTrailingButton?
     let resolvedCodePeer: EnginePeer?
     let tag: AnyObject?
     let galleryButtonTag: AnyObject?
@@ -718,6 +745,9 @@ final class CaptureControlsComponent: Component {
     let shutterReleased: () -> Void
     let lockRecording: () -> Void
     let flipTapped: () -> Void
+    let showsCloseButton: Bool
+    let closeTapped: () -> Void
+    let chatDoneTapped: () -> Void
     let galleryTapped: () -> Void
     let settingsTapped: () -> Void
     let swipeHintUpdated: (SwipeHint) -> Void
@@ -731,15 +761,19 @@ final class CaptureControlsComponent: Component {
         isTablet: Bool,
         isSticker: Bool,
         hasGallery: Bool,
+        isChat: Bool = false,
+        holdMinimumPressDuration: Double = 0.3,
         hasAppeared: Bool,
         hasAccess: Bool,
         hideControls: Bool,
         controlsBottomInset: CGFloat,
+        bottomRowPlacement: CaptureControlsBottomRowPlacement? = nil,
         collageProgress: Float,
         collageCount: Int?,
         tintColor: UIColor,
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
+        chatTrailingButton: CameraScreenChatTrailingButton? = nil,
         resolvedCodePeer: EnginePeer?,
         tag: AnyObject?,
         galleryButtonTag: AnyObject?,
@@ -748,6 +782,9 @@ final class CaptureControlsComponent: Component {
         shutterReleased: @escaping () -> Void,
         lockRecording: @escaping () -> Void,
         flipTapped: @escaping () -> Void,
+        showsCloseButton: Bool = false,
+        closeTapped: @escaping () -> Void = {},
+        chatDoneTapped: @escaping () -> Void = {},
         galleryTapped: @escaping () -> Void,
         settingsTapped: @escaping () -> Void,
         swipeHintUpdated: @escaping (SwipeHint) -> Void,
@@ -760,15 +797,19 @@ final class CaptureControlsComponent: Component {
         self.isTablet = isTablet
         self.isSticker = isSticker
         self.hasGallery = hasGallery
+        self.isChat = isChat
+        self.holdMinimumPressDuration = holdMinimumPressDuration
         self.hasAppeared = hasAppeared
         self.hasAccess = hasAccess
         self.hideControls = hideControls
         self.controlsBottomInset = controlsBottomInset
+        self.bottomRowPlacement = bottomRowPlacement
         self.collageProgress = collageProgress
         self.collageCount = collageCount
         self.tintColor = tintColor
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
+        self.chatTrailingButton = chatTrailingButton
         self.resolvedCodePeer = resolvedCodePeer
         self.tag = tag
         self.galleryButtonTag = galleryButtonTag
@@ -777,6 +818,9 @@ final class CaptureControlsComponent: Component {
         self.shutterReleased = shutterReleased
         self.lockRecording = lockRecording
         self.flipTapped = flipTapped
+        self.showsCloseButton = showsCloseButton
+        self.closeTapped = closeTapped
+        self.chatDoneTapped = chatDoneTapped
         self.galleryTapped = galleryTapped
         self.settingsTapped = settingsTapped
         self.swipeHintUpdated = swipeHintUpdated
@@ -798,6 +842,12 @@ final class CaptureControlsComponent: Component {
         if lhs.hasGallery != rhs.hasGallery {
             return false
         }
+        if lhs.isChat != rhs.isChat {
+            return false
+        }
+        if lhs.holdMinimumPressDuration != rhs.holdMinimumPressDuration {
+            return false
+        }
         if lhs.hasAppeared != rhs.hasAppeared {
             return false
         }
@@ -805,6 +855,9 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.hideControls != rhs.hideControls {
+            return false
+        }
+        if lhs.bottomRowPlacement != rhs.bottomRowPlacement {
             return false
         }
         if lhs.controlsBottomInset != rhs.controlsBottomInset {
@@ -823,6 +876,12 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.lastGalleryAsset?.localIdentifier != rhs.lastGalleryAsset?.localIdentifier {
+            return false
+        }
+        if lhs.showsCloseButton != rhs.showsCloseButton {
+            return false
+        }
+        if lhs.chatTrailingButton != rhs.chatTrailingButton {
             return false
         }
         if lhs.resolvedCodePeer != rhs.resolvedCodePeer {
@@ -907,6 +966,61 @@ final class CaptureControlsComponent: Component {
         private let bottomContainerView = GlassBackgroundContainerView()
         private let bottomSettingsButton = ComponentView<Empty>()
         private let bottomFlipButton = ComponentView<Empty>()
+        private var previousChatTrailingButton: CameraScreenChatTrailingButton?
+        private var bottomCloseButton: ComponentView<Empty>?
+        private var bottomFlipButtonUnderlay: UIView?
+        private var bottomCloseButtonUnderlay: UIView?
+        private var bottomSettingsButtonUnderlay: UIView?
+        private var galleryGlassView: GlassBackgroundView?
+        private var containerScale: CameraScreenContainerScale?
+        private var originInContainer: CGPoint = .zero
+        private var galleryUnderlay: UIView?
+        private var galleryGlassFrame: CGRect?
+        private(set) var isHandedOffToEditor = false
+
+        var bottomFlipButtonSlotView: UIView? {
+            return self.bottomFlipButton.view
+        }
+
+        var bottomCloseButtonView: UIView? {
+            return self.bottomCloseButton?.view
+        }
+
+        private var bottomSettingsButtonIsHidden: Bool = false
+        
+        private func updateBottomButtonUnderlay(_ current: UIView?, frame: CGRect, isHidden: Bool, transition: ComponentTransition) -> UIView? {
+            let underlay: UIView
+            if let current {
+                underlay = current
+            } else {
+                underlay = UIView()
+                underlay.isUserInteractionEnabled = false
+                underlay.backgroundColor = UIColor(rgb: 0xffffff, alpha: cameraScreenModeControlUnderlayAlpha)
+                underlay.clipsToBounds = true
+                self.insertSubview(underlay, belowSubview: self.bottomContainerView)
+            }
+            underlay.layer.cornerRadius = frame.height * 0.5
+            transition.setBounds(view: underlay, bounds: CGRect(origin: .zero, size: frame.size))
+            transition.setPosition(view: underlay, position: frame.center)
+            transition.setTransform(view: underlay, transform: self.counterTransform(center: frame.center, scale: isHidden ? 0.01 : 1.0))
+            transition.setAlpha(view: underlay, alpha: isHidden ? 0.0 : 1.0)
+            return underlay
+        }
+
+        private func counterTransform(center: CGPoint, scale: CGFloat) -> CATransform3D {
+            let counter = self.containerScale?.counterTransform(at: CGPoint(x: center.x + self.originInContainer.x, y: center.y + self.originInContainer.y)) ?? .identity
+            return CATransform3DConcat(CATransform3DMakeScale(counter.scale * scale, counter.scale * scale, 1.0), CATransform3DMakeTranslation(counter.translation.x, counter.translation.y, 0.0))
+        }
+
+        func updateContainerScale(_ containerScale: CameraScreenContainerScale?, originInContainer: CGPoint, transition: ContainedViewLayoutTransition) {
+            self.containerScale = containerScale
+            self.originInContainer = originInContainer
+            cameraScreenUpdateSublayerTransform(layer: self.bottomContainerView.layer, transform: self.counterTransform(center: self.bottomContainerView.center, scale: 1.0), transition: transition)
+            for underlay in [self.galleryUnderlay, self.bottomFlipButtonUnderlay, self.bottomCloseButtonUnderlay, self.bottomSettingsButtonUnderlay].compactMap({ $0 }) {
+                let hiddenScale: CGFloat = underlay.alpha > 0.0 ? 1.0 : 0.01
+                transition.updateTransform(layer: underlay.layer, transform: self.counterTransform(center: underlay.center, scale: hiddenScale))
+            }
+        }
         
         private let leftGuide = SimpleLayer()
         private let rightGuide = SimpleLayer()
@@ -1179,9 +1293,128 @@ final class CaptureControlsComponent: Component {
             return true
         }
         
-        private var animatedOut = false
+        var isBottomRowVisible: Bool {
+            if self.isHandedOffToEditor || self.bottomContainerView.alpha <= 0.0 {
+                return false
+            }
+            if let view = self.galleryButtonView.view, view.superview != nil, view.alpha > 0.0 {
+                return true
+            }
+            if let view = self.bottomCloseButton?.view, view.alpha > 0.0 {
+                return true
+            }
+            return false
+        }
+
+        func editorHandoffSlots() -> (left: CameraScreenEditorHandoffSlot?, right: CameraScreenEditorHandoffSlot?) {
+            var left: CameraScreenEditorHandoffSlot?
+            if let galleryGlassFrame = self.galleryGlassFrame, let galleryButtonView = self.galleryButtonView.view, galleryButtonView.superview != nil, galleryButtonView.alpha > 0.0 {
+                var contentViews: [UIView] = []
+                if let snapshot = galleryButtonView.snapshotView(afterScreenUpdates: false) {
+                    snapshot.frame = galleryButtonView.convert(galleryButtonView.bounds, to: self).offsetBy(dx: -galleryGlassFrame.minX, dy: -galleryGlassFrame.minY)
+                    contentViews.append(snapshot)
+                }
+                left = CameraScreenEditorHandoffSlot(frame: self.convert(galleryGlassFrame, to: nil), hasGlass: true, contentViews: contentViews)
+            } else if let closeView = self.bottomCloseButton?.view, closeView.alpha > 0.0 {
+                left = CameraScreenEditorHandoffSlot(frame: closeView.convert(closeView.bounds, to: nil), hasGlass: true, contentViews: [cameraScreenHandoffIconView(name: "Navigation/Close", size: closeView.bounds.size)])
+            }
+            var right: CameraScreenEditorHandoffSlot?
+            if let flipView = self.bottomFlipButton.view, flipView.superview != nil, flipView.alpha > 0.0 {
+                let iconName: String
+                if let chatTrailingButton = self.component?.chatTrailingButton, case .done = chatTrailingButton {
+                    iconName = "Navigation/Done"
+                } else {
+                    iconName = "Camera/FlipIcon"
+                }
+                right = CameraScreenEditorHandoffSlot(frame: flipView.convert(flipView.bounds, to: nil), hasGlass: true, contentViews: [cameraScreenHandoffIconView(name: iconName, size: flipView.bounds.size)])
+            }
+            return (left, right)
+        }
+
+        func editorReturnTargets() -> (left: CGRect?, right: CGRect?) {
+            var left: CGRect?
+            if let galleryGlassFrame = self.galleryGlassFrame, self.galleryButtonView.view?.superview != nil {
+                left = self.convert(galleryGlassFrame, to: nil)
+            } else if let closeView = self.bottomCloseButton?.view {
+                left = closeView.convert(closeView.bounds, to: nil)
+            }
+            var right: CGRect?
+            if let flipView = self.bottomFlipButton.view, flipView.superview != nil {
+                right = flipView.convert(flipView.bounds, to: nil)
+            }
+            return (left, right)
+        }
+
+        private var handedOffSideViews: [UIView] {
+            var views: [UIView] = [self.bottomContainerView]
+            if let view = self.galleryButtonView.view {
+                views.append(view)
+            }
+            views.append(contentsOf: [self.galleryUnderlay, self.bottomFlipButtonUnderlay, self.bottomCloseButtonUnderlay, self.bottomSettingsButtonUnderlay].compactMap { $0 })
+            return views
+        }
+
+        func animateShutterOutToEditor(transition: ComponentTransition) {
+            for view in [self.flipButtonView.view, self.shutterButtonView.view].compactMap({ $0 }) {
+                transition.setScale(view: view, scale: 0.1)
+                transition.setAlpha(view: view, alpha: 0.0)
+            }
+        }
+
+        func setHandedOffToEditor() {
+            self.isHandedOffToEditor = true
+            for view in self.handedOffSideViews {
+                view.layer.removeAllAnimations()
+                view.alpha = 0.0
+            }
+        }
+
+        func clearEditorHandoffStayingHidden() {
+            self.isHandedOffToEditor = false
+        }
+
+        func restoreFromEditorHandoff(transition: ComponentTransition, delay: Double) {
+            guard let component = self.component else {
+                return
+            }
+            self.isHandedOffToEditor = false
+            for view in [self.flipButtonView.view, self.shutterButtonView.view].compactMap({ $0 }) {
+                transition.setScale(view: view, scale: 1.0)
+            }
+            if let view = self.shutterButtonView.view {
+                transition.setAlpha(view: view, alpha: 1.0)
+            }
+            if let view = self.flipButtonView.view {
+                view.alpha = 0.0
+            }
+            var restored: [(UIView, CGFloat)] = [(self.bottomContainerView, 1.0)]
+            if let view = self.galleryButtonView.view {
+                restored.append((view, component.hideControls ? 0.0 : (component.tintColor.rgb == 0xffffff ? 1.0 : 0.6)))
+            }
+            let underlayPairs: [(UIView?, UIView?)] = [
+                (self.galleryUnderlay, self.galleryButtonView.view),
+                (self.bottomFlipButtonUnderlay, self.bottomFlipButton.view),
+                (self.bottomCloseButtonUnderlay, self.bottomCloseButton?.view),
+                (self.bottomSettingsButtonUnderlay, self.bottomSettingsButton.view)
+            ]
+            for (underlay, buttonView) in underlayPairs {
+                guard let underlay, let buttonView else {
+                    continue
+                }
+                ComponentTransition.immediate.setScale(view: underlay, scale: buttonView.alpha > 0.0 ? 1.0 : 0.01)
+                restored.append((underlay, buttonView.alpha > 0.0 ? 1.0 : 0.0))
+            }
+            for (view, alpha) in restored {
+                ComponentTransition.immediate.setScale(view: view, scale: 1.0)
+                view.alpha = alpha
+                if alpha > 0.0 {
+                    view.layer.animateAlpha(from: 0.0, to: alpha, duration: 0.2, delay: delay)
+                    cameraScreenAnimateBlur(layer: view.layer, fromRadius: cameraScreenEditorHandoffBlurRadius, toRadius: 0.0, delay: delay)
+                }
+            }
+        }
+
         func animateOutToEditor(transition: ComponentTransition) {
-            self.animatedOut = true
             
             if let view = self.galleryButtonView.view {
                 transition.setScale(view: view, scale: 0.1)
@@ -1202,10 +1435,16 @@ final class CaptureControlsComponent: Component {
             if let view = self.bottomFlipButton.view {
                 transition.setScale(view: view, scale: 0.1)
             }
+            if let view = self.bottomCloseButton?.view {
+                transition.setScale(view: view, scale: 0.1)
+            }
+            for underlay in [self.galleryUnderlay, self.bottomFlipButtonUnderlay, self.bottomCloseButtonUnderlay, self.bottomSettingsButtonUnderlay].compactMap({ $0 }) {
+                transition.setAlpha(view: underlay, alpha: 0.0)
+                transition.setScale(view: underlay, scale: 0.1)
+            }
         }
         
         func animateInFromEditor(transition: ComponentTransition) {
-            self.animatedOut = false
 
             guard let component = self.component else {
                 return
@@ -1233,6 +1472,22 @@ final class CaptureControlsComponent: Component {
             transition.setAlpha(view: self.bottomContainerView, alpha: 1.0)
             if let view = self.bottomFlipButton.view {
                 transition.setScale(view: view, scale: 1.0)
+            }
+            if let view = self.bottomCloseButton?.view {
+                transition.setScale(view: view, scale: 1.0)
+            }
+            let underlayPairs: [(UIView?, UIView?)] = [
+                (self.galleryUnderlay, self.galleryButtonView.view),
+                (self.bottomFlipButtonUnderlay, self.bottomFlipButton.view),
+                (self.bottomCloseButtonUnderlay, self.bottomCloseButton?.view),
+                (self.bottomSettingsButtonUnderlay, self.bottomSettingsButton.view)
+            ]
+            for (underlay, buttonView) in underlayPairs {
+                guard let underlay, let buttonView else {
+                    continue
+                }
+                transition.setAlpha(view: underlay, alpha: buttonView.alpha)
+                transition.setScale(view: underlay, scale: buttonView.alpha > 0.0 ? 1.0 : 0.01)
             }
         }
 
@@ -1272,18 +1527,25 @@ final class CaptureControlsComponent: Component {
                 bottomButtonSideInset = 9.0
                 bottomButtonTopInset = -2.0 - UIScreenPixel
             }
+            if let bottomRowPlacement = component.bottomRowPlacement {
+                bottomButtonSideInset = bottomRowPlacement.sideInset
+                bottomButtonTopInset = bottomRowPlacement.topInset
+            }
             
             let galleryButtonFrame: CGRect
             let lockReferenceFrame: CGRect
             let gallerySize: CGSize
             if component.hasGallery {
                 let galleryCornerRadius: CGFloat
+                let galleryInset: CGFloat
                 if component.isTablet {
                     gallerySize = CGSize(width: 72.0, height: 72.0)
                     galleryCornerRadius = 16.0
+                    galleryInset = 0.0
                 } else {
-                    gallerySize = CGSize(width: 48.0, height: 48.0)
-                    galleryCornerRadius = 24.0
+                    galleryInset = cameraScreenGalleryThumbnailInset
+                    gallerySize = CGSize(width: 48.0 - galleryInset * 2.0, height: 48.0 - galleryInset * 2.0)
+                    galleryCornerRadius = gallerySize.height * 0.5
                 }
                 let galleryButtonId: String
                 if let (identifier, _) = state.cachedAssetImage, identifier == "" {
@@ -1306,9 +1568,11 @@ final class CaptureControlsComponent: Component {
                                 )
                             ),
                             tag: component.galleryButtonTag,
+                            animateScale: component.isTablet,
                             action: {
                                 component.galleryTapped()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: component.strings.Attachment_Gallery)
                         )
                     ),
                     environment: {},
@@ -1318,33 +1582,75 @@ final class CaptureControlsComponent: Component {
                     galleryButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - galleryButtonSize.width) / 2.0), y: size.height - galleryButtonSize.height - 56.0), size: galleryButtonSize)
                     lockReferenceFrame = .zero
                 } else {
-                    galleryButtonFrame = CGRect(origin: CGPoint(x: bottomButtonSideInset, y: size.height + bottomButtonTopInset), size: galleryButtonSize)
-                    lockReferenceFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: floorToScreenPixels((size.height - galleryButtonSize.height) / 2.0)), size: galleryButtonSize)
+                    galleryButtonFrame = CGRect(origin: CGPoint(x: bottomButtonSideInset + galleryInset, y: size.height + bottomButtonTopInset + galleryInset), size: galleryButtonSize)
+                    lockReferenceFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: floorToScreenPixels((size.height - galleryButtonSize.height - galleryInset * 2.0) / 2.0)), size: CGSize(width: galleryButtonSize.width + galleryInset * 2.0, height: galleryButtonSize.height + galleryInset * 2.0))
                 }
                 if let galleryButtonView = self.galleryButtonView.view as? CameraButton.View {
                     galleryButtonView.contentView.clipsToBounds = true
                     galleryButtonView.contentView.layer.cornerRadius = galleryCornerRadius
-                    if galleryButtonView.superview == nil {
+                    if self.galleryButtonChromeView.superview == nil {
                         galleryButtonView.contentView.addSubview(self.galleryButtonChromeView)
-                        self.addSubview(galleryButtonView)
                     }
-                    transition.setBounds(view: galleryButtonView, bounds: CGRect(origin: .zero, size: galleryButtonFrame.size))
-                    transition.setPosition(view: galleryButtonView, position: galleryButtonFrame.center)
-                    
                     self.galleryButtonChromeView.frame = CGRect(origin: .zero, size: galleryButtonSize)
+                    self.galleryButtonChromeView.isHidden = !component.isTablet
                     
                     let normalAlpha = component.tintColor.rgb == 0xffffff ? 1.0 : 0.6
+                    let hidesGallery = isLiveStream || isRecording || isTransitioning || hideControls
                     
-                    transition.setScale(view: galleryButtonView, scale: isLiveStream || isRecording || isTransitioning || hideControls ? 0.1 : 1.0)
-                    transition.setAlpha(view: galleryButtonView, alpha: isLiveStream || isRecording || isTransitioning || hideControls ? 0.0 : normalAlpha)
+                    transition.setScale(view: galleryButtonView, scale: hidesGallery ? 0.1 : 1.0)
+                    transition.setAlpha(view: galleryButtonView, alpha: hidesGallery || self.isHandedOffToEditor ? 0.0 : normalAlpha)
+                    
+                    if component.isTablet {
+                        self.galleryGlassFrame = nil
+                        self.galleryGlassView?.removeFromSuperview()
+                        self.galleryGlassView = nil
+                        self.galleryUnderlay?.removeFromSuperview()
+                        self.galleryUnderlay = nil
+                    } else {
+                        let glassFrame = galleryButtonFrame.insetBy(dx: -galleryInset, dy: -galleryInset)
+                        self.galleryGlassFrame = glassFrame
+                        let glassView: GlassBackgroundView
+                        var glassTransition = transition
+                        if let current = self.galleryGlassView {
+                            glassView = current
+                        } else {
+                            glassView = GlassBackgroundView()
+                            self.galleryGlassView = glassView
+                            self.bottomContainerView.contentView.insertSubview(glassView, at: 0)
+                            glassTransition = .immediate
+                        }
+                        let localGlassFrame = glassFrame.offsetBy(dx: 0.0, dy: -size.height)
+                        glassTransition.setBounds(view: glassView, bounds: CGRect(origin: .zero, size: localGlassFrame.size))
+                        glassTransition.setPosition(view: glassView, position: localGlassFrame.center)
+                        glassView.update(size: localGlassFrame.size, cornerRadius: localGlassFrame.height * 0.5, isDark: true, tintColor: .init(kind: .panel), isInteractive: !hidesGallery, transition: glassTransition)
+                        glassTransition.setScale(view: glassView, scale: hidesGallery ? 0.1 : 1.0)
+                        glassTransition.setAlpha(view: glassView, alpha: hidesGallery ? 0.0 : 1.0)
+                        self.galleryUnderlay = self.updateBottomButtonUnderlay(self.galleryUnderlay, frame: glassFrame, isHidden: true, transition: transition)
+                    }
+                    
+                    let galleryParentView: UIView
+                    var galleryButtonPosition = galleryButtonFrame.center
+                    if !component.isTablet, let glassView = self.galleryGlassView {
+                        galleryParentView = glassView.contentView
+                        galleryButtonPosition = CGPoint(x: galleryInset + galleryButtonFrame.width * 0.5, y: galleryInset + galleryButtonFrame.height * 0.5)
+                    } else {
+                        galleryParentView = self
+                    }
+                    var galleryPositionTransition = transition
+                    if galleryButtonView.superview !== galleryParentView {
+                        galleryParentView.addSubview(galleryButtonView)
+                        galleryPositionTransition = .immediate
+                    }
+                    galleryPositionTransition.setBounds(view: galleryButtonView, bounds: CGRect(origin: .zero, size: galleryButtonFrame.size))
+                    galleryPositionTransition.setPosition(view: galleryButtonView, position: galleryButtonPosition)
                 }
             } else {
                 galleryButtonFrame = .zero
-                gallerySize = .zero
-                lockReferenceFrame = .zero
+                lockReferenceFrame = captureControlsLockReferenceFrameWithoutGallery(isChat: component.isChat, isTablet: component.isTablet, isSticker: component.isSticker, controlsHeight: size.height, sideInset: buttonSideInset)
+                gallerySize = lockReferenceFrame.size
             }
             
-            if !component.isTablet && component.hasAccess {
+            if !component.isTablet && (component.hasAccess || component.showsCloseButton) {
                 if !isLiveActive {
                     component.flipAnimationAction.connect { [weak self] _ in
                         self?.flipButtonAnimationAction.invoke(Void())
@@ -1372,7 +1678,8 @@ final class CaptureControlsComponent: Component {
                             minSize: CGSize(width: 44.0, height: 44.0),
                             action: {
                                 component.flipTapped()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: component.strings.VoiceOver_Camera_SwitchCamera)
                         )
                     ),
                     environment: {},
@@ -1394,25 +1701,40 @@ final class CaptureControlsComponent: Component {
                 self.bottomContainerView.frame = bottomContainerFrame
                 self.bottomContainerView.update(size: bottomContainerFrame.size, isDark: true, transition: .immediate)
                 
-                let bottomFlipButtonSize = self.bottomFlipButton.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        GlassBarButtonComponent(
-                            size: CGSize(width: 48.0, height: 48.0),
-                            backgroundColor: UIColor(rgb: 0x212121),
-                            isDark: true,
-                            state: .tintedGlass,
-                            component: AnyComponentWithIdentity(id: "flip", component: AnyComponent(
-                                FlipButtonContentComponent(
-                                    action: self.bottomFlipButtonAnimationAction,
-                                    maskFrame: flipButtonMaskFrame,
-                                    tintColor: component.tintColor
-                                )
-                            )),
-                            action: { _ in
-                                component.flipTapped()
-                            }
+                let bottomFlipButtonContent: AnyComponentWithIdentity<Empty>
+                let bottomFlipButtonAction: (UIView) -> Void
+                let bottomFlipButtonAccessibilityLabel: String
+                var bottomFlipButtonTransition: ComponentTransition = .immediate
+                if let chatTrailingButton = component.chatTrailingButton, case .done = chatTrailingButton {
+                    bottomFlipButtonContent = AnyComponentWithIdentity(id: "done", component: AnyComponent(
+                        BundleIconComponent(name: "Navigation/Done", tintColor: .white)
+                    ))
+                    bottomFlipButtonAction = { _ in
+                        component.chatDoneTapped()
+                    }
+                    bottomFlipButtonAccessibilityLabel = component.strings.Common_Done
+                } else {
+                    bottomFlipButtonContent = AnyComponentWithIdentity(id: "flip", component: AnyComponent(
+                        FlipButtonContentComponent(
+                            action: self.bottomFlipButtonAnimationAction,
+                            maskFrame: flipButtonMaskFrame,
+                            tintColor: component.tintColor
                         )
+                    ))
+                    bottomFlipButtonAction = { _ in
+                        component.flipTapped()
+                    }
+                    bottomFlipButtonAccessibilityLabel = component.strings.VoiceOver_Camera_SwitchCamera
+                }
+                if let previousChatTrailingButton = self.previousChatTrailingButton, let chatTrailingButton = component.chatTrailingButton, previousChatTrailingButton != chatTrailingButton {
+                    bottomFlipButtonTransition = .spring(duration: 0.4)
+                }
+                self.previousChatTrailingButton = component.chatTrailingButton
+                
+                let bottomFlipButtonSize = self.bottomFlipButton.update(
+                    transition: bottomFlipButtonTransition,
+                    component: AnyComponent(
+                        captureControlsBottomGlassButton(content: bottomFlipButtonContent, action: bottomFlipButtonAction, accessibility: ComponentAccessibility(label: bottomFlipButtonAccessibilityLabel))
                     ),
                     environment: {},
                     containerSize: availableSize
@@ -1425,8 +1747,54 @@ final class CaptureControlsComponent: Component {
                     transition.setBounds(view: bottomFlipButtonView, bounds: CGRect(origin: .zero, size: bottomFlipButtonFrame.size))
                     transition.setPosition(view: bottomFlipButtonView, position: bottomFlipButtonFrame.center)
                     
-                    transition.setScale(view: bottomFlipButtonView, scale: isRecording || isLiveActive || isTransitioning || hideControls ? 0.01 : 1.0)
-                    transition.setAlpha(view: bottomFlipButtonView, alpha: isRecording || isLiveActive || isTransitioning || hideControls ? 0.0 : 1.0)
+                    let hidesBottomFlipButton = isRecording || isLiveActive || isTransitioning || hideControls || !component.hasAccess
+                    transition.setScale(view: bottomFlipButtonView, scale: hidesBottomFlipButton ? 0.01 : 1.0)
+                    transition.setAlpha(view: bottomFlipButtonView, alpha: hidesBottomFlipButton ? 0.0 : 1.0)
+                    bottomFlipButtonView.accessibilityElementsHidden = hidesBottomFlipButton
+                    self.bottomFlipButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomFlipButtonUnderlay, frame: bottomFlipButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomFlipButton || self.isHandedOffToEditor, transition: transition)
+                }
+                
+                if component.showsCloseButton {
+                    let bottomCloseButton: ComponentView<Empty>
+                    if let current = self.bottomCloseButton {
+                        bottomCloseButton = current
+                    } else {
+                        bottomCloseButton = ComponentView<Empty>()
+                        self.bottomCloseButton = bottomCloseButton
+                    }
+                    let bottomCloseButtonSize = bottomCloseButton.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            captureControlsBottomGlassButton(
+                                content: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                                    BundleIconComponent(name: "Navigation/Close", tintColor: .white)
+                                )),
+                                action: { _ in
+                                    component.closeTapped()
+                                }
+                            )
+                        ),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    let bottomCloseButtonFrame = CGRect(origin: CGPoint(x: bottomButtonSideInset, y: bottomButtonTopInset), size: bottomCloseButtonSize)
+                    if let bottomCloseButtonView = bottomCloseButton.view {
+                        if bottomCloseButtonView.superview == nil {
+                            self.bottomContainerView.contentView.addSubview(bottomCloseButtonView)
+                        }
+                        transition.setBounds(view: bottomCloseButtonView, bounds: CGRect(origin: .zero, size: bottomCloseButtonFrame.size))
+                        transition.setPosition(view: bottomCloseButtonView, position: bottomCloseButtonFrame.center)
+                        
+                        let hidesBottomCloseButton = isRecording || isTransitioning || hideControls
+                        transition.setScale(view: bottomCloseButtonView, scale: hidesBottomCloseButton ? 0.01 : 1.0)
+                        transition.setAlpha(view: bottomCloseButtonView, alpha: hidesBottomCloseButton ? 0.0 : 1.0)
+                        self.bottomCloseButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomCloseButtonUnderlay, frame: bottomCloseButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomCloseButton || self.isHandedOffToEditor, transition: transition)
+                    }
+                } else if let bottomCloseButton = self.bottomCloseButton {
+                    self.bottomCloseButton = nil
+                    bottomCloseButton.view?.removeFromSuperview()
+                    self.bottomCloseButtonUnderlay?.removeFromSuperview()
+                    self.bottomCloseButtonUnderlay = nil
                 }
             } else {
                 if let flipButtonView = self.flipButtonView.view {
@@ -1437,20 +1805,18 @@ final class CaptureControlsComponent: Component {
                 }
             }
             
+            let hidesBottomSettingsButton = !isLiveStream || isLiveActive || isRecording || isTransitioning || hideControls
             let bottomSettingsButtonSize = self.bottomSettingsButton.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    GlassBarButtonComponent(
-                        size: CGSize(width: 48.0, height: 48.0),
-                        backgroundColor: UIColor(rgb: 0x212121),
-                        isDark: true,
-                        state: .tintedGlass,
-                        component: AnyComponentWithIdentity(id: "settings", component: AnyComponent(
+                    captureControlsBottomGlassButton(
+                        content: AnyComponentWithIdentity(id: "settings", component: AnyComponent(
                             BundleIconComponent(name: "Camera/Settings", tintColor: .white)
                         )),
                         action: { _ in
                             component.settingsTapped()
-                        }
+                        },
+                        accessibility: hidesBottomSettingsButton ? ComponentAccessibility(isHidden: true) : ComponentAccessibility(label: component.strings.Settings_Title)
                     )
                 ),
                 environment: {},
@@ -1464,8 +1830,21 @@ final class CaptureControlsComponent: Component {
                 transition.setBounds(view: bottomSettingsButtonView, bounds: CGRect(origin: .zero, size: bottomSettingsButtonFrame.size))
                 transition.setPosition(view: bottomSettingsButtonView, position: bottomSettingsButtonFrame.center)
                 
-                transition.setScale(view: bottomSettingsButtonView, scale: !isLiveStream || isLiveActive || isRecording || isTransitioning || hideControls ? 0.01 : 1.0)
-                transition.setAlpha(view: bottomSettingsButtonView, alpha: !isLiveStream || isLiveActive || isRecording || isTransitioning || hideControls ? 0.0 : 1.0)
+                transition.setScale(view: bottomSettingsButtonView, scale: hidesBottomSettingsButton ? 0.01 : 1.0)
+                // Out of the accessibility tree while it is scaled out (its inner button was still listed under the hidden
+                // glass view): hidden once it has faded out, shown again before it animates in. No visual change: it is
+                // transparent then.
+                self.bottomSettingsButtonIsHidden = hidesBottomSettingsButton
+                if !hidesBottomSettingsButton {
+                    bottomSettingsButtonView.isHidden = false
+                }
+                transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0, completion: { [weak self, weak bottomSettingsButtonView] _ in
+                    guard let self, let bottomSettingsButtonView, self.bottomSettingsButtonIsHidden else {
+                        return
+                    }
+                    bottomSettingsButtonView.isHidden = true
+                })
+                self.bottomSettingsButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomSettingsButtonUnderlay, frame: bottomSettingsButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomSettingsButton || self.isHandedOffToEditor, transition: transition)
             }
             
             var hitTestEdgeInsets: UIEdgeInsets?
@@ -1509,7 +1888,20 @@ final class CaptureControlsComponent: Component {
                             self?.shutterUpdateOffsetX.invoke((0.0, .immediate))
                             component.shutterTapped()
                         },
-                        highlightedAction: self.shutterHightlightedAction
+                        highlightedAction: self.shutterHightlightedAction,
+                        accessibility: {
+                            // VoiceOver: the shutter by what its tap does in the current mode.
+                            switch component.shutterState {
+                            case .generic, .disabled:
+                                return ComponentAccessibility(label: component.strings.Common_TakePhoto, traits: component.shutterState == .disabled ? .notEnabled : [])
+                            case .video, .transition:
+                                return ComponentAccessibility(label: component.strings.VoiceOver_Camera_RecordVideo)
+                            case .stopRecording, .holdRecording:
+                                return ComponentAccessibility(label: component.strings.VoiceOver_Chat_Stop)
+                            case let .live(active, _):
+                                return ComponentAccessibility(label: active ? component.strings.Camera_LiveStream_End : component.strings.Camera_LiveStream_StartLiveStream)
+                            }
+                        }()
                     ).minSize(maximumShutterSize).withHitTestEdgeInsets(hitTestEdgeInsets)
                 ),
                 environment: {},
@@ -1651,7 +2043,9 @@ final class CaptureControlsComponent: Component {
                         minSize: hintIconSize,
                         action: {
                             component.lockRecording()
-                        }
+                        },
+                        // The hold-to-record lock, reached by dragging the shutter; the shutter's tap records and stops.
+                        accessibility: ComponentAccessibility(isHidden: true)
                     )
                 ),
                 environment: {},
@@ -1682,7 +2076,7 @@ final class CaptureControlsComponent: Component {
                         shutterButtonView.addGestureRecognizer(panGestureRecognizer)
                         
                         let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
-                        pressGestureRecognizer.minimumPressDuration = 0.3
+                        pressGestureRecognizer.minimumPressDuration = component.holdMinimumPressDuration
                         pressGestureRecognizer.delegate = self
                         self.pressGestureRecognizer = pressGestureRecognizer
                         shutterButtonView.addGestureRecognizer(pressGestureRecognizer)
@@ -1722,12 +2116,16 @@ final class CaptureControlsComponent: Component {
             if let codeResultView = self.codeResultView?.view, codeResultView.frame.contains(point) {
                 return codeResultView.hitTest(self.convert(point, to: codeResultView), with: event)
             }
-            if let galleryButtonView = self.galleryButtonView.view, galleryButtonView.alpha > 0.0, galleryButtonView.frame.contains(point) {
-                return galleryButtonView.hitTest(self.convert(point, to: galleryButtonView), with: event)
+            if let galleryButtonView = self.galleryButtonView.view, galleryButtonView.alpha > 0.0, (self.galleryGlassFrame ?? galleryButtonView.frame).contains(point) {
+                let localPoint = self.convert(point, to: galleryButtonView)
+                return galleryButtonView.hitTest(galleryButtonView.bounds.contains(localPoint) ? localPoint : CGPoint(x: galleryButtonView.bounds.midX, y: galleryButtonView.bounds.midY), with: event)
             }
             let bottomPoint = self.convert(point, to: self.bottomContainerView)
             if let bottomFlipButtonView = self.bottomFlipButton.view, bottomFlipButtonView.alpha > 0.0, bottomFlipButtonView.frame.contains(bottomPoint) {
                 return bottomFlipButtonView.hitTest(self.convert(point, to: bottomFlipButtonView), with: event)
+            }
+            if let bottomCloseButtonView = self.bottomCloseButton?.view, bottomCloseButtonView.alpha > 0.0, bottomCloseButtonView.frame.contains(bottomPoint) {
+                return bottomCloseButtonView.hitTest(self.convert(point, to: bottomCloseButtonView), with: event)
             }
             if let bottomSettingsButtonView = self.bottomSettingsButton.view, bottomSettingsButtonView.alpha > 0.0, bottomSettingsButtonView.frame.contains(bottomPoint) {
                 return bottomSettingsButtonView.hitTest(self.convert(point, to: bottomSettingsButtonView), with: event)

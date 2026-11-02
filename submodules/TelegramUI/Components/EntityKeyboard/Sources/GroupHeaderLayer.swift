@@ -30,6 +30,10 @@ final class GroupHeaderLayer: UIView {
     private var separatorLayer: SimpleLayer?
     private var tintSeparatorLayer: SimpleLayer?
     private var actionButton: GroupHeaderActionButton?
+    /// VoiceOver: the header's action button, listed by the grid next to its heading.
+    var accessibilityActionButton: UIView? {
+        return self.actionButton
+    }
     
     private var groupEmbeddedView: GroupEmbeddedView?
     

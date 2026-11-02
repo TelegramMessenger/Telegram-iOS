@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
 swift_library(
     name = "ChatSendStarsScreen",
@@ -38,6 +40,36 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/TelegramUI/Components/Stories/LiveChat/StoryLiveChatMessageComponent",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+swift_library(
+    name = "ChatSendStarsScreenTestsLib",
+    testonly = True,
+    srcs = glob([
+        "Tests/**/*.swift",
+    ]),
+    deps = [
+        ":ChatSendStarsScreen",
+        "//submodules/TelegramCore",
+    ],
+)
+
+ios_test_runner(
+    name = "ChatSendStarsScreenTestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "ChatSendStarsScreenTests",
+    minimum_os_version = "15.0",
+    runner = ":ChatSendStarsScreenTestRunner",
+    deps = [
+        ":ChatSendStarsScreenTestsLib",
     ],
     visibility = [
         "//visibility:public",

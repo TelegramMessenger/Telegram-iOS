@@ -543,7 +543,14 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if let constrainWidth = self.constrainWidth, constrainWidth > 100.0 {
             containerWidth = constrainWidth
         }
-        
+        switch self.location {
+        case .top, .bottom:
+            // A toast along the top or bottom edge: narrower on a regular-width layout, centred below.
+            containerWidth = toastFrame(CGRect(x: 0.0, y: 0.0, width: containerWidth, height: 0.0), metrics: layout.metrics).width
+        case .point:
+            break
+        }
+
         var actionSize: CGSize = .zero
         
         var buttonInset: CGFloat = 0.0

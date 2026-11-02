@@ -32,7 +32,35 @@ func makeUser(id: Int64) -> TelegramUser {
     )
 }
 
-func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFlags = TelegramChannelFlags(), adminRights: TelegramChatAdminRights? = nil, defaultBannedRights: TelegramChatBannedRights? = nil) -> TelegramChannel {
+func makeBot(id: Int64) -> TelegramUser {
+    return TelegramUser(
+        id: makeUserPeerId(id),
+        accessHash: nil,
+        firstName: "B\(id)",
+        lastName: nil,
+        username: nil,
+        phone: nil,
+        photo: [],
+        botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil),
+        restrictionInfo: nil,
+        flags: UserInfoFlags(),
+        emojiStatus: nil,
+        usernames: [],
+        storiesHidden: nil,
+        nameColor: nil,
+        backgroundEmojiId: nil,
+        profileColor: nil,
+        profileBackgroundEmojiId: nil,
+        subscriberCount: nil,
+        verificationIconFileId: nil
+    )
+}
+
+func makeSecretChat(id: Int64, with userId: Int64) -> TelegramSecretChat {
+    return TelegramSecretChat(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(id)), creationDate: 0, regularPeerId: makeUserPeerId(userId), accessHash: 0, role: .creator, embeddedState: .active, messageAutoremoveTimeout: nil)
+}
+
+func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFlags = TelegramChannelFlags(), adminRights: TelegramChatAdminRights? = nil, defaultBannedRights: TelegramChatBannedRights? = nil, linkedMonoforumId: PeerId? = nil) -> TelegramChannel {
     return TelegramChannel(
         id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id)),
         accessHash: nil,
@@ -59,7 +87,7 @@ func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFla
         subscriptionUntilDate: nil,
         verificationIconFileId: nil,
         sendPaidMessageStars: nil,
-        linkedMonoforumId: nil
+        linkedMonoforumId: linkedMonoforumId
     )
 }
 

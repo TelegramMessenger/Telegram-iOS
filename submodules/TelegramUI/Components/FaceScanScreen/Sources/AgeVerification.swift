@@ -33,6 +33,11 @@ private func legacyModelPath() -> String {
 }
 private let legacyModelPeer = "agelegacycomputation"
 
+public func removeDownloadedAgeVerificationModels() {
+    try? FileManager.default.removeItem(atPath: modelPath())
+    try? FileManager.default.removeItem(atPath: legacyModelPath())
+}
+
 public func ageVerificationAvailability(context: AccountContext) -> Signal<AgeVerificationAvailability, NoError> {
     let compiledModelPath: String
     let modelPeerName: String

@@ -146,6 +146,26 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     private var starsEffectLayer: StarsButtonEffectLayer?
     
+    /// VoiceOver: a custom emoji reaction is named by its alt emoji, decoded from the file only when VoiceOver asks.
+    override public var accessibilityLabel: String? {
+        get {
+            if let label = super.accessibilityLabel, !label.isEmpty {
+                return label
+            }
+            guard case .custom = self.item.reaction.rawValue else {
+                return nil
+            }
+            for attribute in self.item.stillAnimation._parse().attributes {
+                if case let .CustomEmoji(_, _, alt, _) = attribute, !alt.isEmpty {
+                    return alt
+                }
+            }
+            return nil
+        } set(value) {
+            super.accessibilityLabel = value
+        }
+    }
+    
     private var animateInAnimationNode: AnimatedStickerNode?
     private var staticAnimationPlaceholderView: UIImageView?
     private let staticAnimationNode: AnimatedStickerNode
@@ -168,6 +188,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     var didSetupStillAnimation: Bool = false
         
     var expandedAnimationDidBegin: (() -> Void)?
+    private(set) var didBeginExpandedAnimation: Bool = false
     
     var currentFrameIndex: Int {
         return self.staticAnimationNode.currentFrameIndex
@@ -352,6 +373,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             animationNode.started = { [weak self] in
                 if !didReportStarted {
                     didReportStarted = true
+                    self?.didBeginExpandedAnimation = true
                     self?.expandedAnimationDidBegin?()
                 }
             }

@@ -14,6 +14,10 @@ public protocol ChatListController: ViewController {
     var location: ChatListControllerLocation { get }
     var lockViewFrame: CGRect? { get }
     
+    /// Set by a host that opens the list's threads itself (the chat side list). Called with the parent peer and thread a
+    /// tap resolved to; returning true consumes the tap.
+    var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)? { get set }
+    
     var isSearchActive: Bool { get }
     func activateSearch(filter: ChatListSearchFilter, query: String?)
     func deactivateSearch(animated: Bool)

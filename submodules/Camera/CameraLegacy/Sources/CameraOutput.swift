@@ -21,6 +21,8 @@ final class CameraOutput: NSObject {
     let isVideoMessage: Bool
     
     var hasAudio: Bool = false
+    private var captureMode: CameraCaptureMode?
+    private var hasHighResolutionPhoto = false
     
     let photoOutput = AVCapturePhotoOutput()
     let videoOutput = AVCaptureVideoDataOutput()
@@ -70,7 +72,8 @@ final class CameraOutput: NSObject {
         self.audioOutput.setSampleBufferDelegate(nil, queue: nil)
     }
     
-    func configure(for session: CameraSession, device: CameraDevice, input: CameraInput, previewView: LegacyCameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool) {
+    func configure(for session: CameraSession, device: CameraDevice, input: CameraInput, previewView: LegacyCameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, captureMode: CameraCaptureMode? = nil) {
+        self.captureMode = captureMode
         if session.session.canAddOutput(self.videoOutput) {
             if session.hasMultiCam {
                 session.session.addOutputWithNoConnections(self.videoOutput)
@@ -89,6 +92,11 @@ final class CameraOutput: NSObject {
             } else {
                 Logger.shared.log("Camera", "Can't add audio output")
             }
+            if captureMode != nil {
+                self.hasAudio = input.hasAudioInput(in: session) && session.session.outputs.contains(where: { $0 === self.audioOutput })
+            }
+        } else if captureMode != nil {
+            self.hasAudio = false
         }
         if photo, session.session.canAddOutput(self.photoOutput) {
             if session.hasMultiCam {
@@ -138,6 +146,52 @@ final class CameraOutput: NSObject {
             } else {
                 Logger.shared.log("Camera", "Can't get video port")
             }
+        }
+        
+        if photo, case .photo = captureMode {
+            self.configureHighResolutionPhoto(session: session, device: device)
+        } else if self.hasHighResolutionPhoto {
+            self.resetHighResolutionPhoto(device: device)
+        }
+    }
+    
+    private func resetHighResolutionPhoto(device: CameraDevice) {
+        self.hasHighResolutionPhoto = false
+        if #available(iOS 16.0, *) {
+            guard let format = device.videoDevice?.activeFormat else {
+                return
+            }
+            let videoDimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            let supported = format.supportedMaxPhotoDimensions
+            if let matching = supported.first(where: { $0.width == videoDimensions.width && $0.height == videoDimensions.height }) {
+                self.photoOutput.maxPhotoDimensions = matching
+            } else if let smallest = supported.min(by: { Int64($0.width) * Int64($0.height) < Int64($1.width) * Int64($1.height) }) {
+                self.photoOutput.maxPhotoDimensions = smallest
+            }
+        } else {
+            if self.photoOutput.isHighResolutionCaptureEnabled {
+                self.photoOutput.isHighResolutionCaptureEnabled = false
+            }
+        }
+    }
+    
+    private func configureHighResolutionPhoto(session: CameraSession, device: CameraDevice) {
+        guard session.session.outputs.contains(where: { $0 === self.photoOutput }) else {
+            return
+        }
+        if #available(iOS 16.0, *) {
+            guard let photoDimensions = device.photoDimensions, let format = device.videoDevice?.activeFormat else {
+                return
+            }
+            if format.supportedMaxPhotoDimensions.contains(where: { $0.width == photoDimensions.width && $0.height == photoDimensions.height }) {
+                self.photoOutput.maxPhotoDimensions = photoDimensions
+                self.hasHighResolutionPhoto = true
+            }
+        } else {
+            if self.photoOutput.isHighResolutionCaptureEnabled == false {
+                self.photoOutput.isHighResolutionCaptureEnabled = true
+            }
+            self.hasHighResolutionPhoto = true
         }
     }
         
@@ -210,7 +264,19 @@ final class CameraOutput: NSObject {
             }
         }
         
-        let settings = AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)])
+        let isEncodedPhoto = self.captureMode == .photo
+        let settings: AVCapturePhotoSettings
+        if isEncodedPhoto {
+            let codecType: AVVideoCodecType = self.photoOutput.availablePhotoCodecTypes.contains(.hevc) ? .hevc : .jpeg
+            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: codecType])
+            if #available(iOS 16.0, *) {
+                settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
+            } else {
+                settings.isHighResolutionPhotoEnabled = self.photoOutput.isHighResolutionCaptureEnabled
+            }
+        } else {
+            settings = AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)])
+        }
         settings.flashMode = mirror ? .off : flashMode
         if let previewPhotoPixelFormatType = settings.availablePreviewPhotoPixelFormatTypes.first {
             settings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
@@ -224,7 +290,7 @@ final class CameraOutput: NSObject {
         }
         
 #if targetEnvironment(simulator)
-        let image = generateImage(CGSize(width: 1080, height: 1920), opaque: true, scale: 1.0, rotatedContext: { size, context in
+        let image = generateImage(isEncodedPhoto ? CGSize(width: 1080, height: 1440) : CGSize(width: 1080, height: 1920), opaque: true, scale: 1.0, rotatedContext: { size, context in
             let colors: [UIColor] = [UIColor(rgb: 0xff00ff), UIColor(rgb: 0xff0000), UIColor(rgb: 0x00ffff), UIColor(rgb: 0x00ff00)]
             if let randomColor = colors.randomElement() {
                 context.setFillColor(randomColor.cgColor)
@@ -237,7 +303,7 @@ final class CameraOutput: NSObject {
         )
 #else
         let uniqueId = settings.uniqueID
-        let photoCapture = PhotoCaptureContext(ciContext: self.ciContext, settings: settings, orientation: orientation, mirror: mirror)
+        let photoCapture = PhotoCaptureContext(ciContext: self.ciContext, settings: settings, orientation: orientation, mirror: mirror, isEncoded: isEncodedPhoto)
         let _ = self.photoCaptureRequests.modify { dict in
             var dict = dict
             dict[uniqueId] = photoCapture
@@ -299,18 +365,19 @@ final class CameraOutput: NSObject {
             ]
         } else {
             let codecType: AVVideoCodecType = hasHEVCHardwareEncoder ? .hevc : .h264
-            if orientation == .landscapeLeft || orientation == .landscapeRight {
-                dimensions = CGSize(width: 1920, height: 1080)
-            } else {
-                dimensions = CGSize(width: 1080, height: 1920)
-            }
             guard let settings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
                 return .complete()
             }
             videoSettings = settings
+            dimensions = cameraRecordedDimensions(captureMode: self.captureMode, videoSettings: settings, isLandscape: orientation == .landscapeLeft || orientation == .landscapeRight)
         }
         
-        let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
+        let audioSettings: [String: Any]
+        if self.captureMode != nil && !self.hasAudio {
+            audioSettings = [:]
+        } else {
+            audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
+        }
         if self.hasAudio && audioSettings.isEmpty {
             Logger.shared.log("Camera", "Audio settings are empty on recording start")
             return .fail(.audioInitializationError)

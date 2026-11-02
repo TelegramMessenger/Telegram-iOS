@@ -53,11 +53,21 @@ final class ButtonGroupView: OverlayMaskContainerView {
         let id: AnyHashable
         let icon: String
         let text: String
+        /// Shows a close button that calls this; a notice without one goes when its condition does.
+        let closeAction: (() -> Void)?
+        /// Called when the notice itself is tapped.
+        let action: (() -> Void)?
+        /// The button the notice's tail points at. Such a notice stands nearest the buttons; it has no tail while
+        /// they are hidden.
+        let tailTarget: Button.Content.Key?
         
-        init(id: AnyHashable, icon: String, text: String) {
+        init(id: AnyHashable, icon: String, text: String, closeAction: (() -> Void)? = nil, action: (() -> Void)? = nil, tailTarget: Button.Content.Key? = nil) {
             self.id = id
             self.icon = icon
             self.text = text
+            self.closeAction = closeAction
+            self.action = action
+            self.tailTarget = tailTarget
         }
     }
     
@@ -67,6 +77,10 @@ final class ButtonGroupView: OverlayMaskContainerView {
     private var closeButtonView: CloseButtonView?
     
     var closePressed: (() -> Void)?
+    
+    func buttonView(key: Button.Content.Key) -> UIView? {
+        return self.buttonViews[key]
+    }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -104,7 +118,17 @@ final class ButtonGroupView: OverlayMaskContainerView {
             }
         }
         
+        let buttonRowMinX: CGFloat = centeredX(width: buttonSize * CGFloat(buttons.count) + buttonSpacing * CGFloat(buttons.count - 1))
+        func buttonCenterX(key: Button.Content.Key) -> CGFloat? {
+            guard let index = buttons.firstIndex(where: { $0.content.key == key }) else {
+                return nil
+            }
+            return buttonRowMinX + (buttonSize + buttonSpacing) * CGFloat(index) + buttonSize * 0.5
+        }
+        
         let buttonNoticeSpacing: CGFloat = 16.0
+        // Between the buttons and the tip of a notice's tail.
+        let buttonTailSpacing: CGFloat = 8.0
         let controlsHiddenNoticeSpacing: CGFloat = 0.0
         var nextNoticeY: CGFloat
         if isAnimatedOutToGroupCall {
@@ -118,8 +142,14 @@ final class ButtonGroupView: OverlayMaskContainerView {
         
         var validNoticeIds: [AnyHashable] = []
         var noticesHeight: CGFloat = 0.0
-        for notice in notices {
+        let orderedNotices = notices.filter({ $0.tailTarget != nil }) + notices.filter({ $0.tailTarget == nil })
+        for notice in orderedNotices {
             validNoticeIds.append(notice.id)
+            
+            var tailTargetX: CGFloat?
+            if let tailTarget = notice.tailTarget, noticesHeight == 0.0, !controlsHidden, !isAnimatedOutToGroupCall, !displayClose {
+                tailTargetX = buttonCenterX(key: tailTarget)
+            }
             
             let noticeView: NoticeView
             var noticeTransition = transition
@@ -139,12 +169,24 @@ final class ButtonGroupView: OverlayMaskContainerView {
             } else {
                 if controlsHidden {
                     noticesHeight += controlsHiddenNoticeSpacing
+                } else if tailTargetX != nil {
+                    noticesHeight += buttonTailSpacing
+                    nextNoticeY += buttonNoticeSpacing - buttonTailSpacing
                 } else {
                     noticesHeight += buttonNoticeSpacing
                 }
             }
-            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
-            let noticeFrame = CGRect(origin: CGPoint(x: centeredX(width: noticeSize.width), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
+            noticeView.closeAction = notice.closeAction
+            noticeView.closeAccessibilityLabel = strings.Common_Close
+            noticeView.action = notice.action
+            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, displayClose: notice.closeAction != nil, displayTail: tailTargetX != nil, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
+            var noticeX = centeredX(width: noticeSize.width)
+            if let tailTargetX {
+                let tailLayout = PrivateCallNoticeTailLayout(noticeWidth: noticeSize.width, cornerRadius: floor((noticeSize.height - PrivateCallNoticeTailLayout.tailHeight) * 0.5), targetX: tailTargetX, bandMinX: bandMinX, bandWidth: bandWidth, containerWidth: size.width, sideInset: 16.0)
+                noticeX = tailLayout.noticeX
+                noticeView.updateTail(x: tailLayout.tailX, transition: noticeTransition)
+            }
+            let noticeFrame = CGRect(origin: CGPoint(x: noticeX, y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
             noticesHeight += noticeSize.height
             if !isAnimatedOutToGroupCall {
                 nextNoticeY -= noticeSize.height + noticeSpacing
@@ -187,7 +229,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
             buttonY = size.height - insets.bottom - 52.0 - buttonSize
             resultHeight = size.height - buttonY + noticesHeight
         }
-        var buttonX: CGFloat = centeredX(width: buttonSize * CGFloat(buttons.count) + buttonSpacing * CGFloat(buttons.count - 1))
+        var buttonX: CGFloat = buttonRowMinX
         
         if displayClose {
             let closeButtonView: CloseButtonView

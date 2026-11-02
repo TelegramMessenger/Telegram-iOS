@@ -109,7 +109,7 @@ may span the strip (now the general bottom rule, below).
 | F61 | Theme preview + limits list page dots, gift auction accessory panel, wallet collectible/transaction sheets (more button vs FP block), wallet peer selection empty state, wallet send close into strip, music player controls (band) + playlist margins (listSideMargins) | Settings, Premium, TelegramBaseController, Wallet, TelegramUI overlay audio player | all | B1/B2/B4/B8 | details in the branch commit messages | fixed (code) |
 | SKIP | Recent session card, Text Size / Theme preview UL split, sticker pack UL popover | | UL | B12/B13 | unreachable: .modal/.flatModal get forOptionalFloatingPresentation (StickerPackScreen applies it itself) | not a bug on the Duo |
 | F62 | Poll/checklist/new-contact close into strip, sticker attachment (close + keyboard band), context menu preview (UL phone branch) + ContextMenuNode block clamp, entity search, emoji status picker, forum topic header, gift options/store widths + close, five gift sheets' FR width (+ GiftAuctionBid), gift variants playback slide, video message capture circle (ObjC) | Compose, Context, EntityKeyboard, Gifts, LegacyComponents | all | B1/B2/B4/B8/B12/B13 | details in the branch commit messages | fixed (code) |
-| F63 | Gift craft slots + avatar, face scan ring/preview/instruction/cancel, QR preview orientation in UL, video message camera tablet-landscape band | GiftCraftScreen/CraftTableComponent, FaceScanScreen, QrCodeScanScreen, VideoMessageCameraScreen | FP/FL/UL | B2/B11/B12 | band-sized but screen-centred; regular-width phone treated as fixed portrait | fixed: centred on the band (`bandCenterX`), `previewFollowsDeviceOrientation` for a regular-width Duo, band insets added (code) |
+| F63 | Gift craft slots + avatar, face scan ring/preview/instruction/cancel, QR preview orientation in UL, video message camera tablet-landscape band | GiftCraftScreen/CraftTableComponent, FaceScanScreen, QrCodeScanScreen, VideoMessageCameraScreen | FP/FL/UL | B2/B11/B12 | band-sized but screen-centred; regular-width phone treated as fixed portrait | fixed: centred on the band (`bandCenterX`), `previewFollowsDeviceOrientation` for a regular-width Duo (dropped with #84: the preview's connection takes the body's orientation, `CameraVideoOrientation`), band insets added (code) |
 | F64 | Legacy photo editor (crop/adjust/quality/avatar/drawing host) | LegacyComponents TGPhotoCropController/TGPhotoEditorTabController container frames + TGViewController class table | FP/FL/UL | B4 | static inset table (no context) => crop area full width, top-right handle under the 84x170 block | fixed: table returns the last context safe area on the Duo; portrait branch honours side insets. FP sim-verified: crop area x 7..374, adjust photo in band |
 | F65 | Legacy photo viewer top row in UP | TGMediaPickerGalleryInterfaceView + LegacyComponentsContext.statusIslandTrailingInset | UP | B6/decision 2 | after F64 the top row (recipient, check) moved below the island; decision 2 keeps viewers' top rows beside it | fixed: row stays at the top, check button left by the island inset (0 elsewhere; FP unchanged, sim-checked) — UP code-only |
 | SKIP | Five gift B12 rows | | UL | B12 | unreachable on the Duo (flatModal gets forOptionalFloatingPresentation) | not a bug on the Duo |
@@ -164,22 +164,46 @@ Real bugs found on the way:
 Review and runtime findings, fixed:
 
 - The join-link card's close button slides clear of the FP block when the card rises to it.
+- The profile wallet card's Send Money button (`PeerWalletScreen`) is a small centred control under the band-centred
+  card: it was centred on the screen and `W - 60` wide, 42pt off the card's axis and into the strip (#58).
 - The peer picker's text input and forward panels grow upward (to half the screen), so they take the band of their
   actual rows, like the chat's input panel.
 - The sticker pack's visible glass button was a different node from the legacy one the fixer changed; caught by an
   FP capture, not by the two reviewers.
 - Share and import-sticker sheets stay in the band: tall scrolling grids whose corner buttons rise to the block.
+  The new share screen (`ShareScreen`) brought back a centered card on unfolded landscape by choosing its
+  `centeredSize` with `widthClass == .regular`; its content then lost the screen's 84pt strip inset off the card
+  (#86). A `ResizableSheetComponent` caller chooses `centeredSize` with `presentsFloatingPanels`, as its `isCentered`
+  (`RecentSessionScreen` still uses the width class; it is pushed, so it sees compact metrics on the Duo).
+- A mini app in the sheet (`WebAppController`) keeps its page to the band: the page spanned the strip under the
+  navigation bar's close and more buttons, which stand there, and most pages ignore the safe area reported to them, so
+  the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
 - Small centred controls stay on the axis of their content: camera preview Done, face scan Cancel, the round record
   button, the landscape wallet Send, the quick-reply empty-state button.
+- The wallet Send screen's custom keypad is a bottom panel, as the passcode screen's (the same component): in portrait
+  its keys span the strip with `bottomEdgeSideInsets()` (#53). In landscape they are a fixed-width block under the
+  band-centred Send button and keep the band, on that button's axis.
 
 Deliberately not changed:
 
 - Chat list empty state: the side tab bar sits in the strip at the bottom of the root screens.
 - Call screen button row: centred under the band-centred avatar.
-- Login intro (legacy RMIntroViewController): its Start button stays in the band, so the phone entry's button widens
-  as it animates in from it.
-- SheetComponent's landscape band, emoji keyboards and the business intro emoji panel (grows to 540pt in search),
-  PeerInfoPaneContainer, the chat's footer panels and input media, toasts.
+- Login intro (legacy RMIntroViewController): its Start button stays in the band. Since issue #18 the phone entry's
+  button keeps the band too on the folded screen (`authorizationBottomBand`), so it no longer widens as it animates in
+  from it.
+- The business intro emoji panel (grows to 540pt in search), PeerInfoPaneContainer, the chat's footer panels, toasts.
+
+Changed later: the emoji / stickers / GIFs keyboard (issue #71, `EntityKeyboardSideInsets.swift`). Its background
+spans the strip; the grids, group headers and the GIFs / Stickers / Emoji switcher centre on the band (its accessory
+buttons sit inside it), the pack rows and a header's embedded row are clipped to it, and its in-keyboard search keeps
+clear of the strip and the status corner block.
+
+Changed later too: SheetComponent's landscape band (issue #72, `sheetBandPlacement`). Beside a strip in landscape the
+whole sheet, background included, keeps to the band instead of only its content, so it no longer runs under unfolded
+landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet. This also fixed the
+Disable Sharing sheet (issue #87, `PeerCopyProtectionInfoScreen`), runtime-checked folded: it spans and is
+screen-centred in FP, keeps to the band with its content centred in FL and FR. UL, where it was reported, is code-only
+(`SheetPlacementTests.test_band_unfoldedLandscape_sheetKeepsClearOfTheRightStrip`).
 
 Runtime-checked (folded): Text Size Cancel/Set span 0..466 (portrait-only modal); wallpaper preview Apply 30..436;
 language sheet spans in FP, screen-centred in FR, clear of the bottom-right block in FL; sticker pack button spans in

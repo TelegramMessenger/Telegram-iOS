@@ -1,0 +1,44 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<form id="quiz">
+  <fieldset id="q1"><legend>1. Capital of Australia?</legend>
+    <label><input type="radio" name="q1" value="sydney"> Sydney</label>
+    <label><input type="radio" name="q1" value="canberra" id="q1-right"> Canberra</label>
+    <label><input type="radio" name="q1" value="melbourne"> Melbourne</label></fieldset>
+  <fieldset id="q2"><legend>2. 7 × 8 = ?</legend>
+    <label><input type="radio" name="q2" value="54"> 54</label>
+    <label><input type="radio" name="q2" value="56" id="q2-right"> 56</label>
+    <label><input type="radio" name="q2" value="58" id="q2-wrong"> 58</label></fieldset>
+  <fieldset id="q3"><legend>3. Which are primes? (two answers)</legend>
+    <label><input type="checkbox" name="q3" value="2" id="q3-a"> 2</label>
+    <label><input type="checkbox" name="q3" value="9"> 9</label>
+    <label><input type="checkbox" name="q3" value="11" id="q3-b"> 11</label></fieldset>
+  <button type="submit" id="submit">Check answers</button>
+  <div id="score"></div>
+</form>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 74.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 46.8
+    div 14 14 332 46.8
+      button 30 24 104 16.8
+      div 14 60.8 332 0
+
+== paint
+root 360x74.8 items=4
+  solid-fill bounds=(0,0,360,75) layer=(border=(0,0,360,75),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,75),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(14,14,136,37) layer=(border=(14,14,136,37),radius=(8,8,8,8,8,8,8,8),clip=(14,14,136,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(22,16,56,32) pos=(30,24,40,16) color=#ffffffff text="Check" font=f1 glyphs=5 advance=40
+  text bounds=(70,16,72,32) pos=(78,24,56,16) color=#ffffffff text="answers" font=f1 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

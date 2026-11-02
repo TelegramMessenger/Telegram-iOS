@@ -122,6 +122,9 @@ open class CountryButtonNode: ASButtonNode {
 
     public func setCountryTitle(countryId: String, name: String, font: UIFont, color: UIColor) {
         self.setAttributedTitle(countryFlagAndNameAttributedString(countryId: countryId, name: name, font: font, textColor: color), for: [])
+        // The title begins with the flag's placeholder; VoiceOver reads the country's name.
+        self.accessibilityLabel = name
+        self.accessibilityTraits = .button
     }
 
     override open func layout() {

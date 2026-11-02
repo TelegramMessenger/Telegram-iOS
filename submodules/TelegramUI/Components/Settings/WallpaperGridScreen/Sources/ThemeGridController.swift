@@ -14,7 +14,6 @@ import HexColor
 import PresentationDataUtils
 import MediaPickerUI
 import WallpaperGalleryScreen
-import Photos
 
 public enum WallpaperSelectionResult {
     case remove
@@ -227,29 +226,22 @@ public final class ThemeGridController: ViewController {
                     }
                 }
                 
-                let controller = MediaPickerScreenImpl(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
-                controller.customSelection = { [weak self] _, asset in
-                    guard let strongSelf = self, let asset = asset as? PHAsset else {
-                        return
-                    }
-                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: mode)
-                    controller.requiredLevel = requiredCustomLevel
-                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, _ in
-                        if let strongSelf = self {
-                            if case .peer = mode {
-                                strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
-                                Queue.mainQueue().after(0.15) {
-                                    dismissControllers()
-                                }
-                            } else {
-                                uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
-                                    dismissControllers()
-                                })
+                let controller = makeCustomWallpaperMediaPicker(context: strongSelf.context, mode: mode, requiredLevel: requiredCustomLevel, push: { [weak self] controller in
+                    self?.push(controller)
+                }, apply: { [weak self] wallpaper, options, editedImage, cropRect, brightness in
+                    if let strongSelf = self {
+                        if case .peer = mode {
+                            strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
+                            Queue.mainQueue().after(0.15) {
+                                dismissControllers()
                             }
+                        } else {
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                                dismissControllers()
+                            })
                         }
                     }
-                    strongSelf.push(controller)
-                }
+                })
                 self?.push(controller)
             }
         }, presentColors: { [weak self] in
@@ -279,59 +271,56 @@ public final class ThemeGridController: ViewController {
             }
         }, deleteWallpapers: { [weak self] wallpapers, completed in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                var items: [ActionSheetItem] = []
-                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_DeleteConfirmation(Int32(wallpapers.count)), color: .destructive, action: { [weak self, weak actionSheet] in
-   
-                    actionSheet?.dismissAnimated()
-                    completed()
+                let title = strongSelf.presentationData.strings.Wallpaper_DeleteConfirmation(Int32(wallpapers.count))
+                let alertController = textAlertController(
+                    context: strongSelf.context,
+                    title: title,
+                    text: "",
+                    actions: [
+                        TextAlertAction(type: .defaultDestructiveAction, title: title, action: { [weak self] in
+                            completed()
                     
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    for wallpaper in wallpapers {
-                        if wallpaper == strongSelf.presentationData.chatWallpaper {
-                            let presentationData = strongSelf.presentationData
-                            let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                let themeReference: PresentationThemeReference
-                                if presentationData.autoNightModeTriggered {
-                                    themeReference = current.automaticThemeSwitchSetting.theme
-                                } else {
-                                    themeReference = current.theme
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            for wallpaper in wallpapers {
+                                if wallpaper == strongSelf.presentationData.chatWallpaper {
+                                    let presentationData = strongSelf.presentationData
+                                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
+                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                        let themeReference: PresentationThemeReference
+                                        if presentationData.autoNightModeTriggered {
+                                            themeReference = current.automaticThemeSwitchSetting.theme
+                                        } else {
+                                            themeReference = current.theme
+                                        }
+                                        themeSpecificChatWallpapers[themeReference.index] = nil
+                                        themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: current.themeSpecificAccentColors[themeReference.index])] = nil
+                                        return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
+                                    })).start()
+                                    break
                                 }
-                                themeSpecificChatWallpapers[themeReference.index] = nil
-                                themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: current.themeSpecificAccentColors[themeReference.index])] = nil
-                                return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
-                            })).start()
-                            break
-                        }
-                    }
+                            }
                     
-                    var deleteWallpapers: [Signal<Void, NoError>] = []
-                    for wallpaper in wallpapers {
-                        deleteWallpapers.append(deleteWallpaper(account: strongSelf.context.account, wallpaper: wallpaper))
-                    }
+                            var deleteWallpapers: [Signal<Void, NoError>] = []
+                            for wallpaper in wallpapers {
+                                deleteWallpapers.append(deleteWallpaper(account: strongSelf.context.account, wallpaper: wallpaper))
+                            }
                     
-                    let _ = (combineLatest(deleteWallpapers)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.controllerNode.updateWallpapers()
-                        }
-                    })
+                            let _ = (combineLatest(deleteWallpapers)
+                            |> deliverOnMainQueue).start(completed: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.controllerNode.updateWallpapers()
+                                }
+                            })
                     
-                    strongSelf.donePressed()
-                }))
-                
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                strongSelf.present(actionSheet, in: .window(.root))
+                            strongSelf.donePressed()
+                        }),
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})
+                    ],
+                    actionLayout: .vertical
+                )
+                strongSelf.present(alertController, in: .window(.root))
             }
         }, shareWallpapers: { [weak self] wallpapers in
             if let strongSelf = self {
@@ -339,49 +328,46 @@ public final class ThemeGridController: ViewController {
             }
         }, resetWallpapers: { [weak self] in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                let items: [ActionSheetItem] = [
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        
-                        if let strongSelf = self {
-                            strongSelf.scrollToTop?()
+                let alertController = textAlertController(
+                    context: strongSelf.context,
+                    title: nil,
+                    text: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersInfo,
+                    actions: [
+                        TextAlertAction(type: .defaultDestructiveAction, title: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersConfirmation, action: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.scrollToTop?()
                             
-                            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
-                            strongSelf.present(controller, in: .window(.root))
+                                let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
+                                strongSelf.present(controller, in: .window(.root))
                             
-                            let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
-                                let _ = updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                    return current.withUpdatedThemeSpecificChatWallpapers([:])
-                                }).start()
+                                let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
+                                    let _ = updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
+                                        return current.withUpdatedThemeSpecificChatWallpapers([:])
+                                    }).start()
 
-                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
-                                    WallpapersState.update(transaction: transaction, { state in
-                                        var state = state
-                                        state.wallpapers.removeAll()
-                                        return state
-                                    })
-                                }).start()
+                                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
+                                        WallpapersState.update(transaction: transaction, { state in
+                                            var state = state
+                                            state.wallpapers.removeAll()
+                                            return state
+                                        })
+                                    }).start()
                                 
-                                let _ = (strongSelf.context.engine.themes.wallpapers()
-                                |> deliverOnMainQueue).start(completed: { [weak self, weak controller] in
-                                    controller?.dismiss()
-                                    if let strongSelf = self {
-                                        strongSelf.controllerNode.updateWallpapers()
-                                    }
+                                    let _ = (strongSelf.context.engine.themes.wallpapers()
+                                    |> deliverOnMainQueue).start(completed: { [weak self, weak controller] in
+                                        controller?.dismiss()
+                                        if let strongSelf = self {
+                                            strongSelf.controllerNode.updateWallpapers()
+                                        }
+                                    })
                                 })
-                            })
-                        }
-                    })
-                ]
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                strongSelf.present(actionSheet, in: .window(.root))
+                            }
+                        }),
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})
+                    ],
+                    actionLayout: .vertical
+                )
+                strongSelf.present(alertController, in: .window(.root))
             }
         }, popViewController: { [weak self] in
             if let strongSelf = self {

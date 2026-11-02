@@ -2636,10 +2636,10 @@ private final class WalletTransactionContentComponent: Component {
                         action: { [weak self] in
                             guard let self,
                                   let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
-                                  let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
+                                  let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
                                 return
                             }
-                            self.openExplorer(sourceView: sourceView)
+                            self.openExplorer(sourceView: rightItemView.menuSourceView)
                         }
                     )],
                     background: controlsBackground
@@ -3376,7 +3376,9 @@ private final class WalletTransactionContentComponent: Component {
                             )),
                             action: { [weak self] in
                                 self?.presentFeesAlert(transaction: transaction)
-                            }
+                            },
+                            // VoiceOver: "?" opens the network fees explanation; named by its title.
+                            accessibility: ComponentAccessibility(label: environment.strings.Wallet_Transaction_NetworkFeesTitle)
                         )),
                         spacing: 6.0,
                         alignSendButtonToTop: false

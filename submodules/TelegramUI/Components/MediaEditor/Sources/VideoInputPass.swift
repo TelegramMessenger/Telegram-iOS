@@ -90,7 +90,6 @@ final class CIInputPass: RenderPass {
     private var context: CIContext?
     
     func setup(device: MTLDevice, library: MTLLibrary) {
-        self.context = CIContext(mtlDevice: device, options: [.workingColorSpace : CGColorSpaceCreateDeviceRGB()])
     }
     
     func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
@@ -115,6 +114,9 @@ final class CIInputPass: RenderPass {
             texture.label = "outlineOutputTexture"
         }
         
+        if self.context == nil {
+            self.context = CIContext(mtlDevice: device, options: [.workingColorSpace : CGColorSpaceCreateDeviceRGB()])
+        }
         guard let outputTexture = self.outputTexture, let context = self.context else {
             return nil
         }

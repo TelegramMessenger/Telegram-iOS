@@ -106,6 +106,7 @@ public final class InteractiveDiamondComponent: Component {
         public private(set) var isExpanded = false
         public var onExpansionChanged: ((Bool) -> Void)?
         public var onLanding: ((CGFloat) -> Void)?
+        public var onTap: (() -> Void)?
         public var onMotionUpdated: ((MotionState?) -> Void)?
         public var onRefractionUpdated: ((RefractionGeometry?) -> Void)? {
             didSet {
@@ -290,10 +291,15 @@ public final class InteractiveDiamondComponent: Component {
                 let sample = self.dragSamples[0]
                 let interval = CGFloat(max(now - sample.time, 1.0 / 240.0))
                 let velocity = CGPoint(x: (position.x - sample.x) / interval, y: 0.0)
+                let isTap: Bool
+                if gesture.state == .ended, let pressStart = self.pressStart {
+                    isTap = now - pressStart.time < 0.25
+                        && hypot(position.x - pressStart.position.x, position.y - pressStart.position.y) < 10.0
+                } else {
+                    isTap = false
+                }
                 let tapDirection: Float?
-                if gesture.state == .ended, self.diamondLayer.diamondStyle.tapToSpin,
-                   let pressStart = self.pressStart, now - pressStart.time < 0.25,
-                   hypot(position.x - pressStart.position.x, position.y - pressStart.position.y) < 10.0 {
+                if isTap, self.diamondLayer.diamondStyle.tapToSpin {
                     let centerX = self.expansionStyle == .wallet ? self.diamondLayer.position.x : self.bounds.midX
                     tapDirection = position.x < centerX ? -1.0 : 1.0
                 } else {
@@ -316,6 +322,9 @@ public final class InteractiveDiamondComponent: Component {
                 }
                 if gesture.state == .ended, wasHolding, self.expansionStyle != .wallet {
                     self.scheduleLandingFeedback(power: releasePower)
+                }
+                if isTap {
+                    self.onTap?()
                 }
             case .cancelled, .failed:
                 self.cancelLandingFeedback()
@@ -711,6 +720,8 @@ public final class PremiumDiamondComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+            // A decorative 3D diamond: VoiceOver reads the title and text beside it.
+            self.accessibilityElementsHidden = true
 
             self.isOpaque = false
             self.diamondLayer.onReady = { [weak self] in

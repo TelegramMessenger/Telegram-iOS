@@ -137,19 +137,16 @@ private func deviceSafeInsets(deviceMetrics: DeviceMetrics, windowSize: CGSize) 
 /// the side the camera is on and whether the window reaches the screen edge at all, and each side is
 /// taken on its own, because the two sides need not be equal. Every other device keeps the per-model
 /// table, whose values the layout has been tuned against.
-/// Also carries the corner blocks (see `iPhoneDuoReservedCorners`) and the fold.
+/// Also carries the corner blocks (see `iPhoneDuoReservedArea`) and the fold.
 private func windowReservedArea(hostView: WindowHostView, deviceMetrics: DeviceMetrics, windowSize: CGSize, orientation: UIInterfaceOrientation) -> WindowReservedArea {
     if DeviceMetrics.hasMultipleDisplays {
-        // The table's settled insets agree with the table's corners at every posture; the live system
-        // insets lag behind rotations and folds. Postures the table does not list keep the live ones.
-        let safeInsets: UIEdgeInsets
-        if let tableInsets = iPhoneDuoSafeInsets(windowSize: windowSize, orientation: orientation) {
-            safeInsets = tableInsets
-        } else {
-            let systemInsets = hostView.systemSafeAreaInsets
-            safeInsets = UIEdgeInsets(top: systemInsets.top, left: systemInsets.left, bottom: 0.0, right: systemInsets.right)
-        }
-        return WindowReservedArea(safeInsets: safeInsets, reservedCorners: iPhoneDuoReservedCorners(windowSize: windowSize, orientation: orientation), division: iPhoneDuoDivision(windowSize: windowSize, reported: hostView.activeDivision))
+        // The system's insets and status block, while they describe the window's posture; the live values lag behind
+        // rotations and folds, and the table's settled ones stand in meanwhile. Postures the table does not list keep
+        // the live insets.
+        let systemInsets = hostView.systemSafeAreaInsets
+        let duoArea = iPhoneDuoReservedArea(windowSize: windowSize, orientation: orientation, systemSafeInsets: systemInsets, systemOcclusions: iPhoneDuoSystemReportIsSettled ? hostView.activeOcclusions : [])
+        let safeInsets = duoArea.safeInsets ?? UIEdgeInsets(top: systemInsets.top, left: systemInsets.left, bottom: 0.0, right: systemInsets.right)
+        return WindowReservedArea(safeInsets: safeInsets, reservedCorners: duoArea.corners, division: iPhoneDuoDivision(windowSize: windowSize, reported: hostView.activeDivision))
     }
     return WindowReservedArea(safeInsets: deviceSafeInsets(deviceMetrics: deviceMetrics, windowSize: windowSize), reservedCorners: .none, division: nil)
 }
@@ -204,6 +201,20 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     }
     if let superview = view.superview {
         return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview, keyboardOnly: keyboardOnly)
+    }
+    return false
+}
+
+// With a hardware keyboard, iPadOS posts a keyboard frame for its minimized keyboard bar as soon as a text input becomes
+// first responder: full width, 68.5pt high on an iPad Air 11" (iOS 27 simulator), while all it draws is a small button in
+// the bottom corner, which hides itself, with no notification, once the user types. Taken as the keyboard, it lifted the
+// chat's input panel and left an empty gap below it. No software keyboard on an iPad is anywhere near 100pt high (337pt
+// on the same iPad), so a shorter frame is the bar, unless the first responder has an input (accessory) view: that is
+// drawn across the bottom with a hardware keyboard too, and its frame is as short. A phone posts a zero-height frame for
+// a hardware keyboard.
+func isHardwareKeyboardBar(keyboardFrame: CGRect, deviceType: DeviceType, responderHasInputViews: Bool) -> Bool {
+    if case .tablet = deviceType, !responderHasInputViews, keyboardFrame.height > 0.0, keyboardFrame.height < 100.0 {
+        return true
     }
     return false
 }
@@ -285,6 +296,12 @@ public final class WindowHostView {
             return self.eventView.reservedRegions(kind: .division).first(where: \.isActive)?.frame
         }
         return nil
+    }
+    
+    /// Multi-display devices only: the occlusion regions the system reports as active (the status corner block and
+    /// the camera), in `eventView` coordinates. Empty before iOS 27.1.
+    fileprivate var activeOcclusions: [CGRect] {
+        return activeOcclusionFrames(in: self.eventView)
     }
     
     /// The bounds of the display the window is currently on (they follow the interface orientation).
@@ -498,7 +515,7 @@ public class Window1 {
         let reservedArea = windowReservedArea(hostView: self.hostView, deviceMetrics: self.deviceMetrics, windowSize: boundsSize, orientation: orientation)
         let onScreenNavigationHeight = windowOnScreenNavigationHeight(hostView: self.hostView, deviceMetrics: self.deviceMetrics, isLandscape: isLandscape)
         
-        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForWindowSize(size: boundsSize, orientation: orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, reservedArea: reservedArea, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
+        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForWindowSize(size: boundsSize, orientation: orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, reservedArea: reservedArea, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: isVoiceOverRunningForLayout)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
@@ -767,6 +784,14 @@ public class Window1 {
                     keyboardHeight = 0.0
                 }
                 
+                if let keyboardFrameEnd = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.eventView).0
+                    let responderHasInputViews = firstResponder?.inputView != nil || firstResponder?.inputAccessoryView != nil
+                    if isHardwareKeyboardBar(keyboardFrame: keyboardFrameEnd, deviceType: strongSelf.deviceMetrics.type, responderHasInputViews: responderHasInputViews) {
+                        keyboardHeight = 0.0
+                    }
+                }
+                
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     if #available(iOS 26.0, *) {
@@ -836,7 +861,7 @@ public class Window1 {
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
-                    strongSelf.updateLayout { $0.update(inVoiceOver: UIAccessibility.isVoiceOverRunning) }
+                    strongSelf.updateLayout { $0.update(inVoiceOver: isVoiceOverRunningForLayout) }
                 }
             })
         }
@@ -1038,6 +1063,14 @@ public class Window1 {
             transition = .animated(duration: duration, curve: .easeInOut)
         } else {
             transition = .immediate
+        }
+        if DeviceMetrics.hasMultipleDisplays {
+            // A rotation or a fold: the system's report is transitional for a while, and once it has settled its sizes
+            // replace the table's, even if no layout pass follows.
+            iPhoneDuoPostureWillChange()
+            DispatchQueue.main.asyncAfter(deadline: .now() + iPhoneDuoSystemReportSettleDelay + 0.05, execute: { [weak self] in
+                self?.updateSystemInsets()
+            })
         }
         self.updateLayout { $0.update(size: value, metrics: layoutMetricsForWindowSize(size: value, orientation: orientation), reservedArea: windowReservedArea(hostView: self.hostView, deviceMetrics: self.deviceMetrics, windowSize: value, orientation: self.hostView.currentInterfaceOrientation()), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
         if let statusBarHost = self.statusBarHost, !statusBarHost.isApplicationInForeground {

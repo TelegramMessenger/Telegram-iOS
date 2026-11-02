@@ -1,0 +1,157 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Converter</title>
+<style></style>
+</head>
+<body>
+<div class="card">
+  <h2>💱 Currency Converter</h2>
+  <div class="row">
+    <div class="amt" id="amtSteps"><button data-d="-10">−10</button><button data-d="-1">−1</button><span id="amt">${"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":100}</span><button data-d="1">+1</button><button data-d="10">+10</button></div>
+    <div class="cur" id="from"><button data-c="USD" class="active">USD</button><button data-c="EUR" class="">EUR</button><button data-c="GBP" class="">GBP</button><button data-c="JPY" class="">JPY</button></div>
+  </div>
+  <div class="swap"><button id="swap">⇅</button></div>
+  <div class="row">
+    <div class="amt"><span id="out">€{"kind":"number","locale":"en-US","opts":{"minimumFractionDigits":2,"maximumFractionDigits":2},"value":92}</span></div>
+    <div class="cur" id="to"><button data-c="USD" class="">USD</button><button data-c="EUR" class="active">EUR</button><button data-c="GBP" class="">GBP</button><button data-c="JPY" class="">JPY</button></div>
+  </div>
+  <div class="rate" id="rate">1 USD = 0.9200 EUR</div>
+  <details>
+    <summary>Edit rates (per 1 USD)</summary>
+    <div class="rates" id="rates"><div><span class="lbl">EUR</span><div class="step" data-c="EUR"><button data-d="-1">−</button><span>0.92</span><button data-d="1">+</button></div></div><div><span class="lbl">GBP</span><div class="step" data-c="GBP"><button data-d="-1">−</button><span>0.79</span><button data-d="1">+</button></div></div><div><span class="lbl">JPY</span><div class="step" data-c="JPY"><button data-d="-1">−</button><span>149.5</span><button data-d="1">+</button></div></div></div>
+    <div class="updated" id="updated">Using built-in rates (a widget has no network access)</div>
+  </details>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 438.395
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 406.395
+    div 34 34 292 370.395
+      h2 34 34 292 22.5
+      div 43 79.5 274 87.5
+        div 43 79.5 274 53.9
+          button 52 91.45 40 30
+          button 116 91.45 32 30
+          span 163 83.5 616 45.9
+          button 794 91.45 16 30
+          button 834 91.45 24 30
+        div 43 139.4 274 27.6
+          button 44 145.4 63.5 15.6
+          button 113.5 145.4 63.5 15.6
+          button 183 145.4 63.5 15.6
+          button 252.5 145.4 63.5 15.6
+      div 34 182 292 36
+        button 162 182 36 36
+      div 43 233 274 87.5
+        div 43 233 274 53.9
+          span 43 237 608 45.9
+        div 43 292.9 274 27.6
+          button 44 298.9 63.5 15.6
+          button 113.5 298.9 63.5 15.6
+          button 183 298.9 63.5 15.6
+          button 252.5 298.9 63.5 15.6
+      div 34 339.5 292 17.55
+      details 34 371.05 292 33.345
+        summary 34 371.05 292 33.345
+          -tag-before 34 371.05 14.625 31.59
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              button 0 0 0 0
+              span 0 0 0 0
+              button 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              button 0 0 0 0
+              span 0 0 0 0
+              button 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            div 0 0 0 0
+              button 0 0 0 0
+              span 0 0 0 0
+              button 0 0 0 0
+        div 0 0 0 0
+
+== paint
+root 867x438.395 items=58
+  solid-fill bounds=(0,0,360,438) layer=(border=(0,0,360,438),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,438),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#eff6ffff
+  box-shadow bounds=(4,4,352,430) box=(16,16,328,406) radius=(12,12,12,12,12,12,12,12) shadow=(0,2,8,0,#00000014,0)
+  solid-fill bounds=(16,16,328,406) layer=(border=(16,16,328,406),radius=(12,12,12,12,12,12,12,12),clip=(16,16,328,406),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(34,71,292,105) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(34,71,292,105) root=0
+  solid-fill bounds=(43,91,58,30) layer=(border=(43,91,58,30),radius=(8,8,8,8,8,8,8,8),clip=(43,91,58,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(107,91,50,30) layer=(border=(107,91,50,30),radius=(8,8,8,8,8,8,8,8),clip=(107,91,50,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(785,91,34,30) layer=(border=(785,91,34,30),radius=(8,8,8,8,8,8,8,8),clip=(785,91,34,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(825,91,42,30) layer=(border=(825,91,42,30),radius=(8,8,8,8,8,8,8,8),clip=(825,91,42,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  solid-fill bounds=(43,139,66,28) layer=(border=(43,139,66,28),radius=(8,8,8,8,8,8,8,8),clip=(43,139,66,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(43,139,66,28) borders=(left=(1,4,#2563ebff),top=(1,4,#2563ebff),right=(1,4,#2563ebff),bottom=(1,4,#2563ebff),radius=(8,8,8,8,8,8,8,8)) pos=(43,139,66,28) root=0
+  solid-fill bounds=(113,139,65,28) layer=(border=(113,139,65,28),radius=(8,8,8,8,8,8,8,8),clip=(113,139,65,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(113,139,65,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(113,139,65,28) root=0
+  solid-fill bounds=(182,139,66,28) layer=(border=(182,139,66,28),radius=(8,8,8,8,8,8,8,8),clip=(182,139,66,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(182,139,66,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(182,139,66,28) root=0
+  solid-fill bounds=(252,139,65,28) layer=(border=(252,139,65,28),radius=(8,8,8,8,8,8,8,8),clip=(252,139,65,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(252,139,65,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(252,139,65,28) root=0
+  borders bounds=(34,224,292,106) borders=(left=(1,4,#d1d5dbff),top=(1,4,#d1d5dbff),right=(1,4,#d1d5dbff),bottom=(1,4,#d1d5dbff),radius=(8,8,8,8,8,8,8,8)) pos=(34,224,292,106) root=0
+  solid-fill bounds=(43,293,66,28) layer=(border=(43,293,66,28),radius=(8,8,8,8,8,8,8,8),clip=(43,293,66,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(43,293,66,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(43,293,66,28) root=0
+  solid-fill bounds=(113,293,65,28) layer=(border=(113,293,65,28),radius=(8,8,8,8,8,8,8,8),clip=(113,293,65,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  borders bounds=(113,293,65,28) borders=(left=(1,4,#2563ebff),top=(1,4,#2563ebff),right=(1,4,#2563ebff),bottom=(1,4,#2563ebff),radius=(8,8,8,8,8,8,8,8)) pos=(113,293,65,28) root=0
+  solid-fill bounds=(182,293,66,28) layer=(border=(182,293,66,28),radius=(8,8,8,8,8,8,8,8),clip=(182,293,66,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(182,293,66,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(182,293,66,28) root=0
+  solid-fill bounds=(252,293,65,28) layer=(border=(252,293,65,28),radius=(8,8,8,8,8,8,8,8),clip=(252,293,65,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(252,293,65,28) borders=(left=(1,4,#e5e7ebff),top=(1,4,#e5e7ebff),right=(1,4,#e5e7ebff),bottom=(1,4,#e5e7ebff),radius=(8,8,8,8,8,8,8,8)) pos=(252,293,65,28) root=0
+  text bounds=(26,29,48,32) pos=(34,37,32,16) color=#000000ff text="💱" font=f1 glyphs=4 advance=32
+  text bounds=(66,29,80,32) pos=(74,37,64,16) color=#000000ff text="Currency" font=f1 glyphs=8 advance=64
+  text bounds=(138,29,88,32) pos=(146,37,72,16) color=#000000ff text="Converter" font=f1 glyphs=9 advance=72
+  text bounds=(44,91,56,32) pos=(52,99,40,16) color=#1e3a8aff text="−10" font=f2 glyphs=5 advance=40
+  text bounds=(108,91,48,32) pos=(116,99,32,16) color=#1e3a8aff text="−1" font=f2 glyphs=4 advance=32
+  text bounds=(339,79,264,32) pos=(347,87,248,16) color=#000000ff text="${\"kind\":\"number\",\"locale\":\"en-" font=f3 glyphs=31 advance=248
+  text bounds=(155,101,632,32) pos=(163,109,616,16) color=#000000ff text="US\",\"opts\":{\"minimumFractionDigits\":2,\"maximumFractionDigits\":2},\"value\":100}" font=f3 glyphs=77 advance=616
+  text bounds=(786,91,32,32) pos=(794,99,16,16) color=#1e3a8aff text="+1" font=f2 glyphs=2 advance=16
+  text bounds=(826,91,40,32) pos=(834,99,24,16) color=#1e3a8aff text="+10" font=f2 glyphs=3 advance=24
+  text bounds=(55.75,137,40,32) pos=(63.75,145,24,16) color=#ffffffff text="USD" font=f2 glyphs=3 advance=24
+  text bounds=(125.25,137,40,32) pos=(133.25,145,24,16) color=#111111ff text="EUR" font=f2 glyphs=3 advance=24
+  text bounds=(194.75,137,40,32) pos=(202.75,145,24,16) color=#111111ff text="GBP" font=f2 glyphs=3 advance=24
+  text bounds=(264.25,137,40,32) pos=(272.25,145,24,16) color=#111111ff text="JPY" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(162,182,36,36) layer=(border=(162,182,36,36),radius=(8,8,8,8,8,8,8,8),clip=(162,182,36,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dbeafeff
+  text bounds=(160,183,40,32) pos=(168,191,24,16) color=#000000ff text="⇅" font=f4 glyphs=3 advance=24
+  text bounds=(207,232,280,32) pos=(215,240,264,16) color=#000000ff text="€{\"kind\":\"number\",\"locale\":\"en-" font=f3 glyphs=33 advance=264
+  text bounds=(35,255,624,32) pos=(43,263,608,16) color=#000000ff text="US\",\"opts\":{\"minimumFractionDigits\":2,\"maximumFractionDigits\":2},\"value\":92}" font=f3 glyphs=76 advance=608
+  text bounds=(55.75,291,40,32) pos=(63.75,299,24,16) color=#111111ff text="USD" font=f2 glyphs=3 advance=24
+  text bounds=(125.25,291,40,32) pos=(133.25,299,24,16) color=#ffffffff text="EUR" font=f2 glyphs=3 advance=24
+  text bounds=(194.75,291,40,32) pos=(202.75,299,24,16) color=#111111ff text="GBP" font=f2 glyphs=3 advance=24
+  text bounds=(264.25,291,40,32) pos=(272.25,299,24,16) color=#111111ff text="JPY" font=f2 glyphs=3 advance=24
+  text bounds=(100,332,24,32) pos=(108,340,8,16) color=#6b7280ff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(116,332,40,32) pos=(124,340,24,16) color=#6b7280ff text="USD" font=f5 glyphs=3 advance=24
+  text bounds=(148,332,24,32) pos=(156,340,8,16) color=#6b7280ff text="=" font=f5 glyphs=1 advance=8
+  text bounds=(164,332,64,32) pos=(172,340,48,16) color=#6b7280ff text="0.9200" font=f5 glyphs=6 advance=48
+  text bounds=(220,332,40,32) pos=(228,340,24,16) color=#6b7280ff text="EUR" font=f5 glyphs=3 advance=24
+  text bounds=(26,363,40,32) pos=(34,371,24,16) color=#2563ebff text="▶" font=f6 glyphs=3 advance=24
+  text bounds=(26,379,40,32) pos=(34,387,24,16) color=#2563ebff text="︎" font=f6 glyphs=3 advance=24
+  text bounds=(40.625,379,48,32) pos=(48.625,387,32,16) color=#2563ebff text="Edit" font=f5 glyphs=4 advance=32
+  text bounds=(80.625,379,56,32) pos=(88.625,387,40,16) color=#2563ebff text="rates" font=f5 glyphs=5 advance=40
+  text bounds=(128.625,379,48,32) pos=(136.625,387,32,16) color=#2563ebff text="(per" font=f5 glyphs=4 advance=32
+  text bounds=(168.625,379,24,32) pos=(176.625,387,8,16) color=#2563ebff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(184.625,379,48,32) pos=(192.625,387,32,16) color=#2563ebff text="USD)" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -792,6 +792,7 @@ final class ChatbotSetupScreenComponent: Component {
                 initialText: "",
                 resetText: resetQueryText.flatMap { ListTextFieldItemComponent.ResetText(value: $0) },
                 placeholder: environment.strings.ChatbotSetup_BotSearchPlaceholder,
+                clearButtonAccessibilityLabel: environment.strings.WebSearch_RecentSectionClear,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 updated: { [weak self] value in

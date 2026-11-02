@@ -176,6 +176,9 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.isAccessibilityElement = true
         self.buttonNode.accessibilityLabel = action.text
+        if action.accessibilityIsSelected {
+            self.buttonNode.accessibilityTraits = [.button, .selected]
+        }
         
         super.init()
         

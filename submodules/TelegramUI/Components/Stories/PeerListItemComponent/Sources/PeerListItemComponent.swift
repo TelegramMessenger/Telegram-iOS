@@ -233,6 +233,7 @@ public final class PeerListItemComponent: Component {
     let sideInset: CGFloat
     let title: String
     let titleAccessory: TitleAccessory
+    let titleColor: UIColor?
     let avatar: Avatar?
     let avatarComponent: AnyComponent<Empty>?
     let avatarPeer: EnginePeer?
@@ -267,6 +268,7 @@ public final class PeerListItemComponent: Component {
         sideInset: CGFloat,
         title: String,
         titleAccessory: TitleAccessory = .none,
+        titleColor: UIColor? = nil,
         avatar: Avatar? = nil,
         avatarComponent: AnyComponent<Empty>? = nil,
         peer: EnginePeer?,
@@ -300,6 +302,7 @@ public final class PeerListItemComponent: Component {
         self.sideInset = sideInset
         self.title = title
         self.titleAccessory = titleAccessory
+        self.titleColor = titleColor
         self.avatar = avatar
         self.avatarComponent = avatarComponent
         self.avatarPeer = avatarPeer
@@ -347,6 +350,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.titleAccessory != rhs.titleAccessory {
+            return false
+        }
+        if lhs.titleColor != rhs.titleColor {
             return false
         }
         if lhs.avatar != rhs.avatar {
@@ -420,9 +426,126 @@ public final class PeerListItemComponent: Component {
         return true
     }
     
+    /// The row's tap target. For VoiceOver it is the row: its title as the label, the rest of its text (status,
+    /// subtitle, accessory) as the value, selection and swipe actions included. Computed when VoiceOver asks.
+    private final class ContainerButton: HighlightTrackingButton {
+        weak var row: View?
+        
+        /// Inside the chat's history subtree (`accessibilityIsInsideViewElementsSubtree`) the row keeps the plain button it
+        /// was. No chat part uses this row today; the guard keeps it so if one does.
+        private var describesRow: Bool {
+            return self.row != nil && !accessibilityIsInsideViewElementsSubtree(self)
+        }
+        
+        override var isAccessibilityElement: Bool {
+            get {
+                if !self.describesRow {
+                    return super.isAccessibilityElement
+                }
+                return self.row?.rowAccessibilityLabel != nil
+            } set(value) {
+                super.isAccessibilityElement = value
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                if !self.describesRow {
+                    return super.accessibilityLabel
+                }
+                return self.row?.rowAccessibilityLabel
+            } set(value) {
+                super.accessibilityLabel = value
+            }
+        }
+        
+        override var accessibilityValue: String? {
+            get {
+                if !self.describesRow {
+                    return super.accessibilityValue
+                }
+                return self.row?.rowAccessibilityValue
+            } set(value) {
+                super.accessibilityValue = value
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                if !self.describesRow {
+                    return super.accessibilityTraits
+                }
+                return self.row?.rowAccessibilityTraits ?? []
+            } set(value) {
+                super.accessibilityTraits = value
+            }
+        }
+        
+        override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                if !self.describesRow {
+                    return super.accessibilityCustomActions
+                }
+                return self.row?.rowAccessibilityCustomActions
+            } set(value) {
+                super.accessibilityCustomActions = value
+            }
+        }
+    }
+    
     public final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
         public let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
+        
+        fileprivate var rowAccessibilityLabel: String? {
+            guard let component = self.component else {
+                return nil
+            }
+            if let titleView = self.title.view {
+                let texts = titleView.accessibilityDisplayedContent().texts
+                if !texts.isEmpty {
+                    return texts.joined(separator: ", ")
+                }
+            }
+            return component.title.isEmpty ? nil : component.title
+        }
+        
+        fileprivate var rowAccessibilityValue: String? {
+            var texts: [String] = []
+            for view in [self.label.view, self.subtitleView?.view, self.rightAccessoryComponentView?.view] {
+                if let view, !view.isHidden, view.alpha >= 0.01, view.superview != nil {
+                    texts.append(contentsOf: view.accessibilityDisplayedContent().texts)
+                }
+            }
+            return texts.isEmpty ? nil : texts.joined(separator: ", ")
+        }
+        
+        fileprivate var rowAccessibilityTraits: UIAccessibilityTraits {
+            guard let component = self.component else {
+                return []
+            }
+            var traits: UIAccessibilityTraits = component.action != nil ? .button : .staticText
+            if case let .editing(isSelected, _) = component.selectionState, isSelected {
+                traits.insert(.selected)
+            }
+            if !component.isEnabled {
+                traits.insert(.notEnabled)
+            }
+            return traits
+        }
+        
+        fileprivate var rowAccessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            guard let component = self.component, let inlineActions = component.inlineActions, !inlineActions.actions.isEmpty else {
+                return nil
+            }
+            // The swipe options, as the row's actions.
+            return inlineActions.actions.map { inlineAction in
+                return UIAccessibilityCustomAction(name: inlineAction.title, actionHandler: { _ in
+                    inlineAction.action()
+                    return true
+                })
+            }
+        }
         
         private let swipeOptionContainer: ListItemSwipeOptionContainer
         
@@ -493,7 +616,8 @@ public final class PeerListItemComponent: Component {
             self.separatorLayer = SimpleLayer()
             
             self.extractedContainerView = ContextExtractedContentContainingView()
-            self.containerButton = HighlightTrackingButton()
+            let containerButton = ContainerButton()
+            self.containerButton = containerButton
             self.containerButton.layer.anchorPoint = CGPoint()
             self.containerButton.isExclusiveTouch = true
             
@@ -502,6 +626,8 @@ public final class PeerListItemComponent: Component {
             self.avatarButtonView = HighlightTrackingButton()
             
             super.init(frame: frame)
+            
+            containerButton.row = self
             
             self.addSubview(self.extractedContainerView)
             self.targetViewForActivationProgress = self.extractedContainerView.contentView
@@ -707,6 +833,11 @@ public final class PeerListItemComponent: Component {
             self.containerButton.isEnabled = component.action != nil
             
             self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil && component.openStories != nil
+            // Without stories to open the avatar's button does nothing: not an element then.
+            let avatarButtonHidden = !self.avatarButtonView.isUserInteractionEnabled
+            if self.avatarButtonView.accessibilityElementsHidden != avatarButtonHidden && (!avatarButtonHidden || !accessibilityIsInsideViewElementsSubtree(self)) {
+                self.avatarButtonView.accessibilityElementsHidden = avatarButtonHidden
+            }
             
             let labelData: (String, Subtitle.Color)
             if let presence = component.presence {
@@ -1083,7 +1214,7 @@ public final class PeerListItemComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.title, font: titleFont, textColor: component.titleColor ?? component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: titleAvailableWidth, height: 100.0)

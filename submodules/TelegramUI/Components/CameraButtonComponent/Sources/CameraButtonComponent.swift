@@ -8,8 +8,10 @@ public final class CameraButton: Component {
     let tag: AnyObject?
     let isEnabled: Bool
     let isExclusive: Bool
+    let animateScale: Bool
     let action: () -> Void
     let longTapAction: (() -> Void)?
+    let accessibility: ComponentAccessibility?
 
     public init(
         content: AnyComponentWithIdentity<Empty>,
@@ -17,16 +19,20 @@ public final class CameraButton: Component {
         tag: AnyObject? = nil,
         isEnabled: Bool = true,
         isExclusive: Bool = true,
+        animateScale: Bool = true,
         action: @escaping () -> Void,
-        longTapAction: (() -> Void)? = nil
+        longTapAction: (() -> Void)? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.content = content
         self.minSize = minSize
         self.tag = tag
         self.isEnabled = isEnabled
         self.isExclusive = isExclusive
+        self.animateScale = animateScale
         self.action = action
         self.longTapAction = longTapAction
+        self.accessibility = accessibility
     }
     
     public func tagged(_ tag: AnyObject) -> CameraButton {
@@ -36,8 +42,10 @@ public final class CameraButton: Component {
             tag: tag,
             isEnabled: self.isEnabled,
             isExclusive: self.isExclusive,
+            animateScale: self.animateScale,
             action: self.action,
-            longTapAction: self.longTapAction
+            longTapAction: self.longTapAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -55,6 +63,12 @@ public final class CameraButton: Component {
             return false
         }
         if lhs.isExclusive != rhs.isExclusive {
+            return false
+        }
+        if lhs.animateScale != rhs.animateScale {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -78,7 +92,7 @@ public final class CameraButton: Component {
                 return
             }
             let scale: CGFloat
-            if component.isEnabled {
+            if component.isEnabled && component.animateScale {
                 scale = self.currentIsHighlighted ? 0.8 : 1.0
             } else {
                 scale = 1.0
@@ -123,6 +137,23 @@ public final class CameraButton: Component {
         
         @objc private func handleLongPress() {
             self.component?.longTapAction?()
+        }
+        
+        /// VoiceOver: the long press (the flash's tint, for one) as a "More" action, offered while the long press is.
+        override public var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                guard let component = self.component, component.longTapAction != nil, component.isEnabled else {
+                    return nil
+                }
+                return [UIAccessibilityCustomAction(name: ComponentAccessibilityStrings.more, actionHandler: { [weak self] _ in
+                    guard let self, let longTapAction = self.component?.longTapAction else {
+                        return false
+                    }
+                    longTapAction()
+                    return true
+                })]
+            } set(value) {
+            }
         }
         
         @objc private func pressed() {
@@ -185,6 +216,7 @@ public final class CameraButton: Component {
             self.updateScale(transition: transition)
             self.isEnabled = component.isEnabled
             self.longTapGestureRecognizer?.isEnabled = component.longTapAction != nil
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
             
             self.contentView.bounds = CGRect(origin: .zero, size: contentSize)
             self.contentView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
