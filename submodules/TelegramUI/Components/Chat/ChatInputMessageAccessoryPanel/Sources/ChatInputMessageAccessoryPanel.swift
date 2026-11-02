@@ -361,15 +361,16 @@ public final class ChatInputMessageAccessoryPanel: Component {
             }
             if case .ended = recognizer.state {
                 if component.action != nil {
-                    self.hideOptionsHint(disable: true)
+                    self.hideOptionsHint()
                 }
                 component.action?(self)
             }
         }
         
-        // The reply and forward panels show "Tap here for reply/forward options" in place of the message preview for
-        // 3 seconds after they appear, at most 3 times in total; opening the options sets the counter to 3 (the
-        // panel's action, in ChatInterfaceStateAccessoryPanels), so it never shows again after that.
+        // As the pre-glass reply and forward panels did, the panels show the message preview first and, 3 seconds after
+        // they appear, "Tap here for reply/forward options" in its place, until the panel is tapped; at most 3 times in
+        // total. Opening the options sets the counter to 3 (the panel's action, in ChatInterfaceStateAccessoryPanels),
+        // so it never shows again after that.
         private func startOptionsHintIfNeeded(component: ChatInputMessageAccessoryPanel) {
             let accountManager = component.context.sharedContext.accountManager
             let getCount: Signal<Int32, NoError>
@@ -390,28 +391,29 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 guard let self, count < 3, !self.isOptionsHintDisabled else {
                     return
                 }
-                let _ = incrementCount.startStandalone()
-                
-                self.isOptionsHintVisible = true
-                if !self.isUpdating {
-                    self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
-                }
-                
                 self.optionsHintTimer?.invalidate()
                 let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
-                    self?.hideOptionsHint(disable: false)
+                    guard let self, !self.isOptionsHintDisabled else {
+                        return
+                    }
+                    self.optionsHintTimer = nil
+                    // Counted when shown: a panel closed within the 3 seconds does not use up a show.
+                    let _ = incrementCount.startStandalone()
+
+                    self.isOptionsHintVisible = true
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
+                    }
                 }, queue: Queue.mainQueue())
                 self.optionsHintTimer = timer
                 timer.start()
             })
         }
-        
-        private func hideOptionsHint(disable: Bool) {
-            if disable {
-                self.isOptionsHintDisabled = true
-                self.optionsHintDisposable?.dispose()
-                self.optionsHintDisposable = nil
-            }
+
+        private func hideOptionsHint() {
+            self.isOptionsHintDisabled = true
+            self.optionsHintDisposable?.dispose()
+            self.optionsHintDisposable = nil
             self.optionsHintTimer?.invalidate()
             self.optionsHintTimer = nil
             if self.isOptionsHintVisible {
