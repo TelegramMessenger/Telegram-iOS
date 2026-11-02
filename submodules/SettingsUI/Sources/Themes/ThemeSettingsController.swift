@@ -427,7 +427,8 @@ private func themeSettingsControllerEntries(
     chatThemes: [PresentationThemeReference],
     animatedEmojiStickers: [String: [StickerPackItem]],
     accountPeer: EnginePeer?,
-    nameColors: PeerNameColors
+    nameColors: PeerNameColors,
+    showsBubbleModeSwitch: Bool
 ) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -469,7 +470,9 @@ private func themeSettingsControllerEntries(
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
     entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
     
-    entries.append(.bubbleMode(presentationData.theme, strings.Appearance_BubbleMode, bubbleMode))
+    if showsBubbleModeSwitch {
+        entries.append(.bubbleMode(presentationData.theme, strings.Appearance_BubbleMode, bubbleMode))
+    }
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
     switch presentationThemeSettings.automaticThemeSwitchSetting.trigger {
@@ -1187,9 +1190,10 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         // The hidden rows slide only on the update where the mode flipped.
         let bubbleModeChanged = previousBubbleMode.swap(bubbleMode).flatMap { $0 != bubbleMode } ?? false
+        let showsBubbleModeSwitch = showsBubbleFreeModeSetting(isBubbleFreeModeAvailable: isBubbleFreeModeAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }), isInUse: !bubbleMode)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: bubbleModeChanged)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, showsBubbleModeSwitch: showsBubbleModeSwitch), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: bubbleModeChanged)
         
         return (controllerState, (listState, arguments))
     }

@@ -108,7 +108,9 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper, animated: false)
         self.chatBackgroundNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
                         
-        self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData, focusOnItemTag: focusOnItemTag)
+        // Decided once for the screen, so that picking Default does not take the choice away under the finger.
+        let showsFontChoice = showsBubbleFreeModeSetting(isBubbleFreeModeAvailable: isBubbleFreeModeAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }), isInUse: presentationThemeSettings.chatBubbleSettings.serifMessageFont)
+        self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData, showsFontChoice: showsFontChoice, focusOnItemTag: focusOnItemTag)
                 
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
@@ -813,6 +815,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     // The face message text is set in, above the size.
+    private let showsFontChoice: Bool
     private let defaultFontNode = TextSizeFontOptionNode()
     private let serifFontNode = TextSizeFontOptionNode()
     private let sectionNode = ASDisplayNode()
@@ -830,10 +833,11 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     var updateCustomFontSize: ((PresentationFontSize) -> Void)?
     var updateSerifMessageFont: ((Bool) -> Void)?
     
-    init(presentationThemeSettings: PresentationThemeSettings, presentationData: PresentationData, focusOnItemTag: TextSizeSelectionEntryTag?) {
+    init(presentationThemeSettings: PresentationThemeSettings, presentationData: PresentationData, showsFontChoice: Bool, focusOnItemTag: TextSizeSelectionEntryTag?) {
         self.presentationThemeSettings = presentationThemeSettings
         self.presentationData = presentationData
-        
+        self.showsFontChoice = showsFontChoice
+
         self.switchItemNode = ItemListSwitchItemNode(type: .regular)
         self.fontSizeItemNode = ThemeSettingsFontSizeItemNode()
         
@@ -847,8 +851,10 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             self.sectionNode.layer.cornerCurve = .continuous
         }
         
-        self.addSubnode(self.defaultFontNode)
-        self.addSubnode(self.serifFontNode)
+        if self.showsFontChoice {
+            self.addSubnode(self.defaultFontNode)
+            self.addSubnode(self.serifFontNode)
+        }
         self.addSubnode(self.sectionNode)
         self.sectionNode.addSubnode(self.switchItemNode)
         self.sectionNode.addSubnode(self.fontSizeItemNode)
@@ -907,17 +913,20 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         let sectionRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right) + sideInset
         let sectionWidth = max(1.0, width - sectionLeftInset - sectionRightInset)
         
-        let theme = self.presentationData.theme
-        let strings = self.presentationData.strings
-        let optionSpacing: CGFloat = 12.0
-        let optionSize = CGSize(width: floor((sectionWidth - optionSpacing) * 0.5), height: 84.0)
-        let serifMessageFont = self.presentationThemeSettings.chatBubbleSettings.serifMessageFont
-        self.defaultFontNode.update(size: optionSize, sampleFont: Font.regular(28.0), title: strings.Appearance_TextSize_FontDefault, isSelected: !serifMessageFont, theme: theme)
-        self.serifFontNode.update(size: optionSize, sampleFont: Font.with(size: 28.0, design: .serif), title: strings.Appearance_TextSize_FontSerif, isSelected: serifMessageFont, theme: theme)
-        transition.updateFrame(node: self.defaultFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset, y: 0.0), size: optionSize))
-        transition.updateFrame(node: self.serifFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset + sectionWidth - optionSize.width, y: 0.0), size: optionSize))
-        let sectionOriginY = optionSize.height + buttonsSpacing
-        
+        var sectionOriginY: CGFloat = 0.0
+        if self.showsFontChoice {
+            let theme = self.presentationData.theme
+            let strings = self.presentationData.strings
+            let optionSpacing: CGFloat = 12.0
+            let optionSize = CGSize(width: floor((sectionWidth - optionSpacing) * 0.5), height: 84.0)
+            let serifMessageFont = self.presentationThemeSettings.chatBubbleSettings.serifMessageFont
+            self.defaultFontNode.update(size: optionSize, sampleFont: Font.regular(28.0), title: strings.Appearance_TextSize_FontDefault, isSelected: !serifMessageFont, theme: theme)
+            self.serifFontNode.update(size: optionSize, sampleFont: Font.with(size: 28.0, design: .serif), title: strings.Appearance_TextSize_FontSerif, isSelected: serifMessageFont, theme: theme)
+            transition.updateFrame(node: self.defaultFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset, y: 0.0), size: optionSize))
+            transition.updateFrame(node: self.serifFontNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset + sectionWidth - optionSize.width, y: 0.0), size: optionSize))
+            sectionOriginY = optionSize.height + buttonsSpacing
+        }
+
         var sectionHeight: CGFloat = 0.0
         
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), systemStyle: .glass, title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, noCorners: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
