@@ -1920,8 +1920,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         // The bottom inset with neither a keyboard nor an input node, the least the panels sit above.
         var restingBottomInset = cleanInsets.bottom
         // iPad: the bottom panels' row (a panel's default height, 40pt) rests centred on the tab bar in the master
-        // pane beside the chat (when the master pane shows another screen, the row moves by the same 4pt).
-        if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, case .standard(.default) = self.chatPresentationInterfaceState.mode {
+        // pane beside the chat, while there is one (not beside a pushed master screen, such as a forum's topics).
+        if case .tablet = layout.deviceMetrics.type, case .regular = layout.metrics.widthClass, layout.isBesideBottomTabBar, case .standard(.default) = self.chatPresentationInterfaceState.mode {
             restingBottomInset += tabBarAlignedRowBottomInsetOffset(bottomInset: restingBottomInset, rowSpacing: inputPanelsInset, rowHeight: 40.0)
         }
         var insets: UIEdgeInsets
