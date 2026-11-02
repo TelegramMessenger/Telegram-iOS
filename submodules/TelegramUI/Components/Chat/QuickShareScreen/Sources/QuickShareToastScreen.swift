@@ -212,7 +212,9 @@ private final class QuickShareToastScreenComponent: Component {
                 right: environment.safeInsets.right + 12.0
             )
             
-            let availableContentSize = CGSize(width: availableSize.width - containerInsets.left - containerInsets.right, height: availableSize.height - containerInsets.top - containerInsets.bottom)
+            // Narrower on a regular-width layout, centred.
+            let toastHorizontalFrame = toastFrame(CGRect(x: containerInsets.left, y: 0.0, width: availableSize.width - containerInsets.left - containerInsets.right, height: 0.0), metrics: environment.metrics)
+            let availableContentSize = CGSize(width: toastHorizontalFrame.width, height: availableSize.height - containerInsets.top - containerInsets.bottom)
             
             let spacing: CGFloat = 8.0
             
@@ -312,7 +314,7 @@ private final class QuickShareToastScreenComponent: Component {
             }
             
             let size = CGSize(width: availableContentSize.width, height: contentHeight)
-            let backgroundFrame = CGRect(origin: CGPoint(x: containerInsets.left, y: availableSize.height - containerInsets.bottom - size.height), size: size)
+            let backgroundFrame = CGRect(origin: CGPoint(x: toastHorizontalFrame.minX, y: availableSize.height - containerInsets.bottom - size.height), size: size)
             
             self.backgroundView.updateColor(color: UIColor(white: 0.0, alpha: 0.7), transition: transition.containedViewLayoutTransition)
 

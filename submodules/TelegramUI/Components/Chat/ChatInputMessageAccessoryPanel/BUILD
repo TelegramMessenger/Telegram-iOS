@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/CompositeTextNode",
         "//submodules/ChatInterfaceState",
+        "//submodules/TelegramNotices",
     ],
     visibility = [
         "//visibility:public",

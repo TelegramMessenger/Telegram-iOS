@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "Sources/Animation/CSSText.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::animation {
 
@@ -271,7 +270,6 @@ double Easing::web(double x, bool before) const {
 }
 
 std::shared_ptr<const Easing> parseEasing(JSContext* ctx, std::string_view raw) {
-    chargeScan(ctx, raw.size());
     if (raw.size() > kMaxEasingText) {
         return nullptr;
     }

@@ -165,25 +165,6 @@ WR_TEST(testConsoleSymbolDescriptionDoesNotRecurse) {
     CHECK(env.host().logs.empty());
 }
 
-// Ruling 1: a rope argument is charged before ToString flattens it, so a budget that cannot pay for the copy stops the
-// call before anything is copied or logged.
-WR_TEST(testConsoleChargesARopeBeforeFlatteningIt) {
-    wr_test::HostEnv env;
-    JSRuntime* rt = env.runtime().jsRuntime();
-    env.eval("var rope = 'x'.repeat(800000) + 'y'");
-    // Not enough memory for the 800 KB flat copy either: had the copy come before the charge, the call would fail out
-    // of memory instead of stopping on the budget.
-    JSMemoryUsage usage;
-    JS_ComputeMemoryUsage(rt, &usage);
-    JS_SetMemoryLimit(rt, size_t(usage.malloc_size) + 400000);
-    // Well under the rope's 100,000-unit charge, well over the call's own cost.
-    env.runtime().setWorkLimit(JS_GetWorkUnits(rt) + 5000);
-    // HostEnv::eval answers a stop as "ABORTED" (Task 9).
-    CHECK_EQ(env.eval("console.log(rope)"), std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    CHECK(env.host().logs.empty());
-}
-
 WR_TEST(testTopAndLocationAreUnforgeable) {
     wr_test::HostEnv env;
     CHECK_JS(env, "(d => d.get && !d.set && d.configurable === false)(Object.getOwnPropertyDescriptor(window, 'top'))");

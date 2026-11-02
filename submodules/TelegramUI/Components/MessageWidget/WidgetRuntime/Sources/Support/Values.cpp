@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -49,7 +48,6 @@ bool String::equals(JSContext* ctx, const String& other) const {
     if (a.length != b.length) {
         return false;
     }
-    chargeScan(ctx, a.length);
     for (uint32_t i = 0; i < a.length; i++) {
         char16_t x = a.latin1 ? a.latin1[i] : a.utf16[i];
         char16_t y = b.latin1 ? b.latin1[i] : b.utf16[i];

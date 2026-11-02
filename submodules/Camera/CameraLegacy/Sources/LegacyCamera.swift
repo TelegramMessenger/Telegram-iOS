@@ -568,6 +568,15 @@ private final class CameraContext {
         self.session.session.beginConfiguration()
         f()
         self.session.session.commitConfiguration()
+        // A configuration that changes an input makes the previews' connections anew (the first input, camera flips,
+        // dual and mode changes), and a new connection starts in portrait, which is not the body's orientation on
+        // iPhone Duo's inner screen.
+        let previewViews = [self.simplePreviewView, self.secondaryPreviewView]
+        Queue.mainQueue().async {
+            for previewView in previewViews {
+                previewView?.updateOrientation()
+            }
+        }
     }
     
     var hasTorch: Signal<Bool, NoError> {
@@ -690,7 +699,7 @@ private final class CameraContext {
         
         let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if self.initialConfiguration.isRoundVideo {
-            return mainDeviceContext.output.startRecording(mode: .roundVideo, orientation: DeviceModel.current.isIpad ? orientation : .portrait, additionalOutput: self.additionalDeviceContext?.output)
+            return mainDeviceContext.output.startRecording(mode: .roundVideo, orientation: cameraRecordsRoundVideoInPreviewOrientation ? orientation : .portrait, additionalOutput: self.additionalDeviceContext?.output)
         } else {
             if let additionalDeviceContext = self.additionalDeviceContext {
                 return combineLatest(

@@ -37,8 +37,8 @@ final class ConformanceRunnerTests: XCTestCase {
     /// each widget loads." A visual run ends once its widget has loaded, and the baseline records only that it loaded.
     func testTheVisualSetIsLoadedOnly() throws {
         let tests = try ConformanceManifest.loadVisualSet()
-        XCTAssertEqual(tests.count, 46)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 50)
+        XCTAssertEqual(tests.count, 47)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 51)
         XCTAssertTrue(tests.allSatisfy { $0.loadOnly && $0.actions.isEmpty && $0.stages.isEmpty && FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let unstyled = try XCTUnwrap(tests.first { $0.id == "visual/14-unstyled-document" })
         let started = Date()
@@ -93,10 +93,23 @@ final class ConformanceRunnerTests: XCTestCase {
         XCTAssertEqual(bot.answer(Data("shared".utf8), current: current).edit, MessageWidgetState(chatData: Data("x".utf8), publicData: Data("s1".utf8)))
     }
 
+    /// widget-sandbox v0.4.0: a test the client draws its time over carries the band its runner passes (the header's
+    /// `safeArea`); every other runs with none.
+    func testATimeCornerTestCarriesItsSafeArea() throws {
+        let tests = try ConformanceManifest.loadAutomaticSet() + ConformanceManifest.loadVisualSet()
+        XCTAssertEqual(tests.first { $0.id == "auto/36-safe-area" }?.safeArea, MessageWidgetContentSafeArea(bottom: 24.0, cornerLeft: 64.0))
+        XCTAssertEqual(tests.first { $0.id == "visual/17-time-corner" }?.safeArea, MessageWidgetContentSafeArea(bottom: 24.0, cornerRight: 64.0))
+        XCTAssertEqual(tests.filter { $0.safeArea != .none }.count, 2)
+    }
+
     func testTheManifestLoadsTheAutomaticSet() throws {
         let tests = try ConformanceManifest.loadAutomaticSet()
-        XCTAssertEqual(tests.count, 51)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 53)
+        XCTAssertEqual(tests.count, 60)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 62)
+        // widget-sandbox v0.3.0's stop tests, with the reasons they are judged by.
+        XCTAssertEqual(tests.filter { $0.stops != nil }.map(\.id), ["auto/31-stop-text", "auto/32-stop-attribute", "auto/33-stop-batch", "auto/34-stop-css-rules", "auto/35-stop-canvas-pixels"])
+        XCTAssertEqual(tests.first { $0.id == "auto/35-stop-canvas-pixels" }?.stops, "Canvas limit exceeded: canvases of")
+        XCTAssertEqual(tests.first { $0.id == "auto/31-stop-text" }?.covers, ["limit.text-node"])
         XCTAssertTrue(tests.allSatisfy { FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let taps = try XCTUnwrap(tests.first { $0.id == "auto/16-sdk-taps-a" })
         XCTAssertEqual(taps.actions.count, 3)

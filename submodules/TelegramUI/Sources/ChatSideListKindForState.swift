@@ -18,20 +18,19 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
     }
     let peer = state.renderedPeer?.peers[peerId] ?? state.renderedPeer?.peer
     var isForum = false
-    var isInlineForum = false
+    var isSidebarForum = false
     var isMonoforum = false
     var isAdminMonoforum = false
-    var isBotWithThreads = false
+    var isSidebarBot = false
     if let channel = peer as? TelegramChannel {
         isForum = channel.isForum
-        // As the topics strip decides: a forum viewed as messages.
-        isInlineForum = channel.isForum && state.viewForumAsMessages
+        isSidebarForum = channel.isForum && state.viewForumAsMessages && channel.flags.contains(.displayForumAsSidebar)
         isMonoforum = channel.isMonoForum
         if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = state.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
             isAdminMonoforum = true
         }
-    } else if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum) {
-        isBotWithThreads = true
+    } else if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum), botInfo.flags.contains(.displayForumAsSidebar) {
+        isSidebarBot = true
     }
     // Saved Messages without sub-chats has nothing to list; a sub-chat always has at least itself.
     if peerId == context.account.peerId, case .peer = state.chatLocation, !state.hasSavedChats {
@@ -41,10 +40,10 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
         peerId: peerId,
         accountPeerId: context.account.peerId,
         isForum: isForum,
-        isInlineForum: isInlineForum,
+        isSidebarForum: isSidebarForum,
         isMonoforum: isMonoforum,
         isAdminMonoforum: isAdminMonoforum,
-        isBotWithThreads: isBotWithThreads,
+        isSidebarBot: isSidebarBot,
         enabled: context.usesChatSideList
     )
 }

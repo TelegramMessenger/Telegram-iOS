@@ -17,6 +17,14 @@ public struct MessageWidgetChannelMessage: Equatable {
 /// One post of widget-sandbox's shared test channel (`conformance/channel.json`, v0.1.0): a widget with its anchors and
 /// caption, and the reference pictures posted after it. Paths are under the conformance root. Since v0.2.1 a post may
 /// say how the bot sends it (`message`; nil without one, or for a kind this client does not know).
+/// Where a post's caption is (widget-sandbox v0.4.0): below the widget, none (`withoutCaption`), or above it
+/// (`captionAbove`, layer 233's `invert_media`); with none or above, the client draws its time over the widget.
+public enum MessageWidgetCaptionPlacement: Equatable {
+    case below
+    case none
+    case above
+}
+
 public struct MessageWidgetChannelPost: Equatable {
     public var widget: String
     public var width: Int32
@@ -24,6 +32,7 @@ public struct MessageWidgetChannelPost: Equatable {
     public var caption: String
     public var photos: [String]
     public var message: MessageWidgetChannelMessage?
+    public var captionPlacement: MessageWidgetCaptionPlacement = .below
 
     public init(widget: String, width: Int32, height: Int32, caption: String, photos: [String], message: MessageWidgetChannelMessage? = nil) {
         self.widget = widget
@@ -58,6 +67,8 @@ public enum MessageWidgetChannel {
             var caption: String
             var photos: [String]
             var message: Message?
+            var withoutCaption: Bool?
+            var captionAbove: Bool?
         }
         var posts: [Post]
     }
@@ -71,7 +82,13 @@ public enum MessageWidgetChannel {
             let message = post.message.flatMap { message in
                 MessageWidgetMessageKind(rawValue: message.kind).map { MessageWidgetChannelMessage(kind: $0, chatData: message.chatData, publicData: message.publicData) }
             }
-            return MessageWidgetChannelPost(widget: post.widget, width: post.width, height: post.height, caption: post.caption, photos: post.photos, message: message)
+            var channelPost = MessageWidgetChannelPost(widget: post.widget, width: post.width, height: post.height, caption: post.caption, photos: post.photos, message: message)
+            if post.withoutCaption == true {
+                channelPost.captionPlacement = .none
+            } else if post.captionAbove == true {
+                channelPost.captionPlacement = .above
+            }
+            return channelPost
         }
     }
 }

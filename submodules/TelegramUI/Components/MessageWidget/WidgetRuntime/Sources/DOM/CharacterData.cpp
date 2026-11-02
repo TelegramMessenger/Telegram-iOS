@@ -16,10 +16,20 @@ String CharacterData::dataString(JSContext* ctx) const {
 }
 
 void CharacterData::setDataString(JSContext* ctx, String data) {
+    this->countDataChange(ctx);
     m_data.set(JS_GetRuntime(ctx), data.toJS(ctx));
     Document& document = this->nodeDocument();
     document.noteMutation();
     document.forEachMutationListener([&](MutationListener& listener) { listener.characterDataChanged(*this); });
+}
+
+void CharacterData::countDataChange(JSContext* ctx) {
+    // limit.batch (widget-sandbox v0.3.0): one operation per batch once the node was inserted in an earlier one
+    // (Node::countsChange), counted before the change.
+    Runtime& runtime = Runtime::from(ctx);
+    if (this->countsChange(runtime.batchSerial(), m_dataOpBatch)) {
+        runtime.addOps(1);
+    }
 }
 
 String CharacterData::substringData(JSContext* ctx, uint32_t offset, uint32_t count) {
@@ -61,12 +71,10 @@ Ref<Text> Text::splitText(JSContext* ctx, uint32_t offset) {
 String Text::wholeText(JSContext* ctx) {
     Node* first = this;
     while (first->previousSiblingNode() && first->previousSiblingNode()->type() == NodeType::Text) {
-        charge(ctx, work::kNodeVisit);
         first = first->previousSiblingNode();
     }
     Vector<char16_t> out{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     for (Node* n = first; n && n->type() == NodeType::Text; n = n->nextSiblingNode()) {
-        charge(ctx, work::kNodeVisit);
         appendCodeUnits(out, static_cast<Text*>(n)->dataString(ctx));
     }
     return String::fromUTF16(ctx, out.data(), out.size());

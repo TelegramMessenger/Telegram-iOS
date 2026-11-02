@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- showcase: widget profile 1, SDK v1; idea: a smoothly shaded ray-sphere planet -->
+<html><head><meta charset="utf-8"><style>
+:root{color-scheme:light dark;--bg:light-dark(#eef2f5,#091321);--fg:light-dark(#193548,#e6f0ff);--muted:light-dark(#526a7d,#9aafcb);--line:light-dark(#c3d0da,#304561)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui,sans-serif}.card{width:100%;padding:16px 20px}h2{font-size:20px;margin:0 0 4px}p{font-size:12px;color:var(--muted);line-height:1.4;margin:4px 0}.stage{height:240px;display:flex;align-items:center;justify-content:center}canvas{display:block;width:100%;max-width:240px;height:auto;touch-action:pan-y;cursor:grab}.tools{display:flex;flex-wrap:wrap;gap:5px}button{font:12px system-ui,sans-serif;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:7px;min-height:32px;padding:5px 8px}button:active{background:var(--line)}#status{margin-top:8px;font:11px ui-monospace,monospace}.hint{font-size:10px;margin-top:8px}
+</style></head><body><div class="card"><h2>Blue planet</h2><p>Turn a world in your hands.</p><div class="stage"><canvas id="view" width="128" height="128" role="img" aria-label="A shaded three-dimensional planet. Drag sideways to orbit."></canvas></div><div class="tools"><button id="left">Left</button><button id="right">Right</button><button id="up">Higher</button><button id="down">Lower</button><button id="near" aria-label="Zoom in">+</button><button id="far" aria-label="Zoom out">−</button><button id="reset">Reset</button><button id="special">Clouds on / off</button></div><div id="status" aria-live="polite"></div><p class="hint">Drag sideways to orbit. Vertical gestures scroll the chat.</p></div><script>
+const canvas=document.getElementById('view'),ctx=canvas.getContext('2d'),status=document.getElementById('status'),media=matchMedia('(prefers-color-scheme: dark)');
+const N=128,W=192,H=96,key='blue-planet-v1',pixels=new Uint8ClampedArray(N*N*4),map=new Uint8ClampedArray(W*H*4),rays=new Float32Array(N*N*4),sky=new Uint8ClampedArray(N*N*3);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+let darkMode=media.matches,yaw=-.55,pitch=.28,zoom=1,variant=0,drag=null,pending=0,last=-1000,cachedZoom=0,seed=1847;
+try{const s=JSON.parse(localStorage.getItem(key));if(s){if(Number.isFinite(s.yaw))yaw=s.yaw;if(Number.isFinite(s.pitch))pitch=clamp(s.pitch,-.8,.8);if(Number.isFinite(s.zoom))zoom=clamp(s.zoom,.7,1.3);if(Number.isInteger(s.variant))variant=Math.abs(s.variant%2)}}catch{}
+function save(){yaw=((yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;try{localStorage.setItem(key,JSON.stringify({yaw,pitch,zoom,variant}))}catch{}}
+for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+ const a=(i/W-.5)*Math.PI*2,b=j/(H-1)*Math.PI,x=Math.sin(b)*Math.cos(a),y=Math.cos(b),z=Math.sin(b)*Math.sin(a),o=(j*W+i)*4;
+ const land=Math.sin(x*5+Math.cos(z*8))*Math.sin(z*5-x*2)+.55*Math.sin(z*12+y*8)+.25*Math.cos(x*21-z*13),grain=Math.sin(x*65+z*31)*Math.sin(y*57-x*27);
+ let r,g,c;
+ if(land>.3){const h=clamp((land-.3)*.65,0,1);r=34+97*h+grain*7;g=79+53*h+grain*8;c=40+23*h}
+ else{r=9;g=42+12*Math.sin(land*3);c=83+16*Math.sin(land*3)}
+ const ice=clamp((Math.abs(y)-.87)*10,0,1),cloud=Math.sin(x*18+z*7)*Math.cos(z*14-y*9)+.4*Math.sin(y*28+x*11);
+ map[o]=r+(225-r)*ice;map[o+1]=g+(237-g)*ice;map[o+2]=c+(242-c)*ice;map[o+3]=clamp((cloud-.59)*190,0,180);
+}
+for(let i=0;i<N*N;i++){
+ seed=(Math.imul(seed,1664525)+1013904223)>>>0;const star=(seed>>>16)%263===0?65+(seed&127):0;
+ sky[i*3]=3+star*.76;sky[i*3+1]=7+star*.86;sky[i*3+2]=15+star;
+}
+function geometry(){
+ const focal=136*zoom;
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+  const o=(y*N+x)*4,dx=(x-63.5)/focal,dy=(63.5-y)/focal,k=1/Math.sqrt(dx*dx+dy*dy+1),rz=-k,b=3*rz,d=b*b-8;
+  if(d>=0){const t=-b-Math.sqrt(d);rays[o]=dx*k*t;rays[o+1]=dy*k*t;rays[o+2]=3+rz*t;rays[o+3]=1}
+  else{rays[o+3]=-Math.max(0,(1.045-3*Math.sqrt(1-k*k))/.045)}
+ }
+ cachedZoom=zoom;
+}
+function draw(){
+ if(pending)clearTimeout(pending);pending=0;last=performance.now();if(zoom!==cachedZoom)geometry();
+ const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+ const lx=.68*cy-.68*sy,lz=.68*sy+.68*cy,ly=.27,lcy=ly*cp+lz*sp,lcz=-ly*sp+lz*cp,hk=1/Math.hypot(lx,lcy,lcz+1),hx=lx*hk,hy=lcy*hk,hz=(lcz+1)*hk;
+ for(let i=0;i<N*N;i++){
+  const o=i*4,s=i*3,hit=rays[o+3];let r=sky[s],g=sky[s+1],b=sky[s+2];
+  if(hit>0){
+   const nx=rays[o],ny=rays[o+1],nz=rays[o+2],py=ny*cp-nz*sp,pz=ny*sp+nz*cp,wx=nx*cy+pz*sy,wz=pz*cy-nx*sy;
+   const u=clamp(((Math.atan2(wz,wx)/(2*Math.PI)+.5)*W)|0,0,W-1),v=clamp((Math.acos(clamp(py,-1,1))/Math.PI*(H-1))|0,0,H-1),t=(v*W+u)*4;
+   const daylight=Math.max(0,nx*lx+ny*lcy+nz*lcz),shade=.035+daylight*.98,cloud=variant?0:map[t+3]/255;
+   r=(map[t]+(240-map[t])*cloud)*shade;g=(map[t+1]+(246-map[t+1])*cloud)*shade;b=(map[t+2]+(251-map[t+2])*cloud)*shade;
+   let spec=Math.max(0,nx*hx+ny*hy+nz*hz);spec*=spec;spec*=spec;spec*=spec;spec*=spec;spec*=spec;
+   if(map[t+2]>map[t+1]*1.35&&daylight>0){r+=spec*110*(1-cloud);g+=spec*140*(1-cloud);b+=spec*160*(1-cloud)}
+   const edge=1-nz,rim=edge*edge*edge*(.12+daylight*.6);r+=rim*24;g+=rim*95;b+=rim*180;
+  }else if(hit<0){r+=-hit*7;g+=-hit*27;b+=-hit*63}
+  pixels[o]=r;pixels[o+1]=g;pixels[o+2]=b;pixels[o+3]=255;
+ }
+ const colors={};
+ for(let y=0;y<N;y++){let x=0;while(x<N){const start=x,o=(y*N+x)*4,c=((pixels[o]&252)<<16)|((pixels[o+1]&252)<<8)|(pixels[o+2]&252);x++;while(x<N){const n=(y*N+x)*4;if((((pixels[n]&252)<<16)|((pixels[n+1]&252)<<8)|(pixels[n+2]&252))!==c)break;x++}ctx.fillStyle=colors[c]||(colors[c]='#'+(0x1000000+c).toString(16).slice(1));ctx.fillRect(start,y,x-start,1)}}
+ report();
+}
+function report(){status.textContent=(variant?'Clear skies':'Cloud cover')+' · '+Math.round(zoom*100)+'%'}
+function schedule(){if(!pending)pending=setTimeout(draw,Math.max(0,250-(performance.now()-last)))}
+function change(action){
+ if(drag){yaw=drag.yaw;drag=null}
+ if(action==='left')yaw-=.3;if(action==='right')yaw+=.3;if(action==='up')pitch=clamp(pitch+.15,-.8,.8);if(action==='down')pitch=clamp(pitch-.15,-.8,.8);if(action==='near')zoom=clamp(zoom+.1,.7,1.3);if(action==='far')zoom=clamp(zoom-.1,.7,1.3);if(action==='special')variant=1-variant;
+ if(action==='reset'){yaw=-.55;pitch=.28;zoom=1;variant=0}save();report();schedule();
+}
+for(const id of ['left','right','up','down','near','far','reset','special'])document.getElementById(id).addEventListener('click',()=>change(id));
+canvas.addEventListener('pointerdown',e=>{if(e.button!==0||drag)return;drag={id:e.pointerId,x:e.clientX,yaw};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw=drag.yaw+(e.clientX-drag.x)*.012;schedule()});
+function end(e,cancel){if(!drag||drag.id!==e.pointerId)return;if(cancel)yaw=drag.yaw;drag=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!cancel)save();schedule()}
+canvas.addEventListener('pointerup',e=>end(e,false));canvas.addEventListener('pointercancel',e=>end(e,true));canvas.addEventListener('lostpointercapture',e=>end(e,true));
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&drag)end({pointerId:drag.id},true)});
+media.addEventListener('change',e=>{darkMode=e.matches;schedule()});draw();
+</script></body></html>

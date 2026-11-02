@@ -50,7 +50,7 @@ final class GamesTests: MessageWidgetTestCase {
     }
 
     /// On a phone devicePixelRatio is 3, so every canvas holds nine times the pixels and its drawing costs as much more:
-    /// each game must still keep every task well inside its budget (the corpus check's quarter).
+    /// each game must still keep every task well inside its slice (a quarter of it at most).
     func testEveryGamePlaysAtThreeTimes() {
         self.play(scale: 3.0)
     }
@@ -84,13 +84,15 @@ final class GamesTests: MessageWidgetTestCase {
             self.frames(instance, 10)
             let after = self.canvasPixels(instance)
             self.keepImage(instance, size: view.bounds.size, "\(game.name)-\(Int(scale))x-playing")
-            print("\(game.name) at \(Int(scale))x: boot \(instance.bootWorkForTesting) units, largest later task \(instance.largestTaskWorkForTesting), error \(instance.lastError ?? "none"), stopped \(instance.deadReason ?? "no"), canvas changed \(before != after)")
+            let bootCpu = instance.largestTaskCpuMillisecondsForTesting(.boot), frameCpu = instance.largestTaskCpuMillisecondsForTesting(.frame)
+            print(String(format: "%@ at %dx: boot %.1f ms of CPU, largest frame %.1f ms, error %@, stopped %@, canvas changed %@", game.name, Int(scale), bootCpu, frameCpu, instance.lastError ?? "none", instance.deadReason ?? "no", before != after ? "true" : "false"))
             XCTAssertNotNil(before, game.name)
             XCTAssertNotEqual(before, after, "\(game.name): holding \(game.control) did not change the canvas")
             XCTAssertNil(instance.lastError, game.name)
             XCTAssertNil(instance.deadReason, game.name)
-            XCTAssertLessThan(instance.bootWorkForTesting, MessageWidgetCore.bootWorkUnits / 4, game.name)
-            XCTAssertLessThan(instance.largestTaskWorkForTesting, MessageWidgetCore.taskWorkUnits / 4, game.name)
+            // Well inside their slices (500 ms): a quarter at most.
+            XCTAssertLessThan(bootCpu, 125.0, game.name)
+            XCTAssertLessThan(frameCpu, 125.0, game.name)
         }
     }
 }

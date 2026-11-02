@@ -2597,6 +2597,7 @@ Unused sets are archived when you add more.";
 "NetworkUsageSettings.CallDataSection" = "CALLS";
 
 "Call.PrivacyErrorMessage" = "Sorry, %@ doesn't accept calls.";
+"Call.PrivacyErrorMessageMultiple" = "Sorry, %@ don't accept calls.";
 
 "Notification.CallBack" = "Call Back";
 
@@ -14205,6 +14206,7 @@ Sorry for the inconvenience.";
 "NewCall.VideoOption" = "Call with video enabled";
 "NewCall.ActionCallSingle" = "Call %@";
 "NewCall.ActionCallMultiple" = "Call";
+"NewCall.ParticipantLimitAlert" = "A call can have up to %@ participants.";
 
 "Chat.ToastCallLinkExpired.Text" = "This link is no longer active";
 
@@ -14423,6 +14425,7 @@ Sorry for the inconvenience.";
 "PeerInfo.Topics.DisplayAsInfo" = "Choose how topics appear for all members.";
 "PeerInfo.Topics.Tabs" = "Tabs";
 "PeerInfo.Topics.List" = "List";
+"PeerInfo.Topics.Sidebar" = "Sidebar";
 
 "PeerInfo.OptionTopics.Enabled" = "Enabled";
 "PeerInfo.OptionTopics.Disabled" = "Disabled";
@@ -16908,6 +16911,7 @@ Error: %8$@";
 "Wallet.Transfer.ErrorTitle" = "Transfer Failed";
 "Wallet.Transfer.ErrorText" = "The transfer could not be prepared or sent. Check the address, balance and network connection, then try again.";
 "Wallet.Transfer.CollectibleTopUpText" = "You need at least 0.1 Grams in your wallet to transfer an NFT. Top up your balance and try again.";
+"Wallet.Transfer.TopUpText" = "There are not enough Grams in your wallet for this payment and its network fee. Top up your balance and try again.";
 "Wallet.TonAddressCopied" = "TON address copied to clipboard";
 "Wallet.OptionalMessage" = "Optional message";
 "Wallet.Transfer.KeyChangedTitle" = "Wallet Key Changed";

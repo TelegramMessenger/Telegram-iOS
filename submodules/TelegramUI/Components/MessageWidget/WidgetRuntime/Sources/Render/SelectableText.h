@@ -9,9 +9,8 @@
 // runs is one space, a <br>, a preserved newline and a change of block container are one newline, never at the start
 // and never two in a row. Separators belong to no run.
 //
-// The export is the host's work, not the widget's: it runs no script, flushes nothing and charges a counter of its own
-// (the rates of Work.h), never the widget's budget, so it never stops, fails or demotes a widget. Past its budget it is
-// nothing (the client then lets nothing be selected for that layout).
+// The export is the host's work, not the widget's: it runs no script and flushes nothing, so it never stops, fails or
+// demotes a widget. The rendered text's caps bound it (the CPU-clock limits design).
 #pragma once
 
 #include <cstdint>
@@ -41,7 +40,7 @@ struct SelectableRun {
     std::vector<float> carets;
     /// a b c d tx ty: box space → document, its ancestors' transforms composed as transformRects composes them.
     double transform[6] = {1, 0, 0, 1, 0, 0};
-    /// The Text node's NodeKey (stable across rebuilds), and the UTF-16 offset of `start` in that node's drawn text.
+    /// The Text node's NodeKey (stable across patches), and the UTF-16 offset of `start` in that node's drawn text.
     uint64_t node = 0;
     uint32_t nodeOffset = 0;
 };
@@ -50,8 +49,6 @@ struct SelectableText {
     std::u16string text;
     /// In `text` order.
     std::vector<SelectableRun> runs;
-    /// What the export spent, in work units.
-    uint64_t units = 0;
 };
 
 /// What the export reads.
@@ -62,11 +59,9 @@ struct SelectableTextSource {
     std::function<uint64_t(const litehtml::element&)> keyOf;
     /// RenderHost::caretOffsets for litehtml's font handle.
     std::function<std::vector<float>(litehtml::uint_ptr font, std::string_view utf8)> caretOffsets;
-    uint64_t budget = 0;
     double visibleHeight = 0;
 };
 
-/// nullopt when the export would pass the source's budget.
-std::optional<SelectableText> exportSelectableText(const SelectableTextSource& source);
+SelectableText exportSelectableText(const SelectableTextSource& source);
 
 } // namespace wr

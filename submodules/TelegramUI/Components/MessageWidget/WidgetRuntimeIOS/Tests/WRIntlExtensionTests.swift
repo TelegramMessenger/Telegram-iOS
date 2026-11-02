@@ -15,7 +15,6 @@ final class WRIntlExtensionTests: XCTestCase {
         func session(_ session: WRSession, diagnostic kind: String, detail: String) {}
         func session(_ session: WRSession, log level: Int, text: String) {}
         func session(_ session: WRSession, bridge method: String, args argsJson: String) {}
-        func session(_ session: WRSession, didWork totalUnits: UInt64) {}
         func session(_ session: WRSession, intl requestJson: String) -> String {
             return WidgetSandboxIntl.answer(requestJson)
         }

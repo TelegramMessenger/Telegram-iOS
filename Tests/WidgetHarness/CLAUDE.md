@@ -68,7 +68,7 @@ One leading dash (`--widget-set` is ignored silently).
 
 | Argument | Values | Default |
 |---|---|---|
-| `-widget-set` | `conformance` (widget-sandbox v0.2.3's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
+| `-widget-set` | `conformance` (widget-sandbox v0.5.0's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
 | `-widget-posts` | whole widget paths, comma-separated: only these posts, in this order (oldest first), e.g. `fixture/tall-box.html,fixture/resize/grow-top.html` | all |
 | `-widget-kill-switch` | `on` (the app config's `ios_killswitch_disable_message_widgets` engaged: every widget a pill) | `off` |
@@ -78,7 +78,7 @@ One leading dash (`--widget-set` is ignored silently).
 | `-harness-side` | `incoming` (the posts come from the other side of the chat) | outgoing |
 | `-harness-menu` | `hold` (the stand-in context menu stays open until `harness.endMenu`; `harness.openMenu` opens it on the newest widget bubble without a long press) | ends after 2 s |
 | `-harness-copy-protected` | `on` (the chat forbids copying: `isCopyProtectionEnabled`) | off |
-| `-harness-can-query` | `on` (every widget message has the server's `can_query`: its bubble shows the network marker) | off |
+| `-harness-can-query` | `on` (every widget message has the server's `can_query`; no bubble shows a network marker since 2026-10-29) | off |
 | `-harness-background-query` | `on` (every widget message also has `background_query`: requests without a tap, as in the private chat with the bot) | off |
 | `-harness-chat` | `bot` (the chat is with a bot, "Harness Bot": with `-harness-side incoming`, a bot's media, which otherwise gets the share button) | a user |
 | `-harness-text-size` | Settings ▸ Appearance ▸ Text Size as `PresentationFontSize`'s raw value (0 extra small … 4 extra large, 5 extra large ×2, 6 medium) | the context's |
@@ -104,8 +104,7 @@ contextMenuEnded fixture/open-link.html
   text needs the window's). A widget reports its height after its boot: wait for the readout to leave the 160 pt
   placeholder (`x160 `) before aiming inside a widget.
 - The state is `widget` (a live `MessageWidgetView` is attached), `pill` (the unsupported pill) or `placeholder`.
-- `+caption`: the bubble holds another content node (the caption's text); ` +marker@x,y`: it shows the network marker
-  (the message has `can_query`), centred there in the window's coordinates; ` +share`: the chat's share button sits
+- `+caption`: the bubble holds another content node (the caption's text); ` +share`: the chat's share button sits
   beside the bubble (never, for a widget); ` pressed`: its context gesture's press (the shrink while it waits for a long press) is on.
 - `log <path> <value>`: a fixture widget's (`fixture/…`) `<html data-log>`, when it has one, read through
   `MessageWidgetView.documentElementAttribute` (each read waits for the widget's queue, so only the harness's own
@@ -130,14 +129,14 @@ contextMenuEnded fixture/open-link.html
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
 - Changing the format means changing every test that parses it.
 
-## The conformance set (widget-sandbox v0.2.3, `conformance/CLIENTS.md`)
+## The conformance set (widget-sandbox v0.5.0, `conformance/CLIENTS.md`)
 
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
-runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (53 runs), through
+runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (62 runs), through
 `MessageWidgetInstance` with the app's pool and wait policy at width 390, on the app's own theme for an incoming bubble
 of the default chat theme (`ConformanceRunner.theme`, `messageWidgetTheme`: CLIENTS.md step 1, "as in production"),
-then the visual set loaded only (50 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
+then the visual set loaded only (51 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
 "the report then shows whether each widget loads"), one at a time (`ConformanceRunner.runAll`:
 widgets run together share the pool's two threads, and 10-css-animations' iteration check failed whenever the
 filter-heavy 09 pages ran beside it), each view in the window so it gets its frames, a stand-in chat input focused
@@ -170,6 +169,11 @@ error of the run instead, and its checks stay as the widget left them. The manif
 too, as `host · <id> · <name>`, judged from what the host saw exactly as `report.mjs` judges them (a bridge call's
 count, the bubble's height, the chat input's focus).
 
+**A test that must stop** (v0.3.0's `auto/31`–`35`: text, attribute, batch, CSS-rule and canvas-pixel caps) names
+the reason's prefix in the manifest's `stops`: the runner waits for the widget's death instead of `done`, records it
+as the run's `dead`, and the baseline keys it as `<id> · stopped with "<stops>…"`, `pass` when the dead reason starts
+with it (`ConformanceManifest.stops`, `ConformanceBaseline`), as `report.mjs` judges it.
+
 **Who gets a press is the bubble's, so Tier 1 cannot pass it all.** The runner injects below the bubble, so the checks
 only the bubble can satisfy fail there and stay `fail` in the baseline, as CLIENTS.md says such a runner reports:
 - `auto/23-gestures-a`: the hold on `auto` (the menu's `pointercancel`).
@@ -179,6 +183,15 @@ only the bubble can satisfy fail there and stay `fail` in the baseline, as CLIEN
 `WidgetHarnessUITests.testAuto23aThroughTheRealBubble` and `testAuto23bThroughTheRealBubble` run those tests through the
 real bubble and hold every check to `pass`. XCUITest presses at the targets the readout's `conformance` line publishes.
 There is no caption, and an older post sits above, so the probes are below the status bar and the chat can scroll.
+
+**The time over the widget** (widget-sandbox v0.4.0): a test whose header gives a `safeArea` (`auto/36-safe-area`,
+`visual/17-time-corner`, the reference band of 24 px and a 64 px corner) runs with it as its content safe area, handed to
+the instance before its first layout (`ConformanceTest.safeArea`); its checks compare with what the widget was told, so
+they hold at the bubble's own numbers too. The channel posts such a widget twice, `withoutCaption` and `captionAbove`
+(`MessageWidgetChannelPost.captionPlacement`): the harness's posts and the DEBUG insertion send the first without a
+caption and the second with its caption above (`WidgetHarnessPost.captionAbove`, `InvertMediaMessageAttribute`), where
+the real bubble draws its date over the widget and passes its own band. `WidgetHarnessListHost.replaceCaption(path:text:captionAbove:)`
+edits a post's caption and where it shows as a message edit does (`testACaptionEditChangesTheBandOnce`).
 
 **The message context and the bot** (widget-sandbox v0.2.1, CLIENTS.md "The message context"):
 - **The context and state:** a test with `message` runs with its first spec's kind (`MessageWidgetMessageKind`, upstream's
@@ -200,14 +213,24 @@ There is no caption, and an older post sits above, so the probes are below the s
   `Fixtures/widget-watch.html` watches its shared state from the start (a tap on `#toggle` stops or starts) and logs
   `watching|<state>` or `not|<state>`; `replaceWidgetState(…, widgetId:)` gives a post the widget id a shared widget's
   message has, which polling needs.
+- **The wallet** (widget-sandbox v0.5.0; `WidgetHarnessWalletTests`): the harness has no wallet context, so a test
+  replaces the wallet's part, `MessageWidgetWallet.perform` (the window and the send: the mock answers with a sent
+  transaction, a signature or a failure), and the bot, `MessageWidgetNetwork.requestAnswer` (which takes the query type),
+  and passes the wallet in the context as the app does where this device can sign
+  (`MessageWidgetWalletAvailability.set(_:accountId:)` with `WidgetHarnessListHost.accountPeerIdValue`, cleared in
+  `tearDown`). The coordinator between them is the shipping one. `Fixtures/wallet/pay.html` (a folder fixture, loaded
+  by its path) pays on `#pay` (y 20: a request with the wallet, then the answer's transaction on the grant) and signs on
+  `#sign` (y 80), logging `wallet` or `no-wallet` at load, then `paid:<result>`, `signed:<result>` or `err:<code>`; its
+  posts come from the chat's bot (`botChat`, `incoming`), the message's bot the window would name.
 - **Inline previews** (W3; `WidgetHarnessPreviewTests`): a `MessageWidgetPreviewNode` in the root's view, with no list.
   `Fixtures/preview/widget-preview.html` asks a request at load and logs
   `isPreview|chatType|viewer.id|chatData|publicData|request outcome|pointer count`, each value written with `String(…)`
   so a null reads `null`. It is a folder fixture loaded by its path, so it stays out of the all-fixtures set. The no-input
   test drives the widget's own pointer path (`MessageWidgetInstance.pointer`), below the node, so it fails if the
-  runtime's preview gate lets input through. `Fixtures/preview/slow-box.html` boots past the layout pass's wait (about
-  3M units), for the late-snapshot tests: every other fixture boots inside the wait. The failed-start test forces a
-  parse failure with `MessageWidgetCore.budgetsForTesting` (`@testable import MessageWidget`) and resets it.
+  runtime's preview gate lets input through. `Fixtures/preview/slow-box.html` boots past the layout pass's 20 ms wait
+  (3,000,000 loop iterations), for the late-snapshot tests: every other fixture boots inside the wait. The failed-start
+  test makes the start fail with `MessageWidgetCore.startFailureForTesting` (`@testable import MessageWidget`) and
+  resets it.
 - **A reload does not free the previous chat.** After `reload(options:)` the old list host is freed, but its whole node
   tree, bubbles and running widgets, stays alive under a root that left the window (measured 2026-10-26). A test
   never waits for a bubble's deinit after a reload; what a bubble's teardown does is unit-tested in its own module.
@@ -215,6 +238,28 @@ There is no caption, and an older post sits above, so the probes are below the s
   four live widgets holds 4 `ChatMessageWidgetBubbleContentNode`, `MessageWidgetInstance`, `MessageWidgetCore` and
   `MessageWidgetView` while open, and none 5 s after it closes, in three open/close cycles. The reload's leftover is the
   harness's own. Count only once the pop has settled: right after the tap the old chat is still alive.
+
+## The stress kit (`-widget-stress measure|production`)
+
+widget-sandbox v0.3.0's `packages/stress` (vendored as `third-party/widget-sandbox/stress`, bundled as
+`WidgetStress.bundle`) run by `MessageWidgetStress` instead of the chat: each of the manifest's 127 widgets boots in a
+stand-in bubble at the kit's width, warms up, is measured (`CADisplayLink` frames, the widget's `data-stress`, ops,
+the largest batch, layout queries, heap, nodes, the renderer's flush and tile-draw time, the widget's JS on its
+thread's CPU clock), and the run file (`run.schema.json`) goes to the app's Documents as `stress-<pass>-<date>.json`,
+its path to the log. `measure` runs under the compat policy (nothing stops) with the CPU quotas out of the way (10,000
+ms per 1000 ms window; the 500 ms slice stays, as the kit's reference keeps it), `production` under strict and the
+product's CPU limits (a level past a cap stops, as in the app). The run file's `config.applied` names the CPU limits
+each pass ran under (`cpuLimitMs`, `cpuQuotaMs`, `cpuQuotaWindowMs`, `cpuKillAfterMs`, `mainThreadQuotaMs`). On the
+simulator a pass takes about 35 minutes; drive it on K1:
+
+```bash
+xcrun simctl launch "$K1" org.telegram.WidgetHarness -widget-stress measure
+# the file: "$(xcrun simctl get_app_container "$K1" org.telegram.WidgetHarness data)/Documents/stress-measure-*.json"
+```
+
+The maintainers want device runs (CLIENTS.md: no debugger, low power mode off, a cool device); DEBUG builds of the app
+run the same kit from Debug Settings ▸ "Run widget stress kit (measure)" or "(production)". `WidgetHarnessStressTests`
+(Tier 1) runs one short load of each pass.
 
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 

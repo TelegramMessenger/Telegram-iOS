@@ -17,7 +17,18 @@ public let chatMediaEditorLivePhotoButtonSize = CGSize(width: 160.0, height: 18.
 /// `titleRowMaxY`: on iPhone Duo, the bottom of the chat-name row at the top left. In portrait the badge sits 18pt
 /// under it, as it does in landscape (where `48` is that row's bottom, 30, plus 18), wherever the row is: on the status
 /// island's clock line unfolded, at the top of the folded screen. Elsewhere it keeps a phone's fixed `145`.
-public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize, titleRowMaxY: CGFloat? = nil) -> CGRect {
+public func chatMediaEditorLivePhotoButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, keyboardHeight: CGFloat, buttonSize: CGSize, titleRowMaxY: CGFloat? = nil, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let notchEdge = chatMediaEditorLandscapeNotchEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = notchEdge - 16.0 - buttonSize.width
+        case .right:
+            x = notchEdge + 16.0
+        }
+        return CGRect(origin: CGPoint(x: x, y: safeInsets.top + 48.0), size: buttonSize)
+    }
     let y: CGFloat
     if size.width > size.height {
         y = 48.0

@@ -23,7 +23,15 @@ litehtml::rendered_width litehtml::render_item_image::_render(pixel_t x, pixel_t
 
     src_el()->css_w().line_height_w().computed_value = height();
 
-    if(src_el()->css().get_height().is_predefined() && src_el()->css().get_width().is_predefined())
+    // Telegram (VENDOR.md edit 69): a percentage height whose containing block's height is indefinite computes to auto
+    // (CSS 2.1 §10.5), so the size follows the width and the natural ratio: a grid measuring its rows lays an
+    // auto-height button out, and a mark at 58 % of it is not 58 % of the grid.
+    const css_length& css_height  = src_el()->css().get_height();
+    const bool        height_auto = css_height.is_predefined() ||
+                             (css_height.units() == css_units_percentage &&
+                              containing_block_size.height.type == containing_block_context::cbc_value_type_auto);
+
+    if(height_auto && src_el()->css().get_width().is_predefined())
     {
         m_pos.height = sz.height;
         m_pos.width  = sz.width;
@@ -61,7 +69,7 @@ litehtml::rendered_width litehtml::render_item_image::_render(pixel_t x, pixel_t
                 m_pos.width = sz.width;
             }
         }
-    } else if(!src_el()->css().get_height().is_predefined() && src_el()->css().get_width().is_predefined())
+    } else if(!height_auto && src_el()->css().get_width().is_predefined())
     {
         if(self_size.height.type != containing_block_context::cbc_value_type_auto && self_size.height.value > 0_px)
         {
@@ -85,7 +93,7 @@ litehtml::rendered_width litehtml::render_item_image::_render(pixel_t x, pixel_t
         {
             m_pos.width = sz.width;
         }
-    } else if(src_el()->css().get_height().is_predefined() && !src_el()->css().get_width().is_predefined())
+    } else if(height_auto && !src_el()->css().get_width().is_predefined())
     {
         m_pos.width = src_el()->css().get_width().calc_percent(parent_width);
 
@@ -141,6 +149,16 @@ litehtml::rendered_width litehtml::render_item_image::_render(pixel_t x, pixel_t
 
     rendered_width ret;
     ret.natural_width = ret.min_width = m_pos.width + content_offset_left() + content_offset_right();
+    // Telegram (VENDOR.md edit 68): a replaced element sized by a percentage width or max-width is compressible (CSS
+    // Sizing 3 §5.2.2): its min-content contribution resolves the percentage against zero, so a mark at 58 % of its
+    // grid cell does not widen the cell's track to 58 % of the grid.
+    const css_length& width     = src_el()->css().get_width();
+    const css_length& max_width = src_el()->css().get_max_width();
+    if((!width.is_predefined() && width.units() == css_units_percentage) ||
+       (!max_width.is_predefined() && max_width.units() == css_units_percentage))
+    {
+        ret.min_width = content_offset_left() + content_offset_right();
+    }
 
     return ret;
 }

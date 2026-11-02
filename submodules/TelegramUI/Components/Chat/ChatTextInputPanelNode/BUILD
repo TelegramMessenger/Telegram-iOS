@@ -93,6 +93,7 @@ swift_library(
     ]),
     deps = [
         ":ChatTextInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
         "//submodules/TextFormat",
         "//submodules/TelegramUIPreferences",

@@ -137,7 +137,7 @@ func chatMediaEditorVideoQualityInfoString(values: MediaEditorValues, preset: Me
 }
 
 let chatMediaEditorQualityPanelSize: CGFloat = 75.0
-private let chatMediaEditorQualityPanelTopInset: CGFloat = 7.0
+let chatMediaEditorQualityPanelTopInset: CGFloat = 7.0
 private let chatMediaEditorQualitySliderMargin: CGFloat = 15.0
 
 final class ChatMediaEditorQualityPanelView: UIView {
@@ -145,6 +145,7 @@ final class ChatMediaEditorQualityPanelView: UIView {
     private let valueLabel = UILabel()
     private let slider = ComponentView<Empty>()
     var selectionUpdated: ((MediaQualityPreset) -> Void)?
+    var trackingUpdated: ((Bool) -> Void)?
 
     init(title: String) {
         super.init(frame: .zero)
@@ -189,10 +190,14 @@ final class ChatMediaEditorQualityPanelView: UIView {
                         self.selectionUpdated?(presets[index])
                     }
                 )),
-                trackBackgroundColor: TGPhotoEditorInterfaceAssets.sliderBackColor(),
-                trackForegroundColor: TGPhotoEditorInterfaceAssets.sliderTrackColor(),
-                trackHeight: 2.0,
-                useLegacyKnob: true
+                useNative: true,
+                trackBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1),
+                trackForegroundColor: UIColor(rgb: 0xffffff),
+                trackHeight: 6.0,
+                displaysBorderOnTracking: true,
+                isTrackingUpdated: { [weak self] isTracking in
+                    self?.trackingUpdated?(isTracking)
+                }
             )),
             environment: {},
             containerSize: CGSize(width: max(0.0, size.width - sliderMargin * 2.0), height: 44.0)
@@ -270,6 +275,9 @@ extension ChatMediaEditorScreen.Node {
             self.qualitySelection = preset
             self.requestLayout(transition: .immediate)
         }
+        panelView.trackingUpdated = { [weak self] isTracking in
+            self?.setInteractionTracking(isTracking, source: "quality")
+        }
         panelView.alpha = 0.0
         if let toolbarView = self.toolbar.view {
             self.view.insertSubview(panelView, belowSubview: toolbarView)
@@ -312,7 +320,9 @@ extension ChatMediaEditorScreen.Node {
 
     private func closeQuality() {
         let panelView = self.qualityPanelView
+        panelView?.trackingUpdated = nil
         self.qualityPanelView = nil
+        self.setInteractionTracking(false, source: "quality")
         self.qualitySelection = nil
         self.activeTool = nil
         self.updateEntityInteraction()
@@ -328,16 +338,23 @@ extension ChatMediaEditorScreen.Node {
         guard let panelView = self.qualityPanelView, let selection = self.qualitySelection else {
             return
         }
-        let toolbarMinY = chatMediaEditorBottomPanelFrame(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarHeight: chatMediaEditorToolbarHeight).minY
-        let panelFrame = CGRect(
-            x: 0.0,
-            y: toolbarMinY - chatMediaEditorQualityPanelSize + chatMediaEditorQualityPanelTopInset,
-            width: layout.size.width,
-            height: chatMediaEditorQualityPanelSize - chatMediaEditorQualityPanelTopInset
-        )
-        transition.updateFrame(view: panelView, frame: panelFrame)
+        let side = self.toolbarSide(layout: layout)
+        let panelFrame = chatMediaEditorQualityPanelFrame(size: layout.size, safeInsets: self.editorSafeInsets(layout: layout), toolbarSide: side)
+        let contentSize = side == nil ? panelFrame.size : CGSize(width: panelFrame.height, height: panelFrame.width)
+        let rotation: CGFloat
+        switch side {
+        case .left:
+            rotation = -CGFloat.pi / 2.0
+        case .right:
+            rotation = CGFloat.pi / 2.0
+        case nil:
+            rotation = 0.0
+        }
+        transition.updateBounds(layer: panelView.layer, bounds: CGRect(origin: .zero, size: contentSize))
+        transition.updatePosition(layer: panelView.layer, position: CGPoint(x: panelFrame.midX, y: panelFrame.midY))
+        transition.updateTransform(layer: panelView.layer, transform: CGAffineTransform(rotationAngle: rotation))
         let presets = chatMediaEditorVideoQualityPickerPresets(dimensions: self.mediaEditor.values.originalDimensions.cgSize)
-        panelView.update(presets: presets, selected: selection, size: panelFrame.size, transition: ComponentTransition(transition))
+        panelView.update(presets: presets, selected: selection, size: contentSize, transition: ComponentTransition(transition))
     }
 
     private func presentPhotoQualityTooltip(isHighQuality: Bool) {

@@ -7,7 +7,6 @@
 
 #include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -37,13 +36,6 @@ const char* const kEmpty = "<!doctype html><html><head></head><body></body></htm
 void switchTheme(RenderEnv& env, wr::Theme theme) {
     wr::HostState::of(env.ctx()).themeChanged(env.ctx(), theme);
     env.env().drain();
-}
-
-uint64_t unitsOf(RenderEnv& env, const std::string& code) {
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().eval(code);
-    return JS_GetWorkUnits(rt) - before;
 }
 
 } // namespace
@@ -146,26 +138,12 @@ WR_TEST(testAnUnknownMediaKeywordDoesNotGrowTheIdTable) {
     CHECK(!litehtml::_find_id("never-a-scheme-7", id));
 }
 
-WR_TEST(testMatchMediaIsChargedByTheQuery) {
-    RenderEnv env(kEmpty);
-    // Both queries are built before the measurement, so the measured script is the same few bytes.
-    // Under profile 1's 1,024 units (961: testAQueryOver1024UnitsIsFalse) and the 16 KB cap (testAnOverlongQueryIsRefused).
-    env.env().eval("window.s = '(min-width: 1px)'; window.q = s + ' and (min-width: 1px)'.repeat(45); 1");
-    const uint64_t length = uint64_t(std::stoull(env.env().eval("q.length")));
-    unitsOf(env, "matchMedia(s).matches");
-    const uint64_t shortCost = unitsOf(env, "matchMedia(s).matches");
-    const uint64_t longCost = unitsOf(env, "matchMedia(q).matches");
-    CHECK(longCost >= shortCost + length * wr::work::kCssByte);
-}
-
 /// The final review's C2: a query past kMaxMediaQueryBytes is refused before it is copied or parsed (litehtml's
-/// tokenizer allocates outside the memory limit): it never matches, reads back as "not all", and costs a constant.
+/// tokenizer allocates outside the memory limit): it never matches and reads back as "not all".
 WR_TEST(testAnOverlongQueryIsRefused) {
     RenderEnv env(kEmpty);
     env.env().eval("window.q = '(min-width: 1px)' + ' and (min-width: 1px)'.repeat(2000); 1");
     CHECK_EQ(env.env().eval("(m => m.matches + ':' + m.media)(matchMedia(q))"), std::string("false:not all"));
-    unitsOf(env, "matchMedia(q).matches");
-    CHECK(unitsOf(env, "matchMedia(q).matches") < 2000);
 }
 
 /// V4 plan, Task 3b: matchMedia and @media share the profile's walker; an out-of-profile query is false whatever the

@@ -212,8 +212,9 @@ litehtml::position paintBounds(const PaintItem& item, const Layer& enclosing);
 
 // ---- The mirror (Task 10b). ----
 
-/// A DOM node's key in its RenderTree (the element → node map's); 0 for what no node owns (an anonymous box, a
-/// pseudo-element, a form control's parts).
+/// A DOM node's key in its RenderTree (the element → node map's); for a ::before, an ::after or a form control's part,
+/// one derived from its element's and its tag (RenderTree::keyOf); 0 for what no node owns (an anonymous box, a text
+/// piece of generated content).
 using NodeKey = uint64_t;
 /// A mirror node's identity: assigned when it is made, kept for its life, never reused within a RenderTree.
 using LayerId = uint64_t;

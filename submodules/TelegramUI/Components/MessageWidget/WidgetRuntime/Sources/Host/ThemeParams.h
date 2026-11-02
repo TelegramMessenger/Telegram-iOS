@@ -48,6 +48,21 @@ struct ThemeTextTokens {
 /// Keeps each token that matches its grammar: `fontSize` 8–64, rounded to two decimals; `lineHeight` 1–3, rounded to
 /// three; `padding` one to four lengths, each `0` or up to four digits and three decimals in px, em or rem.
 ThemeTextTokens checkTextTokens(const ThemeTextTokens& tokens);
+/// widget-sandbox v0.4.0 (SDK v1 §2.17, §5.12): what the client draws over the widget, in CSS px: the band of the message
+/// time at the widget's bottom (`bottom`) and the corner the time takes in it, on its physical side (`cornerRight` in a
+/// left-to-right interface, `cornerLeft` in a right-to-left one); the rest 0. All 0 with a caption below the widget, and
+/// until the host says.
+struct ContentSafeArea {
+    double top = 0, right = 0, bottom = 0, left = 0, cornerLeft = 0, cornerRight = 0;
+    bool operator==(const ContentSafeArea&) const = default;
+};
+/// upstream's checkContentSafeArea: each field a finite number within its range (an inset 0–64, a corner 0–200),
+/// rounded to two decimals (Math.round(v * 100) / 100); anything else 0.
+ContentSafeArea checkContentSafeArea(const ContentSafeArea& area);
+/// contentSafeAreaVariables, as declarations for the root: the six --tg-content-safe-area-* of `area` (already checked),
+/// always all of them, each !important.
+std::string contentSafeAreaRootDeclarations(const ContentSafeArea& area);
+
 /// themeVariables, as declarations for the root: --tg-theme-<key, _ as -> and --tg-color-scheme, then --tg-button-* for
 /// each button token passed, then always the three --tg-text-* (all already checked), each !important.
 std::string themeRootDeclarations(const ThemeParams& params, Theme theme, const ThemeButtonTokens& tokens = {},

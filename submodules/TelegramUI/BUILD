@@ -59,6 +59,8 @@ swift_library(
         "//third-party/widget-sandbox:debug_build": [
             "//third-party/widget-sandbox:WidgetConformanceBundle",
             "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
+            # The renderer stress kit, for Debug Settings' "Run widget stress kit" (widget-sandbox v0.3.0).
+            "//third-party/widget-sandbox:WidgetStressBundle",
         ],
         "//conditions:default": [],
     }),
@@ -379,6 +381,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatUserInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatNewThreadInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/TelegramUI/Components/TabBarLayout",
         "//submodules/TelegramUI/Components/Chat/ChatButtonKeyboardInputNode",
         "//submodules/TelegramUI/Components/Chat/ChatChannelSubscriberInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatContextResultPeekContent",

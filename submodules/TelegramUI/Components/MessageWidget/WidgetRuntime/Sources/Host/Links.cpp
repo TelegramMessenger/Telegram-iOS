@@ -7,7 +7,6 @@
 #include "Sources/Host/TelegramWidget.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -208,7 +207,6 @@ void openLinkFromWidget(JSContext* ctx, LinkMethod method, const std::optional<V
     std::optional<std::string> checked;
     if (url && JS_IsString(url->get())) {
         const String text = String::adopt(ctx, JS_DupValue(ctx, url->get()));
-        chargeScan(ctx, std::min<uint64_t>(text.length(), kMaxLinkLength + 1));
         checked = checkLink(method, text);
     }
     if (!checked) {
@@ -223,7 +221,6 @@ void openLinkFromWidget(JSContext* ctx, LinkMethod method, const std::optional<V
 
 void followLink(JSContext* ctx, const String& url) {
     // The trim scans the whitespace (the final review's I3); checkLink reads at most kMaxLinkLength + 1 units after it.
-    chargeScan(ctx, url.length());
     const String link = trimmed(ctx, url);
     HostState& state = HostState::of(ctx);
     if (link.length() >= 11 && link.substring(ctx, 0, 11).equalsIgnoringASCIICase("javascript:")) {

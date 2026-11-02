@@ -2,22 +2,8 @@ import Foundation
 import UIKit
 import AVFoundation
 import SwiftSignalKit
+import Display
 import Camera
-
-private extension UIInterfaceOrientation {
-    var videoOrientation: AVCaptureVideoOrientation {
-        switch self {
-        case .portraitUpsideDown:
-            return .portraitUpsideDown
-        case .landscapeRight:
-            return .landscapeRight
-        case .landscapeLeft:
-            return .landscapeLeft
-        default:
-            return .portrait
-        }
-    }
-}
 
 final class CameraPreviewView: UIView, CameraSimplePreviewView {
     private let placeholderView = UIImageView()
@@ -62,7 +48,11 @@ final class CameraPreviewView: UIView, CameraSimplePreviewView {
             return
         }
         let interfaceOrientation = self.window?.windowScene?.interfaceOrientation ?? .portrait
-        self.videoPreviewLayer.connection?.videoOrientation = interfaceOrientation.videoOrientation
+        // The window's orientation is measured against its screen, the connection's against the body that holds the
+        // camera: a quarter turn apart on iPhone Duo's inner screen.
+        let screenPortrait = screenPortraitDeviceOrientationForWindow(size: self.window?.bounds.size ?? .zero)
+        let videoOrientation = CameraVideoOrientation(interfaceOrientation: CameraVideoOrientation(interfaceOrientation), screenPortrait: CameraVideoOrientation(screenPortrait))
+        self.videoPreviewLayer.connection?.videoOrientation = videoOrientation.avCaptureVideoOrientation
         self.videoPreviewLayer.removeAllAnimations()
     }
 

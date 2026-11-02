@@ -1,0 +1,52 @@
+stop -
+drive time limit
+bridge watchPublicData ["true"]
+refused-loads 0
+
+== dom
+<html><head><meta name="tw-bot" content="vote">
+<style></style>
+</head><body><h1 id="q">Poll</h1>
+<div class="sb"><span id="lv"><i></i>Live</span><span id="tt">· No results yet</span></div>
+<div id="os" class=""><i class="sk"></i><i class="sk"></i><i class="sk"></i></div>
+<div id="ms" class=""></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 160.65
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 12 340 138.65
+    h1 14 12 332 22.1
+    div 14 37.1 332 17.55
+      span 14 37.1 44 17.55
+        i 14 42.375 7 7
+      span 64 37.1 136 17.55
+    div 10 70.65 340 74
+      i 62 70.65 258 14
+      i 62 100.65 258 14
+      i 62 130.65 258 14
+    div 14 150.65 332 0
+
+== paint
+root 360x160.65 items=10
+  group opacity=0.3166 matrix=(1,0,0,1,0,0) backface=0 bounds=(12,40.375,11,11) exact=1
+    solid-fill bounds=(14,42,7,7) layer=(border=(14,42,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(14,42,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.0633 matrix=(1,0,0,1,0,0) backface=0 bounds=(60,68.65,262,18) exact=1
+    solid-fill bounds=(62,71,258,14) layer=(border=(62,71,258,14),radius=(7,7,7,7,7,7,7,7),clip=(62,71,258,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  group opacity=0.0633 matrix=(1,0,0,1,0,0) backface=0 bounds=(60,98.65,262,18) exact=1
+    solid-fill bounds=(62,101,258,14) layer=(border=(62,101,258,14),radius=(7,7,7,7,7,7,7,7),clip=(62,101,258,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  group opacity=0.0633 matrix=(1,0,0,1,0,0) backface=0 bounds=(60,128.65,262,18) exact=1
+    solid-fill bounds=(62,131,258,14) layer=(border=(62,131,258,14),radius=(7,7,7,7,7,7,7,7),clip=(62,131,258,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  text bounds=(6,7,48,32) pos=(14,15,32,16) color=#000000ff text="Poll" font=f1 glyphs=4 advance=32
+  text bounds=(18,29,48,32) pos=(26,37,32,16) color=#3390ecff text="Live" font=f2 glyphs=4 advance=32
+  text bounds=(56,29,32,32) pos=(64,37,16,16) color=#707579ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(80,29,32,32) pos=(88,37,16,16) color=#707579ff text="No" font=f3 glyphs=2 advance=16
+  text bounds=(104,29,72,32) pos=(112,37,56,16) color=#707579ff text="results" font=f3 glyphs=7 advance=56
+  text bounds=(168,29,40,32) pos=(176,37,24,16) color=#707579ff text="yet" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

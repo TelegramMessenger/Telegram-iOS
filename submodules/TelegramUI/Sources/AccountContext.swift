@@ -139,6 +139,7 @@ public final class AccountContextImpl: AccountContext {
     public let tonContext: StarsContext?
     public let walletContext: WalletContext?
     private let walletTonConnectDisposable = MetaDisposable()
+    private let widgetWalletDisposable = MetaDisposable()
     private let walletTonConnectDecisionDisposable = MetaDisposable()
     private var walletTonConnectState: WalletContext.TonConnectState?
     private var walletTonConnectController: ViewController?
@@ -638,6 +639,17 @@ public final class AccountContextImpl: AccountContext {
 
         if let walletContext = self.walletContext {
             self.account.walletTransferTasksRunning.set(walletContext.hasTransferBackgroundTasks)
+            // widget-sandbox v0.5.0 (sdk-v1 §5.13): message widgets get the wallet where it is available to this user
+            // (wallet_available) and this device can sign for it (the user's call of 2026-10-30).
+            let widgetWalletAccountId = self.account.peerId.id._internalGetInt64Value()
+            let widgetWalletOwner = ObjectIdentifier(self)
+            self.widgetWalletDisposable.set((combineLatest(
+                self._appConfiguration.get() |> map { WalletConfiguration.with(appConfiguration: $0).isAvailable } |> distinctUntilChanged,
+                walletContext.widgetWalletReady
+            )
+            |> deliverOnMainQueue).start(next: { isAvailable, isReady in
+                MessageWidgetWalletAvailability.set(isAvailable && isReady, accountId: widgetWalletAccountId, owner: widgetWalletOwner)
+            }))
             self.walletTonConnectDisposable.set((walletContext.tonConnectState
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 self?.updateWalletTonConnectPresentation(state)
@@ -675,6 +687,10 @@ public final class AccountContextImpl: AccountContext {
             self.account.walletTransferTasksRunning.set(.single(false))
         }
         self.walletTonConnectDisposable.dispose()
+        self.widgetWalletDisposable.dispose()
+        if self.walletContext != nil {
+            MessageWidgetWalletAvailability.release(accountId: self.account.peerId.id._internalGetInt64Value(), owner: ObjectIdentifier(self))
+        }
         self.walletTonConnectDecisionDisposable.dispose()
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()

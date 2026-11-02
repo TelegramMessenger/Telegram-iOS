@@ -202,8 +202,19 @@ litehtml::rendered_width litehtml::render_item_block::_render(pixel_t x, pixel_t
     if(css().get_aspect_ratio() > 0 && self_size.height.type == containing_block_context::cbc_value_type_auto &&
        (containing_block_size.size_mode & containing_block_context::size_mode_content) == 0)
     {
+        // Telegram (VENDOR.md edit 67): the ratio follows the width min-width and max-width leave, not the width
+        // available: `max-width: 264px; aspect-ratio: 1` in 374 px is 264 px tall.
+        pixel_t ratio_width = pixel_t(self_size.render_width);
+        if(self_size.max_width.type != containing_block_context::cbc_value_type_none)
+        {
+            ratio_width = std::min<pixel_t>(ratio_width, self_size.max_width);
+        }
+        if(self_size.min_width.type != containing_block_context::cbc_value_type_none)
+        {
+            ratio_width = std::max<pixel_t>(ratio_width, self_size.min_width);
+        }
         pixel_t ratio_height =
-            (pixel_t(self_size.render_width) + box_sizing_width()) / pixel_t(css().get_aspect_ratio()) - box_sizing_height();
+            (ratio_width + box_sizing_width()) / pixel_t(css().get_aspect_ratio()) - box_sizing_height();
         if(self_size.min_height.type == containing_block_context::cbc_value_type_none ||
            self_size.min_height.value < ratio_height)
         {
@@ -431,13 +442,17 @@ litehtml::rendered_width litehtml::render_item_block::_render(pixel_t x, pixel_t
 
     rendered_width ret;
     ret.natural_width = ret_width + content_offset_width();
-    if(!is_one_of(css().get_overflow(), overflow_visible, overflow_clip) && css().get_width().is_predefined() &&
+    // Telegram (VENDOR.md edit 71): a percentage width (a calc() with one included) is cyclic while the containing block
+    // is sized by its content, so it counts as auto for the min-content contribution (CSS Sizing 3 §5.2.1): a poll's
+    // fill at `width: 60%` gave its bar 60 % of the row as its minimum, which widened the row's auto column.
+    const bool auto_width = css().get_width().is_predefined() || css().get_width().units() == css_units_percentage;
+    if(!is_one_of(css().get_overflow(), overflow_visible, overflow_clip) && auto_width &&
        css().get_display() != display_table_cell)
     {
         ret.min_width = content_offset_left() + content_offset_right();
     } else
     {
-        if(css().get_width().is_predefined())
+        if(auto_width)
         {
             ret.min_width = ret_min_width + content_offset_width();
         } else

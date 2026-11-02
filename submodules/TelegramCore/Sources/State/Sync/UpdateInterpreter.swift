@@ -305,6 +305,8 @@ struct UpdateInterpreter {
                 self.applyPinnedSavedDialogs(updatePinnedSavedDialogsData)
             case let .updatePinnedForumTopic(updatePinnedForumTopicData):
                 self.applyPinnedForumTopic(updatePinnedForumTopicData)
+            case let .updateEditForumTopic(updateEditForumTopicData):
+                self.applyEditForumTopic(updateEditForumTopicData)
             case let .updateReadMessagesContents(updateReadMessagesContentsData):
                 self.applyReadMessagesContents(updateReadMessagesContentsData)
             case let .updateChannelReadMessagesContents(updateChannelReadMessagesContentsData):
@@ -413,8 +415,10 @@ struct UpdateInterpreter {
                 self.applyWalletTonConnectPendingDisconnect(data)
             case let .updateWalletState(updateWalletStateData):
                 self.applyWalletState(updateWalletStateData)
+#if TELEGRAM_AGENT_API
             case let .updateAgentSettings(updateAgentSettingsData):
                 self.applyAgentSettings(updateAgentSettingsData)
+#endif
             case let .updateStarsRevenueStatus(updateStarsRevenueStatusData):
                 self.applyStarsRevenueStatus(updateStarsRevenueStatusData)
             case let .updatePaidReactionPrivacy(updatePaidReactionPrivacyData):
@@ -427,8 +431,10 @@ struct UpdateInterpreter {
                 self.applyStarGiftAuctionUserState(updateStarGiftAuctionUserStateData)
             case let .updateEmojiGameInfo(updateEmojiGameInfoData):
                 self.applyEmojiGameInfo(updateEmojiGameInfoData)
+#if TELEGRAM_NEWS_FEED_API
             case let .updateReadFeed(updateReadFeedData):
                 self.applyReadFeed(updateReadFeedData)
+#endif
             default:
                 break
         }

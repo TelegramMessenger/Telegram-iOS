@@ -205,6 +205,20 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     return false
 }
 
+// With a hardware keyboard, iPadOS posts a keyboard frame for its minimized keyboard bar as soon as a text input becomes
+// first responder: full width, 68.5pt high on an iPad Air 11" (iOS 27 simulator), while all it draws is a small button in
+// the bottom corner, which hides itself, with no notification, once the user types. Taken as the keyboard, it lifted the
+// chat's input panel and left an empty gap below it. No software keyboard on an iPad is anywhere near 100pt high (337pt
+// on the same iPad), so a shorter frame is the bar, unless the first responder has an input (accessory) view: that is
+// drawn across the bottom with a hardware keyboard too, and its frame is as short. A phone posts a zero-height frame for
+// a hardware keyboard.
+func isHardwareKeyboardBar(keyboardFrame: CGRect, deviceType: DeviceType, responderHasInputViews: Bool) -> Bool {
+    if case .tablet = deviceType, !responderHasInputViews, keyboardFrame.height > 0.0, keyboardFrame.height < 100.0 {
+        return true
+    }
+    return false
+}
+
 public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
     if view.isFirstResponder {
         return (view, accessoryHeight)
@@ -768,6 +782,14 @@ public class Window1 {
                 // an all-zero frame has minY 0 and is not caught here.
                 if #available(iOSApplicationExtension 16.1, iOS 16.1, *), let screen = notification.object as? UIScreen, let keyboardFrameEnd = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect, keyboardFrameEnd.minY >= screen.bounds.height - 1.0 {
                     keyboardHeight = 0.0
+                }
+                
+                if let keyboardFrameEnd = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.eventView).0
+                    let responderHasInputViews = firstResponder?.inputView != nil || firstResponder?.inputAccessoryView != nil
+                    if isHardwareKeyboardBar(keyboardFrame: keyboardFrameEnd, deviceType: strongSelf.deviceMetrics.type, responderHasInputViews: responderHasInputViews) {
+                        keyboardHeight = 0.0
+                    }
                 }
                 
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0

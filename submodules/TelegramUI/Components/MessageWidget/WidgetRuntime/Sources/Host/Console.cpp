@@ -22,17 +22,11 @@ bool appendASCII(std::string& out, std::string_view ascii) {
 }
 
 /// The text of a value that is not a symbol: ToString(v), QuickJS's own conversion (it can run the value's toString,
-/// as a script's String(v) does), then as much of its UTF-8 as fits. Each copy is charged before it is made: a rope
-/// argument's flattening inside ToString by its whole length, then the UTF-8 conversion by what fits (utf8Prefix stops
-/// at the first character that does not fit, so it visits at most `room` + 1 units).
+/// as a script's String(v) does), then as much of its UTF-8 as fits (utf8Prefix stops at the first character that does
+/// not fit, so it visits at most `room` + 1 units).
 bool appendText(JSContext* ctx, std::string& out, JSValueConst v) {
-    JSStringView view{nullptr, nullptr, 0};
-    if (JS_IsString(v) && !JS_GetStringView(v, &view)) {
-        chargeScan(ctx, JS_GetStringLength(v));
-    }
     String text = String::adopt(ctx, checked(ctx, JS_ToString(ctx, v)));
     size_t room = kMaxDiagnosticBytes - out.size();
-    chargeScan(ctx, std::min<uint64_t>(text.length(), room));
     bool cut = false;
     out += text.utf8Prefix(room, &cut);
     return !cut && out.size() < kMaxDiagnosticBytes;

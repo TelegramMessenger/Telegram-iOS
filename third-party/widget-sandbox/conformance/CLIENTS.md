@@ -10,7 +10,7 @@ You need three things: the framework tag, your own host and renderer, and Node �
 
 | | |
 |---|---|
-| `auto/*.html` | The automatic set: 51 widgets that check themselves. Required. |
+| `auto/*.html` | The automatic set: 54 widgets that check themselves. Required. |
 | `visual/*.html` | The visual set: 20 widgets for people (the test channel). Optional in a runner, where it is only a load check. |
 | `channel.json` | The test channel in posting order: per message the widget, its size anchors, the caption and the reference photos. |
 | `manifest.json` | One entry per widget: scripted `actions`, `host` checks, pixel `stages` (`rect`, `themes`, `refs`), `themes`. |
@@ -52,6 +52,9 @@ Build it as a test target or a debug mode in your client. For every entry of `ma
 2. **Focus the chat input**, or a stand-in text field, before loading the widget.
 3. **Load the widget HTML** and observe the validated ops. Every platform has the same renderer seam, so wrap your renderer: see "Reading the ops" below.
 4. **Wait** for `status` `done`, or `awaiting` when the test has `actions`. Give up after 20 s and record what you have.
+   A test with `stops` in the manifest (`auto/31-stop-*`…`34`) passes a counted limit on purpose: your host must stop it
+   (`onDead` / the diagnostics' reason) with a reason that starts with `stops`, e.g. `Text limit exceeded`. Wait for the
+   death instead of `done` and record the reason in `dead`; the report passes the test only on that stop.
 5. **Record `chatFocused`**: does the chat input still have the keyboard focus? The profile has no keyboard (D4), so a widget must never take the focus.
 6. **Perform the `actions`**, if any, in order, with real input. Coordinates are widget CSS px from the widget's top-left. A target name means the centre of `targets[name]` in the **latest** published value, because the widget re-measures after every update. Leave about 350 ms between actions. Then wait up to 10 s for `done`.
 
@@ -83,6 +86,14 @@ Build it as a test target or a debug mode in your client. For every entry of `ma
 Run the visual set the same way if you like, without actions or crops; the report then shows whether each widget loads.
 
 **The message context.** A test with `message` in the manifest (lib.ts `MessageSpec`) checks what your client passes for one kind of message (`auto/26-context-*`, layer 233): create its host with the context of the first spec's `kind` (the server's flags of `WIDGET_MESSAGE_KINDS` in `sdk-policy.ts`: `private`, `group`, `no-queries`, `copy`, `live-copy`, `preview`), its `chat_data` / `public_data` as `data`, and a viewer, as you would for such a message. Its requests (`bot` in the manifest) need an answer: answer each request with the `result` the table gives for its `data` (the runner plays the bot; the templates `{n}`, `{from}`, `{time}` may come out as any text), or let your real test bot answer. The other tests run in the private chat's context with no state, as before.
+
+**The time over the corner.** A test with `safeArea` in the manifest (`auto/36-safe-area`, `visual/17-time-corner`;
+`docs/sdk-v1.md` §2.17, §5.12) is a widget with no caption below it: create its host with the content safe area your client
+passes for a widget with no caption below it (your time's band and corner, on your interface's side) and draw your time over
+it, as in a chat. Its checks compare with what your host passed (`TelegramWidget.contentSafeAreaInset`), so any band
+passes; the manifest's numbers are the ones the reference picture was drawn with (24 px, a 64 px corner). Every other
+test runs with the safe area of a caption below the widget: all 0. Such a test is posted twice in the test group,
+without a caption and with its caption above the widget (`invert_media`): both get your band and corner.
 
 Write everything into one run file per renderer, following `run.schema.json`:
 
@@ -160,12 +171,14 @@ How to read them by status:
 
 Send `<platform>-<renderer>.json` and `summary.md` to the widget-sandbox maintainers, or open a PR adding them to `packages/conformance/results/`.
 
+**Patterns from real widgets.** `auto/28-grid-percent-fill`, `29-grid-svg-marks` and `30-svg-fill-box` copy the layout of bot widgets that the Telegram iOS and Android clients drew wrong while Chromium drew them right: a poll's row (a `<button>` grid with a bar whose fill a transition takes to 100 %), a 3×3 board of buttons with SVG marks put in after load, and a chart's end dot scaled with `transform-box: fill-box`. All of it is profile 1, so widgets keep these patterns: a failure here is your renderer's to fix (or your theme tokens', if your `--tg-button-*` values change the layout), not the widget's. Each check's detail gives the measured boxes. The iOS and Android renderers ignored `transform-box: fill-box` (an SVG shape scaled about the view box), which `30-svg-fill-box` measures; its three pixel stages draw the same shape static, animated and moved, for a renderer that paints other than it answers: crop them while the widget runs, as step 7 says. The patterns and what was seen: `README.md`, "Patterns from real widgets".
+
 ## The client SDK group (`visual/sdk/`)
 
 Twenty-six small widgets test what **your client** implements on its side of SDK v1 (`docs/sdk-v1.md`, §5):
 - links (the confirmation with the full URL, t.me inside the client, rejected and over-long URLs, no link from a timer);
 - haptics of each kind, the rate limit, and that without a touch a widget gets one second of them, then none for nine (`26-haptics-no-touch`; `auto/27-haptics-no-touch` counts them on the bridge);
-- storage (re-creation, app restart, deletion with the message, the 16 KB quota);
+- storage (re-creation, app restart, deletion with the message, the 4 KB quota);
 - stopping after 2 consecutive crashes;
 - who gets a press (`12-drag-gestures`): double taps are always the widget's; horizontal drags and holds on `touch-action: none` are the widget's, on `auto` the bubble's (menu, swipe-to-reply); a vertical drag is always the chat's scroll, over `none` too; a drag from the leading 20 px is back;
 - the hard clip at the maximum height (600 px, the shared v0.1.0 value);
@@ -199,7 +212,7 @@ They need SDK v1 in the framework (`docs/sdk-v1.md`).
 
 ## The whole set in the test channel
 
-Every widget of the set is a mini-widget, so a test bot sends all of them as real layer-233 messages (`inputMediaWidget` with the HTML; the shared channel is filled by forwarding). A post with `message` is sent with those fields and looked at where it says: the original in the private chat or the group, the forward, or the inline results; `auto/26-context-private` viewed as a forward in the channel fails by design. `channel.json` is the posting order: the visual set (`visual/01…16`, in reading order, with the parts of a split topic one after the other), the client SDK group, then the automatic set. Each post has the widget, its size anchors (`width` / `height`, `0` = auto), a caption saying what to check, and the reference photos to post right after it: `refs/visual/<widget>.png`, plus `.dark.png` for the theme-dependent ones.
+Every widget of the set is a mini-widget, so a test bot sends all of them as real layer-233 messages (`inputMediaWidget` with the HTML; the shared channel is filled by forwarding). A post with `message` is sent with those fields and looked at where it says: the original in the private chat or the group, the forward, or the inline results; `auto/26-context-private` viewed as a forward in the channel fails by design. `channel.json` is the posting order: the visual set (`visual/01…16`, in reading order, with the parts of a split topic one after the other), the client SDK group, then the automatic set. Each post has the widget, its size anchors (`width` / `height`, `0` = auto), a caption saying what to check, and the reference photos to post right after it: `refs/visual/<widget>.png`, plus `.dark.png` for the theme-dependent ones. The test bot sends the widget document with its key as the caption below it, except for `auto/36-safe-area` and `visual/17-time-corner`, posted twice: once marked `withoutCaption` (no caption) and once `captionAbove` (the caption shown above the widget, `invert_media`). With no caption below the widget your client draws the message time over its bottom corner, which is what those cases look at.
 
 In a visual widget each row shows a group of features drawn live by your client, with one line saying what to compare with the same row of the picture. Interactive rows say what to tap or drag. Testers scroll through on a phone and report a row that does not match, with a screenshot. Fonts differ between platforms by design: compare the structure, not the letter shapes. An automatic widget reports itself: its result line at the bottom must say `done` and show no `fail` count (each failing check is listed under it).
 

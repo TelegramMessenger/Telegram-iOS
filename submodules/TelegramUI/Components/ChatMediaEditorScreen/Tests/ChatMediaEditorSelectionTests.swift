@@ -150,7 +150,7 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         let safeInsets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
         let toolbarMinY = size.height - safeInsets.bottom - 49.0
         XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: false), CGRect(x: 402.0 - 64.0, y: 874.0 - 49.0 - 52.0 - 50.0 - 34.0, width: 64.0, height: 38.0))
-        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true).minY, 874.0 - 49.0 - 52.0 - 50.0 - 34.0 - 46.0)
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true).minY, 874.0 - 49.0 - 52.0 - 50.0 - 34.0 - 50.0)
         let cellSize = CGSize(width: 128.0, height: 128.0)
         XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: false, cellSize: cellSize), CGRect(x: 4.0, y: 874.0 - 49.0 - 52.0 - 136.0 - 64.0 - 34.0, width: 402.0 - 8.0, height: 136.0))
         XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: safeInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: true, cellSize: cellSize).minY, 874.0 - 49.0 - 52.0 - 136.0 - 64.0 - 34.0 - 46.0)
@@ -256,5 +256,47 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         XCTAssertTrue(chatMediaEditorSelectionToggleHaptic(wasSelected: true, isSelected: false))
         XCTAssertFalse(chatMediaEditorSelectionToggleHaptic(wasSelected: false, isSelected: false))
         XCTAssertFalse(chatMediaEditorSelectionToggleHaptic(wasSelected: true, isSelected: true))
+    }
+
+    func testLandscapeCheckButtonFrame() {
+        let size = CGSize(width: 874.0, height: 402.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: insets, toolbarSide: .left), CGRect(x: 760.0, y: 5.0, width: 39.0, height: 39.0))
+        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: insets, toolbarSide: .right), CGRect(x: 75.0, y: 5.0, width: 39.0, height: 39.0))
+    }
+
+    func testLandscapeCounterButtonFrame() {
+        let size = CGSize(width: 874.0, height: 402.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: false, toolbarSide: .left), CGRect(x: 112.0, y: 8.0, width: 64.0, height: 38.0))
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, toolbarSide: .left), CGRect(x: 112.0, y: 8.0, width: 64.0, height: 38.0))
+        XCTAssertEqual(chatMediaEditorCounterButtonFrame(size: size, safeInsets: insets, reservedCorners: .none, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, toolbarSide: .right), CGRect(x: 698.0, y: 8.0, width: 64.0, height: 38.0))
+    }
+
+    func testLandscapeStripFrame() {
+        let size = CGSize(width: 874.0, height: 402.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+        let cellSize = CGSize(width: 128.0, height: 128.0)
+        XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: false, cellSize: cellSize, toolbarSide: .left), CGRect(x: 177.0, y: 4.0, width: 136.0, height: 374.0))
+        XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, cellSize: cellSize, toolbarSide: .left), CGRect(x: 177.0, y: 4.0, width: 136.0, height: 310.0))
+        XCTAssertEqual(chatMediaEditorStripFrame(size: size, safeInsets: insets, toolbarMinY: 0.0, captionBaseHeight: 52.0, hasVideoHeader: true, cellSize: cellSize, toolbarSide: .right), CGRect(x: 561.0, y: 4.0, width: 136.0, height: 310.0))
+    }
+
+    func testStripBackgroundGrowsFromTopWhenVertical() {
+        let cellSize = CGSize(width: 128.0, height: 128.0)
+        let horizontalSize = CGSize(width: 394.0, height: 136.0)
+        XCTAssertEqual(chatMediaEditorStripBackgroundFrame(size: horizontalSize, count: 1, cellSize: cellSize, isVertical: false), CGRect(x: 258.0, y: 0.0, width: 136.0, height: 136.0))
+        XCTAssertEqual(chatMediaEditorStripMaskFrame(size: horizontalSize, count: 1, cellSize: cellSize, isVertical: false), CGRect(x: 258.0, y: 4.0, width: 136.0, height: 128.0))
+        let verticalSize = CGSize(width: 136.0, height: 310.0)
+        XCTAssertEqual(chatMediaEditorStripBackgroundFrame(size: verticalSize, count: 1, cellSize: cellSize, isVertical: true), CGRect(x: 0.0, y: 0.0, width: 136.0, height: 136.0))
+        XCTAssertEqual(chatMediaEditorStripBackgroundFrame(size: verticalSize, count: 2, cellSize: cellSize, isVertical: true), CGRect(x: 0.0, y: 0.0, width: 136.0, height: 268.0))
+        XCTAssertEqual(chatMediaEditorStripBackgroundFrame(size: verticalSize, count: 5, cellSize: cellSize, isVertical: true), CGRect(x: 0.0, y: 0.0, width: 136.0, height: 310.0))
+        XCTAssertEqual(chatMediaEditorStripMaskFrame(size: verticalSize, count: 2, cellSize: cellSize, isVertical: true), CGRect(x: 4.0, y: 0.0, width: 128.0, height: 268.0))
+    }
+
+    func testStripHiddenCenterSlidesTowardColumn() {
+        XCTAssertEqual(chatMediaEditorStripHiddenCenter(size: CGSize(width: 394.0, height: 136.0), toolbarSide: nil), CGPoint(x: 197.0, y: 68.0 + 136.0 / 3.0))
+        XCTAssertEqual(chatMediaEditorStripHiddenCenter(size: CGSize(width: 136.0, height: 310.0), toolbarSide: .left), CGPoint(x: 68.0 - 136.0 / 3.0, y: 155.0))
+        XCTAssertEqual(chatMediaEditorStripHiddenCenter(size: CGSize(width: 136.0, height: 310.0), toolbarSide: .right), CGPoint(x: 68.0 + 136.0 / 3.0, y: 155.0))
     }
 }

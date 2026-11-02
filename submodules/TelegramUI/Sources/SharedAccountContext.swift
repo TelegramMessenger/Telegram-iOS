@@ -547,6 +547,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         GlassBackgroundView.useCustomGlassImpl = immediateExperimentalUISettingsValue.with({ $0.fakeGlass })
         ManagedAudioSessionImpl.respectsSystemRecordingInput = immediateExperimentalUISettingsValue.with({ $0.respectSystemMicrophone })
+        MediaEditorVideoExport.forceLegacyStoryWriter = immediateExperimentalUISettingsValue.with({ $0.storyLegacyVideoWriter })
+        MediaEditorVideoExport.forceLegacyChatWriter = immediateExperimentalUISettingsValue.with({ $0.chatLegacyVideoWriter })
         
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
@@ -556,6 +558,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
                 ManagedAudioSessionImpl.respectsSystemRecordingInput = settings.respectSystemMicrophone
+                MediaEditorVideoExport.forceLegacyStoryWriter = settings.storyLegacyVideoWriter
+                MediaEditorVideoExport.forceLegacyChatWriter = settings.chatLegacyVideoWriter
             }
         })
         
@@ -4686,8 +4690,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return WalletConnectScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, connect: connect)
     }
 
-    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
-        return WalletTransferScreen(context: context, walletContext: walletContext, request: request, cancelled: cancelled, confirm: confirm)
+    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, ignoresTouchesFor: Double, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
+        return WalletTransferScreen(context: context, walletContext: walletContext, request: request, requester: requester, ignoresTouchesFor: ignoresTouchesFor, cancelled: cancelled, confirm: confirm)
     }
 
     public func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {

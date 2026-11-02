@@ -40,7 +40,7 @@ public:
     String hash(JSContext* ctx);
 
 private:
-    /// The document's URL, split. Charged by the URL's length before it is converted and split.
+    /// The document's URL, split.
     URLParts parts(JSContext* ctx);
 };
 

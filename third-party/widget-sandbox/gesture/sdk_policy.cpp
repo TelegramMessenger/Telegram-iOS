@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 
 namespace twidget {
 
@@ -31,6 +32,13 @@ bool contains(const std::array<std::string_view, N>& list, std::string_view s) {
 bool isHex(unsigned char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
 bool isAlpha(unsigned char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'); }
 bool isDigit(unsigned char c) { return c >= '0' && c <= '9'; }
+
+/// A JSON number that is an integer within [min, max] (the TS `Number.isInteger` and the range test): not 1.5, not "1".
+std::optional<int64_t> integerIn(const Json& v, double min, double max) {
+    double n = v.asNumber();
+    if (!v.isNumber() || !std::isfinite(n) || std::floor(n) != n || n < min || n > max) return std::nullopt;
+    return int64_t(n);
+}
 
 /// Lowercases A–Z only: a Unicode mapping (U+212A KELVIN SIGN → `k`) must not turn a non-ASCII host into an ASCII one.
 std::string asciiLower(std::string_view s) {
@@ -193,11 +201,55 @@ Json BridgeCall::toJson() const {
     if (action) return action->toJson();
     Json o = Json::object();
     if (resizeAnchor) o.set("kind", "setResizeAnchor").set("edge", *resizeAnchor);
-    if (request) o.set("kind", "request").set("id", request->id).set("data", request->data);
+    if (request) {
+        o.set("kind", "request").set("id", request->id).set("data", request->data);
+        if (request->wallet) o.set("wallet", true);
+    }
+    if (wallet) o.set("kind", "wallet").set("id", wallet->id).set("call", wallet->call.toJson());
     if (copyText) o.set("kind", "copyText").set("text", *copyText);
     if (watchPublicData) o.set("kind", "watchPublicData").set("on", *watchPublicData);
     return o;
 }
+
+}  // namespace sdk
+
+Json WalletMessage::toJson() const {
+    Json o = Json::object();
+    o.set("address", address).set("amount", amount);
+    if (payload) o.set("payload", *payload);
+    if (stateInit) o.set("stateInit", *stateInit);
+    return o;
+}
+
+Json WalletTransaction::toJson() const {
+    Json list = Json::array();
+    for (const auto& m : messages) list.push(m.toJson());
+    Json o = Json::object();
+    if (validUntil) o.set("valid_until", *validUntil);
+    if (network) o.set("network", *network);
+    if (from) o.set("from", *from);
+    o.set("messages", std::move(list));
+    return o;
+}
+
+Json SignDataPayload::toJson() const {
+    Json o = Json::object();
+    o.set("type", type);
+    for (const auto& [k, v] : {std::pair{"text", &text}, {"bytes", &bytes}, {"schema", &schema}, {"cell", &cell}, {"network", &network}, {"from", &from}})
+        if (*v) o.set(k, **v);
+    return o;
+}
+
+Json WalletCall::toJson() const {
+    Json o = Json::object();
+    o.set("method", methodName());
+    if (method == Method::SignData) o.set("payload", payload.toJson());
+    else o.set("transaction", transaction.toJson());
+    o.set("data", data);
+    return o;
+}
+
+namespace sdk {
 
 std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args) {
     if (!args.isArray() || !method.isString()) return std::nullopt;
@@ -233,12 +285,34 @@ std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args) 
         return call;
     }
     if (m == "request") {
-        // [id, data]: an integer id 1 … 2147483647 (not 1.5, not "1"), then the data's own check.
-        const Json& id = args[0];
-        std::optional<std::string> data = args.size() == 2 ? checkRequestDataValue(args[1]) : std::nullopt;
-        double n = id.asNumber();
-        if (!data || !id.isNumber() || !std::isfinite(n) || std::floor(n) != n || n < 1 || n > double(MAX_REQUEST_ID)) return std::nullopt;
-        call.request = BridgeCall::Request{int64_t(n), std::move(*data)};
+        // [id, data] or [id, data, options]: an integer id 1 … 2147483647 (not 1.5, not "1"), then the data's own check.
+        std::optional<std::string> data = args.size() == 2 || args.size() == 3 ? checkRequestDataValue(args[1]) : std::nullopt;
+        std::optional<bool> wallet = args.size() == 3 ? checkRequestOptions(args[2]) : std::optional<bool>(false);
+        std::optional<int64_t> id = integerIn(args[0], 1, double(MAX_REQUEST_ID));
+        if (!data || !wallet || !id) return std::nullopt;
+        call.request = BridgeCall::Request{*id, std::move(*data), *wallet};
+        return call;
+    }
+    if (m == "wallet") {
+        // [id, method, the method's argument, data]
+        std::optional<int64_t> id = integerIn(args[0], 1, double(MAX_REQUEST_ID));
+        std::optional<std::string> data = args.size() == 4 ? checkRequestDataValue(args[3]) : std::nullopt;
+        if (!id || !data) return std::nullopt;
+        WalletCall w;
+        w.data = std::move(*data);
+        if (args[1].isString() && args[1].asString() == "sendTransaction") {
+            std::optional<WalletTransaction> tx = checkWalletTransaction(args[2]);
+            if (!tx) return std::nullopt;
+            w.transaction = std::move(*tx);
+        } else if (args[1].isString() && args[1].asString() == "signData") {
+            std::optional<SignDataPayload> p = checkSignDataPayload(args[2]);
+            if (!p) return std::nullopt;
+            w.method = WalletCall::Method::SignData;
+            w.payload = std::move(*p);
+        } else {
+            return std::nullopt;
+        }
+        call.wallet = BridgeCall::Wallet{*id, std::move(w)};
         return call;
     }
     if (m == "watchPublicData") {
@@ -253,6 +327,124 @@ std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args) 
         return call;
     }
     return std::nullopt;
+}
+
+std::optional<bool> checkRequestOptions(const Json& options) {
+    if (!options.isObject()) return std::nullopt;
+    for (const auto& [k, v] : options.obj()) if (k != "wallet") return std::nullopt;
+    const Json& w = options["wallet"];
+    if (w.isNull()) return false;
+    if (!w.isBool()) return std::nullopt;
+    return w.asBool();
+}
+
+namespace {
+
+/// A–Z, a–z, 0–9, `+`, `/`, `_`, `-`: base64 and base64url together.
+bool isBase64Char(unsigned char c) { return isAlpha(c) || isDigit(c) || c == '+' || c == '/' || c == '_' || c == '-'; }
+
+bool onlyKeys(const Json& o, std::initializer_list<std::string_view> keys) {
+    for (const auto& [k, v] : o.obj())
+        if (std::find(keys.begin(), keys.end(), k) == keys.end()) return false;
+    return true;
+}
+
+/// Base64 or base64url of 1 to `max` characters, with at most two `=` at the end.
+std::optional<std::string> base64(const Json& v, size_t max) {
+    if (!v.isString() || v.asString().size() > max) return std::nullopt;
+    std::string_view s = v.asString();
+    for (int i = 0; i < 2 && !s.empty() && s.back() == '='; i++) s.remove_suffix(1);
+    if (s.empty() || !std::all_of(s.begin(), s.end(), [](char c) { return isBase64Char((unsigned char)c); })) return std::nullopt;
+    return v.asString();
+}
+
+/// Nanotons: a decimal string of at most 37 digits without a leading zero (`0` itself is an amount).
+bool isAmount(std::string_view s) {
+    return !s.empty() && s.size() <= 37 && std::all_of(s.begin(), s.end(), [](char c) { return isDigit((unsigned char)c); }) && (s.size() == 1 || s[0] != '0');
+}
+
+/// Text the server and the bot can take: well-formed, no NUL, 1 to `max` UTF-8 bytes.
+std::optional<std::string> signText(const Json& v, size_t max) {
+    if (!v.isString()) return std::nullopt;
+    const std::string& s = v.asString();
+    if (s.empty() || !wellFormed(s) || s.find('\0') != std::string::npos || utf8Length(s) > max) return std::nullopt;
+    return s;
+}
+
+/// The optional `network` and `from` of a transaction or a payload; false when one breaks its rule.
+bool walletTarget(const Json& input, std::optional<std::string>& network, std::optional<std::string>& from) {
+    if (const Json& n = input["network"]; !n.isNull()) {
+        if (!n.isString() || !contains(WALLET_NETWORKS, n.asString())) return false;
+        network = n.asString();
+    }
+    if (const Json& f = input["from"]; !f.isNull()) {
+        from = checkWalletAddress(f);
+        if (!from) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+std::optional<std::string> checkWalletAddress(const Json& address) {
+    if (!address.isString()) return std::nullopt;
+    const std::string& s = address.asString();
+    if (s.size() == 48 && std::all_of(s.begin(), s.end(), [](char c) { return isBase64Char((unsigned char)c); })) return s;
+    size_t prefix = s.rfind("0:", 0) == 0 ? 2 : s.rfind("-1:", 0) == 0 ? 3 : 0;
+    if (prefix == 0 || s.size() != prefix + 64 || !std::all_of(s.begin() + long(prefix), s.end(), [](char c) { return isHex((unsigned char)c); })) return std::nullopt;
+    return s;
+}
+
+std::optional<std::string> checkWalletDestination(const Json& address) {
+    if (!address.isString()) return std::nullopt;
+    const std::string& s = address.asString();
+    if (s.size() != 48 || !std::all_of(s.begin(), s.end(), [](char c) { return isBase64Char((unsigned char)c); })) return std::nullopt;
+    return s;
+}
+
+std::optional<WalletTransaction> checkWalletTransaction(const Json& tx) {
+    if (!tx.isObject() || !onlyKeys(tx, {"valid_until", "network", "from", "messages"})) return std::nullopt;
+    WalletTransaction out;
+    if (const Json& v = tx["valid_until"]; !v.isNull()) {
+        out.validUntil = integerIn(v, 1, 4294967295.0);
+        if (!out.validUntil) return std::nullopt;
+    }
+    if (!walletTarget(tx, out.network, out.from)) return std::nullopt;
+    const Json& list = tx["messages"];
+    if (!list.isArray() || list.size() < 1 || list.size() > MAX_WALLET_MESSAGES) return std::nullopt;
+    size_t total = 0;
+    for (const Json& m : list.arr()) {
+        if (!m.isObject() || !onlyKeys(m, {"address", "amount", "payload", "stateInit"})) return std::nullopt;
+        std::optional<std::string> address = checkWalletDestination(m["address"]);
+        if (!address || !m["amount"].isString() || !isAmount(m["amount"].asString())) return std::nullopt;
+        WalletMessage message{*address, m["amount"].asString(), std::nullopt, std::nullopt};
+        if (!m["payload"].isNull() && !(message.payload = base64(m["payload"], MAX_WALLET_BOC_LENGTH))) return std::nullopt;
+        if (!m["stateInit"].isNull() && !(message.stateInit = base64(m["stateInit"], MAX_WALLET_BOC_LENGTH))) return std::nullopt;
+        total += message.payload.value_or("").size() + message.stateInit.value_or("").size();
+        out.messages.push_back(std::move(message));
+    }
+    if (total > MAX_WALLET_BOC_TOTAL) return std::nullopt;
+    return out;
+}
+
+std::optional<SignDataPayload> checkSignDataPayload(const Json& payload) {
+    if (!payload.isObject() || !payload["type"].isString()) return std::nullopt;
+    const std::string& type = payload["type"].asString();
+    SignDataPayload out;
+    out.type = type;
+    if (type == "text") {
+        if (!onlyKeys(payload, {"type", "network", "from", "text"}) || !(out.text = signText(payload["text"], MAX_SIGN_DATA_LENGTH))) return std::nullopt;
+    } else if (type == "binary") {
+        if (!onlyKeys(payload, {"type", "network", "from", "bytes"}) || !(out.bytes = base64(payload["bytes"], MAX_SIGN_DATA_LENGTH))) return std::nullopt;
+    } else if (type == "cell") {
+        if (!onlyKeys(payload, {"type", "network", "from", "schema", "cell"}) || !(out.schema = signText(payload["schema"], MAX_SIGN_DATA_SCHEMA_BYTES)) ||
+            !(out.cell = base64(payload["cell"], MAX_SIGN_DATA_LENGTH)))
+            return std::nullopt;
+    } else {
+        return std::nullopt;
+    }
+    if (!walletTarget(payload, out.network, out.from)) return std::nullopt;
+    return out;
 }
 
 std::optional<std::string> checkRequestData(std::string_view data) {
@@ -381,14 +573,24 @@ std::string_view requestFailureCode(WidgetRequestFailure failure) {
     }
 }
 
+std::string_view walletFailureCode(WidgetRequestFailure failure) {
+    switch (failure) {
+    case WidgetRequestFailure::Rejected: return "REJECTED";
+    case WidgetRequestFailure::BadRequest: return "BAD_REQUEST";
+    default: return requestFailureCode(failure);
+    }
+}
+
 std::string_view requestVerdictName(RequestVerdict verdict) {
     switch (verdict) {
     case RequestVerdict::Foreground: return "foreground";
     case RequestVerdict::Background: return "background";
+    case RequestVerdict::Held: return "held";
+    case RequestVerdict::Granted: return "granted";
     case RequestVerdict::Disabled: return "disabled";
+    case RequestVerdict::NoWallet: return "no-wallet";
     case RequestVerdict::Busy: return "busy";
     case RequestVerdict::NoActivation: return "no-activation";
-    case RequestVerdict::Hidden: return "hidden";
     case RequestVerdict::RateLimited: return "rate-limited";
     }
     return "no-activation";
@@ -396,7 +598,7 @@ std::string_view requestVerdictName(RequestVerdict verdict) {
 
 std::optional<std::string_view> requestRefusal(RequestVerdict verdict) {
     switch (verdict) {
-    case RequestVerdict::Foreground: case RequestVerdict::Background: return std::nullopt;
+    case RequestVerdict::Foreground: case RequestVerdict::Background: case RequestVerdict::Held: case RequestVerdict::Granted: return std::nullopt;
     case RequestVerdict::Busy: return "BUSY";
     case RequestVerdict::RateLimited: return "RATE_LIMITED";
     default: return "NOT_ALLOWED";
@@ -405,17 +607,35 @@ std::optional<std::string_view> requestRefusal(RequestVerdict verdict) {
 
 RequestVerdict RequestGate::decide(double now, const Conditions& s) {
     if (!s.canQuery) return RequestVerdict::Disabled;
+    if (s.withWallet && !s.wallet) return RequestVerdict::NoWallet;
     if (inFlight_) return RequestVerdict::Busy;
-    if (s.gesture && s.visible) {
-        inFlight_ = true;
-        return RequestVerdict::Foreground;
+    if (s.gesture && s.visible) return out(RequestVerdict::Foreground);
+    if (!s.backgroundQuery || s.withWallet) return RequestVerdict::NoActivation;
+    if (!s.visible) {
+        inFlight_ = held_ = true;
+        return RequestVerdict::Held;
     }
-    if (!s.backgroundQuery) return RequestVerdict::NoActivation;
-    if (!s.visible) return RequestVerdict::Hidden;
     if (lastBackground_ && now - *lastBackground_ < BACKGROUND_REQUEST_INTERVAL_MS) return RequestVerdict::RateLimited;
     lastBackground_ = now;
     inFlight_ = true;
     return RequestVerdict::Background;
+}
+
+RequestVerdict RequestGate::decideWallet(double now, const WalletConditions& s) {
+    if (!s.canQuery) return RequestVerdict::Disabled;
+    if (!s.wallet) return RequestVerdict::NoWallet;
+    if (inFlight_) return RequestVerdict::Busy;
+    if (s.gesture && s.visible) return out(RequestVerdict::Foreground);
+    if (s.visible && grantAt_ && now - *grantAt_ <= WALLET_GRANT_MS) return out(RequestVerdict::Granted);
+    return RequestVerdict::NoActivation;
+}
+
+bool RequestGate::show(double now) {
+    lastBackground_.reset();
+    if (!held_) return false;
+    held_ = false;
+    lastBackground_ = now;
+    return true;
 }
 
 HapticGate::Decision HapticGate::decide(double now, bool visible) {

@@ -6,6 +6,7 @@
 #include "Generated/Bindings.h"
 #include "Sources/Canvas/CanvasStyle.h"
 #include "Sources/Host/Sequences.h"
+#include "Sources/Runtime/LimitStops.h"
 #include "Sources/Support/Errors.h"
 
 namespace wr {
@@ -90,8 +91,12 @@ Ref<Path2D> Path2D::construct(JSContext* ctx, std::optional<std::variant<Path2D*
             // Read up to the reference's 64 K (V5d final review, I2): a longer string makes an empty path, as the
             // reference's validator refuses its path data.
             const String& d = std::get<String>(*path);
+            // limit.text-node (widget-sandbox v0.3.0): path data is a text value; past the cap the widget stops.
+            const Limits& limits = Runtime::from(ctx).limits();
+            if (limits.stops && d.length() > limits.textValueUnits) {
+                stopForTextValue(ctx, d.length());
+            }
             if (d.length() <= kMaxPathData) {
-                chargeScan(ctx, d.length());
                 canvas::path::appendSVG(made->m_data, d.utf8());
             }
         }

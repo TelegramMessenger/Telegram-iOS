@@ -1,7 +1,7 @@
 // Profile 1's markup rules (V4 plan, Tasks 4 and 5): what the renderer's copy of an element is, and which of its
 // attributes it carries, as the reference validator decides them (widget-sandbox v0.1.0 validator.ts, opEl and
 // sanitizeAttr; .superpowers research RB §1 and §2), read from the profile's tables (Profile.h). Pure: nothing here
-// charges, throws or reads the DOM, so a build, a patch and the render input decide alike.
+// throws or reads the DOM, so a build, a patch and the render input decide alike.
 #pragma once
 
 #include <cstdint>

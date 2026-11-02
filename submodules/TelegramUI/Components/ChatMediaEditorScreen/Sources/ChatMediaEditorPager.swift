@@ -160,6 +160,10 @@ public func chatMediaEditorPagerLayout(width: CGFloat, height: CGFloat, index: I
     }
 }
 
+public func chatMediaEditorPagerOffset(index: Int, width: CGFloat) -> CGFloat {
+    return (width + chatMediaEditorPagerPageSpacing) * CGFloat(index)
+}
+
 public let chatMediaEditorPagerParallaxFactor: CGFloat = 0.16
 
 public func chatMediaEditorPagerParallaxOffset(pageFrame: CGRect, contentOffset: CGFloat) -> CGFloat {
@@ -650,6 +654,7 @@ final class ChatMediaEditorPagerView: UIView, UIScrollViewDelegate, UIGestureRec
     var settled: ((Int) -> Void)?
     var canSwipeDown: (() -> Bool)?
     var swipeDownUpdated: ((ChatMediaEditorSwipeDownGestureRecognizer) -> Void)?
+    var trackingUpdated: ((String, Bool) -> Void)?
 
     override init(frame: CGRect) {
         self.scrollView = UIScrollView()
@@ -706,7 +711,7 @@ final class ChatMediaEditorPagerView: UIView, UIScrollViewDelegate, UIGestureRec
             self.scrollView.contentSize = contentSize
         }
         if layoutChanged && !self.isScrolling {
-            self.scrollView.contentOffset = CGPoint(x: pageWidth * CGFloat(currentIndex), y: 0.0)
+            self.scrollView.contentOffset = CGPoint(x: chatMediaEditorPagerOffset(index: currentIndex, width: size.width), y: 0.0)
         }
         self.updatePages(relayout: true)
     }
@@ -715,11 +720,11 @@ final class ChatMediaEditorPagerView: UIView, UIScrollViewDelegate, UIGestureRec
         guard index >= 0, index < self.count, self.pageSize.width > 0.0 else {
             return
         }
-        let pageWidth = self.pageSize.width + chatMediaEditorPagerPageSpacing
-        self.scrollView.setContentOffset(CGPoint(x: pageWidth * CGFloat(index), y: 0.0), animated: animated)
+        self.scrollView.setContentOffset(CGPoint(x: chatMediaEditorPagerOffset(index: index, width: self.pageSize.width), y: 0.0), animated: animated)
         if !animated {
             self.settle()
         }
+        self.releaseTrackingIfIdle()
     }
 
     func reloadPage(at index: Int) {
@@ -793,18 +798,31 @@ final class ChatMediaEditorPagerView: UIView, UIScrollViewDelegate, UIGestureRec
         self.updatePages(relayout: false)
     }
 
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.trackingUpdated?("pager", true)
+    }
+
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.settle()
+            self.trackingUpdated?("pager", false)
         }
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.settle()
+        self.trackingUpdated?("pager", false)
     }
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
         self.settle()
+        self.releaseTrackingIfIdle()
+    }
+
+    private func releaseTrackingIfIdle() {
+        if !self.scrollView.isTracking {
+            self.trackingUpdated?("pager", false)
+        }
     }
 
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -815,6 +833,14 @@ final class ChatMediaEditorPagerView: UIView, UIScrollViewDelegate, UIGestureRec
     }
 
     @objc private func swipeDownGesture(_ recognizer: ChatMediaEditorSwipeDownGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.trackingUpdated?("swipeDown", true)
+        case .ended, .cancelled, .failed:
+            self.trackingUpdated?("swipeDown", false)
+        default:
+            break
+        }
         self.swipeDownUpdated?(recognizer)
     }
 }

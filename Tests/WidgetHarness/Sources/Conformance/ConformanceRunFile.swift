@@ -1,13 +1,13 @@
 import Foundation
 
-/// The run file of widget-sandbox v0.2.3's `conformance/run.schema.json`, which `tools/report.mjs` judges: one per
+/// The run file of widget-sandbox v0.3.0's `conformance/run.schema.json`, which `tools/report.mjs` judges: one per
 /// renderer, every run of the automatic set.
 public enum ConformanceRunFile {
     public static let platform = "ios"
     public static let renderer = "telegram-native"
     /// The vendored conformance set (`third-party/widget-sandbox`, VENDOR.md).
-    public static let framework = "v0.2.3"
-    public static let commit = "88285a3b"
+    public static let framework = "v0.5.0"
+    public static let commit = "3a7acf1"
 
     /// `crops`: run key (`ConformanceRun.key`) → stage name → the crop's path, relative to the run file.
     public static func encode(runs: [ConformanceRun], crops: [String: [String: String]], engine: String, date: Date) throws -> Data {

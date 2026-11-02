@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include "Sources/Support/Work.h"
 
 namespace wr::css {
 
@@ -61,7 +60,6 @@ BlockShape blockShape(const litehtml::css_token_vector& tokens) {
     std::array<int, kMaxBracketDepth> closers{};
     int depth = 0;
     for (const litehtml::css_token& t : tokens) {
-        shape.depthSum += uint64_t(depth);
         int closer = 0;
         if (t.type == litehtml::LEFT_PAREN || t.type == litehtml::FUNCTION) {
             closer = litehtml::RIGHT_PAREN;
@@ -75,7 +73,6 @@ BlockShape blockShape(const litehtml::css_token_vector& tokens) {
                 shape.tooDeep = true;
                 return shape;
             }
-            shape.blocks++;
             closers[size_t(depth++)] = closer;
         } else if (depth > 0 && t.ch == closers[size_t(depth - 1)]) {
             depth--;
@@ -88,17 +85,12 @@ std::optional<litehtml::css_token_vector> componentValues(JSContext* ctx, const 
     if (text.length() > kMaxSelectorUnits) {
         return std::nullopt;
     }
-    charge(ctx, uint64_t(text.length()) * work::kParseByte);
     std::string source = cssInput(text);
-    if (source.size() > text.length()) {
-        charge(ctx, uint64_t(source.size() - text.length()) * work::kParseByte);
-    }
     litehtml::css_token_vector flat = litehtml::tokenize(source);
     const BlockShape shape = blockShape(flat);
     if (shape.tooDeep) {
         return std::nullopt;
     }
-    charge(ctx, shape.depthSum * work::kComponentNesting + shape.blocks * work::kComponentBlock);
     return litehtml::normalize(std::move(flat), litehtml::f_componentize);
 }
 

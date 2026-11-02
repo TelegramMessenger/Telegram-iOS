@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import MediaCropComponent
+import Display
 
 public struct ChatMediaEditorLayout: Equatable {
     public var previewFrame: CGRect
@@ -24,8 +25,18 @@ public func chatMediaEditorLayout(
     mediaSize: CGSize,
     toolbarHeight: CGFloat,
     captionPanelHeight: CGFloat,
-    keyboardHeight: CGFloat
+    keyboardHeight: CGFloat,
+    toolbarSide: ChatMediaEditorToolbarSide? = nil,
+    reservedCorners: ContainerViewLayoutCorners = .none
 ) -> ChatMediaEditorLayout {
+    if let toolbarSide {
+        let contentRect = chatMediaEditorLandscapeContentRect(size: size, safeInsets: safeInsets, side: toolbarSide, panelWidth: 0.0)
+        return ChatMediaEditorLayout(
+            previewFrame: chatMediaEditorFittedFrame(mediaSize: mediaSize, in: contentRect),
+            toolbarFrame: chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: safeInsets, side: toolbarSide, reservedCorners: reservedCorners),
+            captionPanelFrame: CGRect(x: 0.0, y: size.height, width: size.width, height: captionPanelHeight)
+        )
+    }
     let toolbarFrame = chatMediaEditorBottomPanelFrame(size: size, safeInsets: safeInsets, toolbarHeight: toolbarHeight)
 
     let restingCaptionPanelMinY = toolbarFrame.minY - captionPanelHeight
@@ -53,13 +64,66 @@ public let chatMediaEditorVideoScrubberPanelHeight: CGFloat = 64.0
 public let chatMediaEditorVideoHeaderHeight: CGFloat = 72.0
 let chatMediaEditorVideoScrubberSideInset: CGFloat = 9.0
 
-public func chatMediaEditorVideoHeaderFrame(size: CGSize, toolbarMinY: CGFloat, captionBaseHeight: CGFloat) -> CGRect {
+func chatMediaEditorLandscapeInnerEdge(size: CGSize, safeInsets: UIEdgeInsets, side: ChatMediaEditorToolbarSide) -> CGFloat {
+    let columnFrame = chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: safeInsets, side: side)
+    switch side {
+    case .left:
+        return columnFrame.maxX
+    case .right:
+        return columnFrame.minX
+    }
+}
+
+func chatMediaEditorLandscapeNotchEdge(size: CGSize, safeInsets: UIEdgeInsets, side: ChatMediaEditorToolbarSide, reservedCorners: ContainerViewLayoutCorners = .none, rowMinY: CGFloat = 0.0, rowMaxY: CGFloat = 0.0) -> CGFloat {
+    func reachesRow(_ block: CGSize?, isTop: Bool) -> CGSize? {
+        guard let block else {
+            return nil
+        }
+        if isTop {
+            return rowMinY < block.height ? block : nil
+        } else {
+            return rowMaxY > size.height - block.height ? block : nil
+        }
+    }
+    switch side {
+    case .left:
+        var edge = size.width - safeInsets.right
+        for block in [reachesRow(reservedCorners.topRight, isTop: true), reachesRow(reservedCorners.bottomRight, isTop: false)] {
+            if let block {
+                edge = min(edge, size.width - block.width)
+            }
+        }
+        return edge
+    case .right:
+        var edge = safeInsets.left
+        for block in [reachesRow(reservedCorners.topLeft, isTop: true), reachesRow(reservedCorners.bottomLeft, isTop: false)] {
+            if let block {
+                edge = max(edge, block.width)
+            }
+        }
+        return edge
+    }
+}
+
+public func chatMediaEditorVideoHeaderFrame(size: CGSize, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, safeInsets: UIEdgeInsets = .zero, toolbarSide: ChatMediaEditorToolbarSide? = nil, reservedCorners: ContainerViewLayoutCorners = .none) -> CGRect {
+    if let toolbarSide {
+        let y = size.height - safeInsets.bottom - chatMediaEditorVideoScrubberPanelHeight
+        let innerEdge = chatMediaEditorLandscapeInnerEdge(size: size, safeInsets: safeInsets, side: toolbarSide)
+        let notchEdge = chatMediaEditorLandscapeNotchEdge(size: size, safeInsets: safeInsets, side: toolbarSide, reservedCorners: reservedCorners, rowMinY: y, rowMaxY: y + chatMediaEditorVideoScrubberPanelHeight)
+        let minX = min(innerEdge, notchEdge)
+        let maxX = max(innerEdge, notchEdge)
+        return CGRect(x: minX, y: y, width: max(0.0, maxX - minX), height: chatMediaEditorVideoScrubberPanelHeight)
+    }
     return CGRect(x: 0.0, y: toolbarMinY - 74.0 - captionBaseHeight, width: size.width, height: chatMediaEditorVideoHeaderHeight)
 }
 
-public func chatMediaEditorScrubberFrame(size: CGSize, safeInsets: UIEdgeInsets, headerFrame: CGRect, scrubberHeight: CGFloat) -> CGRect {
-    let width = max(0.0, size.width - safeInsets.left - safeInsets.right - chatMediaEditorVideoScrubberSideInset * 2.0)
+public func chatMediaEditorScrubberFrame(size: CGSize, safeInsets: UIEdgeInsets, headerFrame: CGRect, scrubberHeight: CGFloat, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
     let y = headerFrame.minY + floor((headerFrame.height - scrubberHeight) / 2.0)
+    if toolbarSide != nil {
+        let width = max(0.0, headerFrame.width - chatMediaEditorVideoScrubberSideInset * 2.0)
+        return CGRect(x: headerFrame.minX + chatMediaEditorVideoScrubberSideInset, y: y, width: width, height: scrubberHeight)
+    }
+    let width = max(0.0, size.width - safeInsets.left - safeInsets.right - chatMediaEditorVideoScrubberSideInset * 2.0)
     return CGRect(x: safeInsets.left + chatMediaEditorVideoScrubberSideInset, y: y, width: width, height: scrubberHeight)
 }
 
@@ -90,8 +154,24 @@ public func chatMediaEditorToolPreviewFrame(
     size: CGSize,
     safeInsets: UIEdgeInsets,
     mediaSize: CGSize,
-    toolbarHeight: CGFloat
+    toolbarHeight: CGFloat,
+    toolbarSide: ChatMediaEditorToolbarSide? = nil
 ) -> CGRect {
+    if let toolbarSide {
+        let panelWidth: CGFloat?
+        switch kind {
+        case .tools, .chatTools:
+            panelWidth = chatMediaEditorLandscapeToolsPanelWidth
+        case .quality:
+            panelWidth = chatMediaEditorLandscapeQualityPanelWidth
+        case .paint:
+            panelWidth = nil
+        }
+        if let panelWidth {
+            let contentRect = chatMediaEditorLandscapeContentRect(size: size, safeInsets: safeInsets, side: toolbarSide, panelWidth: panelWidth)
+            return chatMediaEditorFittedFrame(mediaSize: mediaSize, in: contentRect)
+        }
+    }
     let width = max(0.0, size.width - safeInsets.left - safeInsets.right)
     let availableRect: CGRect
     switch kind {
@@ -129,6 +209,47 @@ public func chatMediaEditorToolPreviewFrame(
     return chatMediaEditorScreenCenteredFrame(chatMediaEditorFittedFrame(mediaSize: mediaSize, in: availableRect), size: size, safeInsets: safeInsets)
 }
 
+public func chatMediaEditorLandscapeToolsPanelFrame(size: CGSize, safeInsets: UIEdgeInsets, side: ChatMediaEditorToolbarSide) -> CGRect {
+    let x: CGFloat
+    switch side {
+    case .left:
+        x = safeInsets.left + chatMediaEditorLandscapeColumnWidth
+    case .right:
+        x = size.width - safeInsets.right - chatMediaEditorLandscapeColumnWidth - chatMediaEditorLandscapeToolsPanelWidth
+    }
+    return CGRect(
+        x: x,
+        y: safeInsets.top,
+        width: chatMediaEditorLandscapeToolsPanelWidth,
+        height: max(0.0, size.height - safeInsets.top - safeInsets.bottom)
+    )
+}
+
+public func chatMediaEditorQualityPanelFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarSide: ChatMediaEditorToolbarSide?) -> CGRect {
+    if let toolbarSide {
+        let x: CGFloat
+        switch toolbarSide {
+        case .left:
+            x = safeInsets.left + chatMediaEditorLandscapeColumnWidth
+        case .right:
+            x = size.width - safeInsets.right - chatMediaEditorLandscapeColumnWidth - chatMediaEditorLandscapeQualityPanelWidth
+        }
+        return CGRect(
+            x: x,
+            y: safeInsets.top,
+            width: chatMediaEditorLandscapeQualityPanelWidth,
+            height: max(0.0, size.height - safeInsets.top - safeInsets.bottom)
+        )
+    }
+    let toolbarMinY = chatMediaEditorBottomPanelFrame(size: size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight).minY
+    return CGRect(
+        x: 0.0,
+        y: toolbarMinY - chatMediaEditorQualityPanelSize + chatMediaEditorQualityPanelTopInset,
+        width: size.width,
+        height: chatMediaEditorQualityPanelSize - chatMediaEditorQualityPanelTopInset
+    )
+}
+
 public func chatMediaEditorScreenCenteredFrame(_ frame: CGRect, size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
     if safeInsets.left == safeInsets.right {
         return frame
@@ -145,9 +266,19 @@ public struct ChatMediaEditorRecipientLayout: Equatable {
     public var labelFrame: CGRect
 }
 
-public func chatMediaEditorRecipientLayout(size: CGSize, safeInsets: UIEdgeInsets, arrowSize: CGSize, labelSize: CGSize, statusIsland: ChatMediaEditorStatusIslandRow? = nil) -> ChatMediaEditorRecipientLayout {
+
+public func chatMediaEditorRecipientLayout(size: CGSize, safeInsets: UIEdgeInsets, arrowSize: CGSize, labelSize: CGSize, statusIsland: ChatMediaEditorStatusIslandRow? = nil, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> ChatMediaEditorRecipientLayout {
     let screenWidth = min(size.width, size.height)
     var labelWidth = max(0.0, min(labelSize.width, screenWidth - 150.0))
+    if let toolbarSide {
+        let arrowY = floor(chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets, toolbarSide: toolbarSide).midY - arrowSize.height / 2.0)
+        let labelY = arrowY - 2.0
+        let contentRect = chatMediaEditorLandscapeContentRect(size: size, safeInsets: safeInsets, side: toolbarSide, panelWidth: 0.0)
+        let arrowX = floor(contentRect.midX - (arrowSize.width + 6.0 + labelWidth) / 2.0)
+        let arrowFrame = CGRect(origin: CGPoint(x: arrowX, y: arrowY), size: arrowSize)
+        let labelFrame = CGRect(x: arrowFrame.maxX + 6.0, y: labelY, width: labelWidth, height: labelSize.height)
+        return ChatMediaEditorRecipientLayout(arrowFrame: arrowFrame, labelFrame: labelFrame)
+    }
     let topInset = safeInsets.top
     var arrowFrame = CGRect(origin: CGPoint(x: safeInsets.left + chatMediaEditorScreenEdgeInset, y: topInset + 16.0), size: arrowSize)
     if let statusIsland {
@@ -179,7 +310,18 @@ let chatMediaEditorCropPanelHeight: CGFloat = 115.0
 let chatMediaEditorCropPanelHeightWithoutWheel: CGFloat = 60.0
 let chatMediaEditorCropSelectorDialSpacing: CGFloat = 12.0
 
-public func chatMediaEditorCropContainerFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarHeight: CGFloat, hasRotationWheel: Bool, hasPerspective: Bool = false) -> CGRect {
+let chatMediaEditorCropLandscapeResetStripWidth: CGFloat = 61.0
+let chatMediaEditorCropLandscapeDialStripWidth: CGFloat = 100.0
+
+func chatMediaEditorCropLandscapeSelectorBlockWidth(hasRotationWheel: Bool, hasPerspective: Bool) -> CGFloat {
+    return hasRotationWheel && hasPerspective ? mediaCropAdjustmentSelectorHeight + chatMediaEditorCropSelectorDialSpacing : 0.0
+}
+
+public func chatMediaEditorCropContainerFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarHeight: CGFloat, hasRotationWheel: Bool, hasPerspective: Bool = false, toolbarSide: ChatMediaEditorToolbarSide? = nil) -> CGRect {
+    if let toolbarSide {
+        let panelWidth = (hasRotationWheel ? chatMediaEditorCropLandscapeDialStripWidth + chatMediaEditorCropLandscapeResetStripWidth : chatMediaEditorCropLandscapeResetStripWidth) + chatMediaEditorCropLandscapeSelectorBlockWidth(hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective)
+        return chatMediaEditorLandscapeContentRect(size: size, safeInsets: safeInsets, side: toolbarSide, panelWidth: panelWidth)
+    }
     var panelHeight = hasRotationWheel ? chatMediaEditorCropPanelHeight : chatMediaEditorCropPanelHeightWithoutWheel
     if hasRotationWheel && hasPerspective {
         panelHeight += mediaCropAdjustmentSelectorHeight + chatMediaEditorCropSelectorDialSpacing

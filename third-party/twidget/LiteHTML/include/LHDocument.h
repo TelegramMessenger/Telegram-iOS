@@ -62,23 +62,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Vector shapes of the <svg> whose `attribute` equals `value`, in document coordinates, or nil when the SVG uses
 /// anything beyond solid or axis linear-gradient fills and plain strokes.
 - (nullable LHSVGShapes *)svgShapesWithAttribute:(NSString *)attribute value:(NSString *)value maxWidth:(CGFloat)maxWidth NS_SWIFT_NAME(svgShapes(attribute:value:maxWidth:));
-/// Builds the next frame of `previous`. When only inline `style` values and text changed, the previous
-/// document's tree is patched in place and handed over (much cheaper than parsing); `previous` then
-/// rebuilds itself from its own HTML if it is used again. Otherwise this parses `html` from scratch.
-- (instancetype)initWithHTML:(NSString *)html css:(nullable NSString *)css previous:(nullable LHDocument *)previous;
-- (instancetype)initWithHTML:(NSString *)html css:(nullable NSString *)css previous:(nullable LHDocument *)previous viewportSize:(CGSize)viewportSize NS_DESIGNATED_INITIALIZER;
+/// A document laid out against `viewportSize`: what viewport units and media queries read.
+- (instancetype)initWithHTML:(NSString *)html css:(nullable NSString *)css viewportSize:(CGSize)viewportSize NS_DESIGNATED_INITIALIZER;
 @property (readonly) CGSize viewportSize;
-@property (readonly) BOOL dependsOnViewport;
-/// Patches `previous` in place with new inline style values, keyed by the value of `attribute`, without parsing HTML.
-/// Each value must be the exact `style` attribute text the full HTML would carry, and every element must already have a
-/// style attribute. Runs the same checks as an HTML patch and returns nil, leaving `previous` usable, when it can't apply.
-- (nullable instancetype)initWithPrevious:(LHDocument *)previous styles:(NSDictionary<NSString *, NSString *> *)styles attribute:(NSString *)attribute css:(nullable NSString *)css NS_DESIGNATED_INITIALIZER;
-/// Patches `previous` in place with new attribute values and texts. `changes` holds NUL-terminated triples: the value of
-/// `attribute` naming the element, an attribute name or the empty name for the text of an element whose only child is one
-/// text run, and the value. Each value must be the exact text the full HTML would carry there, and every changed attribute
-/// and text must already be there. Returns nil, leaving `previous` usable, when it can't apply.
-- (nullable instancetype)initWithPrevious:(LHDocument *)previous changes:(NSData *)changes attribute:(NSString *)attribute css:(nullable NSString *)css NS_DESIGNATED_INITIALIZER;
-/// Whether this document was made by patching the previous one.
 /// Fonts resolved and cached for every document in the process; fonts no document uses are dropped past a bound.
 + (NSUInteger)cachedFontCount;
 + (NSUInteger)rasterCacheBytes;
@@ -87,12 +73,6 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSDictionary<NSString*, NSNumber*>*)simpleTextStats;
 + (NSUInteger)textMeasureCount;
 + (NSDictionary<NSString*, NSNumber*>*)layoutCacheStats;
-@property (readonly) BOOL reusedPrevious;
-@property (readonly) BOOL reusedLayout;
-@property (readonly, nullable) NSArray<NSValue *> *layoutDirtyRects;
-/// After a paint-only patch, the document rects that hold every pixel it can have changed; nil when the change may
-/// paint anywhere else, so the caller has to diff display lists.
-@property (readonly, nullable) NSArray<NSValue *> *patchDirtyRects;
 - (instancetype)init NS_UNAVAILABLE;
 
 @property (nonatomic, readonly, copy) NSString *html;

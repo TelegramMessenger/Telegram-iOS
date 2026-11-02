@@ -6,6 +6,7 @@ import TelegramPresentationData
 import AccountContext
 import ComponentFlow
 import GlassBackgroundComponent
+import ReactionContextGeometry
 
 private func generateBackgroundImage(foreground: UIColor, diameter: CGFloat, sideInset: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + sideInset * 2.0, height: diameter + sideInset * 2.0), rotatedContext: { size, context in
@@ -263,7 +264,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         }
         
-        let contentBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0).union(largeCircleFrame).union(smallCircleFrame)
+        let contentBounds = reactionContextBackgroundContentBounds(backgroundFrame: backgroundFrame, largeCircleFrame: largeCircleFrame, smallCircleFrame: smallCircleFrame, displayTail: displayTail)
         
         transition.updateFrame(node: self.backgroundMaskNode, frame: backgroundMaskNodeFrame, beginWithCurrentState: true)
         transition.updateFrame(layer: self.backgroundClippingLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)

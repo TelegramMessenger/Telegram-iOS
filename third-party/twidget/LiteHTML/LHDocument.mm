@@ -593,42 +593,10 @@ static uint64_t LHPackSize(CGSize size)
     return static_cast<uint64_t>(lo) | (static_cast<uint64_t>(hi) << 32);
 }
 
-static bool DependsOnViewport(const std::string& text)
-{
-    const size_t count = text.size();
-    if(strcasestr(text.c_str(), "@media"))
-        return true;
-    for(size_t i = 1; i + 1 < count; i++)
-    {
-        const char v = text[i];
-        if(v != 'v' && v != 'V')
-            continue;
-        size_t number = i - 1;
-        const char prefix = static_cast<char>(std::tolower(static_cast<unsigned char>(text[number])));
-        if((prefix == 's' || prefix == 'l' || prefix == 'd') && number > 0)
-            number--;
-        const unsigned char digit = static_cast<unsigned char>(text[number]);
-        if(!std::isdigit(digit) && digit != '.')
-            continue;
-        size_t end = i + 1;
-        const char unit = static_cast<char>(std::tolower(static_cast<unsigned char>(text[end])));
-        if(unit == 'w' || unit == 'h')
-            end += 1;
-        else if(count - end >= 3 && (strncasecmp(text.c_str() + end, "min", 3) == 0 || strncasecmp(text.c_str() + end, "max", 3) == 0))
-            end += 3;
-        else
-            continue;
-        if(end >= count || !std::isalpha(static_cast<unsigned char>(text[end])))
-            return true;
-    }
-    return false;
-}
-
 @implementation LHDocument
 {
     std::mutex                   _lock;
     std::unique_ptr<LHContainer> _container;
-    std::string                  _htmlSource;
     std::vector<const lh::render_item *> _paintTrace;
     BOOL                         _paintTraceValid;
     int                          _backdropDepth;
@@ -638,21 +606,12 @@ static bool DependsOnViewport(const std::string& text)
     CGFloat                      _preferredWidth;
     CGSize                       _size;
     CGSize                       _viewportSize;
-    BOOL                         _dependsOnViewport;
     std::atomic<uint64_t>        _sizeMirror;
-    BOOL                         _paintOnly;
-    BOOL                         _pointerRestyled;
     NSString                    *_cursor;
     CGColorSpaceRef              _colorSpace;
     std::mutex                   _spaceLock;
     BOOL                         _noSubtreeCulling;
     BOOL                         _controlsActive;
-    std::string                  _master;
-    BOOL                         _updatable;
-    BOOL                         _consumed;
-    BOOL                         _consumedCulling;
-    BOOL                         _reusedPrevious;
-    CGFloat                      _consumedMaxWidth;
     NSString                    *_exclusionAttribute;
     NSSet<NSString *>           *_exclusions;
     NSSet<NSString *>           *_textExclusions;
@@ -790,201 +749,23 @@ static std::string MasterWithCSS(NSString *css)
     return self;
 }
 
-- (instancetype)initWithHTML:(NSString *)html css:(NSString *)css previous:(LHDocument *)previous
-{
-    return [self initWithHTML:html css:css previous:previous viewportSize:previous ? previous.viewportSize : CGSizeZero];
-}
-
-- (instancetype)initWithHTML:(NSString *)html css:(NSString *)css previous:(LHDocument *)previous viewportSize:(CGSize)viewportSize
+- (instancetype)initWithHTML:(NSString *)html css:(NSString *)css viewportSize:(CGSize)viewportSize
 {
     if((self = [super init]))
     {
         _html         = [html copy];
         _lastMaxWidth = -1;
         _cursor       = @"auto";
-        _updatable    = YES;
         _viewportSize = viewportSize;
-        _master       = MasterWithCSS(css);
-
-        double            t0   = NowMs();
-        const std::string body = html.UTF8String ?: "";
-        _dependsOnViewport = DependsOnViewport(body) || DependsOnViewport(css.UTF8String ?: "");
-        if(previous)
-        {
-            std::lock_guard<std::mutex> guard(previous->_lock);
-            if(previous->_doc && previous->_updatable && previous->_master == _master && (CGSizeEqualToSize(previous->_viewportSize, _viewportSize) || (!previous->_dependsOnViewport && !_dependsOnViewport)) &&
-               previous->_doc->update_from_string(body, nullptr))
-            {
-                _doc       = std::move(previous->_doc);
-                _container = std::move(previous->_container);
-                _cursor    = previous->_cursor;
-                [self takeDeclarationsLocked:previous];
-                previous->_consumed         = YES;
-                previous->_consumedMaxWidth = previous->_lastMaxWidth;
-                previous->_consumedCulling  = _container->clip_culling();
-                _reusedPrevious             = YES;
-                if(_doc->last_patch_paint_only() && previous->_lastMaxWidth > 0 && !previous->_pointerRestyled)
-                {
-                    _lastMaxWidth = previous->_lastMaxWidth;
-                    _size         = previous->_size;
-                    _sizeMirror.store(LHPackSize(_size), std::memory_order_relaxed);
-                    _paintOnly    = YES;
-                }
-            }
-        }
-        if(!_doc)
-        {
-            _container = std::make_unique<LHContainer>();
-            _container->set_viewport(lh::position(0, 0, static_cast<float>(_viewportSize.width), static_cast<float>(_viewportSize.height)));
-            _doc       = lh::document::createUpdatableFromString(body, _container.get(), _master);
-        }
+        _container    = std::make_unique<LHContainer>();
+        _container->set_viewport(lh::position(0, 0, static_cast<float>(viewportSize.width), static_cast<float>(viewportSize.height)));
         [self bindContainerLocked];
+
+        double t0 = NowMs();
+        _doc = lh::document::createFromString(lh::estring(html.UTF8String ?: ""), _container.get(), MasterWithCSS(css));
         _parseMilliseconds = NowMs() - t0;
     }
     return self;
-}
-
-- (nullable instancetype)initWithPrevious:(LHDocument *)previous styles:(NSDictionary<NSString *, NSString *> *)styles attribute:(NSString *)attribute css:(NSString *)css
-{
-    if(!(self = [super init]))
-        return nil;
-    _lastMaxWidth = -1;
-    _cursor       = @"auto";
-    _updatable    = YES;
-    _master       = MasterWithCSS(css);
-    double t0     = NowMs();
-    std::lock_guard<std::mutex> guard(previous->_lock);
-    if(!previous->_doc || !previous->_updatable || previous->_master != _master || !previous->_doc->root() || styles.count == 0)
-        return nil;
-    std::unordered_map<std::string, std::string> wanted;
-    for(NSString *key in styles)
-        wanted.emplace(key.UTF8String ?: "", styles[key].UTF8String ?: "");
-    std::vector<std::pair<lh::element::ptr, std::string>> patches;
-    const char *name = attribute.UTF8String;
-    std::function<void(const lh::element::ptr &)> visit = [&](const lh::element::ptr &el) {
-        if(patches.size() == wanted.size())
-            return;
-        if(const char *v = el->get_attr(name))
-        {
-            auto it = wanted.find(v);
-            if(it != wanted.end())
-                patches.emplace_back(el, it->second);
-        }
-        for(const auto &child : el->children())
-            visit(child);
-    };
-    visit(previous->_doc->root());
-    if(patches.size() != wanted.size() || !previous->_doc->update_styles(patches, nullptr))
-        return nil;
-    if(![self adoptPatchedLocked:previous])
-        return nil;
-    _parseMilliseconds = NowMs() - t0;
-    return self;
-}
-
-- (nullable instancetype)initWithPrevious:(LHDocument *)previous changes:(NSData *)changes attribute:(NSString *)attribute css:(NSString *)css
-{
-    if(!(self = [super init]))
-        return nil;
-    _lastMaxWidth = -1;
-    _cursor       = @"auto";
-    _updatable    = YES;
-    _master       = MasterWithCSS(css);
-    double t0     = NowMs();
-    std::lock_guard<std::mutex> guard(previous->_lock);
-    if(!previous->_doc || !previous->_updatable || previous->_master != _master || !previous->_doc->root() || changes.length == 0)
-        return nil;
-    const char *bytes = static_cast<const char *>(changes.bytes);
-    const char *limit = bytes + changes.length;
-    if(limit[-1] != 0)
-        return nil;
-    struct entry
-    {
-        std::string_view name, value;
-    };
-    std::unordered_map<std::string_view, std::vector<entry>> wanted;
-    for(const char *p = bytes; p < limit;)
-    {
-        std::string_view parts[3];
-        for(auto &part : parts)
-        {
-            if(p >= limit)
-                return nil;
-            part = std::string_view(p);
-            p += part.size() + 1;
-        }
-        wanted[parts[0]].push_back({parts[1], parts[2]});
-    }
-    std::vector<lh::document::hole_change> patches;
-    size_t matched = 0;
-    const char *name = attribute.UTF8String;
-    std::vector<lh::element *> pending{previous->_doc->root().get()};
-    while(!pending.empty() && matched < wanted.size())
-    {
-        lh::element *el = pending.back();
-        pending.pop_back();
-        if(const char *v = el->get_attr(name))
-        {
-            auto it = wanted.find(std::string_view(v));
-            if(it != wanted.end() && !it->second.empty())
-            {
-                matched++;
-                const lh::element::ptr owner = el->shared_from_this();
-                for(const auto &item : it->second)
-                {
-                    lh::document::hole_change change;
-                    change.owner = owner;
-                    change.text  = item.name.empty();
-                    change.name  = std::string(item.name);
-                    change.value = std::string(item.value);
-                    patches.push_back(std::move(change));
-                }
-                it->second.clear();
-            }
-        }
-        const auto &children = el->children();
-        for(auto child = children.rbegin(); child != children.rend(); ++child)
-            pending.push_back(child->get());
-    }
-    if(matched != wanted.size() || !previous->_doc->update_holes(patches, nullptr))
-        return nil;
-    if(![self adoptPatchedLocked:previous])
-        return nil;
-    _parseMilliseconds = NowMs() - t0;
-    return self;
-}
-
-- (BOOL)adoptPatchedLocked:(LHDocument *)previous
-{
-    std::string html;
-    if(!previous->_doc->template_html(html))
-    {
-        previous->_updatable = NO;
-        previous->_doc.reset();
-        previous->_container.reset();
-        previous->_consumed         = YES;
-        previous->_consumedMaxWidth = previous->_lastMaxWidth;
-        return NO;
-    }
-    _htmlSource                 = std::move(html);
-    _doc                        = std::move(previous->_doc);
-    _container                  = std::move(previous->_container);
-    _cursor                     = previous->_cursor;
-    _viewportSize               = previous->_viewportSize;
-    [self takeDeclarationsLocked:previous];
-    previous->_consumed         = YES;
-    previous->_consumedMaxWidth = previous->_lastMaxWidth;
-    previous->_consumedCulling  = _container->clip_culling();
-    _reusedPrevious             = YES;
-    if(_doc->last_patch_paint_only() && previous->_lastMaxWidth > 0 && !previous->_pointerRestyled)
-    {
-        _lastMaxWidth = previous->_lastMaxWidth;
-        _size         = previous->_size;
-        _sizeMirror.store(LHPackSize(_size), std::memory_order_relaxed);
-        _paintOnly    = YES;
-    }
-    [self bindContainerLocked];
-    return YES;
 }
 
 + (NSUInteger)cachedFontCount
@@ -1032,134 +813,7 @@ static std::string MasterWithCSS(NSString *css)
 - (NSString *)html
 {
     std::lock_guard<std::mutex> guard(_lock);
-    if(!_html)
-        _html = [[NSString alloc] initWithBytes:_htmlSource.data() length:_htmlSource.size() encoding:NSUTF8StringEncoding] ?: @"";
     return _html;
-}
-
-- (BOOL)reusedPrevious
-{
-    return _reusedPrevious;
-}
-
-- (BOOL)reusedLayout
-{
-    return _paintOnly;
-}
-
-- (NSArray<NSValue *> *)layoutDirtyRects
-{
-    std::lock_guard<std::mutex> guard(_lock);
-    if(!_reusedPrevious || _paintOnly || !_doc)
-        return nil;
-    std::vector<lh::position> regions;
-    if(!_doc->layout_dirty_regions(regions))
-        return nil;
-    NSMutableArray<NSValue *> *rects = [NSMutableArray arrayWithCapacity:regions.size()];
-    for(const auto &region : regions)
-#if TARGET_OS_OSX
-        [rects addObject:[NSValue valueWithRect:NSMakeRect(region.x.value(), region.y.value(), region.width.value(), region.height.value())]];
-#else
-        [rects addObject:LHValueWithRect(CGRectMake(region.x.value(), region.y.value(), region.width.value(), region.height.value()))];
-#endif
-    return rects;
-}
-
-- (NSArray<NSValue *> *)patchDirtyRects
-{
-    std::lock_guard<std::mutex> guard(_lock);
-    std::vector<lh::element::ptr> regions;
-    if(!_paintOnly || !_doc || !_doc->root_render() || _doc->has_backdrop || !_doc->last_patch_regions(regions))
-        return nil;
-    if(regions.empty())
-        return @[];
-    const lh::render_item *root = _doc->root_render().get();
-    std::unordered_map<const lh::element *, std::shared_ptr<lh::render_item>> found;
-    for(const auto &region : regions)
-    {
-        if(found.count(region.get()))
-            continue;
-        std::shared_ptr<lh::render_item> single;
-        int                              count = 0;
-        region->for_each_render_item([&](const std::shared_ptr<lh::render_item> &ri) {
-            auto top = ri;
-            while(auto up = top->parent())
-                top = up;
-            if(top.get() != root)
-                return;
-            count++;
-            single = ri;
-        });
-        if(count != 1)
-            return nil;
-        found.emplace(region.get(), single);
-    }
-    NSMutableArray<NSValue *> *rects = [NSMutableArray arrayWithCapacity:found.size()];
-    for(const auto &entry : found)
-    {
-        const auto &ri = entry.second;
-        if(!ri)
-            return nil;
-        const auto el       = ri->src_el();
-        const bool text     = el->is_text();
-        const bool replaced = std::dynamic_pointer_cast<lh::el_svg>(el) || std::dynamic_pointer_cast<lh::el_image>(el);
-        if(!text && el->is_inline() && !el->is_inline_box() && !replaced)
-            return nil;
-        for(auto p = ri; p; p = p->parent())
-        {
-            const auto &css = p->src_el()->css();
-            if(css.is_paint_group() || (css.get_position() != lh::element_position_static && css.get_position() != lh::element_position_relative))
-                return nil;
-        }
-        if(!text && (!el->css().get_box_shadows().empty() || !el->css().get_text_shadows().empty() ||
-                     (el->css().get_outline().style != lh::border_style_none && el->css().get_outline().style != lh::border_style_hidden)))
-            return nil;
-        CGRect box = BorderBox(ri);
-        if(text)
-        {
-            const auto parent = el->parent();
-            if(!parent || !parent->css().get_text_shadows().empty())
-                return nil;
-            const CGFloat slack = std::max<CGFloat>(4, std::ceil(box.size.height) / 2 + 1) + 1;
-            box                 = CGRectInset(box, -slack, -slack);
-        }
-        if(CGRectIsEmpty(box))
-            continue;
-#if TARGET_OS_OSX
-        [rects addObject:[NSValue valueWithRect:NSRectFromCGRect(CGRectInset(box, -1, -1))]];
-#else
-        [rects addObject:LHValueWithRect(CGRectInset(box, -1, -1))];
-#endif
-    }
-    return rects;
-}
-
-- (void)takeDeclarationsLocked:(LHDocument *)previous
-{
-    _declarations              = previous->_declarations;
-    _declarationsKey           = previous->_declarationsKey;
-    _declarationsEpoch         = previous->_declarationsEpoch;
-    previous->_declarations    = nil;
-    previous->_declarationsKey = nil;
-}
-
-- (void)restoreLocked
-{
-    if(!_consumed || _doc)
-        return;
-    _consumed     = NO;
-    _declarations = nil;
-    _paintTraceValid = NO;
-    _itemIndexValid  = NO;
-    _container = std::make_unique<LHContainer>();
-    _container->set_viewport(lh::position(0, 0, static_cast<float>(_viewportSize.width), static_cast<float>(_viewportSize.height)));
-    _container->set_clip_culling(_consumedCulling);
-    _container->set_controls_active(_controlsActive, LHControlAccent());
-    [self bindContainerLocked];
-    _doc          = lh::document::createUpdatableFromString(_html ? std::string(_html.UTF8String ?: "") : _htmlSource, _container.get(), _master);
-    _lastMaxWidth = -1;
-    if(_consumedMaxWidth > 0)
-        [self layoutLockedWithMaxWidth:_consumedMaxWidth];
 }
 
 - (void)dealloc
@@ -1197,11 +851,6 @@ static std::string MasterWithCSS(NSString *css)
     return _viewportSize;
 }
 
-- (BOOL)dependsOnViewport
-{
-    return _dependsOnViewport;
-}
-
 - (CGSize)size
 {
     if(_lock.try_lock())
@@ -1221,14 +870,12 @@ static std::string MasterWithCSS(NSString *css)
 - (BOOL)clipCulling
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     return _container->clip_culling();
 }
 
 - (void)setClipCulling:(BOOL)clipCulling
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     _container->set_clip_culling(clipCulling);
 }
 
@@ -1278,7 +925,6 @@ static std::string MasterWithCSS(NSString *css)
 {
     _paintTraceValid = NO;
     _itemIndexValid  = NO;
-    [self restoreLocked];
     maxWidth = std::max<CGFloat>(1, std::floor(maxWidth));
     if(!_doc)
         return CGSizeZero;
@@ -1448,7 +1094,6 @@ static std::string MasterWithCSS(NSString *css)
 - (NSDictionary<NSString *, NSDictionary<NSString *, id> *> *)scrollersByAttribute:(NSString *)attribute
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if(!_doc || !_doc->root_render())
         return result;
@@ -1521,7 +1166,6 @@ static std::string MasterWithCSS(NSString *css)
 - (nullable NSDictionary<NSString *, NSNumber *> *)offsetMetricsWithAttribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri)
         return nil;
@@ -1578,7 +1222,6 @@ static std::string MasterWithCSS(NSString *css)
 - (nullable NSDictionary<NSString *, NSNumber *> *)textareaMetricsWithAttribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri || ri->src_el()->tag() != lh::_textarea_ || !ri->is_visible())
         return nil;
@@ -1603,7 +1246,6 @@ static std::string MasterWithCSS(NSString *css)
 - (CGPoint)setScrollOffset:(CGPoint)offset attribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     std::string cacheKey = std::string(attribute.UTF8String) + "\x01" + value.UTF8String;
     std::shared_ptr<lh::render_item> ri;
     if(auto it = _scrollItems.find(cacheKey); it != _scrollItems.end())
@@ -1634,7 +1276,6 @@ static std::string MasterWithCSS(NSString *css)
 - (CGImageRef)copyScrollContentWithAttribute:(NSString *)attribute value:(NSString *)value rect:(CGRect)rect scale:(CGFloat)scale
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri || !ri->get_scroll_view())
         return nullptr;
@@ -1858,7 +1499,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (CGImageRef)copyImageOfElementWithAttribute:(NSString *)attribute value:(NSString *)value scale:(CGFloat)scale inkBounds:(CGRect *)inkOut borderBox:(CGRect *)boxOut radii:(CGFloat *)radiiOut bareShadows:(BOOL)bareShadows
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri)
         return nullptr;
@@ -1926,7 +1566,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (BOOL)isElementWithAttribute:(NSString *)attribute value:(NSString *)value isolatedInRect:(CGRect)rect
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri || (ri->src_el()->is_inline() && !ri->src_el()->is_inline_box()))
         return NO;
@@ -1965,7 +1604,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (BOOL)backgroundColorIsLocalWithAttribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     auto tag = ri ? dynamic_cast<lh::html_tag *>(ri->src_el().get()) : nullptr;
     if(!tag || !tag->background_color_is_local())
@@ -1999,7 +1637,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSDictionary<NSString *, NSNumber *> *)paintOrderOfAttribute:(NSString *)attribute values:(NSSet<NSString *> *)values
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     NSMutableDictionary<NSString *, NSNumber *> *result = [NSMutableDictionary dictionary];
     if(!_doc || !_doc->root_render() || values.count == 0)
         return result;
@@ -2031,7 +1668,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (BOOL)clipOfElementWithAttribute:(NSString *)attribute value:(NSString *)value rect:(CGRect *)rect radii:(CGFloat *)radii
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri)
         return NO;
@@ -2075,7 +1711,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (nullable NSArray<NSString *> *)elementsObscuringAttribute:(NSString *)attribute value:(NSString *)value inRect:(CGRect)rect ignoring:(NSSet<NSString *> *)ignoring clipped:(BOOL)clipped
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     if(!ri || (ri->src_el()->is_inline() && !ri->src_el()->is_inline_box()) || CGRectIsNull(rect) || CGRectIsEmpty(rect))
         return nil;
@@ -2180,7 +1815,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 
 - (void)drawLockedInContext:(CGContextRef)ctx origin:(CGPoint)origin clip:(CGRect)clip
 {
-    [self restoreLocked];
     if(!_doc)
         return;
     [self resolveExclusionsLocked];
@@ -2208,7 +1842,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (void)drawInContext:(CGContextRef)ctx origin:(CGPoint)origin clip:(CGRect)clip baseTransform:(CGAffineTransform)baseTransform
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     if(!_doc)
         return;
     _container->m_shadow_base_context = ctx;
@@ -2221,7 +1854,7 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (BOOL)drawIfCurrentInContext:(CGContextRef)ctx origin:(CGPoint)origin clip:(CGRect)clip
 {
     std::lock_guard<std::mutex> guard(_lock);
-    if(_consumed || !_doc)
+    if(!_doc)
         return NO;
     [self drawLockedInContext:ctx origin:origin clip:clip];
     return YES;
@@ -2282,7 +1915,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (nullable NSString *)attribute:(NSString *)name atPoint:(CGPoint)p withinAttribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     if(!_doc || !_doc->root_render())
         return nil;
     auto root = attribute && value ? [self renderItemLockedWithAttribute:attribute value:value] : _doc->root_render();
@@ -2338,7 +1970,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *)declarations:(NSArray<NSString *> *)names byAttribute:(NSString *)attribute requiringAny:(NSArray<NSString *> *)required
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if(!_doc || !_doc->root())
         return result;
@@ -2410,7 +2041,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (nullable NSDictionary<NSString *, NSNumber *> *)svgGeometry:(NSString *)method at:(double)distance attribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     if(!_doc || !_doc->root())
         return nil;
     const char       *key    = attribute.UTF8String;
@@ -2463,7 +2093,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (nullable NSFont *)fontWithAttribute:(NSString *)attribute value:(NSString *)value lineHeight:(CGFloat *)lineHeight baseline:(CGFloat *)baseline
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     auto ri = [self renderItemLockedWithAttribute:attribute value:value];
     *lineHeight = ri ? ri->css().line_height().computed_value.value() : 0;
     *baseline = 0;
@@ -2479,7 +2108,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSDictionary<NSString *, NSString *> *)computedStyleForAttribute:(NSString *)attribute value:(NSString *)value
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     if(!_doc || !_doc->root_render())
         return @{};
     const char                          *key    = attribute.UTF8String;
@@ -2573,7 +2201,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSDictionary<NSString *, NSValue *> *)boundsWithAttribute:(NSString *)name transformed:(BOOL)transformed
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     NSMutableDictionary<NSString *, NSValue *> *result = [NSMutableDictionary dictionary];
     if(!_doc || !_doc->root_render())
         return result;
@@ -2653,7 +2280,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSString *)layoutSignature
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     std::string out;
     if(!_doc || !_doc->root_render())
         return @"";
@@ -2697,7 +2323,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (NSDictionary<NSString *, NSString *> *)parentsByAttribute:(NSString *)name
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     NSMutableDictionary<NSString *, NSString *> *result = [NSMutableDictionary dictionary];
     if(!_doc || !_doc->root())
         return result;
@@ -2716,7 +2341,6 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (CGRect)boundsOfElementsMatching:(NSString *)selector
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     if(!_doc || !_doc->root() || !_doc->root_render())
         return CGRectNull;
     std::unordered_set<const lh::element *> wanted;
@@ -3108,47 +2732,39 @@ static CGRect TightInk(CGContextRef ctx, CGRect ink, CGRect box, CGFloat scale)
 - (BOOL)mouseMoved:(CGPoint)p
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     float x = static_cast<float>(p.x), y = static_cast<float>(p.y);
     _paintTraceValid = NO;
     _itemIndexValid = NO;
     const BOOL changed = _doc && _doc->on_mouse_over(x, y, x, y, IgnoreRedraw);
-    _pointerRestyled = _pointerRestyled || changed;
     return changed;
 }
 
 - (BOOL)mouseDown:(CGPoint)p
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     float x = static_cast<float>(p.x), y = static_cast<float>(p.y);
     _paintTraceValid = NO;
     _itemIndexValid = NO;
     const BOOL changed = _doc && _doc->on_lbutton_down(x, y, x, y, IgnoreRedraw);
-    _pointerRestyled = _pointerRestyled || changed;
     return changed;
 }
 
 - (BOOL)mouseUp:(CGPoint)p
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     float x = static_cast<float>(p.x), y = static_cast<float>(p.y);
     _paintTraceValid = NO;
     _itemIndexValid = NO;
     const BOOL changed = _doc && _doc->on_lbutton_up(x, y, x, y, IgnoreRedraw);
-    _pointerRestyled = _pointerRestyled || changed;
     return changed;
 }
 
 - (BOOL)mouseExited
 {
     std::lock_guard<std::mutex> guard(_lock);
-    [self restoreLocked];
     _paintTraceValid = NO;
     _itemIndexValid = NO;
     const BOOL changed = _doc && _doc->on_mouse_leave(IgnoreRedraw);
-    _pointerRestyled = _pointerRestyled || changed;
     return changed;
 }
 

@@ -163,29 +163,29 @@ WR_TEST(testImagesShareADecode) {
 }
 
 /// V5d fix-wave 2 review, I-1: the shared decodes' sweep of expired entries is amortized, so a live image with a src of
-/// its own costs the same however many came before it: the last thousand of 10,000 cost about what the first did.
+/// its own costs the same however many came before it: the last thousand of 10,000 take about the CPU time the first
+/// did (a sweep of every entry per decision would take about nine times as long).
 WR_TEST(testTheImageSweepIsAmortized) {
     RenderEnv env(page(""));
     env.env().eval(std::string("var png = '") + kPNG + "'; var keep = [];"
                    " var add = (n) => { for (let i = 0; i < n; i++) { const im = new Image(); im.src = png + '#' + keep.length;"
                    " im.naturalWidth; keep.push(im); } }; 1");
-    JSRuntime* rt = env.env().runtime().jsRuntime();
     // The decisions (each a shared decode's lookup and sweep) are made when the images' events fire.
     auto cost = [&](int n) {
-        const uint64_t before = JS_GetWorkUnits(rt);
+        const double before = wr_test::threadCpuMs();
         env.env().eval("add(" + std::to_string(n) + "); 1");
         env.env().drain();
-        return JS_GetWorkUnits(rt) - before;
+        return wr_test::threadCpuMs() - before;
     };
-    const uint64_t first = cost(1000);
+    const double first = cost(1000);
     env.env().eval("add(8000); 1");
     env.env().drain();
-    const uint64_t last = cost(1000);
+    const double last = cost(1000);
     CHECK_EQ(env.env().eval("[keep.length, keep[9999].naturalWidth].join()"), std::string("10000,40"));
-    CHECK(last < first * 3 / 2);
-    if (last >= first * 3 / 2) {
-        std::printf("  first 1000: %llu units, last 1000: %llu\n", (unsigned long long)first, (unsigned long long)last);
+    if (last >= 3 * first + 1) {
+        std::printf("  first 1000: %.3f CPU ms, last 1000: %.3f\n", first, last);
     }
+    CHECK(last < 3 * first + 1);
 }
 
 namespace {
@@ -427,25 +427,3 @@ WR_TEST(testReadoptingALoadedImageLoadsAgain) {
     CHECK_EQ(env.env().eval("[log.join(), i.complete, i.naturalWidth].join('|')"), std::string("load|true|40"));
 }
 
-/// v0.2.3 review, M4: the being-rendered walk up an image's ancestors costs a node visit a step. Read twice (the second
-/// read finds the layout clean), an image 200 elements deep walks its ancestors twice, for its border box and for
-/// being rendered, so it costs at least 2 × 200 visits more than one at the top. Measured: 932 units more charged, 526
-/// with the being-rendered walk uncharged.
-WR_TEST(testTheRenderedWalkIsCharged) {
-    RenderEnv env(page("<div id=root></div>"));
-    env.env().eval(std::string("var d = root; for (let i = 0; i < 200; i++) d = d.appendChild(document.createElement('div'));"
-                               " var deep = d.appendChild(new Image()); deep.src = '") + kPNG + "'; var top = root.appendChild(new Image());"
-                   " top.src = '" + kPNG + "'; 1");
-    env.env().drain();
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    auto readCost = [&](const char* name) {
-        env.env().eval(std::string(name) + ".width; 1");
-        const uint64_t before = JS_GetWorkUnits(rt);
-        env.env().eval(std::string(name) + ".width; 1");
-        return JS_GetWorkUnits(rt) - before;
-    };
-    const uint64_t shallow = readCost("top");
-    const uint64_t deep = readCost("deep");
-    std::printf("  rendered walk read: %llu units at the top, %llu 200 deep\n", (unsigned long long)shallow, (unsigned long long)deep);
-    CHECK(deep >= shallow + 2 * 200 * wr::work::kNodeVisit);
-}

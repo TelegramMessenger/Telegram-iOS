@@ -72,6 +72,14 @@ public let chatTextInputMinFontSize: CGFloat = 5.0
 
 private let minInputFontSize = chatTextInputMinFontSize
 
+/// Whether the panel's own recognizer takes a tap on the input field: before the input node loads (the tap loads and
+/// focuses it), and while sending text is restricted, when the input node is disabled and the tap answers with the
+/// boost-to-unrestrict sheet or the restriction tooltip. An enabled input node takes its own taps, and the touch-down
+/// recognizer must then stay off: it conflicts with the Apple Intelligence gestures.
+func textInputTapRecognizerIsEnabled(isInputNodeLoaded: Bool, sendingTextDisabled: Bool) -> Bool {
+    return !isInputNodeLoaded || sendingTextDisabled
+}
+
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
     return chatTextInputFieldMinHeight(for: presentationInterfaceState.fontSize)
 }
@@ -1101,7 +1109,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         self.textInputBackgroundTapRecognizer = recognizer
         self.textInputBackgroundNode.isUserInteractionEnabled = true
-        self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
+        // On the clipping container, not the background: the glass field and its content lie over the background
+        // and take every touch, while the container covers the text and holds the input node.
+        self.textInputNodeClippingContainer.addGestureRecognizer(recognizer)
         
         if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
@@ -1138,6 +1148,24 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     override public func didLoad() {
         super.didLoad()
+    }
+    
+    private func updateTextInputTapRecognizer() {
+        self.textInputBackgroundTapRecognizer?.isEnabled = textInputTapRecognizerIsEnabled(isInputNodeLoaded: self.richTextInputNode != nil, sendingTextDisabled: self.sendingTextDisabled)
+    }
+    
+    // Start can appear while the chat is off screen (the bot blocked from its profile): the panel then has no window to
+    // measure against, and the tooltip presented then would point at the top of the screen. The chat still lays the
+    // panel out and reports where (`updateAbsoluteRect`), so measure from that.
+    private func startButtonTooltipLocation() -> CGRect {
+        let buttonFrame = self.view.convert(self.startButton.bounds, from: self.startButton.view)
+        let panelMinY: CGFloat
+        if self.view.window == nil, let (absoluteRect, _) = self.absoluteRect {
+            panelMinY = absoluteRect.minY
+        } else {
+            panelMinY = self.view.convert(self.bounds, to: nil).minY
+        }
+        return CGRect(origin: CGPoint(x: buttonFrame.midX, y: panelMinY + buttonFrame.minY - 1.0), size: CGSize())
     }
     
     public func loadTextInputNodeIfNeeded() {
@@ -1305,11 +1333,6 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         richTextInputNode.mediaItemViewFactory = self.mediaItemViewFactory
         richTextInputNode.formulaRenderer = self.formulaRenderer
 
-        if let textInputBackgroundTapRecognizer = self.textInputBackgroundTapRecognizer {
-            self.textInputBackgroundTapRecognizer = nil
-            self.textInputBackgroundNode.view.removeGestureRecognizer(textInputBackgroundTapRecognizer)
-        }
-        
         var accessoryButtonsWidth: CGFloat = 0.0
         var firstButton = true
         for (_, button) in self.accessoryItemButtons {
@@ -1345,6 +1368,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         self.textInputBackgroundNode.isUserInteractionEnabled = !richTextInputNode.inputIsUserInteractionEnabled
+        self.updateTextInputTapRecognizer()
         
         richTextInputNode.toggleQuoteCollapse = { [weak self] range in
             guard let self else {
@@ -1924,18 +1948,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.sendingTextDisabled = sendingTextDisabled
         
         self.richTextInputNode?.inputIsUserInteractionEnabled = !sendingTextDisabled
+        self.updateTextInputTapRecognizer()
         
-        var displayBotStartButton = false
-        if case .scheduledMessages = interfaceState.subject {
-        } else {
-            if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true, _) = chatHistoryState, interfaceState.chatLocation.threadId == nil {
-                    displayBotStartButton = true
-                } else if interfaceState.peerIsBlocked {
-                    displayBotStartButton = true
-                }
-            }
-        }
+        let displayBotStartButton = chatDisplaysBotStartButton(interfaceState)
         
         let inputHasText = !isRecording && !(self.richTextInputNode?.inputContentIsEmpty ?? true)
         
@@ -2016,9 +2031,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     transition.animatePosition(layer: self.startButton.layer, from: CGPoint(x: 0.0, y: 80.0), to: CGPoint(), additive: true)
                 }
                 if let context = self.context {
-                    let parentFrame = self.view.convert(self.bounds, to: nil)
-                    let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-                    let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
+                    let location = self.startButtonTooltipLocation()
                     
                     if let tooltipController = self.tooltipController {
                         if self.view.window != nil {
@@ -2041,10 +2054,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                             guard let self, let tooltipController, self.tooltipController === tooltipController else {
                                 return
                             }
-                            let parentFrame = self.view.convert(self.bounds, to: nil)
-                            let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-                            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
-                            controller.location = .point(location, .bottom)
+                            controller.location = .point(self.startButtonTooltipLocation(), .bottom)
                             self.interfaceInteraction?.presentControllerInCurrent(controller, nil)
                         })
                     }
@@ -3492,7 +3502,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
             let contextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
             contextPlaceholder.addAttribute(.foregroundColor, value: placeholderColor.withAlphaComponent(1.0), range: NSRange(location: 0, length: contextPlaceholder.length))
-            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, nextButtonTopRight.x - actualTextInputViewInternalInsets.left), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: chatTextInputPlaceholderMaxWidth(textLeftInset: actualTextInputViewInternalInsets.left, buttonsMinX: nextButtonTopRight.x), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let tintContextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
             tintContextPlaceholder.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintContextPlaceholder.length))
             let contextPlaceholderNode = placeholderApply()
@@ -3524,7 +3534,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         let textPlaceholderSize: CGSize
-        let textPlaceholderMaxWidth: CGFloat = isAgentLayout ? max(1.0, textInputContainerBackgroundFrame.width - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right) : max(1.0, nextButtonTopRight.x - 12.0)
+        let textPlaceholderMaxWidth: CGFloat = isAgentLayout ? max(1.0, textInputContainerBackgroundFrame.width - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right) : chatTextInputPlaceholderMaxWidth(textLeftInset: actualTextInputViewInternalInsets.left, buttonsMinX: nextButtonTopRight.x)
         
         if (updatedPlaceholder != nil && self.currentPlaceholder != updatedPlaceholder) || themeUpdated || fontSizeUpdated {
             let currentPlaceholder = updatedPlaceholder ?? self.currentPlaceholder ?? ""

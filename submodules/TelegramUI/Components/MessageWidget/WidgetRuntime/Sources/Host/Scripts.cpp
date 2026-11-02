@@ -29,10 +29,9 @@ constexpr char kUnreadable = '\x01';
 
 /// `value` with leading and trailing ASCII whitespace stripped when `strip`, ASCII lowercased. A value longer than
 /// `maxLength` units, or with a non-ASCII character, is no name HTML knows: it comes back as kUnreadable without being
-/// converted. Charged per unit.
+/// converted.
 std::string lowercased(JSContext* ctx, const String& value, bool strip, uint32_t maxLength) {
     JSStringView v = value.view();
-    chargeScan(ctx, v.length);
     auto unit = [&](uint32_t i) -> char16_t { return v.latin1 ? char16_t(v.latin1[i]) : v.utf16[i]; };
     uint32_t start = 0;
     uint32_t end = v.length;
@@ -123,9 +122,14 @@ void queueElementEvent(JSContext* ctx, HTMLScriptElement& el, const char* type) 
 }
 
 /// The sets HTML executes "as soon as possible", in order or not: the source is always ready at once here, so each is
-/// a task on the networking task source, and the queue's order is the order.
-void queueExecution(JSContext* ctx, HTMLScriptElement& el) {
-    EventLoop::of(ctx).queueTask(TaskSource::Networking, makeTask(ctx, [script = Ref<HTMLScriptElement>::retain(ctx, &el)](JSContext* ctx) mutable {
+/// a task (HTML's networking task source; ours Script, which names a boot's in a CPU stop), and the queue's order is
+/// the order. A parser-inserted one runs as the boot's, a link as the parse's other scripts are
+/// (EventLoop::markBootLinkStep, which demotion exempts); one the widget inserted is its own.
+void queueExecution(JSContext* ctx, HTMLScriptElement& el, bool parserInserted) {
+    EventLoop::of(ctx).queueTask(TaskSource::Script, makeTask(ctx, [script = Ref<HTMLScriptElement>::retain(ctx, &el), parserInserted](JSContext* ctx) mutable {
+        if (parserInserted) {
+            EventLoop::of(ctx).markBootLinkStep();
+        }
         HostState::of(ctx).scripts().execute(ctx, *script);
     }));
 }
@@ -153,8 +157,8 @@ void ScriptElements::collect(Node& node, bool subtree) {
     Runtime::from(m_ctx).requestNativeExitWork();
 }
 
-// The post-connection steps, for every script in the inserted subtree (walked later, at depth 0, charged). Only an
-// element can be or contain a script.
+// The post-connection steps, for every script in the inserted subtree (walked later, at depth 0). Only an element can
+// be or contain a script.
 void ScriptElements::nodeInserted(Node& node) {
     if (node.isElement()) {
         this->collect(node, true);
@@ -186,7 +190,7 @@ void ScriptElements::attributeChanged(Element& element, JSAtom localName, Namesp
             this->collect(element, false);
         }
     } catch (...) {
-        // The connected check's charge refused by the budget (latched already), or collect's Aborted: Aborted.
+        // collect's Aborted (the memory limit, latched already) or any other failure: Aborted.
         abortForCaughtException(m_ctx);
     }
 }
@@ -214,7 +218,6 @@ void ScriptElements::preparePending(JSContext* ctx) {
             // HTML's static node list: the scripts in the subtree as inserted, before any of them runs.
             Vector<Ref<HTMLScriptElement>> scripts{JSAllocator<Ref<HTMLScriptElement>>(JS_GetRuntime(ctx))};
             for (Node* n = &root; n; n = n->nextInTreeOrder(&root)) {
-                charge(ctx, work::kNodeVisit);
                 if (isHTMLScript(ctx, *n)) {
                     scripts.push_back(Ref<HTMLScriptElement>::retain(ctx, static_cast<HTMLScriptElement*>(n)));
                 }
@@ -227,7 +230,6 @@ void ScriptElements::preparePending(JSContext* ctx) {
 }
 
 void ScriptElements::prepare(JSContext* ctx, HTMLScriptElement& el, Caller caller) {
-    charge(ctx, work::kNodeVisit);
     Ref<HTMLScriptElement> keep = Ref<HTMLScriptElement>::retain(ctx, &el);
     DOMState& state = DOMState::of(ctx);
     Host& host = Runtime::from(ctx).host();
@@ -312,13 +314,10 @@ void ScriptElements::prepare(JSContext* ctx, HTMLScriptElement& el, Caller calle
         el.setFromExternalFile(true);
         // No URL parser until M2: the loader gets the attribute as written. The host's loader answers at once; the
         // runtime itself never fetches anything.
-        chargeScan(ctx, src.length());
         std::string url = src.utf8();
         ScriptLoader* loader = host.scriptLoader();
         std::optional<ScriptSource> source = loader ? loader->load(url) : std::nullopt;
         if (source) {
-            // Both are converted (and the URL may echo the script-controlled src): charged before.
-            chargeScan(ctx, source->text.size() + source->url.size());
             el.setResult(ctx, String::fromUTF8(ctx, source->text), String::fromUTF8(ctx, source->url));
         } else {
             host.diagnostic("script-skipped", "external script not available: " + clipped(src));
@@ -345,7 +344,7 @@ void ScriptElements::prepare(JSContext* ctx, HTMLScriptElement& el, Caller calle
     }
     if ((type == ScriptType::Classic && hasSrc) || type == ScriptType::Module) {
         // "In order as soon as possible" (no async, not force async) or "as soon as possible": a task either way.
-        queueExecution(ctx, el);
+        queueExecution(ctx, el, parserInserted);
         return;
     }
     // An inline classic script, parser-inserted or not: "immediately execute the script element".
@@ -367,7 +366,6 @@ void ScriptElements::execute(JSContext* ctx, HTMLScriptElement& el) {
     }
     String source = el.resultSource(ctx);
     std::string url = el.resultURL(ctx);
-    chargeScan(ctx, source.length());
     std::string text = source.utf8();
     Runtime& runtime = Runtime::from(ctx);
     // 6. currentScript is the classic script while it runs, the microtask checkpoint of "clean up after running

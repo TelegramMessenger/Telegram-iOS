@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <map>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 namespace wr {
@@ -11,7 +13,7 @@ namespace wr {
 namespace {
 
 // Ruling E3: past this many Backdrop items in either tree everything changed (nullopt), which bounds the backdrop
-// step at 64 × 64; a hostile page of many backdrop-filter elements would otherwise make every flush quadratic, uncharged.
+// step at 64 × 64; a hostile page of many backdrop-filter elements would otherwise make every flush quadratic.
 constexpr size_t kMaxDiffedBackdrops = 64;
 
 // How a rect in some layer's coordinates reaches the root: through `matrix` (the enclosing groups' matrices,
@@ -377,21 +379,42 @@ std::optional<std::vector<litehtml::position>> mirrorChangedRects(const MirrorNo
     while (!stack.empty()) {
         Pair pair = stack.back();
         stack.pop_back();
-        // The children matched by kind, key and order among those of that kind and key.
+        // The children matched first by identity (the same object in both trees: a mirror's publishes share every node no
+        // operation names), then by kind, key and order among the rest of that kind and key.
+        std::vector<bool> taken(pair.b->children.size(), false);
+        std::vector<size_t> same(pair.a->children.size(), SIZE_MAX);
+        {
+            std::unordered_map<const MirrorNode*, size_t> inBByObject;
+            for (size_t j = 0; j < pair.b->children.size(); j++) {
+                inBByObject.emplace(pair.b->children[j].get(), j);
+            }
+            for (size_t i = 0; i < pair.a->children.size(); i++) {
+                if (auto found = inBByObject.find(pair.a->children[i].get()); found != inBByObject.end()) {
+                    same[i] = found->second;
+                    taken[found->second] = true;
+                }
+            }
+        }
         std::map<std::tuple<int, NodeKey, size_t>, size_t> inB;
         {
             std::map<std::pair<int, NodeKey>, size_t> seen;
             for (size_t i = 0; i < pair.b->children.size(); i++) {
+                if (taken[i]) {
+                    continue;
+                }
                 const MirrorNode& child = *pair.b->children[i];
                 const auto kind = std::make_pair(int(child.kind), child.key);
                 inB[{kind.first, kind.second, seen[kind]++}] = i;
             }
         }
         std::vector<std::pair<size_t, size_t>> matched;
-        std::vector<bool> taken(pair.b->children.size(), false);
         {
             std::map<std::pair<int, NodeKey>, size_t> seen;
             for (size_t i = 0; i < pair.a->children.size(); i++) {
+                if (same[i] != SIZE_MAX) {
+                    matched.emplace_back(i, same[i]);
+                    continue;
+                }
                 const MirrorNode& child = *pair.a->children[i];
                 const auto kind = std::make_pair(int(child.kind), child.key);
                 auto found = inB.find({kind.first, kind.second, seen[kind]++});
@@ -408,17 +431,55 @@ std::optional<std::vector<litehtml::position>> mirrorChangedRects(const MirrorNo
                 push(nodeRect(collector, *pair.b->children[j], pair.mb, pair.bx, pair.by));
             }
         }
+        // Children that changed order give every matched child's rects. With nodes shared (a mirror's publish), the order
+        // is the shared ones': a pair matched by key that sits elsewhere among them (a removed node and an inserted one
+        // with its key) gives its own.
+        const bool shared = std::any_of(same.begin(), same.end(), [](size_t j) { return j != SIZE_MAX; });
         bool reordered = false;
-        for (size_t k = 1; k < matched.size(); k++) {
-            reordered = reordered || matched[k].second < matched[k - 1].second;
+        std::vector<bool> elsewhere(matched.size(), false);
+        if (!shared) {
+            for (size_t k = 1; k < matched.size(); k++) {
+                reordered = reordered || matched[k].second < matched[k - 1].second;
+            }
+        } else {
+            std::vector<size_t> below(matched.size(), SIZE_MAX), above(matched.size(), SIZE_MAX);
+            size_t last = SIZE_MAX;
+            for (size_t k = 0; k < matched.size(); k++) {
+                below[k] = last;
+                if (same[matched[k].first] != SIZE_MAX) {
+                    reordered = reordered || (last != SIZE_MAX && matched[k].second < last);
+                    last = matched[k].second;
+                }
+            }
+            last = SIZE_MAX;
+            for (size_t k = matched.size(); k-- > 0;) {
+                above[k] = last;
+                if (same[matched[k].first] != SIZE_MAX) {
+                    last = matched[k].second;
+                }
+            }
+            size_t keyed = SIZE_MAX;   // the last pair matched by key, which one after it must not precede
+            for (size_t k = 0; k < matched.size(); k++) {
+                if (same[matched[k].first] != SIZE_MAX) {
+                    continue;
+                }
+                const size_t j = matched[k].second;
+                elsewhere[k] = (below[k] != SIZE_MAX && j < below[k]) || (above[k] != SIZE_MAX && j > above[k]);
+                if (keyed != SIZE_MAX && j < matched[keyed].second) {
+                    elsewhere[k] = true;
+                    elsewhere[keyed] = true;
+                }
+                keyed = k;
+            }
         }
-        for (const auto& [i, j] : matched) {
+        for (size_t k = 0; k < matched.size(); k++) {
+            const auto [i, j] = matched[k];
             const MirrorNode& a = *pair.a->children[i];
             const MirrorNode& b = *pair.b->children[j];
             if (&a == &b && !reordered && pair.ax == pair.bx && pair.ay == pair.by) {
                 continue;
             }
-            if (reordered || !samePlace(a, b)) {
+            if (reordered || elsewhere[k] || !samePlace(a, b)) {
                 push(nodeRect(collector, a, pair.ma, pair.ax, pair.ay));
                 push(nodeRect(collector, b, pair.mb, pair.bx, pair.by));
                 continue;

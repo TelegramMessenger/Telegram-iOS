@@ -17,7 +17,6 @@
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -75,20 +74,21 @@ HTMLImageElement::State HTMLImageElement::state(JSContext* ctx, std::optional<De
         if (!HostState::find(ctx)) {
             return State::Broken;
         }
-        chargeScan(ctx, src->length());
         // A present src profile 1 refuses, the empty one included, is the 48 px placeholder the renderer draws in its
         // place (V4 plan, Task 6; RB §3.5, §8.5): it loads.
         std::string utf8 = src->utf8();
-        if (!css::policy::imageSourceKept(utf8)) {
+        // widget-sandbox v0.3.0: one claiming more than 1024² pixels is the placeholder too, and bytes of none of the
+        // profile's formats are broken, as the layout decides (css::policy::imageSource).
+        const css::policy::ImageSource source = css::policy::imageSource(utf8);
+        if (source == css::policy::ImageSource::Refused) {
             utf8 = std::string(WidgetContainer::kPlaceholderURL);
         }
-        bool decoded = false;
-        m_decoded = canvas::CanvasState::of(ctx).sharedImage(utf8, decoded);
-        m_decided = true;
-        if (decoded) {
-            // A decode, the first time any image with this src asks (V5d final review, I3).
-            charge(ctx, uint64_t(m_decoded->width * m_decoded->height / 64) * work::kCanvasSixtyFourPixels);
+        if (source == css::policy::ImageSource::Broken) {
+            m_decoded = std::nullopt;
+        } else {
+            m_decoded = canvas::CanvasState::of(ctx).sharedImage(utf8);
         }
+        m_decided = true;
     }
     if (!m_decoded) {
         return State::Broken;
@@ -241,7 +241,6 @@ void fireParsedImageEvents(JSContext* ctx) {
     Document& document = DOMState::of(ctx).document();
     Node* node = &document;
     while (node) {
-        charge(ctx, work::kNodeVisit);
         if (auto* image = dynamic_cast<HTMLImageElement*>(node); image && !image->eventQueued()) {
             image->setEventQueued();
             pending.push_back(Collected{Ref<HTMLImageElement>::retain(ctx, image), image->sourceGeneration()});
@@ -260,7 +259,6 @@ void fireParsedImageEvents(JSContext* ctx) {
     HostState* host = HostState::find(ctx);
     if (canvas::CanvasState* state = host ? host->canvasSlot().get() : nullptr) {
         for (Ref<HTMLImageElement>& image : state->takeParsedImages()) {
-            charge(ctx, work::kNodeVisit);
             if (!image->eventQueued() && &image->nodeDocument() == &document) {
                 image->setEventQueued();
                 const uint32_t generation = image->sourceGeneration();

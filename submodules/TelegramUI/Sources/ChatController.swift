@@ -8444,6 +8444,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             //TODO:release
         }
+        // Before endEditing, which can relayout the history with the keyboard's inset gone.
+        self.chatDisplayNode.historyNode.readVisibleMessagesBeforeLeaving()
         UIView.performWithoutAnimation {
             self.view.endEditing(true)
         }

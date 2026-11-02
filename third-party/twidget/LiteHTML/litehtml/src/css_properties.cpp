@@ -953,6 +953,7 @@ void litehtml::css_properties::compute_effects(const html_tag* el, const documen
     m_opacity         = el->get_property<float>(_opacity_, false, 1.f, offset(m_opacity));
     m_aspect_ratio    = el->get_property<float>(_aspect_ratio_, false, 0.f, offset(m_aspect_ratio));
     m_backface_hidden = el->get_property<int>(_backface_visibility_, false, 0, offset(m_backface_hidden));
+    m_transform_box   = el->get_property<int>(_transform_box_, false, transform_box_view_box, offset(m_transform_box));
     m_contain         = el->get_property<int>(_contain_, false, 0, offset(m_contain));
     if(m_contain)
     {

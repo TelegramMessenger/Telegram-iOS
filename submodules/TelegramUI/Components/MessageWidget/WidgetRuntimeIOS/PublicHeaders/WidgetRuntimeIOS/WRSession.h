@@ -11,17 +11,31 @@ NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, WRStopReason) {
     WRStopReasonNone,
-    WRStopReasonBudget,
     WRStopReasonMemory,
     WRStopReasonInternal,
-    /// One task's layout queries did more than their budget (sdk-v1 §2, "Layout query limit exceeded").
+    /// One task's layout queries took more than 100 ms (widget-sandbox's "Layout query limit exceeded"), its reason in
+    /// `stopDetail`.
     WRStopReasonLayoutQuery,
+    /// A counted cap of the strict policy (widget-sandbox v0.3.0), its reason in `stopDetail`.
+    WRStopReasonLimit,
+    /// A task ran past its slice on the CPU clock, or past the wall-clock backstop ("CPU limit exceeded"), its reason
+    /// in `stopDetail`.
+    WRStopReasonCpu,
+};
+
+/// The counted caps a session runs under (WidgetRuntime's Limits, widget-sandbox v0.3.0): Strict, every widget the app
+/// shows; Compat, the caps from before v0.3.0, past which nothing stops (the stress kit's measuring runs, tests).
+typedef NS_ENUM(NSInteger, WRLimitPolicy) {
+    WRLimitPolicyStrict,
+    WRLimitPolicyCompat,
 };
 
 typedef NS_ENUM(NSInteger, WRStepResult) {
     WRStepResultRan,
     WRStepResultIdle,
     WRStepResultStopped,
+    /// Nothing ran: what was runnable waits for the CPU windows until `nextTimerDeadline` (widget-sandbox's quota).
+    WRStepResultDeferred,
 };
 
 typedef NS_ENUM(NSInteger, WRPointerPhase) {
@@ -49,12 +63,15 @@ typedef NS_ENUM(NSInteger, WRResizeAnchor) {
     WRResizeAnchorBottom,
 };
 
-/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer.
+/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer. `Rejected` (the user declined in the
+/// wallet window) and `BadRequest` (the wallet refused it) are a wallet call's (§2.18); a request sees them as FAILED.
 typedef NS_ENUM(NSInteger, WRRequestFailure) {
     WRRequestFailureNone = 0,
     WRRequestFailureTimeout,
     WRRequestFailureRateLimited,
     WRRequestFailureFailed,
+    WRRequestFailureRejected,
+    WRRequestFailureBadRequest,
 };
 
 /// The account looking at the widget (sdk-v1 §2.13, Mini Apps' WebAppUser), as the client passes it; the runtime checks
@@ -75,8 +92,6 @@ typedef NS_ENUM(NSInteger, WRRequestFailure) {
 - (void)session:(WRSession *)session log:(NSInteger)level text:(NSString *)text;
 /// A bridge call: the method, and its arguments as a JSON array of strings. The session applies no policy.
 - (void)session:(WRSession *)session bridge:(NSString *)method args:(NSString *)argsJson;
-/// The work counter, at least every 10,000 units while a step runs: what feeds main's wait meter.
-- (void)session:(WRSession *)session didWork:(uint64_t)totalUnits;
 @optional
 /// SDK v1 §3.2: the whole content of a storage area (`local` or `session`) a task changed, as [key, value] pairs in
 /// insertion order, at the end of that task. Not after the widget has stopped.
@@ -133,13 +148,52 @@ typedef struct {
 @property (nonatomic, readonly) NSData *runs;
 /// float[]: each run's caret offsets (CSS px from its box's left, one per UTF-16 boundary; descending right to left).
 @property (nonatomic, readonly) NSData *carets;
-/// What the export spent, in work units (its own, never the widget's).
-@property (nonatomic, readonly) uint64_t units;
+@end
+
+/// widget-sandbox's runtime limits (LIMIT_DEFAULTS), in milliseconds of the widget thread's CPU time: a task's slice
+/// (past it the widget stops), the JS quota per window and the main-thread window (past either, deferrable tasks
+/// wait), and how long throttling may last before the widget stops (0: never).
+@interface WRCpuLimits : NSObject
+- (instancetype)initWithCpuLimitMs:(double)cpuLimitMs
+                        cpuQuotaMs:(double)cpuQuotaMs
+                  cpuQuotaWindowMs:(double)cpuQuotaWindowMs
+                    cpuKillAfterMs:(double)cpuKillAfterMs
+                 mainThreadQuotaMs:(double)mainThreadQuotaMs;
+/// The product's, in every build and under both policies: 500, 300 per 1000, 0, 100.
++ (instancetype)productLimits;
+@property (nonatomic, readonly) double cpuLimitMs;
+@property (nonatomic, readonly) double cpuQuotaMs;
+@property (nonatomic, readonly) double cpuQuotaWindowMs;
+@property (nonatomic, readonly) double cpuKillAfterMs;
+@property (nonatomic, readonly) double mainThreadQuotaMs;
+@end
+
+/// What the stress kit's runner reads of a session (widget-sandbox v0.3.0, packages/stress): statistics, never a decision.
+@interface WRSessionStats : NSObject
+/// widget-sandbox's operations since the runtime began, and the largest batch (Limits::opsPerBatch's count).
+@property (nonatomic, readonly) uint64_t totalOps;
+@property (nonatomic, readonly) uint64_t maxBatchOps;
+/// Layout queries answered.
+@property (nonatomic, readonly) uint64_t layoutQueries;
+/// Milliseconds the render flushes took (style, layout, the layer tree).
+@property (nonatomic, readonly) double flushMilliseconds;
+/// The QuickJS heap in use, bytes.
+@property (nonatomic, readonly) uint64_t heapBytes;
+/// The document's nodes.
+@property (nonatomic, readonly) uint64_t nodes;
+/// Steps either CPU window deferred.
+@property (nonatomic, readonly) uint64_t throttledSteps;
+/// Milliseconds the layout queries took, over every step.
+@property (nonatomic, readonly) double queryMilliseconds;
+/// The widget's JS time over every step (what the JS quota records), and the most CPU one step took (its JS and the
+/// renderer's), milliseconds on the widget thread.
+@property (nonatomic, readonly) double jsMilliseconds;
+@property (nonatomic, readonly) double largestStepMilliseconds;
 @end
 
 @interface WRSession : NSObject
 
-/// The runtime (64 MiB of memory, a 1 MiB stack), its host and its render tree, laid out at `width` CSS px in the
+/// The runtime (memory as its policy says, a 1 MiB stack), its host and its render tree, laid out at `width` CSS px in the
 /// light or dark theme and recorded for drawing at `scale`. nil when it cannot be made.
 - (nullable instancetype)initWithWidth:(CGFloat)width
                                   dark:(BOOL)dark
@@ -157,26 +211,56 @@ typedef struct {
                             textTokens:(NSDictionary<NSString *, id> *)textTokens
                                  scale:(CGFloat)scale
                               delegate:(id<WRSessionDelegate>)delegate;
+/// The same under `policy` (the others are Strict).
+- (nullable instancetype)initWithWidth:(CGFloat)width
+                                  dark:(BOOL)dark
+                           themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
+                          buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens
+                            textTokens:(NSDictionary<NSString *, id> *)textTokens
+                                 scale:(CGFloat)scale
+                              delegate:(id<WRSessionDelegate>)delegate
+                                policy:(WRLimitPolicy)policy;
+/// The same under `cpuLimits` (the others use the product's).
+- (nullable instancetype)initWithWidth:(CGFloat)width
+                                  dark:(BOOL)dark
+                           themeParams:(NSDictionary<NSString *, NSString *> *)themeParams
+                          buttonTokens:(NSDictionary<NSString *, id> *)buttonTokens
+                            textTokens:(NSDictionary<NSString *, id> *)textTokens
+                                 scale:(CGFloat)scale
+                              delegate:(id<WRSessionDelegate>)delegate
+                                policy:(WRLimitPolicy)policy
+                             cpuLimits:(WRCpuLimits *)cpuLimits;
 - (instancetype)init NS_UNAVAILABLE;
 
-/// The parse (under the 400,000,000-unit ceiling, ours) and then the boot's scripts and lifecycle on one 48,000,000-unit
-/// budget, up to the `load` task. NO when the widget failed to start: a C++ failure, a stop before its parsed markup was
-/// published, or a second boot. A widget whose scripts stopped it still started. No size check of our own: the server
-/// bounds the HTML (widget-sandbox integration.md, "The widget payload").
-- (BOOL)bootWithSource:(NSString *)source;
-/// The same, on the given parse ceiling and boot budget (tests measure what a widget needs on larger ones).
-- (BOOL)bootWithSource:(NSString *)source parseUnits:(uint64_t)parseUnits bootUnits:(uint64_t)bootUnits;
+/// The QuickJS heap limit the session's policy gives it.
+@property (nonatomic, readonly) NSUInteger memoryLimitBytes;
+/// The stress kit's statistics now; nil without a runtime.
+- (nullable WRSessionStats*)stats;
 
-/// One task (timers due by `nowMs` included) or one animation frame, under the limit setWorkLimitAfter: set. `nowMs` is
-/// on the session's monotonic clock (CACurrentMediaTime() × 1000).
+/// The parse, ours (its count limits bound it), and then the boot's scripts and lifecycle, each task on a CPU slice of
+/// its own, up to the `load` task. NO when the widget failed to start: a C++ failure, a stop before its parsed markup
+/// was published, or a second boot. A widget whose scripts stopped it still started. No size check of our own: the
+/// server bounds the HTML (widget-sandbox integration.md, "The widget payload").
+- (BOOL)bootWithSource:(NSString *)source;
+
+/// One task (timers due by `nowMs` included) or one animation frame, on the CPU slice its kind gets; Deferred when the
+/// CPU windows hold back what is runnable (`nextTimerDeadline` is the retry). `nowMs` is on the session's monotonic clock
+/// (CACurrentMediaTime() × 1000).
 - (WRStepResult)runNextTaskAt:(double)nowMs;
 - (BOOL)wantsAnimationFrame;
 - (WRStepResult)runAnimationFrameAt:(double)nowMs;
 - (BOOL)hasRunnableTaskAt:(double)nowMs;
-/// The earliest timer deadline, nil when there is none.
+/// The earliest timer deadline or deferred work's retry time, nil when there is none.
 - (nullable NSNumber *)nextTimerDeadline;
-/// The next step may spend `units` more.
-- (void)setWorkLimitAfter:(uint64_t)units;
+/// The CPU milliseconds of every step so far (each measured on the thread that ran it), our renderer's included: a
+/// difference around a drain is the drain's.
+@property (nonatomic, readonly) double stepCpuMilliseconds;
+/// Of `stepCpuMilliseconds`, the boot lifecycle's own steps (its scripts and its load), wherever they run: the boot
+/// task, and past its slice whichever core task drains next. The core exempts them from demotion for their first two
+/// slices of CPU in all (`MessageWidgetCore.bootDemotionExemptionSlices`), the boot task's own included.
+@property (nonatomic, readonly) double bootCpuMilliseconds;
+/// Tests only, between steps: the session's CPU and wall clocks (milliseconds) from now on; the thread's otherwise.
+- (void)setCpuClockForTesting:(double (^)(void))cpu wall:(double (^)(void))wall;
 
 /// A width or theme change rebuilds and flushes now; a theme change also queues the TelegramWidget.onTheme callbacks.
 - (void)setWidth:(CGFloat)width;
@@ -198,13 +282,18 @@ typedef struct {
 - (void)setLocale:(NSString *)locale;
 /// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context, the server's flags as they are, the chat type
 /// ("private", "group", "supergroup", "channel", or nil) and the viewer; fixed for the widget's life. Set it before the
-/// boot.
-- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview;
+/// boot. `wallet` (v0.5.0, §2.18): the client has Gram Wallet for this user.
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview wallet:(BOOL)wallet;
 /// SDK v1 §2.13: the bot's state, as the server's bytes. Before the boot it is the state the widget starts with; after
 /// it, a change: the widget gets chatDataChanged and publicDataChanged for the values that changed, in a task.
 - (void)setChatData:(nullable NSData *)chatData publicData:(nullable NSData *)publicData;
-/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` bridge call), settled in a
-/// task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
+/// SDK v1 §2.17 (widget-sandbox v0.4.0): what the client draws over the widget, in CSS px (checked: an inset 0–64, a
+/// corner 0–200, else 0). Before the boot it is what the first layout has, with no event; after it, a change lays out
+/// now and the widget gets a fresh TelegramWidget.contentSafeAreaInset and contentSafeAreaChanged, in a task. An equal
+/// value is nothing.
+- (void)setContentSafeAreaTop:(double)top right:(double)right bottom:(double)bottom left:(double)left cornerLeft:(double)cornerLeft cornerRight:(double)cornerRight;
+/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` or `wallet` bridge call),
+/// settled in a task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
 - (void)completeRequest:(int64_t)requestId result:(nullable NSData *)result failure:(WRRequestFailure)failure;
 - (void)setVisible:(BOOL)visible;
 /// One phase of a tap at `point` (CSS px), queued as a task: a touch's.
@@ -218,14 +307,16 @@ typedef struct {
 /// button, a checkbox, a label, a summary, or a drag claim), once a step has run its down task; NO without a runtime.
 /// The client takes a tap there at once and waits for a double tap anywhere else (sdk-v1 §5.5).
 @property (nonatomic, readonly) BOOL pressTakesTaps;
+/// The newest press's down task has not run yet: `gestureClaim` and `pressTakesTaps` still answer the press before it.
+@property (nonatomic, readonly) BOOL pressDownPending;
 /// The edge the widget asked to stay put when its height changes (`TelegramWidget.setResizeAnchor`), reported with the
 /// height; Top until it asks, and without a runtime.
 @property (nonatomic, readonly) WRResizeAnchor resizeAnchor;
 
 @property (nonatomic, readonly) WRStopReason stopReason;
-@property (nonatomic, readonly) uint64_t workUnits;
-/// What the parse spent of `workUnits` (the parsed markup's first build included); the boot's scripts spent the rest.
-@property (nonatomic, readonly) uint64_t parseUnits;
+/// A Limit, Cpu or LayoutQuery stop's reason, upstream's words ("Ops limit exceeded: 10001 operations in one batch (max
+/// 10000)", "CPU limit exceeded: …"); nil for any other stop and while running. Kept after the runtime goes.
+@property (nonatomic, readonly, nullable) NSString* stopDetail;
 /// The loads the render tree refused (it fetches nothing), as of the last call; kept after the runtime goes.
 @property (nonatomic, readonly) uint64_t refusedLoads;
 /// The content's own width and the document's height, CGSizeZero before the first flush.
@@ -241,18 +332,17 @@ typedef struct {
 - (nullable NSArray<NSValue *> *)changedRects;
 /// Drops the runtime. Trees already handed out stay valid.
 - (void)teardown;
-/// The selectable text of the current layout (sdk-v1 §5.10) on its own work budget: no script runs, nothing is
-/// flushed, and nothing the widget can observe changes (its work units included). nil past the budget, with no runtime
-/// or after a failure; a text with no runs when nothing is selectable. Text wholly at or below `visibleHeight` CSS px
-/// is left out. Never stops or fails the session.
-- (nullable WRSelectableText *)selectableTextWithBudget:(uint64_t)units visibleHeight:(CGFloat)visibleHeight;
+/// The selectable text of the current layout (sdk-v1 §5.10): no script runs, nothing is flushed, and nothing the widget
+/// can observe changes. nil with no runtime or after a failure; a text with no runs when nothing is selectable. Text
+/// wholly at or below `visibleHeight` CSS px is left out. Never stops or fails the session.
+- (nullable WRSelectableText *)selectableTextWithVisibleHeight:(CGFloat)visibleHeight;
 /// The live document's `<html>` attribute `name` (the conformance runner reads `data-conformance` there): no script
 /// runs and nothing is flushed (the name's string, allocated in the widget's heap, is the only work). nil when absent,
 /// before the boot, after a failure or teardown.
 - (nullable NSString *)documentElementAttribute:(NSString *)name;
 
-/// Tests only: `code` as a global script under the limit setWorkLimitAfter: set, then its microtasks and a flush; its
-/// completion value as a string, or nil when there is no runtime or the script stopped it.
+/// Tests only: `code` as a global script in one event-kind step (its CPU slice, its times recorded), then its
+/// microtasks and a flush; its completion value as a string, or nil when there is no runtime or the script stopped it.
 - (nullable NSString *)evaluateForTesting:(NSString *)code;
 /// Tests only: the border box (CSS px) of the first element `selector` matches, at the current layout; CGRectNull when
 /// nothing matches, the selector does not parse, or the element has no box. Public, as evaluateForTesting: is, because

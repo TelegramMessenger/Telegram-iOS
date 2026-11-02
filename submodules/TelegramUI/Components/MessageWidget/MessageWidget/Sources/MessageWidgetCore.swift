@@ -10,28 +10,19 @@ import WidgetSandboxIntl
 /// thread running that task, and nothing here calls the host back — bridge calls, the size, the tiles and the state
 /// leave in the task's `WidgetSnapshot`.
 final class MessageWidgetCore {
-    /// The old runtime's budgets, which carry over unchanged: the parse is ours, under its ceiling; the boot's
-    /// scripts and lifecycle share one budget; each later runtime step has its own.
-    static let parseWorkUnits: UInt64 = 400_000_000
-    static let bootWorkUnits: UInt64 = 48_000_000
-    static let taskWorkUnits: UInt64 = 28_000_000
     /// The most runtime steps one core task runs: a wake right after it runs the rest, so a widget that keeps a task
-    /// runnable cannot hold its queue. A drain also stops once it has spent a task's budget (Task 8 review I1): each
-    /// step has its own, so one core task spends at most about two.
+    /// runnable cannot hold its queue. Each step has its own CPU slice (widget-sandbox's limits, `MessageWidgetCpuLimits`).
     static let maximumStepsPerTask = 256
-    /// Tests only: budgets that replace the parse ceiling and the boot and task budgets of every widget booted while
-    /// set — the corpus check measures what each widget needs rather than where it is stopped. Nil in the app.
-    static var budgetsForTesting: (parse: UInt64, boot: UInt64, task: UInt64)?
+    /// The boot's own steps (its scripts and its load) never demote the widget for its first this many slices of CPU in
+    /// all: a run of heavy scripts past them would keep main waiting for its wakes for as long as it lasted (the fourth
+    /// fix-wave review).
+    static let bootDemotionExemptionSlices = 2.0
+    /// Tests only: the CPU and wall clocks (milliseconds) of every session made while set; the widget thread's otherwise.
+    static var cpuClockForTesting: (cpu: () -> Double, wall: () -> Double)?
+    /// Tests only: a source this answers true for fails to start, as when no session can be made (the pill).
+    static var startFailureForTesting: ((String) -> Bool)?
     /// The longest bridge method name; a longer one is ignored.
     static let maximumBridgeMethodLength = 64
-    /// The selectable text's export (sdk-v1 §5.10): the host's work, on a budget of its own that is never the widget's
-    /// and never stops it. Four times the export at the render limits (1,259,504 units: 10,000 one-piece Text nodes
-    /// holding the 262,144-unit text budget, SelectableTextTests, carets charged at `work::kCaretUnit`), rounded up to a
-    /// whole million.
-    static let selectionWorkUnits: UInt64 = 6_000_000
-    /// Tests only: replaces `selectionWorkUnits`.
-    static var selectionBudgetForTesting: UInt64?
-
     private let source: String
     private let stoppedLabel: String
     private let maxMessageLength: Int
@@ -47,13 +38,11 @@ final class MessageWidgetCore {
     /// The session's delegate, which it holds weakly.
     private var sessionDelegate: SessionDelegate?
     private var width: CGFloat = 0.0
+    /// What the bubble draws over the widget (sdk-v1 §2.17), as last handed to the session.
+    private var contentSafeArea: MessageWidgetContentSafeArea = .none
     private var visible = true
     private var state: WidgetSnapshot.State = .live
     private var tornDown = false
-    private var taskBudget = MessageWidgetCore.taskWorkUnits
-    private var bootBudget = MessageWidgetCore.bootWorkUnits
-    /// The running core task's kind: what a work-limit stop names.
-    private var kind: WidgetSnapshot.Kind = .boot
     private var bridgeCalls: [MessageWidgetInstance.BridgeCall] = []
     private var storageCommits: [MessageWidgetInstance.StorageCommit] = []
     /// Where the commits go: posted to main by the task itself, so the commits of a task running when its widget was
@@ -73,28 +62,31 @@ final class MessageWidgetCore {
     /// What the running task exported for the selection, when it is a `.selection` task.
     private var exportedSelection: (text: MessageWidgetSelectableText?, done: Bool) = (nil, false)
     private var sequence = 0
-    /// The running task's meter (nil between tasks), and the session's work counter as last added to it.
-    private var meter: WorkMeter?
-    private var meteredUnits: UInt64 = 0
     /// The main-run-loop wake for the session's next runnable task or timer, and when it fires (CACurrentMediaTime s).
     private var wake: MessageWidgetTimerHandle?
     private var wakeAt = Double.infinity
 
-    /// Tests only: the units the parse, the boot (its scripts and lifecycle), the last task and the largest task after
-    /// the boot spent.
-    private(set) var parseWork: UInt64 = 0
-    private(set) var bootWork: UInt64 = 0
-    private(set) var lastTaskWork: UInt64 = 0
-    private(set) var largestTaskWork: UInt64 = 0
+    /// Tests only: the most CPU milliseconds a task of each kind spent in its runtime steps (its snapshot's).
+    private(set) var largestTaskCpuMilliseconds: [WidgetSnapshot.Kind: Double] = [:]
     /// The request number of the draw task running now (MessageWidgetInstance's).
     private var drawRequest = 0
     /// Tests only: the wall time of the last task's runtime work (its steps, publish included) and of its tile drawing.
     private(set) var lastStepMilliseconds: Double = 0.0
     private(set) var lastDrawMilliseconds: Double = 0.0
+    /// The stress kit's runner (MessageWidgetStressStats): every task's step and draw time, and the frame and draw tasks.
+    private var totalStepMilliseconds: Double = 0.0
+    private var totalDrawMilliseconds: Double = 0.0
+    private var frameTasks = 0
+    private var drawTasks = 0
     /// Tests only: the loads the renderer refused (it fetches nothing), as of the last task; -1 without a session.
     private(set) var refusedLoads = -1
+    /// The counted caps the session runs under (widget-sandbox v0.3.0), and its CPU limits.
+    private let limits: MessageWidgetLimitPolicy
+    private let cpuLimits: MessageWidgetCpuLimits
 
-    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
+    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat, limits: MessageWidgetLimitPolicy = .strict, cpuLimits: MessageWidgetCpuLimits = .product) {
+        self.limits = limits
+        self.cpuLimits = cpuLimits
         self.source = source
         self.commitSink = commitSink
         self.storage = storage
@@ -110,26 +102,22 @@ final class MessageWidgetCore {
 
     // MARK: tasks
 
-    /// One task: `body`, with `meter` counting every unit of its work, then the tree it published and the next wake, then
-    /// its snapshot. Tiles are drawn only by a `.draw` task (the user, 2026-10-19: drawing may be async; only the size is
+    /// One task: `body`, then the tree it published and the next wake, then its snapshot. Tiles are drawn only by a `.draw` task (the user, 2026-10-19: drawing may be async; only the size is
     /// critical), which main queues after a snapshot whose tree changed.
-    func run(_ kind: WidgetSnapshot.Kind, meter: WorkMeter, _ body: () -> Void) -> WidgetSnapshot {
-        self.kind = kind
-        self.meter = meter
-        let start = self.session?.workUnits ?? 0
-        self.meteredUnits = start
+    func run(_ kind: WidgetSnapshot.Kind, _ body: () -> Void) -> WidgetSnapshot {
+        // The task's CPU: its steps', each measured on this thread (a boot's session is made inside it).
+        let cpuBefore = self.session?.stepCpuMilliseconds ?? 0.0
+        // Of it, the boot lifecycle's own steps (its scripts and its load), wherever they run: no demotion within their
+        // first `bootDemotionExemptionSlices` slices of CPU in all (the boot task's own included).
+        let bootCpuBefore = self.session?.bootCpuMilliseconds ?? 0.0
         let stepStart = CACurrentMediaTime()
         if !self.tornDown {
             body()
         }
-        if let session = self.session {
-            self.addWork(session.workUnits)
-            // The boot's own work is its scripts' and lifecycle's (bootWork): the parse is not the widget's.
-            self.lastTaskWork = kind == .boot ? self.bootWork : session.workUnits &- start
-            if kind != .boot {
-                self.largestTaskWork = max(self.largestTaskWork, self.lastTaskWork)
-            }
-        }
+        // Read before the publish, which drops the session of a widget the task stopped.
+        let bootExemption = MessageWidgetCore.bootDemotionExemptionSlices * self.cpuLimits.cpuLimitMs
+        let bootCpuMilliseconds = self.session.map { max(0.0, min($0.bootCpuMilliseconds, bootExemption) - min(bootCpuBefore, bootExemption)) } ?? 0.0
+        let cpuMilliseconds = self.session.map { max(0.0, $0.stepCpuMilliseconds - cpuBefore) } ?? 0.0
         self.publish()
         var frame: WidgetFrame?
         if kind == .draw {
@@ -141,16 +129,22 @@ final class MessageWidgetCore {
                 self.appendDiag("tile-draw-failed", "the last frame stays at \(Int(renderer.documentSize.width))x\(Int(renderer.documentSize.height))")
             }
             self.lastDrawMilliseconds = (CACurrentMediaTime() - drawStart) * 1000.0
+            self.totalDrawMilliseconds += self.lastDrawMilliseconds
+            self.drawTasks += 1
         } else {
             self.lastStepMilliseconds = (CACurrentMediaTime() - stepStart) * 1000.0
+            self.totalStepMilliseconds += self.lastStepMilliseconds
+            if kind == .frame {
+                self.frameTasks += 1
+            }
         }
+        self.largestTaskCpuMilliseconds[kind] = max(self.largestTaskCpuMilliseconds[kind] ?? 0.0, cpuMilliseconds)
         let needsDraw = kind != .draw && self.renderer.map { self.drawer.needsDraw($0) } == true
         self.scheduleWake()
-        self.meter = nil
         self.sequence += 1
         let wantsFrame = self.state == .live && self.session?.wantsAnimationFrame() == true
         let resizeAnchor: MessageWidgetResizeAnchor = self.session?.resizeAnchor == .bottom ? .bottom : .top
-        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, resizeAnchor: resizeAnchor, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
+        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, resizeAnchor: resizeAnchor, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, bootCpuMilliseconds: bootCpuMilliseconds, cpuMilliseconds: cpuMilliseconds, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
         self.exportedSelection = (nil, false)
         self.bridgeCalls.removeAll()
         if !self.storageCommits.isEmpty {
@@ -169,15 +163,11 @@ final class MessageWidgetCore {
     }
 
     /// Creates the session and runs the widget's parse and boot. A session that cannot be made or a boot that does not
-    /// start (a C++ failure, a parse past its ceiling) is `.failedToStart`; a boot its scripts stopped is `.frozen`, as at
-    /// any other time, with its parsed markup.
-    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, reducedMotion: Bool = false, budgets: (parse: UInt64, boot: UInt64, task: UInt64)?) {
+    /// start (a C++ failure, nothing published) is `.failedToStart`, but for markup past a count cap, which is `.frozen`
+    /// with the badge alone; a boot its scripts stopped is `.frozen`, as at any other time, with its parsed markup.
+    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, reducedMotion: Bool = false, contentSafeArea: MessageWidgetContentSafeArea = .none) {
         self.width = width
         self.visible = visible
-        if let budgets {
-            self.bootBudget = budgets.boot
-            self.taskBudget = budgets.task
-        }
         if self.startsStopped {
             // §5.7: stopped twice in a row; the badge alone, and none of the widget's code runs.
             let renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
@@ -186,20 +176,31 @@ final class MessageWidgetCore {
             self.state = .frozen("Stopped twice in a row")
             return
         }
+        if let fails = MessageWidgetCore.startFailureForTesting, fails(self.source) {
+            self.appendDiag("core-error", "the widget runtime could not be created")
+            self.state = .failedToStart
+            return
+        }
         let delegate = SessionDelegate(core: self)
-        guard let session = WRSession(width: width, dark: theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary, scale: self.scale, delegate: delegate) else {
+        guard let session = WRSession(width: width, dark: theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary, scale: self.scale, delegate: delegate, policy: self.limits == .compat ? .compat : .strict, cpuLimits: self.cpuLimits.session) else {
             self.appendDiag("core-error", "the widget runtime could not be created")
             self.state = .failedToStart
             return
         }
         self.sessionDelegate = delegate
+        if let clock = MessageWidgetCore.cpuClockForTesting {
+            session.setCpuClockForTesting(clock.cpu, wall: clock.wall)
+        }
         session.setLocale(self.locale)
         // The first layout's prefers-reduced-motion: the render tree exists already, the boot builds it.
         session.setReducedMotion(reducedMotion)
+        // sdk-v1 §2.17: what the bubble draws over the widget, in the first layout, so the first height has the band.
+        self.contentSafeArea = contentSafeArea
+        session.setContentSafeAreaTop(Double(contentSafeArea.top), right: Double(contentSafeArea.right), bottom: Double(contentSafeArea.bottom), left: Double(contentSafeArea.left), cornerLeft: Double(contentSafeArea.cornerLeft), cornerRight: Double(contentSafeArea.cornerRight))
         session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
         let context = self.context
         let viewer = context.viewer.map { WRWidgetViewer(id: $0.id, firstName: $0.firstName, lastName: $0.lastName, username: $0.username, isPremium: $0.isPremium) }
-        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview)
+        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview, wallet: context.wallet)
         session.setChatData(self.widgetState.chatData, publicData: self.widgetState.publicData)
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
@@ -207,11 +208,15 @@ final class MessageWidgetCore {
         if !visible {
             session.setVisible(false)
         }
-        let before = session.workUnits
-        let started = session.boot(withSource: self.source, parseUnits: budgets?.parse ?? MessageWidgetCore.parseWorkUnits, bootUnits: self.bootBudget)
-        self.parseWork = session.parseUnits
-        self.bootWork = (session.workUnits &- before) &- session.parseUnits
-        if !started {
+        let started = session.boot(withSource: self.source)
+        if !started && session.stopReason == .limit, let renderer = self.renderer {
+            // The parsed markup already passes a counted cap: a stop, never the pill, which tells the user to update
+            // the app. Nothing was published, so the badge stands alone, as for a widget stopped twice in a row.
+            self.state = .frozen(session.stopDetail ?? "Limit exceeded")
+            self.refusedLoads = Int(clamping: session.refusedLoads)
+            renderer.freeze(label: self.stoppedLabel)
+            self.dropSession()
+        } else if !started {
             self.appendDiag("core-error", session.failed ? "the widget runtime failed" : "the widget did not start")
             self.state = .failedToStart
             self.renderer = nil
@@ -227,11 +232,17 @@ final class MessageWidgetCore {
         guard self.state == .live, let session = self.session else {
             return
         }
-        // The rebuild is a step of its own, on a budget of its own (Task 8 review I2).
-        session.setWorkLimitAfter(self.taskBudget)
         session.setWidth(width)
         // The width change's rendering update (media changes, ResizeObserver, IntersectionObserver) is a task.
         self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The stress kit's statistics now (widget-sandbox v0.3.0, packages/stress); nil without a session.
+    func stressStats() -> MessageWidgetStressStats? {
+        guard let session = self.session, let stats = session.stats() else {
+            return nil
+        }
+        return MessageWidgetStressStats(stepMilliseconds: self.totalStepMilliseconds, drawMilliseconds: self.totalDrawMilliseconds, flushMilliseconds: stats.flushMilliseconds, frameTasks: self.frameTasks, drawTasks: self.drawTasks, totalOps: stats.totalOps, maxBatchOps: stats.maxBatchOps, layoutQueries: stats.layoutQueries, heapBytes: stats.heapBytes, nodes: stats.nodes, jsMilliseconds: stats.jsMilliseconds, queryMilliseconds: stats.queryMilliseconds, largestStepMilliseconds: stats.largestStepMilliseconds, throttledSteps: stats.throttledSteps)
     }
 
     /// The live document's `<html>` attribute `name` (`WRSession.documentElementAttribute`).
@@ -244,12 +255,25 @@ final class MessageWidgetCore {
         self.renderer?.setMaximumHeight(maximumHeight)
     }
 
+    /// What the bubble draws over the widget changed (sdk-v1 §2.17, §5.12): the session lays out now and gives the widget
+    /// its contentSafeAreaChanged in a task, which runs in this one. An equal value is nothing.
+    func setContentSafeArea(_ area: MessageWidgetContentSafeArea) {
+        guard area != self.contentSafeArea else {
+            return
+        }
+        self.contentSafeArea = area
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setContentSafeAreaTop(Double(area.top), right: Double(area.right), bottom: Double(area.bottom), left: Double(area.left), cornerLeft: Double(area.cornerLeft), cornerRight: Double(area.cornerRight))
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
     /// The theme: the session rebuilds now and queues the TelegramWidget.onTheme callbacks, which run in this task.
     func setTheme(_ theme: MessageWidgetInstance.Theme) {
         guard self.state == .live, let session = self.session else {
             return
         }
-        session.setWorkLimitAfter(self.taskBudget)
         session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
@@ -261,17 +285,15 @@ final class MessageWidgetCore {
         guard self.state == .live, let session = self.session else {
             return
         }
-        session.setWorkLimitAfter(self.taskBudget)
         session.setChatData(state.chatData, publicData: state.publicData)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 
-    /// The client's outcome for the widget's request `id` (sdk-v1 §2.14), settled in this task.
+    /// The client's outcome for the widget's request or wallet call `id` (sdk-v1 §2.14, §2.18), settled in this task.
     func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {
         guard self.state == .live, let session = self.session else {
             return
         }
-        session.setWorkLimitAfter(self.taskBudget)
         switch outcome {
         case let .answered(result):
             session.completeRequest(id, result: result, failure: .none)
@@ -281,6 +303,10 @@ final class MessageWidgetCore {
             session.completeRequest(id, result: nil, failure: .rateLimited)
         case .failed:
             session.completeRequest(id, result: nil, failure: .failed)
+        case .rejected:
+            session.completeRequest(id, result: nil, failure: .rejected)
+        case .badRequest:
+            session.completeRequest(id, result: nil, failure: .badRequest)
         }
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
@@ -291,7 +317,6 @@ final class MessageWidgetCore {
         guard self.state == .live, let session = self.session else {
             return
         }
-        session.setWorkLimitAfter(self.taskBudget)
         session.setReducedMotion(reduced)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
@@ -328,6 +353,15 @@ final class MessageWidgetCore {
         guard phase == .down else {
             return .none
         }
+        // A widget the drains stopped is a picture: the bubble's press.
+        guard self.state == .live, !self.isStopped(session) else {
+            return .none
+        }
+        // A down whose task is still behind the drains' backlog (more than they may spend) is unanswered, as when main's
+        // wait ends first: never the claim of the press before it (the fix waves' review).
+        if session.pressDownPending {
+            return .unanswered
+        }
         let axes = session.gestureClaim
         if mouse {
             // The policy's mouse: no hold menu and no swipes, so its holds and sideways drags are the widget's whatever
@@ -346,7 +380,6 @@ final class MessageWidgetCore {
         guard self.state == .live, self.visible, let session = self.session, session.wantsAnimationFrame() else {
             return
         }
-        session.setWorkLimitAfter(self.taskBudget)
         _ = session.runAnimationFrame(at: time)
     }
 
@@ -362,12 +395,11 @@ final class MessageWidgetCore {
     }
 
     /// A `.selection` task's body: the selectable text of the current layout, text wholly below `visibleHeight` left out
-    /// (sdk-v1 §5.10). Its work is the export's own and never reaches the widget's meter or budget.
+    /// (sdk-v1 §5.10). The host's work: it runs no script and never reaches the widget's limits.
     func exportSelection(visibleHeight: CGFloat) {
         var text: MessageWidgetSelectableText?
         if self.state == .live, let session = self.session {
-            let budget = MessageWidgetCore.selectionBudgetForTesting ?? MessageWidgetCore.selectionWorkUnits
-            text = session.selectableText(withBudget: budget, visibleHeight: visibleHeight).map(MessageWidgetSelectableText.init)
+            text = session.selectableText(withVisibleHeight: visibleHeight).map(MessageWidgetSelectableText.init)
         }
         self.exportedSelection = (text?.isEmpty == false ? text : nil, true)
     }
@@ -382,7 +414,6 @@ final class MessageWidgetCore {
         guard self.state == .live, let session = self.session else {
             return nil
         }
-        session.setWorkLimitAfter(self.taskBudget)
         return session.evaluate(forTesting: code)
     }
 
@@ -391,7 +422,6 @@ final class MessageWidgetCore {
         guard self.state == .live, let session = self.session else {
             return nil
         }
-        session.setWorkLimitAfter(self.taskBudget)
         let box = session.borderBox(forTesting: selector)
         return box.isNull ? nil : box
     }
@@ -406,17 +436,20 @@ final class MessageWidgetCore {
 
     // MARK: steps and wakes
 
-    /// The session's runnable tasks at `now`, one step each on its own budget, at most `maximumStepsPerTask` of them and
-    /// none once the drain has spent a task's budget. `now` is fixed for the whole drain, so a timer the steps set is not
-    /// due within it; what is left is the next wake's.
+    /// The session's runnable tasks at `now`, one step each on its own CPU slice, at most `maximumStepsPerTask` of them
+    /// and one slice of CPU (`cpuLimitMs`) in all, so the drain leaves the pool thread to other widgets; a step the CPU
+    /// windows defer ends the drain (the wake follows `nextTimerDeadline`, the retry). `now` is fixed for
+    /// the whole drain, so a timer the steps set is not due within it; what is left is the next wake's.
     private func drain(at now: Double) {
         guard let session = self.session else {
             return
         }
-        let start = session.workUnits
         var steps = 0
-        while self.state == .live, steps < MessageWidgetCore.maximumStepsPerTask, session.workUnits &- start < self.taskBudget, !self.isStopped(session), session.hasRunnableTask(at: now) {
-            session.setWorkLimitAfter(self.taskBudget)
+        // One slice of CPU per drain, whatever the steps' kinds: a chain of follow-ups inherits its root's kind, and a
+        // boot's, an event's or a visibility change's is never deferred by the JS quota (the final review's I1).
+        let cpuStart = session.stepCpuMilliseconds
+        while self.state == .live, steps < MessageWidgetCore.maximumStepsPerTask, !self.isStopped(session), session.hasRunnableTask(at: now),
+              session.stepCpuMilliseconds - cpuStart < self.cpuLimits.cpuLimitMs {
             steps += 1
             if session.runNextTask(at: now) != .ran {
                 break
@@ -492,14 +525,18 @@ final class MessageWidgetCore {
         }
         let reason: String
         switch session.stopReason {
-        case .budget:
-            let budget = self.kind == .boot ? self.bootBudget : self.taskBudget
-            reason = "Work limit exceeded: \(self.kindName) did more than \(budget) units of work"
         case .memory:
-            reason = "Memory limit exceeded (64 MB)"
+            reason = "Memory limit exceeded (\(session.memoryLimitBytes >> 20) MB)"
         case .layoutQuery:
-            // sdk-v1 §2's own words.
-            reason = "Layout query limit exceeded"
+            // widget-sandbox's own words, with the task they name.
+            reason = session.stopDetail ?? "Layout query limit exceeded"
+        case .cpu:
+            // widget-sandbox's runtime limits on the CPU clock, in upstream's words.
+            reason = session.stopDetail ?? "CPU limit exceeded"
+        case .limit:
+            // A counted cap of the strict policy, in upstream's words (widget-sandbox v0.3.0): the conformance set's
+            // stop tests are judged by its start.
+            reason = session.stopDetail ?? "Limit exceeded"
         default:
             reason = "Widget core error"
         }
@@ -513,20 +550,6 @@ final class MessageWidgetCore {
         return session.failed || session.stopReason != .none
     }
 
-    /// What a work-limit stop says ran: today's task kinds.
-    private var kindName: String {
-        switch self.kind {
-        case .boot:
-            return "boot"
-        case .frame:
-            return "frame"
-        case .timer, .wake:
-            return "timer"
-        default:
-            return "event"
-        }
-    }
-
     private func dropSession() {
         self.session?.teardown()
         self.session = nil
@@ -534,14 +557,6 @@ final class MessageWidgetCore {
     }
 
     // MARK: the session's delegate (inside a session call, on this task's thread)
-
-    fileprivate func addWork(_ total: UInt64) {
-        guard total > self.meteredUnits else {
-            return
-        }
-        self.meter?.add(total - self.meteredUnits)
-        self.meteredUnits = total
-    }
 
     fileprivate func diagnostic(_ kind: String, detail: String) {
         if kind == "uncaught-exception" {
@@ -569,8 +584,8 @@ final class MessageWidgetCore {
 
     /// The runtime posts a link call only once it has checked the URL (SDK v1 §2.5) and the press allowed it; the host
     /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). A request, a
-    /// copyText and watchPublicData (widget-sandbox v0.2) arrive checked by the runtime's policy. Any other method is
-    /// ignored.
+    /// copyText and watchPublicData (widget-sandbox v0.2) and a wallet call (v0.5.0) arrive checked by the runtime's
+    /// policy. Any other method is ignored.
     fileprivate func bridge(_ method: String, argsJson: String) {
         guard method.count <= MessageWidgetCore.maximumBridgeMethodLength else {
             self.appendDiag("bridge-ignored", String(method.prefix(MessageWidgetCore.maximumBridgeMethodLength)))
@@ -594,11 +609,28 @@ final class MessageWidgetCore {
             }
             self.bridgeCalls.append(.haptic(kind: first, value: args.count > 1 ? args[1] as? String : nil))
         case "request":
-            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it).
-            guard args.count == 2, let id = Int64(first), let data = args[1] as? String else {
+            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it); a request for the
+            // user's wallet card (§2.18) adds {"wallet": true}.
+            guard args.count == 2 || args.count == 3, let id = Int64(first), let data = args[1] as? String else {
                 return
             }
-            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8)))
+            let wallet = args.count == 3 && ((args[2] as? [String: Any])?["wallet"] as? Bool ?? false)
+            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8), wallet: wallet))
+        case "wallet":
+            // sdk-v1 §2.18: [id, method, the checked transaction or payload, data].
+            guard args.count == 4, let id = Int64(first), let method = args[1] as? String, let argument = args[2] as? [String: Any], let data = args[3] as? String,
+                  let json = try? JSONSerialization.data(withJSONObject: argument, options: [.sortedKeys, .withoutEscapingSlashes]),
+                  let text = String(data: json, encoding: .utf8) else {
+                return
+            }
+            switch method {
+            case "sendTransaction":
+                self.bridgeCalls.append(.wallet(id: id, call: .sendTransaction(json: text, data: Data(data.utf8))))
+            case "signData":
+                self.bridgeCalls.append(.wallet(id: id, call: .signData(json: text, data: Data(data.utf8))))
+            default:
+                self.appendDiag("bridge-ignored", "wallet." + method)
+            }
         case "copyText":
             guard !first.isEmpty else {
                 return
@@ -631,10 +663,6 @@ private final class SessionDelegate: NSObject, WRSessionDelegate {
 
     func session(_ session: WRSession, bridge method: String, args argsJson: String) {
         self.core?.bridge(method, argsJson: argsJson)
-    }
-
-    func session(_ session: WRSession, didWork totalUnits: UInt64) {
-        self.core?.addWork(totalUnits)
     }
 
     func session(_ session: WRSession, storageCommit area: String, entries: [[String]]) {

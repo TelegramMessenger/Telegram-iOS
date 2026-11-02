@@ -69,6 +69,25 @@ public enum ChatTitleLeadingIcon: Equatable {
     case peer(EnginePeer, imageOverride: AvatarNodeImageOverride?)
 }
 
+/// The wrapper a navigation transition is lent the pill's contents in (`lendGlassPillContent`). The title lays them out
+/// about its centre, and the transition gives it the size of the capsule it makes, which can come after the title's last
+/// layout (lent at the wide pill a chat header has before its right button, the capsule made at the narrow one): it keeps
+/// them on its centre whatever size it is given, instead of half a width change off the pill until the hand-over.
+private final class ChatTitleGlassPillContentWrapperView: UIView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let center = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
+        for subview in self.subviews {
+            subview.center = center
+        }
+    }
+}
+
+func makeChatTitleGlassPillContentWrapper(size: CGSize) -> UIView {
+    return ChatTitleGlassPillContentWrapperView(frame: CGRect(origin: CGPoint(), size: size))
+}
+
 public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTitleView {
     private final class ContentData: Equatable {
         let context: AccountContext
@@ -468,7 +487,7 @@ public final class ChatTitleComponent: Component {
             if let current = self.lentContentWrapper {
                 return current
             }
-            let wrapper = UIView(frame: CGRect(origin: CGPoint(), size: frame.size))
+            let wrapper = makeChatTitleGlassPillContentWrapper(size: frame.size)
             wrapper.isUserInteractionEnabled = false
             wrapper.addSubview(self.contentContainer)
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: frame.size)
@@ -1590,8 +1609,15 @@ public final class ChatTitleComponent: Component {
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, isVisible: !hidesGlass, transition: transition)
-                // Not while a transition has it (`lendGlassPillContent`, `lendExpansionLabels`): the transition places it.
-                if self.lentContentWrapper == nil && self.lentExpansionLabels == nil {
+                // Not while an expansion has it (`lendExpansionLabels`): the expansion places it. Lent to a navigation
+                // transition (`lendGlassPillContent`), whose wrapper the transition places and may resize (the wrapper
+                // keeps it on its centre), it takes the pill's new size about the wrapper's centre: a pill that changes
+                // width while the transition draws it is neither clipped nor moved sideways, whatever the change's
+                // animation.
+                if let lentContentWrapper = self.lentContentWrapper, self.lentExpansionLabels == nil {
+                    transition.setPosition(view: self.contentContainer, position: CGPoint(x: lentContentWrapper.bounds.midX, y: lentContentWrapper.bounds.midY))
+                    transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: containerFrame.size))
+                } else if self.lentExpansionLabels == nil {
                     transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
                 }
                 self.contentContainer.layer.cornerRadius = containerFrame.height * 0.5

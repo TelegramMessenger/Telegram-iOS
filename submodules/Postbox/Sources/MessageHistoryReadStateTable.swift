@@ -264,7 +264,11 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: (MessageId.Id, Bool)?) -> (CombinedPeerReadState?, Bool) {
+    /// `interactive`: the user's own read. Read past the newest stored message and at or past `maxKnownId` (the
+    /// server's newest message when it last reported the count), it reads every message the count holds: a message
+    /// above `maxKnownId` is counted only when it is stored. That is where marking a whole chat read lands when the
+    /// server's newest message was never stored here (`_internal_readPeerHistoryToTopInteractively`).
+    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: (MessageId.Id, Bool)?, interactive: Bool = false) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId) (before: \(states.namespaces))")
@@ -272,14 +276,18 @@ final class MessageHistoryReadStateTable: Table {
             
             switch state {
                 case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
-                    if maxIncomingReadId < messageId.id || (topMessageId != nil && (messageId.id == topMessageId!.0 || topMessageId!.1) && state.count != 0) || markedUnread {
+                    var readsEverything = false
+                    if let topMessageId = topMessageId {
+                        readsEverything = messageId.id == topMessageId.0 || topMessageId.1 || (interactive && messageId.id > topMessageId.0 && messageId.id >= maxKnownId && messageId.id >= maxIncomingReadId)
+                    }
+                    if maxIncomingReadId < messageId.id || (readsEverything && state.count != 0) || markedUnread {
                         var (deltaCount, holes) = incomingStatsInRange(messageId.namespace, maxIncomingReadId + 1, messageId.id)
                         
                         if traceReadStates {
                             print("[ReadStateTable] applyMaxReadId after deltaCount: \(deltaCount), holes: \(holes)")
                         }
                         
-                        if let topMessageId = topMessageId, (messageId.id == topMessageId.0 || topMessageId.1) {
+                        if readsEverything {
                             if deltaCount != Int(state.count) {
                                 deltaCount = Int(state.count)
                                 holes = true
@@ -387,7 +395,7 @@ final class MessageHistoryReadStateTable: Table {
             if let state = states.namespaces[messageIndex.id.namespace] {
                 switch state {
                     case .idBased:
-                        let (combinedState, holes) = self.applyIncomingMaxReadId(messageIndex.id, incomingStatsInRange: incomingStatsInRange, topMessageId: topMessageId)
+                        let (combinedState, holes) = self.applyIncomingMaxReadId(messageIndex.id, incomingStatsInRange: incomingStatsInRange, topMessageId: topMessageId, interactive: true)
                         
                         if let combinedState = combinedState {
                             return (combinedState, .Push(thenSync: holes), [])

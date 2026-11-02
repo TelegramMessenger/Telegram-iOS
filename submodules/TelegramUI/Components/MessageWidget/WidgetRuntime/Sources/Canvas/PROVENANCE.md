@@ -39,8 +39,7 @@ It is owned here from the port on (V5d plan, Task 1): edit it in place. Nothing 
    validator makes either a zero-length linear gradient).
 10. **The host** is `CanvasHost` with fonts as `HostFont` and images as `HostImage`; colours are parsed by the
     bindings (twidget's interpreter parsed them with its own `css::parse_color`); SVG path numbers go through
-    `strtod` instead of `css::number`. Fonts come with their ascent and descent, and a `Text` op carries its advance
-    and the font's ascent and descent, for `deviceArea` (the charge).
+    `strtod` instead of `css::number`. Fonts come with their ascent and descent, which place a `Text` op's baseline.
 11. `CanvasOp`'s `Text` keeps twidget's convention: the alignment offset `textDx` is applied before the horizontal
     `scaleX` a `maxWidth` gives.
 12. **What a context keeps is in the JS heap** (V5d final review, C2 and C3; fix-wave review, I-C). Paths
@@ -49,8 +48,8 @@ It is owned here from the port on (V5d plan, Task 1): edit it in place. Nothing 
     is one link of a `ClipNode` chain that each saved state shares, at most `kMaxClipDepth` (64) deep, a clip past it
     ignored. twidget kept all of these in std containers and copied every clip path into every saved state. An op's
     geometry stays a std container: it is dropped within the call.
-13. **Dashes are counted** (fix-wave review, C-B; wave-2 review, C-1). A dashed stroke carries how many dashes and
-    gaps it makes (`dashSegments`), which the context charges. They are counted where `CanvasBitmap` dashes: the device
-    path through the inverse of the op's float matrix (none when that matrix is singular to it), per subpath, since the
-    pattern restarts at each. Past `kMaxDashSegments` (100,000), or when a length is not finite, the stroke is drawn
-    solid (`dashDropped`). twidget passed the pattern through whatever it made.
+13. **Dashes are counted** (fix-wave review, C-B; wave-2 review, C-1). A dashed stroke's dashes and gaps
+    (`dashSegments`) are counted where `CanvasBitmap` dashes: the device path through the inverse
+    of the op's float matrix (none when that matrix is singular to it), per subpath, since the pattern restarts at
+    each. Past `kMaxDashSegments` (100,000), or when a length is not finite, the stroke is drawn solid
+    (`dashDropped`). twidget passed the pattern through whatever it made.

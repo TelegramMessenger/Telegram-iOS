@@ -13,7 +13,7 @@ import ChatMessageWidgetBubbleContentNode
 final class WidgetHarnessNetworkTests: XCTestCase {
     private let requestPath = "fixture/widget-request.html"
     private let watchPath = "fixture/widget-watch.html"
-    private var savedRequestAnswer: ((AccountContext, EngineMessage.Id, Data) -> Signal<Data?, BotWidgetQueryError>)?
+    private var savedRequestAnswer: ((AccountContext, EngineMessage.Id, BotWidgetQueryType, Data) -> Signal<Data?, BotWidgetQueryError>)?
     private var savedPollPublicData: ((AccountContext, EngineMessage.Id, Int64) -> Signal<Never, NoError>)?
     /// What the polling seam saw: `subscribe <message id> <widget id>` and `dispose <message id> <widget id>`.
     private final class PollLog {
@@ -95,7 +95,7 @@ final class WidgetHarnessNetworkTests: XCTestCase {
 
     func testATappedRequestReachesTheBotAndItsAnswerTheWidget() throws {
         var asked: [(EngineMessage.Id, Data)] = []
-        MessageWidgetNetwork.requestAnswer = { _, messageId, data in
+        MessageWidgetNetwork.requestAnswer = { _, messageId, _, data in
             asked.append((messageId, data))
             return .single(Data("pong".utf8))
         }
@@ -109,7 +109,7 @@ final class WidgetHarnessNetworkTests: XCTestCase {
 
     func testEachFailureReachesTheWidgetAsItsCode() throws {
         for (error, code) in [(BotWidgetQueryError.timeout, "TIMEOUT"), (.rateLimited, "RATE_LIMITED"), (.failed, "FAILED")] {
-            MessageWidgetNetwork.requestAnswer = { _, _, _ in
+            MessageWidgetNetwork.requestAnswer = { _, _, _, _ in
                 return .fail(error)
             }
             let (root, host) = try self.load("widget-request", path: self.requestPath)

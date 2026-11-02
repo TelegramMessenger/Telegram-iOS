@@ -1,5 +1,4 @@
-// The string rules the DOM's and HTML's algorithms share (Infra's ASCII operations, the DOM's name checks). Each pass
-// over a string's characters is charged at QuickJS's scan rate (chargeScan, work::kScanEightUnits).
+// The string rules the DOM's and HTML's algorithms share (Infra's ASCII operations, the DOM's name checks).
 #pragma once
 
 #include <cstdint>
@@ -29,8 +28,7 @@ struct TokenRange {
 };
 /// DOM's "ordered set parser": `s`'s ASCII-whitespace-separated tokens in order of first occurrence, each distinct
 /// token once (exact code units). Worst-case O(n log n): a stable merge sort of the tokens' indices, then each later
-/// duplicate dropped, so no input (a hash collision, say) makes it quadratic. Its worst case — n log2 n comparisons,
-/// each reading at most the shorter token — is charged before it runs. The lists are counted (JSAllocator).
+/// duplicate dropped, so no input (a hash collision, say) makes it quadratic. The lists are counted (JSAllocator).
 Vector<TokenRange> orderedSetTokens(JSContext* ctx, const String& s);
 /// HTML "strip and collapse ASCII whitespace".
 String stripAndCollapseASCIIWhitespace(JSContext* ctx, const String& s);
@@ -42,8 +40,8 @@ bool isValidNamespacePrefix(JSContext* ctx, const String& s);
 bool qualifiedNameIs(JSContext* ctx, JSAtom prefix, JSAtom localName, const String& name);
 /// `s` in UTF-8 for an error message: at most 160 bytes, cut at a character boundary and then marked with '…'. QuickJS
 /// keeps 255 bytes of a DOMException's message, cut wherever the byte count ends: converting more of a long name made
-/// bytes no one saw, work its charges did not cover (WorkCostTests, "long invalid name"), and a cut inside a character.
-/// 160 leaves the longest message's own text (55 bytes) whole. Selectors quote the same way (Selectors.cpp).
+/// bytes no one saw, and a cut inside a character. 160 leaves the longest message's own text (55 bytes) whole.
+/// Selectors quote the same way (Selectors.cpp).
 std::string quotedForMessage(const String& s);
 
 } // namespace wr

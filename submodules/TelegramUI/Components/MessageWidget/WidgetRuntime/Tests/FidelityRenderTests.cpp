@@ -642,6 +642,8 @@ WR_TEST(testAuthorDirSelectorsSeeTheAttributeAsWritten) {
 /// their uncharged work does not grow with a value's length: 64 nested elements with a 1 MiB dir each under an auto root,
 /// and 50 text changes with a layout query each, copied about 3 GB before.
 WR_TEST(testDirAutoWalksDoNotCopyLongValues) {
+    // Past the strict caps (widget-sandbox v0.3.0), which stop the widget: the old caps, which compat keeps.
+    wr_test::ScopedLimits compat(wr::Limits::compat());
     RenderEnv env(page("", "<div id=root dir=auto></div>"));
     checkEval(env, "const v = 'x'.repeat(1 << 20); let n = $('root'); for (let i = 0; i < 64; i++) { const e = "
                    "document.createElement('div'); e.setAttribute('dir', v); n.appendChild(e); n = e; } "
@@ -737,4 +739,94 @@ WR_TEST(testMathWithPercentages) {
     env.flush();
     checkEval(env, "Math.round($('a').getBoundingClientRect().width)", "55");
     expectMatchesRebuild(env, "a calc width set by script");
+}
+
+/// widget-sandbox v0.3.0 auto/28 (css.display.grid): a poll's option rows (corpus bot-demos/02-poll), each a <button>
+/// grid `52px 1fr auto`: the auto column fits its count, so the count ends at the row's end (its right padding, 8 px,
+/// before it), and a bar across columns 2–3 runs from 52 px to the row's end, whatever the label's length (an
+/// ellipsised one included) and the fill's width.
+WR_TEST(testAPollRowsAutoColumnFitsItsCount) {
+    const char* rows[][3] = {{"Friday", "0", "0%"}, {"Saturday after lunch, if it does not rain", "803", "60%"},
+                             {"Sunday", "1", "100%"}};
+    std::string body = "<div id=os>";
+    for (const auto& row : rows) {
+        body += std::string("<button><span class=p>0%</span><span class=l><span class=n>") + row[0] +
+                "</span></span><span class=c><span>" + row[1] + "</span></span><i class=b><i style='width:" + row[2] +
+                "'></i></i></button>";
+    }
+    body += "</div>";
+    RenderEnv env(page("#os button{display:grid;grid-template-columns:52px 1fr auto;align-items:center;row-gap:6px;"
+                       "width:100%;margin:0;padding:8px 8px 10px 0;background:none;border-radius:12px;color:inherit;"
+                       "font:inherit;text-align:left}"
+                       ".p{font-size:14px;font-weight:600;text-align:right;padding-right:10px;white-space:nowrap}"
+                       ".l{display:flex;align-items:center;gap:6px;min-width:0}"
+                       ".n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+                       ".c{font-size:13px;padding-left:8px}"
+                       ".b{grid-column:2/4;height:6px;border-radius:3px;background:#ddd}"
+                       ".b i{display:block;height:100%;border-radius:3px;background:#36c}",
+                       body));
+    // Per row: the count's right edge, the bar's left and right edges, from the row's left; the row's width.
+    checkEval(env,
+              "[...document.querySelectorAll('#os button')].map(b => { const r = b.getBoundingClientRect(), "
+              "c = b.children[2].firstChild.getBoundingClientRect(), t = b.children[3].getBoundingClientRect(); "
+              "return [c.right - r.left, t.left - r.left, t.right - r.left, r.width].map(Math.round).join(); }).join(' ')",
+              "292,52,292,300 292,52,292,300 292,52,292,300");
+}
+
+/// widget-sandbox v0.3.0 auto/29 (css.display.grid): the grid-template shorthand sets the rows, then the columns
+/// after its slash.
+WR_TEST(testGridTemplateSetsRowsThenColumns) {
+    RenderEnv env(page("#g{display:grid;width:240px;height:120px;grid-template:repeat(3,1fr)/repeat(2,1fr)}",
+                       "<div id=g><i></i><i></i><i></i><i id=c3></i><i></i><i id=c5></i></div>"));
+    checkEval(env,
+              "['c3', 'c5'].map(id => { const r = $(id).getBoundingClientRect(); "
+              "return [r.x, r.y, r.width, r.height].join(); }).join(' ')",
+              "120,40,120,40 120,80,120,40");
+}
+
+/// widget-sandbox v0.3.0 auto/29 (css.box.aspect-ratio): an aspect-ratio box's height follows the width its max-width
+/// leaves, not the width available to it.
+WR_TEST(testAspectRatioFollowsTheMaxWidth) {
+    RenderEnv env(page("#bd{position:relative;max-width:264px;margin:auto;aspect-ratio:1}", "<div id=bd></div>"));
+    checkEval(env, "(r => [r.x, r.y, r.width, r.height].join())($('bd').getBoundingClientRect())", "18,0,264,264");
+}
+
+/// widget-sandbox v0.3.0 auto/29 (css.display.grid, css.box.size): a tic-tac-toe board (corpus bot-demos/04-tic-tac-toe)
+/// as it builds itself: nine buttons in an absolutely positioned `repeat(3,1fr)/repeat(3,1fr)` grid over a square
+/// board; a mark, an <svg> 58 % of its button, sits centred in its own cell and leaves the cells equal thirds.
+WR_TEST(testABoardsMarksSitInTheirCells) {
+    RenderEnv env(page("svg{fill:none}#bd{position:relative;max-width:264px;margin:auto;aspect-ratio:1}"
+                       "#g{position:absolute;inset:0;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr)}"
+                       "#g button{padding:0;border-radius:16px;background:none;display:grid;place-items:center}"
+                       "#g svg{width:58%;height:58%;stroke-width:2.6}",
+                       "<div id=bd><div id=g></div></div>"));
+    checkEval(env,
+              "for (let i = 0; i < 9; i++) $('g').appendChild(document.createElement('button')); "
+              "const c = $('g').children; "
+              "c[4].innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M6.5 6.5l11 11\"/></svg>'; "
+              "c[5].innerHTML = '<svg viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/></svg>'; "
+              "const at = e => (r => [r.x, r.y, r.width, r.height].map(v => Math.round(v * 10) / 10).join())"
+              "(e.getBoundingClientRect()); "
+              "[at(c[0]), at(c[4]), at(c[5]), at(c[8]), at(c[4].firstChild), at(c[5].firstChild)].join(' ')",
+              "18,0,88,88 106,88,88,88 194,88,88,88 194,176,88,88 124.5,106.5,51,51 212.5,106.5,51,51");
+}
+
+/// widget-sandbox v0.3.0 auto/30 (css.transform.2d): a shape's CSS transform with `transform-box: fill-box` scales about
+/// its own box (`transform-origin: center` is the circle's centre), and getBoundingClientRect reports the transformed
+/// box the painter draws; without it the reference box is the view box, so `scale(3)` scales about the user space's
+/// origin. A moved shape takes its box along.
+WR_TEST(testFillBoxScalesAShapeAboutItself) {
+    RenderEnv env(page("svg{display:block}.pu{transform-box:fill-box;transform-origin:center}#d2,#d4{transform:scale(3)}",
+                       "<svg width=300 height=96 viewBox='0 0 300 96'><circle id=d1 cx=284 cy=20 r=4 fill='rgb(1,0,0)'/>"
+                       "<circle class=pu id=d2 cx=284 cy=20 r=4 fill='rgb(2,0,0)'/>"
+                       "<circle id=d4 cx=20 cy=10 r=4 fill='rgb(3,0,0)'/></svg>"));
+    const char* boxes = "['d1', 'd2', 'd4'].map(id => (r => [r.x, r.y, r.width, r.height].join())"
+                        "($(id).getBoundingClientRect())).join(' ')";
+    checkEval(env, boxes, "280,16,8,8 272,8,24,24 48,18,24,24");
+    expectPaints(env, {"path 1,0,0 280,16,288,24", "path 2,0,0 272,8,296,32", "path 3,0,0 48,18,72,42"});
+    checkEval(env, "$('d2').setAttribute('cx', '100'); $('d2').setAttribute('cy', '70'); 1", "1");
+    env.flush();
+    checkEval(env, boxes, "280,16,8,8 88,58,24,24 48,18,24,24");
+    expectPaints(env, {"path 1,0,0 280,16,288,24", "path 2,0,0 88,58,112,82", "path 3,0,0 48,18,72,42"});
+    expectMatchesRebuild(env, "a fill-box shape moved");
 }

@@ -35,8 +35,7 @@ struct Affine {
 
 /// The transforms of `element` and each ancestor, composed innermost first (render_item::get_visual_transform): what
 /// maps `element`'s layout boxes into the document. False (and `out` the identity) when none of them is transformed.
-/// `visited`, when given, gains one per element walked.
-bool visualTransform(const litehtml::element& element, Affine& out, uint64_t* visited = nullptr);
+bool visualTransform(const litehtml::element& element, Affine& out);
 
 /// Maps `rects` (layout boxes of `element`, document coordinates) through the transforms of `element` and each ancestor,
 /// innermost first (render_item::get_visual_transform: transform, translate, rotate and scale about the origin), each rect

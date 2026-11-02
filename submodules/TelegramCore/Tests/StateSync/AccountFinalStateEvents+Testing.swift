@@ -36,7 +36,7 @@ extension AccountFinalStateEvents {
         walletTransferUpdates: [WalletTransferUpdate] = [],
         walletTonConnectEvents: [WalletTonConnectEvent] = [],
         updatedWalletState: Api.WalletState? = nil,
-        updatedAgentSettings: Api.agent.Settings? = nil,
+        updatedAgentSettings: EngineAgentSettings? = nil,
         updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:],
         sentScheduledMessageIds: Set<MessageId> = Set(),
         reportMessageDelivery: Set<MessageId> = Set(),

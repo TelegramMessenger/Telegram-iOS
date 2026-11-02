@@ -1222,7 +1222,9 @@ private final class WalletSendScreenComponent: Component {
                 self.abandonRestoration()
                 self.cancelPendingSend()
                 self.isVisible = false
-                self.peerAddressResolution.state = .cancelled
+                if self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading {
+                    self.peerAddressResolution.state = .cancelled
+                }
                 self.peerAddressDisposable.set(nil)
                 if let parentController = controller.parentController() {
                     parentController.dismiss(animated: true)
@@ -2321,6 +2323,7 @@ private final class WalletSendScreenComponent: Component {
             var recipientFrame: CGRect?
             if !isLandscape && (component.peer != nil || !self.recipientAddress.isEmpty) {
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let recipientDisplay = self.peerAddressResolution.display(recipientAddress: self.recipientAddress)
                 let recipientSize = self.recipient.update(
                     transition: transition,
                     component: AnyComponent(WalletSendRecipientComponent(
@@ -2330,7 +2333,8 @@ private final class WalletSendScreenComponent: Component {
                         nameDisplayOrder: presentationData.nameDisplayOrder,
                         peer: component.peer,
                         address: self.recipientAddress,
-                        isLoading: self.recipientAddress.isEmpty && (self.peerAddressResolution.state == .notRequested || self.peerAddressResolution.state == .loading),
+                        isLoading: recipientDisplay == .loading,
+                        unavailableText: recipientDisplay == .unavailable ? environment.strings.Wallet_Recipient_Error : nil,
                         openChat: self.canOpenRecipientChat ? { [weak self] in
                             self?.openRecipientChat()
                         } : nil,

@@ -84,15 +84,10 @@ private:
     Vector<Held> m_items;
 };
 
-/// The layout a geometry member reads, after charging the query, flushing what is pending
-/// (RenderTree::flushForQuery) and counting that work against the step's layout-query budget
-/// (work::kLayoutQueryBudget): past it the widget stops with StopReason::LayoutQuery and this throws Aborted.
-/// nullptr when there is no render tree (a document that is not laid out).
+/// The layout a geometry member reads, after flushing what is pending (RenderTree::flushForQuery, whose time is the
+/// task's query time): past 100 ms of it in one task the widget stops with StopReason::LayoutQuery and this throws
+/// Aborted. nullptr when there is no render tree (a document that is not laid out).
 RenderTree* layoutForQuery(JSContext* ctx);
-
-/// Charges what a query's read walked and counts it against the step's layout-query budget, as layoutForQuery counts
-/// the query and its flush: past the budget the widget stops with StopReason::LayoutQuery and this throws Aborted.
-void chargeQueryRead(JSContext* ctx, uint64_t units);
 
 /// The size `element` is laid out at, its content box (CSS px, before transforms), after a layout query, and which of
 /// its dimensions the CSS leaves auto; nullopt when it is not being rendered. HTML img's width and height when the

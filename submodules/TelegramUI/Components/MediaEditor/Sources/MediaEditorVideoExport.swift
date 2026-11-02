@@ -55,6 +55,7 @@ public final class MediaEditorVideoExport {
     
     public struct Configuration {
         public var shouldOptimizeForNetworkUse: Bool = true
+        public var useStreamingWriter: Bool = false
         public var videoSettings: [String: Any]
         public var audioSettings: [String: Any]
         public var values: MediaEditorValues
@@ -244,6 +245,11 @@ public final class MediaEditorVideoExport {
     
     private var writer: MediaEditorVideoExportWriter?
     private var composer: MediaEditorComposer?
+    
+    public static var forceLegacyStoryWriter = false
+    public static var forceLegacyChatWriter = false
+    
+    public var streamingFileGrowth: ((Int64, Int64) -> Void)?
     
     let debugFrameObserver: ((CVPixelBuffer, CMTime) -> Void)?
     let debugCompositionTimeObserver: ((Double) -> Void)?
@@ -777,6 +783,12 @@ public final class MediaEditorVideoExport {
                 
         if self.configuration.isSticker {
             self.writer = MediaEditorVideoFFMpegWriter()
+        } else if self.configuration.useStreamingWriter, case let .video(_, isStory) = self.subject, !(isStory ? MediaEditorVideoExport.forceLegacyStoryWriter : MediaEditorVideoExport.forceLegacyChatWriter), let duration = self.durationValue, duration.seconds > 0.0, MediaEditorVideoStreamingWriter.supports(configuration: self.configuration) {
+            let streamingWriter = MediaEditorVideoStreamingWriter(expectedDuration: duration.seconds)
+            streamingWriter.onFileGrowth = { [weak self] fileSize, headerEnd in
+                self?.streamingFileGrowth?(fileSize, headerEnd)
+            }
+            self.writer = streamingWriter
         } else {
             self.writer = MediaEditorVideoAVAssetWriter()
         }

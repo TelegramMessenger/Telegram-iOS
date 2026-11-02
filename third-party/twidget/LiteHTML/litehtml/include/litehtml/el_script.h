@@ -14,6 +14,8 @@ namespace litehtml
 
         void        parse_attributes() override;
         bool        appendChild(const ptr& el) override;
+        bool        accepts_child(string_id /*tag*/) const override { return true; } // Telegram (VENDOR.md edit 83)
+        bool        accepts_text() const override { return true; }
         string_id   tag() const override;
         const char* get_tagName() const override;
     };

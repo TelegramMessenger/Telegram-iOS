@@ -21,9 +21,8 @@ enum class PseudoElement : uint8_t { None, Before, After };
 const std::vector<std::string>& computedPropertyNames();
 
 /// The resolved value of `name` (lower-cased, or a custom property as written) for `element`, or for its
-/// pseudo-element: a missing pseudo-element reads its host's inherited values, with `content: none`. Charges nothing:
-/// `work`, when given, gains the units of what the read walked and scanned beyond the value it returns.
-std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo, uint64_t* work = nullptr);
+/// pseudo-element: a missing pseudo-element reads its host's inherited values, with `content: none`.
+std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo);
 
 /// `::before` / `:before` and the like (ASCII case-insensitive), or None for anything else, empty included.
 PseudoElement pseudoElementNamed(std::string_view name);
@@ -37,8 +36,7 @@ enum class UserSelect : uint8_t { Auto, None, Text };
 UserSelect ownUserSelect(const litehtml::element& element);
 
 /// Whether text in `element` (or, for a text piece, in its parent) is selectable: the nearest ancestor-or-self whose own
-/// value is not Auto decides, and the UA layer's `none` on the root ends the walk (sdk-v1 §5.10). Charges nothing: the
-/// caller does, from `visited`, which gains one per element walked.
-bool selectsText(const litehtml::element& element, uint64_t* visited = nullptr);
+/// value is not Auto decides, and the UA layer's `none` on the root ends the walk (sdk-v1 §5.10).
+bool selectsText(const litehtml::element& element);
 
 } // namespace wr

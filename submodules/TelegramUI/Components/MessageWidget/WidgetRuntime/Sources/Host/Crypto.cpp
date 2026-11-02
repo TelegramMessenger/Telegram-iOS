@@ -2,7 +2,6 @@
 
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -25,7 +24,6 @@ Value Crypto::getRandomValues(JSContext* ctx, Value array) {
     if (length > kMaxRandomBytes) {
         throw DOMError{"QuotaExceededError", "getRandomValues fills at most 65536 bytes."};
     }
-    charge(ctx, work::kCssByte * uint64_t(length));
     size_t size = 0;
     uint8_t* bytes = JS_GetArrayBuffer(ctx, &size, buffer.get());
     if (bytes && offset + length <= size) {

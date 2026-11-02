@@ -127,6 +127,12 @@ WR_TEST(testTheAttributeRules) {
         {N::SVG, "rect", "fill", "url(https://x#g)", "0"},
         {N::SVG, "rect", "fill", "oklch(1 0 0)", "0"},
         {N::SVG, "rect", "clip-path", "url(#c)", "0"},
+        // widget-sandbox v0.4.0 (sdk-v1 §2.17): env() rewritten as in a stylesheet.
+        {N::SVG, "rect", "fill", "env(safe-area-inset-bottom, red)", "1|fill|var(--tg-content-safe-area-inset-bottom, red)|0"},
+        {N::SVG, "rect", "stroke", "env(keyboard-inset-height, red)", "1|stroke|red|0"},
+        {N::SVG, "rect", "stroke", "env(keyboard-inset-height)", "0"},
+        {N::SVG, "rect", "fill", "url(env(safe-area-inset-bottom))", "0"},
+        {N::SVG, "rect", "stroke-width", "env(safe-area-inset-bottom, 2px)", "1|stroke-width|env(safe-area-inset-bottom, 2px)|0"},
         {N::SVG, "text", "font-family", "Inter, monospace", "1|font-family|monospace|0"},
         {N::SVG, "svg", "overflow", "scroll", "1|overflow|scroll|0"},
         {N::HTML, "img", "src", "https://x", "1|src|https://x|0"},

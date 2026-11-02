@@ -160,12 +160,13 @@ WR_TEST(testHandlerNamesMatchTheIDL) {
 // Ruling R3: compiling a body is a script entry, so a stop inside it stays a stop. A body that closes the function
 // early runs its own code while it compiles (Ruling 15's accepted cost); here that code never ends.
 WR_TEST(testAStopWhileCompilingStaysAStop) {
+    wr_test::ScopedProductSlices slices;
     wr_test::HostEnv env;
     env.eval("var d = document.createElement('div');"
              "d.setAttribute('onclick', '} }.onclick; }); for (;;) {} (function () { return { a: function () {');");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 300000);
+    wr_test::stopAfter(env.runtime());
     CHECK_EQ(env.eval("try { d.onclick; } catch (e) {} 'caught'"), std::string("ABORTED"));
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+    CHECK(env.runtime().stopReason() == wr::StopReason::Cpu);
     CHECK_EQ(env.eval("1"), std::string("STOPPED"));
 }
 
@@ -297,21 +298,20 @@ WR_TEST(testHandlersWithoutTheHostState) {
     CHECK_JS(env, "b.onclick !== null && (b.onclick = null, b.onclick === null)");
 }
 
+
 namespace {
 
 enum class ChangeOutcome { Completed, StoppedInTheListener, StoppedOutside, Escaped };
 
-/// Runs `change` on a fresh window whose `d` is a div with one click listener (and `f` a function), with the budget
-/// placed to refuse the first charge `offset` work units or more into the change (allocations count, at QuickJS's
-/// rate). JS_ChargeWork asks the interrupt handler only once a period, so the period is aligned first: a full period's
-/// charge asks it (no limit yet), so the next check is exactly JS_WORK_CHECK_PERIOD units away; the units that put it
-/// `offset` modulo the period into the change are spent; and the limit is `offset` units on, so the checks before it
-/// pass. Aborted is what the attribute listener throws for a stop inside it; Thrown comes from the charges outside it
-/// (the mutation's own, or the IDL setter's, which `glue` maps). After a stop the runtime must be latched. Then nothing
-/// may be left over: everything the change made is reachable only from `d` and `f`, so with both dropped and a
-/// collection, the object count is back where the same round without the change left it.
+/// Runs `change` on a fresh window whose `d` is a div with one click listener (and `f` a function), with the heap's
+/// limit `slack` bytes past what is in use when the change starts, so one of its allocations may be refused at the
+/// limit (the memory stop latches inside QuickJS's allocator, quickjs-ng change 9). Aborted is what the attribute
+/// listener throws for a stop inside it; Thrown or std::bad_alloc come from the allocations outside it. After a refusal
+/// the runtime is latched (Memory). Then nothing may be left over: everything the change made is reachable only from `d`
+/// and `f`, so with both dropped and a collection, the object count is back where the same round without the change
+/// left it.
 template <class F>
-ChangeOutcome runChangeWithStopAt(uint64_t offset, F&& change) {
+ChangeOutcome runChangeWithMemoryAt(size_t slack, F&& change) {
     wr_test::HostEnv env;
     JSContext* ctx = env.ctx();
     JSRuntime* rt = env.runtime().jsRuntime();
@@ -331,7 +331,7 @@ ChangeOutcome runChangeWithStopAt(uint64_t offset, F&& change) {
     };
     const char* setup = "globalThis.d = document.createElement('div'); d.addEventListener('click', () => {}); globalThis.f = () => {};";
     env.eval(setup);
-    int64_t baseline = dropAndCollect();
+    const int64_t baseline = dropAndCollect();
     env.eval(setup);
     ChangeOutcome outcome = ChangeOutcome::Completed;
     {
@@ -343,11 +343,9 @@ ChangeOutcome runChangeWithStopAt(uint64_t offset, F&& change) {
         wr::Atom click = wr::Atom::fromUTF8(ctx, "click");
         wr::String body = wr::String::fromUTF8(ctx, "void 0");
         change(ctx, element, onclick.get(), click.get(), body, f.get(), true);
-        uint64_t periods = (offset - 1) / JS_WORK_CHECK_PERIOD;
-        uint64_t within = offset - periods * JS_WORK_CHECK_PERIOD;
-        wr::charge(ctx, JS_WORK_CHECK_PERIOD);
-        wr::charge(ctx, JS_WORK_CHECK_PERIOD - within);
-        env.runtime().setWorkLimit(JS_GetWorkUnits(rt) + offset);
+        JSMemoryUsage usage;
+        JS_ComputeMemoryUsage(rt, &usage);
+        JS_SetMemoryLimit(rt, size_t(usage.malloc_size) + slack);
         try {
             change(ctx, element, onclick.get(), click.get(), body, f.get(), false);
         } catch (const wr::Aborted&) {
@@ -355,69 +353,68 @@ ChangeOutcome runChangeWithStopAt(uint64_t offset, F&& change) {
         } catch (const wr::Thrown&) {
             JS_FreeValue(ctx, JS_GetException(ctx));
             outcome = ChangeOutcome::StoppedOutside;
+        } catch (const std::bad_alloc&) {
+            outcome = ChangeOutcome::StoppedOutside;
         } catch (...) {
             JS_FreeValue(ctx, JS_GetException(ctx));
             outcome = ChangeOutcome::Escaped;
         }
+        JS_SetMemoryLimit(rt, wr::Runtime::Options().memoryLimitBytes);
     }
     if (outcome == ChangeOutcome::StoppedInTheListener || outcome == ChangeOutcome::StoppedOutside) {
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
+        CHECK(env.runtime().stopReason() == wr::StopReason::Memory);
+    }
+    if (env.runtime().stopReason() != wr::StopReason::None) {
         CHECK_EQ(env.eval("1"), std::string("STOPPED"));
     }
-    int64_t left = dropAndCollect();
+    const int64_t left = dropAndCollect();
     if (left != baseline) {
         wr_test::failures()++;
-        std::printf("  stop at offset %llu: %lld objects left over\n", (unsigned long long)offset, (long long)(left - baseline));
+        std::printf("  a refusal at %zu bytes of slack: %lld objects left over\n", slack, (long long)(left - baseline));
     }
     return outcome;
 }
 
-/// Sweeps the stop over the first `units` units of `change` (its measured cost, with room); every offset must end in
-/// completion or a latched stop, and at least one must stop inside the attribute listener when `listener` says so.
+/// Sweeps the limit over the change's allocations, 8 bytes at a time until it completes 8 times in a row; every slack
+/// must end in completion or a latched stop, and at least one must stop inside the attribute listener when `listener`
+/// says so.
 template <class F>
-void sweepStops(const char* what, uint64_t units, bool listener, F&& change) {
+void sweepMemory(const char* what, bool listener, F&& change) {
     int inside = 0;
-    int completed = 0;
-    for (uint64_t offset = 1; offset <= units; offset++) {
-        ChangeOutcome outcome = runChangeWithStopAt(offset, change);
+    int stopped = 0;
+    int completedInARow = 0;
+    for (size_t slack = 0; slack <= 16384 && completedInARow < 8; slack += 8) {
+        const ChangeOutcome outcome = runChangeWithMemoryAt(slack, change);
         if (outcome == ChangeOutcome::Escaped) {
             wr_test::failures()++;
-            std::printf("  %s: an exception other than Aborted or Thrown escaped at offset %llu\n", what, (unsigned long long)offset);
+            std::printf("  %s: an exception other than Aborted, Thrown or bad_alloc escaped at %zu bytes\n", what, slack);
         }
         inside += outcome == ChangeOutcome::StoppedInTheListener;
-        completed += outcome == ChangeOutcome::Completed;
+        stopped += outcome != ChangeOutcome::Completed;
+        completedInARow = outcome == ChangeOutcome::Completed ? completedInARow + 1 : 0;
     }
-    if ((listener && inside == 0) || completed == 0) {
+    if ((listener && inside == 0) || stopped == 0 || completedInARow < 8) {
         wr_test::failures()++;
-        std::printf("  %s: %d stops in the listener, %d completions over %llu offsets\n", what, inside, completed, (unsigned long long)units);
+        std::printf("  %s: %d refusals in the listener, %d in all, %d completions in a row\n", what, inside, stopped, completedInARow);
     }
 }
 
 } // namespace
 
-// Ruling R6: the attribute listener allocates and registers a listener inside a mutation. A stop at any charge on the
-// way (the mutation's own, the listener's, the handler map's, the listener list's) is final, Aborted when it is the
-// listener's, and the unwind leaves every reference owned once. The IDL setter's paths are swept the same way.
-WR_TEST(testAStopInsideAHandlerChangeIsFinal) {
-    // The first activation (a map, an entry, a processing function, a listener): about 120 units.
-    sweepStops("setting the content attribute", 160, true, [](JSContext* ctx, wr::Element& d, JSAtom onclick, JSAtom, const wr::String& body, JSValueConst, bool setup) {
+// The final review's I2 (Ruling R6, restated on the memory limit): the attribute listener allocates and registers a
+// listener inside a mutation. An allocation refused anywhere on the way (the mutation's own, the listener's, the handler
+// map's, the listener list's) is final, Aborted when it is the listener's, and the unwind leaves every reference owned
+// once. The IDL setter is swept the same way. Removing or clearing a handler allocates nothing in the widget's heap, so
+// no refusal reaches those paths.
+WR_TEST(testARefusalInsideAHandlerChangeIsFinal) {
+    sweepMemory("setting the content attribute", true, [](JSContext* ctx, wr::Element& d, JSAtom onclick, JSAtom, const wr::String& body, JSValueConst, bool setup) {
         if (!setup) {
             d.setAttributeValue(ctx, onclick, body);
         }
     });
-    sweepStops("removing the content attribute", 40, true, [](JSContext* ctx, wr::Element& d, JSAtom onclick, JSAtom, const wr::String& body, JSValueConst, bool setup) {
-        if (setup) {
-            d.setAttributeValue(ctx, onclick, body);
-        } else {
-            d.removeAttributeAtom(ctx, onclick);
-        }
-    });
-    sweepStops("setting the IDL attribute", 120, false, [](JSContext* ctx, wr::Element& d, JSAtom, JSAtom click, const wr::String&, JSValueConst f, bool setup) {
+    sweepMemory("setting the IDL attribute", false, [](JSContext* ctx, wr::Element& d, JSAtom, JSAtom click, const wr::String&, JSValueConst f, bool setup) {
         if (!setup) {
             wr::setEventHandler(ctx, d, click, f);
         }
-    });
-    sweepStops("clearing the IDL attribute", 40, false, [](JSContext* ctx, wr::Element& d, JSAtom, JSAtom click, const wr::String&, JSValueConst f, bool setup) {
-        wr::setEventHandler(ctx, d, click, setup ? f : JS_NULL);
     });
 }

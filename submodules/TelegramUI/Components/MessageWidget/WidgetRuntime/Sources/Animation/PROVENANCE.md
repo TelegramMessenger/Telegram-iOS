@@ -34,15 +34,13 @@ list parsers.
    widget can make 10,000 keyframes each with its own `linear()`. Twidget's per-thread parse cache (256 entries) is
    gone: an easing is parsed once per keyframe or effect and shared.
 5. **`pair_tokens`' per-thread cache is gone** (2,048 entries of up to 4,096-byte keys, on the system heap and shared
-   by every widget on the thread); the work is charged instead.
+   by every widget on the thread): each call tokenizes its pair afresh.
 6. **Colours:** `#hex` and `rgb()`/`rgba()` are normalised exactly as twidget did (their components stay exact, so
    `rgb(0 0 0 / 50%)` keeps alpha 0.5). Named colours and `hsl()`/`hsla()` go through litehtml's colour parser
    (`litehtml::parse_color`, componentized as litehtml's own style values are: its full named table, where twidget had
    its own, and `hsl()`, which twidget did not normalise at all), with alpha as litehtml's byte. `currentcolor` and the
    colour functions litehtml does not parse (`hwb()`, `lab()`, …) stay as written. A colour function with a nested
    parenthesis is left as text.
-7. **Charging:** each public function charges a scan of its inputs (`chargeScan`) before the work; `effectValue`
-   charges four scans of its values. Twidget charged nothing.
 
 ## Changes in the V5f port (`CSSAnimationRules`)
 
@@ -51,8 +49,7 @@ list parsers.
    `animation-timing-function` is kept as its own easing; one without it takes the animation's when the animation is
    made, which twidget decided while sampling.
 2. **A keyframe selector outside 0%…100% is dropped** (CSS Animations 1 §3); twidget kept it.
-3. **Lists stop at 64 entries** (`kMaxCSSListEntries`) and every read is charged (`kCssByte` for a sheet, a scan for a
-   declaration).
+3. **Lists stop at 64 entries** (`kMaxCSSListEntries`).
 4. **`parseTimeMs` returns milliseconds** and takes no `calc()` (twidget's `TimeScanner` is not ported).
 5. **A transition's combined duration decides** (`max(duration, 0) + delay > 0`, CSS Transitions 1): `opacity 0s 1s` is a
    transition; twidget dropped every entry whose duration was not positive.

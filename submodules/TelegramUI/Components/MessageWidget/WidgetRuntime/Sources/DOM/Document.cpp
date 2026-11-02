@@ -126,7 +126,6 @@ bool isValidElementLocalName(JSContext* ctx, const String& name) {
     if (n == 0) {
         return false;
     }
-    chargeScan(ctx, n);
     char16_t first = name.at(0);
     if (isASCIIAlpha(first)) {
         for (uint32_t i = 1; i < n; i++) {
@@ -168,8 +167,7 @@ Ref<Element> Document::createElementNS(JSContext* ctx, std::optional<String> nam
     std::optional<String> prefix;
     String localName = qualifiedName;
     uint32_t colon = UINT32_MAX;
-    // The colon is looked for once: charged for the whole name, which the checks below read again.
-    chargeScan(ctx, qualifiedName.length());
+    // The colon is looked for once.
     for (uint32_t i = 0; i < qualifiedName.length(); i++) {
         if (qualifiedName.at(i) == ':') {
             colon = i;

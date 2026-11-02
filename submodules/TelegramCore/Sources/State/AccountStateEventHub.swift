@@ -151,8 +151,8 @@ final class AccountStateEventHub {
         return self.walletStateUpdatesPipe.signal()
     }
 
-    private let agentSettingsUpdatesPipe = ValuePipe<Api.agent.Settings>()
-    var agentSettingsUpdates: Signal<Api.agent.Settings, NoError> {
+    private let agentSettingsUpdatesPipe = ValuePipe<EngineAgentSettings>()
+    var agentSettingsUpdates: Signal<EngineAgentSettings, NoError> {
         return self.agentSettingsUpdatesPipe.signal()
     }
 

@@ -28,14 +28,13 @@ static char16_t unitAt(const JSStringView& v, uint32_t i) {
     return v.latin1 ? char16_t(v.latin1[i]) : char16_t(v.utf16[i]);
 }
 
-/// Whether the string `token` is `v`'s code units [start, end). A comparison of equal lengths is charged by its length.
+/// Whether the string `token` is `v`'s code units [start, end).
 static bool tokenIs(JSContext* ctx, JSValueConst token, const JSStringView& v, uint32_t start, uint32_t end) {
     JSStringView t{nullptr, nullptr, 0};
     JS_GetStringView(token, &t);
     if (t.length != end - start) {
         return false;
     }
-    chargeScan(ctx, t.length);
     for (uint32_t i = 0; i < t.length; i++) {
         if (unitAt(t, i) != unitAt(v, start + i)) {
             return false;
@@ -48,8 +47,7 @@ static bool tokenIs(JSContext* ctx, JSValueConst token, const JSStringView& v, u
 // is new, so a value repeating one token does not allocate per repeat.
 void DOMTokenList::parse(JSContext* ctx, const String& value) {
     JSStringView v = value.view();
-    // Every unit is read once by the scan (the comparisons are charged by tokenIs).
-    chargeScan(ctx, v.length);
+    // Every unit is read once by the scan.
     uint32_t i = 0;
     while (i < v.length) {
         while (i < v.length && isASCIIWhitespace(unitAt(v, i))) {
@@ -62,16 +60,13 @@ void DOMTokenList::parse(JSContext* ctx, const String& value) {
         if (i == start) {
             continue;
         }
-        size_t compared = 0;
         bool duplicate = false;
         for (const Held& t : m_tokens) {
-            compared++;
             if (tokenIs(ctx, t.value, v, start, i)) {
                 duplicate = true;
                 break;
             }
         }
-        charge(ctx, work::kNodeVisit * (compared + 1));
         if (!duplicate) {
             String token = value.substring(ctx, start, i);
             m_tokens.emplace_back();
@@ -89,7 +84,7 @@ const Vector<Held>& DOMTokenList::tokens(JSContext* ctx) {
     if (same) {
         return m_tokens;
     }
-    // Not parsed until the parse below is complete: a parse the budget stops is redone on the next read.
+    // Not parsed until the parse below is complete: a parse the memory limit stops is redone on the next read.
     m_parsed = false;
     this->clearTokens(rt);
     m_parsedFrom.set(rt, JS_DupValue(ctx, current));
@@ -117,7 +112,6 @@ static void checkNotEmpty(const String& token) {
 
 static void checkNoWhitespace(JSContext* ctx, const String& token) {
     JSStringView v = token.view();
-    chargeScan(ctx, v.length);
     for (uint32_t i = 0; i < v.length; i++) {
         if (isASCIIWhitespace(unitAt(v, i))) {
             throw DOMError{"InvalidCharacterError", "The token contains ASCII whitespace."};
@@ -130,10 +124,9 @@ static void validateToken(JSContext* ctx, const String& token) {
     checkNoWhitespace(ctx, token);
 }
 
-/// The index of `token` in `set`, or -1, charging each comparison.
+/// The index of `token` in `set`, or -1.
 static int indexOf(JSContext* ctx, const Vector<String>& set, const String& token) {
     for (size_t i = 0; i < set.size(); i++) {
-        charge(ctx, work::kNodeVisit);
         if (set[i].equals(ctx, token)) {
             return int(i);
         }
@@ -143,7 +136,6 @@ static int indexOf(JSContext* ctx, const Vector<String>& set, const String& toke
 
 Vector<String> DOMTokenList::copyOfTokens(JSContext* ctx) {
     const Vector<Held>& tokens = this->tokens(ctx);
-    charge(ctx, work::kNodeVisit * tokens.size());
     Vector<String> set{JSAllocator<String>(JS_GetRuntime(ctx))};
     set.reserve(tokens.size());
     for (const Held& t : tokens) {
@@ -156,7 +148,6 @@ bool DOMTokenList::contains(JSContext* ctx, String token) {
     const Vector<Held>& tokens = this->tokens(ctx);
     JSStringView v = token.view();
     for (const Held& t : tokens) {
-        charge(ctx, work::kNodeVisit);
         if (tokenIs(ctx, t.value, v, 0, v.length)) {
             return true;
         }
@@ -256,7 +247,6 @@ bool DOMTokenList::replace(JSContext* ctx, String token, String newToken) {
     replaced.reserve(set.size());
     bool placed = false;
     for (String& t : set) {
-        charge(ctx, work::kNodeVisit);
         if (t.equals(ctx, token) || t.equals(ctx, newToken)) {
             if (!placed) {
                 replaced.push_back(newToken);

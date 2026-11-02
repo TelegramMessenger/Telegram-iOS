@@ -9,11 +9,11 @@
   "D4": "Input: taps in the PoC, drag in v1; no keyboard at all, not even Enter or Space (it conflicts with the chat input field; Artem, 2026-10-16)",
   "D5": "strict policy everywhere; webAnimations and morphUpdates from the profile",
   "D6": "3D (__tw3d) cut from the release",
-  "D8": "SDK outward: openLink / openTelegramLink on a tap with confirmation, haptics; no sendMessage",
+  "D8": "SDK outward: openLink (confirmed with the full URL) and openTelegramLink (no confirmation of its own, 2026-10-29) on a tap, haptics; no sendMessage",
   "D11": "One widget model: classic DOM in the sandbox",
   "D12a": "Above the cap: hard clip, no fullscreen",
   "D14": "Theme: themeParams + --tg-theme-*, theme change event",
-  "D17": "State: localStorage per (account, chat, message id): the chat the message is in, as message ids are unique only within a chat (supergroups); 16 KB, QuotaExceededError; sessionStorage in memory",
+  "D17": "State: localStorage per (account, chat, message id): the chat the message is in, as message ids are unique only within a chat (supergroups); 4 KB, QuotaExceededError; sessionStorage in memory",
   "D18": "Text is not selectable by default; a widget enables selection with user-select: text (2026-10-20, replaces \"Text selection forbidden\")",
   "D20": "Mini-HTML (2026-10-17): a widget is one HTML document of at most 4 KB compressed and 32 KB uncompressed, delivered in the message; the server compresses the HTML from the bot (zlib at level 9 since 2026-10-24) and enforces both limits",
   "D21": "No accessibility in v1",
@@ -31,7 +31,9 @@
   "G1": "Gestures, v0.1.2 (Artem, 2026-10-22): one shared policy with the same thresholds on every client and in the sandbox. A double tap over the widget is always the widget's (both clicks and dblclick, on every element; the reaction stays with the bubble outside the widget). For the rest touch-action is the claim, decided per element at pointerdown over the target and its ancestors (a container covers its children, as in CSS): auto: holds and swipes are the bubble's (the widget gets pointercancel); pan-y / pan-x: drags on the other axis are the widget's; none: everything is the widget's, holds (contextmenu) included. The leading 20 px of the widget and the bubble outside it never take a claim. Replaces \"double tap and long press stay with the bubble\" (SDK)",
   "G2": "Vertical drags are the chat's, v0.1.3 (Artem, 2026-10-24): a widget claims only horizontal drags; a vertical drag over a widget always scrolls the chat, whatever touch-action says, and the widget gets pointercancel. auto: holds and drags are the bubble's; pan-y: horizontal drags are the widget's; pan-x claims nothing; none: horizontal drags and holds (contextmenu) are the widget's. The axis lock (the first move past the 10 px slop decides for the whole press), double taps and the leading 20 px are unchanged. The engine under the renderer always allows vertical panning. Replaces G1's pan-x and the vertical half of none",
   "R1": "Resize anchor, v0.1.3 (Artem, 2026-10-24): TelegramWidget.setResizeAnchor('top' | 'bottom') says which edge of the bubble stays put on screen when the widget's height changes (top by default: it grows downward; bottom: it grows upward and the content above moves). An SDK v1 addition inside profile 1: TelegramWidget.profile stays 1 and widgets detect the method with typeof. It goes through the bridge as a checked call (sdk-policy, four copies and the fixture), needs no gesture, and the host keeps the latest value and reports it with the height; the client's list compensates its scroll",
-  "I1": "The bot's data and requests (Artem, 2026-10-25; the server's spec): a widget is fixed code plus changeable state: the HTML never changes after sending; the state changes, and only the bot writes it. TelegramWidget.chatData, the chat state (one original message, seen only in its chat: in a group every member sees it; never forwarded), and publicData, the shared state (wherever the widget is shown: a forward gets a copy, or shares a shared widget's one state with the original): each a text of up to 1024 bytes (UTF-8), read-only in the widget; chatDataChanged / publicDataChanged when they change (no restart). isForward, chatType and viewer (Mini Apps' WebAppUser: id, first_name, last_name, username, is_premium; a field that breaks its rule is left out); a forward is told nothing about the chat it is in (no chatType: the bot must not learn where its widget was forwarded), and the widget knows its viewer only where it may ask the bot (can_query), originals included. request(data of 1-64 bytes): a callback button inside the widget; where it may ask is the server's per message (can_query: originals of a widget sent with allow_queries, forwards of one sent with fwd_allow_queries; background_query: the original in the private chat with the bot); the client marks a widget with can_query as one whose tap may send data to the bot's server; on a tap, one per tap (shared with openLink, openTelegramLink and copyText); in the background while visible: one when the widget appears on screen, then one per 5 s; one in flight; resolves { result } (text of at most 1024 bytes), rejects with error.code; the answer does not change the state. copyText(text of 1-256 characters) on a tap; the client's toast shows what it copied. Part of SDK v1 and layer 233 from the launch, inside profile 1. TelegramWidget.isPreview: an inline result in the list before it is sent gets its state but no input, no bridge call but ready and setResizeAnchor, no chat type or viewer, and Web Storage that is never committed. The checks are sdk-policy (four copies and the fixture)"
+  "I1": "The bot's data and requests (Artem, 2026-10-25; the server's spec): a widget is fixed code plus changeable state: the HTML never changes after sending; the state changes, and only the bot writes it. TelegramWidget.chatData, the chat state (one original message, seen only in its chat: in a group every member sees it; never forwarded), and publicData, the shared state (wherever the widget is shown: a forward gets a copy, or shares a shared widget's one state with the original): each a text of up to 1024 bytes (UTF-8), read-only in the widget; chatDataChanged / publicDataChanged when they change (no restart). isForward, chatType and viewer (Mini Apps' WebAppUser: id, first_name, last_name, username, is_premium; a field that breaks its rule is left out); a forward is told nothing about the chat it is in (no chatType: the bot must not learn where its widget was forwarded), and the widget knows its viewer only where it may ask the bot (can_query), originals included. request(data of 1-64 bytes): a callback button inside the widget; where it may ask is the server's per message (can_query: originals of a widget sent with allow_queries, forwards of one sent with fwd_allow_queries; background_query: the original in the private chat with the bot); the client marks a widget with can_query as one whose tap may send data to the bot's server; on a tap, one per tap (shared with openLink, openTelegramLink and copyText); in the background while visible: one when the widget appears on screen, then one per 5 s; one in flight; resolves { result } (text of at most 1024 bytes), rejects with error.code; the answer does not change the state. copyText(text of 1-256 characters) on a tap; the client's toast shows what it copied. Part of SDK v1 and layer 233 from the launch, inside profile 1. TelegramWidget.isPreview: an inline result in the list before it is sent gets its state but no input, no bridge call but ready and setResizeAnchor, no chat type or viewer, and Web Storage that is never committed. The checks are sdk-policy (four copies and the fixture)",
+  "L1": "Strict limits from the start (2026-10-29): about twice what real widgets use; past a counted cap the widget stops (docs/decisions.md)",
+  "P1-safe-area": "Clarified on 2026-10-29 (Artem; widgets were not launched yet), not profile 2: a client draws the message time and its status over the bottom corner of a widget with no caption below it, as on a photo (with a caption below the time is in the caption's line and nothing is drawn over the widget; a caption shown above the widget, invert_media, is as none: Artem's decision of 2026-10-30). env(safe-area-inset-top|right|bottom|left[, fallback]) is in: the validator rewrites it to var(--tg-content-safe-area-inset-…[, fallback]), root variables the renderer sets like the theme's (bottom = the height of the time's band, the others 0), with --tg-content-safe-area-corner-left|right for the width of the client's corner in that band (a physical side: right in a left-to-right interface, left in a right-to-left one); 0 with a caption below. Another env() name resolves to its fallback or drops the declaration. The UA layer adds the band to the body's bottom padding, and TelegramWidget.contentSafeAreaInset with the contentSafeAreaChanged event gives the same numbers to script"
  },
  "tables": {
   "html": {
@@ -659,6 +661,7 @@
     "minmax",
     "repeat",
     "fit-content",
+    "env",
     "url"
    ],
    "units": [
@@ -838,7 +841,7 @@
     "prefers-reduced-motion"
    ]
   },
-  "uaStylesheet": "@layer tw-ua{:where(html){color:var(--tg-theme-text-color);font:var(--tg-text-font-size,15px)/var(--tg-text-line-height,1.35) system-ui,sans-serif;-webkit-text-size-adjust:none;text-size-adjust:none;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}:where(body){margin:var(--tg-text-padding,8px 12px);padding:0}:where(h1,h2,h3,h4,h5,h6){margin:.75em 0 .35em;font-weight:600;line-height:1.25}:where(h1){font-size:1.6em}:where(h2){font-size:1.35em}:where(h3){font-size:1.2em}:where(h4){font-size:1.07em}:where(h5){font-size:1em}:where(h6){font-size:.87em}:where(p,ul,ol,menu,dl,pre,blockquote,figure,table){margin:.6em 0}:where(ul,ol,menu){padding:0 0 0 1.5em;padding-inline-start:1.5em;padding-inline-end:0}:where(ul,menu){list-style-type:disc}:where(ol){list-style-type:decimal}:where(li ul,li menu){list-style-type:circle}:where(li ul,li ol,li menu,li dl){margin:0}:where(dt){font-weight:600}:where(dd){margin:0 0 0 1.5em;margin-inline-start:1.5em;margin-inline-end:0}:where(table){border-collapse:collapse;border-spacing:0}:where(caption){padding:0 0 .3em;color:var(--tg-theme-hint-color);font-size:.87em;text-align:left;text-align:start}:where(th,td){padding:.3em .6em;border-bottom:1px solid var(--tg-theme-section-separator-color);text-align:left;text-align:start;vertical-align:top}:where(th){font-weight:600}:where(th:last-child,td:last-child){padding-right:0;padding-inline-end:0;padding-inline-start:.6em}:where(th:first-child,td:first-child){padding-left:0;padding-inline-start:0;padding-inline-end:.6em}:where(hr){height:0;margin:.6em 0;border:0;border-top:1px solid var(--tg-theme-section-separator-color)}:where(pre,code,kbd,samp){font-family:ui-monospace,monospace;font-size:.9em}:where(pre code,pre kbd,pre samp){font-size:1em}:where(pre){padding:.5em .7em;border-radius:6px;background:rgba(128,128,128,.12);white-space:pre-wrap}:where(blockquote){padding:0 0 0 .75em;padding-inline-start:.75em;padding-inline-end:0;border-left:3px solid var(--tg-theme-accent-text-color);border-inline-start:3px solid var(--tg-theme-accent-text-color);border-inline-end:0}:where(figcaption){margin:.3em 0 0;color:var(--tg-theme-hint-color);font-size:.87em}:where(img){max-width:100%}:where(a[href]){color:var(--tg-theme-link-color);text-decoration:none}:where(b,strong){font-weight:600}:where(i,em,cite,dfn,var){font-style:italic}:where(small){font-size:.85em}:where(sub,sup){position:relative;font-size:.75em;line-height:0;vertical-align:baseline}:where(sup){top:-.5em}:where(sub){bottom:-.25em}:where(mark){background:rgba(255,204,0,.4);color:inherit}:where(body>:first-child){margin-top:0}:where(body>:last-child){margin-bottom:0}:where(button){appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}:where(button:not([disabled])):active{opacity:var(--tg-button-pressed-opacity,.7)}:where(button[disabled]){opacity:var(--tg-button-disabled-opacity,.5);cursor:default}}"
+  "uaStylesheet": "@layer tw-ua{:where(html){color:var(--tg-theme-text-color);font:var(--tg-text-font-size,15px)/var(--tg-text-line-height,1.35) system-ui,sans-serif;-webkit-text-size-adjust:none;text-size-adjust:none;overflow-wrap:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}:where(body){margin:var(--tg-text-padding,8px 12px);padding:0;padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}:where(h1,h2,h3,h4,h5,h6){margin:.75em 0 .35em;font-weight:600;line-height:1.25}:where(h1){font-size:1.6em}:where(h2){font-size:1.35em}:where(h3){font-size:1.2em}:where(h4){font-size:1.07em}:where(h5){font-size:1em}:where(h6){font-size:.87em}:where(p,ul,ol,menu,dl,pre,blockquote,figure,table){margin:.6em 0}:where(ul,ol,menu){padding:0 0 0 1.5em;padding-inline-start:1.5em;padding-inline-end:0}:where(ul,menu){list-style-type:disc}:where(ol){list-style-type:decimal}:where(li ul,li menu){list-style-type:circle}:where(li ul,li ol,li menu,li dl){margin:0}:where(dt){font-weight:600}:where(dd){margin:0 0 0 1.5em;margin-inline-start:1.5em;margin-inline-end:0}:where(table){border-collapse:collapse;border-spacing:0}:where(caption){padding:0 0 .3em;color:var(--tg-theme-hint-color);font-size:.87em;text-align:left;text-align:start}:where(th,td){padding:.3em .6em;border-bottom:1px solid var(--tg-theme-section-separator-color);text-align:left;text-align:start;vertical-align:top}:where(th){font-weight:600}:where(th:last-child,td:last-child){padding-right:0;padding-inline-end:0;padding-inline-start:.6em}:where(th:first-child,td:first-child){padding-left:0;padding-inline-start:0;padding-inline-end:.6em}:where(hr){height:0;margin:.6em 0;border:0;border-top:1px solid var(--tg-theme-section-separator-color)}:where(pre,code,kbd,samp){font-family:ui-monospace,monospace;font-size:.9em}:where(pre code,pre kbd,pre samp){font-size:1em}:where(pre){padding:.5em .7em;border-radius:6px;background:rgba(128,128,128,.12);white-space:pre-wrap}:where(blockquote){padding:0 0 0 .75em;padding-inline-start:.75em;padding-inline-end:0;border-left:3px solid var(--tg-theme-accent-text-color);border-inline-start:3px solid var(--tg-theme-accent-text-color);border-inline-end:0}:where(figcaption){margin:.3em 0 0;color:var(--tg-theme-hint-color);font-size:.87em}:where(img){max-width:100%}:where(a[href]){color:var(--tg-theme-link-color);text-decoration:none}:where(b,strong){font-weight:600}:where(i,em,cite,dfn,var){font-style:italic}:where(small){font-size:.85em}:where(sub,sup){position:relative;font-size:.75em;line-height:0;vertical-align:baseline}:where(sup){top:-.5em}:where(sub){bottom:-.25em}:where(mark){background:rgba(255,204,0,.4);color:inherit}:where(body>:first-child){margin-top:0}:where(body>:last-child){margin-bottom:0}:where(button){appearance:none;-webkit-appearance:none;margin:0;border:0;border-radius:var(--tg-button-radius,8px);padding:var(--tg-button-padding,8px 14px);min-height:var(--tg-button-height,auto);font:var(--tg-button-font,500 14px/1.2 system-ui,sans-serif);background:var(--tg-button-bg,rgba(51,144,236,.12));color:var(--tg-button-text,inherit);cursor:pointer;-webkit-tap-highlight-color:transparent}:where(button:not([disabled])):active{opacity:var(--tg-button-pressed-opacity,.7)}:where(button[disabled]){opacity:var(--tg-button-disabled-opacity,.5);cursor:default}}"
  },
  "features": [
   {
@@ -2788,9 +2791,9 @@
    "id": "css.value.env",
    "area": "css",
    "title": "env() (safe-area-inset-*, …)",
-   "status": "out",
-   "decision": "P1",
-   "neutralise": "the declaration is dropped (or env() resolves to its fallback)",
+   "status": "in",
+   "decision": "P1-safe-area",
+   "note": "env(safe-area-inset-top|right|bottom|left[, fallback]) is the client's chrome over the widget (the message time over the bottom corner of a widget with no caption below it): the validator rewrites it to var(--tg-content-safe-area-inset-…[, fallback]), a root variable the renderer sets; another name resolves to its fallback, or the declaration is dropped without one; never inside url().",
    "match": {
     "functions": [
      "env"
@@ -3837,7 +3840,7 @@
   {
    "id": "js.storage.local",
    "area": "js",
-   "title": "localStorage: per (account, chat, message), preloaded, 16 KB, QuotaExceededError past it",
+   "title": "localStorage: per (account, chat, message), preloaded, 4 KB, QuotaExceededError past it",
    "status": "in",
    "decision": "D17",
    "note": "Today an in-memory map per widget instance with no quota.",
@@ -4232,6 +4235,22 @@
    }
   },
   {
+   "id": "tw.content-safe-area",
+   "area": "sdk",
+   "title": "TelegramWidget.contentSafeAreaInset { top, right, bottom, left, cornerLeft, cornerRight } (logical px, frozen, a fresh object per change) and contentSafeAreaChanged, with the --tg-content-safe-area-inset-* / -corner-left|right variables on the root, updated in one task",
+   "status": "in",
+   "decision": "P1-safe-area",
+   "note": "bottom is the height of the band the client draws the message time in over a widget with no caption below it; cornerRight (left-to-right interface) or cornerLeft (right-to-left) the width of its corner in that band; 0 with a caption below. Detect it with TelegramWidget.contentSafeAreaInset !== undefined (the profile stays 1).",
+   "match": {
+    "apis": [
+     "TelegramWidget.contentSafeAreaInset"
+    ],
+    "properties": [
+     "--tg-content-safe-area-*"
+    ]
+   }
+  },
+  {
    "id": "tw.resize-anchor",
    "area": "sdk",
    "title": "TelegramWidget.setResizeAnchor('top' | 'bottom'): the edge of the bubble that stays put when the widget's height changes",
@@ -4534,14 +4553,14 @@
   {
    "id": "limit.text-node",
    "area": "limit",
-   "title": "Text values (text node, string property) up to 64 KB (strict)",
+   "title": "Text values (text node, canvas string, Path2D data) up to 32 K UTF-16 units; past it the widget stops (strict)",
    "status": "in",
    "decision": "D5"
   },
   {
    "id": "limit.text-budget",
    "area": "limit",
-   "title": "Document text budget 256 K units, complex-script text 8192 units (strict)",
+   "title": "Document text 48 K units, past it the widget stops; complex-script text 8192 units, past it the text is refused (strict)",
    "status": "in",
    "decision": "D5"
   },
@@ -4555,30 +4574,86 @@
   {
    "id": "limit.timers",
    "area": "limit",
-   "title": "At most 256 live timers (RangeError past it)",
+   "title": "At most 64 live timers (RangeError past it)",
    "status": "in",
    "decision": "P1"
   },
   {
    "id": "limit.cpu",
    "area": "limit",
-   "title": "CPU quota 300 ms per second (timers deferred, not killed); 500 ms per task slice; layout queries count toward both and may block the host for at most max(slice, 100 ms) per task",
+   "title": "CPU quota 300 ms of JS per second (timers deferred, not killed); 500 ms per task slice; layout queries may block the host for at most 100 ms per task",
    "status": "in",
    "decision": "P1"
   },
   {
    "id": "limit.memory",
    "area": "limit",
-   "title": "QuickJS heap 64 MB",
+   "title": "QuickJS heap 8 MB",
    "status": "in",
    "decision": "P1"
   },
   {
    "id": "limit.storage",
    "area": "limit",
-   "title": "localStorage 16 KB per message (QuotaExceededError)",
+   "title": "localStorage 4 KB per message (QuotaExceededError)",
    "status": "in",
    "decision": "D17"
+  },
+  {
+   "id": "limit.attribute",
+   "area": "limit",
+   "title": "Attribute and inline-style values up to 8 K UTF-16 units; past it the widget stops (strict)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.batch",
+   "area": "limit",
+   "title": "At most 10 000 operations in one batch (one task's DOM changes); past it the widget stops (strict)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.css-rules",
+   "area": "limit",
+   "title": "At most 400 CSS rules and 32 @keyframes in the document's stylesheets; past them the widget stops (strict)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.canvas-commands",
+   "area": "limit",
+   "title": "At most 10 000 canvas commands per canvas in one task (RangeError past it; strict; provisional until the stress kit's numbers)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.animations",
+   "area": "limit",
+   "title": "At most 64 running script animations (further ones are not rendered; strict)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.main-thread",
+   "area": "limit",
+   "title": "The host's main-thread work for a widget, its layout queries plus 25 µs per operation and 2 µs per canvas command, at most 100 ms per second (timers and frames deferred past it)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.canvas-pixels",
+   "area": "limit",
+   "title": "A widget's canvases hold at most 2048 × 2048 pixels together; past it the widget stops (strict; the renderer itself never applies a size past 4096 × 4096)",
+   "status": "in",
+   "decision": "L1"
+  },
+  {
+   "id": "limit.image-pixels",
+   "area": "limit",
+   "title": "A data: image of at most 1024 × 1024 pixels, as its bytes say (larger: the placeholder); bytes of none of the profile's image formats are a broken image",
+   "status": "in",
+   "decision": "L1"
   },
   {
    "id": "limit.html-size",
@@ -4690,6 +4765,14 @@
    "status": "in",
    "decision": "D12a",
    "note": "Testable with a test bot sending inputMediaWidget with the anchors set; 200 / 50 / 600 are the shared v0.1.0 constants."
+  },
+  {
+   "id": "behaviour.time-corner",
+   "area": "behaviour",
+   "title": "A widget with no caption below it (none, or one shown above it) gets the message time and status over its bottom corner, on a backing as on a photo, and taps on it are the client's; the client passes the band (contentSafeArea bottom) and its corner (cornerRight, or cornerLeft in a right-to-left interface) before the first render and changes them only with the bubble's layout (a caption added, removed or moved above or below by an edit, \"edited\"); with a caption below the time is in the caption's line and the safe area is 0",
+   "status": "in",
+   "decision": "P1-safe-area",
+   "note": "WidgetHost contentSafeArea / setContentSafeArea on every host; never per frame; the floating day pill has no contract and is drawn over the widget like over a photo."
   },
   {
    "id": "behaviour.resize-anchor",

@@ -1,5 +1,4 @@
 #include "Sources/Host/HostState.h"
-#include "Sources/Support/Work.h"
 #include "Sources/Host/TelegramWidget.h"
 
 #include <algorithm>
@@ -74,17 +73,21 @@ void HostState::setVisible(JSContext* ctx, bool visible) {
             }
             document.setHidden(!visible);
             if (visible) {
-                // SDK v1 §2.14: the widget appeared on screen, so its next background request may go out at once.
-                HostState::of(ctx).m_requestGate.show();
+                // SDK v1 §2.14: the widget appeared on screen, so its next background request may go out at once; one
+                // made while it was hidden is that request (widget-sandbox v0.3.0).
+                HostState& host = HostState::of(ctx);
+                if (host.m_requestGate.show(host.m_loop.currentTime())) {
+                    host.window().TelegramWidget(ctx)->sendHeldRequest(ctx);
+                }
             }
             Atom type = Atom::fromUTF8(ctx, "visibilitychange");
             fireEvent(ctx, document, type.get(), true, false);
             // SDK v1 §2.7: isActive and activated / deactivated follow, after visibilitychange.
             HostState::of(ctx).window().TelegramWidget(ctx)->runEvent(
                 ctx, visible ? TelegramWidget::Event::Activated : TelegramWidget::Event::Deactivated);
-        }));
+        }), TaskKind::Visibility);
     } catch (...) {
-        // Not to the host: the failure latches the stop (a charge the budget refused: Budget; out of memory: Memory).
+        // Not to the host: the failure latches the stop (out of memory: Memory).
         try {
             abortForCaughtException(ctx);
         } catch (const Aborted&) {
@@ -117,13 +120,24 @@ bool HostState::activationAvailable(JSContext* ctx) const {
            std::find(m_consumedPresses.begin(), m_consumedPresses.end(), m_activePress) == m_consumedPresses.end();
 }
 
-twidget::sdk::RequestVerdict HostState::decideRequest(JSContext* ctx) {
+twidget::sdk::RequestVerdict HostState::decideRequest(JSContext* ctx, bool withWallet) {
     twidget::sdk::RequestGate::Conditions conditions;
     conditions.gesture = this->activationAvailable(ctx);
     conditions.visible = !DOMState::of(ctx).document().isHidden();
     conditions.canQuery = m_widgetContext.canQuery;
     conditions.backgroundQuery = m_widgetContext.backgroundQuery;
+    conditions.withWallet = withWallet;
+    conditions.wallet = m_widgetContext.wallet;
     return m_requestGate.decide(m_loop.currentTime(), conditions);
+}
+
+twidget::sdk::RequestVerdict HostState::decideWallet(JSContext* ctx) {
+    twidget::sdk::RequestGate::WalletConditions conditions;
+    conditions.gesture = this->activationAvailable(ctx);
+    conditions.visible = !DOMState::of(ctx).document().isHidden();
+    conditions.canQuery = m_widgetContext.canQuery;
+    conditions.wallet = m_widgetContext.wallet;
+    return m_requestGate.decideWallet(m_loop.currentTime(), conditions);
 }
 
 int64_t HostState::nextRequestId() {
@@ -138,7 +152,7 @@ void HostState::completeRequest(JSContext* ctx, int64_t id, const twidget::Widge
     try {
         m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, outcome](JSContext* ctx) {
             HostState::of(ctx).window().TelegramWidget(ctx)->settleRequest(ctx, id, outcome);
-        }));
+        }), TaskKind::Bridge);
     } catch (...) {
         try {
             abortForCaughtException(ctx);
@@ -147,11 +161,11 @@ void HostState::completeRequest(JSContext* ctx, int64_t id, const twidget::Widge
     }
 }
 
-void HostState::queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code) {
-    // From inside a binding: a failure to queue is the binding's (a budget or memory stop), thrown through.
-    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, code](JSContext* ctx) {
-        HostState::of(ctx).window().TelegramWidget(ctx)->refuseRequest(ctx, id, code);
-    }));
+void HostState::queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code, const std::string& reason) {
+    // From inside a binding: a failure to queue is the binding's (a memory stop), thrown through.
+    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, code, reason](JSContext* ctx) {
+        HostState::of(ctx).window().TelegramWidget(ctx)->refuseRequest(ctx, id, code, reason);
+    }), TaskKind::Bridge);
 }
 
 void HostState::reportCapped(JSContext* ctx, std::string_view kind, const std::string& detail) {
@@ -210,6 +224,7 @@ void HostState::setContext(JSContext* ctx, const twidget::WidgetContext& context
     state.isForward = !context.preview && context.isCopy;
     state.canQuery = !context.preview && context.canQuery;
     state.backgroundQuery = !context.preview && context.backgroundQuery;
+    state.wallet = state.canQuery && context.wallet;
     if (!state.preview && !state.isForward) {
         state.chatType = twidget::sdk::checkChatType(context.chatType);
     }
@@ -250,25 +265,94 @@ void HostState::setData(JSContext* ctx, const twidget::WidgetData& data) {
     }
     twidget::sdk::CheckedWidgetData checked = this->checkedData(ctx, data);
     try {
-        // The bridge task of upstream's shim (sdk-v1 §3.3): the values change, then the events fire, in one task.
-        m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [chatData = std::move(checked.chatData), publicData = std::move(checked.publicData)](JSContext* ctx) {
-            HostState& host = HostState::of(ctx);
-            const bool chatChanged = chatData != host.m_chatData;
-            const bool publicChanged = publicData != host.m_publicData;
-            host.m_chatData = chatData;
-            host.m_publicData = publicData;
-            TelegramWidget* widget = host.window().TelegramWidget(ctx);
-            if (chatChanged) {
-                widget->runEvent(ctx, TelegramWidget::Event::ChatDataChanged);
-            }
-            if (publicChanged) {
-                widget->runEvent(ctx, TelegramWidget::Event::PublicDataChanged);
-            }
-        }));
+        if (m_holdingInputs) {
+            m_heldInputs.emplace_back(std::move(checked));
+            return;
+        }
+        this->queueData(ctx, std::move(checked));
     } catch (...) {
         try {
             abortForCaughtException(ctx);
         } catch (const Aborted&) {
+        }
+    }
+}
+
+void HostState::setInitialContentSafeArea(JSContext* ctx, const ContentSafeArea& area) {
+    m_contentSafeArea = checkContentSafeArea(area);
+    m_sdkContentSafeArea = m_contentSafeArea;
+    m_contentSafeAreaGeneration++;
+    if (m_render) {
+        m_render->setContentSafeArea(ctx, contentSafeAreaRootDeclarations(m_contentSafeArea));
+    }
+}
+
+void HostState::setContentSafeArea(JSContext* ctx, const ContentSafeArea& area) {
+    const ContentSafeArea checked = checkContentSafeArea(area);
+    if (Runtime::from(ctx).stopReason() != StopReason::None || checked == m_contentSafeArea) {
+        return;
+    }
+    try {
+        m_contentSafeArea = checked;
+        if (m_render) {
+            m_render->setContentSafeArea(ctx, contentSafeAreaRootDeclarations(m_contentSafeArea));
+        }
+        // The band changes the layout now (the bubble's size follows at once), as a width change does.
+        m_loop.flushForHostChange(TaskKind::SafeArea);
+        if (m_holdingInputs) {
+            m_heldInputs.emplace_back(checked);
+            return;
+        }
+        this->queueContentSafeArea(ctx, checked);
+    } catch (...) {
+        try {
+            abortForCaughtException(ctx);
+        } catch (const Aborted&) {
+        }
+    }
+}
+
+void HostState::queueContentSafeArea(JSContext* ctx, const ContentSafeArea& area) {
+    // The shim's safeArea dispatch (sdk-v1 §3): a fresh object for script, then the event, in one task; nothing when
+    // script already has these numbers (a change and its reversal queued together).
+    m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [area](JSContext* ctx) {
+        HostState& host = HostState::of(ctx);
+        if (area == host.m_sdkContentSafeArea) {
+            return;
+        }
+        host.m_sdkContentSafeArea = area;
+        host.m_contentSafeAreaGeneration++;
+        host.window().TelegramWidget(ctx)->runEvent(ctx, TelegramWidget::Event::ContentSafeAreaChanged);
+    }), TaskKind::SafeArea);
+}
+
+void HostState::queueData(JSContext* ctx, twidget::sdk::CheckedWidgetData checked) {
+    // The bridge task of upstream's shim (sdk-v1 §3.3): the values change, then the events fire, in one task.
+    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [chatData = std::move(checked.chatData), publicData = std::move(checked.publicData)](JSContext* ctx) {
+        HostState& host = HostState::of(ctx);
+        const bool chatChanged = chatData != host.m_chatData;
+        const bool publicChanged = publicData != host.m_publicData;
+        host.m_chatData = chatData;
+        host.m_publicData = publicData;
+        TelegramWidget* widget = host.window().TelegramWidget(ctx);
+        if (chatChanged) {
+            widget->runEvent(ctx, TelegramWidget::Event::ChatDataChanged);
+        }
+        if (publicChanged) {
+            widget->runEvent(ctx, TelegramWidget::Event::PublicDataChanged);
+        }
+    }), TaskKind::Bridge);
+}
+
+void HostState::releaseHeldInputs(JSContext* ctx) {
+    m_holdingInputs = false;
+    std::vector<std::variant<twidget::sdk::CheckedWidgetData, ContentSafeArea>> held = std::move(m_heldInputs);
+    m_heldInputs.clear();
+    for (auto& input : held) {
+        if (auto* data = std::get_if<twidget::sdk::CheckedWidgetData>(&input)) {
+            this->queueData(ctx, std::move(*data));
+        } else {
+            this->queueContentSafeArea(ctx, std::get<ContentSafeArea>(input));
         }
     }
 }
@@ -329,9 +413,11 @@ void HostState::applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, Th
         if (m_render) {
             m_render->setTheme(ctx, theme, themeRootDeclarations(m_themeParams, theme, m_buttonTokens, m_textTokens));
         }
+        // The new theme lays out now; only the widget's own step (themeChanged, media changes) waits for the windows.
+        m_loop.flushForHostChange(TaskKind::Theme);
         m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [](JSContext* ctx) {
             HostState::of(ctx).window().TelegramWidget(ctx)->runEvent(ctx, TelegramWidget::Event::ThemeChanged);
-        }));
+        }), TaskKind::Theme);
     } catch (...) {
         try {
             abortForCaughtException(ctx);
@@ -348,7 +434,8 @@ void HostState::setReducedMotion(JSContext* ctx, bool reduced) {
         if (m_render) {
             m_render->setReducedMotion(ctx, reduced);
         }
-        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}));
+        m_loop.flushForHostChange(TaskKind::Viewport);
+        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}), TaskKind::Viewport);
     } catch (...) {
         try {
             abortForCaughtException(ctx);
@@ -365,7 +452,10 @@ void HostState::setWidth(JSContext* ctx, double width) {
         if (m_render) {
             m_render->setWidth(ctx, width);
         }
-        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}));
+        // The new width lays out now (the bubble's size follows at once); only the widget's own step (its media
+        // changes, ResizeObserver delivery) waits for the windows.
+        m_loop.flushForHostChange(TaskKind::Resize);
+        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}), TaskKind::Viewport);
     } catch (...) {
         try {
             abortForCaughtException(ctx);

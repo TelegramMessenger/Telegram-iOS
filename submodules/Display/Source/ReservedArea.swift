@@ -110,6 +110,16 @@ public extension DeviceMetrics {
     }
 }
 
+/// `DeviceMetrics.screenPortraitDeviceOrientation(size:)` for a view that reads its window rather than a layout (a camera
+/// preview setting its connection's orientation from the window scene): on the device the app runs on, the body position
+/// in which the portrait of the screen showing a window of `size` reads upright. Portrait on every device but iPhone Duo.
+public func screenPortraitDeviceOrientationForWindow(size: CGSize) -> UIDeviceOrientation {
+    guard DeviceMetrics.hasMultipleDisplays else {
+        return .portrait
+    }
+    return DeviceMetrics.iPhoneDuo.screenPortraitDeviceOrientation(size: size)
+}
+
 /// The reserved corners for a full-screen layout built outside the window's own layout pass (a legacy host that hands
 /// a size and insets to a Display screen), as the window's own layout gets them (`iPhoneDuoReservedArea`): iPhone
 /// Duo's status corners for a window of `size` in `orientation`, `.none` on every other device.

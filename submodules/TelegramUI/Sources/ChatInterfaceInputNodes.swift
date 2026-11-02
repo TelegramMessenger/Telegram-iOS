@@ -15,6 +15,11 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
     if let inputPanelNode = inputPanelNode, !(inputPanelNode is ChatTextInputPanelNode) {
         return nil
     }
+    // The text panel shows the bot's Start button in place of its input (a blocked bot, a bot not started yet): no
+    // input node goes with it. The input mode is kept, so a reply keyboard comes back once the bot is unblocked.
+    if chatDisplaysBotStartButton(chatPresentationInterfaceState) {
+        return nil
+    }
     switch chatPresentationInterfaceState.inputMode {
     case .media:
         if let currentNode = currentNode as? ChatEntityKeyboardInputNode {

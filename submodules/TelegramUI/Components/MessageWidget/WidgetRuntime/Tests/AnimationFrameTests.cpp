@@ -6,7 +6,6 @@
 #include "Sources/Host/AnimationFrames.h"
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Host/HostState.h"
-#include "Sources/Support/Work.h"
 #include "Tests/HostHarness.h"
 
 namespace wr {
@@ -20,14 +19,6 @@ struct AnimationFramesTestAccess {
 } // namespace wr
 
 namespace {
-
-double globalNumber(JSContext* ctx, const char* name) {
-    wr::Value global = wr::Value::adopt(ctx, JS_GetGlobalObject(ctx));
-    wr::Value v = wr::Value::adopt(ctx, JS_GetPropertyStr(ctx, global.get(), name));
-    double d = -1;
-    JS_ToFloat64(ctx, &d, v.get());
-    return d;
-}
 
 /// globalThis.setNextFrameHandle(h): the handle the next requestAnimationFrame tries first, from inside a callback.
 JSValue setNextFrameHandle(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
@@ -101,9 +92,11 @@ WR_TEST(testFrameCallbackErrorsAreReported) {
     CHECK_JS_EQ(env, "log.join()", "error:a,b");
 }
 
-WR_TEST(testAnimationFramesShareTheTimerLimit) {
+// widget-sandbox v0.3.0: the timer cap (64) is the timers' own; frame callbacks keep theirs, 256 (upstream's shim caps
+// none: ours bounds the table).
+WR_TEST(testAnimationFramesHaveALimitOfTheirOwn) {
     wr_test::HostEnv env;
-    env.eval("for (let i = 0; i < 200; i++) setTimeout(() => {}, 1000); var frames = []; for (let i = 0; i < 56; i++) frames.push(requestAnimationFrame(() => {}));");
+    env.eval("for (let i = 0; i < 64; i++) setTimeout(() => {}, 1000); var frames = []; for (let i = 0; i < 256; i++) frames.push(requestAnimationFrame(() => {}));");
     CHECK_THROWS(env, "requestAnimationFrame(() => {})", "RangeError");
     CHECK_JS_EQ(env, "(() => { try { requestAnimationFrame(() => {}); } catch (e) { return e.message; } })()", "too many animation frame callbacks");
     CHECK_THROWS(env, "setTimeout(() => {}, 1000)", "RangeError");
@@ -114,7 +107,7 @@ WR_TEST(testAnimationFramesShareTheTimerLimit) {
 WR_TEST(testStoppedRuntimeRunsNoFrames) {
     wr_test::HostEnv env;
     env.eval("var ran = false; requestAnimationFrame(() => { ran = true; });");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 300000);
+    wr_test::stopAfter(env.runtime());
     CHECK_EQ(env.eval("for (;;) {}"), std::string("ABORTED"));
     wr::EventLoop& loop = wr::EventLoop::of(env.ctx());
     CHECK(!loop.wantsAnimationFrame());
@@ -167,39 +160,6 @@ WR_TEST(testFrameCallbacksReleaseWhatTheyHold) {
     CHECK_EQ(wr::EventLoop::of(env.ctx()).liveCallbackCount(), size_t(0));
 }
 
-// Ruling R1 (Review Focus 2): a callback that requests itself again from every frame runs frame after frame until the
-// work limit stops the widget, within a bounded number of frames; after the stop no frame and no task runs JS.
-WR_TEST(testASelfRequeueingFrameChainStopsAtTheWorkLimit) {
-    wr_test::HostEnv env;
-    JSContext* ctx = env.ctx();
-    wr::EventLoop& loop = wr::EventLoop::of(ctx);
-    env.eval("var n = 0; function f() { n++; requestAnimationFrame(f); } requestAnimationFrame(f);");
-    env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 100000);
-    const int kCap = 100000;
-    int frames = 0;
-    bool everyFrameRan = true;
-    for (; frames < kCap; frames++) {
-        env.host().now += 16;
-        wr::StepResult result = loop.runAnimationFrame(env.host().now);
-        if (result == wr::StepResult::Stopped) {
-            break;
-        }
-        everyFrameRan = everyFrameRan && result == wr::StepResult::Ran;
-    }
-    CHECK(frames < kCap);
-    CHECK(frames > 10);
-    CHECK(everyFrameRan);
-    CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-    double n = globalNumber(ctx, "n");
-    CHECK(n >= double(frames));
-    CHECK(!loop.wantsAnimationFrame());
-    env.host().now += 16;
-    CHECK(loop.runAnimationFrame(env.host().now) == wr::StepResult::Stopped);
-    CHECK(env.step() == wr::StepResult::Stopped);
-    CHECK_EQ(env.eval("n"), std::string("STOPPED"));
-    CHECK_EQ(globalNumber(ctx, "n"), n);
-}
-
 // Ruling R6: the handle counter wraps from UINT32_MAX to 1 and skips the handles still in the list (HTML: a handle
 // greater than zero), so a handle is never zero or shared. Callbacks still run in the order they were requested.
 WR_TEST(testHandlesWrapPastUint32MaxAndSkipThoseInUse) {
@@ -233,48 +193,22 @@ WR_TEST(testAReusedHandleRequestedInsideAFrameRunsNextFrame) {
     CHECK_JS_EQ(env, "log.join()", "a,c");
 }
 
-// setVisible is the host's, as the loop's steps are, so it never throws: a stopped widget queues nothing, and when its
-// own charge meets the work limit the widget stops (Budget) with no exception left pending. A charge asks the limit only
-// every JS_WORK_CHECK_PERIOD units, so each case makes sure one does.
+/// A host call on a stopped runtime (here setVisible, which queues a task) neither throws to the host nor runs anything.
 WR_TEST(testSetVisibleNeverThrowsToTheHost) {
-    {
-        wr_test::HostEnv env;
-        JSContext* ctx = env.ctx();
-        env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()) + 300000);
-        CHECK_EQ(env.eval("for (;;) {}"), std::string("ABORTED"));
-        // A check is never more than JS_WORK_CHECK_PERIOD units away: these calls would reach one if they charged.
-        bool threw = false;
-        try {
-            for (int i = 0; i < JS_WORK_CHECK_PERIOD; i++) {
-                wr::HostState::of(ctx).setVisible(ctx, i % 2 == 1);
-            }
-        } catch (...) {
-            threw = true;
+    wr_test::HostEnv env;
+    JSContext* ctx = env.ctx();
+    wr_test::stopAfter(env.runtime());
+    CHECK_EQ(env.eval("for (;;) {}"), std::string("ABORTED"));
+    bool threw = false;
+    try {
+        for (int i = 0; i < 1000; i++) {
+            wr::HostState::of(ctx).setVisible(ctx, i % 2 == 1);
         }
-        CHECK(!threw);
-        CHECK(!JS_HasException(ctx));
-        CHECK(env.step() == wr::StepResult::Stopped);
-        CHECK(!wr::DOMState::of(ctx).document().isHidden());
+    } catch (...) {
+        threw = true;
     }
-    {
-        wr_test::HostEnv env;
-        JSContext* ctx = env.ctx();
-        // A full period's charge asks the handler (no limit yet), so the next check is exactly a period away; the limit
-        // is then the counter, and the work short of the check by setVisible's own charge (work::kNodeVisit) is spent.
-        wr::charge(ctx, JS_WORK_CHECK_PERIOD);
-        env.runtime().setWorkLimit(JS_GetWorkUnits(env.runtime().jsRuntime()));
-        wr::charge(ctx, JS_WORK_CHECK_PERIOD - wr::work::kNodeVisit);
-        CHECK(env.runtime().stopReason() == wr::StopReason::None);
-        bool threw = false;
-        try {
-            wr::HostState::of(ctx).setVisible(ctx, false);
-        } catch (...) {
-            threw = true;
-        }
-        CHECK(!threw);
-        CHECK(env.runtime().stopReason() == wr::StopReason::Budget);
-        CHECK(!JS_HasException(ctx));
-        CHECK(env.step() == wr::StepResult::Stopped);
-        CHECK(!wr::DOMState::of(ctx).document().isHidden());
-    }
+    CHECK(!threw);
+    CHECK(!JS_HasException(ctx));
+    CHECK(env.step() == wr::StepResult::Stopped);
+    CHECK(!wr::DOMState::of(ctx).document().isHidden());
 }

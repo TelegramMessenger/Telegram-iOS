@@ -56,7 +56,11 @@ public:
     bool imageSmoothingEnabled(JSContext*) const { return m_state.smoothing; }
     void setImageSmoothingEnabled(JSContext* ctx, bool enabled);
     String imageSmoothingQuality(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.smoothingQuality); }
-    void setImageSmoothingQuality(JSContext* ctx, String value) { m_state.smoothingQuality = value.utf8(); }
+    void setImageSmoothingQuality(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.smoothingQuality = value.utf8();
+        }
+    }
     Unrestricted shadowOffsetX(JSContext*) const { return {m_state.shadowOffsetX}; }
     Unrestricted shadowOffsetY(JSContext*) const { return {m_state.shadowOffsetY}; }
     Unrestricted shadowBlur(JSContext*) const { return {m_state.shadowBlur}; }
@@ -84,7 +88,11 @@ public:
     void strokeRect(JSContext* ctx, Unrestricted x, Unrestricted y, Unrestricted w, Unrestricted h);
 
     // CanvasDrawPath.
-    void beginPath(JSContext*) { m_interpreter.beginPath(); }
+    void beginPath(JSContext* ctx) {
+        if (this->command(ctx)) {
+            m_interpreter.beginPath();
+        }
+    }
     void fill(JSContext* ctx, std::optional<Value> pathOrFillRule, std::optional<Value> fillRule);
     void stroke(JSContext* ctx, std::optional<Value> path);
     void clip(JSContext* ctx, std::optional<Value> pathOrFillRule, std::optional<Value> fillRule);
@@ -122,7 +130,11 @@ public:
     // CanvasTextDrawingStyles.
     String lang(JSContext* ctx) const { return String::fromUTF8(ctx, textOr(m_state.lang, "inherit")); }
     /// Capped at 256 bytes (a BCP 47 tag is far shorter), so a saved state stays small (V5d final review, C4).
-    void setLang(JSContext* ctx, String value) { m_state.lang = makeSharedText(JS_GetRuntime(ctx), value.utf8Prefix(256, nullptr)); }
+    void setLang(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.lang = makeSharedText(JS_GetRuntime(ctx), value.utf8Prefix(256, nullptr));
+        }
+    }
     String font(JSContext* ctx) const { return String::fromUTF8(ctx, textOr(m_state.font, canvas::kDefaultFont)); }
     void setFont(JSContext* ctx, String value);
     String textAlign(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.textAlign); }
@@ -136,13 +148,29 @@ public:
     String wordSpacing(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.wordSpacing); }
     void setWordSpacing(JSContext* ctx, String value);
     String fontKerning(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.fontKerning); }
-    void setFontKerning(JSContext*, String value) { m_state.fontKerning = value.utf8(); }
+    void setFontKerning(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.fontKerning = value.utf8();
+        }
+    }
     String fontStretch(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.fontStretch); }
-    void setFontStretch(JSContext*, String value) { m_state.fontStretch = value.utf8(); }
+    void setFontStretch(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.fontStretch = value.utf8();
+        }
+    }
     String fontVariantCaps(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.fontVariantCaps); }
-    void setFontVariantCaps(JSContext*, String value) { m_state.fontVariantCaps = value.utf8(); }
+    void setFontVariantCaps(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.fontVariantCaps = value.utf8();
+        }
+    }
     String textRendering(JSContext* ctx) const { return String::fromUTF8(ctx, m_state.textRendering); }
-    void setTextRendering(JSContext*, String value) { m_state.textRendering = value.utf8(); }
+    void setTextRendering(JSContext* ctx, String value) {
+        if (this->command(ctx)) {
+            m_state.textRendering = value.utf8();
+        }
+    }
 
     // CanvasPath, on the current path through the current transform.
     void closePath(JSContext* ctx);
@@ -175,6 +203,16 @@ public:
     void dispose(JSRuntime* rt) override;
 
 private:
+    /// limit.canvas-commands (widget-sandbox v0.3.0): one command to this canvas, as upstream's shim counts them (a
+    /// drawing or path method, a state change, a gradient or pattern made; never a query). Past Limits::canvasCommands in
+    /// one batch, strict throws RangeError and compat drops it (false). A canvas's first command of a batch is one
+    /// operation of it (limit.batch: upstream's `canvas` operation).
+    bool command(JSContext* ctx);
+    /// Stops the widget when `text` passes the text-value cap (strict): a canvas string is a text value.
+    static void stopPastTextValue(JSContext* ctx, const String& text);
+    /// The batch (Runtime::batchSerial) the command count is of, and the count.
+    uint64_t m_commandBatch = ~uint64_t(0);
+    size_t m_commands = 0;
     /// A fill or stroke style: a colour, or the gradient or pattern object a script set.
     struct Style {
         canvas::Color color{0, 0, 0, 255};
@@ -208,7 +246,7 @@ private:
     void clearState(JSRuntime* rt, State& state);
     /// Back to the defaults: the readback state, its stack and the interpreter.
     void resetState(JSContext* ctx, bool clearBitmap);
-    /// Charges each op by the area it may touch, allocates the bitmap on the first op, and runs them.
+    /// Reports a dash list an op dropped (`canvas-dashes`), allocates the bitmap on the first op, and runs the ops.
     void run(JSContext* ctx, std::vector<canvas::CanvasOp>& ops);
     /// The bitmap changed: the render tree republishes the canvas when it is rendered (RenderTree::canvasPainted).
     void painted(JSContext* ctx);

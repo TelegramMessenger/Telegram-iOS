@@ -81,16 +81,12 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         }
     }
 
-    private func agentSettings(_ activeProvider: String) -> Api.agent.Settings {
-        return .settings(.init(flags: 1 << 0, keys: [], activeProvider: activeProvider))
+    private func agentSettings(_ activeProvider: String) -> EngineAgentSettings {
+        return EngineAgentSettings(keys: [], activeProvider: activeProvider)
     }
 
-    private func activeProvider(_ settings: Api.agent.Settings?) -> String? {
-        if case let .settings(data)? = settings {
-            return data.activeProvider
-        } else {
-            return nil
-        }
+    private func activeProvider(_ settings: EngineAgentSettings?) -> String? {
+        return settings?.activeProvider
     }
 
     /// Nil when the value is not `walletStateEmpty`.

@@ -72,7 +72,7 @@ struct ComplexSelector {
     std::vector<CompoundSelector> compounds;
 };
 
-/// Throws DOMError SyntaxError (and Thrown when the budget stops the widget).
+/// Throws DOMError SyntaxError (and Thrown when the memory limit refuses a name's or a value's string).
 SelectorList parseSelectors(JSContext* ctx, const String& text);
 /// `scope` is :scope's node: querySelector's receiver, or the element matches() or closest() was called on. Matching
 /// reads the tree through views and runs no script, so the tree cannot change while it runs.

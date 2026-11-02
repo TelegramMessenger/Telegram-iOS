@@ -39,7 +39,7 @@ var $ = function (id) { return document.getElementById(id); };
 function watch(id, on) {
   var s = { ctx: 0, clicks: 0, dbl: 0, cancel: 0, moves: 0 };
   var el = $(id);
-  el.addEventListener('pointerdown', function (e) { s.type = e.pointerType; s.x = e.clientX; s.moves = 0; on('down', e, s); });
+  el.addEventListener('pointerdown', function (e) { s.type = e.pointerType; s.x = e.clientX; s.moves = 0; el.setPointerCapture(e.pointerId); on('down', e, s); });
   el.addEventListener('pointermove', function (e) { if (e.buttons) s.moves++; });
   ['pointerup', 'pointercancel', 'click', 'dblclick', 'contextmenu'].forEach(function (t) {
     el.addEventListener(t, function (e) { if (t === 'contextmenu') { s.ctx++; e.preventDefault(); } if (t === 'click') s.clicks++; if (t === 'dblclick') s.dbl++; if (t === 'pointercancel') s.cancel++; on(t, e, s); });

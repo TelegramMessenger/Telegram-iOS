@@ -368,4 +368,147 @@ final class ChatMediaEditorCropTabTests: XCTestCase {
         XCTAssertEqual(placement.perspective, MediaEditorPerspectiveHomography(perspective: state.perspective, size: CGSize(width: 4000.0 * placement.scale, height: 3000.0 * placement.scale)))
         XCTAssertEqual(chatMediaEditorCropPreviewPlacement(state: MediaCropState(originalSize: state.originalSize), frameSize: CGSize(width: 400.0, height: 300.0)).perspective, .identity)
     }
+
+    private let landscapeSize = CGSize(width: 874.0, height: 402.0)
+    private let landscapeInsets = UIEdgeInsets(top: 0.0, left: 62.0, bottom: 20.0, right: 62.0)
+
+    func testLandscapeCropContainerLeft() {
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, toolbarSide: .left), CGRect(x: 334.0, y: 0.0, width: 478.0, height: 382.0))
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: false, toolbarSide: .left), CGRect(x: 272.0, y: 0.0, width: 540.0, height: 382.0))
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: false, toolbarSide: .left), CGRect(x: 172.0, y: 0.0, width: 640.0, height: 382.0))
+    }
+
+    func testLandscapeCropContainerRight() {
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, toolbarSide: .right), CGRect(x: 62.0, y: 0.0, width: 478.0, height: 382.0))
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: false, toolbarSide: .right), CGRect(x: 62.0, y: 0.0, width: 640.0, height: 382.0))
+    }
+
+    func testLandscapeCropControlsLeft() {
+        let layout = chatMediaEditorCropControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, resetButtonWidth: 40.0, toolbarSide: .left)
+        XCTAssertEqual(layout.selector, CGRect(x: 284.0, y: 0.0, width: 50.0, height: 382.0))
+        XCTAssertEqual(layout.rotationDial, CGRect(x: 172.0, y: 0.0, width: 100.0, height: 382.0))
+        XCTAssertEqual(layout.rotationDialScale, 1.0)
+        XCTAssertEqual(layout.rotationDialAxis, .vertical(clockwise: true))
+        XCTAssertEqual(layout.resetButton, CGRect(x: 121.0, y: 179.0, width: 40.0, height: 24.0))
+
+        let video = chatMediaEditorCropControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: false, resetButtonWidth: 40.0, toolbarSide: .left)
+        XCTAssertEqual(video.selector, .zero)
+        XCTAssertEqual(video.rotationDial, .zero)
+        XCTAssertEqual(video.resetButton, CGRect(x: 121.0, y: 179.0, width: 40.0, height: 24.0))
+    }
+
+    func testLandscapeCropControlsRight() {
+        let layout = chatMediaEditorCropControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, resetButtonWidth: 40.0, toolbarSide: .right)
+        XCTAssertEqual(layout.selector, CGRect(x: 540.0, y: 0.0, width: 50.0, height: 382.0))
+        XCTAssertEqual(layout.rotationDial, CGRect(x: 602.0, y: 0.0, width: 100.0, height: 382.0))
+        XCTAssertEqual(layout.rotationDialScale, 1.0)
+        XCTAssertEqual(layout.rotationDialAxis, .vertical(clockwise: false))
+        XCTAssertEqual(layout.resetButton, CGRect(x: 712.0, y: 179.0, width: 40.0, height: 24.0))
+    }
+
+    func testLandscapeWideResetButtonKeepsStripCentre() {
+        let layout = chatMediaEditorCropControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, resetButtonWidth: 80.0, toolbarSide: .left)
+        XCTAssertEqual(layout.resetButton, CGRect(x: 101.0, y: 179.0, width: 80.0, height: 24.0))
+        XCTAssertGreaterThan(layout.resetButton.width, chatMediaEditorCropLandscapeResetStripWidth)
+    }
+
+    func testPortraitCropUnchanged() {
+        let size = CGSize(width: 402.0, height: 874.0)
+        let insets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
+        for (hasRotationWheel, hasPerspective) in [(true, true), (true, false), (false, false)] {
+            XCTAssertEqual(chatMediaEditorCropContainerFrame(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective), chatMediaEditorCropContainerFrame(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective, toolbarSide: nil))
+            let layout = chatMediaEditorCropControlsLayout(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective, resetButtonWidth: 40.0)
+            XCTAssertEqual(layout, chatMediaEditorCropControlsLayout(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: hasRotationWheel, hasPerspective: hasPerspective, resetButtonWidth: 40.0, toolbarSide: nil))
+            XCTAssertEqual(layout.rotationDialAxis, .horizontal)
+        }
+        let plain = chatMediaEditorCropControlsLayout(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: true, resetButtonWidth: 40.0)
+        XCTAssertEqual(plain.rotationDial, CGRect(x: 0.0, y: 696.0, width: 402.0, height: 28.0))
+        XCTAssertEqual(plain.resetButton, CGRect(x: 181.0, y: 738.0, width: 40.0, height: 24.0))
+        XCTAssertEqual(plain.rotationDialScale, 1.0)
+        XCTAssertEqual(chatMediaEditorCropContainerFrame(size: size, safeInsets: insets, toolbarHeight: 49.0, hasRotationWheel: true), CGRect(x: 0.0, y: 62.0, width: 402.0, height: 874.0 - 62.0 - 34.0 - 49.0 - 115.0))
+    }
+
+    func testHorizontalDialPlacementIsItsFrame() {
+        let frame = CGRect(x: 0.0, y: 696.0, width: 402.0, height: 28.0)
+        let placement = mediaCropDialPlacement(frame: frame, axis: .horizontal)
+        XCTAssertEqual(placement.bounds, CGRect(x: 0.0, y: 0.0, width: 402.0, height: 28.0))
+        XCTAssertEqual(placement.center, CGPoint(x: 201.0, y: 710.0))
+        XCTAssertTrue(placement.transform.isIdentity)
+    }
+
+    private func dialDragTranslation(frame: CGRect, axis: MediaCropDialAxis, screenTranslation: CGPoint) -> (local: CGFloat, frame: CGRect, topEdgeX: CGFloat) {
+        let parent = UIView(frame: CGRect(origin: .zero, size: landscapeSize))
+        let dial = UIView()
+        parent.addSubview(dial)
+        let placement = mediaCropDialPlacement(frame: frame, axis: axis)
+        dial.bounds = placement.bounds
+        dial.center = placement.center
+        dial.transform = placement.transform
+        let start = CGPoint(x: frame.midX, y: frame.midY)
+        let end = CGPoint(x: start.x + screenTranslation.x, y: start.y + screenTranslation.y)
+        let local = dial.convert(end, from: parent).x - dial.convert(start, from: parent).x
+        let topEdgeX = dial.convert(CGPoint(x: dial.bounds.midX, y: 0.0), to: parent).x
+        return (local, dial.frame, topEdgeX)
+    }
+
+    func testVerticalDialDragDownMatchesPortraitDragRightOnLeftSide() {
+        let strip = CGRect(x: 172.0, y: 62.0, width: 100.0, height: 320.0)
+        let placement = mediaCropDialPlacement(frame: strip, axis: .vertical(clockwise: true))
+        XCTAssertEqual(placement.bounds, CGRect(x: 0.0, y: 0.0, width: 320.0, height: 100.0))
+        XCTAssertEqual(placement.center, CGPoint(x: 222.0, y: 222.0))
+
+        let portrait = dialDragTranslation(frame: CGRect(x: 0.0, y: 300.0, width: 402.0, height: 28.0), axis: .horizontal, screenTranslation: CGPoint(x: 10.0, y: 0.0))
+        XCTAssertEqual(portrait.local, 10.0, accuracy: 0.001)
+
+        let left = dialDragTranslation(frame: strip, axis: .vertical(clockwise: true), screenTranslation: CGPoint(x: 0.0, y: 10.0))
+        XCTAssertEqual(left.local, 10.0, accuracy: 0.001)
+        XCTAssertEqual(left.frame.minX, strip.minX, accuracy: 0.001)
+        XCTAssertEqual(left.frame.minY, strip.minY, accuracy: 0.001)
+        XCTAssertEqual(left.frame.width, strip.width, accuracy: 0.001)
+        XCTAssertEqual(left.frame.height, strip.height, accuracy: 0.001)
+        XCTAssertEqual(left.topEdgeX, strip.maxX, accuracy: 0.001)
+    }
+
+    func testVerticalDialDragDownIsMirroredOnRightSide() {
+        let strip = CGRect(x: 602.0, y: 62.0, width: 100.0, height: 320.0)
+        let right = dialDragTranslation(frame: strip, axis: .vertical(clockwise: false), screenTranslation: CGPoint(x: 0.0, y: 10.0))
+        XCTAssertEqual(right.local, -10.0, accuracy: 0.001)
+        XCTAssertEqual(right.frame.minX, strip.minX, accuracy: 0.001)
+        XCTAssertEqual(right.frame.height, strip.height, accuracy: 0.001)
+        XCTAssertEqual(right.topEdgeX, strip.minX, accuracy: 0.001)
+    }
+
+    private func dialHitRectOnScreen(frame: CGRect, axis: MediaCropDialAxis) -> CGRect {
+        let parent = UIView(frame: CGRect(origin: .zero, size: landscapeSize))
+        let dial = UIView()
+        parent.addSubview(dial)
+        let placement = mediaCropDialPlacement(frame: frame, axis: axis)
+        dial.bounds = placement.bounds
+        dial.center = placement.center
+        dial.transform = placement.transform
+        return dial.convert(dial.bounds.inset(by: mediaCropDialHitInsets(axis: axis)), to: parent)
+    }
+
+    func testHorizontalDialHitInsetsUnchanged() {
+        XCTAssertEqual(mediaCropDialHitInsets(axis: .horizontal), UIEdgeInsets(top: -12.0, left: 0.0, bottom: -12.0, right: 0.0))
+    }
+
+    func testVerticalDialHitAreaClearsCropHandles() {
+        let handleHitOutset: CGFloat = 16.0
+        let containerInset: CGFloat = 9.0
+        for side in [ChatMediaEditorToolbarSide.left, .right] {
+            let container = chatMediaEditorCropContainerFrame(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, toolbarSide: side)
+            let layout = chatMediaEditorCropControlsLayout(size: landscapeSize, safeInsets: landscapeInsets, toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true, resetButtonWidth: 40.0, toolbarSide: side)
+            let hitRect = dialHitRectOnScreen(frame: layout.rotationDial, axis: layout.rotationDialAxis)
+            switch side {
+            case .left:
+                XCTAssertLessThanOrEqual(hitRect.maxX, container.minX + containerInset - handleHitOutset + 0.001)
+                XCTAssertEqual(hitRect.minX, layout.rotationDial.minX - 12.0, accuracy: 0.001)
+            case .right:
+                XCTAssertGreaterThanOrEqual(hitRect.minX, container.maxX - containerInset + handleHitOutset - 0.001)
+                XCTAssertEqual(hitRect.maxX, layout.rotationDial.maxX + 12.0, accuracy: 0.001)
+            }
+            XCTAssertEqual(hitRect.height, layout.rotationDial.height, accuracy: 0.001)
+        }
+    }
 }

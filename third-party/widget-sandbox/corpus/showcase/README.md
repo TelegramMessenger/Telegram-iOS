@@ -1,6 +1,6 @@
 # showcase — interactive, animated demos on widget profile 1
 
-21 widgets written the way a widget author would write them for widget
+27 widgets written the way a widget author would write them for widget
 profile 1 (`docs/profile-v1.md`) and SDK v1 (`docs/sdk-v1.md` §2), with
 nothing held back for a `render()` harness or for a native renderer: CSS
 transitions and `@keyframes`, grid, 2D transforms (flips included), inline
@@ -22,6 +22,12 @@ like at its best within the profile every client draws.
 
 | Batch | File | The case | What moves | Kept locally / links out |
 |---|---|---|---|---|
+| `3d/` | `01-robot` | pocket robot viewer | horizontal orbit, elevation and zoom buttons; three poses | view and pose |
+| | `02-camera` | camera assembly viewer | orbit the assembled body or separate lens elements | view and assembly |
+| | `03-orbits` | single shaded planet | perspective ray/sphere shading, camera orbit, elevation and cloud toggle | view and cloud cover |
+| | `04-island` | miniature coastal retreat | orbit the model; switch between three tide levels | view and tide |
+| | `05-molecules` | ball-and-stick molecular viewer | orbit water, methane or ammonia | view and molecule |
+| | `06-cat` | sculpted cat model | mouse X/Y rotation, tail pose, zoom and elevation | view and pose |
 | `travel/` | `01-boarding-pass` | airline boarding pass | gate countdown (1 Hz, turns orange → red), tap flips the pass to a QR pattern (a 2D flip: one face folds to a line with `scaleX`, the other unfolds; both faces share one grid cell), Add to Wallet settles into a done state, the plane glides along the route | "In Wallet"; Wallet opens the `.pkpass`, Share opens Telegram's share sheet (`t.me/share/url`) |
 | | `02-ride-tracking` | taxi on its way | the car drives the route on a stylised SVG map (the streets are one path, the car a JS polyline: no layout queries), the ETA and distance count down, status steps light up | Call / Message open the ride's page |
 | | `03-hotel-booking` | hotel card | swipeable photo carousel (pointer events + snap), two-tap date range on a mini calendar, guests stepper, price breakdown tweens, Book → a drawn check mark | the booking (a re-created widget opens on the confirmation), the heart |
@@ -60,7 +66,7 @@ like at its best within the profile every client draws.
 - Inside profile 1, so the validator removes nothing: no form controls (a
   slider is a drawn track dragged with pointer events or a segmented
   control, a text field is a set of presets, a checkbox is a toggle
-  button), no 3D (flips are `scaleX` / `scaleY`), no SVG `<pattern>`, no
+  button), no WebGL or CSS 3D transforms (flips are `scaleX` / `scaleY`), no SVG `<pattern>`, no
   `text-shadow` (a `drop-shadow()` filter instead), no `user-select`, no
   keyboard or focus, no inner scrolling, no named fonts.
 - State lives in JS, the DOM is updated in place; lists may be rebuilt with a

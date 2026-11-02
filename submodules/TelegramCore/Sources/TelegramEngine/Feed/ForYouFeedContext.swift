@@ -8,6 +8,7 @@ private let forYouSnapshotLimit = 300
 /// One `feed.getForYou` batch, stored and turned into items in server order. nil on a network error. With a
 /// `query` the batch is the server's search results instead of the feed's next batch.
 private func fetchForYouBatch(account: Account, query: String?, limit: Int32) -> Signal<[EngineForYouItem]?, NoError> {
+#if TELEGRAM_NEWS_FEED_API
     var flags: Int32 = 0
     if query != nil {
         flags |= 1 << 0
@@ -43,6 +44,10 @@ private func fetchForYouBatch(account: Account, query: String?, limit: Int32) ->
             return forYouItems(from: forYouBatchElements(parsed.elements, storedById: storedById))
         }
     }
+#else
+    // The feed API is parked (layer 233 has none): an empty batch, nothing sent.
+    return .single([])
+#endif
 }
 
 /// The posts `feed.getForYou` finds for `query`, in server order. nil on a network error. They are stored as the

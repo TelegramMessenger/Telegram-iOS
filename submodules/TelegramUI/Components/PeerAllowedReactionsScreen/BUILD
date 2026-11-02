@@ -10,6 +10,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ComponentFlow",
@@ -35,6 +36,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListItemSliderSelectorComponent",
         "//submodules/TelegramUI/Components/ListSwitchItemComponent",
+        "//submodules/TextSelectionNode:TextSelectionNode",
     ],
     visibility = [
         "//visibility:public",

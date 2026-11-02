@@ -12,7 +12,6 @@
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -28,26 +27,13 @@ bool isRootElement(JSContext* ctx, const Element& element) {
     return state && state->hasDocument() && state->document().documentElementNode() == &element;
 }
 
-/// The node's client rects, charged per fragment walked.
-std::vector<RenderBox> chargedClientRects(JSContext* ctx, const RenderTree& render, const Node& node) {
-    std::vector<RenderBox> rects = render.clientRects(node);
-    chargeQueryRead(ctx, work::kLayoutBox * std::max<uint64_t>(1, rects.size()));
-    return rects;
-}
-
-/// The border box (RenderTree::borderBox: the union of the client rects), charged per fragment walked; nullopt with no
-/// box.
-std::optional<RenderBox> chargedBorderBox(JSContext* ctx, const RenderTree& render, const Node& node) {
+/// The border box (RenderTree::borderBox: the union of the client rects); nullopt with no box.
+std::optional<RenderBox> borderBoxOf(const RenderTree& render, const Node& node) {
     RenderBox box;
-    if (!unionOfRects(chargedClientRects(ctx, render, node), box)) {
+    if (!unionOfRects(render.clientRects(node), box)) {
         return std::nullopt;
     }
     return box;
-}
-
-std::optional<RenderTree::BoxMetrics> chargedMetrics(JSContext* ctx, const RenderTree& render, const Node& node) {
-    chargeQueryRead(ctx, work::kLayoutBox);
-    return render.boxMetrics(node);
 }
 
 /// CSSOM View's offsetParent: null for an element with no box, a fixed one, the body and the root; otherwise the
@@ -59,16 +45,15 @@ Element* offsetParentOf(JSContext* ctx, RenderTree& render, Element& element) {
     }
     Document& document = state->document();
     HTMLElement* body = document.body(ctx);
-    std::optional<RenderTree::BoxMetrics> metrics = chargedMetrics(ctx, render, element);
+    std::optional<RenderTree::BoxMetrics> metrics = render.boxMetrics(element);
     if (!metrics || metrics->fixed || &element == body || &element == document.documentElementNode()) {
         return nullptr;
     }
     for (Element* ancestor = element.parentElementNode(); ancestor; ancestor = ancestor->parentElementNode()) {
-        chargeQueryRead(ctx, work::kNodeVisit);
         if (ancestor == body) {
             return body;
         }
-        std::optional<RenderTree::BoxMetrics> ancestorMetrics = chargedMetrics(ctx, render, *ancestor);
+        std::optional<RenderTree::BoxMetrics> ancestorMetrics = render.boxMetrics(*ancestor);
         if (ancestorMetrics && ancestorMetrics->positioned) {
             return ancestor;
         }
@@ -80,9 +65,8 @@ Element* offsetParentOf(JSContext* ctx, RenderTree& render, Element& element) {
 void extendByDescendants(JSContext* ctx, const RenderTree& render, const Element& element, double& right, double& bottom) {
     Node* node = element.firstChildNode();
     while (node) {
-        chargeQueryRead(ctx, work::kNodeVisit);
         if (node->isElement()) {
-            if (std::optional<RenderBox> box = chargedBorderBox(ctx, render, *node)) {
+            if (std::optional<RenderBox> box = borderBoxOf(render, *node)) {
                 right = std::max(right, box->x + box->width);
                 bottom = std::max(bottom, box->y + box->height);
             }
@@ -103,7 +87,7 @@ void extendByDescendants(JSContext* ctx, const RenderTree& render, const Element
 RenderBox scrollExtent(JSContext* ctx, const RenderTree& render, const Element& element, const RenderBox& padding) {
     double right = -std::numeric_limits<double>::infinity(), bottom = -std::numeric_limits<double>::infinity();
     extendByDescendants(ctx, render, element, right, bottom);
-    std::optional<RenderTree::BoxMetrics> metrics = chargedMetrics(ctx, render, element);
+    std::optional<RenderTree::BoxMetrics> metrics = render.boxMetrics(element);
     double far = padding.x + padding.width, low = padding.y + padding.height;
     if (std::isfinite(right) && metrics) {
         far = std::max(far, right + metrics->paddingRight);
@@ -116,8 +100,8 @@ RenderBox scrollExtent(JSContext* ctx, const RenderTree& render, const Element& 
 
 /// The padding box of a rendered, non-inline element, and its metrics.
 std::optional<RenderBox> paddingBox(JSContext* ctx, const RenderTree& render, const Element& element) {
-    std::optional<RenderTree::BoxMetrics> metrics = chargedMetrics(ctx, render, element);
-    std::optional<RenderBox> box = chargedBorderBox(ctx, render, element);
+    std::optional<RenderTree::BoxMetrics> metrics = render.boxMetrics(element);
+    std::optional<RenderBox> box = borderBoxOf(render, element);
     if (!metrics || !box || metrics->inlineLevel) {
         return std::nullopt;
     }
@@ -128,17 +112,6 @@ std::optional<RenderBox> paddingBox(JSContext* ctx, const RenderTree& render, co
 
 } // namespace
 
-// The final review's I1: a read-only loop pays no flush, so its reads carry their own weight.
-void chargeQueryRead(JSContext* ctx, uint64_t units) {
-    charge(ctx, units);
-    Runtime& runtime = Runtime::from(ctx);
-    runtime.addLayoutQueryUnits(units);
-    if (runtime.layoutQueryUnits() > work::kLayoutQueryBudget) {
-        runtime.stop(StopReason::LayoutQuery);
-        throw Aborted{};
-    }
-}
-
 RenderTree* layoutForQuery(JSContext* ctx) {
     HostState* host = HostState::find(ctx);
     RenderTree* render = host ? host->render() : nullptr;
@@ -146,12 +119,11 @@ RenderTree* layoutForQuery(JSContext* ctx) {
         return nullptr;
     }
     Runtime& runtime = Runtime::from(ctx);
-    const uint64_t before = JS_GetWorkUnits(runtime.jsRuntime());
-    charge(ctx, work::kLayoutQuery);
+    runtime.noteLayoutQuery();
     render->flushForQuery(ctx);
-    runtime.addLayoutQueryUnits(JS_GetWorkUnits(runtime.jsRuntime()) - before);
-    if (runtime.layoutQueryUnits() > work::kLayoutQueryBudget) {
-        runtime.stop(StopReason::LayoutQuery);
+    // widget-sandbox's layout queries per task: past 100 ms of their time the widget stops.
+    if (runtime.queryBudgetSpent()) {
+        runtime.stopForLayoutQueries();
         throw Aborted{};
     }
     return render;
@@ -245,14 +217,14 @@ void DOMRectList::dispose(JSRuntime* rt) {
 // getClientRects and getBoundingClientRect report where the boxes are drawn: transformed (RenderTree::visualRects).
 Ref<DOMRectList> Element::getClientRects(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    return DOMRectList::make(ctx, render ? render->visualRects(*this, chargedClientRects(ctx, *render, *this))
+    return DOMRectList::make(ctx, render ? render->visualRects(*this, render->clientRects(*this))
                                          : std::vector<RenderBox>());
 }
 
 Ref<DOMRect> Element::getBoundingClientRect(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
     RenderBox box;
-    if (!render || !unionOfRects(render->visualRects(*this, chargedClientRects(ctx, *render, *this)), box)) {
+    if (!render || !unionOfRects(render->visualRects(*this, render->clientRects(*this)), box)) {
         box = RenderBox();
     }
     return DOMRectReadOnly::make(ctx, box);
@@ -260,13 +232,13 @@ Ref<DOMRect> Element::getBoundingClientRect(JSContext* ctx) {
 
 int32_t Element::clientTop(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderTree::BoxMetrics> metrics = render ? chargedMetrics(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderTree::BoxMetrics> metrics = render ? render->boxMetrics(*this) : std::nullopt;
     return metrics && !metrics->inlineLevel ? rounded(metrics->borderTop) : 0;
 }
 
 int32_t Element::clientLeft(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderTree::BoxMetrics> metrics = render ? chargedMetrics(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderTree::BoxMetrics> metrics = render ? render->boxMetrics(*this) : std::nullopt;
     return metrics && !metrics->inlineLevel ? rounded(metrics->borderLeft) : 0;
 }
 
@@ -333,7 +305,7 @@ Element* HTMLElement::offsetParent(JSContext* ctx) {
 
 int32_t HTMLElement::offsetTop(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderBox> box = render ? borderBoxOf(*render, *this) : std::nullopt;
     if (!box) {
         return 0;
     }
@@ -342,8 +314,8 @@ int32_t HTMLElement::offsetTop(JSContext* ctx) {
     if (!parent || (state && state->hasDocument() && parent == state->document().body(ctx))) {
         return rounded(box->y);
     }
-    std::optional<RenderBox> parentBox = chargedBorderBox(ctx, *render, *parent);
-    std::optional<RenderTree::BoxMetrics> parentMetrics = chargedMetrics(ctx, *render, *parent);
+    std::optional<RenderBox> parentBox = borderBoxOf(*render, *parent);
+    std::optional<RenderTree::BoxMetrics> parentMetrics = render->boxMetrics(*parent);
     if (!parentBox || !parentMetrics) {
         return rounded(box->y);
     }
@@ -352,7 +324,7 @@ int32_t HTMLElement::offsetTop(JSContext* ctx) {
 
 int32_t HTMLElement::offsetLeft(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderBox> box = render ? borderBoxOf(*render, *this) : std::nullopt;
     if (!box) {
         return 0;
     }
@@ -361,8 +333,8 @@ int32_t HTMLElement::offsetLeft(JSContext* ctx) {
     if (!parent || (state && state->hasDocument() && parent == state->document().body(ctx))) {
         return rounded(box->x);
     }
-    std::optional<RenderBox> parentBox = chargedBorderBox(ctx, *render, *parent);
-    std::optional<RenderTree::BoxMetrics> parentMetrics = chargedMetrics(ctx, *render, *parent);
+    std::optional<RenderBox> parentBox = borderBoxOf(*render, *parent);
+    std::optional<RenderTree::BoxMetrics> parentMetrics = render->boxMetrics(*parent);
     if (!parentBox || !parentMetrics) {
         return rounded(box->x);
     }
@@ -374,14 +346,12 @@ std::optional<RenderedContentSize> renderedContentSize(JSContext* ctx, const Ele
     if (!render) {
         return std::nullopt;
     }
-    uint64_t visited = 0;
-    const bool rendered = render->beingRendered(element, visited);
-    chargeQueryRead(ctx, work::kNodeVisit * std::max<uint64_t>(1, visited));
+    const bool rendered = render->beingRendered(element);
     if (!rendered) {
         return std::nullopt;
     }
-    std::optional<RenderBox> box = chargedBorderBox(ctx, *render, element);
-    std::optional<RenderTree::BoxMetrics> metrics = box ? chargedMetrics(ctx, *render, element) : std::nullopt;
+    std::optional<RenderBox> box = borderBoxOf(*render, element);
+    std::optional<RenderTree::BoxMetrics> metrics = box ? render->boxMetrics(element) : std::nullopt;
     if (!box || !metrics) {
         return std::nullopt;
     }
@@ -392,13 +362,13 @@ std::optional<RenderedContentSize> renderedContentSize(JSContext* ctx, const Ele
 
 int32_t HTMLElement::offsetWidth(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderBox> box = render ? borderBoxOf(*render, *this) : std::nullopt;
     return box ? rounded(box->width) : 0;
 }
 
 int32_t HTMLElement::offsetHeight(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;
+    std::optional<RenderBox> box = render ? borderBoxOf(*render, *this) : std::nullopt;
     return box ? rounded(box->height) : 0;
 }
 
@@ -414,7 +384,6 @@ Element* Document::elementFromPoint(JSContext* ctx, double x, double y) {
         return nullptr;
     }
     // The hit test walks the whole render tree.
-    chargeQueryRead(ctx, work::kLayoutBox * std::max<uint64_t>(1, render->boxCount()));
     Node* node = render->nodeAt(x, y);
     return node && node->isElement() ? static_cast<Element*>(node) : nullptr;
 }

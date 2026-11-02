@@ -1,7 +1,7 @@
 // Resize Observer (V3b plan, Task 2; https://drafts.csswg.org/resize-observer/): ResizeObserver, ResizeObserverEntry
 // and ResizeObserverSize. The event loop delivers after the flush that ends a task or a frame (EventLoop::
-// deliverResizeObservations): gather, broadcast, run the microtasks, lay out, gather again, at most
-// work::kResizeObserverRounds rounds. An observer with observations is held by the window, so it keeps delivering after
+// deliverResizeObservations): gather, broadcast, run the microtasks, lay out, gather again, at most EventLoop's
+// kResizeObserverRounds (4) rounds. An observer with observations is held by the window, so it keeps delivering after
 // the widget drops it; it holds its targets.
 #pragma once
 
@@ -57,7 +57,7 @@ public:
     void disconnect(JSContext* ctx);
 
     /// "gather active resize observations": marks every observation whose size differs from the one it last reported
-    /// (0×0 at first); true when one does. Charged per observation.
+    /// (0×0 at first); true when one does.
     bool gather(JSContext* ctx, const RenderTree& render);
     /// "broadcast active resize observations": the marked ones, as entries, to the callback (its exception reported),
     /// each now the size it reported. Runs script.

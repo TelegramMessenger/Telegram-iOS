@@ -19,9 +19,31 @@ public struct ChatMediaEditorBottomControlsLayout: Equatable {
     public var rightFrame: CGRect
 }
 
-public func chatMediaEditorBottomControlsLayout(size: CGSize, safeInsets: UIEdgeInsets, middleItemWidths: [CGFloat], middleSpacing: CGFloat = chatMediaEditorBottomControlsMiddleSpacing, rightWidth: CGFloat) -> ChatMediaEditorBottomControlsLayout {
+public func chatMediaEditorBottomControlsLayout(size: CGSize, safeInsets: UIEdgeInsets, middleItemWidths: [CGFloat], middleSpacing: CGFloat = chatMediaEditorBottomControlsMiddleSpacing, rightWidth: CGFloat, side: ChatMediaEditorToolbarSide? = nil, reservedCorners: ContainerViewLayoutCorners = .none) -> ChatMediaEditorBottomControlsLayout {
+    if let side {
+        let panelFrame = chatMediaEditorLandscapeColumnFrame(size: size, safeInsets: safeInsets, side: side, reservedCorners: reservedCorners)
+        let layout = chatMediaEditorBottomControlsColumnLocalLayout(size: panelFrame.size, middleItemWidths: middleItemWidths, middleSpacing: middleSpacing, leftWidth: chatMediaEditorBottomControlsButtonSide, rightWidth: rightWidth)
+        return ChatMediaEditorBottomControlsLayout(panelFrame: panelFrame, leftFrame: layout.leftFrame, middleFrame: layout.middleFrame, itemFrames: layout.itemFrames, rightFrame: layout.rightFrame)
+    }
     let panelFrame = chatMediaEditorBottomPanelFrame(size: size, safeInsets: safeInsets, toolbarHeight: chatMediaEditorToolbarHeight)
     return chatMediaEditorBottomControlsLocalLayout(panelFrame: panelFrame, middleItemWidths: middleItemWidths, middleSpacing: middleSpacing, rightWidth: rightWidth)
+}
+
+func chatMediaEditorBottomControlsColumnLocalLayout(size: CGSize, middleItemWidths: [CGFloat], middleSpacing: CGFloat, leftWidth: CGFloat, rightWidth: CGFloat) -> MediaEditorBottomControlsLayout {
+    let side = chatMediaEditorBottomControlsButtonSide
+    let rightFrame = CGRect(x: floorToScreenPixels((size.width - rightWidth) / 2.0), y: 0.0, width: rightWidth, height: side)
+    let leftFrame = CGRect(x: floorToScreenPixels((size.width - leftWidth) / 2.0), y: size.height - side, width: leftWidth, height: side)
+    let middleHeight = CGFloat(middleItemWidths.count) * side + CGFloat(max(0, middleItemWidths.count - 1)) * middleSpacing
+    let middleMinY = floorToScreenPixels((size.height - middleHeight) / 2.0)
+    let itemFrames = middleItemWidths.enumerated().map { index, width in
+        return CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: middleMinY + CGFloat(index) * (side + middleSpacing), width: width, height: side)
+    }
+    var middleFrame: CGRect?
+    if let first = itemFrames.first, let last = itemFrames.last {
+        let width = itemFrames.map(\.width).max() ?? side
+        middleFrame = CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: first.minY, width: width, height: last.maxY - first.minY)
+    }
+    return MediaEditorBottomControlsLayout(leftFrame: leftFrame, middleFrame: middleFrame, itemFrames: itemFrames, rightFrame: rightFrame)
 }
 
 let chatMediaEditorBottomControlsSpec = MediaEditorBottomControlsLayoutSpec(sideInset: chatMediaEditorBottomControlsSideInset, middleCentering: .screenBand(inset: chatMediaEditorBottomControlsButtonSide), buttonSide: chatMediaEditorBottomControlsButtonSide)
@@ -253,10 +275,12 @@ public func chatMediaEditorBottomControlsItems(
     }
 }
 
-public func chatMediaEditorBottomControlsAreHidden(mode: ChatMediaEditorBottomControlsMode, keyboardHeight: CGFloat, isEditingCaption: Bool, paintControlsVisible: Bool) -> Bool {
+// The row hides for a keyboard that covers it, not for caption editing as such: with a hardware keyboard (an iPad's)
+// the caption is edited with no keyboard on screen, and Send has to stay.
+public func chatMediaEditorBottomControlsAreHidden(mode: ChatMediaEditorBottomControlsMode, keyboardHeight: CGFloat, paintControlsVisible: Bool) -> Bool {
     switch mode {
     case .gallery:
-        return keyboardHeight > 0.0 || isEditingCaption
+        return keyboardHeight > 0.0
     case .paint:
         return keyboardHeight > 0.0 || !paintControlsVisible
     case .crop, .quality, .tools:

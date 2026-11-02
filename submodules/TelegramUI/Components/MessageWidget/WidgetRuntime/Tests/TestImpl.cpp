@@ -112,7 +112,7 @@ wr::Ref<TestList> TestList::makeInterrupting(JSContext* ctx, uint32_t count) {
 
 uint32_t TestList::length(JSContext* ctx) {
     if (m_interrupting) {
-        // What JS_ThrowInterrupted (quickjs.c) leaves pending when the budget stops the widget.
+        // What JS_ThrowInterrupted (quickjs.c) leaves pending when the runtime stops the widget.
         JS_ThrowInternalError(ctx, "interrupted");
         JSValue error = JS_GetException(ctx);
         JS_SetUncatchableError(ctx, error);

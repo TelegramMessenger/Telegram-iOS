@@ -54,15 +54,6 @@ void expectMatchesRebuild(RenderEnv& env, const std::string& what) {
     CHECK_EQ(dump, layer);
 }
 
-bool publishedReset(RenderEnv& env) {
-    for (const wr::LayerOp& op : env.render().layerOps()) {
-        if (op.kind == wr::LayerOp::Reset) {
-            return true;
-        }
-    }
-    return false;
-}
-
 } // namespace
 
 WR_TEST(testTheConformanceFrames) {
@@ -145,12 +136,14 @@ WR_TEST(testCommitStyles) {
               "DOMException:InvalidStateError");
 }
 
-WR_TEST(testCustomPropertyRebuilds) {
+// An animated custom property is patched (twidget edit 17): the var() readers below it are matched again.
+WR_TEST(testCustomPropertyAnimationIsPatched) {
     RenderEnv env(kPage);
     const uint64_t builds = env.render().buildCount();
     checkEval(env, "const v = $('v').animate({'--x': ['0px', '100px']}, 1000); v.pause(); v.currentTime = 500; $('v').getBoundingClientRect().width",
               "50");
-    CHECK(env.render().buildCount() > builds);
+    CHECK_EQ(env.render().buildCount(), builds);
+    expectMatchesRebuild(env, "an animated custom property");
 }
 
 WR_TEST(testValuesThatWouldEscapeTheirDeclaration) {
@@ -161,19 +154,46 @@ WR_TEST(testValuesThatWouldEscapeTheirDeclaration) {
               "30,1");
 }
 
+// widget-sandbox v0.3.0, limit.animations: the first 64 live script animations render (compat: 1,024).
 WR_TEST(testTheAnimationLimit) {
-    RenderEnv env(kPage);
-    env.env().eval("window.boxes = []; for (let i = 0; i < 1100; i++) { const d = document.createElement('div'); document.body.append(d);"
-                   " boxes.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
-    env.env().frame(16);
-    env.env().frame(16);
-    checkEval(env, "[getComputedStyle(boxes[0]).opacity, getComputedStyle(boxes[1023]).opacity, getComputedStyle(boxes[1024]).opacity].join()",
-              "0.5,0.5,1");
-    int limits = 0;
-    for (const auto& [kind, detail] : env.env().host().diagnostics) {
-        limits += kind == "animation-limit" && detail == "more than 1024 live script animations; further ones are not rendered";
+    for (const bool strict : {true, false}) {
+        wr_test::ScopedLimits limits(strict ? wr::Limits::strict() : wr::Limits::compat());
+        const int cap = strict ? 64 : 1024;
+        RenderEnv env(kPage);
+        env.env().eval("window.boxes = []; for (let i = 0; i < 1100; i++) { const d = document.createElement('div'); document.body.append(d);"
+                       " boxes.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
+        env.env().frame(16);
+        env.env().frame(16);
+        checkEval(env, "[getComputedStyle(boxes[0]).opacity, getComputedStyle(boxes[" + std::to_string(cap - 1) + "]).opacity, getComputedStyle(boxes[" +
+                           std::to_string(cap) + "]).opacity].join()",
+                  "0.5,0.5,1");
+        int noted = 0;
+        for (const auto& [kind, detail] : env.env().host().diagnostics) {
+            noted += kind == "animation-limit" && detail == "more than " + std::to_string(cap) + " live script animations; further ones are not rendered";
+        }
+        CHECK_EQ(noted, 1);
     }
-    CHECK_EQ(limits, 1);
+}
+
+// widget-sandbox v0.3.0, limit.animations: the cap counts live script animations, as upstream's validator does (its
+// `MAX_LIVE_ANIMS`, over the shim's animation records); CSS animations and transitions are the renderer's own. A widget
+// animating a hundred tiles with CSS (corpus htmlbubbles-ported/10-game-night/08-kai) loses none.
+WR_TEST(testTheAnimationLimitCountsScriptAnimationsOnly) {
+    RenderEnv env(kPage);
+    env.env().eval("const s = document.createElement('style'); s.textContent = '@keyframes fade { from { opacity: 0.75 } to"
+                   " { opacity: 0.75 } }'; document.head.append(s);"
+                   " window.css = []; for (let i = 0; i < 100; i++) { const d = document.createElement('div');"
+                   " d.style.animation = 'fade 100s infinite'; document.body.append(d); css.push(d); }"
+                   " window.run = []; for (let i = 0; i < 70; i++) { const d = document.createElement('div'); document.body.append(d);"
+                   " run.push(d); d.animate({opacity: [0.5, 0.5]}, 100000); } 1");
+    env.env().frame(16);
+    env.env().frame(16);
+    checkEval(env, "[css[99], run[0], run[63], run[64]].map(d => getComputedStyle(d).opacity).join()", "0.75,0.5,0.5,1");
+    int noted = 0;
+    for (const auto& [kind, detail] : env.env().host().diagnostics) {
+        noted += kind == "animation-limit" && detail == "more than 64 live script animations; further ones are not rendered";
+    }
+    CHECK_EQ(noted, 1);
 }
 
 WR_TEST(testOverrideSize) {
@@ -185,16 +205,14 @@ WR_TEST(testOverrideSize) {
               "4096,0");
 }
 
-/// A running transform animation's frames are patches that keep litehtml's render tree: on an in-flow block no Reset is
-/// published at all, from the frame its declarations appear to the one they go, and what each publishes is a rebuild's.
-/// On a positioned element the tree is kept too; the frames where it becomes and stops being a paint group publish the
-/// mirror's own Reset (LayerMirror's placement rule places a new group only for an in-flow block: unplaceableResets).
+/// A running transform animation's frames are patches that keep litehtml's render tree, on an in-flow block and on a
+/// positioned element, from the frame its declarations appear to the one they go (where it becomes and stops being a paint
+/// group), and what each publishes is a fresh build's.
 WR_TEST(testAPaintOnlyFrameKeepsTheTree) {
     RenderEnv env(kPage);
     const uint64_t patches = env.render().patchCount();
     const uint64_t builds = env.render().buildCount();
-    const uint64_t resets = env.render().treeRebuildResets();
-    const auto run = [&](const char* id, bool inFlow) {
+    const auto run = [&](const char* id) {
         env.env().eval(std::string("window.t = $('") + id +
                        "').animate({transform: ['translateX(0px)', 'translateX(100px)'], opacity: [1, 0.5]}, 500); 1");
         // The first frame starts it at 0; the next five move it, the last of them to its end, where its values go.
@@ -202,20 +220,15 @@ WR_TEST(testAPaintOnlyFrameKeepsTheTree) {
             env.env().frame(100);
             const std::string what = std::string(id) + ", frame " + std::to_string(i) + " (" +
                                      env.env().eval("[t.playState, t.currentTime].join()") + ")";
-            if (env.render().treeRebuildResets() != resets || (inFlow && publishedReset(env))) {
-                std::printf("  the render tree was rebuilt or a Reset published: %s\n", what.c_str());
-            }
-            CHECK_EQ(env.render().treeRebuildResets(), resets);
-            CHECK(!inFlow || !publishedReset(env));
             CHECK_EQ(env.render().buildCount(), builds);
             expectMatchesRebuild(env, what);
         }
         checkEval(env, std::string("[t.playState, tx('") + id + "'), getComputedStyle($('" + id + "')).opacity].join()",
                   "finished,none,1");
     };
-    run("p2", true);
+    run("p2");
     CHECK(env.render().patchCount() >= patches + 6);
-    run("a", false);
+    run("a");
 }
 
 /// A running width animation still lays out: the box follows it, as a rebuild's does.
@@ -229,28 +242,6 @@ WR_TEST(testALayoutFrameStillLaysOut) {
         checkEval(env, "$('p2').getBoundingClientRect().width", std::to_string(20 + std::stoi(at) / 10));
         expectMatchesRebuild(env, "width at " + at);
     }
-}
-
-/// One frame of a running transform animation on a 200-element page is cheap (Review Focus 3).
-WR_TEST(testAFrameIsCheap) {
-    std::string page = "<!doctype html><html><head><style>body { margin: 0 } .row { height: 10px; color: #333 }"
-                       " #mover { width: 20px; height: 20px; background: #3a3 }</style></head><body><div id=mover></div>";
-    for (int i = 0; i < 200; i++) {
-        page += "<div class=row>row " + std::to_string(i) + "</div>";
-    }
-    page += "</body></html>";
-    RenderEnv env(page);
-    env.env().eval("document.getElementById('mover').animate({transform: ['translateX(0px)', 'translateX(100px)']}, 100000); 1");
-    env.env().frame(16);
-    env.env().frame(16);
-    JSRuntime* rt = env.env().runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.env().frame(16);
-    const uint64_t cost = JS_GetWorkUnits(rt) - before;
-    if (cost >= 250000) {
-        std::printf("  a frame cost %llu units\n", (unsigned long long)cost);
-    }
-    CHECK(cost < 250000);
 }
 
 /// A frame's changed rects are in the document's coordinates, wherever the animated element sits: the host redraws
@@ -366,4 +357,38 @@ WR_TEST(testAnImplicitZIndexKeyframeStartsFromTheStylesheet) {
     RenderEnv env("<!doctype html><html><head><style>#z { position: relative; z-index: 2 }</style></head><body>"
                   "<div id=z></div><script>window.z = document.getElementById('z');</script></body></html>");
     checkEval(env, "const k = z.animate({zIndex: 10}, 1000); k.pause(); k.currentTime = 250; getComputedStyle(z).zIndex", "4");
+}
+
+// Twidget edit 87: the motion lab's card slides in from translateX(28px) holding its positioned rings. While the card is
+// transformed it holds them (add_positioned); when its transform goes (a class removed, the animation ended), they go
+// back to the root's positioned list, so they are still painted, and every flush equals a fresh build and publishes
+// operations.
+WR_TEST(testAnEndedTransformAnimationPaintsItsPositionedChild) {
+    {
+        RenderEnv env("<!doctype html><style>body{margin:0} .card{display:flex;padding:8px;background:#eee}"
+                      " .moved{transform:translateX(28px)} .rings{position:relative;flex-shrink:0;width:60px;height:60px}"
+                      " .pct{position:absolute;left:20px;top:20px;width:20px;height:20px;background:#00f}</style>"
+                      "<body><div id=w class='card moved'><div class=rings><div class=pct>9</div></div></div></body>");
+        env.env().eval("document.getElementById('w').classList.remove('moved'); 1");
+        env.flush();
+        expectMatchesRebuild(env, "the transform's class removed");
+    }
+    RenderEnv env("<!doctype html><style>body{margin:0} .card{display:flex;padding:8px;background:#eee}"
+                  " @keyframes tr-slide-left{from{opacity:0;transform:translateX(28px)}}"
+                  " .tr-slide-left{animation:tr-slide-left .3s cubic-bezier(.33,1,.68,1)}"
+                  " .rings{position:relative;flex-shrink:0;width:60px;height:60px}"
+                  " .pct{position:absolute;left:20px;top:20px;width:20px;height:20px;background:#00f}</style>"
+                  "<body><div id=w class=card><div class=rings><div class=pct>9</div></div></div><p id=p>p</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    env.env().eval("document.getElementById('w').classList.add('tr-slide-left'); 1");
+    for (int i = 0; i < 6; i++) {
+        env.env().frame(100);
+        const std::string what = "frame " + std::to_string(i);
+        expectMatchesRebuild(env, what);
+    }
+    // A later change elsewhere fetches the positioned lists again: the ring is still the root's.
+    env.env().eval("document.getElementById('p').textContent = 'later'; 1");
+    env.flush();
+    expectMatchesRebuild(env, "a later change");
+    CHECK_EQ(env.render().buildCount(), builds);
 }

@@ -1,6 +1,6 @@
 // CSS Syntax's component values from a string (V5c plan, Task 2): the preprocessing, litehtml's tokenizer and its
-// componentizer, behind the caps and charges the selector parser established (Selectors.cpp, M1b ruling 6). Shared by
-// the selector parser and CSS.supports.
+// componentizer, behind the caps the selector parser established (Selectors.cpp, M1b ruling 6). Shared by the selector
+// parser and CSS.supports.
 #pragma once
 
 #include <array>
@@ -18,12 +18,12 @@ namespace wr::css {
 
 /// Blocks (functions and brackets) nested past this are refused: the componentizer recurses once per block.
 inline constexpr int kMaxBracketDepth = 64;
-/// Ruling 6's length cap, in UTF-16 units, checked on the string's length before anything is converted, charged or
-/// allocated. It bounds the parse's transient C++ heap, which is outside the widget's memory limit (ruling 5). A unit
-/// is at most 3 UTF-8 bytes, and the worst peak measured is 545 bytes of heap per UTF-8 byte (a run of one-character
-/// tokens just past a power of two, where the token vectors' growth slack is largest; method and table in the Task 17
-/// report), so the bound is 16,384 x 3 x 545 = 26.8 MB. A unit makes at most one token, so the worst per unit is the
-/// same 545 B (16,384 x 545 = 8.9 MB); the largest peak measured at the cap itself is 5.8 MB.
+/// Ruling 6's length cap, in UTF-16 units, checked on the string's length before anything is converted or allocated.
+/// It bounds the parse's transient C++ heap, which is outside the widget's memory limit (ruling 5). A unit is at most 3
+/// UTF-8 bytes, and the worst peak measured is 545 bytes of heap per UTF-8 byte (a run of one-character tokens just
+/// past a power of two, where the token vectors' growth slack is largest; method and table in the Task 17 report), so
+/// the bound is 16,384 x 3 x 545 = 26.8 MB. A unit makes at most one token, so the worst per unit is the same 545 B
+/// (16,384 x 545 = 8.9 MB); the largest peak measured at the cap itself is 5.8 MB.
 inline constexpr uint32_t kMaxSelectorUnits = 16384;
 static_assert(uint64_t(kMaxSelectorUnits) * 3 < uint64_t(INT_MAX), "litehtml's tokenizer indexes its input with int");
 
@@ -36,11 +36,6 @@ std::string cssInput(const String& text, uint32_t limit = UINT32_MAX);
 struct BlockShape {
     /// Nesting past the cap: the componentizer recurses once per block, so it must not run.
     bool tooDeep = false;
-    /// Each token's depth (the blocks around it), summed: the componentizer copies a token once more for each block it
-    /// is nested in, since every finished block is deep-copied into its parent.
-    uint64_t depthSum = 0;
-    /// Blocks and functions.
-    uint64_t blocks = 0;
 };
 
 /// The walk follows the componentizer's rules exactly: a function or an opening bracket opens a block; a closing token
@@ -49,8 +44,7 @@ struct BlockShape {
 BlockShape blockShape(const litehtml::css_token_vector& tokens);
 
 /// `text`'s component values: nullopt past kMaxSelectorUnits (refused on the length alone, before anything is
-/// converted, charged or allocated) or kMaxBracketDepth. Charged as the selector parser charges: work::kParseByte per
-/// UTF-8 byte before the tokenizer runs, then the componentizer's copying before it runs. Throws Thrown (a stop).
+/// converted or allocated) or kMaxBracketDepth.
 std::optional<litehtml::css_token_vector> componentValues(JSContext* ctx, const String& text);
 
 } // namespace wr::css

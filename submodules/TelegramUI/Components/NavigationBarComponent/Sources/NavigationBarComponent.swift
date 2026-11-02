@@ -31,6 +31,11 @@ public struct NavigationBarLentCapsule {
     public let content: UIView?
 }
 
+/// How far a tap on a navigation bar's buttons may drift before the screen's swipe back takes the touch, as for the chat
+/// title: the swipe otherwise begins after 2pt to the right and cancels the tap. A swipe back that starts on the bar
+/// still navigates, from 10pt on.
+public let navigationBarTapMovement: CGFloat = 10.0
+
 public final class NavigationBarComponent: Component {
     public let theme: NavigationBarTheme
     public let strings: NavigationBarStrings
@@ -111,8 +116,12 @@ public final class NavigationBarComponent: Component {
         return true
     }
 
-    public final class View: UIView {
+    public final class View: UIView, InteractiveTransitionGestureRecognizerTapTarget {
         private var component: NavigationBarComponent?
+
+        public var interactiveTransitionMinimumMovement: CGFloat {
+            return navigationBarTapMovement
+        }
 
         private(set) var primaryContentView: NavigationBarContentView?
         private(set) var secondaryContentView: NavigationBarContentView?

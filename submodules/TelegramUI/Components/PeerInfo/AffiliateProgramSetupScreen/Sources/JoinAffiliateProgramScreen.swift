@@ -1321,6 +1321,8 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 }
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                // Narrower on a regular-width layout, centred.
+                let toastBand = Display.toastFrame(CGRect(x: environment.safeInsets.left + 12.0, y: 0.0, width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right - 12.0 * 2.0, height: 0.0), metrics: environment.metrics)
                 let toastSize = toast.update(
                     transition: transition,
                     component: AnyComponent(ToastContentComponent(
@@ -1343,9 +1345,9 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         iconSpacing: 12.0
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right - 12.0 * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: toastBand.width, height: 1000.0)
                 )
-                let toastFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 12.0, y: 0.0), size: toastSize)
+                let toastFrame = CGRect(origin: CGPoint(x: toastBand.minX, y: 0.0), size: toastSize)
                 if let toastView = toast.view {
                     if toastView.superview == nil {
                         self.addSubview(toastView)

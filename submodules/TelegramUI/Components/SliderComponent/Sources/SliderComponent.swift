@@ -163,6 +163,7 @@ public final class SliderComponent: Component {
     
     public final class View: UIView {
         private var nativeSliderView: SliderView?
+        private var nativeTapGestureRecognizer: UITapGestureRecognizer?
         private let nativeTrackBackgroundView = UIView()
         private let nativeTrackForegroundView = UIView()
         private var sliderView: TGPhotoEditorSliderView?
@@ -219,7 +220,11 @@ public final class SliderComponent: Component {
                     sliderView.disablesInteractiveTransitionGestureRecognizer = true
                     sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
                     sliderView.layer.allowsGroupOpacity = true
-                    
+
+                    let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.nativeSliderTapped(_:)))
+                    sliderView.addGestureRecognizer(tapGestureRecognizer)
+                    self.nativeTapGestureRecognizer = tapGestureRecognizer
+
                     self.addSubview(self.nativeTrackBackgroundView)
                     self.addSubview(self.nativeTrackForegroundView)
                     self.addSubview(sliderView)
@@ -244,6 +249,11 @@ public final class SliderComponent: Component {
                     sliderView.minimumValue = 0.0
                     sliderView.maximumValue = Float(discrete.valueCount - 1)
                     sliderView.value = Float(discrete.value)
+                }
+                if case let .discrete(discrete) = component.content {
+                    self.nativeTapGestureRecognizer?.isEnabled = discrete.valueCount > 1
+                } else {
+                    self.nativeTapGestureRecognizer?.isEnabled = false
                 }
 
                 let useCenteredNativeTrack: Bool
@@ -437,6 +447,29 @@ public final class SliderComponent: Component {
             case let .continuous(continuous):
                 continuous.valueUpdated(floatValue)
             }
+        }
+
+        @objc private func nativeSliderTapped(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended, let component = self.component, component.isEnabled, case let .discrete(discrete) = component.content, discrete.valueCount > 1, let sliderView = self.nativeSliderView else {
+                return
+            }
+            let bounds = sliderView.bounds
+            let trackRect = sliderView.trackRect(forBounds: bounds)
+            let minX = sliderView.thumbRect(forBounds: bounds, trackRect: trackRect, value: sliderView.minimumValue).midX
+            let maxX = sliderView.thumbRect(forBounds: bounds, trackRect: trackRect, value: sliderView.maximumValue).midX
+            guard maxX != minX else {
+                return
+            }
+            let fraction = max(0.0, min(1.0, (recognizer.location(in: sliderView).x - minX) / (maxX - minX)))
+            var index = Int((fraction * CGFloat(discrete.valueCount - 1)).rounded())
+            if let minValue = discrete.minValue {
+                index = max(index, minValue)
+            }
+            guard index != discrete.value else {
+                return
+            }
+            sliderView.setValue(Float(index), animated: true)
+            discrete.valueUpdated(index)
         }
     }
 

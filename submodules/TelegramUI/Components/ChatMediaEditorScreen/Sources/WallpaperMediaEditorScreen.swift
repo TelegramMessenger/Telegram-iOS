@@ -276,7 +276,7 @@ public final class WallpaperMediaEditorScreen: ViewController {
                 context: self.context,
                 mediaEditor: self.mediaEditor,
                 hiddenTools: wallpaperMediaEditorHiddenTools(),
-                layoutStyle: .chat(previewFrame: previewFrame, mediaGeometry: nil)
+                layoutStyle: .chat(previewFrame: previewFrame, mediaGeometry: nil, sidePanelFrame: nil)
             )
             toolsScreen.dismissed = { [weak self] in
                 self?.toolsDismissed()

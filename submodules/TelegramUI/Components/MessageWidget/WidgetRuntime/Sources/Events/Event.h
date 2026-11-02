@@ -30,7 +30,6 @@ public:
     EventTarget* target(JSContext*) { return this->targetNode(); }
     EventTarget* srcElement(JSContext*) { return this->targetNode(); }
     EventTarget* currentTarget(JSContext*);
-    /// Charged work::kNodeVisit per path entry, before the copy.
     std::vector<EventTarget*> composedPath(JSContext* ctx);
     uint16_t eventPhase(JSContext*) { return m_phase; }
     void stopPropagation(JSContext*) { m_stopPropagation = true; }

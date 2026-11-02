@@ -9,7 +9,6 @@
 #include <litehtml/render_inline.h>
 
 #include "Sources/Render/ComputedStyle.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -107,30 +106,15 @@ class Exporter {
 public:
     explicit Exporter(const SelectableTextSource& source) : m_source(source) {}
 
-    std::optional<SelectableText> run() {
+    SelectableText run() {
         if (m_source.root) {
             visit(*m_source.root);
         }
-        if (m_over) {
-            return std::nullopt;
-        }
-        m_out.units = m_units;
         return std::move(m_out);
     }
 
 private:
-    bool charge(uint64_t units) {
-        m_units += units;
-        if (m_units > m_source.budget) {
-            m_over = true;
-        }
-        return !m_over;
-    }
-
     void visit(const litehtml::element& element) {
-        if (m_over || !charge(work::kNodeVisit)) {
-            return;
-        }
         if (element.is_text()) {
             piece(element);
             return;
@@ -144,9 +128,6 @@ private:
         }
         for (const auto& child : element.children()) {
             visit(*child);
-            if (m_over) {
-                return;
-            }
         }
     }
 
@@ -164,11 +145,11 @@ private:
         const uint32_t pieceOffset = m_keyOffset;
         m_keyOffset += uint32_t(whole.size());
         const litehtml::element* parent = element.parent().get();
-        if (!parent || !charge((whole.size() + 7) / 8 * work::kScanEightUnits)) {
+        if (!parent) {
             return;
         }
         const ParentFacts& f = facts(*parent);
-        if (m_over || !f.selectable) {
+        if (!f.selectable) {
             return;
         }
         if (element.is_break()) {
@@ -180,9 +161,6 @@ private:
             return;
         }
         element.for_each_render_item([&](const std::shared_ptr<litehtml::render_item>& ri) {
-            if (m_over) {
-                return;
-            }
             std::vector<std::pair<std::shared_ptr<litehtml::render_item>, const std::string*>> parts;
             auto textItem = std::dynamic_pointer_cast<litehtml::render_text>(ri);
             if (textItem && !textItem->fragments.empty()) {
@@ -198,24 +176,18 @@ private:
                 partOffset += uint32_t(toUTF16(*drawn).size());
                 const int bytes = part->ellipsis_bytes();
                 const std::string shown = bytes < 0 ? *drawn : drawn->substr(0, size_t(bytes));
-                if (!emit(*part, shown, f, key, pieceOffset + offset) && m_over) {
-                    return;
-                }
+                emit(*part, shown, f, key, pieceOffset + offset);
             }
         });
     }
 
-    /// One run; false when it is not selectable after all (hidden, clipped, unmeasurable) or the budget ran out.
+    /// One run; false when it is not selectable after all (hidden, clipped, unmeasurable).
     bool emit(const litehtml::render_item& item, const std::string& shown, const ParentFacts& f, uint64_t key,
               uint32_t nodeOffset) {
-        // Every run considered pays for its box, kept or not: the walk and the placement below are its cost.
-        if (shown.empty() || !charge(work::kLayoutBox)) {
+        if (shown.empty()) {
             return false;
         }
         for (const litehtml::render_item* r = &item; r; r = r->parent().get()) {
-            if (!charge(work::kNodeVisit)) {
-                return false;
-            }
             if (!r->is_visible()) {
                 return false;
             }
@@ -231,10 +203,6 @@ private:
             return false;
         }
         const std::u16string units = toUTF16(shown);
-        // Charged before the host places the carets (final review C1: their cost follows the run's length).
-        if (!charge((units.size() + 7) / 8 * work::kScanEightUnits + (units.size() + 1) * work::kCaretUnit)) {
-            return false;
-        }
         std::vector<float> carets = m_source.caretOffsets(f.font, shown);
         if (carets.size() != units.size() + 1) {
             return false;
@@ -284,12 +252,10 @@ private:
         }
         ParentFacts f;
         f.parent = &parent;
-        uint64_t visited = 0;
-        f.selectable = selectsText(parent, &visited);
+        f.selectable = selectsText(parent);
         if (f.selectable) {
-            visualTransform(parent, f.transform, &visited);
+            visualTransform(parent, f.transform);
             for (auto r = firstRenderItem(parent); r; r = r->parent()) {
-                visited++;
                 if (r->css().get_overflow() == litehtml::overflow_visible) {
                     continue;
                 }
@@ -310,7 +276,6 @@ private:
                 }
             }
             for (const litehtml::element* el = &parent; el; el = el->parent().get()) {
-                visited++;
                 if (!inlineLevel(el->css().get_display())) {
                     f.block = el;
                     break;
@@ -318,15 +283,12 @@ private:
             }
             f.font = parent.css().get_font();
         }
-        charge(visited * work::kNodeVisit);
         m_facts = f;
         return m_facts;
     }
 
     const SelectableTextSource& m_source;
     SelectableText m_out;
-    uint64_t m_units = 0;
-    bool m_over = false;
     bool m_pendingSpace = false;
     bool m_pendingNewline = false;
     const litehtml::element* m_lastBlock = nullptr;
@@ -337,7 +299,7 @@ private:
 
 } // namespace
 
-std::optional<SelectableText> exportSelectableText(const SelectableTextSource& source) {
+SelectableText exportSelectableText(const SelectableTextSource& source) {
     return Exporter(source).run();
 }
 

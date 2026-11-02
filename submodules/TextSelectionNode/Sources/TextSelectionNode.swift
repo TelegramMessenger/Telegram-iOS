@@ -264,6 +264,8 @@ public final class TextSelectionNode: ASDisplayNode {
     public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
     public var updateRange: ((NSRange?) -> Void)?
     public var presentMenu: ((UIView, CGPoint, [ContextMenuAction]) -> Void)?
+    /// Set by an editable host: the menu then offers Delete, which ends the selection and passes its range here.
+    public var performDelete: ((NSRange) -> Void)?
     private let present: (ViewController, Any?) -> Void
     private let rootView: () -> UIView?
     private let performAction: (NSAttributedString, TextSelectionAction) -> Void
@@ -802,6 +804,12 @@ public final class TextSelectionNode: ASDisplayNode {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
                 self?.performAction(string, .speak)
                 self?.cancelSelection()
+            }))
+        }
+        if let performDelete = self.performDelete {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Common_Delete, accessibilityLabel: self.strings.Common_Delete), action: { [weak self] in
+                self?.cancelSelection()
+                performDelete(adjustedRange)
             }))
         }
         

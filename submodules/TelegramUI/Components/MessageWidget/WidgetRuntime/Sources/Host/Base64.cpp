@@ -2,7 +2,6 @@
 
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
-#include "Sources/Support/Work.h"
 
 namespace wr {
 
@@ -42,7 +41,6 @@ bool isASCIIWhitespace(char16_t c) {
 
 String base64Encode(JSContext* ctx, const String& data) {
     const uint32_t n = data.length();
-    chargeScan(ctx, n);
     Vector<char> out{JSAllocator<char>(JS_GetRuntime(ctx))};
     out.reserve(size_t(n + 2) / 3 * 4);
     uint32_t group = 0;
@@ -79,7 +77,6 @@ String base64Encode(JSContext* ctx, const String& data) {
 
 String forgivingBase64Decode(JSContext* ctx, const String& data) {
     const uint32_t n = data.length();
-    chargeScan(ctx, n);
     // Step 1: the code units without ASCII whitespace.
     Vector<char16_t> units{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
     units.reserve(n);

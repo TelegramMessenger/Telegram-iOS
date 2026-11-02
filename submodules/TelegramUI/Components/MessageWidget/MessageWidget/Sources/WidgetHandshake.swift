@@ -5,28 +5,23 @@ import QuartzCore
 public struct MessageWidgetWaitPolicy: Equatable {
     /// The wall time main waits over every task of one run-loop turn; nil: no cap. Never a verdict: it only ends a wait.
     public var cap: TimeInterval?
-    /// The units of work main waits for over every task of one run-loop turn; nil: no limit.
-    public var allowance: UInt64?
 
-    public init(cap: TimeInterval?, allowance: UInt64?) {
+    public init(cap: TimeInterval?) {
         self.cap = cap
-        self.allowance = allowance
     }
 
-    /// The app's: a 20 ms cap and a 1,000,000-unit allowance (~10 ms at the cost suite's reference rate; provisional,
-    /// to be checked on the slowest supported device against ~20 ms).
-    public static let standard = MessageWidgetWaitPolicy(cap: 0.020, allowance: 1_000_000)
+    /// The app's: a 20 ms cap per run-loop turn (the CPU-clock limits design: the unit allowance went with the units).
+    public static let standard = MessageWidgetWaitPolicy(cap: 0.020)
     /// Tests: every wait ends with its task, as when everything ran on main.
-    public static let unbounded = MessageWidgetWaitPolicy(cap: nil, allowance: nil)
+    public static let unbounded = MessageWidgetWaitPolicy(cap: nil)
 }
 
-/// What main may still wait for in the current run-loop turn: one allowance of units and one cap of time over every
-/// waited task, so which events finish in time depends only on their work and the turn's order (spec D3, D8). Both reset
-/// when main's run loop next waits (`beforeWaiting`, in the common modes, so a scroll's turns count too). Main only.
+/// What main may still wait for in the current run-loop turn: one cap of time over every waited task (spec D3, D8). It
+/// resets when main's run loop next waits (`beforeWaiting`, in the common modes, so a scroll's turns count too). Main
+/// only.
 public final class MessageWidgetTurn {
     public static let shared = MessageWidgetTurn()
 
-    private(set) var unitsWaited: UInt64 = 0
     private(set) var timeWaited: TimeInterval = 0
     private var observer: CFRunLoopObserver?
 
@@ -45,15 +40,7 @@ public final class MessageWidgetTurn {
     }
 
     func reset() {
-        self.unitsWaited = 0
         self.timeWaited = 0
-    }
-
-    func remainingUnits(_ policy: MessageWidgetWaitPolicy) -> UInt64 {
-        guard let allowance = policy.allowance else {
-            return .max
-        }
-        return allowance > self.unitsWaited ? allowance - self.unitsWaited : 0
     }
 
     func remainingTime(_ policy: MessageWidgetWaitPolicy) -> TimeInterval? {
@@ -63,19 +50,16 @@ public final class MessageWidgetTurn {
         return max(0.0, cap - self.timeWaited)
     }
 
-    func record(units: UInt64, time: TimeInterval) {
-        let (sum, overflow) = self.unitsWaited.addingReportingOverflow(units)
-        self.unitsWaited = overflow ? .max : sum
+    func record(time: TimeInterval) {
         self.timeWaited += time
     }
 }
 
 /// One task's handshake: the core completes it exactly once; main waits on it at most once. The task's result goes to
 /// `deposit` when it completes, on the core's thread, so results are deposited in the order their tasks ran. The ways
-/// a wait ends (the task completed, its meter crossed the sync budget, the timeout passed) race the completion under one
-/// lock: a completion main stopped waiting for also calls `late`, so the result is applied without a wait.
+/// a wait ends (the task completed, the timeout passed) race the completion under one lock: a completion main stopped
+/// waiting for also calls `late`, so the result is applied without a wait.
 final class WidgetTicket<Result> {
-    let meter: WorkMeter
     private let lock = NSLock()
     private let wake: DispatchSemaphore
     private let deposit: (Result) -> Void
@@ -83,14 +67,10 @@ final class WidgetTicket<Result> {
     private var completed = false
     private var abandoned = false
 
-    init(syncBudget: UInt64, deposit: @escaping (Result) -> Void, late: @escaping () -> Void) {
-        let wake = DispatchSemaphore(value: 0)
-        self.wake = wake
+    init(deposit: @escaping (Result) -> Void, late: @escaping () -> Void) {
+        self.wake = DispatchSemaphore(value: 0)
         self.deposit = deposit
         self.late = late
-        self.meter = WorkMeter(threshold: syncBudget, crossed: {
-            wake.signal()
-        })
     }
 
     /// Core: deposits the task's result, then wakes the waiting main thread, or calls `late` once main stopped waiting.
@@ -107,10 +87,10 @@ final class WidgetTicket<Result> {
         self.wake.signal()
     }
 
-    /// Main: waits until the task completes (true), or it crosses its sync budget, or `timeout` passes (nil: no
-    /// timeout); then false, and `late` will be called when it completes. A zero budget or timeout does not wait at all.
+    /// Main: waits until the task completes (true) or `timeout` passes (nil: no timeout); then false, and `late` will be
+    /// called when it completes. A zero timeout does not wait at all.
     func wait(timeout: TimeInterval?) -> Bool {
-        if self.meter.threshold > 0 && (timeout.map { $0 > 0.0 } ?? true) {
+        if timeout.map({ $0 > 0.0 }) ?? true {
             let deadline = timeout.map { DispatchTime.now() + $0 }
             while true {
                 let signalled: Bool
@@ -120,7 +100,7 @@ final class WidgetTicket<Result> {
                     self.wake.wait()
                     signalled = true
                 }
-                if !signalled || self.meter.hasCrossed {
+                if !signalled {
                     break
                 }
                 self.lock.lock()
@@ -143,7 +123,7 @@ final class WidgetTicket<Result> {
     }
 }
 
-/// A widget's main-side handshake (spec D3): queues its tasks, waits for them within the turn's allowance and cap, and
+/// A widget's main-side handshake (spec D3): queues its tasks, waits for them within the turn's cap, and
 /// applies their results on main in task order. Every result enters the mailbox when its task completes, in the order
 /// the tasks ran, and main applies only from the mailbox: a run that finished within its wait drains it before
 /// returning, and one that did not is drained later.
@@ -167,16 +147,16 @@ final class WidgetHandshake<Result> {
     }
 
     /// Main: queues `work` (with `key`, replacing a waiting task with the same key) and, when `wait`, waits for it within
-    /// the turn's allowance and cap (`policy`'s, for this call only, when given). True when it finished within the wait:
+    /// the turn's cap (`policy`'s, for this call only, when given). True when it finished within the wait:
     /// its result is applied before this returns. False when it goes on (its result is applied later, in order) or the
     /// queue is closed.
     @discardableResult
-    func run(wait: Bool, key: String? = nil, policy: MessageWidgetWaitPolicy? = nil, _ work: @escaping (WorkMeter) -> Result) -> Bool {
+    func run(wait: Bool, key: String? = nil, policy: MessageWidgetWaitPolicy? = nil, _ work: @escaping () -> Result) -> Bool {
         dispatchPrecondition(condition: .onQueue(.main))
         let policy = policy ?? self.policy
-        let syncBudget: UInt64 = wait ? self.turn.remainingUnits(policy) : 0
+        // A wait ends with its task or at the turn's cap.
         let timeout: TimeInterval? = wait ? self.turn.remainingTime(policy) : 0.0
-        let ticket = WidgetTicket<Result>(syncBudget: syncBudget, deposit: { [weak self] result in
+        let ticket = WidgetTicket<Result>(deposit: { [weak self] result in
             self?.deposit(result)
         }, late: { [weak self] in
             DispatchQueue.main.async {
@@ -184,7 +164,7 @@ final class WidgetHandshake<Result> {
             }
         })
         let queued = self.queue.enqueue(key: key) {
-            ticket.complete(work(ticket.meter))
+            ticket.complete(work())
         }
         guard queued else {
             return false
@@ -192,7 +172,7 @@ final class WidgetHandshake<Result> {
         let start = CACurrentMediaTime()
         let finished = ticket.wait(timeout: timeout)
         if wait {
-            self.turn.record(units: ticket.meter.spent, time: CACurrentMediaTime() - start)
+            self.turn.record(time: CACurrentMediaTime() - start)
         }
         if self.draining {
             // The running drain applies the result, after the older ones it still holds.

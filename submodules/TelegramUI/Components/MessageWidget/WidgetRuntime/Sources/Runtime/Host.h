@@ -68,8 +68,8 @@ public:
     /// widget-sandbox's `intl` capability: a request as its shim sends one (`{"kind":…,"locale":…,"opts":{…},…}`,
     /// Sources/Host/Intl.h) and the answer as its glue gives it: the formatted text, or JSON for the parts and options
     /// kinds. All of Intl's locale data comes from here; the app's is widget-sandbox's iOS glue, Foundation's
-    /// formatters. Synchronous, on the widget's queue, inside a step, charged before it is asked. It must not throw. The
-    /// default has no locale data and answers "".
+    /// formatters. Synchronous, on the widget's queue, inside a step. It must not throw. The default has no locale data
+    /// and answers "".
     virtual std::string intl(std::string_view requestJson) { return {}; }
 };
 

@@ -5,6 +5,7 @@
 #include "css_parser.h"
 #include "os_types.h"
 #include "document_container.h"
+#include "style.h"
 
 namespace litehtml
 {
@@ -588,6 +589,8 @@ namespace litehtml
         {
             return false;
         }
+        if(container)
+            note_environment(environment_scheme); // Telegram (VENDOR.md edit 80)
         color = container_color_scheme(container) ? second : first;
         return true;
     }

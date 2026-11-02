@@ -78,7 +78,9 @@ WR_TEST(testTheStyleSheetsAreKept) {
 }
 
 /// Which elements a flush resolved styles for again: every one after a build; the elements whose DOM attributes changed
-/// after an attribute patch; every element of an inserted subtree; none for a text change or an animation's frame.
+/// and every element a patch restyled (twidget edit 77), so after an insertion every element of the inserted subtree and
+/// the parent's other children a positional rule matched again (the UA layer's `body>:first-child`); none for a text
+/// change or an animation's frame.
 WR_TEST(testStylesResolvedSeesWhatWasRestyled) {
     std::vector<std::string> calls;
     RenderEnv* current = nullptr;
@@ -99,7 +101,8 @@ WR_TEST(testStylesResolvedSeesWhatWasRestyled) {
     calls.clear();
     env.env().eval("const d = document.createElement('div'); d.id = 'n'; d.innerHTML = '<span id=m>x</span>'; document.body.append(d); 1");
     env.flush();
-    CHECK(calls.size() == 1 && calls[0] == "m,n");
+    if (!(calls.size() == 1 && calls[0] == "a,b,m,n,t")) std::printf("  an insertion: %s\n", calls.empty() ? "(none)" : calls[0].c_str());
+    CHECK(calls.size() == 1 && calls[0] == "a,b,m,n,t");
     calls.clear();
     env.env().eval("document.getElementById('t').firstChild.data = 'other'; 1");
     env.flush();

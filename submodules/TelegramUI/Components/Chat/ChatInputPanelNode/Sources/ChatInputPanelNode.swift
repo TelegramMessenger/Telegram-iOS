@@ -30,6 +30,30 @@ public struct ChatInputPanelOverscrollIsland {
     }
 }
 
+/// The extra side inset of the chat's bottom panels with a small bottom inset on a screen with rounded corners, which
+/// they keep clear of. What lines up with the panels' edges (the history navigation buttons above them) takes it too.
+public func chatInputPanelCompactBottomSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
+    if bottomInset <= 32.0 && deviceMetrics.screenCornerRadius > 0.0 {
+        return 18.0
+    } else {
+        return 0.0
+    }
+}
+
+/// How far the chat's history navigation buttons and footer panels step in from the side with a small bottom inset.
+/// On iPad they line up with the input panels, which never step in there (no rounded corners). On phones they keep
+/// stepping in for any small bottom inset, as before, also on home-button iPhones, where the input panels do not.
+public func chatBottomControlsCompactSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
+    if case .tablet = deviceMetrics.type {
+        return chatInputPanelCompactBottomSideInset(bottomInset: bottomInset, deviceMetrics: deviceMetrics)
+    }
+    if bottomInset <= 32.0 {
+        return 18.0
+    } else {
+        return 0.0
+    }
+}
+
 open class ChatInputPanelNode: ASDisplayNode {
     open var context: AccountContext?
     open var chatControllerInteraction: ChatControllerInteraction?
@@ -42,11 +66,7 @@ open class ChatInputPanelNode: ASDisplayNode {
     }
     
     public final func compactBottomSideInset(bottomInset: CGFloat, deviceMetrics: DeviceMetrics) -> CGFloat {
-        if bottomInset <= 32.0 && deviceMetrics.screenCornerRadius > 0.0 {
-            return 18.0
-        } else {
-            return 0.0
-        }
+        return chatInputPanelCompactBottomSideInset(bottomInset: bottomInset, deviceMetrics: deviceMetrics)
     }
     
     open func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isMediaInputExpanded: Bool) -> CGFloat {

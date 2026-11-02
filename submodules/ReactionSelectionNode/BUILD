@@ -2,8 +2,9 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
 load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
-# The reaction bar's pure geometry (where a bar aligned with a lifted card sits, its tail, item shrinking), kept apart
-# from ReactionSelectionNode so a test target can link it without AccountContext.
+# The reaction bar's pure geometry (where a bar aligned with a lifted card sits, its tail, item shrinking) and the
+# fly-in's icon hand-off rule, kept apart from ReactionSelectionNode so a test target can link them without
+# AccountContext.
 swift_library(
     name = "ReactionContextGeometry",
     module_name = "ReactionContextGeometry",

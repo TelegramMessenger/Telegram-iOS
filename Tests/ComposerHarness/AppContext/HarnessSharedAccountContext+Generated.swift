@@ -537,7 +537,7 @@ extension HarnessSharedAccountContext {
     public func makeWalletConnectScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectRequest, cancelled: @escaping () -> Void, connect: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletConnectScreen is not provided")
     }
-    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
+    public func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, ignoresTouchesFor: Double, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletTransferScreen is not provided")
     }
     public func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController {

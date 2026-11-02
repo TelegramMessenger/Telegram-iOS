@@ -249,6 +249,7 @@ func textInputAccessoryPanel(
                     }
                     previousTapTimestamp = CFAbsoluteTimeGetCurrent()
                     interfaceInteraction?.presentReplyOptions(sourceView)
+                    let _ = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: context.sharedContext.accountManager, count: 3).start()
                 },
                 longPressAction: { _ in
                     interfaceInteraction?.navigateToMessage(replyMessageSubject.messageId, false, true, ChatLoadingMessageSubject.generic)

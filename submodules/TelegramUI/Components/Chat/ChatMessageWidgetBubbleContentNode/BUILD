@@ -20,6 +20,8 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/AccountContext",
+        "//submodules/PresentationDataUtils",
+        "//submodules/WalletContext",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
@@ -44,6 +46,8 @@ swift_library(
     deps = [
         ":ChatMessageWidgetBubbleContentNode",
         "//submodules/AccountContext",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/WalletContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",

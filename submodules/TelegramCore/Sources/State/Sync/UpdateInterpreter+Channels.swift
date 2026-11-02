@@ -34,6 +34,15 @@ extension UpdateInterpreter {
         }
     }
     
+    /// A forum topic's edit (a group's topics or a bot's). It carries no pts: in a group the topic's service message,
+    /// when there is one, edits the same fields in its own channel update.
+    mutating func applyEditForumTopic(_ updateEditForumTopicData: Api.Update.Cons_updateEditForumTopic) {
+        let components = forumTopicEditComponents(title: updateEditForumTopicData.title, iconEmojiId: updateEditForumTopicData.iconEmojiId, closed: updateEditForumTopicData.closed, hidden: updateEditForumTopicData.hidden)
+        if !components.isEmpty {
+            updatedState.addEditForumTopic(peerId: updateEditForumTopicData.peer.peerId, threadId: Int64(updateEditForumTopicData.topicId), components: components)
+        }
+    }
+
     mutating func applyDeleteChannelMessages(_ updateDeleteChannelMessagesData: Api.Update.Cons_updateDeleteChannelMessages) {
         let (channelId, messages, pts: pts, ptsCount) = (updateDeleteChannelMessagesData.channelId, updateDeleteChannelMessagesData.messages, updateDeleteChannelMessagesData.pts, updateDeleteChannelMessagesData.ptsCount)
         let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))

@@ -32,7 +32,7 @@ void setBoolean(JSContext* ctx, Element& element, uint16_t id, bool value) {
 }
 
 /// HTML's "rules for parsing integers" (a value past 2^32 fails: no reflected range reaches it). The leading whitespace
-/// is the one unbounded scan (the digits stop past ten); it is charged.
+/// is the one unbounded scan (the digits stop past ten).
 static std::optional<int64_t> parseInteger(JSContext* ctx, const String& s) {
     JSStringView v = s.view();
     auto at = [&](uint32_t i) -> char16_t { return v.latin1 ? v.latin1[i] : v.utf16[i]; };
@@ -40,7 +40,6 @@ static std::optional<int64_t> parseInteger(JSContext* ctx, const String& s) {
     while (i < v.length && isASCIIWhitespace(at(i))) {
         i++;
     }
-    chargeScan(ctx, i);
     bool negative = false;
     if (i < v.length && (at(i) == '-' || at(i) == '+')) {
         negative = at(i) == '-';

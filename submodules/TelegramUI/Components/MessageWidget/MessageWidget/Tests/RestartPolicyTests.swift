@@ -4,7 +4,7 @@ import XCTest
 /// SDK v1 §5.7 (V2b plan, Task 5): a stopped widget is built again the next time its bubble is shown; after 2 stops in a
 /// row it stays stopped until the app restarts (the policy is in memory) or the message gets new HTML (a new source).
 class RestartPolicyTests: MessageWidgetTestCase {
-    /// Loops forever in a task when its stored `loop` is "1", so its budget stops it; runs quietly otherwise.
+    /// Loops forever in a task when its stored `loop` is "1", so its CPU slice stops it; runs quietly otherwise.
     private let source = "<!doctype html><p>x</p><script>if (localStorage.getItem('loop') === '1') setTimeout(() => { for (;;) {} }, 0)</script>"
 
     private func makeRegistry(_ policy: MessageWidgetRestartPolicy) -> MessageWidgetRegistry {

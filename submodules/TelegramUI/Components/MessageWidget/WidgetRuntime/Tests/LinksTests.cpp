@@ -119,10 +119,12 @@ WR_TEST(testOnlyThePressesOwnTaskCarriesIt) {
     env.env().advance(20);
     const Calls promised = {{"openLink", "[\"https://example.org/promise\"]"}};
     CHECK(env.env().host().bridgeCalls == promised);
-    // A press's pointerdown is part of it: its call uses the press, the click's (and its job's) are then blocked.
+    // A finger's pointerdown is no gesture (widget-sandbox v0.3.0, the finger rule): its call is blocked. The click keeps
+    // the press, and the first listener's promise job, run at the checkpoint after that listener, takes it before the
+    // later listener's call.
     env.env().eval("t.addEventListener('pointerdown', open('down')); t.addEventListener('click', open('click')); 1");
     tapAt(env);
-    const Calls expected = {{"openLink", "[\"https://example.org/promise\"]"}, {"openLink", "[\"https://example.org/down\"]"}};
+    const Calls expected = {{"openLink", "[\"https://example.org/promise\"]"}, {"openLink", "[\"https://example.org/promise\"]"}};
     CHECK(env.env().host().bridgeCalls == expected);
 }
 
@@ -165,17 +167,6 @@ WR_TEST(testLinksRouteByHost) {
         }
         CHECK_EQ(got, call);
     }
-}
-
-/// The final review's I3: window.open's leading whitespace is scanned, so it is charged before the trim.
-WR_TEST(testWindowOpensTrimIsCharged) {
-    HostEnv env;
-    // Flat (a concatenation would be a rope, whose flattening QuickJS charges on its own).
-    env.eval("window.padded = ' '.repeat(3000000); 1");
-    JSRuntime* rt = env.runtime().jsRuntime();
-    const uint64_t before = JS_GetWorkUnits(rt);
-    env.eval("window.open(padded); 1");
-    CHECK(JS_GetWorkUnits(rt) - before >= 3000000 / 8);
 }
 
 /// window.open takes the same route (from a press) and returns null.

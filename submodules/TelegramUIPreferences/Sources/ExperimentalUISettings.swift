@@ -88,6 +88,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var chatMediaEditorLegacy: Bool
     public var mediaGridLegacy: Bool
     public var sharedMediaGridLegacy: Bool
+    public var storyLegacyVideoWriter: Bool
+    public var chatLegacyVideoWriter: Bool
     public var chatSideListLegacy: Bool
     public var inputDecTextBackend: Bool
     public var respectSystemMicrophone: Bool
@@ -154,6 +156,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             chatMediaEditorLegacy: false,
             mediaGridLegacy: false,
             sharedMediaGridLegacy: false,
+            storyLegacyVideoWriter: false,
+            chatLegacyVideoWriter: false,
             chatSideListLegacy: false,
             inputDecTextBackend: false,
             respectSystemMicrophone: false,
@@ -218,6 +222,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         chatMediaEditorLegacy: Bool,
         mediaGridLegacy: Bool,
         sharedMediaGridLegacy: Bool,
+        storyLegacyVideoWriter: Bool,
+        chatLegacyVideoWriter: Bool,
         chatSideListLegacy: Bool,
         inputDecTextBackend: Bool,
         respectSystemMicrophone: Bool,
@@ -280,6 +286,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.chatMediaEditorLegacy = chatMediaEditorLegacy
         self.mediaGridLegacy = mediaGridLegacy
         self.sharedMediaGridLegacy = sharedMediaGridLegacy
+        self.storyLegacyVideoWriter = storyLegacyVideoWriter
+        self.chatLegacyVideoWriter = chatLegacyVideoWriter
         self.chatSideListLegacy = chatSideListLegacy
         self.inputDecTextBackend = inputDecTextBackend
         self.respectSystemMicrophone = respectSystemMicrophone
@@ -348,6 +356,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.chatMediaEditorLegacy = try container.decodeIfPresent(Bool.self, forKey: "chatMediaEditorLegacy") ?? false
         self.mediaGridLegacy = try container.decodeIfPresent(Bool.self, forKey: "mediaGridLegacy") ?? false
         self.sharedMediaGridLegacy = try container.decodeIfPresent(Bool.self, forKey: "sharedMediaGridLegacy") ?? false
+        self.storyLegacyVideoWriter = try container.decodeIfPresent(Bool.self, forKey: "storyLegacyVideoWriter") ?? false
+        self.chatLegacyVideoWriter = try container.decodeIfPresent(Bool.self, forKey: "chatLegacyVideoWriter") ?? false
         self.chatSideListLegacy = try container.decodeIfPresent(Bool.self, forKey: "chatSideListLegacy") ?? false
         self.inputDecTextBackend = try container.decodeIfPresent(Bool.self, forKey: "inputDecTextBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
@@ -414,6 +424,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.chatMediaEditorLegacy, forKey: "chatMediaEditorLegacy")
         try container.encodeIfPresent(self.mediaGridLegacy, forKey: "mediaGridLegacy")
         try container.encodeIfPresent(self.sharedMediaGridLegacy, forKey: "sharedMediaGridLegacy")
+        try container.encodeIfPresent(self.storyLegacyVideoWriter, forKey: "storyLegacyVideoWriter")
+        try container.encodeIfPresent(self.chatLegacyVideoWriter, forKey: "chatLegacyVideoWriter")
         try container.encodeIfPresent(self.chatSideListLegacy, forKey: "chatSideListLegacy")
         try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")

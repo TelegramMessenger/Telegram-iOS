@@ -28,6 +28,15 @@ final class LocalWidgetMessagesTests: XCTestCase {
         XCTAssertEqual(widget?.publicData, Data("p".utf8))
     }
 
+    /// widget-sandbox v0.4.0: a post with its caption above the widget (`captionAbove`, layer 233's `invert_media`) is
+    /// inserted so, as the test bot sends it; any other has no such attribute.
+    func testACaptionAboveIsInvertedMedia() {
+        let above = EngineLocalWidgetPost(html: "<p>a</p>", width: 0, height: 0, caption: "above", photos: [], captionAbove: true)
+        let below = EngineLocalWidgetPost(html: "<p>b</p>", width: 0, height: 0, caption: "below", photos: [])
+        let messages = _internal_localWidgetStoreMessages(posts: [above, below], photoResources: [[], []], peerId: self.account, accountPeerId: self.account, lastTimestamp: 1_000)
+        XCTAssertEqual(messages.map { $0.attributes.contains { $0 is InvertMediaMessageAttribute } }, [true, false])
+    }
+
     func testEachPostIsAWidgetMessageThenItsPhotos() {
         let resources = [[], [LocalFileMediaResource(fileId: 7)]]
         let messages = _internal_localWidgetStoreMessages(posts: self.posts(), photoResources: resources, peerId: self.account, accountPeerId: self.account, lastTimestamp: 1_000)

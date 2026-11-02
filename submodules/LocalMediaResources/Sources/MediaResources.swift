@@ -3,6 +3,30 @@ import UIKit
 import TelegramCore
 import PersistentStringHash
 
+private final class StreamingVideoHeaderSizes {
+    private let lock = NSLock()
+    private var sizes: [String: Int32] = [:]
+
+    func set(_ size: Int32, resourceId: String) {
+        self.lock.lock()
+        self.sizes[resourceId] = size
+        self.lock.unlock()
+    }
+
+    func headerSize(resourceId: String) -> Int32 {
+        self.lock.lock()
+        let size = self.sizes[resourceId] ?? 0
+        self.lock.unlock()
+        return max(32 * 1024, size)
+    }
+}
+
+private let streamingVideoHeaderSizes = StreamingVideoHeaderSizes()
+
+public func setStreamingVideoHeaderSize(_ size: Int64, resourceId: String) {
+    streamingVideoHeaderSizes.set(Int32(clamping: size), resourceId: resourceId)
+}
+
 public final class VideoMediaResourceAdjustments: EnginePostboxCoding, Equatable {
     public let data: EngineMemoryBuffer
     public let digest: EngineMemoryBuffer
@@ -104,7 +128,7 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
     }
     
     public var headerSize: Int32 {
-        return 32 * 1024
+        return streamingVideoHeaderSizes.headerSize(resourceId: self.id.stringRepresentation)
     }
     
     public init(localIdentifier: String, conversion: VideoLibraryMediaResourceConversion) {
@@ -164,7 +188,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     public let adjustments: VideoMediaResourceAdjustments?
     
     public var headerSize: Int32 {
-        return 32 * 1024
+        return streamingVideoHeaderSizes.headerSize(resourceId: self.id.stringRepresentation)
     }
     
     public init(randomId: Int64, path: String, adjustments: VideoMediaResourceAdjustments?) {

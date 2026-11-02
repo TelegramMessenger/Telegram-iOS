@@ -10,7 +10,6 @@
 #include "Sources/Animation/CSSText.h"
 #include "Sources/Animation/KeyframeEffect.h"
 #include "Sources/Host/CSSPolicy.h"
-#include "Sources/Support/Work.h"
 
 namespace wr::animation {
 
@@ -264,7 +263,6 @@ void collectKeyframes(JSContext* ctx, JSRuntime* rt, const litehtml::raw_rule::v
 } // namespace
 
 void parseKeyframesRules(JSContext* ctx, std::string_view sheet, CSSKeyframesRules& into) {
-    charge(ctx, uint64_t(sheet.size()) * work::kCssByte);
     collectKeyframes(ctx, JS_GetRuntime(ctx), litehtml::css_parser::parse_stylesheet(std::string(sheet), true), into);
 }
 
@@ -273,7 +271,6 @@ Vector<Keyframe> keyframesFor(JSContext* ctx, const CSSKeyframesRule& rule, cons
     Vector<Keyframe> frames{JSAllocator<Keyframe>(rt)};
     frames.reserve(rule.size());
     for (const CSSKeyframe& source : rule) {
-        charge(ctx, uint64_t(source.values.size() + 1) * work::kNodeVisit);
         Keyframe frame(rt);
         frame.offset = source.offset;
         frame.computedOffset = source.offset;
@@ -318,7 +315,6 @@ std::shared_ptr<const Easing> specEasing(JSContext* ctx, std::string_view text) 
 std::vector<CSSAnimationSpec> animationSpecs(JSContext* ctx, const DeclaredLookup& declared) {
     std::vector<CSSAnimationSpec> specs;
     const std::string shorthand = declared("animation");
-    chargeScan(ctx, shorthand.size());
     for (const std::string& item : listItems(shorthand)) {
         CSSAnimationSpec spec;
         spec.name = "none";
@@ -352,7 +348,6 @@ std::vector<CSSAnimationSpec> animationSpecs(JSContext* ctx, const DeclaredLooku
     }
     auto longhand = [&](const char* property, auto apply) {
         const std::string text = declared(property);
-        chargeScan(ctx, text.size());
         const std::vector<std::string> items = listItems(text);
         if (items.empty()) {
             return;
@@ -386,7 +381,6 @@ std::vector<CSSAnimationSpec> animationSpecs(JSContext* ctx, const DeclaredLooku
 std::vector<CSSTransitionSpec> transitionSpecs(JSContext* ctx, const DeclaredLookup& declared) {
     std::vector<CSSTransitionSpec> specs;
     const std::string shorthand = declared("transition");
-    chargeScan(ctx, shorthand.size());
     for (const std::string& item : listItems(shorthand)) {
         CSSTransitionSpec spec;
         spec.property = "all";
@@ -409,7 +403,6 @@ std::vector<CSSTransitionSpec> transitionSpecs(JSContext* ctx, const DeclaredLoo
     }
     auto items = [&](const char* property) {
         const std::string text = declared(property);
-        chargeScan(ctx, text.size());
         return listItems(text);
     };
     const std::vector<std::string> properties = items("transition-property");

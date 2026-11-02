@@ -23,7 +23,7 @@ public enum ChatSideListKind: Equatable {
     case savedMessages(peerId: EnginePeer.Id)
     case monoforum(peerId: EnginePeer.Id)
     case botThreads(peerId: EnginePeer.Id)
-    /// A forum shown as messages (its chat carries the topics strip today).
+    /// A forum in the sidebar display mode (`forum_sidebar`).
     case forum(peerId: EnginePeer.Id)
 
     /// The peer whose threads the list shows: the chat's own peer in every kind.
@@ -54,29 +54,29 @@ public enum ChatSideListKind: Equatable {
     }
 }
 
-/// Which side list a chat with `peerId` gets, or nil for none. A forum gets one only when shown as messages
-/// (`isInlineForum`); one opened as its topic list keeps that screen.
+/// Which side list a chat with `peerId` gets, or nil for none. A forum gets one only in the sidebar display mode
+/// (`isSidebarForum`); one with tabs keeps its strip and one opened as its topic list keeps that screen.
 public func chatSideListKind(
     peerId: EnginePeer.Id,
     accountPeerId: EnginePeer.Id,
     isForum: Bool,
-    isInlineForum: Bool,
+    isSidebarForum: Bool,
     isMonoforum: Bool,
     isAdminMonoforum: Bool,
-    isBotWithThreads: Bool,
+    isSidebarBot: Bool,
     enabled: Bool
 ) -> ChatSideListKind? {
     if !enabled {
         return nil
     }
     if isForum {
-        return isInlineForum ? .forum(peerId: peerId) : nil
+        return isSidebarForum ? .forum(peerId: peerId) : nil
     }
     if peerId == accountPeerId {
         return .savedMessages(peerId: peerId)
     } else if isMonoforum {
         return isAdminMonoforum ? .monoforum(peerId: peerId) : nil
-    } else if isBotWithThreads {
+    } else if isSidebarBot {
         return .botThreads(peerId: peerId)
     } else {
         return nil

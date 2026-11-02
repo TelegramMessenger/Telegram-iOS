@@ -133,14 +133,16 @@ WR_TEST(testAnElementMovedOutOfADroppedOneRenders) {
     expectMatchesRebuild(env, "moved out");
 }
 
-/// RB §1.4: only the document's own html, head and body are themselves; another body renders as a div.
+/// RB §1.4: only the document's own html, head and body are themselves; another body renders as a div. Appended to the
+/// document element, it patches through the root's replacement (twidget edit 82).
 WR_TEST(testASecondBodyIsADiv) {
     RenderEnv env(page("", "<p>x</p>"));
     const uint64_t builds = env.render().buildCount();
     env.env().eval("document.documentElement.append(document.createElement('body')); 1");
     env.flush();
-    CHECK_EQ(env.render().buildCount(), builds + 1);
+    CHECK_EQ(env.render().buildCount(), builds);
     CHECK(env.render().renderInput().find("<div data-tg-tag=\"body\"") != std::string::npos);
+    expectMatchesRebuild(env, "a second body appended to the document element");
 }
 
 /// Ruling E6's cap counts what litehtml makes a control of, by the rendered tag: only <button> is left.

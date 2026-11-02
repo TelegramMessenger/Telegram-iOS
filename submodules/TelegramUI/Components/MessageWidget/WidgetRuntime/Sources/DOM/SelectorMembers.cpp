@@ -8,7 +8,6 @@ namespace wr {
 Element* Node::querySelector(JSContext* ctx, String selectors) {
     SelectorList list = parseSelectors(ctx, selectors);
     for (Node* n = this->nextInTreeOrder(this); n; n = n->nextInTreeOrder(this)) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement() && matchesSelectors(ctx, list, *static_cast<Element*>(n), this)) {
             return static_cast<Element*>(n);
         }
@@ -22,7 +21,6 @@ Ref<NodeList> Node::querySelectorAll(JSContext* ctx, String selectors) {
     // holds it.
     std::vector<Node*> found;
     for (Node* n = this->nextInTreeOrder(this); n; n = n->nextInTreeOrder(this)) {
-        charge(ctx, work::kNodeVisit);
         if (n->isElement() && matchesSelectors(ctx, list, *static_cast<Element*>(n), this)) {
             found.push_back(n);
         }
@@ -33,7 +31,6 @@ Ref<NodeList> Node::querySelectorAll(JSContext* ctx, String selectors) {
 Element* Element::closest(JSContext* ctx, String selectors) {
     SelectorList list = parseSelectors(ctx, selectors);
     for (Element* e = this; e; e = e->parentElementNode()) {
-        charge(ctx, work::kNodeVisit);
         if (matchesSelectors(ctx, list, *e, this)) {
             return e;
         }

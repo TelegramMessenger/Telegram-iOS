@@ -75,8 +75,7 @@ public:
     /// it, untrusted (Sources/Events/Dispatch.h).
     bool dispatchEvent(JSContext* ctx, Event* event);
 
-    // Native. Each walk of the list is charged work::kNodeVisit per listener before it starts, so a budget stop leaves
-    // the list as it was.
+    // Native.
     /// DOM "add an event listener", options flattened: nothing when an equal listener (type, callback, capture) is
     /// there. A missing `passive` takes the default passive value. A new listener's type is noted in the DOM's
     /// ListenedTypes before the listener is made.
@@ -92,7 +91,7 @@ public:
     /// DOM "default passive value" for a listener of `type` on this target (Node and Window override).
     virtual bool defaultPassive(JSContext* ctx, JSAtom type) { return false; }
     /// DOM "get the parent": the next target in an event path (Node: its parent; Document: the window, see there).
-    /// Runs no script and does constant work: dispatch charges each call.
+    /// Runs no script and does constant work.
     virtual EventTarget* getTheParent(JSContext* ctx, Event& event) { return nullptr; }
     /// DOM's activation behaviour hooks, for a MouseEvent click (M1d fills them; none in M1b).
     virtual bool hasActivationBehavior(JSContext*) { return false; }
@@ -116,8 +115,6 @@ protected:
 
 private:
     Vector<ListenerRef>& ensureListeners(JSContext* ctx);
-    /// Charges a walk of the whole list (nothing before the first add).
-    void chargeListWalk(JSContext* ctx) const;
 
     Vector<ListenerRef>* m_listeners = nullptr;
     EventHandlerMap* m_eventHandlers = nullptr;

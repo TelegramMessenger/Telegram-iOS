@@ -10,6 +10,10 @@ import DrawingUI
 import MediaAssetsContext
 import ChatMediaSend
 
+public func chatMediaEditorPlayButtonIsVisible(isPlaying: Bool, isScrubberTracking: Bool) -> Bool {
+    return !isPlaying && !isScrubberTracking
+}
+
 let chatMediaEditorPlayButtonImage: UIImage? = generateImage(CGSize(width: 60.0, height: 60.0), rotatedContext: { size, context in
     context.clear(CGRect(origin: .zero, size: size))
     context.setFillColor(UIColor(white: 0.0, alpha: 0.6).cgColor)
@@ -209,6 +213,7 @@ extension ChatMediaEditorScreen.Node {
 
         self.scrubber.view?.removeFromSuperview()
         self.scrubber = ComponentView<Empty>()
+        self.releaseScrubberTracking()
         self.removeCoverEditViews(animated: false)
 
         self.cropSession = nil
@@ -456,7 +461,7 @@ extension ChatMediaEditorScreen.Node {
         transition.updateFrame(view: self.playButtonView, frame: CGRect(origin: CGPoint(x: floor(bounds.midX - size.width / 2.0), y: floor(bounds.midY - size.height / 2.0)), size: size))
         var isVisible = false
         if self.isGallery, self.subject.isVideo, self.activeTool == nil, !self.isSending, let playerState = self.playerState {
-            isVisible = !playerState.isPlaying
+            isVisible = chatMediaEditorPlayButtonIsVisible(isPlaying: playerState.isPlaying, isScrubberTracking: self.isScrubberTracking)
         }
         transition.updateAlpha(layer: self.playButtonView.layer, alpha: isVisible ? 1.0 : 0.0)
     }

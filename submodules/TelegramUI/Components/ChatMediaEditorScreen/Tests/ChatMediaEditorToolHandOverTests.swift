@@ -24,22 +24,48 @@ final class ChatMediaEditorToolHandOverTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorHighlightedToolsTabs(values: values().withUpdatedToolValues([.brightness: Float(0.0)])), [])
     }
 
-    func testGalleryHidesForTheKeyboardAndCaptionEditing() {
-        XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: 0.0, isEditingCaption: false, paintControlsVisible: true))
-        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: 300.0, isEditingCaption: false, paintControlsVisible: true))
-        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: 0.0, isEditingCaption: true, paintControlsVisible: true))
+    func testGalleryHidesOnlyForAKeyboardThatCoversIt() {
+        XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: 0.0, paintControlsVisible: true))
+        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: 300.0, paintControlsVisible: true))
+    }
+
+    // An iPad with a hardware keyboard edits the caption with no keyboard on screen: Send stays (#110).
+    func testGalleryKeepsSendWhileEditingTheCaptionWithAHardwareKeyboard() {
+        let keyboardHeight = chatMediaEditorEffectiveKeyboardHeight(inputHeight: 0.0, captionAdditionalInputHeight: 0.0)
+        XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: keyboardHeight, paintControlsVisible: true))
+        XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: keyboardHeight))
+    }
+
+    func testGalleryHidesForTheCaptionEmojiPanel() {
+        let keyboardHeight = chatMediaEditorEffectiveKeyboardHeight(inputHeight: 0.0, captionAdditionalInputHeight: 280.0)
+        XCTAssertEqual(keyboardHeight, 280.0)
+        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .gallery(activeTab: []), keyboardHeight: keyboardHeight, paintControlsVisible: true))
+        XCTAssertTrue(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: keyboardHeight))
+    }
+
+    func testEffectiveKeyboardHeightIsTheTallerOfKeyboardAndCaptionPanel() {
+        XCTAssertEqual(chatMediaEditorEffectiveKeyboardHeight(inputHeight: nil, captionAdditionalInputHeight: 0.0), 0.0)
+        XCTAssertEqual(chatMediaEditorEffectiveKeyboardHeight(inputHeight: 300.0, captionAdditionalInputHeight: 0.0), 300.0)
+        XCTAssertEqual(chatMediaEditorEffectiveKeyboardHeight(inputHeight: 300.0, captionAdditionalInputHeight: 280.0), 300.0)
+    }
+
+    func testCaptionDimShowsOnlyWhileEditingOverAKeyboard() {
+        XCTAssertTrue(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: 300.0))
+        XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: true, keyboardHeight: 0.0))
+        XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: false, keyboardHeight: 300.0))
+        XCTAssertFalse(chatMediaEditorCaptionDimIsVisible(isEditingCaption: false, keyboardHeight: 0.0))
     }
 
     func testCropQualityAndToolsNeverHide() {
         for mode in [ChatMediaEditorBottomControlsMode.crop(highlightedTabs: []), .quality, .tools(selected: .adjustments, highlighted: [])] {
-            XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: 300.0, isEditingCaption: true, paintControlsVisible: false))
+            XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: mode, keyboardHeight: 300.0, paintControlsVisible: false))
         }
     }
 
     func testPaintHidesWhileDrawingAndForTheKeyboard() {
-        XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .draw), keyboardHeight: 0.0, isEditingCaption: true, paintControlsVisible: true))
-        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .draw), keyboardHeight: 0.0, isEditingCaption: false, paintControlsVisible: false))
-        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .text), keyboardHeight: 300.0, isEditingCaption: false, paintControlsVisible: true))
+        XCTAssertFalse(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .draw), keyboardHeight: 0.0, paintControlsVisible: true))
+        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .draw), keyboardHeight: 0.0, paintControlsVisible: false))
+        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .text), keyboardHeight: 300.0, paintControlsVisible: true))
     }
 
     func testPaintReportsHiddenControlsWhileDrawingInteractingOrEditingText() {
@@ -47,7 +73,7 @@ final class ChatMediaEditorToolHandOverTests: XCTestCase {
         XCTAssertFalse(drawingScreenExternalControlsAreVisible(isDrawing: true, isInteractingWithEntities: false, isEditingText: false))
         XCTAssertFalse(drawingScreenExternalControlsAreVisible(isDrawing: false, isInteractingWithEntities: true, isEditingText: false))
         XCTAssertFalse(drawingScreenExternalControlsAreVisible(isDrawing: false, isInteractingWithEntities: false, isEditingText: true))
-        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .text), keyboardHeight: 0.0, isEditingCaption: false, paintControlsVisible: drawingScreenExternalControlsAreVisible(isDrawing: false, isInteractingWithEntities: false, isEditingText: true)))
+        XCTAssertTrue(chatMediaEditorBottomControlsAreHidden(mode: .paint(selected: .text), keyboardHeight: 0.0, paintControlsVisible: drawingScreenExternalControlsAreVisible(isDrawing: false, isInteractingWithEntities: false, isEditingText: true)))
     }
 
     func testPaintTextEditingButtonsAreIconsInBothEditorsButNotLegacy() {

@@ -1,5 +1,5 @@
 // The selectable text (widget-sandbox v0.1.1, sdk-v1 §2.4, §5.10): what the client may select of a widget, and where it is
-// drawn, exported from the published layout on a budget of its own.
+// drawn, exported from the published layout.
 
 #include <cmath>
 #include <cstdint>
@@ -12,7 +12,6 @@
 #include "Sources/DOM/DOM.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Render/SelectableText.h"
-#include "Sources/Support/Work.h"
 #include "Tests/JSHarness.h"
 #include "Tests/RenderHarness.h"
 
@@ -53,9 +52,7 @@ std::string page(const std::string& style, const std::string& body) {
 
 wr::SelectableText exported(RenderEnv& env, double visibleHeight = 1e9) {
     env.flush();
-    std::optional<wr::SelectableText> text = env.render().selectableText(UINT64_MAX, visibleHeight);
-    CHECK(text.has_value());
-    return text ? *text : wr::SelectableText{};
+    return env.render().selectableText(visibleHeight);
 }
 
 std::string runText(const wr::SelectableText& text, const wr::SelectableRun& run) {
@@ -184,39 +181,3 @@ WR_TEST(testTextBelowTheVisibleHeightIsNotSelectable) {
     CHECK_EQ(utf8(exported(env, 600).text), std::string("top"));
 }
 
-/// Past its budget the export is nothing, and it never touches the widget: no stop, no work counted to it.
-WR_TEST(testAnExportPastItsBudgetIsNoneAndHarmless) {
-    std::string words;
-    for (int i = 0; i < 200; i++) {
-        words += "word ";
-    }
-    RenderEnv env(page("", "<p style=\"user-select:text\">" + words + "</p>"));
-    env.flush();
-    JSRuntime* rt = JS_GetRuntime(env.ctx());
-    const uint64_t before = JS_GetWorkUnits(rt);
-    CHECK(!env.render().selectableText(10, 1e9).has_value());
-    std::optional<wr::SelectableText> full = env.render().selectableText(UINT64_MAX, 1e9);
-    CHECK(full.has_value());
-    CHECK(full && full->units > 10);
-    CHECK_EQ(JS_GetWorkUnits(rt), before);
-    CHECK_JS_EQ(env.env(), "String(1 + 1)", "2");
-}
-
-/// What the export costs at the render limits: everything selectable, as many runs as the piece cap lets a layout
-/// have (10,000 Text nodes of one piece each) holding the text budget's 262,144 UTF-16 units. The client's export
-/// budget is set from this (MessageWidgetCore.selectionWorkUnits).
-WR_TEST(testWhatTheExportCostsAtTheTextLimits) {
-    std::string body;
-    const std::string word(wr::kTextBudgetUnits / 10000 - 1, 'w');
-    for (int i = 0; i < 10000; i++) {
-        body += "<span>" + word + "</span>";
-    }
-    RenderEnv env(page("body{user-select:text}", body));
-    env.flush();
-    std::optional<wr::SelectableText> text = env.render().selectableText(UINT64_MAX, 1e9);
-    CHECK(text.has_value());
-    if (text) {
-        std::printf("selectable export: %llu units, %zu runs, %zu UTF-16 units\n", (unsigned long long)text->units,
-                    text->runs.size(), text->text.size());
-    }
-}

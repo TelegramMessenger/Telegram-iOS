@@ -56,15 +56,15 @@ int main(void) {
     CHECK(desc && strstr(desc, "RangeError"));
     free(desc);
 
-    // The interrupt handler is polled every JS_INTERRUPT_COUNTER_INIT operations: 100 here (BUILD, VENDOR.md local
-    // edit 1), so a loop of 100,000 short iterations polls thousands of times; at upstream's 10,000, about fifty.
+    // The interrupt handler is polled every JS_INTERRUPT_COUNTER_INIT operations: upstream's 10,000 (VENDOR.md change
+    // 1, reverted), so a loop of 100,000 short iterations polls about ten times; at the fork's old 100, thousands.
     JS_SetInterruptHandler(rt, count_polls, NULL);
     v = eval(ctx, "for (var i = 0; i < 100000; i++) {}");
     CHECK(!qjs_is_exception(v));
     qjs_free_value(ctx, v);
     JS_SetInterruptHandler(rt, NULL, NULL);
-    if (interrupt_polls < 1000) printf("  interrupt polls: %d\n", interrupt_polls);
-    CHECK(interrupt_polls >= 1000);
+    if (interrupt_polls < 5 || interrupt_polls >= 100) printf("  interrupt polls: %d\n", interrupt_polls);
+    CHECK(interrupt_polls >= 5 && interrupt_polls < 100);
 
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

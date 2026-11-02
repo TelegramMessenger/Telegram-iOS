@@ -1,12 +1,14 @@
 // The layer tree's diff (M1c plan, Task 4): which rects of the canvas a new tree paints differently from the previous
 // one. From Task 10b on a flush that patches publishes the rects its operations name (LayerMirror), and this diff is the
-// tests' oracle and a full rebuild's (Ruling 8): nothing in the update path compares trees.
+// tests' oracle (Ruling 8): nothing in the update path compares trees.
 //
 // Two mirrors (LayerTree::mirror) are compared node by node instead of item by item: in each pair of matched contexts
-// the children are matched by kind, NodeKey and their order among the children of that kind and key, so an inserted
-// node does not make every later one differ. A matched Box or Inline that differs (origin, pass, clips or content), an
+// the children are matched first by identity (the same object in both trees: a mirror's publishes share every node no
+// operation names), then by kind, NodeKey and their order among the rest of that kind and key, so an inserted node does
+// not make every later one differ, an anonymous one (key 0) included. A matched Box or Inline that differs (origin, pass, clips or content), an
 // unmatched node, and a matched context whose own properties differ give their old and new rects (a context's: all it
-// holds); children that changed order give every matched child's. Backdrops then as below.
+// holds); children that changed order give every matched child's, the order being the shared ones' when the trees share
+// nodes (a pair matched by key that sits elsewhere among them gives its own). Backdrops then as below.
 //
 // The walk is positional: both trees are walked in parallel, entry by entry, from the root.
 // - Equal items produce nothing. Items are compared by kind and payload (samePaint); fonts, images and a text item's

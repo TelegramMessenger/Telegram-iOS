@@ -292,7 +292,7 @@ func managingBotTitlePanelForChatPresentationInterfaceState(_ chatPresentationIn
 }
 
 func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool, sideListActive: Bool) -> AnyComponent<Empty>? {
-    // The side list replaces the strip; forums never get one, so their strip stays.
+    // The side list replaces the strip.
     if sideListActive {
         return nil
     }
@@ -414,7 +414,7 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
 }
 
 func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool, sideListActive: Bool) -> ChatFloatingTopicsPanel? {
-    // The side list replaces the strip; forums never get one, so their strip stays.
+    // The side list replaces the strip.
     if sideListActive {
         return nil
     }

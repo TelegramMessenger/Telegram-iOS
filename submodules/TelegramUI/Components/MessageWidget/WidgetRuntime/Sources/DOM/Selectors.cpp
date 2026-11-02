@@ -667,7 +667,6 @@ public:
 private:
     Element* previousElement(Element& e) {
         for (Node* n = e.previousSiblingNode(); n; n = n->previousSiblingNode()) {
-            charge(m_ctx, work::kNodeVisit);
             if (n->isElement()) {
                 return static_cast<Element*>(n);
             }
@@ -677,7 +676,6 @@ private:
 
     Element* nextElement(Element& e) {
         for (Node* n = e.nextSiblingNode(); n; n = n->nextSiblingNode()) {
-            charge(m_ctx, work::kNodeVisit);
             if (n->isElement()) {
                 return static_cast<Element*>(n);
             }
@@ -697,7 +695,6 @@ private:
         switch (c.compounds[i - 1].combinator) {
         case Combinator::Descendant:
             for (Element* a = e.parentElementNode(); a; a = a->parentElementNode()) {
-                charge(m_ctx, work::kNodeVisit);
                 Result r = this->from(c, i - 1, *a);
                 if (r == Result::Matches || r == Result::FailsCompletely) {
                     return r;
@@ -709,7 +706,6 @@ private:
             if (!p) {
                 return Result::FailsCompletely;
             }
-            charge(m_ctx, work::kNodeVisit);
             Result r = this->from(c, i - 1, *p);
             return r == Result::Matches || r == Result::FailsCompletely ? r : Result::FailsAllSiblings;
         }
@@ -733,10 +729,7 @@ private:
 
     /// Not inlined into from(): its locals (attribute values, ids) would otherwise sit in every recursion frame.
     [[gnu::noinline]] bool compound(const CompoundSelector& compound, Element& e) {
-        charge(m_ctx, work::kSelectorTest);
         for (const SimpleSelector& s : compound.simples) {
-            // Each simple evaluated, including the ones that always succeed and so never end the loop early.
-            charge(m_ctx, work::kSimpleSelectorTest);
             if (!this->simple(s, e)) {
                 return false;
             }
@@ -767,7 +760,6 @@ private:
             if (h.size() != n.size()) {
                 return false;
             }
-            chargeScan(m_ctx, n.size());
             return equalAt(h, 0, n, quirks(e));
         }
         case Kind::Class:
@@ -786,7 +778,6 @@ private:
         bool html = htmlInHTMLDocument(e);
         JSAtom name = html ? s.lowerName.get() : s.name.get();
         for (size_t i = 0; i < e.attributeCount(); i++) {
-            charge(m_ctx, work::kNodeVisit);
             const Attribute& a = e.attributeAt(i);
             if (a.localName.atom != name || (s.ns == SimpleSelector::Namespaces::None && a.ns != Namespace::None)) {
                 continue;
@@ -804,7 +795,6 @@ private:
         return false;
     }
 
-    /// Each operator charges the units it may read (chargeScan), before it reads them.
     bool valueMatches(const SimpleSelector& s, const String& value, bool ci) {
         Units h{value.view()};
         Units n{s.value.view()};
@@ -816,13 +806,11 @@ private:
             if (h.size() != n.size()) {
                 return false;
             }
-            chargeScan(m_ctx, n.size());
             return equalAt(h, 0, n, ci);
         case Op::Includes: {
             if (n.size() == 0) {
                 return false;
             }
-            chargeScan(m_ctx, uint64_t(h.size()) + n.size());
             for (uint32_t k = 0; k < n.size(); k++) {
                 if (isASCIIWhitespace(n[k])) {
                     return false;
@@ -848,25 +836,21 @@ private:
             if (h.size() < n.size() || (h.size() > n.size() && h[n.size()] != u'-')) {
                 return false;
             }
-            chargeScan(m_ctx, n.size());
             return equalAt(h, 0, n, ci);
         case Op::Prefix:
             if (n.size() == 0 || h.size() < n.size()) {
                 return false;
             }
-            chargeScan(m_ctx, n.size());
             return equalAt(h, 0, n, ci);
         case Op::Suffix:
             if (n.size() == 0 || h.size() < n.size()) {
                 return false;
             }
-            chargeScan(m_ctx, n.size());
             return equalAt(h, h.size() - n.size(), n, ci);
         case Op::Substring:
             if (n.size() == 0 || h.size() < n.size()) {
                 return false;
             }
-            chargeScan(m_ctx, uint64_t(h.size()) + n.size());
             return contains(h, n, ci, ci ? s.failureFolded : s.failure);
         }
         return false;
@@ -940,7 +924,6 @@ private:
             return e.parent() && e.parent()->type() == NodeType::Document;
         case PseudoClass::Empty:
             for (size_t i = 0; i < e.childCount(); i++) {
-                charge(m_ctx, work::kNodeVisit);
                 Node* c = e.childAt(i);
                 if (c->isElement()) {
                     return false;
@@ -1041,8 +1024,7 @@ private:
 } // namespace
 
 SelectorList parseSelectors(JSContext* ctx, const String& text) {
-    // Over the length cap: refused on the length alone, before any conversion, charge or allocation. Under it, charged
-    // per UTF-8 byte before the tokenizer and for the componentizer's copying before it (css::componentValues).
+    // Over the length cap: refused on the length alone, before any conversion or allocation (css::componentValues).
     std::optional<css_token_vector> tokens = css::componentValues(ctx, text);
     if (!tokens) {
         syntaxError(text);
