@@ -27,7 +27,6 @@ import AvatarNode
 import LocalMediaResources
 import ImageCompression
 import TextFormat
-import PresentationDataUtils
 import MediaEditor
 import MediaEditorBottomControls
 import PeerInfoScreen
@@ -140,9 +139,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
                 let (stableId, id) = event
                 moveStorySource(engine: self.context.engine, peerId: self.context.account.peerId, from: Int64(stableId), to: Int64(id))
-                #if DEBUG
-                self.presentDebugStoryUploadStatistics(stableId: stableId)
-                #endif
             })
         }
     }
@@ -150,27 +146,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    #if DEBUG
-    private func presentDebugStoryUploadStatistics(stableId: Int32) {
-        guard let upload = VideoExportDebugTimings.shared.takeStoryUpload(stableId: stableId) else {
-            return
-        }
-        let export = upload.entry
-        let uploadEnd = CFAbsoluteTimeGetCurrent()
-        let text = String(
-            format: "Writer: %@\nSize: %.1f MB\n\nVideo export: %.2f s\nUpload: %.2f s\nExport start to published: %.2f s\n\nPost tap to published: %.2f s",
-            export.writer,
-            Double(export.fileSize) / 1_048_576.0,
-            export.exportEnd - export.exportStart,
-            uploadEnd - export.exportEnd,
-            uploadEnd - export.exportStart,
-            uploadEnd - upload.postTime
-        )
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        self.context.sharedContext.mainWindow?.present(textAlertController(context: self.context, title: "Story Upload", text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root)
-    }
-    #endif
     
     deinit {
         self.permissionsDisposable?.dispose()
@@ -826,9 +801,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             let groupingId = Int32.random(in: 2000000 ..< Int32.max)
             for result in results {
                 var media: EngineStoryInputMedia?
-                #if DEBUG
-                var debugVideoResourceId: String?
-                #endif
                 
                 if let mediaResult = result.media {
                     switch mediaResult {
@@ -856,9 +828,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             case let .asset(localIdentifier):
                                 resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                             }
-                            #if DEBUG
-                            debugVideoResourceId = EngineMediaResource(resource).id.stringRepresentation
-                            #endif
                             let tempFile = EngineTempBox.shared.tempFile(fileName: "file")
                             defer {
                                 EngineTempBox.shared.dispose(tempFile)
@@ -898,10 +867,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     }
                     #endif
                     
-                    #if DEBUG
-                    let debugPostTime = CFAbsoluteTimeGetCurrent()
-                    let debugResourceId = debugVideoResourceId
-                    #endif
                     let _ = (context.engine.messages.uploadStory(
                         target: target,
                         media: media,
@@ -920,11 +885,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     )
                     |> deliverOnMainQueue).startStandalone(next: { stableId in
                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: result.randomId, to: Int64(stableId))
-                        #if DEBUG
-                        if let debugResourceId {
-                            VideoExportDebugTimings.shared.registerStoryUpload(stableId: stableId, resourceId: debugResourceId, postTime: debugPostTime)
-                        }
-                        #endif
                     })
                 }
                 index += 1

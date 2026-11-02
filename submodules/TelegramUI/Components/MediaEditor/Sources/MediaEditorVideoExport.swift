@@ -251,10 +251,6 @@ public final class MediaEditorVideoExport {
     
     public var streamingFileGrowth: ((Int64, Int64) -> Void)?
     
-    public var usesStreamingWriter: Bool {
-        return self.writer is MediaEditorVideoStreamingWriter
-    }
-    
     let debugFrameObserver: ((CVPixelBuffer, CMTime) -> Void)?
     let debugCompositionTimeObserver: ((Double) -> Void)?
     

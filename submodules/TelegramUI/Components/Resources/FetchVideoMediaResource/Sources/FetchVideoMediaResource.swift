@@ -403,9 +403,6 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         let duration: Double = avAsset.duration.seconds
                         var configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
                         configuration.useStreamingWriter = isStory ? useStreamingStoryVideoWriter : useStreamingChatVideoWriter
-                        #if DEBUG
-                        let exportStart = CFAbsoluteTimeGetCurrent()
-                        #endif
                         let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .video(asset: avAsset, isStory: isStory), configuration: configuration, outputPath: tempFile.path)
                         let streamingHeaderEnd = Atomic<Int64>(value: 0)
                         let streamingMinimumSize = isStory ? 0 : streamingChatVideoUploadMinimumSize
@@ -416,14 +413,6 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         let statusDisposable = videoExport.status.start(next: { status in
                             switch status {
                             case .completed:
-                                #if DEBUG
-                                let debugEntry = VideoExportDebugTimings.Entry(exportStart: exportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: videoExportDebugWriterName(usesStreamingWriter: videoExport.usesStreamingWriter), fileSize: fileSize(tempFile.path) ?? 0, streamedSize: updatedSize.with { $0 })
-                                if isStory {
-                                    VideoExportDebugTimings.shared.recordStoryExport(resourceId: resource.id.stringRepresentation, entry: debugEntry)
-                                } else {
-                                    VideoExportDebugTimings.shared.recordChatExport(entry: debugEntry)
-                                }
-                                #endif
                                 var value = stat()
                                 if stat(tempFile.path, &value) == 0 {
                                     let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -473,9 +462,6 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                             }
                         }
                         
-                        #if DEBUG
-                        let legacyExportStart = CFAbsoluteTimeGetCurrent()
-                        #endif
                         let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
                             /*var value = stat()
                              if stat(path, &value) == 0 {
@@ -499,9 +485,6 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         }), entityRenderer: entityRenderer)!
                         let signalDisposable = signal.start(next: { next in
                             if let result = next as? TGMediaVideoConversionResult {
-                                #if DEBUG
-                                VideoExportDebugTimings.shared.recordChatExport(entry: VideoExportDebugTimings.Entry(exportStart: legacyExportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: "legacy converter", fileSize: fileSize(result.fileURL.path) ?? 0))
-                                #endif
                                 var value = stat()
                                 if stat(result.fileURL.path, &value) == 0 {
                                     let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -620,9 +603,6 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             
             var configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
             configuration.useStreamingWriter = isStory ? useStreamingStoryVideoWriter : useStreamingChatVideoWriter
-            #if DEBUG
-            let exportStart = CFAbsoluteTimeGetCurrent()
-            #endif
             let videoExport = MediaEditorVideoExport(postbox: postbox, subject: subject, configuration: configuration, outputPath: tempFile.path)
             let streamingHeaderEnd = Atomic<Int64>(value: 0)
             let streamingMinimumSize = isStory ? 0 : streamingChatVideoUploadMinimumSize
@@ -633,16 +613,6 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             let statusDisposable = videoExport.status.start(next: { status in
                 switch status {
                 case .completed:
-                    #if DEBUG
-                    if case .video = subject {
-                        let debugEntry = VideoExportDebugTimings.Entry(exportStart: exportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: videoExportDebugWriterName(usesStreamingWriter: videoExport.usesStreamingWriter), fileSize: fileSize(tempFile.path) ?? 0, streamedSize: updatedSize.with { $0 })
-                        if isStory {
-                            VideoExportDebugTimings.shared.recordStoryExport(resourceId: resource.id.stringRepresentation, entry: debugEntry)
-                        } else {
-                            VideoExportDebugTimings.shared.recordChatExport(entry: debugEntry)
-                        }
-                    }
-                    #endif
                     var value = stat()
                     if stat(tempFile.path, &value) == 0 {
                         let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
@@ -696,9 +666,6 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                     return nil
                 }
             }
-            #if DEBUG
-            let legacyExportStart = CFAbsoluteTimeGetCurrent()
-            #endif
             let signal: SSignal
             if isImage, let entityRenderer = entityRenderer {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
@@ -755,11 +722,6 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             
             let signalDisposable = signal.start(next: { next in
                 if let result = next as? TGMediaVideoConversionResult {
-                    #if DEBUG
-                    if !isImage {
-                        VideoExportDebugTimings.shared.recordChatExport(entry: VideoExportDebugTimings.Entry(exportStart: legacyExportStart, exportEnd: CFAbsoluteTimeGetCurrent(), writer: "legacy converter", fileSize: fileSize(result.fileURL.path) ?? 0))
-                    }
-                    #endif
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
 //                        if config.remuxToFMp4 {

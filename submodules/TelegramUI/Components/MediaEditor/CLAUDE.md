@@ -56,8 +56,3 @@ None of these shows up as a build error; each one was a bug:
 - **A reservation that turns out too small is not an error**: `FFMpegMP4StreamWriter` compares an upper bound of the
   `moov` size from the written sample counts with the reservation before the trailer and, if it may not fit, writes
   `moov` at the end and turns the reserved space into a `free` box (a valid file, just not head-first).
-
-DEBUG builds show an alert with the writer, export and upload times once a story is published (`TelegramRootController`)
-or a chat video is sent (`ChatControllerImpl.presentDebugVideoSendStatistics`); both read `VideoExportDebugTimings`.
-A sent chat video takes the latest recorded chat export (the sent message no longer carries the local resource), so
-videos sent at the same time in different chats can be paired wrongly.
