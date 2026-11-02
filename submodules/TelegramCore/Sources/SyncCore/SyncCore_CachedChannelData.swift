@@ -205,13 +205,21 @@ public final class CachedChannelData: CachedPeerData {
             self.isStream = isStream
         }
         
+        /// The call a full peer names by its `inputGroupCall` alone, keeping what is cached about the previous call.
+        /// `isStream` is kept only when it is the same call: the next call of the peer can be the other kind.
+        init(fullPeerCallId id: Int64, accessHash: Int64, previous: ActiveCall?) {
+            self.init(id: id, accessHash: accessHash, title: previous?.title, scheduleTimestamp: previous?.scheduleTimestamp, subscribedToScheduled: previous?.subscribedToScheduled ?? false, isStream: previous?.id == id ? previous?.isStream : nil)
+        }
+        
         public init(decoder: PostboxDecoder) {
             self.id = decoder.decodeInt64ForKey("id", orElse: 0)
             self.accessHash = decoder.decodeInt64ForKey("accessHash", orElse: 0)
             self.title = decoder.decodeOptionalStringForKey("title")
             self.scheduleTimestamp = decoder.decodeOptionalInt32ForKey("scheduleTimestamp")
             self.subscribedToScheduled = decoder.decodeBoolForKey("subscribed", orElse: false)
-            self.isStream = decoder.decodeOptionalBoolForKey("isStream_v2")
+            // Read from the key encode(_:) writes. It used to read "isStream_v2", which nothing writes, so a stored call
+            // always came back with isStream == nil and a live stream was joined as a video chat.
+            self.isStream = decoder.decodeOptionalBoolForKey("isStream")
         }
         
         public func encode(_ encoder: PostboxEncoder) {

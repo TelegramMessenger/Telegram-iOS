@@ -1048,52 +1048,12 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
-        let (presentationData, present, openSettings) = self.getDeviceAccessData()
-        
-        let isVideo = false
-        
-        let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
-            if let isStream = initialCall.isStream, isStream {
-                subscriber.putNext(true)
-                subscriber.putCompletion()
-                
-                return EmptyDisposable
-            }
-            
-            DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
-                present(c, a)
-            }, openSettings: {
-                openSettings()
-            }, { value in
-                if isVideo && value {
-                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
-                        present(c, a)
-                    }, openSettings: {
-                        openSettings()
-                    }, { value in
-                        subscriber.putNext(value)
-                        subscriber.putCompletion()
-                    })
-                } else {
-                    subscriber.putNext(value)
-                    subscriber.putCompletion()
-                }
-            })
-            return EmptyDisposable
-        }
-        |> runOn(Queue.mainQueue())
-        
-        return combineLatest(queue: .mainQueue(),
-            accessEnabledSignal,
-            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        )
+        // Joining must not require the microphone: a video chat is joined muted and a live stream never records.
+        // Asking for it belongs to unmuting, so a denied or undetermined microphone does not stop the join here.
+        return accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
-                return .single(false)
-            }
-            
-            if !accessEnabled {
                 return .single(false)
             }
 
