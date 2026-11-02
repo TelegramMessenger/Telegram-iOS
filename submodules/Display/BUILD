@@ -35,13 +35,15 @@ swift_library(
         "Tests/AccessibilityCollectorTests.swift",
         "Tests/CollectionIndexAccessibilityTests.swift",
         "Tests/TextLinkAccessibilityTests.swift",
+        "Tests/WindowTouchReleaseStateTests.swift",
     ]),
     deps = [
         ":Display",
     ],
 )
 
-# The ASDK accessibility collector (`_ASDisplayViewAccessiblity.mm`) driven through Display's nodes and ListView.
+# The ASDK accessibility collector (`_ASDisplayViewAccessiblity.mm`) driven through Display's nodes and ListView, and
+# the other tests that need a running app (`WindowTouchReleaseStateTests`: a recognizer's state machine).
 swift_library(
     name = "DisplayAccessibilityTestsLib",
     testonly = True,
@@ -50,6 +52,7 @@ swift_library(
         "Tests/CollectionIndexAccessibilityTests.swift",
         "Tests/TextLinkAccessibilityTests.swift",
         "Tests/AccessibilityTextLinksTests.swift",
+        "Tests/WindowTouchReleaseStateTests.swift",
     ],
     deps = [
         ":Display",

@@ -2317,6 +2317,12 @@ public func makeCoreListChatHistoryBackend(rotated: Bool, scrollTrace: Bool = fa
             Logger.shared.log("CoreListScroll", line)
         }
     }
+    // The main window letting go of the touches its recognizers hold as its scene deactivates (#127), beside the list
+    // pan's SCENE lines; written at once, as no gesture may end after it to write the trace.
+    WindowTouchRelease.trace = scrollTrace ? { line in
+        CoreListScrollTrace.log(line)
+        CoreListScrollTrace.flush()
+    } : nil
     CoreListScrollTrace.log("CHAT-LIST created rotated=\(rotated)")
     let backend = CoreListChatHistoryBackend()
     backend.rotated = rotated

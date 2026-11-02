@@ -756,6 +756,10 @@ clock); `TestScrollEngine` has no render server.
     Defensive, for #127 (iOS 27.2 devices: after Home and back the chat did not scroll until reopened); the cause is
     unconfirmed on a device, where a swipe Home starting on the list is suspected of leaving the pan holding a touch
     the system took. The simulator resets the pan itself and never showed it. `SceneActivationTouchResetTests`.
+    It does not cover a still finger: there the two-finger selection pan and the back swipe stay `.possible` on the
+    touch, so the pan, failed (or cancelled by this), is never reset. The main window lets go of every recognizer
+    holding a touch at the same scene changes (Display's `WindowTouchRelease`, `TOUCH-RELEASE` trace lines), which
+    covers both; reproduced on the simulator by withholding a touch's end from the window.
 
 ### Attachments
 
