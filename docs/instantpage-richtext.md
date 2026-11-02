@@ -220,7 +220,7 @@ A V2 `.table` block's item frame is **full-width / flush** with the bubble inter
 
 A `.preformatted` block renders as a **plain, square, `codeBlockBackgroundColor` rectangle spanning its container's interior edge to edge**, with its monospace text — and a **bold, lowercased language line above it** — at exactly the x a paragraph occupies at that nesting level. So the band's interior side padding IS the paragraph inset; it is not a code-block constant. No accent bar, no tint, no corner radius: a code block reads as a highlighted table row, not as a quote variant (it was one, from the 2026-07-06 reskin until 2026-08-18).
 
-The message hosts pass `codeBlockBackgroundColor` the same value they give `tableHeaderColor`. The field is **revived, not new** — V2 stopped reading it in the July reskin while V1 full-page Instant View still does, so the presets in `InstantPageTheme.swift` are untouched and V1 is unaffected.
+The message hosts pass `codeBlockBackgroundColor` the same value they give `tableHeaderColor`, except in an outgoing bubble of a dark theme: there the accent is white, so `tableHeaderColor` is a white wash, and the code takes black 10%, the fill a plain message's code block has on that bubble (`ChatMessageTextBubbleContentNode`'s `codeBlockFillColor`; the long-press Send preview does the same). The field is **revived, not new** — V2 stopped reading it in the July reskin while V1 full-page Instant View still does, so the presets in `InstantPageTheme.swift` are untouched and V1 is unaffected.
 
 ### Non-obvious invariants
 

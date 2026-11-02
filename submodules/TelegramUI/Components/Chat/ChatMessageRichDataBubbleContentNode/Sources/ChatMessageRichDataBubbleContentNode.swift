@@ -814,7 +814,11 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     tableHeaderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.1)
                     tableBorderColor = messageTheme.accentControlColor.withMultipliedAlpha(0.25)
                 }
-                
+                // A code block reads as a highlighted table row, not as an accent-tinted quote — the same fill a
+                // filled table cell gets, except in an outgoing bubble of a dark theme: that bubble is coloured, and
+                // its accent is white, so the code takes the darker fill a plain message's code block has there.
+                let codeBlockBackgroundColor = !isIncoming && isDark ? UIColor(white: 0.0, alpha: 0.1) : tableHeaderColor
+
                 let checkboxFill = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.fillColor : messageTheme.accentControlColor
                 var checkboxForeground = isIncoming ? item.presentationData.theme.theme.list.itemCheckColors.foregroundColor : item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
                 if isDark && checkboxForeground == checkboxFill {
@@ -837,10 +841,9 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     pageBackgroundColor: .clear,
                     textCategories: textCategories,
                     serif: false,
-                    // A code block reads as a highlighted table row, not as an accent-tinted quote
-                    // — the same fill a filled table cell gets. (V1 Instant View still reads this
-                    // field for its own gray box; only the value THIS host passes changes.)
-                    codeBlockBackgroundColor: tableHeaderColor,
+                    // (V1 Instant View still reads this field for its own gray box; only the value THIS host passes
+                    // changes.)
+                    codeBlockBackgroundColor: codeBlockBackgroundColor,
                     linkColor: messageTheme.linkTextColor,
                     textHighlightColor: messageTheme.accentTextColor.withMultipliedAlpha(0.1),
                     linkHighlightColor: messageTheme.linkTextColor.withMultipliedAlpha(0.1),

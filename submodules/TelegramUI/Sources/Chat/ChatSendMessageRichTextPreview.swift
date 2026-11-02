@@ -83,9 +83,9 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
         let messageTheme = presentationData.theme.chat.message.outgoing
         let mainColor = messageTheme.accentTextColor
 
-        if isDark {
-        } else {
-        }
+        // Matches the bubble this previews: the highlighted-table-cell fill, not an accent tint, and in a dark theme
+        // (a coloured bubble with a white accent) the darker fill.
+        let codeBlockBackgroundColor = isDark ? UIColor(white: 0.0, alpha: 0.1) : messageTheme.accentControlColor.withMultipliedAlpha(0.1)
 
         let textCategories = InstantPageTextCategories.chatMessage(
             primaryText: messageTheme.primaryTextColor,
@@ -96,8 +96,7 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
             pageBackgroundColor: .clear,
             textCategories: textCategories,
             serif: false,
-            // Matches the bubble this previews: the highlighted-table-cell fill, not an accent tint.
-            codeBlockBackgroundColor: messageTheme.accentControlColor.withMultipliedAlpha(0.1),
+            codeBlockBackgroundColor: codeBlockBackgroundColor,
             linkColor: messageTheme.linkTextColor,
             textHighlightColor: messageTheme.accentTextColor.withMultipliedAlpha(0.1),
             linkHighlightColor: messageTheme.linkTextColor.withMultipliedAlpha(0.1),
