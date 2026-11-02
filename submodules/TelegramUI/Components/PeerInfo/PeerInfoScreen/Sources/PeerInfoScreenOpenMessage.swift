@@ -120,12 +120,12 @@ extension PeerInfoScreenNode {
         }
     }
 
-    func openMessage(id: EngineMessage.Id) -> Bool {
+    func openMessage(id: EngineMessage.Id, preloadedMessage: EngineMessage? = nil) -> Bool {
         guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
             return false
         }
-        var foundGalleryMessage: EngineMessage?
-        if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
+        var foundGalleryMessage: EngineMessage? = preloadedMessage
+        if foundGalleryMessage == nil, let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
             if let galleryMessage = searchContentNode.messageForGallery(id) {
                 self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [galleryMessage])
                 foundGalleryMessage = galleryMessage
@@ -136,6 +136,28 @@ extension PeerInfoScreenNode {
         }
 
         guard let galleryMessage = foundGalleryMessage else {
+            // The grid can show a cell whose message has left the loaded window. Load it and open the
+            // fullscreen gallery for it rather than dropping the tap.
+            if preloadedMessage == nil {
+                let _ = (self.context.engine.messages.getMessagesLoadIfNecessary([id], strategy: .cloud(skipLocal: false))
+                |> `catch` { _ in
+                    return .single(.result([]))
+                }
+                |> mapToSignal { result -> Signal<EngineMessage?, NoError> in
+                    guard case let .result(messages) = result else {
+                        return .complete()
+                    }
+                    return .single(messages.first.flatMap(EngineMessage.init))
+                }
+                |> take(1)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
+                    guard let self, let message else {
+                        return
+                    }
+                    let _ = self.openMessage(id: id, preloadedMessage: message)
+                })
+                return true
+            }
             return false
         }
         self.view.endEditing(true)

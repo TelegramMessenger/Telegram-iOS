@@ -10,6 +10,10 @@ swift_library(
     ]),
     copts = [
         "-warnings-as-errors",
+        # Xcode 26.6's Swift aborts in OSSACompleteLifetime on ShareScreen.init ("Invalid SIL provided to
+        # OSSACompleteLifetime"); the compiler names this flag as the way to skip that check.
+        "-Xfrontend",
+        "-disable-sil-ownership-verifier",
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
