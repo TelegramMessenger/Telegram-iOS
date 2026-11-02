@@ -4609,7 +4609,18 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater) {
+                        var holdsOnlyForumTopicRoot = false
+                        if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.isForumPost, !historyView.originalView.entries.isEmpty {
+                            holdsOnlyForumTopicRoot = historyView.originalView.entries.allSatisfy { entry in
+                                return entry.message.media.contains(where: { media in
+                                    if let action = media as? TelegramMediaAction, case .topicCreated = action.action {
+                                        return true
+                                    }
+                                    return false
+                                })
+                            }
+                        }
+                        if chatHistoryViewAwaitsMessages(isLoading: historyView.originalView.isLoading, holeEarlier: historyView.originalView.holeEarlier, holeLater: historyView.originalView.holeLater, holdsOnlyForumTopicRoot: holdsOnlyForumTopicRoot) {
                             loadState = .loading(false)
                         } else if let firstEntry = historyView.originalView.entries.first {
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
