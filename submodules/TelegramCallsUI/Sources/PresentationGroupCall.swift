@@ -907,10 +907,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         } else {
             joinsUnmuted = self.isConference && conferenceSourceId == nil
         }
-        // Without microphone access the call joins muted and asks for it (below); it unmutes if access is granted.
-        // A call link's join asks before the call is created (joinConferenceCall); this covers any other caller.
-        let joinsUnmutedAfterAccess = joinsUnmuted && !(isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true)
-        if joinsUnmuted && !joinsUnmutedAfterAccess {
+        // Without microphone access the call joins muted and asks for it (below); once it is granted, the user unmutes
+        // (GroupCallMicrophoneAccessGate). A call link's join asks before the call is created (joinConferenceCall); this
+        // covers any other caller.
+        let asksForMicrophoneAccessAtJoin = joinsUnmuted && !(isStream || DeviceAccess.isMicrophoneAccessAuthorized() == true)
+        if joinsUnmuted && !asksForMicrophoneAccessAtJoin {
             self.isMutedValue = .unmuted
             self.isMutedPromise.set(self.isMutedValue)
             self.stateValue.muteState = nil
@@ -1268,9 +1269,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.requestVideo()
         }
         
-        if joinsUnmutedAfterAccess {
-            // After init, from the main queue: the call screen is presented on the same queue.
-            Queue.mainQueue().async { [weak self] in
+        if asksForMicrophoneAccessAtJoin {
+            // After init (`Queue.mainQueue().async` would run inline here, on the main queue), so that the call screen,
+            // presented on the same queue, is up when the request shows.
+            DispatchQueue.main.async { [weak self] in
                 guard let self, !self.leaving else {
                     return
                 }
@@ -3178,13 +3180,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             present(c, a)
         }, openSettings: {
             openSettings()
-        }, { [weak self] value in
-            guard let self else {
-                return
-            }
-            if let action = self.microphoneAccessGate.accessRequestCompleted(isGranted: value), !self.leaving {
-                self.setIsMuted(action: action)
-            }
+        }, { [weak self] _ in
+            // Granted or not, the call stays muted: a grant does not unmute (GroupCallMicrophoneAccessGate).
+            self?.microphoneAccessGate.accessRequestCompleted()
         })
     }
 
