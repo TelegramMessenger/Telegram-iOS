@@ -40,6 +40,51 @@ final class NavigationBarGlassHoldTests: XCTestCase {
         XCTAssertFalse(hold.isHeld)
     }
 
+    private func pill(x: CGFloat, signature: AnyHashable = "chat") -> NavigationBarTransitionTitlePill {
+        return NavigationBarTransitionTitlePill(frame: CGRect(x: x, y: 64.0, width: 178.0, height: 44.0), signature: signature, lendContent: { UIView() })
+    }
+
+    // A layout that only moves the title's pill (the chat header re-centred under the glass) keeps the hold and asks
+    // the glass to follow it, once per move; the same pill again asks nothing.
+    func test_aMovedTitlePill_isFollowed_notHandedOver() {
+        let hold = self.makeHold()
+        var interruptions = 0
+        var moves = 0
+        hold.hold(true, interrupted: { interruptions += 1 }, titlePillMoved: { moves += 1 }, content: nil, rowFrame: CGRect(), titlePill: self.pill(x: 100.0))
+        hold.titlePillLaidOut(self.pill(x: 100.0))
+        XCTAssertEqual(moves, 0)
+        hold.titlePillLaidOut(self.pill(x: 112.0))
+        XCTAssertEqual(moves, 1)
+        hold.titlePillLaidOut(self.pill(x: 112.0))
+        XCTAssertEqual(moves, 1)
+        XCTAssertEqual(interruptions, 0)
+        XCTAssertTrue(hold.isHeld)
+        hold.interrupt()
+        hold.titlePillLaidOut(self.pill(x: 120.0))
+        XCTAssertEqual(moves, 1, "not after the hold")
+    }
+
+    // A pill the glass cannot follow hands over: one that appears or goes (the glass draws none, or one the bar no
+    // longer has), another title view's (the glass shows the old one's contents), or any change when nobody follows.
+    func test_aTitlePillTheGlassCannotFollow_handsOver() {
+        let cases: [(held: NavigationBarTransitionTitlePill?, laidOut: NavigationBarTransitionTitlePill?, follows: Bool)] = [
+            (nil, self.pill(x: 112.0), true),
+            (self.pill(x: 112.0), nil, true),
+            (self.pill(x: 112.0), self.pill(x: 112.0, signature: "another"), true),
+            (self.pill(x: 100.0), self.pill(x: 112.0), false)
+        ]
+        for (index, entry) in cases.enumerated() {
+            let hold = self.makeHold()
+            var interruptions = 0
+            var moves = 0
+            hold.hold(true, interrupted: { interruptions += 1 }, titlePillMoved: entry.follows ? { moves += 1 } : nil, content: nil, rowFrame: CGRect(), titlePill: entry.held)
+            hold.titlePillLaidOut(entry.laidOut)
+            XCTAssertEqual(interruptions, 1, "case \(index)")
+            XCTAssertEqual(moves, 0, "case \(index)")
+            XCTAssertFalse(hold.isHeld, "case \(index)")
+        }
+    }
+
     // A hold nobody ends releases itself after 1.6 s times the duration factor.
     func test_aHoldNobodyEnds_releasesAfterItsCap() {
         let hold = self.makeHold()
