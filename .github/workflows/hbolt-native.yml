@@ -69,6 +69,7 @@ jobs:
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             $OVERRIDE_XCODE \
             build \
+            --continueOnError \
             --configurationPath="build-system/appstore-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
             --configuration=release_arm64 \
