@@ -257,6 +257,7 @@ final class FullscreenControlsComponent: Component {
                 let verificationIconFrame = CGRect(origin: CGPoint(x: titleFrame.minX - verificationIconSpacing - verificationIconSize.width, y: floorToScreenPixels((leftBackgroundSize.height - verificationIconSize.height) / 2.0)), size: verificationIconSize)
                 if view.superview == nil {
                     view.isUserInteractionEnabled = false
+                    view.alpha = self.displayTitle ? verificationIconAlpha : 0.0
                     self.titleClippingView.addSubview(view)
                     view.frame = verificationIconFrame
                 }
