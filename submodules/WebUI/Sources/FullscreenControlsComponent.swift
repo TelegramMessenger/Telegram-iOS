@@ -202,8 +202,10 @@ final class FullscreenControlsComponent: Component {
             
             var additionalLeftWidth: CGFloat = 0.0
             
-            // As the chat header's third-party verification icon: 20pt, 4pt before the title.
-            let verificationIconSpacing: CGFloat = 4.0
+            // Sized and dimmed as the pill's own verified check (14pt at 0.6, 2pt from the title) to sit with its 13pt
+            // title; the chat header's 20pt would dwarf it.
+            let verificationIconSpacing: CGFloat = 2.0
+            let verificationIconAlpha: CGFloat = 0.6
             var verificationIconSize: CGSize?
             if let verificationIconFileId = component.verificationIconFileId {
                 let verificationIcon: ComponentView<Empty>
@@ -224,7 +226,7 @@ final class FullscreenControlsComponent: Component {
                         action: nil
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 20.0, height: 20.0)
+                    containerSize: CGSize(width: 14.0, height: 14.0)
                 )
             } else if let verificationIcon = self.verificationIcon {
                 self.verificationIcon = nil
@@ -259,7 +261,7 @@ final class FullscreenControlsComponent: Component {
                     view.frame = verificationIconFrame
                 }
                 transition.setFrame(view: view, frame: verificationIconFrame)
-                transition.setAlpha(view: view, alpha: self.displayTitle ? 1.0 : 0.0)
+                transition.setAlpha(view: view, alpha: self.displayTitle ? verificationIconAlpha : 0.0)
             }
             
             let buttonTitleUpdated = (previousComponent?.hasBack ?? false) != component.hasBack
