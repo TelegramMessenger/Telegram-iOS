@@ -1621,7 +1621,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             if self.bottomEdgeEffectView.superview == nil {
                 self.view.addSubview(self.bottomEdgeEffectView)
             }
-            
+            transition.updateAlpha(layer: self.bottomEdgeEffectView.layer, alpha: self.source == .story && !isPickingLocation ? 0.0 : 1.0)
+
             if isPickingLocation {
                 let sendButton: ComponentView<Empty>
                 if let current = self.sendButton {
@@ -1687,7 +1688,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         
                         sendButtonView.alpha = 0.0
                         sendButtonView.transform = .identity
-                        
+                        sendButtonView.frame = sendButtonFrame
+
                         transition.animateTransformScale(view: sendButtonView, from: 0.01)
                         transition.updateAlpha(layer: sendButtonView.layer, alpha: 1.0)
                     }
