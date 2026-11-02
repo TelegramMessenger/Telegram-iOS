@@ -233,6 +233,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private var displayEmojiTooltip: Bool = false
     private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
+    private var cameraOffNoticeState = PrivateCallCameraOffNoticeState()
     private var swapLocalAndRemoteVideo: Bool = false
     public private(set) var isPictureInPictureRequested: Bool = false
     private var isPictureInPictureActive: Bool = false
@@ -478,7 +479,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 update = true
             }
             
-            if self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil {
+            // The controls stay up under the camera-off notice.
+            if (self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil) && !self.cameraOffNoticeState.isVisible {
                 self.areControlsHidden = !self.areControlsHidden
                 update = true
                 
@@ -643,6 +645,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.areControlsHidden = false
         }
         
+        let wasCameraOffNoticeVisible = self.cameraOffNoticeState.isVisible
+        self.cameraOffNoticeState.update(hasRemoteVideo: params.state.remoteVideo != nil, hasLocalVideo: params.state.localVideo != nil)
+        if self.cameraOffNoticeState.isVisible && !wasCameraOffNoticeVisible {
+            // The controls stay up while the notice is; the auto-hide timer starts again once it is dismissed.
+            self.areControlsHidden = false
+            self.hideControlsTimer?.invalidate()
+            self.hideControlsTimer = nil
+        }
+        
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
             case .requesting, .ringing, .connecting, .reconnecting:
@@ -666,6 +677,16 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         self.params = params
         self.updateInternal(params: params, transition: transition)
+    }
+    
+    private func dismissCameraOffNotice() {
+        if !self.cameraOffNoticeState.isVisible {
+            return
+        }
+        self.cameraOffNoticeState.dismiss()
+        if !self.isUpdating {
+            self.update(transition: .spring(duration: 0.4))
+        }
     }
     
     private func update(transition: ComponentTransition) {
@@ -716,7 +737,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         let havePrimaryVideo = !activeVideoSources.isEmpty
         
-        if havePrimaryVideo && self.hideControlsTimer == nil {
+        if havePrimaryVideo && self.hideControlsTimer == nil && !self.cameraOffNoticeState.isVisible {
             self.hideControlsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false, block: { [weak self] _ in
                 guard let self else {
                     return
@@ -826,6 +847,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 guard let self else {
                     return
                 }
+                self.dismissCameraOffNotice()
                 self.videoAction?()
             }),
             ButtonGroupView.Button(content: .microphone(isMuted: params.state.isLocalAudioMuted), isEnabled: !isTerminated, action: { [weak self] in
@@ -865,8 +887,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if params.state.isRemoteAudioMuted {
                 notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), icon: "Call/CallToastMicrophone", text: params.state.strings.Call_MicrophoneOff(params.state.shortName).string))
             }
-            if params.state.remoteVideo != nil && params.state.localVideo == nil {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: params.state.strings.Call_YourCameraOff))
+            if self.cameraOffNoticeState.isVisible {
+                let isVideoButtonActionable = isVideoButtonEnabled && !isTerminated
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: params.state.strings.Call_CameraTooltip, closeAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.dismissCameraOffNotice()
+                }, action: { [weak self] in
+                    // "Tap here to turn on your camera": the video button's action, while that button can be pressed.
+                    guard let self, isVideoButtonActionable else {
+                        return
+                    }
+                    self.dismissCameraOffNotice()
+                    self.videoAction?()
+                }, tailTarget: .video))
             }
             if params.state.isRemoteBatteryLow {
                 notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), icon: "Call/CallToastBattery", text: params.state.strings.Call_BatteryLow(params.state.shortName).string))
