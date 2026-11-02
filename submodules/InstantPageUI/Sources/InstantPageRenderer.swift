@@ -93,6 +93,16 @@ public final class InstantPageV2RenderContext {
     /// this context — is not rebuilt. The host refreshes the flag before each `update(layout:…)`
     /// and every media view re-reads it from the context in its own `update(…)`.
     public private(set) var captureProtected: Bool
+    /// Whether the host bubble is drawn as incoming, which picks the incoming or outgoing bubble palette
+    /// for rows styled like chat media (audio, document). Set by the chat bubble from
+    /// `effectivelyIncoming`, the rule the bubble and the rest of the page use; `message?.isIncoming`
+    /// (the raw `.Incoming` flag) disagrees with it for a Saved Messages forward of one of the user's
+    /// own outgoing messages and for a post in the user's own channel, and drew the row in the other
+    /// side's palette (an accent title on an accent bubble). `false` for the send preview.
+    ///
+    /// Mutable for the same reason as `captureProtected`: the host refreshes it before each update, as
+    /// the view (and this context) outlives updates of its message, the Local→Cloud send flip included.
+    public private(set) var isIncoming: Bool
 
     public init(
         context: AccountContext,
@@ -109,6 +119,7 @@ public final class InstantPageV2RenderContext {
         shouldAutoplayVideo: @escaping (TelegramMediaFile) -> Bool = { _ in false },
         wallpaperBackgroundNode: @escaping () -> WallpaperBackgroundNode? = { nil },
         captureProtected: Bool = false,
+        isIncoming: Bool = false,
         message: MessageReference?
     ) {
         self.context = context
@@ -126,6 +137,7 @@ public final class InstantPageV2RenderContext {
         self.shouldAutoplayVideo = shouldAutoplayVideo
         self.wallpaperBackgroundNode = wallpaperBackgroundNode
         self.captureProtected = captureProtected
+        self.isIncoming = isIncoming
     }
 
     /// Refresh the copy-protection state. See `captureProtected`; the host calls this before each
@@ -133,6 +145,11 @@ public final class InstantPageV2RenderContext {
     /// up in their own `update(…)`.
     public func updateCaptureProtected(_ captureProtected: Bool) {
         self.captureProtected = captureProtected
+    }
+
+    /// Refresh the host bubble's direction. See `isIncoming`.
+    public func updateIsIncoming(_ isIncoming: Bool) {
+        self.isIncoming = isIncoming
     }
 
     /// Update the content-bearing webpage for a later chunk of the SAME message with the SAME
