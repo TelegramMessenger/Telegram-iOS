@@ -44,7 +44,8 @@ xcodebuild themselves pass `-collect-test-diagnostics never`, as two arguments.
 
 Pure C++ units have host `cc_test`s that bypass Make.py entirely (macOS build, no codesigning):
 `./build-input/bazel-9.2.0-darwin-arm64 test //submodules/TgVoipWebrtc:streaming_audio_renderer_test --test_output=all`
-(likewise `:mtproto_ice_transport_test`, and `//third-party/libprisma:SyntaxHighlighterTests` outside tgcalls). The
+(likewise `:mtproto_ice_transport_test`, and outside tgcalls `//third-party/libprisma:SyntaxHighlighterTests` and
+`//third-party/webrtc:neteq_normal_test`, NetEq in our WebRTC fork, whose header gives the ASan flags it needs). The
 tgcalls ones follow a plain `CHECK_TRUE` + `main()` pattern, are listed
 explicitly in `submodules/TgVoipWebrtc/BUILD` (group sources are not globbed), and must be added to the
 `exclude:` list in `tgcalls/Package.swift` so SwiftPM does not compile their `main()`. The first run compiles

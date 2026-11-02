@@ -1,6 +1,7 @@
 
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
 
 config_setting(
@@ -3263,4 +3264,22 @@ objc_library(
         "//third-party/webrtc/absl",
     ],
     visibility = ["//visibility:public"],
+)
+
+# Host regression test for NetEq's Normal (CVE-2026-9119); the test's header says how to run it under ASan.
+cc_test(
+    name = "neteq_normal_test",
+    srcs = ["tests/NetEqNormalTest.cpp"],
+    copts = [
+        "-w",
+        "-include", "stdint.h",
+        "-Ithird-party/webrtc/webrtc/",
+        "-Ithird-party/webrtc/absl",
+    ] + arch_specific_cflags + optimization_flags,
+    cxxopts = [
+        "-std=c++17",
+    ],
+    deps = [
+        ":webrtc",
+    ],
 )
