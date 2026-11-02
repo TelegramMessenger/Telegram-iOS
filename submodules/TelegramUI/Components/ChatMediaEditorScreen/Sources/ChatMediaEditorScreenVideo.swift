@@ -53,6 +53,9 @@ extension ChatMediaEditorScreen.Node {
             }
             if self.playerState != playerState {
                 self.playerState = playerState
+                if playerState?.isPlaying == true {
+                    self.hasStartedPlayback = true
+                }
                 if let layout = self.validLayout {
                     self.updateScrubber(layout: layout, safeInsets: self.editorSafeInsets(layout: layout), transition: .immediate)
                     self.updateCoverScrubber(layout: layout, safeInsets: self.editorSafeInsets(layout: layout), transition: .immediate)

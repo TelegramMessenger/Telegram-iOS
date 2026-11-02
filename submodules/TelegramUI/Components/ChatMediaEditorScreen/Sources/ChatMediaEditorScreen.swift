@@ -146,6 +146,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
         let toolbar = ComponentView<Empty>()
         var scrubber = ComponentView<Empty>()
         var playerState: MediaEditorPlayerState?
+        var hasStartedPlayback = false
         var playerStateDisposable: Disposable?
         var playerStateFramesCount: Int?
         var sourceLoadStateDisposable: Disposable?

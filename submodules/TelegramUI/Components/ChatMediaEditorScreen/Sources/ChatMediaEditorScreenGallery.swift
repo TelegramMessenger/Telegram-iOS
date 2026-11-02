@@ -10,8 +10,8 @@ import DrawingUI
 import MediaAssetsContext
 import ChatMediaSend
 
-public func chatMediaEditorPlayButtonIsVisible(isPlaying: Bool, isScrubberTracking: Bool) -> Bool {
-    return !isPlaying && !isScrubberTracking
+public func chatMediaEditorPlayButtonIsVisible(isPlaying: Bool, hasPlayed: Bool, isScrubberTracking: Bool) -> Bool {
+    return hasPlayed && !isPlaying && !isScrubberTracking
 }
 
 let chatMediaEditorPlayButtonImage: UIImage? = generateImage(CGSize(width: 60.0, height: 60.0), rotatedContext: { size, context in
@@ -197,6 +197,7 @@ extension ChatMediaEditorScreen.Node {
         self.playerStateDisposable?.dispose()
         self.playerStateDisposable = nil
         self.playerState = nil
+        self.hasStartedPlayback = false
         self.sourceLoadStateDisposable?.dispose()
         self.sourceLoadStateDisposable = nil
         if let progressNode = self.sourceProgressNode {
@@ -461,7 +462,7 @@ extension ChatMediaEditorScreen.Node {
         transition.updateFrame(view: self.playButtonView, frame: CGRect(origin: CGPoint(x: floor(bounds.midX - size.width / 2.0), y: floor(bounds.midY - size.height / 2.0)), size: size))
         var isVisible = false
         if self.isGallery, self.subject.isVideo, self.activeTool == nil, !self.isSending, let playerState = self.playerState {
-            isVisible = chatMediaEditorPlayButtonIsVisible(isPlaying: playerState.isPlaying, isScrubberTracking: self.isScrubberTracking)
+            isVisible = chatMediaEditorPlayButtonIsVisible(isPlaying: playerState.isPlaying, hasPlayed: self.hasStartedPlayback, isScrubberTracking: self.isScrubberTracking)
         }
         transition.updateAlpha(layer: self.playButtonView.layer, alpha: isVisible ? 1.0 : 0.0)
     }

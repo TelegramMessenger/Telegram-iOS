@@ -143,9 +143,13 @@ final class ChatMediaEditorLandscapeTests: XCTestCase {
     }
 
     func testPlayButtonIsHiddenWhileScrubbing() {
-        XCTAssertTrue(chatMediaEditorPlayButtonIsVisible(isPlaying: false, isScrubberTracking: false))
-        XCTAssertFalse(chatMediaEditorPlayButtonIsVisible(isPlaying: false, isScrubberTracking: true))
-        XCTAssertFalse(chatMediaEditorPlayButtonIsVisible(isPlaying: true, isScrubberTracking: false))
+        XCTAssertTrue(chatMediaEditorPlayButtonIsVisible(isPlaying: false, hasPlayed: true, isScrubberTracking: false))
+        XCTAssertFalse(chatMediaEditorPlayButtonIsVisible(isPlaying: false, hasPlayed: true, isScrubberTracking: true))
+        XCTAssertFalse(chatMediaEditorPlayButtonIsVisible(isPlaying: true, hasPlayed: true, isScrubberTracking: false))
+    }
+
+    func testPlayButtonIsHiddenBeforePlaybackStarts() {
+        XCTAssertFalse(chatMediaEditorPlayButtonIsVisible(isPlaying: false, hasPlayed: false, isScrubberTracking: false))
     }
 
     func testLandscapeLivePhotoButtonFrame() {

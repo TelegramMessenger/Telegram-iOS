@@ -689,6 +689,10 @@ private final class CameraScreenComponent: CombinedComponent {
                 isCollageEnabled = false
             }
             let previousMode = controller.cameraState.mode
+            let changesChatCaptureMode = self.mode.kind == .chat && previousMode != mode && CameraCaptureMode(mode) != nil
+            if changesChatCaptureMode {
+                controller.node.beginCaptureKindTransition()
+            }
             controller.updateCameraState({ $0.updatedMode(mode).updatedIsCollageEnabled(isCollageEnabled) }, transition: .spring(duration: 0.3))
             
             var flashMode = controller.cameraState.flashMode
@@ -706,6 +710,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     guard let controller else {
                         return
                     }
+                    controller.node.endCaptureKindTransition()
                     controller.updateChatAudioSession(captureKind: controller.cameraState.mode.captureKind, isRecording: controller.cameraState.recording != .none)
                 })
                 camera.setFlashMode(flashMode)
@@ -3634,6 +3639,45 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.isAdjustingExposure = false
             self.focusCrosshairsView.reset()
         }
+
+        private var captureKindSnapshotView: UIView?
+
+        fileprivate func beginCaptureKindTransition() {
+            self.captureKindSnapshotView?.removeFromSuperview()
+            self.captureKindSnapshotView = nil
+            guard let snapshotView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) else {
+                return
+            }
+            snapshotView.frame = self.mainPreviewView.frame
+            snapshotView.isUserInteractionEnabled = false
+            self.mainPreviewContainerView.addSubview(snapshotView)
+            self.captureKindSnapshotView = snapshotView
+        }
+
+        fileprivate func endCaptureKindTransition() {
+            guard let snapshotView = self.captureKindSnapshotView else {
+                return
+            }
+            self.captureKindSnapshotView = nil
+            UIView.animate(withDuration: 0.25, animations: {
+                snapshotView.alpha = 0.0
+            }, completion: { _ in
+                snapshotView.removeFromSuperview()
+            })
+        }
+
+        private func updateCaptureKindSnapshot(containerSize: CGSize, transition: ComponentTransition) {
+            guard let snapshotView = self.captureKindSnapshotView else {
+                return
+            }
+            let sourceSize = snapshotView.bounds.size
+            guard sourceSize.width > 0.0, sourceSize.height > 0.0 else {
+                return
+            }
+            let scale = max(containerSize.width / sourceSize.width, containerSize.height / sourceSize.height)
+            transition.setPosition(view: snapshotView, position: CGPoint(x: containerSize.width / 2.0, y: containerSize.height / 2.0))
+            transition.setScale(view: snapshotView, scale: scale)
+        }
         
         private var isAdjustingExposure = false
         private var exposureTranslation: CGFloat = 0.0
@@ -3788,7 +3832,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 if let self {
                     if modeChange != .none {
                         if case .dualCamera = modeChange, case .front = self.cameraState.position {
-                        } else {
+                        } else if self.captureKindSnapshotView == nil {
                             if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
                                 self.mainPreviewView.addSubview(snapshot)
                                 self.mainPreviewSnapshotView = snapshot
@@ -5210,18 +5254,15 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 self.additionalPreviewContainerView.insertSubview(additionalPreviewView, at: 0)
             }
             
-            if waitsForPreviewTransition {
-                if self.animatedIn {
-                    if chatScreenLayout != nil {
-                        transition.setFrame(view: mainPreviewView, frame: mainPreviewInnerFrame)
-                    } else {
-                        mainPreviewView.frame = mainPreviewInnerFrame
-                    }
-                }
+            let animatesMainPreviewFrame = self.animatedIn && (chatScreenLayout != nil || controller.mode.kind == .chat)
+            if waitsForPreviewTransition && !self.animatedIn {
+            } else if animatesMainPreviewFrame {
+                transition.setFrame(view: mainPreviewView, frame: mainPreviewInnerFrame)
             } else {
                 mainPreviewView.frame = mainPreviewInnerFrame
             }
-            
+            self.updateCaptureKindSnapshot(containerSize: previewFrame.size, transition: transition)
+
             additionalPreviewView.frame = additionalPreviewInnerFrame
                               
             self.previewFrameLeftDimView.isHidden = !isTablet
