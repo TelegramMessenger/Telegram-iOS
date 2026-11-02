@@ -143,6 +143,14 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         guard let scene = notification.object as? UIScene, scene === host.window?.windowScene else {
             return
         }
+        // Debug Settings ▸ "Chat: CoreList scroll trace": the pan at every scene change, not only when it is let go of
+        // below, so that one device trace of #127 shows whether the pan was holding a sequence (this fix's suspect) or
+        // idle (then the cause is elsewhere, such as the navigation swipe-back every pan waits on).
+        FlightTrace.shared.log("SCENE \(notification.name.rawValue) state=\(Self.traceName(pan.state)) "
+            + "touches=\(pan.numberOfTouches) enabled=\(pan.isEnabled) touchDowns=\(touchDownCount) "
+            + "atDeactivation=\(touchDownCountAtDeactivation.map(String.init) ?? "-")")
+        // Written now: if the list then does not scroll, no gesture ends to write it.
+        FlightTrace.shared.flush()
         if notification.name == UIScene.willDeactivateNotification {
             touchDownCountAtDeactivation = touchDownCount
         } else {
