@@ -129,12 +129,14 @@ struct MediaEditorExportScenario {
     let id: String
     let kind: Kind
     let checksDecodedOutput: Bool
+    let durationTolerance: Double?
     private let build: () -> MediaEditorExportInputs
 
-    init(id: String, kind: Kind, checksDecodedOutput: Bool = true, build: @escaping () -> MediaEditorExportInputs) {
+    init(id: String, kind: Kind, checksDecodedOutput: Bool = true, durationTolerance: Double? = nil, build: @escaping () -> MediaEditorExportInputs) {
         self.id = id
         self.kind = kind
         self.checksDecodedOutput = checksDecodedOutput
+        self.durationTolerance = durationTolerance
         self.build = build
     }
 
@@ -495,11 +497,29 @@ let mediaEditorRealisticExportScenarios: [MediaEditorExportScenario] = {
     return scenarios
 }()
 
+let mediaEditorStreamingWriterExportScenarios: [MediaEditorExportScenario] = {
+    let trimRange = 2.614 ..< 7.5
+    let variants: [Variant] = [.story, .chat]
+    return variants.map { variant -> MediaEditorExportScenario in
+        return MediaEditorExportScenario(id: "\(prefix(variant))-video-variable-frame-rate-trimmed-streaming", kind: .video, durationTolerance: 0.1) {
+            guard let url = MediaEditorVariableFrameRateSource.url() else {
+                return .unavailable("cannot generate the variable frame rate source")
+            }
+            let asset = AVURLAsset(url: url)
+            let values = baseValues(variant, originalDimensions: videoDimensions).withUpdatedVideoTrimRange(trimRange)
+            var configuration = recommendedVideoExportConfiguration(values: values, duration: asset.duration.seconds, frameRate: 30.0)
+            configuration.useStreamingWriter = true
+            let frameCount = MediaEditorVariableFrameRateSource.frameTimes.filter { trimRange.contains($0) }.count
+            return .video(subject: .video(asset: asset, isStory: variant == .story), configuration: configuration, textScale: variant == .story ? 2.0 : 1.0, expectedFrameCount: frameCount, expectedDuration: trimRange.upperBound - trimRange.lowerBound)
+        }
+    }
+}()
+
 func mediaEditorExportScenarios(only: String?) -> [MediaEditorExportScenario] {
     guard let only else {
         return mediaEditorExportScenarios
     }
-    let all = mediaEditorExportScenarios + mediaEditorRealisticExportScenarios
+    let all = mediaEditorExportScenarios + mediaEditorRealisticExportScenarios + mediaEditorStreamingWriterExportScenarios
     var result: [MediaEditorExportScenario] = []
     for name in only.components(separatedBy: ",") {
         let selected = name == "realistic" ? mediaEditorRealisticExportScenarios : all.filter { $0.id == name }

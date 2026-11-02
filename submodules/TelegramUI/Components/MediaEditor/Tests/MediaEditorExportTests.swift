@@ -23,6 +23,14 @@ final class MediaEditorExportTests: XCTestCase {
             XCTFail(failure)
         }
     }
+
+    func testStreamingWriterVariableFrameRate() throws {
+        let suite = try self.makeSuite()
+        suite.runExport(scenarios: mediaEditorStreamingWriterExportScenarios)
+        for failure in suite.failures {
+            XCTFail(failure)
+        }
+    }
 }
 
 final class MediaEditorFrameCompositorTests: XCTestCase {

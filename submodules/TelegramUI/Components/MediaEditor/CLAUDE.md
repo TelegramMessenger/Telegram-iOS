@@ -42,8 +42,16 @@ None of these shows up as a build error; each one was a bug:
   returns nothing): the cap starts at 8 and grows by one whenever the queue stays full for 20 ms with nothing encoded.
 - **Every data callback runs in an `autoreleasepool`**, as `AVAssetWriterInput.requestMediaDataWhenReady` does;
   without it the composer's autoreleased images keep every source frame alive until the export ends.
-- VideoToolbox reports `dts > pts` for reordered frames, which libavformat rejects: video DTS are shifted by the
-  reorder depth seen in the first 16 packets, rounded up to whole frames.
+- VideoToolbox reports `dts > pts` for reordered frames, which libavformat rejects (`write_packet: Invalid argument`).
+  A video's DTS is the smallest PTS not yet used, once as many frames as the reorder depth (in frames, measured on the
+  first 16 packets) have arrived. **A shift in time does not work**: screen recordings and other variable-frame-rate
+  sources space frames unevenly, and a shift measured on the first frames is too small later. The export harness
+  scenarios `story-` / `chat-video-variable-frame-rate-trimmed-streaming` cover it
+  (`Harness/run-export-harness.sh export <out> <ids>`; the export scenarios do not compose frames under the
+  `MediaEditorExportTests` ios_unit_test).
+- **A writer failure while a frame is being composed must still end the export**: `encodeVideo` returns `false` when
+  the append failed, since `markVideoAsFinished` has already stopped the writer from calling it again; returning `true`
+  left the export, and the chat message, in processing forever.
 - AAC priming goes into the edit list (negative first PTS), the encoder's tail padding is trimmed through the last
   packet's duration.
 - **Packets are written in 0.5 s runs per track** (`FFMpegMP4StreamWriter`, `av_write_frame`), as `AVAssetWriter`

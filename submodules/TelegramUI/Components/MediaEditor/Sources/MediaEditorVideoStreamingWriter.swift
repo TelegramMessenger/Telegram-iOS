@@ -27,7 +27,7 @@ final class MediaEditorVideoStreamingWriter: MediaEditorVideoExportWriter {
     private static let maxKeyFrameInterval = 30
     private static let maxPendingVideoFrameCount = 8
     private static let encoderStallTimeout: Double = 0.02
-    private static let decodeShiftProbeCount = 16
+    private static let reorderDepthProbeCount = 16
     private static let heldAudioPacketCount = 3
 
     static func supports(configuration: MediaEditorVideoExport.Configuration) -> Bool {
@@ -83,7 +83,10 @@ final class MediaEditorVideoStreamingWriter: MediaEditorVideoExportWriter {
     private var headerWritten = false
     private var pendingPackets: [Packet] = []
     private var pendingVideoPacketCount = 0
-    private var videoDecodeShift: Int64?
+    private var videoReorderDepth: Int?
+    private var videoFirstPts: Int64 = 0
+    private var videoPacketIndex = 0
+    private var videoPendingPts: [Int64] = []
     private var lastVideoDts: Int64?
     private var videoExtradata: Data?
     private var audioExtradata: Data?
@@ -617,12 +620,12 @@ final class MediaEditorVideoStreamingWriter: MediaEditorVideoExportWriter {
     }
 
     private func enqueue(_ packet: Packet) {
-        if !self.headerWritten || self.videoDecodeShift == nil {
+        if !self.headerWritten || self.videoReorderDepth == nil {
             self.pendingPackets.append(packet)
             if packet.isVideo {
                 self.pendingVideoPacketCount += 1
-                if self.pendingVideoPacketCount >= MediaEditorVideoStreamingWriter.decodeShiftProbeCount {
-                    self.resolveVideoDecodeShift()
+                if self.pendingVideoPacketCount >= MediaEditorVideoStreamingWriter.reorderDepthProbeCount {
+                    self.resolveVideoReorderDepth()
                 }
             }
             self.tryWriteHeader()
@@ -631,23 +634,40 @@ final class MediaEditorVideoStreamingWriter: MediaEditorVideoExportWriter {
         self.write(packet)
     }
 
-    private func resolveVideoDecodeShift() {
-        guard self.videoDecodeShift == nil else {
+    private func resolveVideoReorderDepth() {
+        guard self.videoReorderDepth == nil else {
             return
         }
-        let frameTicks = CMTimeConvertScale(self.frameDuration, timescale: MediaEditorVideoStreamingWriter.videoTimescale, method: .roundHalfAwayFromZero).value
-        var shift: Int64 = 0
-        for packet in self.pendingPackets where packet.isVideo {
-            shift = max(shift, packet.dts - packet.pts)
+        let videoPts = self.pendingPackets.filter(\.isVideo).map(\.pts)
+        let sortedPts = videoPts.sorted()
+        var depth = 0
+        for (index, pts) in videoPts.enumerated() {
+            if let rank = sortedPts.firstIndex(of: pts) {
+                depth = max(depth, index - rank)
+            }
         }
-        self.videoDecodeShift = frameTicks > 0 ? ((shift + frameTicks - 1) / frameTicks) * frameTicks : shift
+        self.videoReorderDepth = depth
+        self.videoFirstPts = sortedPts.first ?? 0
+    }
+
+    private func nextVideoDts(pts: Int64) -> Int64 {
+        let depth = self.videoReorderDepth ?? 0
+        let insertionIndex = self.videoPendingPts.firstIndex(where: { $0 > pts }) ?? self.videoPendingPts.count
+        self.videoPendingPts.insert(pts, at: insertionIndex)
+        let index = self.videoPacketIndex
+        self.videoPacketIndex += 1
+        if index < depth {
+            let frameTicks = max(1, CMTimeConvertScale(self.frameDuration, timescale: MediaEditorVideoStreamingWriter.videoTimescale, method: .roundHalfAwayFromZero).value)
+            return self.videoFirstPts - Int64(depth - index) * frameTicks
+        }
+        return self.videoPendingPts.removeFirst()
     }
 
     private func tryWriteHeader(force: Bool = false) {
         if force {
-            self.resolveVideoDecodeShift()
+            self.resolveVideoReorderDepth()
         }
-        guard !self.headerWritten, self.videoDecodeShift != nil, let writer = self.writer, let videoExtradata = self.videoExtradata else {
+        guard !self.headerWritten, self.videoReorderDepth != nil, let writer = self.writer, let videoExtradata = self.videoExtradata else {
             return
         }
         self.lock.lock()
@@ -689,7 +709,7 @@ final class MediaEditorVideoStreamingWriter: MediaEditorVideoExportWriter {
         }
         var dts = packet.dts
         if packet.isVideo {
-            dts -= self.videoDecodeShift ?? 0
+            dts = self.nextVideoDts(pts: packet.pts)
             if dts > packet.pts {
                 dts = packet.pts
             }
