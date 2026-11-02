@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   build:
-    # The source needs the iOS 27 SDK (Xcode 27.1); the macos-26 image tops out at Xcode 26.6.
-    runs-on: macos-14
+    # Closest hosted runner to the pinned Xcode 27.1: macos-26 tops out at Xcode 26.6 (the xcode-27-arm64
+    # preview image never picked up a job), and macos-14's Xcode 16.2 rejects the Icon Composer app icon.
+    runs-on: macos-26
     timeout-minutes: 360
 
     steps:
