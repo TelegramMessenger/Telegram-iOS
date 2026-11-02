@@ -429,6 +429,8 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
         // so refresh it up front — ahead of every reuse branch, including the early returns. The
         // rebuild path picks the same value up through the render context's initializer.
         self.pageView?.renderContext?.updateCaptureProtected(ChatMessageRichDataBubbleContentNode.isCaptureProtected(item: item))
+        // Likewise the direction the audio and document rows take their palette from.
+        self.pageView?.renderContext?.updateIsIncoming(item.message.effectivelyIncoming(item.context.account.peerId))
 
         let key = (stableId: item.message.stableId, messageId: item.message.id, stableVersion: item.message.stableVersion, pendingEditKey: (item.attributes.updatingMedia?.richText).map({ ObjectIdentifier($0) }), richPageKey: richPageKey, showMoreExpanded: showMoreExpanded, structure: structure)
         if let existing = self.pageView, let current = self.pageViewMessageKey, current.stableId == key.stableId {
@@ -542,6 +544,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 return self?.item?.controllerInteraction.presentationContext.backgroundNode
             },
             captureProtected: ChatMessageRichDataBubbleContentNode.isCaptureProtected(item: item),
+            isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
             message: messageReference
         )
         let view = InstantPageV2View(renderContext: renderContext)

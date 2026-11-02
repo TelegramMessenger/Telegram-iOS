@@ -172,7 +172,7 @@ final class MediaEditorExportSuite {
         if let outputDimensions = run.outputDimensions, decoded.dimensions != outputDimensions {
             self.fail("\(scenario.id): decoded dimensions \(decoded.dimensions), expected \(outputDimensions)")
         }
-        if let expectedDuration = run.expectedDuration, let frameDuration = run.frameDuration, abs(decoded.duration - expectedDuration) > frameDuration + 0.0001 {
+        if let expectedDuration = run.expectedDuration, let tolerance = scenario.durationTolerance ?? run.frameDuration, abs(decoded.duration - expectedDuration) > tolerance + 0.0001 {
             self.fail("\(scenario.id): decoded duration \(decoded.duration) s, expected \(expectedDuration) s")
         }
         if abs(decoded.frameCount - run.frameCount) > 1 {

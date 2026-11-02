@@ -777,7 +777,7 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
         let itemMedia = item.media
 
         let presentationData = renderContext.context.sharedContext.currentPresentationData.with { $0 }
-        let incoming = renderContext.message?.isIncoming == true
+        let incoming = renderContext.isIncoming
         let audioFile: TelegramMediaFile
         if case let .file(f) = item.media.media { audioFile = f } else { audioFile = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/mpeg", size: nil, attributes: [], alternativeRepresentations: []) }
         self.audioNode = InstantPageV2AudioContentNode(context: renderContext.context, message: renderContext.message, file: audioFile, incoming: incoming, presentationData: presentationData)
@@ -834,7 +834,7 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
     func update(item: InstantPageV2MediaAudioItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
         self.item = item
         let presentationData = renderContext.context.sharedContext.currentPresentationData.with { $0 }
-        let incoming = renderContext.message?.isIncoming == true
+        let incoming = renderContext.isIncoming
         self.audioNode.updatePresentationData(presentationData, incoming: incoming)
         self.audioNode.updateLayout(width: self.bounds.width)
     }

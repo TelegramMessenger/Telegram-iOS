@@ -1174,7 +1174,7 @@ public final class MediaEditorVideoExport {
                 }
             }
         }
-        return true
+        return !appendFailed
     }
     
     private func encodeAudio() -> Bool {

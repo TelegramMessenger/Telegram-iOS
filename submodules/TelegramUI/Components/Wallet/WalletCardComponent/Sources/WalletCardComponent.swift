@@ -1521,7 +1521,7 @@ public final class WalletCardComponent: Component {
                 return
             }
             self.scrollTransform = transform
-            self.renderCurrentFrame(notifyBalanceGeometry: false)
+            self.renderCurrentFrame(notifyBalanceGeometry: false, layoutStickers: false)
         }
 
         public func updateOverscroll(distance: CGFloat) {
@@ -1770,7 +1770,7 @@ public final class WalletCardComponent: Component {
                     view.layer.removeAnimation(forKey: "filters.gaussianBlur.inputRadius")
                     if easedDetailsFraction > 0.0 {
                         ComponentTransition.immediate.setBlur(layer: view.layer, radius: easedDetailsFraction * 8.0)
-                    } else {
+                    } else if view.layer.filters != nil {
                         view.layer.filters = nil
                     }
                 }
@@ -1950,9 +1950,11 @@ public final class WalletCardComponent: Component {
             return perspectiveTransform
         }
 
-        private func renderCurrentFrame(notifyBalanceGeometry: Bool = true) {
-            self.smoothedStickerShine = Double(self.currentCardY) * 4 + Double(self.currentCardX) * 2
-            self.layoutCardStickers()
+        private func renderCurrentFrame(notifyBalanceGeometry: Bool = true, layoutStickers: Bool = true) {
+            if layoutStickers {
+                self.smoothedStickerShine = Double(self.currentCardY) * 4 + Double(self.currentCardX) * 2
+                self.layoutCardStickers()
+            }
             guard self.currentSize.width > 0.0, self.currentSize.height > 0.0 else {
                 return
             }
