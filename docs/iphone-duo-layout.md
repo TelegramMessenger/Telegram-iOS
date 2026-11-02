@@ -78,7 +78,11 @@ constants.
   measured against the body on both screens and a window's interface orientation against its own screen, so code that
   compares the two (call video rotation: `callInterfaceOrientationInDeviceFrame`) converts first. Measured on the
   device with `AVCaptureDevice.RotationCoordinator` (iOS 27.1): inner portrait = body landscape-left, inner
-  landscape-right = body upside down.
+  landscape-right = body upside down. A capture connection's orientation is a body position too: the camera previews
+  (`CameraPreviewView`, Legacy and Neo) convert the window scene's orientation with `CameraVideoOrientation(
+  interfaceOrientation:screenPortrait:)` and `screenPortraitDeviceOrientationForWindow(size:)`, and photos and videos
+  are captured in the preview's orientation; round videos too on iPad and iPhone Duo
+  (`cameraRecordsRoundVideoInPreviewOrientation`), while other iPhones record them in portrait.
 - The fold: `layout.division`, the active `.division` region (half open). Flat and sheet modals pass it on in their
   content's coordinates (`NavigationModalContainer`; it was dropped there in portrait until 2026-10-29, so nothing
   presented as a modal saw a fold running across the screen). The 1:1 call screen splits at a fold across the inner
