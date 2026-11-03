@@ -135,4 +135,68 @@ final class ForumReadCountersViewTests: XCTestCase {
 
         XCTAssertEqual(recorder.waitForValues(count: 2).last?.count(for: item), 0)
     }
+
+    func testUnreadCountsExposeMutedOnlyTopicsWithoutChangingTheCount() {
+        self.seedForumWithOneUnreadTopic()
+        self.fixture.transaction { transaction in
+            transaction.setMessageHistoryThreadInfo(peerId: self.forumId, threadId: 1, info: StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 3, isMarkedUnread: false, mutedUntil: Int32.max, maxOutgoingReadId: 0)))
+        }
+        let item = UnreadMessageCountsItem.peer(id: self.forumId, handleThreads: true)
+        let recorder = self.fixture.observe(.unreadCounts(items: [item]), as: UnreadMessageCountsView.self)
+        let view = recorder.waitForValues(count: 1).last
+        XCTAssertEqual(view?.count(for: item), 1)
+        XCTAssertEqual(view?.hasUnmutedUnreadThreads(for: self.forumId), false)
+    }
+
+    func testUnreadCountsEmitWhenOnlyTheTopicMuteChanges() {
+        self.seedForumWithOneUnreadTopic()
+        let item = UnreadMessageCountsItem.peer(id: self.forumId, handleThreads: true)
+        let recorder = self.fixture.observe(.unreadCounts(items: [item]), as: UnreadMessageCountsView.self)
+        XCTAssertEqual(recorder.waitForValues(count: 1).last?.hasUnmutedUnreadThreads(for: self.forumId), true)
+
+        self.fixture.transaction { transaction in
+            transaction.setMessageHistoryThreadInfo(peerId: self.forumId, threadId: 1, info: StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 3, isMarkedUnread: false, mutedUntil: Int32.max, maxOutgoingReadId: 0)))
+        }
+        let muted = recorder.waitForValues(count: 2).last
+        XCTAssertEqual(muted?.count(for: item), 1)
+        XCTAssertEqual(muted?.hasUnmutedUnreadThreads(for: self.forumId), false)
+
+        self.setUnreadCount(3, inTopic: 1)
+        let unmuted = recorder.waitForValues(count: 3).last
+        XCTAssertEqual(unmuted?.count(for: item), 1)
+        XCTAssertEqual(unmuted?.hasUnmutedUnreadThreads(for: self.forumId), true)
+    }
+
+    func testReadingTheLastUnmutedTopicLeavesOnlyMutedUnreadTopics() {
+        self.seedForumWithOneUnreadTopic()
+        self.fixture.transaction { transaction in
+            transaction.setMessageHistoryThreadInfo(peerId: self.forumId, threadId: 2, info: StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 2, isMarkedUnread: false, mutedUntil: Int32.max, maxOutgoingReadId: 0)))
+        }
+        let item = UnreadMessageCountsItem.peer(id: self.forumId, handleThreads: true)
+        let recorder = self.fixture.observe(.unreadCounts(items: [item]), as: UnreadMessageCountsView.self)
+        XCTAssertEqual(recorder.waitForValues(count: 1).last?.hasUnmutedUnreadThreads(for: self.forumId), true)
+
+        self.setUnreadCount(0, inTopic: 1)
+        let view = recorder.waitForValues(count: 2).last
+        XCTAssertEqual(view?.count(for: item), 1)
+        XCTAssertEqual(view?.hasUnmutedUnreadThreads(for: self.forumId), false)
+    }
+
+    func testRegularPeersHaveNoThreadMuteOverride() {
+        let chatId = MessageHistoryTableFixture.peerId(701)
+        self.fixture.transaction { transaction in
+            transaction.updatePeersInternal([FixturePeer(id: chatId, title: "Chat")], update: { _, updated in updated })
+        }
+        let item = UnreadMessageCountsItem.peer(id: chatId, handleThreads: true)
+        let recorder = self.fixture.observe(.unreadCounts(items: [item]), as: UnreadMessageCountsView.self)
+        XCTAssertNil(recorder.waitForValues(count: 1).last?.hasUnmutedUnreadThreads(for: chatId))
+    }
+
+    func testPeerReadStateRequestsHaveNoThreadMuteOverride() {
+        self.seedForumWithOneUnreadTopic()
+        let item = UnreadMessageCountsItem.peer(id: self.forumId, handleThreads: false)
+        let recorder = self.fixture.observe(.unreadCounts(items: [item]), as: UnreadMessageCountsView.self)
+        XCTAssertNil(recorder.waitForValues(count: 1).last?.hasUnmutedUnreadThreads(for: self.forumId))
+    }
+
 }
