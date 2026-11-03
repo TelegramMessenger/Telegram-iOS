@@ -58,6 +58,14 @@ private final class SynchronizePeerReadStatesContextImpl {
         let peerIds = Set(self.currentState.keys).union(Set(self.pendingOperations.keys))
         
         for peerId in peerIds {
+            if peerId.id == PeerId.Id.min {
+                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): dropping operation for invalid peer id")
+                let postbox = self.postbox
+                _ = postbox.transaction { transaction -> Void in
+                    transaction.confirmSynchronizedIncomingReadState(peerId)
+                }.startStandalone()
+                continue
+            }
             var maybeOperation: PeerReadStateSynchronizationOperation?
             if let operation = self.currentState[peerId] {
                 maybeOperation = operation
