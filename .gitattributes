@@ -1,0 +1,10 @@
+# Linguist overrides for vendored code
+submodules/AsyncDisplayKit/* linguist-vendored
+submodules/ffmpeg/* linguist-vendored
+submodules/libphonenumber/* linguist-vendored
+submodules/lottie-ios/* linguist-vendored
+submodules/OpusBinding/* linguist-vendored
+submodules/rlottie/rlottie/* linguist-vendored
+submodules/sqlcipher/* linguist-vendored
+submodules/Stripe/* linguist-vendored
+third-party/* linguist-vendored

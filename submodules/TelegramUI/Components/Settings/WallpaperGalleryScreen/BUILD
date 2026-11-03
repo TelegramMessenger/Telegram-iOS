@@ -1,0 +1,42 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "WallpaperGalleryScreen",
+    module_name = "WallpaperGalleryScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
+        "//submodules/Display",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/TelegramPresentationData",
+        "//submodules/AccountContext",
+        "//submodules/PresentationDataUtils",
+        "//submodules/WallpaperBackgroundNode",
+        "//submodules/ComponentFlow",
+        "//submodules/SolidRoundedButtonNode",
+        "//submodules/AppBundle",
+        "//submodules/PremiumUI",
+        "//submodules/WallpaperResources",
+        "//submodules/HexColor",
+        "//submodules/MergeLists",
+        "//submodules/ShareController",
+        "//submodules/GalleryUI",
+        "//submodules/CounterControllerTitleView",
+        "//submodules/LegacyMediaPickerUI",
+        "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
+        "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/GlassControls",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

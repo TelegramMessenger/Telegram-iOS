@@ -1,0 +1,163 @@
+/*
+ * FFv1 codec
+ *
+ * Copyright (c) 2024 Lynne <dev@lynne.ee>
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#ifndef VULKAN_FFV1_VLC_H
+#define VULKAN_FFV1_VLC_H
+
+struct VlcState {
+    uint32_t error_sum;
+    int16_t  drift;
+    int8_t   bias;
+    uint8_t  count;
+};
+
+void update_vlc_state(inout VlcState state, in int v)
+{
+    int drift = state.drift;
+    int count = state.count;
+    int bias = state.bias;
+    state.error_sum += uint16_t(abs(v));
+    drift           += v;
+
+    if (count == 128) { // FIXME: variable
+        count           >>= 1;
+        drift           >>= 1;
+        state.error_sum >>= 1;
+    }
+    count++;
+
+    if (drift <= -count) {
+        bias = max(bias - 1, -128);
+        drift = max(drift + count, -count + 1);
+    } else if (drift > 0) {
+        bias = min(bias + 1, 127);
+        drift = min(drift - count, 0);
+    }
+
+    state.bias = int8_t(bias);
+    state.drift = int16_t(drift);
+    state.count = uint8_t(count);
+}
+
+struct Symbol {
+    uint32_t bits;
+    uint32_t val;
+};
+
+Symbol set_ur_golomb(int i, int k, int limit, int esc_len)
+{
+    int e;
+    Symbol sym;
+
+#ifdef DEBUG
+    if (i < 0)
+        debugPrintfEXT("Error: i is zero!");
+#endif
+
+    e = i >> k;
+    if (e < limit) {
+        sym.bits = e + k + 1;
+        sym.val = (1 << k) + zero_extend(i, k);
+    } else {
+        sym.bits = limit + esc_len;
+        sym.val = i - limit + 1;
+    }
+
+    return sym;
+}
+
+/**
+ * write signed golomb rice code (ffv1).
+ */
+Symbol set_sr_golomb(int i, int k, int limit, int esc_len)
+{
+    int v;
+
+    v  = -2 * i - 1;
+    v ^= (v >> 31);
+
+    return set_ur_golomb(v, k, limit, esc_len);
+}
+
+Symbol get_vlc_symbol(inout VlcState state, int v, int bits)
+{
+    int i, k, code;
+    Symbol sym;
+    v = fold(v - int(state.bias), bits);
+
+    i = state.count;
+    k = 0;
+    while (i < state.error_sum) { // FIXME: optimize
+        k++;
+        i += i;
+    }
+
+#ifdef DEBUG
+    if (k > 16)
+        debugPrintfEXT("Error: k > 16!");
+#endif
+
+    code = v ^ ((2 * state.drift + state.count) >> 31);
+
+    update_vlc_state(state, v);
+
+    return set_sr_golomb(code, k, 12, bits);
+}
+
+uint get_ur_golomb(inout GetBitContext gb, int k, int limit, int esc_len)
+{
+    for (uint i = 0; i < 12; i++)
+        if (get_bit(gb))
+            return get_bits(gb, k) + (i << k);
+
+    return get_bits(gb, esc_len) + 11;
+}
+
+int get_sr_golomb(inout GetBitContext gb, int k, int limit, int esc_len)
+{
+    int v = int(get_ur_golomb(gb, k, limit, esc_len));
+    return (v >> 1) ^ -(v & 1);
+}
+
+int read_vlc_symbol(inout GetBitContext gb, inout VlcState state, int bits)
+{
+    int k, i, v, ret;
+
+    i = state.count;
+    k = 0;
+    while (i < state.error_sum) { // FIXME: optimize
+        k++;
+        i += i;
+    }
+
+    v = get_sr_golomb(gb, k, 12, bits);
+
+    v ^= ((2 * state.drift + state.count) >> 31);
+
+    ret = fold(v + state.bias, bits);
+
+    update_vlc_state(state, v);
+
+    return ret;
+}
+
+#endif /* VULKAN_FFV1_VLC_H */

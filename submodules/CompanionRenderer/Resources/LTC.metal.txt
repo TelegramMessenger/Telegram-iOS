@@ -1,0 +1,218 @@
+// Adapted from selfshadow/ltc_code; see ThirdParty/ltc/LICENSE.
+// Heitz, Dupuy, Hill, Neubelt, SIGGRAPH 2016: Real-Time Polygonal-Light
+// Shading with Linearly Transformed Cosines; disk extension Heitz/Hill 2017.
+constant float pi = M_PI_F;
+constant float LUT_SCALE = 63.0f/64.0f;
+constant float LUT_BIAS = .5f/64.0f;
+float sqr(float x) {return x*x;}
+float3 mul(float3x3 m,float3 v) {return m*v;}
+float3x3 float3x3_from_columns(float3 a,float3 b,float3 c){return float3x3(a,b,c);}
+float3 SolveCubic(float4 Coefficient)
+{
+    // Normalize the polynomial
+    Coefficient.xyz /= Coefficient.w;
+    // Divide middle coefficients by three
+    Coefficient.yz /= 3.0;
+
+    float A = Coefficient.w;
+    float B = Coefficient.z;
+    float C = Coefficient.y;
+    float D = Coefficient.x;
+
+    // Compute the Hessian and the discriminant
+    float3 Delta = float3(
+        -Coefficient.z*Coefficient.z + Coefficient.y,
+        -Coefficient.y*Coefficient.z + Coefficient.x,
+        dot(float2(Coefficient.z, -Coefficient.y), Coefficient.xy)
+    );
+
+    float Discriminant = dot(float2(4.0*Delta.x, -Delta.y), Delta.zy);
+
+    float3 RootsA, RootsD;
+
+    float2 xlc, xsc;
+
+    // Algorithm A
+    {
+        float A_a = 1.0;
+        float C_a = Delta.x;
+        float D_a = -2.0*B*Delta.x + Delta.y;
+
+        // Take the cubic root of a normalized complex number
+        float Theta = atan2(sqrt(max(Discriminant,0.0f)), -D_a)/3.0;
+
+        float x_1a = 2.0*sqrt(-C_a)*cos(Theta);
+        float x_3a = 2.0*sqrt(-C_a)*cos(Theta + (2.0/3.0)*pi);
+
+        float xl;
+        if ((x_1a + x_3a) > 2.0*B)
+            xl = x_1a;
+        else
+            xl = x_3a;
+
+        xlc = float2(xl - B, A);
+    }
+
+    // Algorithm D
+    {
+        float A_d = D;
+        float C_d = Delta.z;
+        float D_d = -D*Delta.y + 2.0*C*Delta.z;
+
+        // Take the cubic root of a normalized complex number
+        float Theta = atan2(D*sqrt(max(Discriminant,0.0f)), -D_d)/3.0;
+
+        float x_1d = 2.0*sqrt(-C_d)*cos(Theta);
+        float x_3d = 2.0*sqrt(-C_d)*cos(Theta + (2.0/3.0)*pi);
+
+        float xs;
+        if (x_1d + x_3d < 2.0*C)
+            xs = x_1d;
+        else
+            xs = x_3d;
+
+        xsc = float2(-D, xs + C);
+    }
+
+    float E =  xlc.y*xsc.y;
+    float F = -xlc.x*xsc.y - xlc.y*xsc.x;
+    float G =  xlc.x*xsc.x;
+
+    float2 xmc = float2(C*F - B*G, -B*F + C*E);
+
+    float3 Root = float3(xsc.x/xsc.y, xmc.x/xmc.y, xlc.x/xlc.y);
+
+    if (Root.x < Root.y && Root.x < Root.z)
+        Root.xyz = Root.yxz;
+    else if (Root.z < Root.x && Root.z < Root.y)
+        Root.xyz = Root.xzy;
+
+    return Root;
+}
+
+// Linearly Transformed Cosines
+///////////////////////////////
+
+float3 LTC_Evaluate(
+    float3 N, float3 V, float3 P, float3x3 Minv, thread const float3* points, bool twoSided, texture2d<float> lut2, sampler lutSampler)
+{
+    // construct orthonormal basis around N
+    float3 T1, T2;
+    T1 = V - N*dot(V, N);
+    T1 = dot(T1,T1)>1e-10f ? normalize(T1) : normalize(cross(N, abs(N.y)<.99f?float3(0,1,0):float3(1,0,0)));
+    T2 = cross(N, T1);
+
+    // rotate area light in (T1, T2, N) basis
+    float3x3 R = transpose(float3x3(T1, T2, N));
+
+    // polygon (allocate 5 vertices for clipping)
+    float3 L_[3];
+    L_[0] = mul(R, points[0] - P);
+    L_[1] = mul(R, points[1] - P);
+    L_[2] = mul(R, points[2] - P);
+
+    float3 Lo_i = float3(0);
+
+    // init ellipse
+    float3 C  = 0.5 * (L_[0] + L_[2]);
+    float3 V1 = 0.5 * (L_[1] - L_[2]);
+    float3 V2 = 0.5 * (L_[1] - L_[0]);
+
+    C  = Minv * C;
+    V1 = Minv * V1;
+    V2 = Minv * V2;
+
+    if(!twoSided && dot(cross(V1, V2), C) < 0.0)
+        return float3(0.0);
+
+    // compute eigenvectors of ellipse
+    float a, b;
+    float d11 = dot(V1, V1);
+    float d22 = dot(V2, V2);
+    float d12 = dot(V1, V2);
+    if (abs(d12)/sqrt(d11*d22) > 0.0001)
+    {
+        float tr = d11 + d22;
+        float det = -d12*d12 + d11*d22;
+
+        // use sqrt matrix to solve for eigenvalues
+        det = sqrt(det);
+        float u = 0.5*sqrt(max(tr - 2.0*det,0.0f));
+        float v = 0.5*sqrt(tr + 2.0*det);
+        float e_max = sqr(u + v);
+        float e_min = sqr(u - v);
+
+        float3 V1_, V2_;
+
+        if (d11 > d22)
+        {
+            V1_ = d12*V1 + (e_max - d11)*V2;
+            V2_ = d12*V1 + (e_min - d11)*V2;
+        }
+        else
+        {
+            V1_ = d12*V2 + (e_max - d22)*V1;
+            V2_ = d12*V2 + (e_min - d22)*V1;
+        }
+
+        a = 1.0 / e_max;
+        b = 1.0 / e_min;
+        V1 = normalize(V1_);
+        V2 = normalize(V2_);
+    }
+    else
+    {
+        a = 1.0 / dot(V1, V1);
+        b = 1.0 / dot(V2, V2);
+        V1 *= sqrt(a);
+        V2 *= sqrt(b);
+    }
+
+    float3 V3 = cross(V1, V2);
+    if (dot(C, V3) < 0.0)
+        V3 *= -1.0;
+
+    float L  = dot(V3, C);
+    float x0 = dot(V1, C) / L;
+    float y0 = dot(V2, C) / L;
+
+    float E1 = rsqrt(a);
+    float E2 = rsqrt(b);
+
+    a *= L*L;
+    b *= L*L;
+
+    float c0 = a*b;
+    float c1 = a*b*(1.0 + x0*x0 + y0*y0) - a - b;
+    float c2 = 1.0 - a*(1.0 + x0*x0) - b*(1.0 + y0*y0);
+    float c3 = 1.0;
+
+    float3 roots = SolveCubic(float4(c0, c1, c2, c3));
+    float e1 = roots.x;
+    float e2 = roots.y;
+    float e3 = roots.z;
+
+    float3 avgDir = float3(a*x0/(a - e2), b*y0/(b - e2), 1.0);
+
+    float3x3 rotate = float3x3_from_columns(V1, V2, V3);
+
+    avgDir = rotate*avgDir;
+    avgDir = normalize(avgDir);
+
+    float L1 = sqrt(-e2/e3);
+    float L2 = sqrt(-e2/e1);
+
+    float formFactor = L1*L2*rsqrt((1.0 + L1*L1)*(1.0 + L2*L2));
+
+    // use tabulated horizon-clipped sphere
+    float2 uv = float2(avgDir.z*0.5 + 0.5, formFactor);
+    uv = uv*LUT_SCALE + LUT_BIAS;
+    float scale = lut2.sample(lutSampler, uv).w;
+
+    float spec = formFactor*scale;
+
+    Lo_i = float3(spec, spec, spec);
+
+    return float3(Lo_i);
+}
+

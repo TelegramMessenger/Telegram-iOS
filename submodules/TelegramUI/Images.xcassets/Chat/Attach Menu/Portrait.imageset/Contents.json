@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "attach_portrait.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

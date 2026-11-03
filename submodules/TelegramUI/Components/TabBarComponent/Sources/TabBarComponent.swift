@@ -1,0 +1,1365 @@
+import Foundation
+import LottieSettings
+import UIKit
+import Display
+import TelegramPresentationData
+import ComponentFlow
+import ComponentDisplayAdapters
+import GlassBackgroundComponent
+import MultilineTextComponent
+import LottieComponent
+import UIKitRuntimeUtils
+import BundleIconComponent
+import TextBadgeComponent
+import LiquidLens
+import AppBundle
+import SearchBarNode
+import TabSelectionRecognizer
+import TabBarLayout
+
+public final class NavigationSearchView: UIView {
+    private struct Params: Equatable {
+        let size: CGSize
+        let theme: PresentationTheme
+        let strings: PresentationStrings
+        let isActive: Bool
+
+        init(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, isActive: Bool) {
+            self.size = size
+            self.theme = theme
+            self.strings = strings
+            self.isActive = isActive
+        }
+
+        static func ==(lhs: Params, rhs: Params) -> Bool {
+            if lhs.size != rhs.size {
+                return false
+            }
+            if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.isActive != rhs.isActive {
+                return false
+            }
+            return true
+        }
+    }
+
+    private let action: () -> Void
+    private let closeAction: () -> Void
+
+    private let backgroundView: GlassBackgroundView
+    private let iconView: UIImageView
+    private(set) var searchBarNode: SearchBarNode?
+    
+    private var close: (background: GlassBackgroundView, icon: UIImageView)?
+
+    private var params: Params?
+    
+    public init(action: @escaping () -> Void, closeAction: @escaping () -> Void) {
+        self.action = action
+        self.closeAction = closeAction
+
+        self.backgroundView = GlassBackgroundView()
+        self.backgroundView.contentView.clipsToBounds = true
+        self.iconView = UIImageView()
+
+        super.init(frame: CGRect())
+
+        self.addSubview(self.backgroundView)
+        self.backgroundView.contentView.addSubview(self.iconView)
+
+        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:))))
+    }
+
+    @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.action()
+        }
+    }
+    
+    @objc private func onCloseTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.closeAction()
+        }
+    }
+
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    public func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, isActive: Bool, transition: ComponentTransition) { 
+        let params = Params(size: size, theme: theme, strings: strings, isActive: isActive)
+        if self.params == params {
+            return
+        }
+        self.params = params
+        self.update(params: params, transition: transition)
+    }
+
+    private func update(params: Params, transition: ComponentTransition) {
+        let backgroundSize: CGSize
+        if params.isActive {
+            backgroundSize = CGSize(width: params.size.width - 48.0 - 8.0, height: params.size.height)
+        } else {
+            backgroundSize = CGSize(width: params.size.width, height: params.size.height)
+        }
+        
+        let previousBackgroundFrame = self.backgroundView.frame
+        
+        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: backgroundSize))
+        let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+
+        self.backgroundView.update(size: backgroundSize, cornerRadius: backgroundSize.height * 0.5, isDark: params.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
+
+        if self.iconView.image == nil {
+            self.iconView.image = UIImage(bundleImageName: "Navigation/Search")?.withRenderingMode(.alwaysTemplate)
+        }
+        transition.setTintColor(view: self.iconView, color: params.isActive ? params.theme.rootController.navigationSearchBar.inputIconColor : params.theme.chat.inputPanel.panelControlColor)
+        
+        if let image = self.iconView.image {
+            let imageSize: CGSize
+            let iconFrame: CGRect
+            if params.isActive {
+                let iconFraction: CGFloat = 0.8
+                imageSize = CGSize(width: image.size.width * iconFraction, height: image.size.height * iconFraction)
+                iconFrame = CGRect(origin: CGPoint(x: 12.0, y: floor((params.size.height - imageSize.height) * 0.5)), size: imageSize)
+            } else {
+                iconFrame = CGRect(origin: CGPoint(x: floor((backgroundSize.width - image.size.width) * 0.5), y: floor((params.size.height - image.size.height) * 0.5)), size: image.size)
+            }
+            transition.setPosition(view: self.iconView, position: iconFrame.center)
+            transition.setBounds(view: self.iconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
+        }
+
+        if params.isActive {
+            let searchBarNode: SearchBarNode
+            var searchBarNodeTransition = transition
+            if let current = self.searchBarNode {
+                searchBarNode = current
+            } else {
+                searchBarNodeTransition = searchBarNodeTransition.withAnimation(.none)
+                searchBarNode = SearchBarNode(
+                    theme: SearchBarNodeTheme(
+                        background: .clear,
+                        separator: .clear,
+                        inputFill: .clear,
+                        primaryText: params.theme.chat.inputPanel.panelControlColor,
+                        placeholder: params.theme.chat.inputPanel.inputPlaceholderColor,
+                        inputIcon: params.theme.chat.inputPanel.inputControlColor,
+                        inputClear: params.theme.chat.inputPanel.panelControlColor,
+                        accent: params.theme.chat.inputPanel.panelControlAccentColor,
+                        keyboard: params.theme.rootController.keyboardColor
+                    ),
+                    presentationTheme: params.theme,
+                    strings: params.strings,
+                    fieldStyle: .inlineNavigation,
+                    icon: .loupe,
+                    forceSeparator: false,
+                    displayBackground: false,
+                    cancelText: nil
+                )
+                searchBarNode.placeholderString = NSAttributedString(string: params.strings.Common_Search, font: Font.regular(17.0), textColor: params.theme.chat.inputPanel.inputPlaceholderColor)
+                self.searchBarNode = searchBarNode
+                self.backgroundView.contentView.addSubview(searchBarNode.view)
+                searchBarNode.view.alpha = 0.0
+            }
+            let searchBarFrame = CGRect(origin: CGPoint(x: 36.0, y: 0.0), size: CGSize(width: backgroundSize.width - 36.0 - 4.0, height: params.size.height))
+            transition.setFrame(view: searchBarNode.view, frame: searchBarFrame)
+            searchBarNode.updateLayout(boundingSize: searchBarFrame.size, leftInset: 0.0, rightInset: 0.0, transition: transition.containedViewLayoutTransition)
+            alphaTransition.setAlpha(view: searchBarNode.view, alpha: 1.0)
+        } else {
+            if let searchBarNode = self.searchBarNode {
+                self.searchBarNode = nil
+                let searchBarNodeView = searchBarNode.view
+                alphaTransition.setAlpha(view: searchBarNode.view, alpha: 0.0, completion: { [weak searchBarNodeView] _ in
+                    searchBarNodeView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        if params.isActive {
+            let closeFrame = CGRect(origin: CGPoint(x: params.size.width - 48.0, y: 0.0), size: CGSize(width: 48.0, height: 48.0))
+            
+            let close: (background: GlassBackgroundView, icon: UIImageView)
+            var closeTransition = transition
+            if let current = self.close {
+                close = current
+            } else {
+                closeTransition = closeTransition.withAnimation(.none)
+                close = (GlassBackgroundView(), UIImageView())
+                self.close = close
+                
+                close.icon.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    context.setLineWidth(2.0)
+                    context.setLineCap(.round)
+                    context.setStrokeColor(UIColor.white.cgColor)
+                    
+                    context.beginPath()
+                    context.move(to: CGPoint(x: 12.0, y: 12.0))
+                    context.addLine(to: CGPoint(x: size.width - 12.0, y: size.height - 12.0))
+                    context.move(to: CGPoint(x: size.width - 12.0, y: 12.0))
+                    context.addLine(to: CGPoint(x: 12.0, y: size.height - 12.0))
+                    context.strokePath()
+                })?.withRenderingMode(.alwaysTemplate)
+                
+                close.background.contentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onCloseTapGesture(_:))))
+                
+                close.background.contentView.addSubview(close.icon)
+                self.insertSubview(close.background, at: 0)
+                
+                if let image = close.icon.image {
+                    close.icon.frame = image.size.centered(in: CGRect(origin: CGPoint(), size: closeFrame.size))
+                }
+                
+                close.background.frame = closeFrame.size.centered(in: previousBackgroundFrame)
+                close.background.update(size: close.background.bounds.size, cornerRadius: close.background.bounds.height * 0.5, isDark: params.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: .immediate)
+                ComponentTransition.immediate.setScale(view: close.background, scale: 0.001)
+            }
+            
+            close.icon.tintColor = params.theme.chat.inputPanel.panelControlColor
+            
+            transition.setPosition(view: close.background, position: closeFrame.center)
+            transition.setBounds(view: close.background, bounds: CGRect(origin: CGPoint(), size: closeFrame.size))
+            transition.setScale(view: close.background, scale: 1.0)
+            
+            if let image = close.icon.image {
+                transition.setFrame(view: close.icon, frame: image.size.centered(in: CGRect(origin: CGPoint(), size: closeFrame.size)))
+            }
+            
+            close.background.update(size: closeFrame.size, cornerRadius: closeFrame.height * 0.5, isDark: params.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: closeTransition)
+        } else {
+            if let close = self.close {
+                self.close = nil
+                let closeBackground = close.background
+                let closeFrame = CGSize(width: 48.0, height: 48.0).centered(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: params.size))
+                transition.setPosition(view: closeBackground, position: closeFrame.center)
+                transition.setBounds(view: closeBackground, bounds: CGRect(origin: CGPoint(), size: closeFrame.size))
+                closeBackground.update(size: closeFrame.size, cornerRadius: closeFrame.height * 0.5, isDark: params.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
+                transition.setScale(view: closeBackground, scale: 0.001, completion: { [weak closeBackground] _ in
+                    closeBackground?.removeFromSuperview()
+                })
+            }
+        }
+    }
+}
+
+public final class TabBarComponent: Component {
+    public final class Item: Equatable {
+        public enum Content: Equatable {
+            public struct CustomItem: Equatable {
+                public enum Icon: Equatable {
+                    case bundleIcon(name: String)
+                    case animation(name: String, offset: CGPoint)
+                }
+
+                public var id: AnyHashable
+                public var title: String
+                public var icon: Icon
+                public var badge: String?
+
+                public init(id: AnyHashable, title: String, icon: Icon, badge: String? = nil) {
+                    self.id = id
+                    self.title = title
+                    self.icon = icon
+                    self.badge = badge
+                }
+            }
+
+            case tabBarItem(UITabBarItem)
+            case customItem(CustomItem)
+
+            public static func ==(lhs: Content, rhs: Content) -> Bool {
+                switch lhs {
+                case let .tabBarItem(lhsTabBarItem):
+                    if case let .tabBarItem(rhsTabBarItem) = rhs {
+                        return lhsTabBarItem === rhsTabBarItem
+                    } else {
+                        return false
+                    }
+                case let .customItem(lhsCustomItem):
+                    if case let .customItem(rhsCustomItem) = rhs {
+                        return lhsCustomItem == rhsCustomItem
+                    } else {
+                        return false
+                    }
+                }
+            }
+        }
+
+        public let content: Content
+        public let action: (Bool) -> Void
+        public let doubleTapAction: (() -> Void)?
+        public let contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?
+
+        fileprivate var id: AnyHashable {
+            switch self.content {
+            case let .tabBarItem(tabBarItem):
+                return AnyHashable(ObjectIdentifier(tabBarItem))
+            case let .customItem(customItem):
+                return customItem.id
+            }
+        }
+
+        public init(content: Content, action: @escaping (Bool) -> Void, doubleTapAction: (() -> Void)?, contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?) {
+            self.content = content
+            self.action = action
+            self.doubleTapAction = doubleTapAction
+            self.contextAction = contextAction
+        }
+
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.content != rhs.content {
+                return false
+            }
+            if (lhs.doubleTapAction == nil) != (rhs.doubleTapAction == nil) {
+                return false
+            }
+            if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
+                return false
+            }
+            return true
+        }
+    }
+
+    public final class Search: Equatable {
+        public let isActive: Bool
+        public let activate: () -> Void
+        public let deactivate: () -> Void
+
+        public init(isActive: Bool, activate: @escaping () -> Void, deactivate: @escaping () -> Void) {
+            self.isActive = isActive
+            self.activate = activate
+            self.deactivate = deactivate
+        }
+
+        public static func ==(lhs: Search, rhs: Search) -> Bool {
+            if lhs.isActive != rhs.isActive {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public let theme: PresentationTheme
+    public let tintSelectedItem: Bool
+    public let isLiftedStateEnabled: Bool
+    public let strings: PresentationStrings
+    public let items: [Item]
+    public let search: Search?
+    public let selectedId: AnyHashable?
+    public let outerInsets: UIEdgeInsets
+    public typealias Axis = TabBarAxis
+    public let axis: Axis
+    /// Icons without labels, on either axis.
+    public let isCompact: Bool
+    
+    public init(
+        theme: PresentationTheme,
+        tintSelectedItem: Bool = true,
+        isLiftedStateEnabled: Bool = true,
+        strings: PresentationStrings,
+        items: [Item],
+        search: Search?,
+        selectedId: AnyHashable?,
+        outerInsets: UIEdgeInsets,
+        axis: Axis,
+        isCompact: Bool
+    ) {
+        self.theme = theme
+        self.tintSelectedItem = tintSelectedItem
+        self.isLiftedStateEnabled = isLiftedStateEnabled
+        self.strings = strings
+        self.items = items
+        self.search = search
+        self.selectedId = selectedId
+        self.outerInsets = outerInsets
+        self.axis = axis
+        self.isCompact = isCompact
+    }
+    
+    public static func ==(lhs: TabBarComponent, rhs: TabBarComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.tintSelectedItem != rhs.tintSelectedItem {
+            return false
+        }
+        if lhs.isLiftedStateEnabled != rhs.isLiftedStateEnabled {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.search != rhs.search {
+            return false
+        }
+        if lhs.selectedId != rhs.selectedId {
+            return false
+        }
+        if lhs.outerInsets != rhs.outerInsets {
+            return false
+        }
+        if lhs.axis != rhs.axis {
+            return false
+        }
+        if lhs.isCompact != rhs.isCompact {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView, UIGestureRecognizerDelegate {
+        private let backgroundContainer: GlassBackgroundContainerView
+        private let liquidLensView: LiquidLensView
+        private let contextGestureContainerView: ContextControllerSourceView
+        
+        private var measureItemViews: [AnyHashable: ComponentView<Empty>] = [:]
+        private var itemViews: [AnyHashable: ComponentView<Empty>] = [:]
+        private var selectedItemViews: [AnyHashable: ComponentView<Empty>] = [:]
+
+        private var searchView: NavigationSearchView?
+        
+        private var tabSelectionRecognizer: TabSelectionRecognizer?
+        private var itemWithActiveContextGesture: AnyHashable?
+        
+        private var component: TabBarComponent?
+        private weak var state: EmptyComponentState?
+
+        /// Along the bar's axis: where the drag started, where the lens is now, and the item's length.
+        private var selectionGestureState: (start: CGFloat, current: CGFloat, itemLength: CGFloat, itemId: AnyHashable)?
+        private var overrideSelectedItemId: AnyHashable?
+        private var pendingDoubleTapItem: (id: AnyHashable, previouslySelectedId: AnyHashable?, timer: Foundation.Timer)?
+
+        public var currentSearchNode: ASDisplayNode? {
+            return self.searchView?.searchBarNode
+        }
+        
+        public override init(frame: CGRect) {
+            self.backgroundContainer = GlassBackgroundContainerView()
+            self.liquidLensView = LiquidLensView(kind: .externalContainer)
+            
+            self.contextGestureContainerView = ContextControllerSourceView()
+            self.contextGestureContainerView.isGestureEnabled = true
+            
+            super.init(frame: frame)
+            
+            if #available(iOS 17.0, *) {
+                self.traitOverrides.verticalSizeClass = .compact
+                self.traitOverrides.horizontalSizeClass = .compact
+            }
+            
+            self.addSubview(self.backgroundContainer)
+            self.backgroundContainer.contentView.addSubview(self.contextGestureContainerView)
+            
+            self.contextGestureContainerView.addSubview(self.liquidLensView)
+            let tabSelectionRecognizer = TabSelectionRecognizer(target: self, action: #selector(self.onTabSelectionGesture(_:)))
+            self.tabSelectionRecognizer = tabSelectionRecognizer
+            self.contextGestureContainerView.addGestureRecognizer(tabSelectionRecognizer)
+            
+            self.contextGestureContainerView.shouldBegin = { [weak self] point in
+                guard let self, let component = self.component else {
+                    return false
+                }
+                
+                if let itemId = self.item(at: point) {
+                    guard let item = component.items.first(where: { $0.id == itemId }) else {
+                            return false
+                        }
+                        if item.contextAction == nil {
+                            return false
+                        }
+                        
+                        self.itemWithActiveContextGesture = itemId
+                        
+                        let startPoint = point
+                        self.contextGestureContainerView.contextGesture?.externalUpdated = { [weak self] _, point in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let dist = sqrt(pow(startPoint.x - point.x, 2.0) + pow(startPoint.y - point.y, 2.0))
+                            if dist > 10.0 {
+                                self.contextGestureContainerView.contextGesture?.cancel()
+                            }
+                        }
+                        
+                        return true
+                }
+
+                return false
+            }
+            self.contextGestureContainerView.customActivationProgress = { _, _ in
+            }
+            self.contextGestureContainerView.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    return
+                }
+                guard let itemWithActiveContextGesture = self.itemWithActiveContextGesture else {
+                    return
+                }
+                
+                var itemView: ItemComponent.View?
+                itemView = self.itemViews[itemWithActiveContextGesture]?.view as? ItemComponent.View
+                
+                guard let itemView else {
+                    return
+                }
+
+                if let tabSelectionRecognizer = self.tabSelectionRecognizer {
+                    tabSelectionRecognizer.state = .cancelled
+                }
+                
+                guard let item = component.items.first(where: { $0.id == itemWithActiveContextGesture }) else {
+                    return
+                }
+                item.contextAction?(gesture, itemView.contextContainerView)
+            }
+        }
+        
+        required public init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.pendingDoubleTapItem?.timer.invalidate()
+        }
+        
+        public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
+        }
+
+        @objc private func onTabSelectionGesture(_ recognizer: TabSelectionRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            switch recognizer.state {
+            case .began:
+                if let search = component.search, search.isActive {
+                } else if let itemId = self.item(at: recognizer.location(in: self)), let itemView = self.itemViews[itemId]?.view {
+                    if let pendingDoubleTapItemValue = self.pendingDoubleTapItem, pendingDoubleTapItemValue.id != itemId {
+                        self.pendingDoubleTapItem = nil
+                        pendingDoubleTapItemValue.timer.invalidate()
+                    }
+                    
+                    let start: CGFloat
+                    let itemLength: CGFloat
+                    switch component.axis {
+                    case .horizontal:
+                        start = itemView.frame.minX - 4.0
+                        itemLength = itemView.bounds.width
+                    case .vertical:
+                        start = itemView.frame.minY - 4.0
+                        itemLength = itemView.bounds.height
+                    }
+                    self.selectionGestureState = (start, start, itemLength, itemId)
+                    self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+                }
+            case .changed:
+                if let search = component.search, search.isActive {
+                } else if var selectionGestureState = self.selectionGestureState {
+                    let translation = recognizer.translation(in: self)
+                    selectionGestureState.current = selectionGestureState.start + (component.axis == .horizontal ? translation.x : translation.y)
+                    if let itemId = self.item(at: recognizer.location(in: self)) {
+                        selectionGestureState.itemId = itemId
+                    }
+                    self.selectionGestureState = selectionGestureState
+                    self.state?.updated(transition: .immediate, isLocal: true)
+                }
+            case .ended, .cancelled:
+                if let search = component.search, search.isActive {
+                    search.deactivate()
+                } else if let selectionGestureState = self.selectionGestureState {
+                    self.selectionGestureState = nil
+                    if case .ended = recognizer.state, let component = self.component {
+                        guard let item = component.items.first(where: { $0.id == selectionGestureState.itemId }) else {
+                            return
+                        }
+                        
+                        var handledDoubleTap = false
+                        if let pendingDoubleTapItemValue = self.pendingDoubleTapItem {
+                            self.pendingDoubleTapItem = nil
+                            pendingDoubleTapItemValue.timer.invalidate()
+                            
+                            if pendingDoubleTapItemValue.id == selectionGestureState.itemId {
+                                handledDoubleTap = true
+                                item.doubleTapAction?()
+                            }
+                        }
+                        
+                        if !handledDoubleTap {
+                            if item.doubleTapAction != nil {
+                                let timer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.18, repeats: false, block: { [weak self] timer in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if let pendingDoubleTapItemValue = self.pendingDoubleTapItem, pendingDoubleTapItemValue.timer === timer {
+                                        self.pendingDoubleTapItem = nil
+                                        
+                                        self.overrideSelectedItemId = pendingDoubleTapItemValue.id
+                                        if let item = component.items.first(where: { $0.id == pendingDoubleTapItemValue.id }) {
+                                            item.action(false)
+                                        }
+                                        
+                                        self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+                                    }
+                                })
+                                self.overrideSelectedItemId = selectionGestureState.itemId
+                                item.action(false)
+                                self.pendingDoubleTapItem = (selectionGestureState.itemId, self.overrideSelectedItemId, timer)
+                            } else {
+                                self.overrideSelectedItemId = selectionGestureState.itemId
+                                item.action(false)
+                            }
+                        }
+                    }
+                    self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+                }
+            default:
+                break
+            }
+        }
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            return super.hitTest(point, with: event)
+        }
+        
+        public func frameForItem(at index: Int) -> CGRect? {
+            guard let component = self.component else {
+                return nil
+            }
+            if index < 0 || index >= component.items.count {
+                return nil
+            }
+            guard let itemView = self.itemViews[component.items[index].id]?.view else {
+                return nil
+            }
+            return self.convert(itemView.bounds, from: itemView)
+        }
+
+        private func item(at point: CGPoint) -> AnyHashable? {
+            guard let component = self.component else {
+                return nil
+            }
+            var ids: [AnyHashable] = []
+            var frames: [CGRect] = []
+            for item in component.items {
+                guard let itemView = self.itemViews[item.id]?.view else {
+                    continue
+                }
+                ids.append(item.id)
+                frames.append(itemView.frame)
+            }
+            return tabBarItemIndex(at: point, axis: component.axis, itemFrames: frames).map { ids[$0] }
+        }
+        
+        public override func didMoveToWindow() {
+            super.didMoveToWindow()
+            
+            self.state?.updated()
+        }
+        
+        func update(component: TabBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let innerInset: CGFloat = 4.0
+            let availableSize = CGSize(width: min(500.0, availableSize.width), height: availableSize.height)
+            
+            let previousComponent = self.component
+            // A new axis or mode is applied without animation, so the capsule does not morph through
+            // intermediate shapes.
+            var transition = transition
+            if let previousComponent, previousComponent.axis != component.axis || previousComponent.isCompact != component.isCompact {
+                transition = .immediate
+            }
+            // Search is laid out on the horizontal axis only.
+            let search = component.axis == .horizontal ? component.search : nil
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+            let _ = alphaTransition
+
+            self.component = component
+            self.state = state
+            
+            self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
+
+            let barHeight: CGFloat = 56.0 + innerInset * 2.0
+
+            var unboundItemWidths: [CGFloat] = []
+            var validIds: [AnyHashable] = []
+            for index in 0 ..< component.items.count {
+                let item = component.items[index]
+                validIds.append(item.id)
+                
+                let measureItemView: ComponentView<Empty>
+                if let current = self.measureItemViews[item.id] {
+                    measureItemView = current
+                } else {
+                    measureItemView = ComponentView()
+                    self.measureItemViews[item.id] = measureItemView
+                }
+                
+                let itemSize = measureItemView.update(
+                    transition: .immediate,
+                    component: AnyComponent(ItemComponent(
+                        item: item,
+                        theme: component.theme,
+                        isSearchActive: false,
+                        showsTitle: true,
+                        isSelected: false,
+                        tintSelectedItem: true,
+                        isUnconstrained: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 56.0)
+                )
+                unboundItemWidths.append(itemSize.width)
+            }
+            
+            var availableLength: CGFloat = availableSize.width
+            if search != nil {
+                availableLength -= barHeight + 8.0
+            }
+            let itemsLayout = tabBarItemsLayout(axis: component.axis, isCompact: component.isCompact, unboundItemWidths: unboundItemWidths, availableLength: availableLength)
+            let tabsSize = itemsLayout.size
+
+            var selectedItemFrame: CGRect?
+            for index in 0 ..< component.items.count {
+                let item = component.items[index]
+                
+                var itemFrame = itemsLayout.itemFrames[index]
+                let itemSize = itemFrame.size
+                
+                let itemView: ComponentView<Empty>
+                var itemTransition = transition
+                
+                if let current = self.itemViews[item.id] {
+                    itemView = current
+                } else {
+                    itemTransition = itemTransition.withAnimation(.none)
+                    itemView = ComponentView()
+                    self.itemViews[item.id] = itemView
+                }
+                
+                let selectedItemView: ComponentView<Empty>
+                if let current = self.selectedItemViews[item.id] {
+                    selectedItemView = current
+                } else {
+                    selectedItemView = ComponentView()
+                    self.selectedItemViews[item.id] = selectedItemView
+                }
+                
+                let isItemSelected: Bool
+                if let overrideSelectedItemId = self.overrideSelectedItemId {
+                    isItemSelected = overrideSelectedItemId == item.id
+                } else {
+                    isItemSelected = component.selectedId == item.id
+                }
+                
+                let _ = itemView.update(
+                    transition: itemTransition,
+                    component: AnyComponent(ItemComponent(
+                        item: item,
+                        theme: component.theme,
+                        isSearchActive: search?.isActive == true,
+                        showsTitle: !component.isCompact,
+                        isSelected: false,
+                        tintSelectedItem: component.tintSelectedItem,
+                        isUnconstrained: false
+                    )),
+                    environment: {},
+                    containerSize: itemSize
+                )
+                let _ = selectedItemView.update(
+                    transition: itemTransition,
+                    component: AnyComponent(ItemComponent(
+                        item: item,
+                        theme: component.theme,
+                        isSearchActive: search?.isActive == true,
+                        showsTitle: !component.isCompact,
+                        isSelected: true,
+                        tintSelectedItem: component.tintSelectedItem,
+                        isUnconstrained: false
+                    )),
+                    environment: {},
+                    containerSize: itemSize
+                )
+                
+                if isItemSelected {
+                    selectedItemFrame = itemFrame
+                }
+                
+                if let itemComponentView = itemView.view as? ItemComponent.View, let selectedItemComponentView = selectedItemView.view as? ItemComponent.View {
+                    let itemAlphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+
+                    if itemComponentView.superview == nil {
+                        itemComponentView.isUserInteractionEnabled = false
+                        selectedItemComponentView.isUserInteractionEnabled = false
+
+                        self.liquidLensView.contentView.addSubview(itemComponentView)
+                        self.liquidLensView.selectedContentView.addSubview(selectedItemComponentView)
+                    }
+
+                    if let search, search.isActive {
+                        if isItemSelected {
+                            itemFrame.origin.x = floor((48.0 - itemSize.width) * 0.5)
+                            itemTransition.setAlpha(view: itemComponentView, alpha: 1.0)
+                            itemAlphaTransition.setBlur(layer: itemComponentView.layer, radius: 0.0)
+                            itemTransition.setAlpha(view: selectedItemComponentView, alpha: 1.0)
+                            itemAlphaTransition.setBlur(layer: selectedItemComponentView.layer, radius: 0.0)
+                        } else {
+                            itemTransition.setAlpha(view: itemComponentView, alpha: 0.0)
+                            itemAlphaTransition.setBlur(layer: itemComponentView.layer, radius: 10.0)
+                            itemTransition.setAlpha(view: selectedItemComponentView, alpha: 0.0)
+                            itemAlphaTransition.setBlur(layer: selectedItemComponentView.layer, radius: 10.0)
+                        }
+                    } else {
+                        itemTransition.setAlpha(view: itemComponentView, alpha: 1.0)
+                        itemAlphaTransition.setBlur(layer: itemComponentView.layer, radius: 0.0)
+                        itemTransition.setAlpha(view: selectedItemComponentView, alpha: 1.0)
+                        itemAlphaTransition.setBlur(layer: selectedItemComponentView.layer, radius: 0.0)
+                    }
+
+                    itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
+                    itemTransition.setPosition(view: selectedItemComponentView, position: itemFrame.center)
+                    itemTransition.setBounds(view: selectedItemComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    itemTransition.setScale(view: selectedItemComponentView, scale: (self.selectionGestureState != nil && component.isLiftedStateEnabled) ? 1.15 : 1.0)
+                    
+                    if let previousComponent, previousComponent.selectedId != item.id, isItemSelected {
+                        itemComponentView.playSelectionAnimation()
+                        selectedItemComponentView.playSelectionAnimation()
+                    }
+                }
+            }
+            
+            var removeIds: [AnyHashable] = []
+            for (id, itemView) in self.itemViews {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    itemView.view?.removeFromSuperview()
+                    self.selectedItemViews[id]?.view?.removeFromSuperview()
+                }
+            }
+            for id in removeIds {
+                self.itemViews.removeValue(forKey: id)
+                self.selectedItemViews.removeValue(forKey: id)
+                self.measureItemViews.removeValue(forKey: id)
+            }
+            
+            var tabsFrame = CGRect(origin: CGPoint(), size: tabsSize)
+            if let search, search.isActive {
+                tabsFrame.size = CGSize(width: 48.0, height: 48.0)
+                tabsFrame.origin.y = tabsSize.height - 48.0
+                tabsFrame.origin.x = -component.outerInsets.left - tabsFrame.width
+            }
+
+            transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
+            transition.setFrame(view: self.liquidLensView, frame: CGRect(origin: CGPoint(), size: tabsSize))
+            
+            var lensSize: CGSize = tabsSize
+            var lensSelectionFrame = tabBarLensSelectionFrame(
+                axis: component.axis,
+                barSize: tabsSize,
+                selectedItemFrame: selectedItemFrame,
+                drag: self.selectionGestureState.map { (origin: $0.current, itemLength: $0.itemLength) }
+            )
+            var isLensCollapsed = false
+            if let search, search.isActive {
+                isLensCollapsed = true
+                lensSize = CGSize(width: 48.0, height: 48.0)
+                lensSelectionFrame = CGRect(x: 0.0, y: 0.0, width: 48.0, height: 48.0)
+            }
+            
+            self.liquidLensView.update(size: lensSize, cornerRadius: component.axis == .vertical ? lensSize.width * 0.5 : nil, selectionOrigin: lensSelectionFrame.origin, selectionSize: lensSelectionFrame.size, inset: 4.0, isDark: component.theme.overallDarkAppearance, isLifted: self.selectionGestureState != nil && component.isLiftedStateEnabled, isCollapsed: isLensCollapsed, transition: transition.withUserData(LiquidLensView.TransitionInfo(disableAnimationWorkarounds: !component.isLiftedStateEnabled)))
+
+            var size = tabsSize
+
+            if let search {
+                let searchSize: CGSize
+                let searchFrame: CGRect
+                if search.isActive {
+                    size.width = availableSize.width
+                    searchSize = CGSize(width: availableSize.width, height: 48.0)
+                    searchFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - searchSize.height), size: searchSize)
+                } else {
+                    searchSize = CGSize(width: barHeight, height: barHeight)
+                    size.width += barHeight + 8.0
+                    searchFrame = CGRect(origin: CGPoint(x: availableSize.width - searchSize.width, y: 0.0), size: searchSize)
+                }
+
+                let searchView: NavigationSearchView
+                var searchViewTransition = transition
+                if let current = self.searchView {
+                    searchView = current
+                } else {
+                    searchViewTransition = searchViewTransition.withAnimation(.none)
+                    searchView = NavigationSearchView(
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.search?.activate()
+                        },
+                        closeAction: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.search?.deactivate()
+                        }
+                    )
+                    self.searchView = searchView
+                    self.backgroundContainer.contentView.addSubview(searchView)
+                    searchView.frame = CGRect(origin: CGPoint(x: availableSize.width + 50.0, y: 0.0), size: searchSize)
+                }
+                searchView.update(size: searchSize, theme: component.theme, strings: component.strings, isActive: search.isActive, transition: searchViewTransition)
+                transition.setFrame(view: searchView, frame: searchFrame)
+            } else {
+                if let searchView = self.searchView {
+                    self.searchView = nil
+                    transition.setFrame(view: searchView, frame: CGRect(origin: CGPoint(x: availableSize.width + 50.0, y: 0.0), size: searchView.bounds.size), completion: { [weak searchView] completed in
+                        guard let searchView, completed else {
+                            return
+                        }
+                        searchView.removeFromSuperview()
+                    })
+                }
+            }
+
+            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: size))
+            self.backgroundContainer.update(size: size, isDark: component.theme.overallDarkAppearance, transition: transition)
+
+            return size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class ItemComponent: Component {
+    let item: TabBarComponent.Item
+    let theme: PresentationTheme
+    let isSearchActive: Bool
+    let showsTitle: Bool
+    let isSelected: Bool
+    let tintSelectedItem: Bool
+    let isUnconstrained: Bool
+    
+    init(item: TabBarComponent.Item, theme: PresentationTheme, isSearchActive: Bool, showsTitle: Bool, isSelected: Bool, tintSelectedItem: Bool, isUnconstrained: Bool) {
+        self.item = item
+        self.theme = theme
+        self.isSearchActive = isSearchActive
+        self.showsTitle = showsTitle
+        self.isSelected = isSelected
+        self.tintSelectedItem = tintSelectedItem
+        self.isUnconstrained = isUnconstrained
+    }
+    
+    static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
+        if lhs.item != rhs.item {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.isSearchActive != rhs.isSearchActive {
+            return false
+        }
+        if lhs.showsTitle != rhs.showsTitle {
+            return false
+        }
+        if lhs.isSelected != rhs.isSelected {
+            return false
+        }
+        if lhs.tintSelectedItem != rhs.tintSelectedItem {
+            return false
+        }
+        if lhs.isUnconstrained != rhs.isUnconstrained {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        let contextContainerView: ContextExtractedContentContainingView
+        
+        private var imageIcon: ComponentView<Empty>?
+        private var animationIcon: ComponentView<Empty>?
+        private let title = ComponentView<Empty>()
+        private var badge: ComponentView<Empty>?
+        
+        private var component: ItemComponent?
+        private weak var state: EmptyComponentState?
+
+        private var setImageListener: Int?
+        private var setSelectedImageListener: Int?
+        private var setBadgeListener: Int?
+
+        override init(frame: CGRect) {
+            self.contextContainerView = ContextExtractedContentContainingView()
+
+            super.init(frame: frame)
+
+            self.addSubview(self.contextContainerView)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        deinit {
+            if let component = self.component, case let .tabBarItem(tabBarItem) = component.item.content {
+                if let setImageListener = self.setImageListener {
+                    tabBarItem.removeSetImageListener(setImageListener)
+                }
+                if let setSelectedImageListener = self.setSelectedImageListener {
+                    tabBarItem.removeSetSelectedImageListener(setSelectedImageListener)
+                }
+                if let setBadgeListener = self.setBadgeListener {
+                    tabBarItem.removeSetBadgeListener(setBadgeListener)
+                }
+            }
+        }
+
+        func playSelectionAnimation() {
+            if let animationIconView = self.animationIcon?.view as? LottieComponent.View {
+                animationIconView.playOnce()
+            }
+        }
+        
+        func update(component: ItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+
+            let previousComponent = self.component
+
+            let previousTabBarItem: UITabBarItem?
+            if let previousComponent, case let .tabBarItem(tabBarItem) = previousComponent.item.content {
+                previousTabBarItem = tabBarItem
+            } else {
+                previousTabBarItem = nil
+            }
+
+            let currentTabBarItem: UITabBarItem?
+            if case let .tabBarItem(tabBarItem) = component.item.content {
+                currentTabBarItem = tabBarItem
+            } else {
+                currentTabBarItem = nil
+            }
+
+            if previousTabBarItem !== currentTabBarItem {
+                if let previousTabBarItem {
+                    if let setImageListener = self.setImageListener {
+                        previousTabBarItem.removeSetImageListener(setImageListener)
+                    }
+                    if let setSelectedImageListener = self.setSelectedImageListener {
+                        previousTabBarItem.removeSetSelectedImageListener(setSelectedImageListener)
+                    }
+                    if let setBadgeListener = self.setBadgeListener {
+                        previousTabBarItem.removeSetBadgeListener(setBadgeListener)
+                    }
+                    self.setImageListener = nil
+                    self.setSelectedImageListener = nil
+                    self.setBadgeListener = nil
+                }
+                if let currentTabBarItem {
+                    self.setImageListener = currentTabBarItem.addSetImageListener { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.state?.updated(transition: .immediate, isLocal: true)
+                    }
+                    self.setSelectedImageListener = currentTabBarItem.addSetSelectedImageListener { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.state?.updated(transition: .immediate, isLocal: true)
+                    }
+                    self.setBadgeListener = UITabBarItem_addSetBadgeListener(currentTabBarItem) { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.state?.updated(transition: .immediate, isLocal: true)
+                    }
+                }
+            }
+
+            self.component = component
+            self.state = state
+
+            let iconTintColor = (component.isSelected && component.tintSelectedItem && !component.isSearchActive) ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor
+
+            let title: String
+            let badgeValue: String?
+
+            // Compact items have no title, so the icon is centered; the badge moves with it.
+            var badgeOffsetY: CGFloat = 0.0
+            func iconY(regular: CGFloat, height: CGFloat) -> CGFloat {
+                if component.showsTitle {
+                    return regular
+                }
+                let y = floor((availableSize.height - height) * 0.5)
+                badgeOffsetY = y - regular
+                return y
+            }
+
+            switch component.item.content {
+            case let .tabBarItem(tabBarItem):
+                title = tabBarItem.title ?? " "
+                badgeValue = tabBarItem.badgeValue
+
+                if let animationName = tabBarItem.animationName {
+                    if let imageIcon = self.imageIcon {
+                        self.imageIcon = nil
+                        imageIcon.view?.removeFromSuperview()
+                    }
+
+                    let animationIcon: ComponentView<Empty>
+                    var iconTransition = transition
+                    if let current = self.animationIcon {
+                        animationIcon = current
+                    } else {
+                        iconTransition = iconTransition.withAnimation(.none)
+                        animationIcon = ComponentView()
+                        self.animationIcon = animationIcon
+                    }
+                    
+                    let animationScale: CGFloat = tabBarItem.animationScale == 0.0 ? 1.0 : tabBarItem.animationScale;
+
+                    let iconSize = animationIcon.update(
+                        transition: iconTransition,
+                        component: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(
+                                name: animationName
+                            ),
+                            color: iconTintColor,
+                            placeholderColor: nil,
+                            startingPosition: .end,
+                            size: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale)),
+                            loop: false,
+                            lottieSettings: .noAccountFallback
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale))
+                    )
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
+                    if let animationIconView = animationIcon.view {
+                        if animationIconView.superview == nil {
+                            if let badgeView = self.badge?.view {
+                                self.contextContainerView.contentView.insertSubview(animationIconView, belowSubview: badgeView)
+                            } else {
+                                self.contextContainerView.contentView.addSubview(animationIconView)
+                            }
+                        }
+                        iconTransition.setFrame(view: animationIconView, frame: iconFrame)
+                    }
+                } else {
+                    if let animationIcon = self.animationIcon {
+                        self.animationIcon = nil
+                        animationIcon.view?.removeFromSuperview()
+                    }
+
+                    let imageIcon: ComponentView<Empty>
+                    var iconTransition = transition
+                    if let current = self.imageIcon {
+                        imageIcon = current
+                    } else {
+                        iconTransition = iconTransition.withAnimation(.none)
+                        imageIcon = ComponentView()
+                        self.imageIcon = imageIcon
+                    }
+
+                    let iconImage = component.isSelected ? tabBarItem.selectedImage : tabBarItem.image
+                    let iconSize = imageIcon.update(
+                        transition: iconTransition,
+                        component: AnyComponent(Image(
+                            image: iconImage,
+                            tintColor: iconImage?.renderingMode == .alwaysTemplate ? iconTintColor : nil,
+                            contentMode: .center
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: 3.0, height: iconSize.height)), size: iconSize)
+                    if let imageIconView = imageIcon.view {
+                        if imageIconView.superview == nil {
+                            if let badgeView = self.badge?.view {
+                                self.contextContainerView.contentView.insertSubview(imageIconView, belowSubview: badgeView)
+                            } else {
+                                self.contextContainerView.contentView.addSubview(imageIconView)
+                            }
+                        }
+                        iconTransition.setFrame(view: imageIconView, frame: iconFrame)
+                    }
+                }
+            case let .customItem(customItem):
+                title = customItem.title
+                badgeValue = customItem.badge
+
+                switch customItem.icon {
+                case let .animation(name, offset):
+                    if let imageIcon = self.imageIcon {
+                        self.imageIcon = nil
+                        imageIcon.view?.removeFromSuperview()
+                    }
+
+                    let animationIcon: ComponentView<Empty>
+                    var iconTransition = transition
+                    if let current = self.animationIcon {
+                        animationIcon = current
+                    } else {
+                        iconTransition = iconTransition.withAnimation(.none)
+                        animationIcon = ComponentView()
+                        self.animationIcon = animationIcon
+                    }
+
+                    let iconSize = animationIcon.update(
+                        transition: iconTransition,
+                        component: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(
+                                name: name
+                            ),
+                            color: iconTintColor,
+                            placeholderColor: nil,
+                            startingPosition: .end,
+                            size: CGSize(width: 48.0, height: 48.0),
+                            loop: false,
+                            lottieSettings: .noAccountFallback
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 48.0, height: 48.0)
+                    )
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: -4.0, height: iconSize.height)), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
+                    if let animationIconView = animationIcon.view {
+                        if animationIconView.superview == nil {
+                            if let badgeView = self.badge?.view {
+                                self.contextContainerView.contentView.insertSubview(animationIconView, belowSubview: badgeView)
+                            } else {
+                                self.contextContainerView.contentView.addSubview(animationIconView)
+                            }
+                        }
+                        iconTransition.setFrame(view: animationIconView, frame: iconFrame)
+                    }
+                case let .bundleIcon(name):
+                    if let animationIcon = self.animationIcon {
+                        self.animationIcon = nil
+                        animationIcon.view?.removeFromSuperview()
+                    }
+
+                    let imageIcon: ComponentView<Empty>
+                    var iconTransition = transition
+                    if let current = self.imageIcon {
+                        imageIcon = current
+                    } else {
+                        iconTransition = iconTransition.withAnimation(.none)
+                        imageIcon = ComponentView()
+                        self.imageIcon = imageIcon
+                    }
+
+                    let iconSize = imageIcon.update(
+                        transition: iconTransition,
+                        component: AnyComponent(BundleIconComponent(
+                            name: name,
+                            tintColor: iconTintColor
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: iconY(regular: 8.0, height: iconSize.height)), size: iconSize)
+                    if let imageIconView = imageIcon.view {
+                        if imageIconView.superview == nil {
+                            if let badgeView = self.badge?.view {
+                                self.contextContainerView.contentView.insertSubview(imageIconView, belowSubview: badgeView)
+                            } else {
+                                self.contextContainerView.contentView.addSubview(imageIconView)
+                            }
+                        }
+                        iconTransition.setFrame(view: imageIconView, frame: iconFrame)
+                    }
+                }
+            }
+
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: title, font: Font.semibold(10.0), textColor: (component.isSelected && component.tintSelectedItem) ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.contextContainerView.contentView.addSubview(titleView)
+                }
+                titleView.frame = titleFrame
+                alphaTransition.setAlpha(view: titleView, alpha: (component.isSearchActive || !component.showsTitle) ? 0.0 : 1.0)
+            }
+
+            if let badgeText = badgeValue, !badgeText.isEmpty {
+                let badge: ComponentView<Empty>
+                var badgeTransition = transition
+                if let current = self.badge {
+                    badge = current
+                } else {
+                    badgeTransition = badgeTransition.withAnimation(.none)
+                    badge = ComponentView()
+                    self.badge = badge
+                }
+                let badgeSize = badge.update(
+                    transition: badgeTransition,
+                    component: AnyComponent(TextBadgeComponent(
+                        text: badgeText,
+                        font: Font.regular(13.0),
+                        background: component.theme.rootController.tabBar.badgeBackgroundColor,
+                        foreground: component.theme.rootController.tabBar.badgeTextColor,
+                        insets: UIEdgeInsets(top: 0.0, left: 5.0, bottom: 1.0, right: 5.0)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                let contentWidth: CGFloat = 25.0
+                let badgeFrame = CGRect(origin: CGPoint(x: floor(availableSize.width / 2.0) + contentWidth - badgeSize.width - 1.0, y: 5.0 + badgeOffsetY), size: badgeSize)
+                if let badgeView = badge.view {
+                    if badgeView.superview == nil {
+                        self.contextContainerView.contentView.addSubview(badgeView)
+                    }
+                    badgeTransition.setFrame(view: badgeView, frame: badgeFrame)
+                    alphaTransition.setAlpha(view: badgeView, alpha: component.isSearchActive ? 0.0 : 1.0)
+                }
+            } else if let badge = self.badge {
+                self.badge = nil
+                badge.view?.removeFromSuperview()
+            }
+
+            transition.setFrame(view: self.contextContainerView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: self.contextContainerView.contentView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            self.contextContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
+
+            if component.isUnconstrained {
+                return CGSize(width: titleSize.width + 10.0 * 2.0, height: availableSize.height)
+            } else {
+                return availableSize
+            }
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}

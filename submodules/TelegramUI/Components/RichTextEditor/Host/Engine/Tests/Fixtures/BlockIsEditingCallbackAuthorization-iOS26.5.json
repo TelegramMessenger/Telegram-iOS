@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "runtime": {
+    "platform": "iOS",
+    "version": "26.5",
+    "build": "23F73"
+  },
+  "selector": "isEditing",
+  "owner": "IDBlockTextView(PrivateInteractionCallbacks)",
+  "decision": "safeFallback",
+  "ordinaryResolvedOwner": "UIResponder",
+  "artifacts": {
+    "units": ".block-is-editing-withdrawal-task4-units-final.xcresult",
+    "lifecycleUI": ".block-is-editing-withdrawal-task4-lifecycle-ui-green.xcresult",
+    "touchUI": ".block-is-editing-withdrawal-task5-touch-ui-green.xcresult",
+    "floatingUI": ".block-is-editing-withdrawal-task5-floating-ui.xcresult",
+    "typingSpellingUI": ".block-is-editing-withdrawal-task5-typing-spelling-ui.xcresult",
+    "englishKeyboardUI": ".block-is-editing-withdrawal-task5-english-keyboard-ui-green.xcresult"
+  },
+  "hopper": {
+    "selectorStub": "0x22299c0",
+    "uiResponderImplementation": "0x10c7f08",
+    "textInputControllerImplementation": "0x15e9398"
+  }
+}

@@ -1,0 +1,359 @@
+import Foundation
+import SwiftSignalKit
+import TelegramCore
+import Display
+import MergeLists
+import AccountContext
+import ChatControllerInteraction
+import ChatHistoryEntry
+import ChatMessageBubbleItemNode
+
+/// The list index (newest first, as `ListViewScrollToItem` counts) of the entry that is, or whose album
+/// contains, `messageId`.
+func chatHistoryListIndex(ofMessageId messageId: EngineMessage.Id, in view: ChatHistoryView) -> Int? {
+    var index = view.filteredEntries.count - 1
+    for entry in view.filteredEntries {
+        switch entry {
+        case let .MessageEntry(message, _, _, _, _, _):
+            if message.id == messageId {
+                return index
+            }
+        case let .MessageGroupEntry(_, messages, _):
+            if messages.contains(where: { $0.0.id == messageId }) {
+                return index
+            }
+        default:
+            break
+        }
+        index -= 1
+    }
+    return nil
+}
+
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, source: ChatHistoryListSource, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, scrollAnimationCurve: ListViewAnimationCurve?, initialData: EngineInitialMessageHistoryData?, keyboardButtonsMessage: EngineRawMessage?, cachedData: EngineCachedPeerData?, cachedDataMessages: [EngineMessage.Id: EngineRawMessage]?, readStateData: [EnginePeer.Id: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNodeImpl?, allUpdated: Bool) -> ChatHistoryViewTransition {
+    var mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
+    let allUpdated = allUpdated || (fromView?.associatedData != toView.associatedData)
+    if reverse {
+        mergeResult = mergeListsStableWithUpdatesReversed(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries, allUpdated: allUpdated)
+    } else {
+        mergeResult = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries, allUpdated: allUpdated)
+    }
+
+    if let messageTransitionNode = messageTransitionNode, messageTransitionNode.hasOngoingTransitions, let previousEntries = fromView?.filteredEntries {
+        for i in 0 ..< mergeResult.updateIndices.count {
+            switch mergeResult.updateIndices[i].1 {
+            case let .MessageEntry(message, presentationData, flag, monthLocation, messageSelection, entryAttributes):
+                if messageTransitionNode.isAnimatingMessage(stableId: message.stableId) {
+                    var updatedMessage = message
+                    mediaLoop: for media in message.media {
+                        if let webpage = media as? TelegramMediaWebpage, case .Loaded = webpage.content {
+                            var filterMedia = false
+                            switch previousEntries[mergeResult.updateIndices[i].2] {
+                            case let .MessageEntry(previousMessage, _, _, _, _, _):
+                                if previousMessage.media.contains(where: { value in
+                                    if let value = value as? TelegramMediaWebpage, case .Loaded = value.content {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }) {
+                                    if messageTransitionNode.hasScheduledUpdateMessageAfterAnimationCompleted(stableId: message.stableId) {
+                                        filterMedia = true
+                                    }
+                                } else {
+                                    filterMedia = true
+                                }
+                            default:
+                                break
+                            }
+
+                            if filterMedia {
+                                updatedMessage = message.withUpdatedMedia(message.media.filter {
+                                    $0 !== media
+                                })
+                                messageTransitionNode.scheduleUpdateMessageAfterAnimationCompleted(stableId: message.stableId)
+                            }
+
+                            break mediaLoop
+                        }
+                    }
+                    mergeResult.updateIndices[i].1 = .MessageEntry(updatedMessage, presentationData, flag, monthLocation, messageSelection, entryAttributes)
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    var adjustedDeleteIndices: [ListViewDeleteItem] = []
+    let previousCount: Int
+    if let fromView = fromView {
+        previousCount = fromView.filteredEntries.count
+    } else {
+        previousCount = 0
+    }
+    for index in mergeResult.deleteIndices {
+        adjustedDeleteIndices.append(ListViewDeleteItem(index: previousCount - 1 - index, directionHint: nil))
+    }
+    
+    var adjustedIndicesAndItems: [ChatHistoryViewTransitionInsertEntry] = []
+    var adjustedUpdateItems: [ChatHistoryViewTransitionUpdateEntry] = []
+    let updatedCount = toView.filteredEntries.count
+    
+    var options: ListViewDeleteAndInsertOptions = []
+    var animateIn = false
+    var maxAnimatedInsertionIndex = -1
+    var stationaryItemRange: (Int, Int)?
+    var scrollToItem: ListViewScrollToItem?
+    var pinnedAnchor: EngineMessage.Index?
+    var keepInPlaceAnchor: EngineMessage.Index?
+    
+    switch reason {
+    case let .Initial(fadeIn):
+        if fadeIn {
+            animateIn = true
+        } else {
+            let _ = options.insert(.LowLatency)
+            let _ = options.insert(.Synchronous)
+            let _ = options.insert(.PreferSynchronousResourceLoading)
+        }
+    case .InteractiveChanges:
+        let _ = options.insert(.AnimateAlpha)
+        let _ = options.insert(.AnimateInsertion)
+        
+        for (index, _, _) in mergeResult.indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
+            let adjustedIndex = updatedCount - 1 - index
+            if adjustedIndex == maxAnimatedInsertionIndex + 1 {
+                maxAnimatedInsertionIndex += 1
+            }
+        }
+    case .Reload:
+        stationaryItemRange = (0, Int.max)
+    case .HoleReload:
+        stationaryItemRange = (0, Int.max)
+    }
+    
+    for (index, entry, previousIndex) in mergeResult.indicesAndItems {
+        let adjustedIndex = updatedCount - 1 - index
+        
+        let adjustedPrevousIndex: Int?
+        if let previousIndex = previousIndex {
+            adjustedPrevousIndex = previousCount - 1 - previousIndex
+        } else {
+            adjustedPrevousIndex = nil
+        }
+        
+        var directionHint: ListViewItemOperationDirectionHint?
+        if maxAnimatedInsertionIndex >= 0 && adjustedIndex <= maxAnimatedInsertionIndex {
+            directionHint = .Down
+        }
+        
+        adjustedIndicesAndItems.append(ChatHistoryViewTransitionInsertEntry(index: adjustedIndex, previousIndex: adjustedPrevousIndex, entry: entry, directionHint: directionHint))
+    }
+    
+    for (index, entry, previousIndex) in mergeResult.updateIndices {
+        let adjustedIndex = updatedCount - 1 - index
+        let adjustedPreviousIndex = previousCount - 1 - previousIndex
+        
+        let directionHint: ListViewItemOperationDirectionHint? = nil
+        adjustedUpdateItems.append(ChatHistoryViewTransitionUpdateEntry(index: adjustedIndex, previousIndex: adjustedPreviousIndex, entry: entry, directionHint: directionHint))
+    }
+    
+    var scrolledToIndex: MessageHistoryScrollToSubject?
+    var scrolledToSomeIndex = false
+    
+    let curve: ListViewAnimationCurve = scrollAnimationCurve ?? .Default(duration: nil)
+    
+    var isSavedMusic = false
+    if case let .custom(_, _, _, isSavedMusicValue, _, _, _) = source {
+        isSavedMusic = isSavedMusicValue
+    }
+    
+    if let scrollPosition = scrollPosition {
+        switch scrollPosition {
+            case let .unread(unreadIndex):
+                var index = toView.filteredEntries.count - 1
+                for entry in toView.filteredEntries {
+                    if case .UnreadEntry = entry {
+                        scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve, directionHint: .Down)
+                        break
+                    }
+                    index -= 1
+                }
+                
+                if scrollToItem == nil {
+                    var index = toView.filteredEntries.count - 1
+                    for entry in toView.filteredEntries {
+                        if entry.index >= unreadIndex {
+                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve,  directionHint: .Down)
+                            break
+                        }
+                        index -= 1
+                    }
+                    
+                    if let currentScrollToItem = scrollToItem {
+                        index = 0
+                        for entry in toView.filteredEntries.reversed() {
+                            if index > currentScrollToItem.index {
+                                if entry.index.timestamp > 10 {
+                                    break
+                                } else if case .ChatInfoEntry = entry {
+                                    scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve,  directionHint: .Down)
+                                    break
+                                }
+                            }
+                            index += 1
+                        }
+                    }
+                }
+                
+                if scrollToItem == nil {
+                    var index = 0
+                    for entry in toView.filteredEntries.reversed() {
+                        if entry.index < unreadIndex {
+                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve, directionHint: .Down)
+                            break
+                        }
+                        index += 1
+                    }
+                }
+            case let .positionRestoration(scrollIndex, relativeOffset):
+                var index = toView.filteredEntries.count - 1
+                for entry in toView.filteredEntries {
+                    if entry.index >= scrollIndex {
+                        scrollToItem = ListViewScrollToItem(index: index, position: .top(relativeOffset), animated: false, curve: curve,  directionHint: .Down)
+                        break
+                    }
+                    index -= 1
+                }
+                
+                if scrollToItem == nil {
+                    var index = 0
+                    for entry in toView.filteredEntries.reversed() {
+                        if entry.index < scrollIndex {
+                            scrollToItem = ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                            break
+                        }
+                        index += 1
+                    }
+                }
+            case let .pinnedAnchor(anchorIndex):
+                // The cached post shown before its surroundings load: at the bottom of the visible
+                // area (list top). A post taller than the area is re-aligned by the history node once
+                // its height is known.
+                pinnedAnchor = anchorIndex
+                if let listIndex = chatHistoryListIndex(ofMessageId: anchorIndex.id, in: toView) {
+                    scrollToItem = ListViewScrollToItem(index: listIndex, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                }
+            case let .keepInPlace(anchorIndex):
+                // Resolved by the history node from the post's current frame, which only it can read.
+                keepInPlaceAnchor = anchorIndex
+            case let .index(scrollSubject, position, directionHint, animated, highlight, displayLink, _):
+                let scrollIndex = scrollSubject
+                var position = position
+                if case .center = position, highlight {
+                    scrolledToIndex = scrollSubject
+                }
+                if case .center = position {
+                    if let quote = scrollSubject.quote {
+                        position = .center(.custom({ itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                                if let quoteRect = itemNode.getQuoteRect(quote: quote.string, offset: quote.offset) {
+                                    return quoteRect.midY
+                                }
+                            }
+                            return 0.0
+                        }))
+                    } else if let subject = scrollSubject.subject {
+                        position = .center(.custom({ itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                                if let taskRect = itemNode.getInnerReplySubjectRect(innerSubject: subject) {
+                                    return taskRect.midY
+                                }
+                            }
+                            return 0.0
+                        }))
+                    }
+                }
+                var index = toView.filteredEntries.count - 1
+                for entry in toView.filteredEntries {
+                    if isSavedMusic {
+                        if case let .message(messageIndex) = scrollIndex.index, messageIndex.id == entry.index.id {
+                            print(messageIndex.id)
+                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: directionHint, displayLink: displayLink)
+                            break
+                        }
+                    } else {
+                        if scrollIndex.index.isLessOrEqual(to: entry.index) {
+                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: directionHint, displayLink: displayLink)
+                            break
+                        }
+                    }
+                    index -= 1
+                }
+                
+                if scrollToItem == nil {
+                    var index = 0
+                    for entry in toView.filteredEntries.reversed() {
+                        if !scrollIndex.index.isLess(than: entry.index) {
+                            scrolledToSomeIndex = true
+                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: directionHint)
+                            break
+                        }
+                        index += 1
+                    }
+                }
+        }
+    } else if case .Initial = reason, scrollToItem == nil {
+        var index = toView.filteredEntries.count - 1
+        for entry in toView.filteredEntries {
+            if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                if let _ = message.adAttribute {
+                    scrollToItem = ListViewScrollToItem(index: index + 1, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                    break
+                }
+            }
+            index -= 1
+        }
+    }
+    
+    if let scrollPosition, let currentScrollToItem = scrollToItem {
+        // A scroll to a message holds it where it lands until the next touch or scroll (the CoreList
+        // backend honours this; ListViewImpl ignores it). Scrolls to either end of the history do not,
+        // and keep-in-place issues its own scroll (or none) in the history node. The unread line holds
+        // nothing when the chat opens on its newest messages: the chat is then at the bottom, and a
+        // message arriving (or one under the line growing) has to push it up as it would anywhere else.
+        let hold: ListViewScrollHold
+        switch scrollPosition {
+        case .unread:
+            hold = .yieldingToNewestEdge
+        case .positionRestoration, .pinnedAnchor:
+            hold = .always
+        case let .index(subject, _, _, _, _, _, _):
+            if case .message = subject.index {
+                hold = .always
+            } else {
+                hold = .none
+            }
+        case .keepInPlace:
+            hold = .none
+        }
+        scrollToItem = currentScrollToItem.withHold(hold)
+    }
+    
+    if updatedMessageSelection {
+        options.insert(.Synchronous)
+    }
+    
+    if keepInPlaceAnchor != nil {
+        // The surroundings of a pinned cached post land in place without animation; the shimmer's crossfade is the only motion.
+        options.remove(.AnimateInsertion)
+        options.remove(.AnimateAlpha)
+        options.remove(.AnimateCrossfade)
+        options.remove(.AnimateTopItemPosition)
+        options.remove(.RequestItemInsertionAnimations)
+        animateIn = false
+    }
+    
+    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, scrolledToSomeIndex: scrolledToSomeIndex || scrolledToIndex != nil, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators, pinnedAnchor: pinnedAnchor, keepInPlaceAnchor: keepInPlaceAnchor)
+}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+    #videoPlayer {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        object-fit: fill;
+    }
+</style>
+<script src="hls.js"></script>
+<script type="text/javascript">
+    function postPlayerEvent(eventName, eventData) {
+        window.webkit.messageHandlers.performAction.postMessage({'event': eventName, 'data': eventData});
+    };
+
+    var video;
+    var hls;
+
+    var isManifestParsed = false;
+    var isFirstFrameReady = false;
+    var isPictureInPictureActive = false;
+
+    var currentTimeUpdateTimeout = null;
+
+    function playerInitialize(params) {
+        video = document.getElementById('videoPlayer');
+
+        video.addEventListener('loadeddata', (event) => {
+            if (!isFirstFrameReady) {
+                isFirstFrameReady = true;
+                refreshPlayerStatus();
+            }
+        });
+        video.addEventListener("playing", function() {
+            refreshPlayerStatus();
+        });
+        video.addEventListener("pause", function() { 
+            refreshPlayerStatus();
+        });
+        video.addEventListener("seeking", function() { 
+            refreshPlayerStatus();
+        });
+        video.addEventListener("waiting", function() { 
+            refreshPlayerStatus();
+        });
+        video.addEventListener("enterpictureinpicture", function() { 
+            isPictureInPictureActive = true;
+            refreshPlayerStatus();
+        }, false);
+        video.addEventListener("leavepictureinpicture", function() { 
+            isPictureInPictureActive = false;
+            refreshPlayerStatus();
+        }, false);
+
+
+        hls = new Hls({
+            startLevel: 0,
+            testBandwidth: false,
+            debug: params['debug'],
+            autoStartLoad: false,
+            abrEwmaDefaultEstimate: params['bandwidthEstimate']
+        });
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            isManifestParsed = true;
+            refreshPlayerStatus();
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, function() {
+            refreshPlayerStatus();
+        });
+        hls.on(Hls.Events.LEVELS_UPDATED, function() {
+            refreshPlayerStatus();
+        });
+
+        hls.loadSource('master.m3u8');
+        hls.attachMedia(video);
+    }
+
+    function playerLoad(initialLevelIndex) {
+        hls.startLevel = initialLevelIndex;
+        hls.startLoad(startPosition=-1);
+    }
+
+    function playerPlay() {
+        video.play();
+    }
+
+    function playerPause() {
+        video.pause();
+    }
+
+    function playerSetBaseRate(value) {
+        video.playbackRate = value;
+    }
+
+    function playerSetLevel(level) {
+        if (level >= 0) {
+            hls.autoLevelEnabled = false;
+            hls.currentLevel = level;
+        } else {
+            hls.autoLevelEnabled = true;
+        }
+    }
+
+    function playerSeek(value) {
+        video.currentTime = value;
+    }
+
+    function playerSetIsMuted(value) {
+        video.muted = value;
+    }
+
+    function playerRequestPictureInPicture() {
+        if (video !== document.pictureInPictureElement) {
+            video.requestPictureInPicture().then(function() {
+                isPictureInPictureActive = true;
+                refreshPlayerStatus();
+            });
+        }
+    }
+
+    function playerStopPictureInPicture() {
+        document.exitPictureInPicture();
+    }
+
+    function getLevels() {
+        var levels = [];
+        for (var i = 0; i < hls.levels.length; i++) {
+            level = hls.levels[i];
+            levels.push({
+                'index': i,
+                'bitrate': level.bitrate || 0,
+                'width': level.width || 0,
+                'height': level.height || 0
+            });
+        }
+        return levels;
+    }
+
+    function refreshPlayerStatus() {
+        var isPlaying = false;
+        if (!video.paused && !video.ended && video.readyState > 2) {
+            isPlaying = true;
+        }
+
+        postPlayerEvent('playerStatus', {
+            'isReady': isManifestParsed,
+            'isFirstFrameReady': isFirstFrameReady,
+            'isPlaying': !video.paused,
+            'rate': isPlaying ? video.playbackRate : 0.0,
+            'defaultRate': video.playbackRate,
+            'levels': getLevels(),
+            'currentLevel': hls.currentLevel,
+            'isPictureInPictureActive': isPictureInPictureActive
+        });
+
+        refreshPlayerCurrentTime();
+
+        if (isPlaying) {
+            if (currentTimeUpdateTimeout == null) {
+                currentTimeUpdateTimeout = setTimeout(() => {
+                    refreshPlayerCurrentTime();
+                }, 200);
+            }
+        } else {
+            if(currentTimeUpdateTimeout != null){
+                clearTimeout(currentTimeUpdateTimeout);
+                currentTimeUpdateTimeout = null;
+            }
+        }
+    }
+
+    function refreshPlayerCurrentTime() {
+        postPlayerEvent('playerCurrentTime', {
+            'value': video.currentTime,
+            'bandwidthEstimate': hls.bandwidthEstimate
+        });
+        currentTimeUpdateTimeout = setTimeout(() => {
+            refreshPlayerCurrentTime()
+        }, 200);
+    }
+</script>
+</head>
+<body>
+<video id="videoPlayer" playsinline></video>
+</body>
+</html>

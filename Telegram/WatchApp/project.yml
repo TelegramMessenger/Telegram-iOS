@@ -1,0 +1,113 @@
+# Embedded-build variant of project.yml.
+#
+# Used by tools/export-sources.sh to generate the xcodeproj that the Telegram
+# iOS Bazel build (apple_prebuilt_watchos_application) compiles with
+# `xcodebuild -configuration Release`. Differs from project.yml deliberately:
+#   - watchOS app target only (no watchapp2-container, no test/snapshot targets)
+#   - bundle id ph.telegra.Telegraph.watchkitapp, a companion of ph.telegra.Telegraph
+#   - signing disabled here; the Bazel rule codesigns the output
+#   - no SnapshotPreviews (preview/test tooling must not ship)
+# Keep `packages`, `deploymentTarget`, sources and the Info.plist path in sync
+# with project.yml. Do NOT add the container target or SnapshotPreviews here.
+name: tgwatch
+options:
+  bundleIdPrefix: ph.telegra   # ph.telegra.Telegraph.watchkitapp, child of the main Telegram app id
+  developmentLanguage: en
+  deploymentTarget:
+    watchOS: "26.0"
+# Both configs are required: xcodegen 2.45.4 crashes generating the scheme when
+# only one config exists. The embedded build only ever uses Release.
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  TDShim:
+    path: Packages/TDShim
+  QRCodeGenerator:
+    url: https://github.com/fwcd/swift-qrcode-generator
+    exactVersion: 2.0.2
+  RLottieKit:
+    path: Packages/RLottieKit
+  WebPKit:
+    path: Packages/WebPKit
+  OpusKit:
+    path: Packages/OpusKit
+targets:
+  tgwatch Watch App:
+    type: application
+    platform: watchOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: tgwatch Watch App
+      - path: Assets/SampleStickers
+        buildPhase: resources
+        type: folder
+    info:
+      path: tgwatch Watch App/Info.plist
+      properties:
+        CFBundleDisplayName: Telegram
+        CFBundleIconName: AppIcon
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: ph.telegra.Telegraph
+        # Intentional: keeps the watch app independently installable on the watch
+        # while still shipping inside the Telegram IPA. Do not change to false.
+        WKRunsIndependentlyOfCompanionApp: true
+        TG_API_ID: $(TG_API_ID)
+        TG_API_HASH: $(TG_API_HASH)
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSMicrophoneUsageDescription: Record voice messages to send in chats.
+        NSLocationWhenInUseUsageDescription: Share your current location in chats.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ph.telegra.Telegraph.watchkitapp
+        DEVELOPMENT_TEAM: C67CF9S4VU
+        TARGETED_DEVICE_FAMILY: "4"
+        GENERATE_INFOPLIST_FILE: "NO"
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/Frameworks
+        SKIP_INSTALL: "YES"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+      configs:
+        Release:
+          # Bazel consumes a plain `xcodebuild build`, so DEPLOYMENT_POSTPROCESSING
+          # stays NO and the default strip phase never runs — the executable ships
+          # with its full ~1M-symbol table, doubling each thinned slice to ~100MB
+          # and tripping App Store's 75MB watchOS limit (error 90389). Force the
+          # strip during build. Scoped to this target only: a project-wide setting
+          # also tries to strip the SPM static libs, which errors on COgg.o.
+          DEPLOYMENT_POSTPROCESSING: "YES"
+          STRIP_INSTALLED_PRODUCT: "YES"
+          STRIP_STYLE: "all"
+          DEAD_CODE_STRIPPING: "YES"
+    dependencies:
+      - package: TDShim
+        product: TDShim
+      - package: QRCodeGenerator
+        product: QRCodeGenerator
+      - package: RLottieKit
+        product: RLottieKit
+      - package: WebPKit
+        product: WebPKit
+      - package: OpusKit
+        product: OpusKit
+schemes:
+  tgwatch Watch App:
+    build:
+      targets:
+        tgwatch Watch App: all
+    archive:
+      config: Release
+    run:
+      config: Release
+      executable: tgwatch Watch App

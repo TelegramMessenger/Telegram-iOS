@@ -1,0 +1,2 @@
+schemaVersion: 1
+enabledWorkflows: ["simulator", "debugging", "ui-automation"]

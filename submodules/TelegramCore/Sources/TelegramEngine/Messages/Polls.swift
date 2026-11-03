@@ -1,0 +1,595 @@
+import Foundation
+internal import TelegramApi
+import Postbox
+import SwiftSignalKit
+import MtProtoKit
+
+func pollCloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
+    if let image = media as? TelegramMediaImage,
+       let reference = image.reference,
+       case let .cloud(id, accessHash, maybeFileReference) = reference {
+        let fileReference = maybeFileReference ?? Data()
+        return .inputMediaPhoto(.init(flags: 0, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: nil, video: nil))
+    } else if let file = media as? TelegramMediaFile,
+              let resource = file.resource as? CloudDocumentMediaResource {
+        return .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
+    } else if let map = media as? TelegramMediaMap {
+        var geoFlags: Int32 = 0
+        if map.accuracyRadius != nil {
+            geoFlags |= 1 << 0
+        }
+        let geoPoint = Api.InputGeoPoint.inputGeoPoint(.init(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
+        if let venue = map.venue {
+            return .inputMediaVenue(.init(geoPoint: geoPoint, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? ""))
+        } else {
+            return .inputMediaGeoPoint(.init(geoPoint: geoPoint))
+        }
+    } else if let webpage = media as? TelegramMediaWebpage, let url = webpage.content.url {
+        let flags: Int32 = 1 << 2
+        return .inputMediaWebPage(.init(flags: flags, url: url))
+    }
+    return nil
+}
+
+
+public enum RequestMessageSelectPollOptionError {
+    case generic
+    case restrictedToSubscribers
+}
+
+func _internal_requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+    return account.postbox.loadedPeerWithId(messageId.peerId)
+    |> take(1)
+    |> castError(RequestMessageSelectPollOptionError.self)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.messages.sendVote(peer: inputPeer, msgId: messageId.id, options: opaqueIdentifiers.map { Buffer(data: $0) }))
+            |> mapError { error -> RequestMessageSelectPollOptionError in
+                if error.errorDescription == "POLL_MEMBER_RESTRICTED" {
+                    return .restrictedToSubscribers
+                }
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> in
+                return account.postbox.transaction { transaction -> TelegramMediaPoll? in
+                    var resultPoll: TelegramMediaPoll?
+                    switch result {
+                    case let .updates(updatesData):
+                        let updates = updatesData.updates
+                        for update in updates {
+                            switch update {
+                            case let .updateMessagePoll(updateMessagePollData):
+                                let (id, poll, results) = (updateMessagePollData.pollId, updateMessagePollData.poll, updateMessagePollData.results)
+                                let pollId = MediaId(namespace: Namespaces.Media.CloudPoll, id: id)
+                                resultPoll = transaction.getMedia(pollId) as? TelegramMediaPoll
+                                if let poll = poll {
+                                    switch poll {
+                                    case let .poll(pollData):
+                                        let (flags, question, answers, closePeriod, closeDate, pollHash, countries) = (pollData.flags, pollData.question, pollData.answers, pollData.closePeriod, pollData.closeDate, pollData.hash, pollData.countriesIso2)
+                                        let publicity: TelegramMediaPollPublicity
+                                        if (flags & (1 << 1)) != 0 {
+                                            publicity = .public
+                                        } else {
+                                            publicity = .anonymous
+                                        }
+                                        let kind: TelegramMediaPollKind
+                                        if (flags & (1 << 3)) != 0 {
+                                            kind = .quiz(multipleAnswers: (flags & (1 << 2)) != 0)
+                                        } else {
+                                            kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
+                                        }
+                                        let openAnswers = (flags & (1 << 6)) != 0
+                                        let revotingDisabled = (flags & (1 << 7)) != 0
+                                        let shuffleAnswers = (flags & (1 << 8)) != 0
+                                        let hideResultsUntilClose = (flags & (1 << 9)) != 0
+                                        let restrictToSubscribers = (flags & (1 << 11)) != 0
+                                        let questionText: String
+                                        let questionEntities: [MessageTextEntity]
+                                        switch question {
+                                        case let .textWithEntities(textWithEntitiesData):
+                                            let (text, entities) = (textWithEntitiesData.text, textWithEntitiesData.entities)
+                                            questionText = text
+                                            questionEntities = messageTextEntitiesFromApiEntities(entities)
+                                        }
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, deadlineDate: closeDate, pollHash: pollHash, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: resultPoll?.attachedMedia, restrictToSubscribers: restrictToSubscribers, countries: countries ?? [])
+                                    }
+                                }
+                                
+                                let resultsMin: Bool
+                                switch results {
+                                case let .pollResults(pollResultsData):
+                                    let flags = pollResultsData.flags
+                                    resultsMin = (flags & (1 << 0)) != 0
+                                }
+                                resultPoll = resultPoll?.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
+                                
+                                if let resultPoll = resultPoll {
+                                    updateMessageMedia(transaction: transaction, id: pollId, media: resultPoll)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        break
+                    default:
+                        break
+                    }
+                    account.stateManager.addUpdates(result)
+                    return resultPoll
+                }
+                |> castError(RequestMessageSelectPollOptionError.self)
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+}
+
+public enum AddPollOptionError {
+    case generic
+}
+
+func _internal_addPollOption(account: Account, messageId: MessageId, text: String, entities: [MessageTextEntity], mediaReference: AnyMediaReference?) -> Signal<Never, AddPollOptionError> {
+    return account.postbox.loadedPeerWithId(messageId.peerId)
+    |> take(1)
+    |> castError(AddPollOptionError.self)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            let inputMedia = mediaReference.flatMap { pollCloudMediaToInputMedia($0.media) }
+            let flags: Int32 = inputMedia != nil ? (1 << 0) : 0
+            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: flags, text: .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))), media: inputMedia))
+            return account.network.request(Api.functions.messages.addPollAnswer(peer: inputPeer, msgId: messageId.id, answer: apiAnswer))
+            |> mapError { _ -> AddPollOptionError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, AddPollOptionError> in
+                return account.postbox.transaction { transaction -> TelegramMediaPoll? in
+                    account.stateManager.addUpdates(result)
+                    return nil
+                }
+                |> castError(AddPollOptionError.self)
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+    |> ignoreValues
+}
+
+public enum DeletePollOptionError {
+    case generic
+}
+
+func _internal_deletePollOption(account: Account, messageId: MessageId, opaqueIdentifier: Data) -> Signal<Never, DeletePollOptionError> {
+    return account.postbox.loadedPeerWithId(messageId.peerId)
+    |> take(1)
+    |> castError(DeletePollOptionError.self)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.messages.deletePollAnswer(peer: inputPeer, msgId: messageId.id, option: Buffer(data: opaqueIdentifier)))
+            |> mapError { _ -> DeletePollOptionError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, DeletePollOptionError> in
+                return account.postbox.transaction { transaction -> TelegramMediaPoll? in
+                    account.stateManager.addUpdates(result)
+                    return nil
+                }
+                |> castError(DeletePollOptionError.self)
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+    |> ignoreValues
+}
+
+func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> (TelegramMediaPoll, Api.InputPeer)? in
+        guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+            return nil
+        }
+        guard let message = transaction.getMessage(messageId) else {
+            return nil
+        }
+        for media in message.media {
+            if let poll = media as? TelegramMediaPoll {
+                return (poll, inputPeer)
+            }
+        }
+        return nil
+    }
+    |> mapToSignal { pollAndInputPeer -> Signal<Void, NoError> in
+        guard let (poll, inputPeer) = pollAndInputPeer, poll.pollId.namespace == Namespaces.Media.CloudPoll else {
+            return .complete()
+        }
+        var flags: Int32 = 0
+        flags |= 1 << 14
+        
+        var pollFlags: Int32 = 0
+        switch poll.kind {
+        case let .poll(multipleAnswers):
+            if multipleAnswers {
+                pollFlags |= 1 << 2
+            }
+        case let .quiz(multipleAnswers):
+            pollFlags |= 1 << 3
+            if multipleAnswers {
+                pollFlags |= 1 << 2
+            }
+        }
+        switch poll.publicity {
+        case .anonymous:
+            break
+        case .public:
+            pollFlags |= 1 << 1
+        }
+        var pollMediaFlags: Int32 = 0
+        var correctAnswersIndices: [Int32]?
+        if let correctAnswersValue = poll.correctAnswers {
+            pollMediaFlags |= 1 << 0
+            
+            var indices: [Int32] = []
+            for i in 0 ..< poll.options.count {
+                if correctAnswersValue.contains(where: { poll.options[i].opaqueIdentifier == $0 }) {
+                    indices.append(Int32(i))
+                }
+            }
+            correctAnswersIndices = indices
+        }
+
+        pollFlags |= 1 << 0
+
+        if poll.deadlineTimeout != nil {
+            pollFlags |= 1 << 4
+        }
+        if poll.deadlineDate != nil {
+            pollFlags |= 1 << 5
+        }
+        if poll.openAnswers {
+            pollFlags |= 1 << 6
+        }
+        if poll.revotingDisabled {
+            pollFlags |= 1 << 7
+        }
+        if poll.shuffleAnswers {
+            pollFlags |= 1 << 8
+        }
+        if poll.hideResultsUntilClose {
+            pollFlags |= 1 << 9
+        }
+        if poll.restrictToSubscribers {
+            pollFlags |= 1 << 11
+        }
+        if !poll.countries.isEmpty {
+            pollFlags |= 1 << 12
+        }
+
+        var mappedSolution: String?
+        var mappedSolutionEntities: [Api.MessageEntity]?
+        if let solution = poll.results.solution {
+            mappedSolution = solution.text
+            mappedSolutionEntities = apiTextAttributeEntities(TextEntitiesMessageAttribute(entities: solution.entities), associatedPeers: SimpleDictionary())
+            pollMediaFlags |= 1 << 1
+        }
+        
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(.init(flags: pollMediaFlags, poll: .poll(.init(id: poll.pollId.id, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: poll.deadlineDate, countriesIso2: poll.countries, hash: 0)), correctAnswers: correctAnswersIndices, attachedMedia: nil, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: nil)), replyMarkup: nil, entities: nil, scheduleDate: nil, scheduleRepeatPeriod: nil, quickReplyShortcutId: nil, richMessage: nil))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Void, NoError> in
+            if let updates = updates {
+                stateManager.addUpdates(updates)
+            }
+            return .complete()
+        }
+    }
+}
+
+final class CachedPollOptionResult: Codable {
+    let peerIds: [PeerId]
+    let dates: [Int32]
+    let count: Int32
+    
+    public static func key(pollId: MediaId, optionOpaqueIdentifier: Data) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8 + optionOpaqueIdentifier.count)
+        key.setInt32(0, value: pollId.namespace)
+        key.setInt64(4, value: pollId.id)
+        key.setData(4 + 8, value: optionOpaqueIdentifier)
+        return key
+    }
+    
+    public init(peerIds: [PeerId], dates: [Int32], count: Int32) {
+        self.peerIds = peerIds
+        self.dates = dates
+        self.count = count
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
+        self.dates = try container.decode([Int32].self, forKey: "dates")
+        self.count = try container.decode(Int32.self, forKey: "count")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        try container.encode(self.dates, forKey: "dates")
+        try container.encode(self.count, forKey: "count")
+    }
+}
+
+private final class PollResultsOptionContext {
+    private let queue: Queue
+    private let account: Account
+    private let pollId: MediaId
+    private let messageId: MessageId
+    private let opaqueIdentifier: Data
+    private let disposable = MetaDisposable()
+    private var isLoadingMore: Bool = false
+    private var hasLoadedOnce: Bool = false
+    private var canLoadMore: Bool = true
+    private var nextOffset: String?
+    private var results: [PollResultsOptionState.Voter] = []
+    private var count: Int?
+    private var populateCache: Bool = true
+    
+    let state = Promise<PollResultsOptionState>()
+    
+    init(queue: Queue, account: Account, pollId: MediaId, messageId: MessageId, opaqueIdentifier: Data, count: Int?) {
+        self.queue = queue
+        self.account = account
+        self.pollId = pollId
+        self.messageId = messageId
+        self.opaqueIdentifier = opaqueIdentifier
+        self.count = count
+        
+        self.isLoadingMore = true
+        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PollResultsOptionState.Voter], canLoadMore: Bool)? in
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)))?.get(CachedPollOptionResult.self)
+            if let cachedResult = cachedResult, Int(cachedResult.count) == count {
+                var result: [PollResultsOptionState.Voter] = []
+                for (peerId, date) in zip(cachedResult.peerIds, cachedResult.dates) {
+                    if let peer = transaction.getPeer(peerId) {
+                        result.append(.init(peer: RenderedPeer(peer: peer), date: date))
+                    } else {
+                        return nil
+                    }
+                }
+                return (result, Int(cachedResult.count) > result.count)
+            } else {
+                return nil
+            }
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersAndCanLoadMore in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isLoadingMore = false
+            if let (cachedPeers, canLoadMore) = cachedPeersAndCanLoadMore {
+                strongSelf.results = cachedPeers
+                strongSelf.hasLoadedOnce = true
+                strongSelf.canLoadMore = canLoadMore
+            }
+            strongSelf.loadMore()
+        }))
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func loadMore() {
+        if self.isLoadingMore {
+            return
+        }
+        self.isLoadingMore = true
+        let pollId = self.pollId
+        let messageId = self.messageId
+        let opaqueIdentifier = self.opaqueIdentifier
+        let account = self.account
+        let accountPeerId = account.peerId
+        let nextOffset = self.nextOffset
+        let populateCache = self.populateCache
+        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<([PollResultsOptionState.Voter], Int, String?), NoError> in
+            if let inputPeer = inputPeer {
+                var flags: Int32 = 1 << 0
+                if let _ = nextOffset {
+                    flags |= (1 << 1)
+                }
+                let signal = account.network.request(Api.functions.messages.getPollVotes(flags: flags, peer: inputPeer, id: messageId.id, option: Buffer(data: opaqueIdentifier), offset: nextOffset, limit: nextOffset == nil ? 10 : 50))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.VotesList?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<([PollResultsOptionState.Voter], Int, String?), NoError> in
+                    return account.postbox.transaction { transaction -> ([PollResultsOptionState.Voter], Int, String?) in
+                        guard let result = result else {
+                            return ([], 0, nil)
+                        }
+                        switch result {
+                        case let .votesList(votesListData):
+                            let (count, votes, chats, users, nextOffset) = (votesListData.count, votesListData.votes, votesListData.chats, votesListData.users, votesListData.nextOffset)
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                            var resultPeers: [PollResultsOptionState.Voter] = []
+                            for vote in votes {
+                                let peerId: PeerId
+                                let date: Int32
+                                switch vote {
+                                case let .messagePeerVote(messagePeerVoteData):
+                                    let peerIdValue = messagePeerVoteData.peer
+                                    peerId = peerIdValue.peerId
+                                    date = messagePeerVoteData.date
+                                case let .messagePeerVoteInputOption(messagePeerVoteInputOptionData):
+                                    let peerIdValue = messagePeerVoteInputOptionData.peer
+                                    peerId = peerIdValue.peerId
+                                    date = messagePeerVoteInputOptionData.date
+                                case let .messagePeerVoteMultiple(messagePeerVoteMultipleData):
+                                    let peerIdValue = messagePeerVoteMultipleData.peer
+                                    peerId = peerIdValue.peerId
+                                    date = messagePeerVoteMultipleData.date
+                                }
+                                if let peer = transaction.getPeer(peerId) {
+                                    resultPeers.append(.init(peer: RenderedPeer(peer: peer), date: date))
+                                }
+                            }
+                            if populateCache {
+                                var peerIds: [PeerId] = []
+                                var dates: [Int32] = []
+                                for peer in resultPeers {
+                                    peerIds.append(peer.peer.peerId)
+                                    dates.append(peer.date)
+                                }
+                                if let entry = CodableEntry(CachedPollOptionResult(peerIds: peerIds, dates: dates, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: entry)
+                                }
+                            }
+                            return (resultPeers, Int(count), nextOffset)
+                        }
+                    }
+                }
+
+                return signal
+            } else {
+                return .single(([], 0, nil))
+            }
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] peers, updatedCount, nextOffset in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.populateCache {
+                strongSelf.populateCache = false
+                strongSelf.results.removeAll()
+            }
+            var existingIds = Set(strongSelf.results.map { $0.peer.peerId })
+            for peer in peers {
+                if !existingIds.contains(peer.peer.peerId) {
+                    strongSelf.results.append(peer)
+                    existingIds.insert(peer.peer.peerId)
+                }
+            }
+            strongSelf.isLoadingMore = false
+            strongSelf.hasLoadedOnce = true
+            strongSelf.canLoadMore = nextOffset != nil
+            strongSelf.nextOffset = nextOffset
+            if strongSelf.canLoadMore {
+                strongSelf.count = max(updatedCount, strongSelf.results.count)
+            } else {
+                strongSelf.count = strongSelf.results.count
+            }
+            strongSelf.updateState()
+        }))
+        self.updateState()
+    }
+    
+    func updateState() {
+        self.state.set(.single(PollResultsOptionState(peers: self.results, isLoadingMore: self.isLoadingMore, hasLoadedOnce: self.hasLoadedOnce, canLoadMore: self.canLoadMore, count: self.count)))
+    }
+}
+
+public struct PollResultsOptionState: Equatable {
+    public struct Voter: Equatable {
+        public var peer: RenderedPeer
+        public var date: Int32
+        
+        public init(peer: RenderedPeer, date: Int32) {
+            self.peer = peer
+            self.date = date
+        }
+    }
+    
+    public var peers: [Voter]
+    public var isLoadingMore: Bool
+    public var hasLoadedOnce: Bool
+    public var canLoadMore: Bool
+    public var count: Int?
+}
+
+public struct PollResultsState: Equatable {
+    public var options: [Data: PollResultsOptionState]
+}
+
+private final class PollResultsContextImpl {
+    private let queue: Queue
+    
+    private var optionContexts: [Data: PollResultsOptionContext] = [:]
+    
+    let state = Promise<PollResultsState>()
+    
+    init(queue: Queue, account: Account, messageId: MessageId, poll: TelegramMediaPoll) {
+        self.queue = queue
+        
+        for option in poll.options {
+            var count: Int?
+            if let voters = poll.results.voters {
+                for voter in voters {
+                    if voter.opaqueIdentifier == option.opaqueIdentifier {
+                        count = voter.count.flatMap(Int.init)
+                    }
+                }
+            }
+            self.optionContexts[option.opaqueIdentifier] = PollResultsOptionContext(queue: self.queue, account: account, pollId: poll.pollId, messageId: messageId, opaqueIdentifier: option.opaqueIdentifier, count: count)
+        }
+        
+        self.state.set(combineLatest(queue: self.queue, self.optionContexts.map { (opaqueIdentifier, context) -> Signal<(Data, PollResultsOptionState), NoError> in
+            return context.state.get()
+            |> map { state -> (Data, PollResultsOptionState) in
+                return (opaqueIdentifier, state)
+            }
+        })
+        |> map { states -> PollResultsState in
+            var options: [Data: PollResultsOptionState] = [:]
+            for (opaqueIdentifier, state) in states {
+                options[opaqueIdentifier] = state
+            }
+            return PollResultsState(options: options)
+        })
+        
+        for (_, context) in self.optionContexts {
+            context.loadMore()
+        }
+    }
+    
+    func loadMore(optionOpaqueIdentifier: Data) {
+        self.optionContexts[optionOpaqueIdentifier]?.loadMore()
+    }
+}
+
+public final class PollResultsContext {
+    private let queue: Queue = Queue()
+    private let impl: QueueLocalObject<PollResultsContextImpl>
+    
+    public var state: Signal<PollResultsState, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.state.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    init(account: Account, messageId: MessageId, poll: TelegramMediaPoll) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return PollResultsContextImpl(queue: queue, account: account, messageId: messageId, poll: poll)
+        })
+    }
+    
+    public func loadMore(optionOpaqueIdentifier: Data) {
+        self.impl.with { impl in
+            impl.loadMore(optionOpaqueIdentifier: optionOpaqueIdentifier)
+        }
+    }
+}

@@ -1,0 +1,102 @@
+cjxl(1)
+=======
+:doctype: manpage
+
+Name
+----
+
+cjxl - compress images to JPEG XL
+
+Synopsis
+--------
+
+*cjxl* ['options'...] 'input' ['output.jxl']
+
+Description
+-----------
+
+`cjxl` compresses an image or animation to the JPEG XL format. It is intended to
+spare users the trouble of determining a set of optimal parameters for each
+individual image. Instead, for a given target quality, it should provide
+consistent visual results across various kinds of images. The defaults have been
+chosen to be sensible, so that the following commands should give satisfactory
+results in most cases:
+
+----
+cjxl input.png output.jxl
+cjxl input.jpg output.jxl
+cjxl input.gif output.jxl
+----
+
+Options
+-------
+
+-h::
+--help::
+    Displays the options that `cjxl` supports. On its own, it will only show
+    basic options. It can be combined with `-v` or `-v -v` to show increasingly
+    advanced options as well.
+
+-v::
+--verbose::
+    Increases verbosity. Can be repeated to increase it further, and also
+    applies to `--help`.
+
+-d 'distance'::
+--distance='distance'::
+    The preferred way to specify quality. It is specified in multiples of a
+    just-noticeable difference. That is, `-d 0` is mathematically lossless,
+    `-d 1` should be visually lossless, and higher distances yield denser and
+    denser files with lower and lower fidelity. Lossy sources such as JPEG and
+    GIF files are compressed losslessly by default, and in the case of JPEG
+    files specifically, the original JPEG can then be reconstructed bit-for-bit.
+    For lossless sources, `-d 1` is the default.
+
+-q 'quality'::
+--quality='quality'::
+    Alternative way to indicate the desired quality. 100 is lossless and lower
+    values yield smaller files. There is no lower bound to this quality
+    parameter, but positive values should approximately match the quality
+    setting of libjpeg.
+
+-e 'effort'::
+--effort='effort'::
+    Controls the amount of effort that goes into producing an ``optimal'' file
+    in terms of quality/size. That is to say, all other parameters being equal,
+    a higher effort should yield a file that is at least as dense and possibly
+    denser, and with at least as high and possibly higher quality.
++
+Recognized effort settings, from fastest to slowest, are:
++
+- 1 or ``lightning''
+- 2 or ``thunder''
+- 3 or ``falcon''
+- 4 or ``cheetah''
+- 5 or ``hare''
+- 6 or ``wombat''
+- 7 or ``squirrel'' (default)
+- 8 or ``kitten''
+- 9 or ``tortoise''
+
+Examples
+--------
+
+----
+# Compress a PNG file to a high-quality JPEG XL version.
+$ cjxl input.png output.jxl
+
+# Compress it at a slightly lower quality, appropriate for web use.
+$ cjxl -d 2 input.png output.jxl
+
+# Compress it losslessly. These are equivalent.
+$ cjxl -d 0   input.png lossless.jxl
+$ cjxl -q 100 input.png lossless.jxl
+
+# Compress a JPEG file losslessly.
+$ cjxl input.jpeg lossless-jpeg.jxl
+----
+
+See also
+--------
+
+*djxl*(1)

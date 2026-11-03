@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "phone.down.fill.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

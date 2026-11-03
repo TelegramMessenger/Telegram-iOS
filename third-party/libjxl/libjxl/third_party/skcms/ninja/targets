@@ -1,0 +1,30 @@
+build $out/skcms.o: compile_cc skcms.cc
+
+build $out/test_only.o: compile_c test_only.c
+
+build $out/tests.o:   compile_c tests.c
+build $out/tests$exe: link $out/skcms.o $out/tests.o $out/test_only.o
+build $out/tests.ok:  run  $out/tests$exe
+
+build $out/bench.o:   compile_c bench.c
+build $out/bench$exe: link $out/skcms.o $out/bench.o
+
+build $out/iccdump.o:   compile_c iccdump.c
+build $out/iccdump$exe: link $out/skcms.o $out/iccdump.o $out/test_only.o
+
+build $out/fuzz/fuzz_main.o: compile_c fuzz/fuzz_main.c
+
+build $out/fuzz/fuzz_iccprofile_atf.o: compile_c fuzz/fuzz_iccprofile_atf.c
+build $out/fuzz_iccprofile_atf$exe:    link $out/fuzz/fuzz_iccprofile_atf.o $
+                                            $out/fuzz/fuzz_main.o $
+                                            $out/skcms.o
+
+build $out/fuzz/fuzz_iccprofile_info.o: compile_c fuzz/fuzz_iccprofile_info.c
+build $out/fuzz_iccprofile_info$exe:    link $out/fuzz/fuzz_iccprofile_info.o $
+                                             $out/fuzz/fuzz_main.o $
+                                             $out/skcms.o
+
+build $out/fuzz/fuzz_iccprofile_transform.o: compile_c fuzz/fuzz_iccprofile_transform.c
+build $out/fuzz_iccprofile_transform$exe:    link $out/fuzz/fuzz_iccprofile_transform.o $
+                                                  $out/fuzz/fuzz_main.o $
+                                                  $out/skcms.o

@@ -1,0 +1,1522 @@
+/*
+ * Copyright (C) 2024 Niklas Haas
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#include "libavutil/avassert.h"
+#include "libavutil/hdr_dynamic_metadata.h"
+#include "libavutil/mastering_display_metadata.h"
+#include "libavutil/refstruct.h"
+
+#include "format.h"
+#include "csputils.h"
+#include "ops_internal.h"
+#include "config_components.h"
+
+#if CONFIG_UNSTABLE
+#include "libavutil/hwcontext.h"
+#endif
+
+#define Q(N) ((AVRational) { N, 1 })
+#define Q0   Q(0)
+#define Q1   Q(1)
+
+#define RET(x)                                                                 \
+    do {                                                                       \
+        int _ret = (x);                                                        \
+        if (_ret  < 0)                                                         \
+            return _ret;                                                       \
+    } while (0)
+
+typedef struct LegacyFormatEntry {
+    uint8_t is_supported_in         :1;
+    uint8_t is_supported_out        :1;
+    uint8_t is_supported_endianness :1;
+} LegacyFormatEntry;
+
+/* Format support table for legacy swscale */
+static const LegacyFormatEntry legacy_format_entries[] = {
+    [AV_PIX_FMT_YUV420P]        = { 1, 1 },
+    [AV_PIX_FMT_YUYV422]        = { 1, 1 },
+    [AV_PIX_FMT_RGB24]          = { 1, 1 },
+    [AV_PIX_FMT_BGR24]          = { 1, 1 },
+    [AV_PIX_FMT_YUV422P]        = { 1, 1 },
+    [AV_PIX_FMT_YUV444P]        = { 1, 1 },
+    [AV_PIX_FMT_YUV410P]        = { 1, 1 },
+    [AV_PIX_FMT_YUV411P]        = { 1, 1 },
+    [AV_PIX_FMT_GRAY8]          = { 1, 1 },
+    [AV_PIX_FMT_MONOWHITE]      = { 1, 1 },
+    [AV_PIX_FMT_MONOBLACK]      = { 1, 1 },
+    [AV_PIX_FMT_PAL8]           = { 1, 0 },
+    [AV_PIX_FMT_YUVJ420P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVJ411P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVJ422P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVJ444P]       = { 1, 1 },
+    [AV_PIX_FMT_YVYU422]        = { 1, 1 },
+    [AV_PIX_FMT_UYVY422]        = { 1, 1 },
+    [AV_PIX_FMT_UYYVYY411]      = { 1, 0 },
+    [AV_PIX_FMT_BGR8]           = { 1, 1 },
+    [AV_PIX_FMT_BGR4]           = { 0, 1 },
+    [AV_PIX_FMT_BGR4_BYTE]      = { 1, 1 },
+    [AV_PIX_FMT_RGB8]           = { 1, 1 },
+    [AV_PIX_FMT_RGB4]           = { 0, 1 },
+    [AV_PIX_FMT_RGB4_BYTE]      = { 1, 1 },
+    [AV_PIX_FMT_NV12]           = { 1, 1 },
+    [AV_PIX_FMT_NV21]           = { 1, 1 },
+    [AV_PIX_FMT_ARGB]           = { 1, 1 },
+    [AV_PIX_FMT_RGBA]           = { 1, 1 },
+    [AV_PIX_FMT_ABGR]           = { 1, 1 },
+    [AV_PIX_FMT_BGRA]           = { 1, 1 },
+    [AV_PIX_FMT_0RGB]           = { 1, 1 },
+    [AV_PIX_FMT_RGB0]           = { 1, 1 },
+    [AV_PIX_FMT_0BGR]           = { 1, 1 },
+    [AV_PIX_FMT_BGR0]           = { 1, 1 },
+    [AV_PIX_FMT_GRAY9BE]        = { 1, 1 },
+    [AV_PIX_FMT_GRAY9LE]        = { 1, 1 },
+    [AV_PIX_FMT_GRAY10BE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY10LE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY12BE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY12LE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY14BE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY14LE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY16BE]       = { 1, 1 },
+    [AV_PIX_FMT_GRAY16LE]       = { 1, 1 },
+    [AV_PIX_FMT_YUV440P]        = { 1, 1 },
+    [AV_PIX_FMT_YUVJ440P]       = { 1, 1 },
+    [AV_PIX_FMT_YUV440P10LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV440P10BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV440P12LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV440P12BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P]       = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P9BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P9LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P9BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P9LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P9BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P9LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P10BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P10LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P10BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P10LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P10BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P10LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P16BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA420P16LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P16BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P16LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P16BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P16LE]   = { 1, 1 },
+    [AV_PIX_FMT_RGB48BE]        = { 1, 1 },
+    [AV_PIX_FMT_RGB48LE]        = { 1, 1 },
+    [AV_PIX_FMT_RGBA64BE]       = { 1, 1, 1 },
+    [AV_PIX_FMT_RGBA64LE]       = { 1, 1, 1 },
+    [AV_PIX_FMT_RGB565BE]       = { 1, 1 },
+    [AV_PIX_FMT_RGB565LE]       = { 1, 1 },
+    [AV_PIX_FMT_RGB555BE]       = { 1, 1 },
+    [AV_PIX_FMT_RGB555LE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR565BE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR565LE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR555BE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR555LE]       = { 1, 1 },
+    [AV_PIX_FMT_YUV420P16LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P16BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P16LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P16BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P16LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P16BE]    = { 1, 1 },
+    [AV_PIX_FMT_RGB444LE]       = { 1, 1 },
+    [AV_PIX_FMT_RGB444BE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR444LE]       = { 1, 1 },
+    [AV_PIX_FMT_BGR444BE]       = { 1, 1 },
+    [AV_PIX_FMT_YA8]            = { 1, 1 },
+    [AV_PIX_FMT_YA16BE]         = { 1, 1 },
+    [AV_PIX_FMT_YA16LE]         = { 1, 1 },
+    [AV_PIX_FMT_BGR48BE]        = { 1, 1 },
+    [AV_PIX_FMT_BGR48LE]        = { 1, 1 },
+    [AV_PIX_FMT_BGRA64BE]       = { 1, 1, 1 },
+    [AV_PIX_FMT_BGRA64LE]       = { 1, 1, 1 },
+    [AV_PIX_FMT_YUV420P9BE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV420P9LE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV420P10BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P10LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P12BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P12LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P14BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV420P14LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P9BE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV422P9LE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV422P10BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P10LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P12BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P12LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P14BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV422P14LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P9BE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV444P9LE]     = { 1, 1 },
+    [AV_PIX_FMT_YUV444P10BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P10LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P12BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P12LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P14BE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P14LE]    = { 1, 1 },
+    [AV_PIX_FMT_YUV444P10MSBBE] = { 1, 1 },
+    [AV_PIX_FMT_YUV444P10MSBLE] = { 1, 1 },
+    [AV_PIX_FMT_YUV444P12MSBBE] = { 1, 1 },
+    [AV_PIX_FMT_YUV444P12MSBLE] = { 1, 1 },
+    [AV_PIX_FMT_GBRP]           = { 1, 1 },
+    [AV_PIX_FMT_GBRP9LE]        = { 1, 1 },
+    [AV_PIX_FMT_GBRP9BE]        = { 1, 1 },
+    [AV_PIX_FMT_GBRP10LE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRP10BE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRAP10LE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRAP10BE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRP10MSBLE]    = { 1, 1 },
+    [AV_PIX_FMT_GBRP10MSBBE]    = { 1, 1 },
+    [AV_PIX_FMT_GBRP12LE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRP12BE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRP12MSBLE]    = { 1, 1 },
+    [AV_PIX_FMT_GBRP12MSBBE]    = { 1, 1 },
+    [AV_PIX_FMT_GBRAP12LE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRAP12BE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRP14LE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRP14BE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRAP14LE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRAP14BE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRP16LE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRP16BE]       = { 1, 1 },
+    [AV_PIX_FMT_GBRPF32LE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRPF32BE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRAPF32LE]     = { 1, 1 },
+    [AV_PIX_FMT_GBRAPF32BE]     = { 1, 1 },
+    [AV_PIX_FMT_GBRPF16LE]      = { 1, 0 },
+    [AV_PIX_FMT_GBRPF16BE]      = { 1, 0 },
+    [AV_PIX_FMT_GBRAPF16LE]     = { 1, 0 },
+    [AV_PIX_FMT_GBRAPF16BE]     = { 1, 0 },
+    [AV_PIX_FMT_GBRAP]          = { 1, 1 },
+    [AV_PIX_FMT_GBRAP16LE]      = { 1, 1 },
+    [AV_PIX_FMT_GBRAP16BE]      = { 1, 1 },
+    [AV_PIX_FMT_BAYER_BGGR8]    = { 1, 0 },
+    [AV_PIX_FMT_BAYER_RGGB8]    = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GBRG8]    = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GRBG8]    = { 1, 0 },
+    [AV_PIX_FMT_BAYER_BGGR16LE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_BGGR16BE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_RGGB16LE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_RGGB16BE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GBRG16LE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GBRG16BE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GRBG16LE] = { 1, 0 },
+    [AV_PIX_FMT_BAYER_GRBG16BE] = { 1, 0 },
+    [AV_PIX_FMT_XYZ12BE]        = { 1, 1, 1 },
+    [AV_PIX_FMT_XYZ12LE]        = { 1, 1, 1 },
+    [AV_PIX_FMT_AYUV64LE]       = { 1, 1},
+    [AV_PIX_FMT_AYUV64BE]       = { 1, 1 },
+    [AV_PIX_FMT_P010LE]         = { 1, 1 },
+    [AV_PIX_FMT_P010BE]         = { 1, 1 },
+    [AV_PIX_FMT_P012LE]         = { 1, 1 },
+    [AV_PIX_FMT_P012BE]         = { 1, 1 },
+    [AV_PIX_FMT_P016LE]         = { 1, 1 },
+    [AV_PIX_FMT_P016BE]         = { 1, 1 },
+    [AV_PIX_FMT_GRAYF32LE]      = { 1, 1 },
+    [AV_PIX_FMT_GRAYF32BE]      = { 1, 1 },
+    [AV_PIX_FMT_GRAYF16LE]      = { 1, 0 },
+    [AV_PIX_FMT_GRAYF16BE]      = { 1, 0 },
+    [AV_PIX_FMT_YAF32LE]        = { 1, 0 },
+    [AV_PIX_FMT_YAF32BE]        = { 1, 0 },
+    [AV_PIX_FMT_YAF16LE]        = { 1, 0 },
+    [AV_PIX_FMT_YAF16BE]        = { 1, 0 },
+    [AV_PIX_FMT_YUVA422P12BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA422P12LE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P12BE]   = { 1, 1 },
+    [AV_PIX_FMT_YUVA444P12LE]   = { 1, 1 },
+    [AV_PIX_FMT_NV24]           = { 1, 1 },
+    [AV_PIX_FMT_NV42]           = { 1, 1 },
+    [AV_PIX_FMT_Y210LE]         = { 1, 1 },
+    [AV_PIX_FMT_Y212LE]         = { 1, 1 },
+    [AV_PIX_FMT_Y216LE]         = { 1, 1 },
+    [AV_PIX_FMT_X2RGB10LE]      = { 1, 1 },
+    [AV_PIX_FMT_X2BGR10LE]      = { 1, 1 },
+    [AV_PIX_FMT_NV20BE]         = { 1, 1 },
+    [AV_PIX_FMT_NV20LE]         = { 1, 1 },
+    [AV_PIX_FMT_P210BE]         = { 1, 1 },
+    [AV_PIX_FMT_P210LE]         = { 1, 1 },
+    [AV_PIX_FMT_P212BE]         = { 1, 1 },
+    [AV_PIX_FMT_P212LE]         = { 1, 1 },
+    [AV_PIX_FMT_P410BE]         = { 1, 1 },
+    [AV_PIX_FMT_P410LE]         = { 1, 1 },
+    [AV_PIX_FMT_P412BE]         = { 1, 1 },
+    [AV_PIX_FMT_P412LE]         = { 1, 1 },
+    [AV_PIX_FMT_P216BE]         = { 1, 1 },
+    [AV_PIX_FMT_P216LE]         = { 1, 1 },
+    [AV_PIX_FMT_P416BE]         = { 1, 1 },
+    [AV_PIX_FMT_P416LE]         = { 1, 1 },
+    [AV_PIX_FMT_NV16]           = { 1, 1 },
+    [AV_PIX_FMT_VUYA]           = { 1, 1 },
+    [AV_PIX_FMT_VUYX]           = { 1, 1 },
+    [AV_PIX_FMT_RGBAF16BE]      = { 1, 0 },
+    [AV_PIX_FMT_RGBAF16LE]      = { 1, 0 },
+    [AV_PIX_FMT_RGBF16BE]       = { 1, 0 },
+    [AV_PIX_FMT_RGBF16LE]       = { 1, 0 },
+    [AV_PIX_FMT_RGBF32BE]       = { 1, 0 },
+    [AV_PIX_FMT_RGBF32LE]       = { 1, 0 },
+    [AV_PIX_FMT_XV30LE]         = { 1, 1 },
+    [AV_PIX_FMT_XV36LE]         = { 1, 1 },
+    [AV_PIX_FMT_XV36BE]         = { 1, 1 },
+    [AV_PIX_FMT_XV48LE]         = { 1, 1 },
+    [AV_PIX_FMT_XV48BE]         = { 1, 1 },
+    [AV_PIX_FMT_AYUV]           = { 1, 1 },
+    [AV_PIX_FMT_UYVA]           = { 1, 1 },
+    [AV_PIX_FMT_VYU444]         = { 1, 1 },
+    [AV_PIX_FMT_V30XLE]         = { 1, 1 },
+};
+
+int sws_isSupportedInput(enum AVPixelFormat pix_fmt)
+{
+    return (unsigned)pix_fmt < FF_ARRAY_ELEMS(legacy_format_entries) ?
+    legacy_format_entries[pix_fmt].is_supported_in : 0;
+}
+
+int sws_isSupportedOutput(enum AVPixelFormat pix_fmt)
+{
+    return (unsigned)pix_fmt < FF_ARRAY_ELEMS(legacy_format_entries) ?
+    legacy_format_entries[pix_fmt].is_supported_out : 0;
+}
+
+int sws_isSupportedEndiannessConversion(enum AVPixelFormat pix_fmt)
+{
+    return (unsigned)pix_fmt < FF_ARRAY_ELEMS(legacy_format_entries) ?
+    legacy_format_entries[pix_fmt].is_supported_endianness : 0;
+}
+
+/**
+ * This function also sanitizes and strips the input data, removing irrelevant
+ * fields for certain formats.
+ */
+SwsFormat ff_fmt_from_frame(const AVFrame *frame, int field)
+{
+    const AVColorPrimariesDesc *primaries;
+    AVFrameSideData *sd;
+
+    enum AVPixelFormat format = frame->format;
+    enum AVPixelFormat hw_format = AV_PIX_FMT_NONE;
+
+#if CONFIG_UNSTABLE
+    if (frame->hw_frames_ctx) {
+        AVHWFramesContext *hwfc = (AVHWFramesContext *)frame->hw_frames_ctx->data;
+        hw_format = frame->format;
+        format = hwfc->sw_format;
+    }
+#endif
+
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(format);
+
+    SwsFormat fmt = {
+        .width     = frame->width,
+        .height    = frame->height,
+        .format    = format,
+        .hw_format = hw_format,
+        .range     = frame->color_range,
+        .csp       = frame->colorspace,
+        .loc       = frame->chroma_location,
+        .desc      = desc,
+        .color = {
+            .prim = frame->color_primaries,
+            .trc  = frame->color_trc,
+        },
+    };
+
+    av_assert1(fmt.width > 0);
+    av_assert1(fmt.height > 0);
+    av_assert1(fmt.format != AV_PIX_FMT_NONE);
+    av_assert0(desc);
+    if (desc->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL | AV_PIX_FMT_FLAG_BAYER)) {
+        /* RGB-like family */
+        fmt.csp   = AVCOL_SPC_RGB;
+        fmt.range = AVCOL_RANGE_JPEG;
+    } else if (desc->flags & AV_PIX_FMT_FLAG_XYZ) {
+        fmt.csp   = AVCOL_SPC_UNSPECIFIED;
+        fmt.color = (SwsColor) {
+            .prim = AVCOL_PRI_BT709, /* swscale currently hard-codes this XYZ matrix */
+            .trc  = AVCOL_TRC_SMPTE428,
+        };
+    } else if (desc->nb_components < 3) {
+        /* Grayscale formats */
+        fmt.color.prim = AVCOL_PRI_UNSPECIFIED;
+        fmt.csp        = AVCOL_SPC_UNSPECIFIED;
+        if (desc->flags & AV_PIX_FMT_FLAG_FLOAT)
+            fmt.range = AVCOL_RANGE_UNSPECIFIED;
+        else
+            fmt.range = AVCOL_RANGE_JPEG; // FIXME: this restriction should be lifted
+    }
+
+    switch (frame->format) {
+    case AV_PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUVJ411P:
+    case AV_PIX_FMT_YUVJ422P:
+    case AV_PIX_FMT_YUVJ444P:
+    case AV_PIX_FMT_YUVJ440P:
+        fmt.range = AVCOL_RANGE_JPEG;
+        break;
+    }
+
+    if (!desc->log2_chroma_w && !desc->log2_chroma_h)
+        fmt.loc = AVCHROMA_LOC_UNSPECIFIED;
+
+    if (frame->flags & AV_FRAME_FLAG_INTERLACED) {
+        fmt.height = (fmt.height + (field == FIELD_TOP)) >> 1;
+        fmt.interlaced = 1;
+    }
+
+    /* Set luminance and gamut information */
+    fmt.color.min_luma = av_make_q(0, 1);
+    switch (fmt.color.trc) {
+    case AVCOL_TRC_SMPTE2084:
+        fmt.color.max_luma = av_make_q(10000, 1); break;
+    case AVCOL_TRC_ARIB_STD_B67:
+        fmt.color.max_luma = av_make_q( 1000, 1); break; /* HLG reference display */
+    default:
+        fmt.color.max_luma = av_make_q(  203, 1); break; /* SDR reference brightness */
+    }
+
+    primaries = av_csp_primaries_desc_from_id(fmt.color.prim);
+    if (primaries)
+        fmt.color.gamut = primaries->prim;
+
+    if ((sd = av_frame_get_side_data(frame, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA))) {
+        const AVMasteringDisplayMetadata *mdm = (const AVMasteringDisplayMetadata *) sd->data;
+        if (mdm->has_luminance) {
+            fmt.color.min_luma = mdm->min_luminance;
+            fmt.color.max_luma = mdm->max_luminance;
+        }
+
+        if (mdm->has_primaries) {
+            /* Ignore mastering display white point as it has no bearance on
+             * the underlying content */
+            fmt.color.gamut.r.x = mdm->display_primaries[0][0];
+            fmt.color.gamut.r.y = mdm->display_primaries[0][1];
+            fmt.color.gamut.g.x = mdm->display_primaries[1][0];
+            fmt.color.gamut.g.y = mdm->display_primaries[1][1];
+            fmt.color.gamut.b.x = mdm->display_primaries[2][0];
+            fmt.color.gamut.b.y = mdm->display_primaries[2][1];
+        }
+    }
+
+    if ((sd = av_frame_get_side_data(frame, AV_FRAME_DATA_DYNAMIC_HDR_PLUS))) {
+        const AVDynamicHDRPlus *dhp = (const AVDynamicHDRPlus *) sd->data;
+        const AVHDRPlusColorTransformParams *pars = &dhp->params[0];
+        const AVRational nits = av_make_q(10000, 1);
+        AVRational maxrgb = pars->maxscl[0];
+
+        if (!dhp->num_windows || dhp->application_version > 1)
+            goto skip_hdr10;
+
+        /* Maximum of MaxSCL components */
+        if (av_cmp_q(pars->maxscl[1], maxrgb) > 0)
+            maxrgb = pars->maxscl[1];
+        if (av_cmp_q(pars->maxscl[2], maxrgb) > 0)
+            maxrgb = pars->maxscl[2];
+
+        if (maxrgb.num > 0) {
+            /* Estimate true luminance from MaxSCL */
+            const AVLumaCoefficients *luma = av_csp_luma_coeffs_from_avcsp(fmt.csp);
+            if (!luma)
+                goto skip_hdr10;
+            fmt.color.frame_peak = av_add_q(av_mul_q(luma->cr, pars->maxscl[0]),
+                                   av_add_q(av_mul_q(luma->cg, pars->maxscl[1]),
+                                            av_mul_q(luma->cb, pars->maxscl[2])));
+            /* Scale the scene average brightness by the ratio between the
+             * maximum luminance and the MaxRGB values */
+            fmt.color.frame_avg = av_mul_q(pars->average_maxrgb,
+                                           av_div_q(fmt.color.frame_peak, maxrgb));
+        } else {
+            /**
+             * Calculate largest value from histogram to use as fallback for
+             * clips with missing MaxSCL information. Note that this may end
+             * up picking the "reserved" value at the 5% percentile, which in
+             * practice appears to track the brightest pixel in the scene.
+             */
+            for (int i = 0; i < pars->num_distribution_maxrgb_percentiles; i++) {
+                const AVRational pct = pars->distribution_maxrgb[i].percentile;
+                if (av_cmp_q(pct, maxrgb) > 0)
+                    maxrgb = pct;
+                fmt.color.frame_peak = maxrgb;
+                fmt.color.frame_avg  = pars->average_maxrgb;
+            }
+        }
+
+        /* Rescale to nits */
+        fmt.color.frame_peak = av_mul_q(nits, fmt.color.frame_peak);
+        fmt.color.frame_avg  = av_mul_q(nits, fmt.color.frame_avg);
+    }
+skip_hdr10:
+
+    /* PQ is always scaled down to absolute zero, so ignore mastering metadata */
+    if (fmt.color.trc == AVCOL_TRC_SMPTE2084)
+        fmt.color.min_luma = av_make_q(0, 1);
+
+    return fmt;
+}
+
+static int infer_prim_ref(SwsColor *csp, const SwsColor *ref)
+{
+    if (csp->prim != AVCOL_PRI_UNSPECIFIED)
+        return 0;
+
+    /* Reuse the reference gamut only for "safe", similar primaries */
+    switch (ref->prim) {
+    case AVCOL_PRI_BT709:
+    case AVCOL_PRI_BT470M:
+    case AVCOL_PRI_BT470BG:
+    case AVCOL_PRI_SMPTE170M:
+    case AVCOL_PRI_SMPTE240M:
+        csp->prim  = ref->prim;
+        csp->gamut = ref->gamut;
+        break;
+    default:
+        csp->prim  = AVCOL_PRI_BT709;
+        csp->gamut = av_csp_primaries_desc_from_id(csp->prim)->prim;
+        break;
+    }
+
+    return 1;
+}
+
+static int infer_trc_ref(SwsColor *csp, const SwsColor *ref)
+{
+    if (csp->trc != AVCOL_TRC_UNSPECIFIED)
+        return 0;
+
+    /* Pick a suitable SDR transfer function, to try and minimize conversions */
+    switch (ref->trc) {
+    case AVCOL_TRC_UNSPECIFIED:
+    /* HDR curves, never default to these */
+    case AVCOL_TRC_SMPTE2084:
+    case AVCOL_TRC_ARIB_STD_B67:
+        csp->trc = AVCOL_TRC_BT709;
+        csp->min_luma = av_make_q(0, 1);
+        csp->max_luma = av_make_q(203, 1);
+        break;
+    default:
+        csp->trc = ref->trc;
+        csp->min_luma = ref->min_luma;
+        csp->max_luma = ref->max_luma;
+        break;
+    }
+
+    return 1;
+}
+
+bool ff_infer_colors(SwsColor *src, SwsColor *dst)
+{
+    int incomplete = 0;
+
+    incomplete |= infer_prim_ref(dst, src);
+    incomplete |= infer_prim_ref(src, dst);
+    av_assert0(src->prim != AVCOL_PRI_UNSPECIFIED);
+    av_assert0(dst->prim != AVCOL_PRI_UNSPECIFIED);
+
+    incomplete |= infer_trc_ref(dst, src);
+    incomplete |= infer_trc_ref(src, dst);
+    av_assert0(src->trc != AVCOL_TRC_UNSPECIFIED);
+    av_assert0(dst->trc != AVCOL_TRC_UNSPECIFIED);
+
+    return incomplete;
+}
+
+int sws_test_format(enum AVPixelFormat format, int output)
+{
+    return output ? sws_isSupportedOutput(format) : sws_isSupportedInput(format);
+}
+
+int sws_test_hw_format(enum AVPixelFormat format)
+{
+    switch (format) {
+    case AV_PIX_FMT_NONE: return 1;
+#if CONFIG_VULKAN
+    case AV_PIX_FMT_VULKAN: return 1;
+#endif
+    default: return 0;
+    }
+}
+
+int sws_test_colorspace(enum AVColorSpace csp, int output)
+{
+    switch (csp) {
+    case AVCOL_SPC_UNSPECIFIED:
+    case AVCOL_SPC_RGB:
+    case AVCOL_SPC_BT709:
+    case AVCOL_SPC_BT470BG:
+    case AVCOL_SPC_SMPTE170M:
+    case AVCOL_SPC_FCC:
+    case AVCOL_SPC_SMPTE240M:
+    case AVCOL_SPC_BT2020_NCL:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+int sws_test_primaries(enum AVColorPrimaries prim, int output)
+{
+    return ((prim > AVCOL_PRI_RESERVED0 && prim < AVCOL_PRI_NB) ||
+            (prim >= AVCOL_PRI_EXT_BASE && prim < AVCOL_PRI_EXT_NB)) &&
+           prim != AVCOL_PRI_RESERVED;
+}
+
+int sws_test_transfer(enum AVColorTransferCharacteristic trc, int output)
+{
+    av_csp_eotf_function eotf = output ? av_csp_itu_eotf_inv(trc)
+                                       : av_csp_itu_eotf(trc);
+    return trc == AVCOL_TRC_UNSPECIFIED || eotf != NULL;
+}
+
+static int test_range(enum AVColorRange range)
+{
+    return (unsigned)range < AVCOL_RANGE_NB;
+}
+
+static int test_loc(enum AVChromaLocation loc)
+{
+    return (unsigned)loc < AVCHROMA_LOC_NB;
+}
+
+int ff_test_fmt(const SwsFormat *fmt, int output)
+{
+    return fmt->width > 0 && fmt->height > 0            &&
+           sws_test_format    (fmt->format,     output) &&
+           sws_test_colorspace(fmt->csp,        output) &&
+           sws_test_primaries (fmt->color.prim, output) &&
+           sws_test_transfer  (fmt->color.trc,  output) &&
+           sws_test_hw_format (fmt->hw_format)          &&
+           test_range         (fmt->range)              &&
+           test_loc           (fmt->loc);
+}
+
+int sws_test_frame(const AVFrame *frame, int output)
+{
+    for (int field = 0; field < 2; field++) {
+        const SwsFormat fmt = ff_fmt_from_frame(frame, field);
+        if (!ff_test_fmt(&fmt, output))
+            return 0;
+        if (!fmt.interlaced)
+            break;
+    }
+
+    return 1;
+}
+
+int sws_is_noop(const AVFrame *dst, const AVFrame *src)
+{
+    for (int field = 0; field < 2; field++) {
+        SwsFormat dst_fmt = ff_fmt_from_frame(dst, field);
+        SwsFormat src_fmt = ff_fmt_from_frame(src, field);
+        if (!ff_fmt_equal(&dst_fmt, &src_fmt))
+            return 0;
+        if (!dst_fmt.interlaced)
+            break;
+    }
+
+    return 1;
+}
+
+void ff_sws_frame_from_avframe(SwsFrame *dst, const AVFrame *src)
+{
+    dst->format  = src->format;
+    dst->width   = src->width;
+    dst->height  = src->height;
+    dst->avframe = src;
+    for (int i = 0; i < FF_ARRAY_ELEMS(dst->data); i++) {
+        dst->data[i]     = src->data[i];
+        dst->linesize[i] = src->linesize[i];
+    }
+}
+
+#if CONFIG_UNSTABLE
+
+/* Returns the type suitable for a pixel after fully decoding/unpacking it */
+static SwsPixelType fmt_pixel_type(enum AVPixelFormat fmt)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    const int bits = FFALIGN(desc->comp[0].depth, 8);
+    if (desc->flags & AV_PIX_FMT_FLAG_FLOAT) {
+        switch (bits) {
+        case 32: return SWS_PIXEL_F32;
+        /* TODO: no support for 16-bit float yet */
+        }
+    } else {
+        switch (bits) {
+        case  8: return SWS_PIXEL_U8;
+        case 16: return SWS_PIXEL_U16;
+        /* TODO: AVRational cannot represent UINT32_MAX */
+        }
+    }
+
+    return SWS_PIXEL_NONE;
+}
+
+/* A regular format is defined as any format that contains only a single
+ * component per elementary data type (i.e. no sub-byte pack/unpack needed),
+ * and whose components map 1:1 onto elementary data units */
+static int is_regular_fmt(enum AVPixelFormat fmt)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    if (desc->flags & (AV_PIX_FMT_FLAG_PAL | AV_PIX_FMT_FLAG_BAYER))
+        return 0; /* no 1:1 correspondence between components and data units */
+    if (desc->flags & (AV_PIX_FMT_FLAG_BITSTREAM))
+        return 0; /* bitstream formats are packed by definition */
+    if ((desc->flags & AV_PIX_FMT_FLAG_PLANAR) || desc->nb_components == 1)
+        return 1; /* planar formats are regular by definition */
+
+    const int step = desc->comp[0].step;
+    int total_bits = 0;
+
+    for (int i = 0; i < desc->nb_components; i++) {
+        if (desc->comp[i].shift || desc->comp[i].step != step)
+            return 0; /* irregular/packed format */
+        total_bits += desc->comp[i].depth;
+    }
+
+    /* Exclude formats with missing components like RGB0, 0RGB, etc. */
+    return total_bits == step * 8;
+}
+
+typedef struct FmtInfo {
+    SwsReadWriteOp rw;
+    SwsSwizzleOp   swizzle;
+    SwsPackOp      pack;
+    int            shift;
+} FmtInfo;
+
+#define BITSTREAM_FMT(SWIZ, FRAC, PACKED, ...) (FmtInfo) {      \
+    .rw = { .elems = 1, .frac = FRAC, .packed = PACKED },       \
+    .swizzle = SWIZ,                                            \
+    __VA_ARGS__                                                 \
+}
+
+#define SUBPACKED_FMT(SWIZ, ...) (FmtInfo) {                    \
+    .rw = { .elems = 1, .packed = true },                       \
+    .swizzle = SWIZ,                                            \
+    .pack.pattern = {__VA_ARGS__},                              \
+}
+
+#define PACKED_FMT(SWIZ, N, ...) (FmtInfo) {                    \
+    .rw = { .elems = N, .packed = (N) > 1 },                    \
+    .swizzle = SWIZ,                                            \
+    __VA_ARGS__                                                 \
+}
+
+#define RGBA SWS_SWIZZLE(0, 1, 2, 3)
+#define BGRA SWS_SWIZZLE(2, 1, 0, 3)
+#define ARGB SWS_SWIZZLE(3, 0, 1, 2)
+#define ABGR SWS_SWIZZLE(3, 2, 1, 0)
+#define AVYU SWS_SWIZZLE(3, 2, 0, 1)
+#define VYUA SWS_SWIZZLE(2, 0, 1, 3)
+#define UYVA SWS_SWIZZLE(1, 0, 2, 3)
+#define VUYA BGRA
+
+static FmtInfo fmt_info_irregular(enum AVPixelFormat fmt)
+{
+    switch (fmt) {
+    /* Bitstream formats */
+    case AV_PIX_FMT_MONOWHITE:
+    case AV_PIX_FMT_MONOBLACK:
+        return BITSTREAM_FMT(RGBA, 3, false);
+    case AV_PIX_FMT_RGB4: return BITSTREAM_FMT(RGBA, 1, true, .pack = {{ 1, 2, 1 }});
+    case AV_PIX_FMT_BGR4: return BITSTREAM_FMT(BGRA, 1, true, .pack = {{ 1, 2, 1 }});
+
+    /* Sub-packed 8-bit aligned formats */
+    case AV_PIX_FMT_RGB4_BYTE:  return SUBPACKED_FMT(RGBA, 1, 2, 1);
+    case AV_PIX_FMT_BGR4_BYTE:  return SUBPACKED_FMT(BGRA, 1, 2, 1);
+    case AV_PIX_FMT_RGB8:       return SUBPACKED_FMT(RGBA, 3, 3, 2);
+    case AV_PIX_FMT_BGR8:       return SUBPACKED_FMT(BGRA, 2, 3, 3);
+
+    /* Sub-packed 16-bit aligned formats */
+    case AV_PIX_FMT_RGB565LE:
+    case AV_PIX_FMT_RGB565BE:
+        return SUBPACKED_FMT(RGBA, 5, 6, 5);
+    case AV_PIX_FMT_BGR565LE:
+    case AV_PIX_FMT_BGR565BE:
+        return SUBPACKED_FMT(BGRA, 5, 6, 5);
+    case AV_PIX_FMT_RGB555LE:
+    case AV_PIX_FMT_RGB555BE:
+        return SUBPACKED_FMT(RGBA, 5, 5, 5);
+    case AV_PIX_FMT_BGR555LE:
+    case AV_PIX_FMT_BGR555BE:
+        return SUBPACKED_FMT(BGRA, 5, 5, 5);
+    case AV_PIX_FMT_RGB444LE:
+    case AV_PIX_FMT_RGB444BE:
+        return SUBPACKED_FMT(RGBA, 4, 4, 4);
+    case AV_PIX_FMT_BGR444LE:
+    case AV_PIX_FMT_BGR444BE:
+        return SUBPACKED_FMT(BGRA, 4, 4, 4);
+
+    /* Sub-packed 32-bit aligned formats */
+    case AV_PIX_FMT_X2RGB10LE:
+    case AV_PIX_FMT_X2RGB10BE:
+        return SUBPACKED_FMT(ARGB, 2, 10, 10, 10);
+    case AV_PIX_FMT_X2BGR10LE:
+    case AV_PIX_FMT_X2BGR10BE:
+        return SUBPACKED_FMT(ABGR, 2, 10, 10, 10);
+    case AV_PIX_FMT_XV30LE:
+    case AV_PIX_FMT_XV30BE:
+        return SUBPACKED_FMT(AVYU, 2, 10, 10, 10);
+    case AV_PIX_FMT_V30XLE:
+    case AV_PIX_FMT_V30XBE:
+        return SUBPACKED_FMT(VYUA, 10, 10, 10, 2);
+
+    /* 3-component formats with extra padding */
+    case AV_PIX_FMT_RGB0:   return PACKED_FMT(RGBA, 4);
+    case AV_PIX_FMT_BGR0:   return PACKED_FMT(BGRA, 4);
+    case AV_PIX_FMT_0RGB:   return PACKED_FMT(ARGB, 4);
+    case AV_PIX_FMT_0BGR:   return PACKED_FMT(ABGR, 4);
+    case AV_PIX_FMT_VUYX:   return PACKED_FMT(VUYA, 4);
+    case AV_PIX_FMT_XV36LE:
+    case AV_PIX_FMT_XV36BE:
+        return PACKED_FMT(UYVA, 4, .shift = 4);
+    case AV_PIX_FMT_XV48LE:
+    case AV_PIX_FMT_XV48BE:
+        return PACKED_FMT(UYVA, 4);
+    }
+
+    return (FmtInfo) {0};
+}
+
+struct comp {
+    int index;
+    int plane;
+    int offset;
+};
+
+/* Compare by (plane, offset) */
+static int cmp_comp(const void *a, const void *b) {
+    const struct comp *ca = a;
+    const struct comp *cb = b;
+    if (ca->plane != cb->plane)
+        return ca->plane - cb->plane;
+    return ca->offset - cb->offset;
+}
+
+static int fmt_analyze_regular(const AVPixFmtDescriptor *desc, SwsReadWriteOp *rw_op,
+                               SwsSwizzleOp *swizzle, int *shift)
+{
+    if (desc->nb_components == 2) {
+        /* YA formats */
+        *swizzle = SWS_SWIZZLE(0, 3, 1, 2);
+    } else {
+        /* Sort by increasing component order */
+        struct comp sorted[4] = { {0}, {1}, {2}, {3} };
+        for (int i = 0; i < desc->nb_components; i++) {
+            sorted[i].plane  = desc->comp[i].plane;
+            sorted[i].offset = desc->comp[i].offset;
+        }
+
+        qsort(sorted, desc->nb_components, sizeof(struct comp), cmp_comp);
+
+        SwsSwizzleOp swiz = SWS_SWIZZLE(0, 1, 2, 3);
+        for (int i = 0; i < desc->nb_components; i++)
+            swiz.in[i] = sorted[i].index;
+        *swizzle = swiz;
+    }
+
+    *shift = desc->comp[0].shift;
+    *rw_op = (SwsReadWriteOp) {
+        .elems  = desc->nb_components,
+        .packed = desc->nb_components > 1 && !(desc->flags & AV_PIX_FMT_FLAG_PLANAR),
+    };
+    return 0;
+}
+
+static int fmt_analyze(enum AVPixelFormat fmt, SwsReadWriteOp *rw_op,
+                       SwsPackOp *pack_op, SwsSwizzleOp *swizzle, int *shift,
+                       SwsPixelType *pixel_type, SwsPixelType *raw_type)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    if (!desc)
+        return AVERROR(EINVAL);
+
+    /* No support for subsampled formats at the moment */
+    if (desc->log2_chroma_w || desc->log2_chroma_h)
+        return AVERROR(ENOTSUP);
+
+    /* No support for semi-planar formats at the moment */
+    if (desc->flags & AV_PIX_FMT_FLAG_PLANAR &&
+        av_pix_fmt_count_planes(fmt) < desc->nb_components)
+        return AVERROR(ENOTSUP);
+
+    *pixel_type = *raw_type = fmt_pixel_type(fmt);
+    if (!*pixel_type)
+        return AVERROR(ENOTSUP);
+
+    if (is_regular_fmt(fmt)) {
+        *pack_op = (SwsPackOp) {0};
+        return fmt_analyze_regular(desc, rw_op, swizzle, shift);
+    }
+
+    FmtInfo info = fmt_info_irregular(fmt);
+    if (!info.rw.elems)
+        return AVERROR(ENOTSUP);
+
+    *rw_op   = info.rw;
+    *pack_op = info.pack;
+    *swizzle = info.swizzle;
+    *shift   = info.shift;
+
+    if (info.pack.pattern[0]) {
+        const int sum = info.pack.pattern[0] + info.pack.pattern[1] +
+                        info.pack.pattern[2] + info.pack.pattern[3];
+        if (sum > 16)
+            *raw_type = SWS_PIXEL_U32;
+        else if (sum > 8)
+            *raw_type = SWS_PIXEL_U16;
+        else
+            *raw_type = SWS_PIXEL_U8;
+    }
+
+    return 0;
+}
+
+static SwsSwizzleOp swizzle_inv(SwsSwizzleOp swiz) {
+    /* Input[x] =: Output[swizzle.x] */
+    unsigned out[4];
+    out[swiz.x] = 0;
+    out[swiz.y] = 1;
+    out[swiz.z] = 2;
+    out[swiz.w] = 3;
+    return (SwsSwizzleOp) {{ .x = out[0], out[1], out[2], out[3] }};
+}
+
+/**
+ * This initializes all absent components explicitly to zero. There is no
+ * need to worry about the correct neutral value as fmt_decode() will
+ * implicitly ignore and overwrite absent components in any case. This function
+ * is just to ensure that we don't operate on undefined memory. In most cases,
+ * it will end up getting pushed towards the output or optimized away entirely
+ * by the optimization pass.
+ */
+static SwsConst fmt_clear(enum AVPixelFormat fmt)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    const bool has_chroma = desc->nb_components >= 3;
+    const bool has_alpha  = desc->flags & AV_PIX_FMT_FLAG_ALPHA;
+
+    SwsConst c = {0};
+    if (!has_chroma)
+        c.q4[1] = c.q4[2] = Q0;
+    if (!has_alpha)
+        c.q4[3] = Q0;
+
+    return c;
+}
+
+#if HAVE_BIGENDIAN
+#  define NATIVE_ENDIAN_FLAG AV_PIX_FMT_FLAG_BE
+#else
+#  define NATIVE_ENDIAN_FLAG 0
+#endif
+
+int ff_sws_decode_pixfmt(SwsOpList *ops, enum AVPixelFormat fmt)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    SwsPixelType pixel_type, raw_type;
+    SwsReadWriteOp rw_op;
+    SwsSwizzleOp swizzle;
+    SwsPackOp unpack;
+    SwsComps *comps = &ops->comps_src;
+    int shift;
+
+    RET(fmt_analyze(fmt, &rw_op, &unpack, &swizzle, &shift,
+                    &pixel_type, &raw_type));
+
+    swizzle = swizzle_inv(swizzle);
+
+    /* Set baseline pixel content flags */
+    const int integer = ff_sws_pixel_type_is_int(raw_type);
+    const int swapped = ff_sws_pixel_type_size(raw_type) > 1 &&
+                        (desc->flags & AV_PIX_FMT_FLAG_BE) != NATIVE_ENDIAN_FLAG;
+    for (int i = 0; i < rw_op.elems; i++) {
+        comps->flags[i] = (integer ? SWS_COMP_EXACT   : 0) |
+                          (swapped ? SWS_COMP_SWAPPED : 0);
+    }
+
+    /* Generate value range information for simple unpacked formats */
+    if (integer && !unpack.pattern[0]) {
+        /* YA formats have desc->comp[] in the order {Y, A} instead of the
+         * canonical order {Y, U, V, A} */
+        const int is_ya = desc->nb_components == 2;
+        for (int c = 0; c < desc->nb_components; c++) {
+            const int bits   = desc->comp[c].depth + shift;
+            const int idx    = swizzle.in[is_ya ? 3 * c : c];
+            comps->min[idx]  = Q0;
+            if (bits < 32) /* FIXME: AVRational is limited to INT_MAX */
+                comps->max[idx] = Q((1ULL << bits) - 1);
+        }
+    }
+
+    /* TODO: handle subsampled or semipacked input formats */
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op    = SWS_OP_READ,
+        .type  = raw_type,
+        .rw    = rw_op,
+    }));
+
+    if (swapped) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_SWAP_BYTES,
+            .type = raw_type,
+        }));
+    }
+
+    if (unpack.pattern[0]) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_UNPACK,
+            .type = raw_type,
+            .pack = unpack,
+        }));
+
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_CONVERT,
+            .type = raw_type,
+            .convert.to = pixel_type,
+        }));
+    }
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op      = SWS_OP_SWIZZLE,
+        .type    = pixel_type,
+        .swizzle = swizzle,
+    }));
+
+    if (shift) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_RSHIFT,
+            .type = pixel_type,
+            .c.u  = shift,
+        }));
+    }
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op   = SWS_OP_CLEAR,
+        .type = pixel_type,
+        .c    = fmt_clear(fmt),
+    }));
+
+    return 0;
+}
+
+int ff_sws_encode_pixfmt(SwsOpList *ops, enum AVPixelFormat fmt)
+{
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(fmt);
+    SwsPixelType pixel_type, raw_type;
+    SwsReadWriteOp rw_op;
+    SwsSwizzleOp swizzle;
+    SwsPackOp pack;
+    int shift;
+
+    RET(fmt_analyze(fmt, &rw_op, &pack, &swizzle, &shift,
+                    &pixel_type, &raw_type));
+
+    if (shift) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_LSHIFT,
+            .type = pixel_type,
+            .c.u  = shift,
+        }));
+    }
+
+    if (rw_op.elems > desc->nb_components) {
+        /* Format writes unused alpha channel, clear it explicitly for sanity */
+        av_assert1(!(desc->flags & AV_PIX_FMT_FLAG_ALPHA));
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_CLEAR,
+            .type = pixel_type,
+            .c.q4[3] = Q0,
+        }));
+    }
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op      = SWS_OP_SWIZZLE,
+        .type    = pixel_type,
+        .swizzle = swizzle,
+    }));
+
+    if (pack.pattern[0]) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_CONVERT,
+            .type = pixel_type,
+            .convert.to = raw_type,
+        }));
+
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_PACK,
+            .type = raw_type,
+            .pack = pack,
+        }));
+    }
+
+    if (ff_sws_pixel_type_size(raw_type) > 1 &&
+        (desc->flags & AV_PIX_FMT_FLAG_BE) != NATIVE_ENDIAN_FLAG) {
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_SWAP_BYTES,
+            .type = raw_type,
+        }));
+    }
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op   = SWS_OP_WRITE,
+        .type = raw_type,
+        .rw   = rw_op,
+    }));
+
+    return 0;
+}
+
+static inline AVRational av_neg_q(AVRational x)
+{
+    return (AVRational) { -x.num, x.den };
+}
+
+static SwsLinearOp fmt_encode_range(const SwsFormat *fmt, bool *incomplete)
+{
+    SwsLinearOp c = { .m = {
+        { Q1, Q0, Q0, Q0, Q0 },
+        { Q0, Q1, Q0, Q0, Q0 },
+        { Q0, Q0, Q1, Q0, Q0 },
+        { Q0, Q0, Q0, Q1, Q0 },
+    }};
+
+    const int depth0 = fmt->desc->comp[0].depth;
+    const int depth1 = fmt->desc->comp[1].depth;
+    const int depth2 = fmt->desc->comp[2].depth;
+    const int depth3 = fmt->desc->comp[3].depth;
+
+    if (fmt->desc->flags & AV_PIX_FMT_FLAG_FLOAT)
+        return c; /* floats are directly output as-is */
+
+    av_assert0(depth0 < 32 && depth1 < 32 && depth2 < 32 && depth3 < 32);
+    if (fmt->csp == AVCOL_SPC_RGB || (fmt->desc->flags & AV_PIX_FMT_FLAG_XYZ)) {
+        c.m[0][0] = Q((1 << depth0) - 1);
+        c.m[1][1] = Q((1 << depth1) - 1);
+        c.m[2][2] = Q((1 << depth2) - 1);
+    } else if (fmt->range == AVCOL_RANGE_JPEG) {
+        /* Full range YUV */
+        c.m[0][0] = Q((1 << depth0) - 1);
+        if (fmt->desc->nb_components >= 3) {
+            /* This follows the ITU-R convention, which is slightly different
+             * from the JFIF convention. */
+            c.m[1][1] = Q((1 << depth1) - 1);
+            c.m[2][2] = Q((1 << depth2) - 1);
+            c.m[1][4] = Q(1 << (depth1 - 1));
+            c.m[2][4] = Q(1 << (depth2 - 1));
+        }
+    } else {
+        /* Limited range YUV */
+        if (fmt->range == AVCOL_RANGE_UNSPECIFIED)
+            *incomplete = true;
+        c.m[0][0] = Q(219 << (depth0 - 8));
+        c.m[0][4] = Q( 16 << (depth0 - 8));
+        if (fmt->desc->nb_components >= 3) {
+            c.m[1][1] = Q(224 << (depth1 - 8));
+            c.m[2][2] = Q(224 << (depth2 - 8));
+            c.m[1][4] = Q(128 << (depth1 - 8));
+            c.m[2][4] = Q(128 << (depth2 - 8));
+        }
+    }
+
+    if (fmt->desc->flags & AV_PIX_FMT_FLAG_ALPHA) {
+        const bool is_ya = fmt->desc->nb_components == 2;
+        c.m[3][3] = Q((1 << (is_ya ? depth1 : depth3)) - 1);
+    }
+
+    if (fmt->format == AV_PIX_FMT_MONOWHITE) {
+        /* This format is inverted, 0 = white, 1 = black */
+        c.m[0][4] = av_add_q(c.m[0][4], c.m[0][0]);
+        c.m[0][0] = av_neg_q(c.m[0][0]);
+    }
+
+    c.mask = ff_sws_linear_mask(c);
+    return c;
+}
+
+static SwsLinearOp fmt_decode_range(const SwsFormat *fmt, bool *incomplete)
+{
+    SwsLinearOp c = fmt_encode_range(fmt, incomplete);
+
+    /* Invert main diagonal + offset: x = s * y + k  ==>  y = (x - k) / s */
+    for (int i = 0; i < 4; i++) {
+        av_assert1(c.m[i][i].num);
+        c.m[i][i] = av_inv_q(c.m[i][i]);
+        c.m[i][4] = av_mul_q(c.m[i][4], av_neg_q(c.m[i][i]));
+    }
+
+    /* Explicitly initialize alpha for sanity */
+    if (!(fmt->desc->flags & AV_PIX_FMT_FLAG_ALPHA))
+        c.m[3][4] = Q1;
+
+    c.mask = ff_sws_linear_mask(c);
+    return c;
+}
+
+static AVRational *generate_bayer_matrix(const int size_log2)
+{
+    const int size = 1 << size_log2;
+    const int num_entries = size * size;
+    AVRational *m = av_refstruct_allocz(sizeof(*m) * num_entries);
+    av_assert1(size_log2 < 16);
+    if (!m)
+        return NULL;
+
+    /* Start with a 1x1 matrix */
+    m[0] = Q0;
+
+    /* Generate three copies of the current, appropriately scaled and offset */
+    for (int sz = 1; sz < size; sz <<= 1) {
+        const int den = 4 * sz * sz;
+        for (int y = 0; y < sz; y++) {
+            for (int x = 0; x < sz; x++) {
+                const AVRational cur = m[y * size + x];
+                m[(y + sz) * size + x + sz] = av_add_q(cur, av_make_q(1, den));
+                m[(y     ) * size + x + sz] = av_add_q(cur, av_make_q(2, den));
+                m[(y + sz) * size + x     ] = av_add_q(cur, av_make_q(3, den));
+            }
+        }
+    }
+
+    /**
+     * To correctly round, we need to evenly distribute the result on [0, 1),
+     * giving an average value of 1/2.
+     *
+     * After the above construction, we have a matrix with average value:
+     *   [ 0/N + 1/N + 2/N + ... (N-1)/N ] / N = (N-1)/(2N)
+     * where N = size * size is the total number of entries.
+     *
+     * To make the average value equal to 1/2 = N/(2N), add a bias of 1/(2N).
+     */
+    for (int i = 0; i < num_entries; i++)
+        m[i] = av_add_q(m[i], av_make_q(1, 2 * num_entries));
+
+    return m;
+}
+
+static bool trc_is_hdr(enum AVColorTransferCharacteristic trc)
+{
+    static_assert(AVCOL_TRC_NB == 19, "Update this list when adding TRCs");
+    static_assert(AVCOL_TRC_EXT_NB == 257, "Update this list when adding TRCs");
+    switch (trc) {
+    case AVCOL_TRC_LOG:
+    case AVCOL_TRC_LOG_SQRT:
+    case AVCOL_TRC_V_LOG:
+    case AVCOL_TRC_SMPTEST2084:
+    case AVCOL_TRC_ARIB_STD_B67:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static int fmt_dither(SwsContext *ctx, SwsOpList *ops,
+                      const SwsPixelType type,
+                      const SwsFormat *src, const SwsFormat *dst)
+{
+    SwsDither mode = ctx->dither;
+    SwsDitherOp dither;
+    const int bpc = dst->desc->comp[0].depth;
+
+    if (mode == SWS_DITHER_AUTO) {
+        /* Visual threshold of perception: 12 bits for SDR, 14 bits for HDR */
+        const int jnd_bits = trc_is_hdr(dst->color.trc) ? 14 : 12;
+        mode = bpc >= jnd_bits ? SWS_DITHER_NONE : SWS_DITHER_BAYER;
+    }
+
+    switch (mode) {
+    case SWS_DITHER_NONE:
+        if (ctx->flags & SWS_ACCURATE_RND) {
+            /* Add constant 0.5 for correct rounding */
+            AVRational *bias = av_refstruct_allocz(sizeof(*bias));
+            if (!bias)
+                return AVERROR(ENOMEM);
+            *bias = (AVRational) {1, 2};
+            return ff_sws_op_list_append(ops, &(SwsOp) {
+                .op   = SWS_OP_DITHER,
+                .type = type,
+                .dither.matrix = bias,
+            });
+        } else {
+            return 0; /* No-op */
+        }
+    case SWS_DITHER_BAYER:
+        /* Hardcode 16x16 matrix for now; in theory we could adjust this
+         * based on the expected level of precision in the output, since lower
+         * bit depth outputs can suffice with smaller dither matrices; however
+         * in practice we probably want to use error diffusion for such low bit
+         * depths anyway */
+        dither.size_log2 = 4;
+        dither.matrix = generate_bayer_matrix(dither.size_log2);
+        if (!dither.matrix)
+            return AVERROR(ENOMEM);
+
+        /* Brute-forced offsets; minimizes quantization error across a 16x16
+         * bayer dither pattern for standard RGBA and YUVA pixel formats */
+        const int offsets_16x16[4] = {0, 3, 2, 5};
+        for (int i = 0; i < 4; i++) {
+            av_assert0(offsets_16x16[i] <= INT8_MAX);
+            dither.y_offset[i] = offsets_16x16[i];
+        }
+
+        if (src->desc->nb_components < 3 && bpc >= 8) {
+            /**
+             * For high-bit-depth sources without chroma, use same matrix
+             * offset for all color channels. This prevents introducing color
+             * noise in grayscale images; and also allows optimizing the dither
+             * operation. Skipped for low bit depth (<8 bpc) as the loss in
+             * PSNR, from the inability to diffuse error among all three
+             * channels, can be substantial.
+             *
+             * This shifts: { X, Y, Z, W } -> { X, X, X, Y }
+             */
+            dither.y_offset[3] = dither.y_offset[1];
+            dither.y_offset[1] = dither.y_offset[2] = dither.y_offset[0];
+        }
+
+        return ff_sws_op_list_append(ops, &(SwsOp) {
+            .op     = SWS_OP_DITHER,
+            .type   = type,
+            .dither = dither,
+        });
+    case SWS_DITHER_ED:
+    case SWS_DITHER_A_DITHER:
+    case SWS_DITHER_X_DITHER:
+        return AVERROR(ENOTSUP);
+
+    case SWS_DITHER_NB:
+        break;
+    }
+
+    av_unreachable("Invalid dither mode");
+    return AVERROR(EINVAL);
+}
+
+static inline SwsLinearOp
+linear_mat3(const AVRational m00, const AVRational m01, const AVRational m02,
+            const AVRational m10, const AVRational m11, const AVRational m12,
+            const AVRational m20, const AVRational m21, const AVRational m22)
+{
+    SwsLinearOp c = {{
+        { m00, m01, m02, Q0, Q0 },
+        { m10, m11, m12, Q0, Q0 },
+        { m20, m21, m22, Q0, Q0 },
+        {  Q0,  Q0,  Q0, Q1, Q0 },
+    }};
+
+    c.mask = ff_sws_linear_mask(c);
+    return c;
+}
+
+int ff_sws_decode_colors(SwsContext *ctx, SwsPixelType type,
+                         SwsOpList *ops, const SwsFormat *fmt, bool *incomplete)
+{
+    const AVLumaCoefficients *c = av_csp_luma_coeffs_from_avcsp(fmt->csp);
+    const SwsPixelType pixel_type = fmt_pixel_type(fmt->format);
+    if (!pixel_type)
+         return AVERROR(ENOTSUP);
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .op         = SWS_OP_CONVERT,
+        .type       = pixel_type,
+        .convert.to = type,
+    }));
+
+    /* Decode pixel format into standardized range */
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .type = type,
+        .op   = SWS_OP_LINEAR,
+        .lin  = fmt_decode_range(fmt, incomplete),
+    }));
+
+    /* Final step, decode colorspace */
+    switch (fmt->csp) {
+    case AVCOL_SPC_RGB:
+        return 0;
+    case AVCOL_SPC_UNSPECIFIED:
+        c = av_csp_luma_coeffs_from_avcsp(AVCOL_SPC_BT470BG);
+        *incomplete = true;
+        /* fall through */
+    case AVCOL_SPC_FCC:
+    case AVCOL_SPC_BT470BG:
+    case AVCOL_SPC_SMPTE170M:
+    case AVCOL_SPC_BT709:
+    case AVCOL_SPC_SMPTE240M:
+    case AVCOL_SPC_BT2020_NCL: {
+        AVRational crg = av_sub_q(Q0, av_div_q(c->cr, c->cg));
+        AVRational cbg = av_sub_q(Q0, av_div_q(c->cb, c->cg));
+        AVRational m02 = av_mul_q(Q(2), av_sub_q(Q1, c->cr));
+        AVRational m21 = av_mul_q(Q(2), av_sub_q(Q1, c->cb));
+        AVRational m11 = av_mul_q(cbg, m21);
+        AVRational m12 = av_mul_q(crg, m02);
+
+        return ff_sws_op_list_append(ops, &(SwsOp) {
+            .type = type,
+            .op   = SWS_OP_LINEAR,
+            .lin  = linear_mat3(
+                Q1,  Q0, m02,
+                Q1, m11, m12,
+                Q1, m21,  Q0
+            ),
+        });
+    }
+
+    case AVCOL_SPC_YCGCO:
+        return ff_sws_op_list_append(ops, &(SwsOp) {
+            .type = type,
+            .op   = SWS_OP_LINEAR,
+            .lin  = linear_mat3(
+                Q1, Q(-1), Q( 1),
+                Q1, Q( 1), Q( 0),
+                Q1, Q(-1), Q(-1)
+            ),
+        });
+
+    case AVCOL_SPC_BT2020_CL:
+    case AVCOL_SPC_SMPTE2085:
+    case AVCOL_SPC_CHROMA_DERIVED_NCL:
+    case AVCOL_SPC_CHROMA_DERIVED_CL:
+    case AVCOL_SPC_ICTCP:
+    case AVCOL_SPC_IPT_C2:
+    case AVCOL_SPC_YCGCO_RE:
+    case AVCOL_SPC_YCGCO_RO:
+        return AVERROR(ENOTSUP);
+
+    case AVCOL_SPC_RESERVED:
+        return AVERROR(EINVAL);
+
+    case AVCOL_SPC_NB:
+        break;
+    }
+
+    av_unreachable("Corrupt AVColorSpace value?");
+    return AVERROR(EINVAL);
+}
+
+int ff_sws_encode_colors(SwsContext *ctx, SwsPixelType type,
+                         SwsOpList *ops, const SwsFormat *src,
+                         const SwsFormat *dst, bool *incomplete)
+{
+    const AVLumaCoefficients *c = av_csp_luma_coeffs_from_avcsp(dst->csp);
+    const SwsPixelType pixel_type = fmt_pixel_type(dst->format);
+    if (!pixel_type)
+         return AVERROR(ENOTSUP);
+
+    switch (dst->csp) {
+    case AVCOL_SPC_RGB:
+        break;
+    case AVCOL_SPC_UNSPECIFIED:
+        c = av_csp_luma_coeffs_from_avcsp(AVCOL_SPC_BT470BG);
+        *incomplete = true;
+        /* fall through */
+    case AVCOL_SPC_FCC:
+    case AVCOL_SPC_BT470BG:
+    case AVCOL_SPC_SMPTE170M:
+    case AVCOL_SPC_BT709:
+    case AVCOL_SPC_SMPTE240M:
+    case AVCOL_SPC_BT2020_NCL: {
+        AVRational cb1 = av_sub_q(c->cb, Q1);
+        AVRational cr1 = av_sub_q(c->cr, Q1);
+        AVRational m20 = av_make_q(1,2);
+        AVRational m10 = av_mul_q(m20, av_div_q(c->cr, cb1));
+        AVRational m11 = av_mul_q(m20, av_div_q(c->cg, cb1));
+        AVRational m21 = av_mul_q(m20, av_div_q(c->cg, cr1));
+        AVRational m22 = av_mul_q(m20, av_div_q(c->cb, cr1));
+
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .type = type,
+            .op   = SWS_OP_LINEAR,
+            .lin  = linear_mat3(
+                c->cr, c->cg, c->cb,
+                m10,     m11,   m20,
+                m20,     m21,   m22
+            ),
+        }));
+        break;
+    }
+
+    case AVCOL_SPC_YCGCO:
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .type = type,
+            .op   = SWS_OP_LINEAR,
+            .lin  = linear_mat3(
+                av_make_q( 1, 4), av_make_q(1, 2), av_make_q( 1, 4),
+                av_make_q( 1, 2), av_make_q(0, 1), av_make_q(-1, 2),
+                av_make_q(-1, 4), av_make_q(1, 2), av_make_q(-1, 4)
+            ),
+        }));
+        break;
+
+    case AVCOL_SPC_BT2020_CL:
+    case AVCOL_SPC_SMPTE2085:
+    case AVCOL_SPC_CHROMA_DERIVED_NCL:
+    case AVCOL_SPC_CHROMA_DERIVED_CL:
+    case AVCOL_SPC_ICTCP:
+    case AVCOL_SPC_IPT_C2:
+    case AVCOL_SPC_YCGCO_RE:
+    case AVCOL_SPC_YCGCO_RO:
+        return AVERROR(ENOTSUP);
+
+    case AVCOL_SPC_RESERVED:
+    case AVCOL_SPC_NB:
+        return AVERROR(EINVAL);
+    }
+
+    RET(ff_sws_op_list_append(ops, &(SwsOp) {
+        .type = type,
+        .op   = SWS_OP_LINEAR,
+        .lin  = fmt_encode_range(dst, incomplete),
+    }));
+
+    if (!(dst->desc->flags & AV_PIX_FMT_FLAG_FLOAT)) {
+        SwsConst range = {0};
+
+        const bool is_ya = dst->desc->nb_components == 2;
+        for (int i = 0; i < dst->desc->nb_components; i++) {
+            /* Clamp to legal pixel range */
+            const int idx = i * (is_ya ? 3 : 1);
+            range.q4[idx] = Q((1 << dst->desc->comp[i].depth) - 1);
+        }
+
+        RET(fmt_dither(ctx, ops, type, src, dst));
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_MAX,
+            .type = type,
+            .c.q4 = { Q0, Q0, Q0, Q0 },
+        }));
+
+        RET(ff_sws_op_list_append(ops, &(SwsOp) {
+            .op   = SWS_OP_MIN,
+            .type = type,
+            .c    = range,
+        }));
+    }
+
+    return ff_sws_op_list_append(ops, &(SwsOp) {
+        .type       = type,
+        .op         = SWS_OP_CONVERT,
+        .convert.to = pixel_type,
+    });
+}
+
+#endif /* CONFIG_UNSTABLE */

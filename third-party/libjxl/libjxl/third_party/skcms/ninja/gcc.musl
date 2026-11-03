@@ -1,0 +1,6 @@
+mode          = .musl
+extra_ldflags = -static
+include ninja/gcc
+
+cc     = env REALGCC=gcc musl-gcc
+cxx    = env REALGCC=g++ musl-gcc

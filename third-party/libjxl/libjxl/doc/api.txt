@@ -1,0 +1,29 @@
+/* This document is meant for Doxygen use only. If you are looking for the API
+ * documentation generate it with `./ci.sh release` and look under the
+ * build/html directory.
+ *
+ * This file documents all the groups and defines the order in which they appear
+ * in Doxygen. Define the @defgroup commands here and use @addtogroup anywhere
+ * else.
+ */
+
+/**
+@defgroup libjxl JPEG XL library (libjxl)
+@brief The main JPEG XL decoder / encoder library.
+
+@addtogroup libjxl
+@{
+
+@defgroup libjxl_decoder JPEG XL Decoder
+
+@defgroup libjxl_encoder JPEG XL Encoder
+
+@defgroup libjxl_common JPEG XL common definitions
+
+@defgroup libjxl_butteraugli Butteraugli metric
+
+@}
+
+@defgroup libjxl_threads JPEG XL Multi-thread library (libjxl_threads)
+@brief Additional multi-threaded implementations for the parallel runner.
+*/

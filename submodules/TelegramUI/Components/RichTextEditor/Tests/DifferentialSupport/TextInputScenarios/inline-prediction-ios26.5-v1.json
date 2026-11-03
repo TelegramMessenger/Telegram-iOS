@@ -1,0 +1,1234 @@
+{
+  "family": "inline-prediction",
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "scenarios": [
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-accept",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-dismiss-then-type",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": "x",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "interior-accept-then-delete",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "accepted"
+        },
+        {
+          "kind": "delete-backward",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-accept",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-dismiss-then-type",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": "x",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "before-boundary-accept-then-delete",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence. I look forward \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "accepted"
+        },
+        {
+          "kind": "delete-backward",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-accept",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence.\nI look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-dismiss-then-type",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence.\nI look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "insert-text",
+          "text": "x",
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    },
+    {
+      "comparisonFields": [
+        "canonical",
+        "blocks",
+        "selection",
+        "markedRange",
+        "markedText",
+        "affinity",
+        "firstResponder",
+        "canUndo",
+        "canRedo",
+        "traits",
+        "caretRect",
+        "selectionRects",
+        "inputDelegateTrace",
+        "storageMutationTrace"
+      ],
+      "geometryTolerance": 1,
+      "identifier": "after-boundary-accept-then-delete",
+      "initial": {
+        "selection": {
+          "location": 33,
+          "length": 0
+        },
+        "text": "Earlier sentence.\nI look forward  \nLater block stays.",
+        "traits": {
+          "autocapitalizationType": 0,
+          "autocorrectionType": 1,
+          "inlinePredictionType": 2,
+          "keyboardType": 0,
+          "returnKeyType": 0,
+          "secureTextEntry": false,
+          "smartDashesType": 1,
+          "smartInsertDeleteType": 1,
+          "smartQuotesType": 1,
+          "spellCheckingType": 1
+        }
+      },
+      "provenance": {
+        "sourceFixture": "UITests/Fixtures/inline-prediction-stock-contract-v1.json",
+        "stockEvidence": ".inline-prediction-task6-complete-matrix-stable1; offeredText=to",
+        "targetRuntime": "iOS 26.5 (23F73)"
+      },
+      "transactions": [
+        {
+          "kind": "become-first-responder",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "set-selection",
+          "text": null,
+          "range": {
+            "location": 33,
+            "length": 0
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "baseline"
+        },
+        {
+          "kind": "set-marked-text",
+          "text": "to",
+          "range": null,
+          "selectedRange": {
+            "location": 0,
+            "length": 0
+          },
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "offered"
+        },
+        {
+          "kind": "replace-range",
+          "text": "to ",
+          "range": {
+            "location": 33,
+            "length": 2
+          },
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "unmark-text",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "accepted"
+        },
+        {
+          "kind": "delete-backward",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": null
+        },
+        {
+          "kind": "checkpoint",
+          "text": null,
+          "range": null,
+          "selectedRange": null,
+          "traits": {
+          },
+          "phase": "terminal"
+        }
+      ]
+    }
+  ],
+  "schema": 1
+}

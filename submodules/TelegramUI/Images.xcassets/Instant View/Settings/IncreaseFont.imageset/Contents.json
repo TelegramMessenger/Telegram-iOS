@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ic_lt_biggerfont.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

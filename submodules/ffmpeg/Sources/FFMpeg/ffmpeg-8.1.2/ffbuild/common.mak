@@ -1,0 +1,279 @@
+#
+# common bits used by all libraries
+#
+
+DEFAULT_X86ASMD=.dbg
+
+ifeq ($(DBG),1)
+X86ASMD=$(DEFAULT_X86ASMD)
+else
+X86ASMD=
+endif
+
+ifndef SUBDIR
+
+LINK = $(LD) $(1)
+
+ifeq ($(LD),$(CC))
+ifneq ($(CXX),)
+LDXX := $(CXX)
+LINK = $(if $(filter -lstdc++,$(1)),$(LDXX) $(filter-out -lstdc++,$(1)),$(LD) $(1))
+endif
+endif
+
+BIN2CEXE = ffbuild/bin2c$(HOSTEXESUF)
+BIN2C = $(BIN2CEXE)
+
+ifndef V
+Q      = @
+ECHO   = printf "$(1)\t%s\n" $(2)
+BRIEF  = CC CXX OBJCC HOSTCC HOSTLD AS X86ASM AR LD LDXX STRIP CP WINDRES GLSLC NVCC BIN2C METALCC METALLIB
+SILENT = DEPCC DEPCXX DEPHOSTCC DEPAS DEPX86ASM RANLIB RM
+
+MSG    = $@
+M      = @$(call ECHO,$(TAG),$@);
+$(foreach VAR,$(BRIEF), \
+    $(eval override $(VAR) = @$$(call ECHO,$(VAR),$$(MSG)); $($(VAR))))
+$(foreach VAR,$(SILENT),$(eval override $(VAR) = @$($(VAR))))
+$(eval INSTALL = @$(call ECHO,INSTALL,$$(^:$(SRC_DIR)/%=%)); $(INSTALL))
+endif
+
+# Prepend to a recursively expanded variable without making it simply expanded.
+PREPEND = $(eval $(1) = $(patsubst %,$$(%), $(2)) $(value $(1)))
+
+# NASM requires -I path terminated with /
+IFLAGS     := -I. -I$(SRC_LINK)/
+CPPFLAGS   := $(IFLAGS) $(CPPFLAGS)
+CFLAGS     += $(ECFLAGS)
+CCFLAGS     = $(CPPFLAGS) $(CFLAGS)
+OBJCFLAGS  += $(EOBJCFLAGS)
+OBJCCFLAGS  = $(CPPFLAGS) $(CFLAGS) $(OBJCFLAGS)
+ASFLAGS    := $(CPPFLAGS) $(ASFLAGS)
+# Use PREPEND here so that later (target-dependent) additions to CPPFLAGS
+# end up in CXXFLAGS.
+$(call PREPEND,CXXFLAGS, CPPFLAGS)
+X86ASMFLAGS += $(IFLAGS:%=%/) -I$(<D)/ -Pconfig.asm
+
+HOSTCCFLAGS = $(IFLAGS) $(HOSTCPPFLAGS) $(HOSTCFLAGS)
+LDFLAGS    := $(ALLFFLIBS:%=$(LD_PATH)lib%) $(LDFLAGS)
+
+define COMPILE
+       $(call $(1)DEP,$(1))
+       $($(1)) $($(1)FLAGS) $($(2)) $($(1)_DEPFLAGS) $($(1)_C) $($(1)_O) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<)
+endef
+
+COMPILE_C = $(call COMPILE,CC)
+COMPILE_CXX = $(call COMPILE,CXX)
+COMPILE_S = $(call COMPILE,AS)
+COMPILE_M = $(call COMPILE,OBJCC)
+COMPILE_X86ASM = $(call COMPILE,X86ASM)
+COMPILE_HOSTC = $(call COMPILE,HOSTCC)
+COMPILE_GLSLC = $(call COMPILE,GLSLC)
+COMPILE_NVCC = $(call COMPILE,NVCC)
+COMPILE_MMI = $(call COMPILE,CC,MMIFLAGS)
+COMPILE_MSA = $(call COMPILE,CC,MSAFLAGS)
+COMPILE_LSX = $(call COMPILE,CC,LSXFLAGS)
+COMPILE_LASX = $(call COMPILE,CC,LASXFLAGS)
+
+%_mmi.o: %_mmi.c
+	$(COMPILE_MMI)
+
+%_msa.o: %_msa.c
+	$(COMPILE_MSA)
+
+%_lsx.o: %_lsx.c
+	$(COMPILE_LSX)
+
+%_lasx.o: %_lasx.c
+	$(COMPILE_LASX)
+
+%.o: %.c
+	$(COMPILE_C)
+
+%.o: %.cpp
+	$(COMPILE_CXX)
+
+%.o: %.m
+	$(COMPILE_M)
+
+%.s: %.c
+	$(CC) $(CCFLAGS) -S -o $@ $<
+
+%.o: %.S
+	$(COMPILE_S)
+
+%_host.o: %.c
+	$(COMPILE_HOSTC)
+
+%$(DEFAULT_X86ASMD).asm: %.asm
+	$(DEPX86ASM) $(X86ASMFLAGS) -M -o $@ $< > $(@:.asm=.d)
+	$(X86ASM) $(X86ASMFLAGS) -e $< | sed '/^%/d;/^$$/d;' > $@
+
+%.o: %.asm
+	$(COMPILE_X86ASM)
+	-$(if $(ASMSTRIPFLAGS), $(STRIP) $(ASMSTRIPFLAGS) $@)
+
+%.o: %.rc
+	$(WINDRES) $(IFLAGS) $(foreach ARG,$(CC_DEPFLAGS),--preprocessor-arg "$(ARG)") -o $@ $<
+
+%.i: %.c
+	$(CC) $(CCFLAGS) $(CC_E) $<
+
+%.h.c:
+	$(Q)echo '#include "$*.h"' >$@
+
+$(BIN2CEXE): ffbuild/bin2c_host.o
+	$(HOSTLD) $(HOSTLDFLAGS) $(HOSTLD_O) $^ $(HOSTEXTRALIBS)
+
+RUN_BIN2C = $(BIN2C) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) $@ $(subst .,_,$(basename $(notdir $@)))
+RUN_GZIP  = $(M)gzip -nc9 $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) >$@
+RUN_MINIFY = $(M)sed 's!/\\*.*\\*/!!g' $< | tr '\n' ' ' | tr -s ' ' | sed 's/^ //; s/ $$//' > $@
+%.gz: TAG = GZIP
+%.min: TAG = MINIFY
+
+%.spv: %.glsl
+	$(COMPILE_GLSLC)
+
+ifdef CONFIG_SHADER_COMPRESSION
+%.spv.gz: %.spv
+	$(RUN_GZIP)
+
+%.spv.c: %.spv.gz $(BIN2CEXE)
+	$(RUN_BIN2C)
+else
+%.spv.c: %.spv $(BIN2CEXE)
+	$(RUN_BIN2C)
+endif
+
+%.metal.air: %.metal
+	$(METALCC) $< -o $@
+
+%.metallib: %.metal.air
+	$(METALLIB) --split-module-without-linking $< -o $@
+
+%.metallib.c: %.metallib $(BIN2CEXE)
+	$(RUN_BIN2C)
+
+%.ptx: %.cu $(SRC_PATH)/compat/cuda/cuda_runtime.h
+	$(COMPILE_NVCC)
+
+ifdef CONFIG_SHADER_COMPRESSION
+%.ptx.gz: %.ptx
+	$(RUN_GZIP)
+
+%.ptx.c: %.ptx.gz $(BIN2CEXE)
+	$(RUN_BIN2C)
+else
+%.ptx.c: %.ptx $(BIN2CEXE)
+	$(RUN_BIN2C)
+endif
+
+%.css.min: %.css
+	$(RUN_MINIFY)
+
+ifdef CONFIG_RESOURCE_COMPRESSION
+
+%.css.min.gz: %.css.min
+	$(RUN_GZIP)
+
+%.css.c: %.css.min.gz $(BIN2CEXE)
+	$(RUN_BIN2C)
+
+%.html.gz: %.html
+	$(RUN_GZIP)
+
+%.html.c: %.html.gz $(BIN2CEXE)
+	$(RUN_BIN2C)
+
+else   # NO COMPRESSION
+
+%.css.c: %.css.min $(BIN2CEXE)
+	$(RUN_BIN2C)
+
+%.html.c: %.html $(BIN2CEXE)
+	$(RUN_BIN2C)
+endif
+
+clean::
+	$(RM) $(BIN2CEXE) $(CLEANSUFFIXES:%=ffbuild/%)
+
+%.c %.h %.pc %.ver %.version: TAG = GEN
+
+# Dummy rule to stop make trying to rebuild removed or renamed headers
+%.h %_template.c:
+	@:
+
+# Disable suffix rules.  Most of the builtin rules are suffix rules,
+# so this saves some time on slow systems.
+.SUFFIXES:
+
+# Do not delete intermediate files from chains of implicit rules
+$(OBJS):
+endif
+
+include $(SRC_PATH)/ffbuild/arch.mak
+
+OBJS      += $(OBJS-yes)
+SHLIBOBJS += $(SHLIBOBJS-yes)
+STLIBOBJS += $(STLIBOBJS-yes)
+FFLIBS    := $($(NAME)_FFLIBS) $(FFLIBS-yes) $(FFLIBS)
+TESTPROGS += $(TESTPROGS-yes)
+
+LDLIBS       = $(FFLIBS:%=%$(BUILDSUF))
+FFEXTRALIBS := $(LDLIBS:%=$(LD_LIB)) $(foreach lib,EXTRALIBS-$(NAME) $(FFLIBS:%=EXTRALIBS-%),$($(lib))) $(EXTRALIBS)
+
+OBJS      := $(sort $(OBJS:%=$(SUBDIR)%))
+SHLIBOBJS := $(sort $(SHLIBOBJS:%=$(SUBDIR)%))
+STLIBOBJS := $(sort $(STLIBOBJS:%=$(SUBDIR)%))
+TESTOBJS  := $(TESTOBJS:%=$(SUBDIR)tests/%) $(TESTPROGS:%=$(SUBDIR)tests/%.o)
+TESTPROGS := $(TESTPROGS:%=$(SUBDIR)tests/%$(EXESUF))
+HOSTOBJS  := $(HOSTPROGS:%=$(SUBDIR)%.o)
+HOSTPROGS := $(HOSTPROGS:%=$(SUBDIR)%$(HOSTEXESUF))
+TOOLS     += $(TOOLS-yes)
+TOOLOBJS  := $(TOOLS:%=tools/%.o)
+TOOLS     := $(TOOLS:%=tools/%$(EXESUF))
+HEADERS   += $(HEADERS-yes)
+
+PATH_LIBNAME = $(foreach NAME,$(1),lib$(NAME)/$($(2)LIBNAME))
+DEP_LIBS := $(foreach lib,$(FFLIBS),$(call PATH_LIBNAME,$(lib),$(CONFIG_SHARED:yes=S)))
+STATIC_DEP_LIBS := $(foreach lib,$(FFLIBS),$(call PATH_LIBNAME,$(lib)))
+
+SRC_DIR    := $(SRC_PATH)/lib$(NAME)
+ALLHEADERS := $(subst $(SRC_DIR)/,$(SUBDIR),$(wildcard $(SRC_DIR)/*.h $(SRC_DIR)/$(ARCH)/*.h))
+SKIPHEADERS += $(ARCH_HEADERS:%=$(ARCH)/%) $(SKIPHEADERS-)
+SKIPHEADERS := $(SKIPHEADERS:%=$(SUBDIR)%)
+HOBJS        = $(filter-out $(SKIPHEADERS:.h=.h.o),$(ALLHEADERS:.h=.h.o))
+SPVOBJS      = $(filter %.spv.o,$(OBJS))
+PTXOBJS      = $(filter %.ptx.o,$(OBJS))
+$(HOBJS):     CCFLAGS += $(CFLAGS_HEADERS)
+checkheaders: $(HOBJS)
+.SECONDARY:   $(HOBJS:.o=.c) $(SPVOBJS:.o=.c) $(SPVOBJS:.o=.gz) $(SPVOBJS:.o=) $(PTXOBJS:.o=.c) $(PTXOBJS:.o=.gz) $(PTXOBJS:.o=)
+alltools: $(TOOLS)
+
+$(HOSTOBJS): %.o: %.c
+	$(COMPILE_HOSTC)
+
+$(HOSTPROGS): %$(HOSTEXESUF): %.o
+	$(HOSTLD) $(HOSTLDFLAGS) $(HOSTLD_O) $^ $(HOSTEXTRALIBS)
+
+$(OBJS):     | $(sort $(dir $(OBJS)))
+$(HOBJS):    | $(sort $(dir $(HOBJS)))
+$(HOSTOBJS): | $(sort $(dir $(HOSTOBJS)))
+$(SHLIBOBJS): | $(sort $(dir $(SHLIBOBJS)))
+$(STLIBOBJS): | $(sort $(dir $(STLIBOBJS)))
+$(TESTOBJS): | $(sort $(dir $(TESTOBJS)))
+$(TOOLOBJS): | tools
+
+OUTDIRS := $(OUTDIRS) $(dir $(OBJS) $(HOBJS) $(HOSTOBJS) $(SHLIBOBJS) $(STLIBOBJS) $(TESTOBJS))
+
+CLEANSUFFIXES     = *.d *.gcda *.gcno *.h.c *.ho *.map *.o *.objs *.pc *.ptx *.ptx.gz *.ptx.c *.spv *.spv.gz *.spv.c *.ver *.version *.html.gz *.html.c *.css.min.gz *.css.min *.css.c  *$(DEFAULT_X86ASMD).asm *~ *.ilk *.pdb
+LIBSUFFIXES       = *.a *.lib *.so *.so.* *.dylib *.dll *.def *.dll.a
+
+define RULES
+clean::
+	$(RM) $(HOSTPROGS) $(TESTPROGS) $(TOOLS)
+endef
+
+$(eval $(RULES))
+
+-include $(wildcard $(OBJS:.o=.d) $(HOSTOBJS:.o=.d) $(TESTOBJS:.o=.d) $(HOBJS:.o=.d) $(SHLIBOBJS:.o=.d) $(STLIBOBJS:.o=.d) $(SPVOBJS:.spv.o=.d)) $(OBJS:.o=$(DEFAULT_X86ASMD).d)

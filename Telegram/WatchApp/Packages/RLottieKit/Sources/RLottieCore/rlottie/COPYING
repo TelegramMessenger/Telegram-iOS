@@ -1,0 +1,17 @@
+Licensing
+
+rlottie basically comes with MIT license(licenses/COPYING.MIT)
+but some parts of shared code are covered by different licenses. Listed
+below are the folder names and the license file covering it. Note that this
+license would cover all of the source invovled in each folders, unless
+specifically noted otherwise. So please refer to these imported project sources
+for details.
+
+Dependencies and licenses:
+
+src/vector/                    licenses/COPYING.MIT, COPYING.SKIA
+src/vector/freetype            licenses/COPYING.FTL
+src/vector/pixman              licenses/COPYING.PIX
+src/vector/stb                 licenses/COPYING.STB
+src/lottie/rapidjson           licenses/COPYING.RPD
+

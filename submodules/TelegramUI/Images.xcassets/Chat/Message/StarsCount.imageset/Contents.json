@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "msgstar.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

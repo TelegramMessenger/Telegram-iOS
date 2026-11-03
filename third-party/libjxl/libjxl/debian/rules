@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	# TODO(deymo): Remove the DCMAKE_BUILD_TYPE once builds without NDEBUG
+	# are as useful as Release builds.
+        # TODO(szabadka) Re-enable jpegli after tests are fixed on Ubuntu 20.04,
+        # and debian:buster
+	dh_auto_configure -- \
+	  -DJPEGXL_VERSION=$(DEB_VERSION) \
+	  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	  -DJPEGXL_FORCE_SYSTEM_GTEST=ON \
+	  -DJPEGXL_FORCE_SYSTEM_BROTLI=ON \
+	  -DJPEGXL_FORCE_SYSTEM_HWY=ON \
+	  -DJPEGXL_ENABLE_JPEGLI=OFF \
+	  -DJPEGXL_ENABLE_JPEGLI_LIBJPEG=OFF \
+	  -DJPEGXL_ENABLE_PLUGINS=ON

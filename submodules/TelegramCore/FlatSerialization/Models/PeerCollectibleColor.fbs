@@ -1,0 +1,13 @@
+namespace TelegramCore;
+
+table PeerCollectibleColor {
+  collectibleId:long (id: 0);
+  giftEmojiFileId:long (id: 1);
+  backgroundEmojiId:long (id: 2);
+  accentColor:uint (id: 3);
+  colors:[uint] (id: 4);
+  darkAccentColor:uint (id: 5);
+  darkColors:[uint] (id: 6);
+}
+
+root_type PeerCollectibleColor;

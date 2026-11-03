@@ -1,0 +1,142 @@
+#include <metal_stdlib>
+using namespace metal;
+// LTC_IMPLEMENTATION
+// GPU_DEFORMATION
+struct VertexIn { float3 position [[attribute(0)]];float3 normal [[attribute(1)]];float2 uv [[attribute(2)]]; };
+struct VertexOut { float4 position [[position]];float3 worldPosition;float3 normal;float2 uv; };
+struct AreaLight {float4 position,axisU,axisV,radiance;};
+struct FragmentUniforms {
+    float4 baseColor,emissiveMetallic,eyeRoughness,flags;
+    float4 settings,worldDiffuse,worldSpecular,viewDirection;
+    AreaLight lights[8];
+    float4 toonSettings,toonRamp[8],viewRight,viewUp;
+};
+static_assert(sizeof(FragmentUniforms)==816 && __builtin_offsetof(FragmentUniforms,toonSettings)==640 && __builtin_offsetof(FragmentUniforms,viewRight)==784);
+struct GPUVertexUniforms {float4x4 viewProjection;GiftDeformParams deform;};
+static_assert(sizeof(GPUVertexUniforms)==288 && __builtin_offsetof(GPUVertexUniforms,deform)==64);
+vertex VertexOut gift_gpu_vertex(VertexIn in [[stage_in]],uint vertexID [[vertex_id]],
+    constant GPUVertexUniforms& u [[buffer(0)]],device const GiftInfluence* influences [[buffer(8)]],
+    device const GiftMorphDelta* morphs [[buffer(9)]],device const GiftJoint* joints [[buffer(10)]]) {
+    GiftDeformed d=gift_deform(in.position,in.normal,vertexID,u.deform,influences,morphs,joints);
+    VertexOut o;o.position=u.viewProjection*d.position;o.worldPosition=d.position.xyz;o.normal=d.normal.xyz;o.uv=in.uv;return o;
+}
+vertex VertexOut gift_outline_gpu_vertex(VertexIn in [[stage_in]],uint vertexID [[vertex_id]],
+    constant GPUVertexUniforms& u [[buffer(0)]],constant float4& outline [[buffer(1)]],device const GiftInfluence* influences [[buffer(8)]],
+    device const GiftMorphDelta* morphs [[buffer(9)]],device const GiftJoint* joints [[buffer(10)]]) {
+    GiftDeformed d=gift_deform(in.position,in.normal,vertexID,u.deform,influences,morphs,joints);
+    VertexOut o;o.position=u.viewProjection*float4(d.position.xyz+d.normal.xyz*outline.w,1);o.worldPosition=d.position.xyz;o.normal=d.normal.xyz;o.uv=in.uv;return o;
+}
+fragment float4 gift_outline_fragment(VertexOut in [[stage_in]],constant FragmentUniforms& u [[buffer(0)]]) {return float4(u.baseColor.rgb,1);}
+float3 fresnel(float cosine,float3 f0) {return f0+(1-f0)*pow(1-cosine,5.f);}
+float3 legacyLight(float3 n,float3 v,float3 l,float3 radiance,float3 base,float roughness,float metallic) {
+    float3 h=normalize(v+l);float nv=max(dot(n,v),.0001f),nl=max(dot(n,l),0.f),nh=max(dot(n,h),0.f);
+    float a=roughness*roughness,a2=a*a,d=nh*nh*(a2-1)+1;
+    float distribution=a2/max(M_PI_F*d*d,.000001f),k=(roughness+1)*(roughness+1)/8;
+    float geometry=(nv/(nv*(1-k)+k))*(nl/(nl*(1-k)+k));
+    float3 f=fresnel(max(dot(h,v),0.f),mix(float3(.04),base,metallic));
+    return ((1-f)*(1-metallic)*base/M_PI_F+distribution*geometry*f/max(4*nv*nl,.0001f))*radiance*nl;
+}
+float mirrorDisk(float3 n,float3 v,float3 p,constant AreaLight& l) {
+    float3 ray=reflect(-v,n),normal=normalize(cross(l.axisU.xyz,l.axisV.xyz));
+    float denom=dot(ray,normal);
+    float safeDenom=(denom>=0?1.f:-1.f)*max(abs(denom),1e-5f);
+    float t=dot(l.position.xyz-p,normal)/safeDenom;
+    float3 hit=p+ray*t-l.position.xyz;
+    float x=dot(hit,l.axisU.xyz)/dot(l.axisU.xyz,l.axisU.xyz);
+    float y=dot(hit,l.axisV.xyz)/dot(l.axisV.xyz,l.axisV.xyz);
+    // Derivatives must execute for the entire quad before any divergent return.
+    float edge=x*x+y*y,aa=clamp(fwidth(edge),.00001f,.1f);
+    float hitDisk=1-smoothstep(1-aa,1+aa,edge);
+    return denom>1e-6f && t>0?hitDisk:0;
+}
+fragment float4 gift_fragment(VertexOut in [[stage_in]],bool front [[front_facing]],
+    constant FragmentUniforms& u [[buffer(0)]],texture2d<float> baseMap [[texture(0)]],
+    texture2d<float> emissionMap [[texture(1)]],texture2d<float> lut1 [[texture(2)]],texture2d<float> lut2 [[texture(3)]],
+    sampler baseSampler [[sampler(0)]],sampler emissionSampler [[sampler(1)]],sampler lutSampler [[sampler(2)]]) {
+    float4 base=baseMap.sample(baseSampler,in.uv)*u.baseColor;
+    if(u.flags.z>.5f && base.a<u.flags.w)discard_fragment();
+    float3 n=normalize(in.normal);if(u.flags.y>.5f && !front)n=-n;
+    float3 v=u.settings.w>.5f?u.viewDirection.xyz:normalize(u.eyeRoughness.xyz-in.worldPosition);
+    if(u.toonSettings.w>.5f) {
+        float3 nv=float3(dot(n,u.viewRight.xyz),dot(n,u.viewUp.xyz),dot(n,u.viewDirection.xyz));
+        // Align each perspective view ray with camera +Z by a shortest-arc
+        // rotation. For an orthographic view this rotation is the identity.
+        float3 ray=float3(dot(v,u.viewRight.xyz),dot(v,u.viewUp.xyz),dot(v,u.viewDirection.xyz));
+        float3 axis=cross(ray,float3(0,0,1));
+        nv+=cross(axis,nv)+cross(axis,cross(axis,nv))/max(1+ray.z,1e-5f);
+        float2 uv=float2(nv.x,-nv.y)*.496f+.5f;
+        return float4(baseMap.sample(baseSampler,uv).rgb*u.baseColor.rgb*u.viewRight.w,1);
+    }
+    float roughness=u.eyeRoughness.w,metallic=u.emissiveMetallic.w;
+    float3 color=base.rgb;
+    if(u.flags.x<.5f) {
+        if(u.settings.y>.5f) {
+            float f0=pow((u.settings.x-1)/(u.settings.x+1),2.f);
+            float3 specColor=mix(float3(f0),base.rgb,metallic);
+            float2 uv=float2(roughness,sqrt(1-saturate(dot(n,v))))*LUT_SCALE+LUT_BIAS;
+            float4 t1=lut1.sample(lutSampler,uv),t2=lut2.sample(lutSampler,uv);
+            float3x3 inverseLTC=float3x3(float3(t1.x,0,t1.y),float3(0,1,0),float3(t1.z,0,t1.w));
+            float3 integratedSpec=specColor*t2.x+(1-specColor)*t2.y;
+            float3 diffuseColor=base.rgb*(1-metallic)*(1-integratedSpec);
+            color=diffuseColor*u.worldDiffuse.xyz+integratedSpec*u.worldSpecular.xyz;
+            for(int i=0;i<int(u.settings.z);i++) {
+                if((uint(u.toonSettings.z)&(1u<<i))==0)continue;
+                constant AreaLight& l=u.lights[i];float3 c=l.position.xyz,a=l.axisU.xyz,b=l.axisV.xyz;
+                // Reference LTC winding emits towards +cross(V1,V2); Blender towards local -Z.
+                float3 points[4]={c-a-b,c+a-b,c+a+b,c-a+b};
+                float diff=LTC_Evaluate(n,v,in.worldPosition,float3x3(1),points,false,lut2,lutSampler).x;
+                float3 spec=roughness<.01f?fresnel(saturate(dot(n,v)),specColor)*mirrorDisk(n,v,in.worldPosition,l):
+                    integratedSpec*LTC_Evaluate(n,v,in.worldPosition,inverseLTC,points,false,lut2,lutSampler).x;
+                if(!isfinite(diff))diff=0;if(!all(isfinite(spec)))spec=float3(0);
+                color+=l.radiance.xyz*(diffuseColor*diff+spec);
+            }
+        } else {
+            float hemi=dot(n,float3(0,1,0))*.5f+.5f;
+            color=base.rgb*mix(float3(.10,.09,.08),float3(.30,.32,.35),hemi)*(1-metallic);
+            roughness=max(roughness,.07f);
+            color+=legacyLight(n,v,normalize(float3(-3,5,5)),float3(2.4,2.3,2.15),base.rgb,roughness,metallic);
+            color+=legacyLight(n,v,normalize(float3(4,2,1)),float3(.75,.85,1),base.rgb,roughness,metallic);
+            color+=legacyLight(n,v,normalize(float3(0,3,-4)),float3(1.25,1.15,.95),base.rgb,roughness,metallic);
+        }
+        color+=u.emissiveMetallic.xyz*emissionMap.sample(emissionSampler,in.uv).rgb;
+    }
+    int stops=int(u.toonSettings.x);
+    if(stops>0) {
+        float value=dot(color,float3(.2126,.7152,.0722));float3 rampColor=u.toonRamp[0].rgb;
+        for(int i=1;i<stops;i++) {
+            float a=u.toonRamp[i-1].w,b=u.toonRamp[i].w;
+            float t=saturate((value-a)/max(b-a,1e-8f));
+            if(u.toonSettings.y==1)t=value>=b?1:0;
+            else if(u.toonSettings.y==2)t=t*t*(3-2*t);
+            if(value>=a)rampColor=mix(u.toonRamp[i-1].rgb,u.toonRamp[i].rgb,t);
+        }
+        color=rampColor;
+    }
+    return float4(max(color,0.f),1);
+}
+struct PostOut {float4 position [[position]];float2 uv;};
+struct PostUniforms {float4 display,ramp,mask,tint;};
+vertex PostOut post_vertex(uint id [[vertex_id]]) {
+    float2 uv=float2((id<<1)&2,id&2);PostOut o;o.position=float4(uv*float2(2,-2)+float2(-1,1),0,1);o.uv=uv;return o;
+}
+fragment float4 post_fragment(PostOut in [[stage_in]],constant PostUniforms& u [[buffer(0)]],
+    texture2d<float> hdr [[texture(0)]],sampler linearSampler [[sampler(0)]]) {
+    float4 sample=hdr.sample(linearSampler,in.uv);
+    float3 color=sample.rgb/max(sample.a,0.00001f);
+    if(u.display.z>.5f) {
+        float2 p=float2(in.uv.x,1-in.uv.y)-u.mask.xy;
+        // Blender rotates in image pixel space. Unit height; x spans the aspect ratio.
+        p.x*=u.display.w;
+        float c=cos(u.ramp.z),s=sin(u.ramp.z);
+        p=float2(c*p.x+s*p.y,-s*p.x+c*p.y);
+        float2 halfSize=.5f*u.mask.zw*float2(u.display.w,1);
+        float2 aa=max(fwidth(p),float2(1e-5));
+        float box=(1-smoothstep(halfSize.x-aa.x,halfSize.x+aa.x,abs(p.x)))*(1-smoothstep(halfSize.y-aa.y,halfSize.y+aa.y,abs(p.y)));
+        float luminance=dot(color,float3(.2126,.7152,.0722));
+        float factor=saturate((luminance-u.ramp.x)/(u.ramp.y-u.ramp.x))*box;
+        color=mix(color,u.tint.rgb,factor);
+    }
+    color=clamp(color*exp2(u.display.x),0.f,1.f);
+    color=select(12.92f*color,1.055f*pow(color,float3(1.f/2.4f))-.055f,color>float3(.0031308f));
+    color=pow(color,float3(1/max(u.display.y,.001f)));return float4(color*sample.a,sample.a);
+}

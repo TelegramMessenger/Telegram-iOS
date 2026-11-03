@@ -1,0 +1,296 @@
+# ==============================================================================================
+# InputDec host application — a THIRD build description, deliberately, and a temporary one.
+#
+# WHY IT EXISTS
+#   1. The ported InputDec engine cannot be linked into Telegram (`IDBlockTextView.m`'s `+load`
+#      runs before `main()` and can `@throw` uncaught, which no runtime flag can gate), so this
+#      app is the ONLY way a human can type into the engine and see what it does.
+#   2. A SwiftPM test target cannot declare a TEST_HOST. Task PORT-PLAN §7.5 Option B is exactly
+#      this: a thin project wrapping the package, with an app target and a HOSTED unit-test
+#      target, so the rendering tier's pixel questions can be asked in a real app process.
+#
+# WHEN IT CAN BE DELETED
+#   When §7.5 Option A lands in phase 10 — a Bazel `ios_unit_test(test_host = …)` over an
+#   `ios_application`, plus `ios_ui_test`. At that point Bazel owns both the host app and the
+#   hosted tests and this file, `Host/App`, and `Host/Tests` all go away together.
+#
+# The generated `.xcodeproj` is NOT committed (`.gitignore`: `Host/*.xcodeproj/`); regenerate with
+# `xcodegen generate --spec Host/project.yml`. Same arrangement as the existing `Demo/project.yml`.
+# ==============================================================================================
+name: InputDecHost
+options:
+  bundleIdPrefix: com.inputdechost
+  deploymentTarget:
+    # 18.4, matching IDBlockTextView's API_AVAILABLE gate. The engine's public header declares six
+    # properties using UIKit types newer than a host's floor — conversationContext alone requires
+    # 18.4 — so the class is gated at its highest requirement, and this harness must be able to see
+    # it without every construction site needing `if #available`.
+    iOS: "18.4"
+  createIntermediateGroups: true
+packages:
+  RichTextEditor:
+    path: ..
+settings:
+  base:
+    # `HostRootViewController` uses `@testable import RichTextEditorUIKit` to install the
+    # contract-violation reporter and to read the LIVE canvas class. Both are module-internal and
+    # neither is worth widening the shipping module's public surface for; see the import's comment.
+    # Set at PROJECT level so the SwiftPM package targets are built with it too — setting it only on
+    # the app target leaves the package's `.swiftmodule` without a testing-enabled interface and the
+    # import fails.
+    ENABLE_TESTABILITY: YES
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+targets:
+  InputDecHost:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: RichTextEditor
+        product: RichTextEditorUIKit
+      - package: RichTextEditor
+        product: RichTextEditorCore
+      # The "Raw engine" arm: upstream's `IDBlockTextView` with NO adapter in the path.
+      - package: RichTextEditor
+        product: RichTextInputDecUpstream
+      - package: RichTextEditor
+        product: RichTextInputDecHost
+      - package: RichTextEditor
+        product: RichTextEngineEditor
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecHost
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.9"
+
+  # The HOSTED unit-test target. Its whole point is `TEST_HOST` — the tests run inside the app
+  # process above, which is the one thing a SwiftPM test bundle cannot do.
+  #
+  # `sources` deliberately includes `../Tests/StockParitySupport` BY REFERENCE rather than by copy:
+  # that directory is the calibrated pixel instrument (`IDRenderView` + `IDCountRedPixels`, ported
+  # verbatim from upstream's `IDTextCanvasTestSupport.m`) and upstream's own
+  # `IDSpellingReadinessProbe`. Re-implementing either would destroy the property that makes a zero
+  # reading interpretable.
+  InputDecHostTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+      - path: ../Tests/StockParitySupport
+        name: StockParitySupport
+    dependencies:
+      - target: InputDecHost
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecHostTests
+        SWIFT_OBJC_BRIDGING_HEADER: $(SRCROOT)/Tests/InputDecHostTests-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../Tests/StockParitySupport/include
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/InputDecHost.app/InputDecHost
+        BUNDLE_LOADER: $(TEST_HOST)
+  # THE ENGINE'S OWN SUITES, imported from InputDec 2026-09-15 with the code they test — see
+  # Host/Engine/README.md for what is here, what runs, and what the numbers mean.
+  # Upstream's OWN demo app, and the test host for the suites above — the arrangement upstream has,
+  # kept because the tests depend on it: IDProjectSmokeTests SUBCLASSES IDDemoViewController, and a
+  # dozen scenario suites drive it. Our own InputDecHost app stays untouched and hosts our own
+  # suite; the two apps do not meet.
+  #
+  # `Engine/Sources` (IDTextView, upstream's other editor) is compiled HERE rather than into the
+  # test bundle: the demo view controller drives it, so it belongs in the app, and the test bundle
+  # resolves those symbols through BUNDLE_LOADER exactly as it resolves the engine's.
+  InputDecEngineApp:
+    type: application
+    platform: iOS
+    sources:
+      - Engine/App
+      - Engine/Sources
+      # The runtime ABI inventory, looked up by NAME at the bundle root — six
+      # IDPrivateSurfaceManifestTests cases search every loaded bundle for it. `buildPhase` is
+      # explicit because xcodegen has NO `resources:` target key: written that way it is silently
+      # ignored, and the file simply never ships.
+      - path: Engine/PrivateUIKit/Contracts/UIKitBehaviorContracts-iOS26.5.json
+        buildPhase: resources
+    dependencies:
+      - package: RichTextEditor
+        product: RichTextInputDecUpstream
+    info:
+      path: Engine/InputDecEngineApp-Info.plist
+      properties:
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleName: InputDecEngineApp
+        CFBundlePackageType: APPL
+        # Upstream's own keys. The scene delegate name is load-bearing — the app has no
+        # application-level window setup, so a generated manifest would launch a blank app and every
+        # hosted suite would fail on a nil root view controller.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: IDSceneDelegate
+        UIApplicationSupportsIndirectInputEvents: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.inputdec.demo.attachment
+            UTTypeDescription: InputDec demo attachment
+            UTTypeConformsTo:
+              - public.data
+          - UTTypeIdentifier: com.inputdec.demo.interaction-attachment
+            UTTypeDescription: InputDec demo interaction attachment
+            UTTypeConformsTo:
+              - public.data
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecEngineApp
+        TARGETED_DEVICE_FAMILY: "1"
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../Sources/RichTextInputDecUpstream/include
+          - $(SRCROOT)/../Sources/RichTextInputDecUpstream/Internal
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include/Kernel
+          - $(SRCROOT)/Engine/Sources
+  # A stock UITextView in an app of its own. The parity suites drive it and the engine side by side
+  # in one run and compare — that comparison IS their method, so the oracle is not optional.
+  InputDecStockOracleHost:
+    type: application
+    platform: iOS
+    sources:
+      - Engine/StockOracleHost
+      - path: Engine/PrivateUIKit/Contracts/UIKitBehaviorContracts-iOS26.5.json
+        buildPhase: resources
+    dependencies:
+      - package: RichTextEditor
+        product: RichTextInputDecUpstream
+    info:
+      path: Engine/InputDecStockOracleHost-Info.plist
+      properties:
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleName: InputDecStockOracleHost
+        CFBundlePackageType: APPL
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecStockOracleHost
+        TARGETED_DEVICE_FAMILY: "1"
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../Sources/RichTextInputDecUpstream/include
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include/Kernel
+  # The imported suites themselves.
+  #
+  # A SEPARATE target from InputDecHostTests, deliberately. That bundle is this repo's own work and
+  # its number is a target: 1,237 cases, 5 known-environmental failures. This one is a MEASUREMENT of
+  # an engine certified against iOS 26.5 and now running on 27, where a body of cases fails for
+  # reasons that are the runtime and not the code. Merging the two buries our green in that red and
+  # makes neither readable. Separate bundles also resolve the four suites that exist in both an ObjC
+  # original here and a Swift adaptation in the package's StockParity directory — same class names,
+  # different bundles, both kept because they answer different questions.
+  InputDecEngineTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      # The exclude and both resources are upstream's own, and they are load-bearing: six
+      # IDPrivateSurfaceManifestTests cases look the test-only manifest up as a BUNDLE resource and
+      # report "Missing checked-in manifest resource" when it is merely a source file.
+      - path: Engine/Tests
+        excludes:
+          - Fixtures/SelectionCallbackAuthorization-iOS26.5.json
+      # BY REFERENCE, one copy, exactly as upstream's own test target lists them. They were COPIED
+      # into Engine/Tests during the import to make the bundle compile, and the duplicate was itself
+      # a defect: testPrivateXCTestHIDABIInvocationsStayInSharedTestSupport scans Tests/ and UITests/
+      # and requires the private XCTest HID ABI to appear in ONE sanctioned file, so a second copy of
+      # IDHIDEventTestSupport.m was a real violation of a real rule.
+      - path: Engine/UITests/IDAutocorrectionDecisionTestSupport.h
+      - path: Engine/UITests/IDAutocorrectionDecisionTestSupport.m
+      - path: Engine/UITests/IDInlinePredictionLifecycleTestSupport.h
+      - path: Engine/UITests/IDInlinePredictionLifecycleTestSupport.m
+      - path: Engine/UITests/IDIMECompositionLifecycleTestSupport.h
+      - path: Engine/UITests/IDIMECompositionLifecycleTestSupport.m
+      - path: Engine/UITests/IDHIDEventTestSupport.h
+      - path: Engine/UITests/IDHIDEventTestSupport.m
+      - path: Engine/UITests/IDTextInputBatchTestSupport.h
+      - path: Engine/UITests/IDTextInputBatchTestSupport.m
+      - path: Engine/TestFixtures/TextInputScenarios
+        buildPhase: resources
+    dependencies:
+      - target: InputDecEngineApp
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecEngineTests
+        # The engine's own headers, public and Internal, plus the kernel's. The tests reach past the
+        # public surface on purpose — they are the engine's unit tests, not a consumer's.
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../Sources/RichTextInputDecUpstream/include
+          - $(SRCROOT)/../Sources/RichTextInputDecUpstream/Internal
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include
+          - $(SRCROOT)/../Sources/RichTextInputDecObjC/include/Kernel
+          - $(SRCROOT)/Engine/App
+          - $(SRCROOT)/Engine/Sources
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/InputDecEngineApp.app/InputDecEngineApp
+        BUNDLE_LOADER: $(TEST_HOST)
+  # The UI-TEST target. It exists to answer the OTHER half of §7.5's question: tranche T6 (the 196
+  # UI-tier methods) needs an XCUITest target against a launchable app, and §9.8 recorded that this
+  # repo had no `ios_ui_test` precedent anywhere. This is one. It is thin on purpose — establishing
+  # that the target type works and that the engine is reachable out of process, not porting T6.
+  InputDecHostUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: InputDecHost
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdechost.InputDecHostUITests
+
+schemes:
+  InputDecHost:
+    build:
+      targets:
+        InputDecHost: all
+        InputDecHostTests: [test]
+        InputDecHostUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - InputDecHostTests
+        - InputDecHostUITests
+  # Its OWN scheme, and deliberately NOT a member of the one above: `hostapp.sh test` keeps
+  # reporting this repo's own suite and its known baseline, and the engine's imported suite is run
+  # when you are changing the engine — which is when you want it alone and want to read every line
+  # of it. `xcodebuild test -scheme InputDecEngine`.
+  InputDecEngine:
+    build:
+      targets:
+        InputDecEngineApp: all
+        InputDecStockOracleHost: all
+        InputDecEngineTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - InputDecEngineTests

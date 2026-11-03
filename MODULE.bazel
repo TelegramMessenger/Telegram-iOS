@@ -1,0 +1,264 @@
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+_WASI_SDK_BUILD = """
+exports_files(["bin/clang++"])
+filegroup(
+    name = "all_files",
+    srcs = glob(["bin/**", "lib/**", "share/**"]),
+    visibility = ["//visibility:public"],
+)
+"""
+
+http_archive(
+    name = "wasi_sdk_macos",
+    urls = ["https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-33/wasi-sdk-33.0-arm64-macos.tar.gz"],
+    sha256 = "85c997a2665ead91673b5bb88b7d0df3fc8900df3bfa244f720d478187bbdc78",
+    strip_prefix = "wasi-sdk-33.0-arm64-macos",
+    build_file_content = _WASI_SDK_BUILD,
+)
+
+http_archive(
+    name = "wasi_sdk_linux",
+    urls = ["https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-33/wasi-sdk-33.0-arm64-linux.tar.gz"],
+    sha256 = "4f98ee738c7abb45c81a94d1461fc53cc569d1cd01498951c8184d841a027844",
+    strip_prefix = "wasi-sdk-33.0-arm64-linux",
+    build_file_content = _WASI_SDK_BUILD,
+)
+
+bazel_dep(name = "bazel_features", version = "1.51.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.20")
+bazel_dep(name = "rules_rust", version = "0.74.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2024",
+    extra_target_triples = [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim",
+        "x86_64-apple-ios",
+    ],
+    # rules_rust 0.74.0 knows archive checksums only up to Rust 1.98.0. Without one, a toolchain download
+    # skips the repository cache, and the remote downloader (bazel-remote) cannot look the archive up in its
+    # store either: every build fetches the toolchain from static.rust-lang.org again and runs past the 60s
+    # remote deadline (DEADLINE_EXCEEDED). Update these together with `versions` (each archive's checksum is
+    # at static.rust-lang.org/dist/<archive>.sha256), or drop them once known_shas.bzl covers the version.
+    sha256s = {
+        "cargo-1.98.1-aarch64-apple-darwin.tar.xz": "de51d4fade4f31ad8ec405261cc96bedc000d905f98980027610d6e288dbe21b",
+        "cargo-1.98.1-x86_64-apple-darwin.tar.xz": "74b1282253c31fb89926d51d57e47a06c6cd26c93657de72edf622a4ab66396f",
+        "clippy-1.98.1-aarch64-apple-darwin.tar.xz": "1ad080040ff0f4f8af0751bd7fa1fb1901212f8d164cecaa3c47b0654e0916f2",
+        "clippy-1.98.1-x86_64-apple-darwin.tar.xz": "f0fdf89c5f4a9f05fa893a75791d274799989371655985bce34358b5e8b1d231",
+        "llvm-tools-1.98.1-aarch64-apple-darwin.tar.xz": "9b68ac31be7c6d25a08ce34dbd2c1d026b8006905e74415b6d9576678379ecbc",
+        "llvm-tools-1.98.1-x86_64-apple-darwin.tar.xz": "3e2649efa7ebd72b96ba23aef4a301dbf9049ce29fb81f6f459772b73451306c",
+        "rust-1.98.1-aarch64-apple-darwin.tar.xz": "8f7c9de34c12c66dc55a6dbdd63b2b9645d4418775d4b975b0078a602f66e3e8",
+        "rust-1.98.1-x86_64-apple-darwin.tar.xz": "0d5aea6011d3b553e5aa71580b0cd7f9f0614eef17f7e5767e6bc161541ed85f",
+        "rust-analyzer-1.98.1-aarch64-apple-darwin.tar.xz": "e79c1c2f2cef01e3f6044e9e9e46b9963ac7c664f681d935ef900fb33828af9a",
+        "rust-analyzer-1.98.1-x86_64-apple-darwin.tar.xz": "25043ec861d7dcda87e9a96aacbdec6dd3b3909d1d13140563d21933a0d459d6",
+        "rust-std-1.98.1-aarch64-apple-darwin.tar.xz": "2de831ef563ce772519a4d18ba2659f0f7428d497ef66dad24b5a35e8f8cd177",
+        "rust-std-1.98.1-aarch64-apple-ios-sim.tar.xz": "63c2a5337695522b3158bd2d67dca8f5ed517321be303b8174447b3900c9a982",
+        "rust-std-1.98.1-aarch64-apple-ios.tar.xz": "ce5ddfb5d970ba38e26dbf657da7a4dd11e747d215786ed44c541f521e84881a",
+        "rust-std-1.98.1-x86_64-apple-darwin.tar.xz": "48b9835058a8baa4ff5e4387f3772c572a017a2b13393c46e151615c54e322e9",
+        "rust-std-1.98.1-x86_64-apple-ios.tar.xz": "e31f61ee797e63e9ab2a381a8efbe8a3fb37987f04e4f92eae2930a2dc6f68cf",
+        "rustc-1.98.1-aarch64-apple-darwin.tar.xz": "738e3f60114b20550fcf4f8a57c9cea0544239f214709f45594ff3fde327f577",
+        "rustc-1.98.1-x86_64-apple-darwin.tar.xz": "641c301bd19c3cead114cbb61919c5ed2475ce53e2d011fe0c990e16c5a1b04b",
+        "rustfmt-1.98.1-aarch64-apple-darwin.tar.xz": "86aa28e2f23edb0045a85288c3f69998dd30294fd2d3f1480efa9485cf137bfd",
+        "rustfmt-1.98.1-x86_64-apple-darwin.tar.xz": "35014248dd2ab9c9c194a86569aacb2e14784b82517ca9b9c806afb946ef3648",
+    },
+    versions = ["1.98.1"],
+)
+use_repo(rust, "rust_toolchains")
+register_toolchains("@rust_toolchains//:all")
+
+wallet_engine_crates = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+wallet_engine_crates.spec(package = "aes", repositories = ["wallet_engine_crates"], version = "=0.8.4")
+wallet_engine_crates.spec(package = "async-trait", repositories = ["wallet_engine_crates"], version = "=0.1.89")
+wallet_engine_crates.spec(package = "base64", repositories = ["wallet_engine_crates"], version = "=0.22.1")
+wallet_engine_crates.spec(package = "crc", repositories = ["wallet_engine_crates"], version = "=3.4.0")
+wallet_engine_crates.spec(package = "crypto_box", default_features = False, features = ["alloc", "salsa20", "std"], repositories = ["wallet_engine_crates"], version = "=0.9.1")
+wallet_engine_crates.spec(package = "curve25519-dalek", repositories = ["wallet_engine_crates"], version = "=4.1.3")
+wallet_engine_crates.spec(package = "ed25519-dalek", features = ["zeroize"], repositories = ["wallet_engine_crates"], version = "=2.2.0")
+wallet_engine_crates.spec(package = "fastnum", features = ["numtraits"], repositories = ["wallet_engine_crates"], version = "0.7")
+wallet_engine_crates.spec(package = "futures", repositories = ["wallet_engine_crates"], version = "=0.3.31")
+wallet_engine_crates.spec(package = "getrandom", features = ["wasm_js"], repositories = ["wallet_engine_crates"], version = "=0.3.4")
+wallet_engine_crates.spec(package = "hex", repositories = ["wallet_engine_crates"], version = "0.4")
+wallet_engine_crates.spec(package = "hmac", repositories = ["wallet_engine_crates"], version = "=0.12.1")
+wallet_engine_crates.spec(package = "num-bigint", repositories = ["wallet_engine_crates"], version = "=0.4.8")
+wallet_engine_crates.spec(package = "num-traits", repositories = ["wallet_engine_crates"], version = "0.2")
+wallet_engine_crates.spec(package = "parking_lot", repositories = ["wallet_engine_crates"], version = "0.12")
+wallet_engine_crates.spec(package = "pbkdf2", features = ["simple"], repositories = ["wallet_engine_crates"], version = "=0.12.2")
+wallet_engine_crates.spec(package = "serde", features = ["derive"], repositories = ["wallet_engine_crates"], version = "=1.0.229")
+wallet_engine_crates.spec(package = "serde-aux", repositories = ["wallet_engine_crates"], version = "4")
+wallet_engine_crates.spec(package = "serde_json", repositories = ["wallet_engine_crates"], version = "=1.0.151")
+wallet_engine_crates.spec(package = "sha2", repositories = ["wallet_engine_crates"], version = "=0.10.9")
+wallet_engine_crates.spec(package = "subtle", repositories = ["wallet_engine_crates"], version = "=2.6.1")
+wallet_engine_crates.spec(package = "thiserror", repositories = ["wallet_engine_crates"], version = "=2.0.17")
+wallet_engine_crates.spec(package = "ton_core", features = ["serde"], repositories = ["wallet_engine_crates"], version = "=0.1.4")
+wallet_engine_crates.spec(package = "ton_macros", repositories = ["wallet_engine_crates"], version = "0.1")
+wallet_engine_crates.spec(package = "uniffi", repositories = ["wallet_engine_crates"], version = "=0.32.0")
+wallet_engine_crates.spec(package = "url", repositories = ["wallet_engine_crates"], version = "=2.5.7")
+wallet_engine_crates.spec(package = "zeroize", features = ["derive"], repositories = ["wallet_engine_crates"], version = "=1.9.0")
+wallet_engine_crates.from_specs(
+    name = "wallet_engine_crates",
+    cargo_lockfile = "//third-party/wallet-engine:Cargo.Bazel.lock",
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim",
+        "x86_64-apple-darwin",
+        "x86_64-apple-ios",
+    ],
+)
+wallet_engine_crates.spec(package = "anyhow", repositories = ["wallet_engine_bindgen_crates"], version = "=1.0.102")
+wallet_engine_crates.spec(package = "uniffi", features = ["cli"], repositories = ["wallet_engine_bindgen_crates"], version = "=0.32.0")
+wallet_engine_crates.from_specs(
+    name = "wallet_engine_bindgen_crates",
+    cargo_lockfile = "//third-party/wallet-engine:Bindgen.Cargo.Bazel.lock",
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+    ],
+)
+use_repo(
+    wallet_engine_crates,
+    "wallet_engine_bindgen_crates",
+    "wallet_engine_crates",
+)
+
+# Third-party crates of the Rust MTProto engine (third-party/mtproto-engine). Every version is pinned
+# with `=` to third-party/mtproto-engine/Cargo.lock. Kept apart from wallet_engine_crates so the two
+# lockfiles move independently. Repin only this repository:
+#   CARGO_BAZEL_REPIN=1 CARGO_BAZEL_REPIN_ONLY=mtproto_engine_crates ./build-input/bazel-9.2.0-darwin-arm64 build //third-party/mtproto-engine:mtproto_engine_ffi_archive
+mtproto_engine_crates = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+mtproto_engine_crates.spec(package = "aes", features = ["zeroize"], repositories = ["mtproto_engine_crates"], version = "=0.8.4")
+mtproto_engine_crates.spec(package = "base64", repositories = ["mtproto_engine_crates"], version = "=0.22.1")
+mtproto_engine_crates.spec(package = "flate2", default_features = False, features = ["rust_backend"], repositories = ["mtproto_engine_crates"], version = "=1.1.10")
+mtproto_engine_crates.spec(package = "getrandom", repositories = ["mtproto_engine_crates"], version = "=0.3.4")
+mtproto_engine_crates.spec(package = "hmac", repositories = ["mtproto_engine_crates"], version = "=0.12.1")
+mtproto_engine_crates.spec(package = "libc", repositories = ["mtproto_engine_crates"], version = "=0.2.189")
+mtproto_engine_crates.spec(package = "mio", features = ["net", "os-poll"], repositories = ["mtproto_engine_crates"], version = "=1.2.2")
+mtproto_engine_crates.spec(package = "num-bigint", repositories = ["mtproto_engine_crates"], version = "=0.4.8")
+mtproto_engine_crates.spec(package = "num-integer", repositories = ["mtproto_engine_crates"], version = "=0.1.47")
+mtproto_engine_crates.spec(package = "num-traits", repositories = ["mtproto_engine_crates"], version = "=0.2.19")
+mtproto_engine_crates.spec(package = "sha1", repositories = ["mtproto_engine_crates"], version = "=0.10.7")
+# `asm` selects sha2's aarch64 SHA-256 backend (src/sha256/aarch64.rs). Cargo enables it only for
+# aarch64 via a target-specific dependency, which Bazel does not read.
+mtproto_engine_crates.spec(package = "sha2", features = ["asm"], repositories = ["mtproto_engine_crates"], version = "=0.10.9")
+mtproto_engine_crates.spec(package = "thiserror", repositories = ["mtproto_engine_crates"], version = "=2.0.17")
+mtproto_engine_crates.spec(package = "zeroize", repositories = ["mtproto_engine_crates"], version = "=1.9.0")
+# ARMv8 AES instructions. Cargo gets this from third-party/mtproto-engine/.cargo/config.toml, which
+# Bazel does not read. Without it the engine silently runs software AES (~15x slower).
+mtproto_engine_crates.annotation(crate = "aes", repositories = ["mtproto_engine_crates"], rustc_flags = ["--cfg", "aes_armv8", "-Copt-level=3"])
+# rules_rust builds these at the compilation mode's opt-level (0 under --configuration=debug_*).
+# They hold the engine's non-generic hot code (hashing, inflate, checksums, DH bignum math), which
+# does not inline into the -Copt-level=3 engine crates. Generic-only crates (cipher, digest, hmac,
+# inout, ...) are instantiated inside the engine crates and need no annotation.
+mtproto_engine_crates.annotation(crate = "sha1", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "sha2", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "flate2", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "miniz_oxide", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "adler2", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "simd-adler32", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "crc32fast", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "num-bigint", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.annotation(crate = "num-integer", repositories = ["mtproto_engine_crates"], rustc_flags = ["-Copt-level=3"])
+mtproto_engine_crates.from_specs(
+    name = "mtproto_engine_crates",
+    cargo_lockfile = "//third-party/mtproto-engine:Cargo.Bazel.lock",
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim",
+        "x86_64-apple-darwin",
+        "x86_64-apple-ios",
+    ],
+)
+use_repo(mtproto_engine_crates, "mtproto_engine_crates")
+
+bazel_dep(name = "rules_go", version = "0.60.0", repo_name = "io_bazel_rules_go")
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.24.2")
+
+bazel_dep(name = "gazelle", version = "0.43.0", repo_name = "bazel_gazelle")
+
+go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//submodules/TgVoipWebrtc/tgcalls/tools/go_sfu:go.mod")
+use_repo(
+    go_deps,
+    "com_github_pion_datachannel",
+    "com_github_pion_dtls_v3",
+    "com_github_pion_ice_v4",
+    "com_github_pion_logging",
+    "com_github_pion_rtcp",
+    "com_github_pion_sctp",
+    "com_github_pion_srtp_v3",
+)
+
+bazel_dep(name = "rules_xcodeproj")
+local_path_override(
+    module_name = "rules_xcodeproj",
+    path = "./build-system/bazel-rules/rules_xcodeproj",
+)
+
+bazel_dep(name = "rules_apple", repo_name = "build_bazel_rules_apple")
+local_path_override(
+    module_name = "rules_apple",
+    path = "./build-system/bazel-rules/rules_apple",
+)
+
+bazel_dep(name = "rules_swift", repo_name = "build_bazel_rules_swift")
+local_path_override(
+    module_name = "rules_swift",
+    path = "./build-system/bazel-rules/rules_swift",
+)
+
+bazel_dep(name = "apple_support", repo_name = "build_bazel_apple_support")
+local_path_override(
+    module_name = "apple_support",
+    path = "./build-system/bazel-rules/apple_support",
+)
+
+# Must be registered here: only the root module outranks rules_cc's generic
+# @local_config_cc toolchain, which rules_swift rejects ("Invalid target triple: local").
+apple_cc_configure = use_extension("@build_bazel_apple_support//crosstool:setup.bzl", "apple_cc_configure_extension")
+use_repo(apple_cc_configure, "local_config_apple_cc", "local_config_apple_cc_toolchains")
+register_toolchains("@local_config_apple_cc_toolchains//:all")
+
+http_file(
+    name = "cmake_tar_gz",
+    sha256 = "3be85f5b999e327b1ac7d804cbc9acd767059e9f603c42ec2765f6ab68fbd367",
+    urls = ["https://github.com/Kitware/CMake/releases/download/v4.1.2/cmake-4.1.2-macos-universal.tar.gz"],
+)
+
+http_file(
+    name = "meson_tar_gz",
+    sha256 = "999b65f21c03541cf11365489c1fad22e2418bb0c3d50ca61139f2eec09d5496",
+    urls = ["https://github.com/mesonbuild/meson/releases/download/1.6.0/meson-1.6.0.tar.gz"],
+)
+
+http_file(
+    name = "ninja-mac_zip",
+    sha256 = "89a287444b5b3e98f88a945afa50ce937b8ffd1dcc59c555ad9b1baf855298c9",
+    urls = ["https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip"],
+)
+
+http_file(
+    name = "flatbuffers_zip",
+    sha256 = "c5cd6a605ff20350c7faa19d8eeb599df6117ea4aabd16ac58a7eb5ba82df4e7",
+    urls = ["https://github.com/google/flatbuffers/archive/refs/tags/v24.12.23.zip"],
+)
+
+provisioning_profile_repository = use_extension("@build_bazel_rules_apple//apple:apple.bzl", "provisioning_profile_repository_extension")
+#provisioning_profile_repository.setup(
+#    fallback_profiles = "//path/to/some:filegroup", # Profiles to use if one isn't found locally
+#)
+
+bazel_dep(name = "build_configuration")
+local_path_override(
+    module_name = "build_configuration",
+    path = "./build-input/configuration-repository",
+)

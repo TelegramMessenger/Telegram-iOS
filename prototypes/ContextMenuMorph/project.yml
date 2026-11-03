@@ -1,0 +1,53 @@
+name: ContextMenuMorph
+options:
+  deploymentTarget:
+    iOS: '26.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CODE_SIGNING_ALLOWED: NO
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+    TARGETED_DEVICE_FAMILY: '1,2'
+targets:
+  LensTransitionRuntime:
+    type: framework
+    platform: iOS
+    sources:
+      - ../../submodules/TelegramUI/Components/LensTransition/Bridge/Sources
+      - path: ../../submodules/TelegramUI/Components/LensTransition/Bridge/PublicHeaders/LensTransitionRuntime
+        headerVisibility: public
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.LensTransitionRuntime
+        DEFINES_MODULE: YES
+        HEADER_SEARCH_PATHS: $(SRCROOT)/../../submodules/TelegramUI/Components/LensTransition/Bridge/PublicHeaders
+  ContextMenuMorph:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+      - ../../submodules/Display/Source/ContextMenuSourceLease.swift
+      - ../../submodules/TelegramUI/Components/LensTransition/Sources/LiquidMorphTransition.swift
+    dependencies:
+      - target: LensTransitionRuntime
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.ContextMenuMorphPrototype
+  ContextMenuMorphTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: ContextMenuMorph
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.ContextMenuMorphPrototypeTests
+schemes:
+  ContextMenuMorph:
+    build:
+      targets:
+        ContextMenuMorph: all
+    test:
+      targets: [ContextMenuMorphTests]

@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ic_gps_filled.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

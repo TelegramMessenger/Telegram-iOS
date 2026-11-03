@@ -1,0 +1,14 @@
+namespace TelegramCore;
+
+table DeviceContactPhoneNumberData {
+    label:string (id: 0, required);
+    value:string (id: 1, required);
+}
+
+table StoredDeviceContactData {
+    firstName:string (id: 0, required);
+    lastName:string (id: 1, required);
+    phoneNumbers:[DeviceContactPhoneNumberData] (id: 2);
+}
+
+root_type StoredDeviceContactData;

@@ -1,0 +1,22 @@
+package(default_visibility = ["//:__subpackages__"])
+
+filegroup(
+    name = "testdata",
+    srcs = glob([
+        "testdata/**/*.icc",
+        "testdata/**/*.pam",
+        "testdata/**/*.pfm",
+        "testdata/**/*.pgm",
+        "testdata/**/*.pnm",
+        "testdata/**/*.ppm",
+        "testdata/**/*.png",
+        "testdata/**/*.jpg",
+        "testdata/**/*.jxl",
+        "testdata/**/*.gif",
+        "testdata/**/*.y4m",
+        "testdata/**/*.jxl",
+        "testdata/**/*.png",
+        "testdata/**/*.jpg",
+        "testdata/position_encoding/*.txt",
+    ]),
+)

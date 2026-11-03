@@ -1,0 +1,10 @@
+   OpenSubdiv
+   Copyright 2013 Pixar
+   All rights reserved.
+
+   This product includes software developed at:
+       Pixar (http://www.pixar.com/).
+       Dreamworks Animation (http://www.dreamworksanimation.com/)
+       Autodesk, Inc. (http://www.autodesk.com/).
+       Google, Inc. (http://www.google.com/).
+       DigitalFish (http://digitalfish.com/).

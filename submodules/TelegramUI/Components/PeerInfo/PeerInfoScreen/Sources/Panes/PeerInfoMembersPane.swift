@@ -1,0 +1,596 @@
+import Foundation
+import UIKit
+import AsyncDisplayKit
+import Display
+import TelegramCore
+import SwiftSignalKit
+import TelegramPresentationData
+import AccountContext
+import ContextUI
+import PhotoResources
+import TelegramUIPreferences
+import ItemListPeerItem
+import ItemListPeerActionItem
+import MergeLists
+import ItemListUI
+import PeerInfoVisualMediaPaneNode
+import PeerInfoPaneNode
+import ContactsPeerItem
+
+private struct PeerMembersListTransaction {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+    let animated: Bool
+}
+
+enum PeerMembersListAction {
+    case open
+    case editRank
+    case promote
+    case restrict
+    case remove
+    case openStories(sourceView: UIView)
+    case openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?)
+}
+
+private enum PeerMembersListEntryStableId: Hashable {
+    case addMember
+    case peer(EnginePeer.Id)
+}
+
+private enum PeerMembersListEntry: Comparable, Identifiable {
+    case addMember(PresentationTheme, String)
+    case member(theme: PresentationTheme, index: Int, member: PeerInfoMember)
+        
+    var stableId: PeerMembersListEntryStableId {
+        switch self {
+            case .addMember:
+                return .addMember
+            case let .member(_, _, member):
+                return .peer(member.id)
+        }
+    }
+    
+    static func ==(lhs: PeerMembersListEntry, rhs: PeerMembersListEntry) -> Bool {
+        switch lhs {
+            case let .addMember(lhsTheme, lhsText):
+                if case let .addMember(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .member(lhsTheme, lhsIndex, lhsMember):
+                if case let .member(rhsTheme, rhsIndex, rhsMember) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsMember == rhsMember {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    static func <(lhs: PeerMembersListEntry, rhs: PeerMembersListEntry) -> Bool {
+        switch lhs {
+            case .addMember:
+                switch rhs {
+                    case .addMember:
+                        return false
+                    case .member:
+                        return true
+                }
+            case let .member(_, lhsIndex, _):
+                switch rhs {
+                    case .addMember:
+                        return false
+                    case let .member(_, rhsIndex, _):
+                        return lhsIndex < rhsIndex
+                }
+        }
+    }
+    
+    func item(context: AccountContext, presentationData: PresentationData, enclosingPeer: EnginePeer, addMemberAction: @escaping () -> Void, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void, contextAction: ((PeerInfoMember, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
+        switch self {
+            case let .addMember(_, text):
+                return ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesItemList.addPersonIcon(presentationData.theme), title: text, alwaysPlain: true, sectionId: 0, height: .compactPeerList, color: .accent, editing: false, action: {
+                    addMemberAction()
+                })
+            case let .member(_, _, member):
+                var labelColor = presentationData.theme.list.itemSecondaryTextColor
+                var labelBackground = false
+                let label: String?
+                if let rank = member.rank {
+                    label = rank
+                } else {
+                    switch member.role {
+                    case .creator:
+                        label = presentationData.strings.GroupInfo_LabelOwner
+                    case .admin:
+                        label = presentationData.strings.GroupInfo_LabelAdmin
+                    case .member:
+                        var canEditRank = false
+                        if member.id == context.account.peerId {
+                            if case let .channel(channel) = enclosingPeer, channel.hasPermission(.editRank) {
+                                canEditRank = true
+                            } else if case let .legacyGroup(group) = enclosingPeer, !group.hasBannedPermission(.banEditRank) {
+                                canEditRank = true
+                            }
+                        }
+                        if canEditRank {
+                            label = presentationData.strings.GroupInfo_AddRank
+                            labelColor = presentationData.theme.list.itemAccentColor
+                        } else {
+                            label = nil
+                        }
+                    }
+                }
+            
+                switch member.role {
+                case .creator:
+                    labelBackground = true
+                    labelColor = UIColor(rgb: 0x956ac8)
+                case .admin:
+                    labelBackground = true
+                    labelColor = UIColor(rgb: 0x49a355)
+                default:
+                    break
+                }
+                
+                let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: enclosingPeer, member: member)
+                
+                var options: [ItemListPeerItemRevealOption] = []
+                if actions.contains(.promote), case .channel = enclosingPeer {
+                    options.append(ItemListPeerItemRevealOption(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: {
+                        action(member, .promote)
+                    }))
+                }
+                if actions.contains(.restrict) {
+                    if case .channel = enclosingPeer {
+                        options.append(ItemListPeerItemRevealOption(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: {
+                            action(member, .restrict)
+                        }))
+                    }
+                    options.append(ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
+                        action(member, .remove)
+                    }))
+                }
+            
+                var presence: EnginePeer.Presence
+                if member.peer.id == context.account.peerId {
+                    presence = EnginePeer.Presence(status: .present(until: Int32.max), lastActivity: 0)
+                } else if let value = member.presence {
+                    presence = EnginePeer.Presence(value)
+                } else {
+                    presence = EnginePeer.Presence(status: .longTimeAgo, lastActivity: 0)
+                }
+            
+                var status: ContactsPeerItemStatus = .presence(presence, presentationData.dateTimeFormat)
+                if case let .user(user) = member.peer, let botInfo = user.botInfo {
+                    let botStatus: String
+                    if botInfo.flags.contains(.hasAccessToChatHistory) {
+                        botStatus = presentationData.strings.Bot_GroupStatusReadsHistory
+                    } else {
+                        botStatus = presentationData.strings.Bot_GroupStatusDoesNotReadHistory
+                    }
+                    status = .custom(string: NSAttributedString(string: botStatus, font: Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize * 14.0 / 17.0)), textColor: presentationData.theme.list.itemSecondaryTextColor), multiline: false, isActive: false, icon: nil)
+                }
+            
+                var canEditRank = false
+                if actions.contains(.editRank) {
+                    canEditRank = true
+                }
+                return ContactsPeerItem(
+                    presentationData: ItemListPresentationData(presentationData),
+                    style: .plain,
+                    systemStyle: .glass,
+                    sectionId: 0,
+                    sortOrder: presentationData.nameSortOrder,
+                    displayOrder: presentationData.nameDisplayOrder,
+                    context: context,
+                    peerMode: .memberList,
+                    peer: .peer(peer: member.peer, chatPeer: member.peer),
+                    status: status,
+                    rightLabelText: label.flatMap { .init(text: $0, color: labelColor, hasBackground: labelBackground) },
+                    enabled: true,
+                    selection: .none,
+                    editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
+                    options: options,
+                    additionalActions: [],
+                    actionIcon: .none,
+                    index: nil,
+                    header: nil,
+                    hideBackground: true,
+                    action: member.peer.id == context.account.peerId && !canEditRank ? nil : { _ in
+                        if member.peer.id == context.account.peerId && canEditRank {
+                            action(member, .editRank)
+                        } else {
+                            action(member, .open)
+                        }
+                    },
+                    disabledAction: nil,
+                    setPeerIdWithRevealedOptions: { _, _ in
+                    },
+                    deletePeer: nil,
+                    itemHighlighting: nil,
+                    contextAction: contextAction == nil ? nil : { node, gesture, _ in
+                        contextAction?(member, node, gesture)
+                    },
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    storyStats: member.storyStats.flatMap { storyStats in
+                        return (
+                            total: storyStats.totalCount,
+                            unseen: storyStats.unseenCount,
+                            hasUnseenCloseFriends: storyStats.hasUnseenCloseFriends,
+                            hasLiveItems: storyStats.hasLiveItems
+                        )
+                    },
+                    openStories: { _, sourceNode in
+                        action(member, .openStories(sourceView: sourceNode.view))
+                    }
+                )
+                
+                /*return ItemListPeerItem(
+                    presentationData: ItemListPresentationData(presentationData),
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    context: context,
+                    peer: EnginePeer(member.peer),
+                    presence: member.presence.flatMap(EnginePeer.Presence.init),
+                    text: .presence,
+                    label: label == nil ? .none : .text(label!, .standard),
+                    editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: false),
+                    revealOptions: ItemListPeerItemRevealOptions(options: options),
+                    switchValue: nil,
+                    enabled: true, 
+                    selectable: member.id != context.account.peerId,
+                    sectionId: 0,
+                    action: {
+                        action(member, .open)
+                    },
+                    setPeerIdWithRevealedOptions: { _, _ in
+                    },
+                    removePeer: { _ in
+                    },
+                    contextAction: contextAction == nil ? nil : { node, gesture in
+                        contextAction?(member, node, gesture)
+                    },
+                    hasTopStripe: false,
+                    noInsets: true,
+                    noCorners: true,
+                    disableInteractiveTransitionIfNecessary: true,
+                    storyStats: member.storyStats,
+                    openStories: { sourceView in
+                        action(member, .openStories(sourceView: sourceView))
+                    }
+                )*/
+        }
+    }
+}
+
+private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toEntries: [PeerMembersListEntry], context: AccountContext, presentationData: PresentationData, enclosingPeer: EnginePeer, addMemberAction: @escaping () -> Void, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void, contextAction: ((PeerInfoMember, ASDisplayNode, ContextGesture?) -> Void)?) -> PeerMembersListTransaction {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: addMemberAction, action: action, contextAction: contextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: addMemberAction, action: action, contextAction: contextAction), directionHint: nil) }
+    
+    return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
+}
+
+final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
+    private let context: AccountContext
+    private let membersContext: PeerInfoMembersContext
+    private let addMemberAction: () -> Void
+    private let action: (PeerInfoMember, PeerMembersListAction) -> Void
+    
+    weak var parentController: ViewController?
+    
+    private let listBackgroundView: UIImageView
+    private let listMaskView: UIImageView
+    private let listNode: ListView
+    private var currentEntries: [PeerMembersListEntry] = []
+    private var enclosingPeer: EnginePeer?
+    private var currentState: PeerInfoMembersState?
+    private var canLoadMore: Bool = false
+    private var enqueuedTransactions: [PeerMembersListTransaction] = []
+    
+    private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool)?
+    private let presentationDataPromise = Promise<PresentationData>()
+    
+    private var ignoreListBackgroundUpdates: Bool = false
+    
+    private let ready = Promise<Bool>()
+    private var didSetReady: Bool = false
+    var isReady: Signal<Bool, NoError> {
+        return self.ready.get()
+    }
+
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        return .single(nil)
+    }
+
+    var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    var tabBarOffset: CGFloat {
+        return 0.0
+    }
+        
+    private var disposable: Disposable?
+    
+    init(context: AccountContext, peerId: EnginePeer.Id, membersContext: PeerInfoMembersContext, addMemberAction: @escaping () -> Void, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void) {
+        self.context = context
+        self.membersContext = membersContext
+        self.addMemberAction = addMemberAction
+        self.action = action
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.listNode = ListViewImpl()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
+        
+        self.listBackgroundView = UIImageView()
+        self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+        self.listMaskView = UIImageView()
+        self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.white.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.clear.cgColor)
+            context.setBlendMode(.copy)
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: 26.0 * 2.0, height: 26.0 * 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16 + 26, topCapHeight: 26).withRenderingMode(.alwaysTemplate)
+        
+        super.init()
+        
+        self.listNode.preloadPages = true
+        self.view.addSubview(self.listBackgroundView)
+        self.addSubnode(self.listNode)
+        self.view.addSubview(self.listMaskView)
+        
+        self.disposable = (combineLatest(queue: .mainQueue(),
+            membersContext.state,
+            self.presentationDataPromise.get(),
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
+        |> deliverOnMainQueue).startStrict(next: { [weak self] state, presentationData, enclosingPeer in
+            guard let strongSelf = self, let enclosingPeer = enclosingPeer else {
+                return
+            }
+            
+            strongSelf.enclosingPeer = enclosingPeer
+            strongSelf.currentState = state
+            strongSelf.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
+        })
+        
+        self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self, let state = strongSelf.currentState, case .ready(true) = state.dataState else {
+                return
+            }
+            if case let .known(value) = offset, value < 100.0 {
+                strongSelf.membersContext.loadMore()
+            }
+        }
+        
+        self.listNode.visibleContentOffsetChanged = { [weak self] _, transition in
+            guard let self else {
+                return
+            }
+            if !self.ignoreListBackgroundUpdates {
+                self.updateListBackground(transition: transition)
+            }
+        }
+        self.listNode.displayedItemRangeChanged = { [weak self] _, _ in
+            guard let self else {
+                return
+            }
+            if !self.ignoreListBackgroundUpdates {
+                self.updateListBackground(transition: .immediate)
+            }
+        }
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+    
+    func ensureMessageIsVisible(id: EngineMessage.Id) {   
+    }
+    
+    func scrollToTop() -> Bool {
+        if !self.listNode.scrollToOffsetFromTop(0.0, animated: true) {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        let isFirstLayout = self.currentParams == nil
+        self.currentParams = (size, isScrollingLockedAtTop)
+        self.presentationDataPromise.set(.single(presentationData))
+        
+        self.ignoreListBackgroundUpdates = true
+        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+
+        var scrollToItem: ListViewScrollToItem?
+        if isScrollingLockedAtTop {
+            switch self.listNode.visibleContentOffset() {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                break
+            default:
+                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: duration), directionHint: .Up)
+            }
+        }
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset + 16.0, bottom: bottomInset, right: sideInset + 16.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        self.listNode.scrollEnabled = !isScrollingLockedAtTop
+        
+        self.ignoreListBackgroundUpdates = false
+        self.updateListBackground(transition: transition)
+        
+        self.listBackgroundView.tintColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.listMaskView.tintColor = presentationData.theme.list.blocksBackgroundColor
+        
+        if isFirstLayout, let enclosingPeer = self.enclosingPeer, let state = self.currentState {
+            self.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
+        }
+    }
+    
+    private func updateState(enclosingPeer: EnginePeer, state: PeerInfoMembersState, presentationData: PresentationData) {
+        var entries: [PeerMembersListEntry] = []
+        if state.canAddMembers {
+            entries.append(.addMember(presentationData.theme, presentationData.strings.GroupInfo_AddParticipant))
+        }
+        for member in state.members {
+            entries.append(.member(theme: presentationData.theme, index: entries.count, member: member))
+        }
+        
+        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: { [weak self] in
+            self?.addMemberAction()
+        }, action: { [weak self] member, action in
+            guard let self else {
+                return
+            }
+            
+            if case .open = action {
+                self.listNode.clearHighlightAnimated(true)
+            }
+            
+            self.action(member, action)
+        }, contextAction: { [weak self] member, sourceNode, gesture in
+            guard let self else {
+                return
+            }
+            var node: ContextExtractedContentContainingNode?
+            if let sourceNode = sourceNode as? ContextExtractedContentContainingNode {
+                node = sourceNode
+            } else {
+                for subnode in sourceNode.subnodes ?? [] {
+                    if let subnode = subnode as? ContextExtractedContentContainingNode {
+                        node = subnode
+                        break
+                    }
+                }
+            }
+            guard let node else {
+                gesture?.cancel()
+                return
+            }
+
+            self.action(member, .openContextMenu(sourceNode: node, gesture: gesture))
+        })
+        self.enclosingPeer = enclosingPeer
+        self.currentEntries = entries
+        self.enqueuedTransactions.append(transaction)
+        self.dequeueTransaction()
+    }
+    
+    private func dequeueTransaction() {
+        guard let _ = self.currentParams, let transaction = self.enqueuedTransactions.first else {
+            return
+        }
+        
+        self.enqueuedTransactions.remove(at: 0)
+        
+        var options = ListViewDeleteAndInsertOptions()
+        if transaction.animated {
+            options.insert(.AnimateInsertion)
+        } else {
+            options.insert(.Synchronous)
+        }
+        
+        self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.didSetReady {
+                strongSelf.didSetReady = true
+                strongSelf.ready.set(.single(true))
+            }
+        })
+    }
+    
+    private func updateListBackground(transition: ContainedViewLayoutTransition) {
+        guard self.listNode.visibleSize.width != 0.0 else {
+            return
+        }
+        
+        var distanceToTop: CGFloat = -100.0
+        var distanceToBottom: CGFloat = -100.0
+        switch self.listNode.visibleContentOffset() {
+        case let .known(topOffset):
+            distanceToTop = -topOffset + self.listNode.insets.top
+        default:
+            break
+        }
+        switch self.listNode.visibleBottomContentOffset() {
+        case let .known(bottomOffset):
+            distanceToBottom = -bottomOffset + self.listNode.insets.bottom
+        default:
+            break
+        }
+        
+        distanceToTop = max(-100.0, distanceToTop)
+        distanceToBottom = max(-100.0, distanceToBottom)
+        
+        let listBackgroundFrame = CGRect(origin: CGPoint(x: 16.0, y: distanceToTop), size: CGSize(width: max(1.0, self.listNode.visibleSize.width - 16.0 * 2.0), height: max(1.0, self.listNode.visibleSize.height - distanceToBottom - distanceToTop)))
+        let listMaskFrame = CGRect(origin: CGPoint(x: 0.0, y: listBackgroundFrame.minY), size: CGSize(width: listBackgroundFrame.width + 16.0 * 2.0, height: listBackgroundFrame.height))
+        transition.updateFrame(view: self.listBackgroundView, frame: listBackgroundFrame)
+        transition.updateFrame(view: self.listMaskView, frame: listMaskFrame)
+    }
+    
+    func findLoadedMessage(id: EngineMessage.Id) -> EngineMessage? {
+        return nil
+    }
+    
+    func updateHiddenMedia() {
+    }
+    
+    func transferVelocity(_ velocity: CGFloat) {
+        if velocity > 0.0 {
+            self.listNode.transferVelocity(velocity)
+        }
+    }
+    
+    func cancelPreviewGestures() {
+    }
+    
+    func transitionNodeForGallery(messageId: EngineMessage.Id, media: EngineMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        return nil
+    }
+    
+    func addToTransitionSurface(view: UIView) {
+    }
+    
+    func updateSelectedMessages(animated: Bool) {
+    }
+}
+
+final class PeerInfoMemberExtractedContentSource: ContextExtractedContentSource {
+    var keepInPlace: Bool
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool
+
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    var centerVertically: Bool
+    var shouldBeDismissed: Signal<Bool, NoError>
+    
+    init(sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool, centerVertically: Bool, shouldBeDismissed: Signal<Bool, NoError>) {
+        self.sourceNode = sourceNode
+        self.keepInPlace = keepInPlace
+        self.blurBackground = blurBackground
+        self.centerVertically = centerVertically
+        self.shouldBeDismissed = shouldBeDismissed
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
+    }
+}

@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=/usr/bin/gdk-pixbuf-thumbnailer
+Exec=/usr/bin/gdk-pixbuf-thumbnailer -s %s %u %o
+MimeType=image/jxl;
