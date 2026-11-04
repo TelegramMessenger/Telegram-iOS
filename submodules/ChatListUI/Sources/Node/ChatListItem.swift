@@ -2609,6 +2609,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     switch recentPeer.value {
                                     case let .builtin(value):
                                         messageText = item.presentationData.strings.ChatList_UserReacted(value).string
+                                        // The entities, spoilers and custom emoji ranges belong to the
+                                        // message text, not to this string.
+                                        messageEntities = []
+                                        spoilers = nil
+                                        customEmojiRanges = nil
                                         richTextPreview = nil
                                     case .custom:
                                         break
