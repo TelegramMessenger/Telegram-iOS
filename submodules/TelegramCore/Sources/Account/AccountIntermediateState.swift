@@ -252,6 +252,9 @@ struct AccountMutableState {
     var displayAlerts: [(text: String, isDropAuth: Bool)] = []
     var dismissBotWebViews: [Int64] = []
     var joinChatWebViewDecisions: [JoinChatWebViewDecision] = []
+    #if os(macOS)
+    var storyReactionNotifications: [StoryReactionNotification] = []
+    #endif
     
     var insertedPeers: [PeerId: Peer] = [:]
     
@@ -308,7 +311,14 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, apiChats: self.apiChats, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, storedStories: self.storedStories, sentScheduledMessageIds: self.sentScheduledMessageIds, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, joinChatWebViewDecisions: self.joinChatWebViewDecisions, branchOperationIndex: self.operations.count)
+        let state = AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, apiChats: self.apiChats, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, storedStories: self.storedStories, sentScheduledMessageIds: self.sentScheduledMessageIds, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, joinChatWebViewDecisions: self.joinChatWebViewDecisions, branchOperationIndex: self.operations.count)
+        #if os(macOS)
+        var branchedState = state
+        branchedState.storyReactionNotifications = self.storyReactionNotifications
+        return branchedState
+        #else
+        return state
+        #endif
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -353,6 +363,9 @@ struct AccountMutableState {
         self.displayAlerts.append(contentsOf: other.displayAlerts)
         self.dismissBotWebViews.append(contentsOf: other.dismissBotWebViews)
         self.joinChatWebViewDecisions.append(contentsOf: other.joinChatWebViewDecisions)
+        #if os(macOS)
+        self.storyReactionNotifications.append(contentsOf: other.storyReactionNotifications)
+        #endif
         
         self.resetForumTopicLists.merge(other.resetForumTopicLists, uniquingKeysWith: { lhs, _ in lhs })
     }
@@ -392,6 +405,12 @@ struct AccountMutableState {
     mutating func addJoinChatWebViewDecision(_ decision: JoinChatWebViewDecision) {
         self.joinChatWebViewDecisions.append(decision)
     }
+
+    #if os(macOS)
+    mutating func addStoryReactionNotification(_ notification: StoryReactionNotification) {
+        self.storyReactionNotifications.append(notification)
+    }
+    #endif
 
     mutating func deleteMessagesWithGlobalIds(_ globalIds: [Int32]) {
         self.addOperation(.DeleteMessagesWithGlobalIds(globalIds))
@@ -989,6 +1008,9 @@ struct AccountFinalStateEvents {
     let displayAlerts: [(text: String, isDropAuth: Bool)]
     let dismissBotWebViews: [Int64]
     let joinChatWebViewDecisions: [JoinChatWebViewDecision]
+    #if os(macOS)
+    var storyReactionNotifications: [StoryReactionNotification] = []
+    #endif
     let delayNotificatonsUntil: Int32?
     let updatedMaxMessageId: Int32?
     let updatedQts: Int32?
@@ -1011,6 +1033,11 @@ struct AccountFinalStateEvents {
     let updatedEmojiGameInfo: EmojiGameInfo?
     
     var isEmpty: Bool {
+        #if os(macOS)
+        if !self.storyReactionNotifications.isEmpty {
+            return false
+        }
+        #endif
         return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.sentScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.groupCallMessageUpdates.isEmpty && self.storyUpdates.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && self.dismissBotWebViews.isEmpty && self.joinChatWebViewDecisions.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty && !self.updateConfig && !self.isPremiumUpdated && self.updatedStarsBalance.isEmpty && self.updatedTonBalance.isEmpty && self.walletTransferUpdates.isEmpty && self.walletTonConnectEvents.isEmpty && self.updatedWalletState == nil && self.updatedStarsRevenueStatus.isEmpty && self.reportMessageDelivery.isEmpty && self.addedConferenceInvitationMessagesIds.isEmpty && self.updatedStarGiftAuctionState.isEmpty && self.updatedStarGiftAuctionMyState.isEmpty && self.updatedEmojiGameInfo == nil
     }
     
@@ -1090,6 +1117,9 @@ struct AccountFinalStateEvents {
         self.updatedStarGiftAuctionState = state.updatedStarGiftAuctionState
         self.updatedStarGiftAuctionMyState = state.updatedStarGiftAuctionMyState
         self.updatedEmojiGameInfo = state.updatedEmojiGameInfo
+        #if os(macOS)
+        self.storyReactionNotifications = state.state.state.storyReactionNotifications
+        #endif
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
@@ -1128,7 +1158,7 @@ struct AccountFinalStateEvents {
         var addedConferenceInvitationMessagesIds = self.addedConferenceInvitationMessagesIds
         addedConferenceInvitationMessagesIds.append(contentsOf: other.addedConferenceInvitationMessagesIds)
         
-        return AccountFinalStateEvents(
+        let result = AccountFinalStateEvents(
             addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds,
             addedReactionEvents: self.addedReactionEvents + other.addedReactionEvents,
             wasScheduledMessageIds: self.wasScheduledMessageIds + other.wasScheduledMessageIds,
@@ -1165,5 +1195,12 @@ struct AccountFinalStateEvents {
             updatedStarGiftAuctionMyState: self.updatedStarGiftAuctionMyState.merging(other.updatedStarGiftAuctionMyState, uniquingKeysWith: { lhs, _ in lhs }),
             updatedEmojiGameInfo: self.updatedEmojiGameInfo
         )
+        #if os(macOS)
+        var unionResult = result
+        unionResult.storyReactionNotifications = self.storyReactionNotifications + other.storyReactionNotifications
+        return unionResult
+        #else
+        return result
+        #endif
     }
 }
