@@ -72,4 +72,35 @@ final class InstantPageV2PortraitMediaFrameTests: XCTestCase {
         XCTAssertEqual(result.frame, CGRect(x: 12, y: 0, width: 133, height: 296))
         XCTAssertEqual(result.cornerRadius, 8)
     }
+
+    func testPortraitCentersWhenTextMakesBubbleWiderThanMedia() {
+        let original = self.frame(CGSize(width: 1080, height: 2400)).frame
+        let centered = instantPageV2CenteredStandaloneMediaFrame(original, contentWidth: 260)
+        XCTAssertEqual(centered, CGRect(x: 58, y: 0, width: 144, height: 320))
+    }
+
+    func testMediaOnlyBubbleRemainsCompactAndLeftAnchored() {
+        let original = self.frame(CGSize(width: 1080, height: 2400)).frame
+        let centered = instantPageV2CenteredStandaloneMediaFrame(original, contentWidth: 144)
+        XCTAssertEqual(centered, original)
+    }
+
+    func testCenteringUsesFittedBubbleWidthNotOriginalMaximum() {
+        let original = self.frame(CGSize(width: 1080, height: 2400)).frame
+        let centered = instantPageV2CenteredStandaloneMediaFrame(original, contentWidth: 200)
+        XCTAssertEqual(centered.minX, 28)
+        XCTAssertEqual(centered.maxX, 172)
+    }
+
+    func testFullBleedMediaDoesNotShift() {
+        let original = self.frame(CGSize(width: 1920, height: 1080)).frame
+        XCTAssertEqual(original.width, 324)
+        XCTAssertEqual(instantPageV2CenteredStandaloneMediaFrame(original, contentWidth: 320), original)
+    }
+
+    func testCenteringPreservesVerticalPositionAndSize() {
+        let frame = CGRect(x: 0, y: 82, width: 144, height: 320)
+        let result = instantPageV2CenteredStandaloneMediaFrame(frame, contentWidth: 231)
+        XCTAssertEqual(result, CGRect(x: 43, y: 82, width: 144, height: 320))
+    }
 }
