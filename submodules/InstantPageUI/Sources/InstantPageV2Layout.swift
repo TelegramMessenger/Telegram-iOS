@@ -16,6 +16,10 @@ public struct InstantPageV2Layout {
     public let items: [InstantPageV2LaidOutItem]
     /// Snapshot of the `index` values of every `.details` item present in `items`, captured at layout time.
     public let detailsIndices: [Int]
+    /// Indices of independent top-level image/video items. Recorded during measurement,
+    /// before the outer chat bubble has resolved widths for the author/forward/reply header.
+    /// Collage cells and nested media are deliberately excluded.
+    let standaloneMediaIndices: [Int]
     /// Media dictionary inherited from the page's `LayoutContext.media`. Used by
     /// `InstantPageV2View.updateInlineImages()` to resolve each text view's
     /// `line.imageItems` MediaIds at update time. Nested layouts (details body,
@@ -32,12 +36,48 @@ public struct InstantPageV2Layout {
     /// schedules a timer on it to keep "N minutes ago" fresh. nil => no relative date => no timer.
     public var formattedDateUpdatePeriod: Int32? = nil
 
-    public init(contentSize: CGSize, items: [InstantPageV2LaidOutItem], detailsIndices: [Int], media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil) {
+    public init(contentSize: CGSize, items: [InstantPageV2LaidOutItem], detailsIndices: [Int], standaloneMediaIndices: [Int] = [], media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil) {
         self.contentSize = contentSize
         self.items = items
         self.detailsIndices = detailsIndices
+        self.standaloneMediaIndices = standaloneMediaIndices
         self.media = media
         self.webpage = webpage
+    }
+
+    /// Produce a display-only copy fitted to the FINAL chat bubble width. Measuring the
+    /// page may happen before the outer bubble accounts for forwarded-from/author/reply
+    /// headers; the cached intrinsic layout must not be modified by those widths.
+    ///
+    /// Text remains measured as-is; only standalone media is re-centered. Covers,
+    /// collage cells, slideshows, tables and nested media keep their original geometry.
+    public func centeredStandaloneMedia(toContentWidth contentWidth: CGFloat) -> InstantPageV2Layout {
+        guard contentWidth > self.contentSize.width else {
+            return self
+        }
+        var items = self.items
+        for index in self.standaloneMediaIndices where items.indices.contains(index) {
+            switch items[index] {
+            case var .mediaImage(image):
+                image.frame = instantPageV2CenteredStandaloneMediaFrame(image.frame, contentWidth: contentWidth)
+                items[index] = .mediaImage(image)
+            case var .mediaVideo(video):
+                video.frame = instantPageV2CenteredStandaloneMediaFrame(video.frame, contentWidth: contentWidth)
+                items[index] = .mediaVideo(video)
+            default:
+                break
+            }
+        }
+        var layout = InstantPageV2Layout(
+            contentSize: CGSize(width: contentWidth, height: self.contentSize.height),
+            items: items,
+            detailsIndices: self.detailsIndices,
+            standaloneMediaIndices: self.standaloneMediaIndices,
+            media: self.media,
+            webpage: self.webpage
+        )
+        layout.formattedDateUpdatePeriod = self.formattedDateUpdatePeriod
+        return layout
     }
 
     /// Returns every `InstantPageMedia` produced by this layout (or its nested sub-layouts)
@@ -694,7 +734,11 @@ private func isOverlayEligibleMedia(_ item: InstantPageV2LaidOutItem) -> Bool {
     }
 }
 
-public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
+/// The bottom row's visual media bounds without requiring it to fill the whole
+/// bubble. A media pill may have been chosen at intrinsic width before an outer
+/// header widened the bubble; retain that decision but anchor it to the final
+/// image/video position.
+public func lastBottomVisualMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
     guard let bottomEdge = layout.items.map({ $0.frame.maxY }).max() else {
         return nil
     }
@@ -718,6 +762,13 @@ public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
         return nil
     }
     let frame = bottomItems.dropFirst().reduce(firstBottomItem.frame) { $0.union($1.frame) }
+    return frame
+}
+
+public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
+    guard let frame = lastBottomVisualMediaFrame(in: layout) else {
+        return nil
+    }
     // Full-width gate: the media must span (approximately) the content width. The tolerance absorbs
     // the right-margin inset that `contentSize.width` reserves (see the `fitToWidth` maxX computation).
     if frame.width >= layout.contentSize.width - 12.0 {
@@ -933,7 +984,7 @@ private func layoutBlockSequence(
 
     centerBlockFormulas(in: &items, contentWidth: contentSize.width, horizontalInset: horizontalInset)
 
-    return InstantPageV2Layout(contentSize: contentSize, items: items, detailsIndices: detailsIndices, media: context.media, webpage: context.webpage)
+    return InstantPageV2Layout(contentSize: contentSize, items: items, detailsIndices: detailsIndices, standaloneMediaIndices: standaloneMediaIndices, media: context.media, webpage: context.webpage)
 }
 
 /// Center a standalone image/video in the width that survived the bubble's
