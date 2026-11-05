@@ -802,6 +802,9 @@ private func layoutBlockSequence(
 ) -> InstantPageV2Layout {
     var items: [InstantPageV2LaidOutItem] = []
     var detailsIndices: [Int] = []
+    // Only independent top-level images/videos are centered after width fitting.
+    // Collage tiles, covers, and nested media must keep their own layout geometry.
+    var standaloneMediaIndices: [Int] = []
     var contentHeight: CGFloat = 0.0
     var previousBlock: InstantPageBlock?
 
@@ -844,10 +847,30 @@ private func layoutBlockSequence(
         )
 
         // Translate local items by (0, contentHeight + spacing) and append.
+        // Track the actual item index: an image/video block may also emit caption items.
+        let isStandaloneMedia: Bool
+        if kind == .topLevel && context.fitToWidth {
+            switch block {
+            case .image, .video:
+                isStandaloneMedia = true
+            default:
+                isStandaloneMedia = false
+            }
+        } else {
+            isStandaloneMedia = false
+        }
         let dy = contentHeight + spacing
         var blockMaxY: CGFloat = 0.0
         for var item in localItems {
             item = item.offsetBy(CGPoint(x: 0.0, y: dy))
+            if isStandaloneMedia {
+                switch item {
+                case .mediaImage, .mediaVideo:
+                    standaloneMediaIndices.append(items.count)
+                default:
+                    break
+                }
+            }
             if case let .details(d) = item {
                 detailsIndices.append(d.index)
             }
@@ -892,11 +915,38 @@ private func layoutBlockSequence(
         // Then re-widen the bands to the width that SURVIVED the shrink — the same reason
         // `centerBlockFormulas` below runs after `contentSize` rather than before it.
         instantPageV2StretchCodeBands(in: &items, contentWidth: contentSize.width)
+        // Measure the bubble from unshifted item frames first. Centering against the
+        // ORIGINAL boundingWidth would leave narrow images misaligned in short bubbles.
+        for index in standaloneMediaIndices {
+            switch items[index] {
+            case var .mediaImage(image):
+                image.frame = instantPageV2CenteredStandaloneMediaFrame(image.frame, contentWidth: contentSize.width)
+                items[index] = .mediaImage(image)
+            case var .mediaVideo(video):
+                video.frame = instantPageV2CenteredStandaloneMediaFrame(video.frame, contentWidth: contentSize.width)
+                items[index] = .mediaVideo(video)
+            default:
+                break
+            }
+        }
     }
 
     centerBlockFormulas(in: &items, contentWidth: contentSize.width, horizontalInset: horizontalInset)
 
     return InstantPageV2Layout(contentSize: contentSize, items: items, detailsIndices: detailsIndices, media: context.media, webpage: context.webpage)
+}
+
+/// Center a standalone image/video in the width that survived the bubble's
+/// fitToWidth pass. A media-only bubble keeps its compact width and x = 0;
+/// wider text (including a caption) creates symmetric space around the media.
+/// Full-width items and their trailing bleed are never shifted.
+func instantPageV2CenteredStandaloneMediaFrame(_ frame: CGRect, contentWidth: CGFloat) -> CGRect {
+    guard frame.width > 0.0, contentWidth > frame.width else {
+        return frame
+    }
+    var result = frame
+    result.origin.x = max(frame.minX, floor((contentWidth - frame.width) / 2.0))
+    return result
 }
 
 /// Horizontally centers every narrow block formula in a finished sequence (see
