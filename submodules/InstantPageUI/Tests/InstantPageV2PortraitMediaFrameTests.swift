@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import TelegramCore
 @testable import InstantPageUI
 
 final class InstantPageV2PortraitMediaFrameTests: XCTestCase {
@@ -132,5 +133,108 @@ final class InstantPageV2PortraitMediaFrameTests: XCTestCase {
         XCTAssertEqual(wideCentered.minX, 0)
         XCTAssertEqual(narrowCentered.maxX, 152)
         XCTAssertEqual(wideCentered.maxX, widestContentWidth)
+    }
+
+    // A synthetic webpage is sufficient for geometry-only tests: the layout
+    // neither fetches media nor opens the webpage.
+    private func mediaImage(_ id: Int64, frame: CGRect, webpage: TelegramMediaWebpage) -> InstantPageV2LaidOutItem {
+        let representation = TelegramMediaImageRepresentation(
+            dimensions: PixelDimensions(width: 1080, height: 2400),
+            resource: LocalFileMediaResource(fileId: id),
+            progressiveSizes: [],
+            immediateThumbnailData: nil
+        )
+        let image = TelegramMediaImage(
+            imageId: EngineMedia.Id(namespace: Namespaces.Media.CloudImage, id: id),
+            representations: [representation],
+            immediateThumbnailData: nil,
+            reference: nil,
+            partialReference: nil,
+            flags: []
+        )
+        let media = InstantPageMedia(index: Int(id), media: .image(image), url: nil, caption: nil, credit: nil)
+        return .mediaImage(InstantPageV2MediaImageItem(
+            frame: frame,
+            cornerRadius: 0,
+            media: media,
+            webPage: webpage,
+            attributes: [],
+            fit: true
+        ))
+    }
+
+    private func geometryWebpage() -> TelegramMediaWebpage {
+        return TelegramMediaWebpage(
+            webpageId: EngineMedia.Id(namespace: Namespaces.Media.LocalWebpage, id: -1),
+            content: .Pending(0, nil)
+        )
+    }
+
+    func testFinalBubbleWidthCentersTwoMediaButDoesNotMutateMeasuredLayout() {
+        let webpage = self.geometryWebpage()
+        let original = InstantPageV2Layout(
+            contentSize: CGSize(width: 180, height: 640),
+            items: [
+                self.mediaImage(1, frame: CGRect(x: 18, y: 0, width: 144, height: 320), webpage: webpage),
+                self.mediaImage(2, frame: CGRect(x: 0, y: 320, width: 180, height: 320), webpage: webpage)
+            ],
+            detailsIndices: [],
+            standaloneMediaIndices: [0, 1]
+        )
+        let displayed = original.centeredStandaloneMedia(toContentWidth: 260)
+
+        XCTAssertEqual(original.contentSize.width, 180)
+        XCTAssertEqual(original.items[0].frame.minX, 18)
+        XCTAssertEqual(original.items[1].frame.minX, 0)
+
+        XCTAssertEqual(displayed.contentSize.width, 260)
+        XCTAssertEqual(displayed.items[0].frame, CGRect(x: 58, y: 0, width: 144, height: 320))
+        XCTAssertEqual(displayed.items[1].frame, CGRect(x: 40, y: 320, width: 180, height: 320))
+    }
+
+    func testFinalLayoutDoesNotGrowForMediaOnlyBubble() {
+        let webpage = self.geometryWebpage()
+        let original = InstantPageV2Layout(
+            contentSize: CGSize(width: 144, height: 320),
+            items: [self.mediaImage(3, frame: CGRect(x: 0, y: 0, width: 144, height: 320), webpage: webpage)],
+            detailsIndices: [],
+            standaloneMediaIndices: [0]
+        )
+        let displayed = original.centeredStandaloneMedia(toContentWidth: 144)
+        XCTAssertEqual(displayed.contentSize.width, 144)
+        XCTAssertEqual(displayed.items[0].frame.minX, 0)
+    }
+
+    func testUntrackedCollageMediaDoesNotShiftWhenHeaderExpandsBubble() {
+        let webpage = self.geometryWebpage()
+        let tile = self.mediaImage(4, frame: CGRect(x: 0, y: 0, width: 90, height: 120), webpage: webpage)
+        let original = InstantPageV2Layout(
+            contentSize: CGSize(width: 180, height: 120),
+            items: [tile],
+            detailsIndices: [],
+            standaloneMediaIndices: []
+        )
+        let displayed = original.centeredStandaloneMedia(toContentWidth: 260)
+        XCTAssertEqual(displayed.items[0].frame, tile.frame)
+        XCTAssertEqual(displayed.contentSize.width, 260)
+    }
+
+    func testFinalBottomMediaFrameTracksCenteredImageStatusPill() {
+        let webpage = self.geometryWebpage()
+        var original = InstantPageV2Layout(
+            contentSize: CGSize(width: 153, height: 320),
+            items: [self.mediaImage(5, frame: CGRect(x: 4, y: 0, width: 144, height: 320), webpage: webpage)],
+            detailsIndices: [],
+            standaloneMediaIndices: [0]
+        )
+        original.formattedDateUpdatePeriod = 10
+        XCTAssertNotNil(lastFullWidthMediaFrame(in: original))
+
+        let displayed = original.centeredStandaloneMedia(toContentWidth: 260)
+        XCTAssertEqual(displayed.items[0].frame.minX, 58)
+        XCTAssertNil(lastFullWidthMediaFrame(in: displayed), "header expansion changes the full-width gate")
+        XCTAssertEqual(lastBottomVisualMediaFrame(in: displayed), displayed.items[0].frame)
+        XCTAssertEqual(displayed.formattedDateUpdatePeriod, 10)
+        XCTAssertEqual(original.items[0].frame.minX, 4)
     }
 }
