@@ -103,4 +103,34 @@ final class InstantPageV2PortraitMediaFrameTests: XCTestCase {
         let result = instantPageV2CenteredStandaloneMediaFrame(frame, contentWidth: 231)
         XCTAssertEqual(result, CGRect(x: 43, y: 82, width: 144, height: 320))
     }
+
+    func testMultiplePortraitMediaCenterIndependentlyInOneWideBubble() {
+        let first = self.frame(CGSize(width: 1080, height: 2400)).frame.offsetBy(dx: 0, dy: 40)
+        let second = self.frame(CGSize(width: 800, height: 1600)).frame.offsetBy(dx: 0, dy: 380)
+        let firstCentered = instantPageV2CenteredStandaloneMediaFrame(first, contentWidth: 260)
+        let secondCentered = instantPageV2CenteredStandaloneMediaFrame(second, contentWidth: 260)
+        XCTAssertEqual(firstCentered, CGRect(x: 58, y: 40, width: 144, height: 320))
+        XCTAssertEqual(secondCentered, CGRect(x: 50, y: 380, width: 160, height: 320))
+    }
+
+    func testMixedLandscapeAndPortraitKeepIndependentGeometry() {
+        let landscape = self.frame(CGSize(width: 1920, height: 1080)).frame
+        let portrait = self.frame(CGSize(width: 1080, height: 2400)).frame.offsetBy(dx: 0, dy: 200)
+        let landscapeAfter = instantPageV2CenteredStandaloneMediaFrame(landscape, contentWidth: 320)
+        let portraitAfter = instantPageV2CenteredStandaloneMediaFrame(portrait, contentWidth: 320)
+        XCTAssertEqual(landscapeAfter, landscape, "full-bleed media must not move")
+        XCTAssertEqual(portraitAfter, CGRect(x: 88, y: 200, width: 144, height: 320))
+    }
+
+    func testTwoDifferentPortraitWidthsDoNotChangeBubbleWidth() {
+        let narrow = self.frame(CGSize(width: 1080, height: 2400)).frame
+        let wide = self.frame(CGSize(width: 800, height: 1600)).frame
+        let widestContentWidth: CGFloat = 160
+        let narrowCentered = instantPageV2CenteredStandaloneMediaFrame(narrow, contentWidth: widestContentWidth)
+        let wideCentered = instantPageV2CenteredStandaloneMediaFrame(wide, contentWidth: widestContentWidth)
+        XCTAssertEqual(narrowCentered.minX, 8)
+        XCTAssertEqual(wideCentered.minX, 0)
+        XCTAssertEqual(narrowCentered.maxX, 152)
+        XCTAssertEqual(wideCentered.maxX, widestContentWidth)
+    }
 }
