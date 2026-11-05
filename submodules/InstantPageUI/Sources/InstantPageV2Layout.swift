@@ -2345,7 +2345,8 @@ private let instantPageV2MediaEdgeBleed: CGFloat = 4.0
 //
 // Returns the frame, the un-bled scaled content size (the caption is offset by
 // `scaledSize.height`), and the effective corner radius to stamp on the item.
-private func instantPageV2MediaFrame(
+// Internal so the geometry can be regression-tested without synthesizing a full InstantPage.
+func instantPageV2MediaFrame(
     naturalSize: CGSize,
     flush: Bool,
     cornerRadius: CGFloat,
@@ -2356,24 +2357,18 @@ private func instantPageV2MediaFrame(
     let availableWidth = flush ? boundingWidth : (boundingWidth - horizontalInset * 2.0)
     var scaledSize: CGSize
     if naturalSize.width > 0.0 && naturalSize.height > 0.0 {
-        let scale = min(availableWidth / naturalSize.width, 1.0)
+        // Apply one uniform scale for both limits. Clamping only the height leaves
+        // an oversized square frame around portrait media (and blurred side bars).
+        let widthScale = availableWidth / naturalSize.width
+        let heightScale = capHeight ? min(1000.0, availableWidth) / naturalSize.height : 1.0
+        let scale = min(1.0, min(widthScale, heightScale))
         scaledSize = CGSize(width: floor(naturalSize.width * scale), height: floor(naturalSize.height * scale))
     } else {
         scaledSize = CGSize(width: availableWidth, height: naturalSize.height)
     }
 
-    // Cap the displayed height at `min(1000, availableWidth)` — "media is never taller than its display
-    // width, up to 1000pt" — matching the RichText editor (`MediaBlockBox.imageDisplaySize`). A capped
-    // (portrait) box no longer matches the image aspect; the media view renders it aspect-fit + blurred
-    // backdrop (the single `.image`/`.video` items pass `fit: true`). The returned `scaledSize.height`
-    // is the capped value, so the caption offsets below the capped box. `capHeight` is opt-in so cover
-    // images / embed placeholders keep their prior (uncapped) sizing.
-    if capHeight {
-        let heightCap = min(1000.0, availableWidth)
-        if scaledSize.height > heightCap {
-            scaledSize.height = heightCap
-        }
-    }
+    // Only single image/video blocks request the height limit. Covers and embeds
+    // retain their prior uncapped behavior; the caption uses this fitted height.
 
     if flush {
         // `floor(x) > x - 1` always, so a full-width item (scaledSize.width == floor(availableWidth))
