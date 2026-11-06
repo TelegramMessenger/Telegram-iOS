@@ -16,6 +16,10 @@ public struct InstantPageV2Layout {
     public let items: [InstantPageV2LaidOutItem]
     /// Snapshot of the `index` values of every `.details` item present in `items`, captured at layout time.
     public let detailsIndices: [Int]
+    /// Indices of independent top-level image/video items. Recorded during measurement,
+    /// before the outer chat bubble has resolved widths for the author/forward/reply header.
+    /// Collage cells and nested media are deliberately excluded.
+    let standaloneMediaIndices: [Int]
     /// Media dictionary inherited from the page's `LayoutContext.media`. Used by
     /// `InstantPageV2View.updateInlineImages()` to resolve each text view's
     /// `line.imageItems` MediaIds at update time. Nested layouts (details body,
@@ -32,12 +36,48 @@ public struct InstantPageV2Layout {
     /// schedules a timer on it to keep "N minutes ago" fresh. nil => no relative date => no timer.
     public var formattedDateUpdatePeriod: Int32? = nil
 
-    public init(contentSize: CGSize, items: [InstantPageV2LaidOutItem], detailsIndices: [Int], media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil) {
+    public init(contentSize: CGSize, items: [InstantPageV2LaidOutItem], detailsIndices: [Int], standaloneMediaIndices: [Int] = [], media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil) {
         self.contentSize = contentSize
         self.items = items
         self.detailsIndices = detailsIndices
+        self.standaloneMediaIndices = standaloneMediaIndices
         self.media = media
         self.webpage = webpage
+    }
+
+    /// Produce a display-only copy fitted to the FINAL chat bubble width. Measuring the
+    /// page may happen before the outer bubble accounts for forwarded-from/author/reply
+    /// headers; the cached intrinsic layout must not be modified by those widths.
+    ///
+    /// Text remains measured as-is; only standalone media is re-centered. Covers,
+    /// collage cells, slideshows, tables and nested media keep their original geometry.
+    public func centeredStandaloneMedia(toContentWidth contentWidth: CGFloat) -> InstantPageV2Layout {
+        guard contentWidth > self.contentSize.width else {
+            return self
+        }
+        var items = self.items
+        for index in self.standaloneMediaIndices where items.indices.contains(index) {
+            switch items[index] {
+            case var .mediaImage(image):
+                image.frame = instantPageV2CenteredStandaloneMediaFrame(image.frame, contentWidth: contentWidth)
+                items[index] = .mediaImage(image)
+            case var .mediaVideo(video):
+                video.frame = instantPageV2CenteredStandaloneMediaFrame(video.frame, contentWidth: contentWidth)
+                items[index] = .mediaVideo(video)
+            default:
+                break
+            }
+        }
+        var layout = InstantPageV2Layout(
+            contentSize: CGSize(width: contentWidth, height: self.contentSize.height),
+            items: items,
+            detailsIndices: self.detailsIndices,
+            standaloneMediaIndices: self.standaloneMediaIndices,
+            media: self.media,
+            webpage: self.webpage
+        )
+        layout.formattedDateUpdatePeriod = self.formattedDateUpdatePeriod
+        return layout
     }
 
     /// Returns every `InstantPageMedia` produced by this layout (or its nested sub-layouts)
@@ -715,7 +755,11 @@ private func isOverlayEligibleMedia(_ item: InstantPageV2LaidOutItem) -> Bool {
     }
 }
 
-public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
+/// The bottom row's visual media bounds without requiring it to fill the whole
+/// bubble. A media pill may have been chosen at intrinsic width before an outer
+/// header widened the bubble; retain that decision but anchor it to the final
+/// image/video position.
+public func lastBottomVisualMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
     guard let bottomEdge = layout.items.map({ $0.frame.maxY }).max() else {
         return nil
     }
@@ -739,6 +783,13 @@ public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
         return nil
     }
     let frame = bottomItems.dropFirst().reduce(firstBottomItem.frame) { $0.union($1.frame) }
+    return frame
+}
+
+public func lastFullWidthMediaFrame(in layout: InstantPageV2Layout) -> CGRect? {
+    guard let frame = lastBottomVisualMediaFrame(in: layout) else {
+        return nil
+    }
     // Full-width gate: the media must span (approximately) the content width. The tolerance absorbs
     // the right-margin inset that `contentSize.width` reserves (see the `fitToWidth` maxX computation).
     if frame.width >= layout.contentSize.width - 12.0 {
@@ -825,6 +876,9 @@ private func layoutBlockSequence(
 ) -> InstantPageV2Layout {
     var items: [InstantPageV2LaidOutItem] = []
     var detailsIndices: [Int] = []
+    // Only independent top-level images/videos are centered after width fitting.
+    // Collage tiles, covers, and nested media must keep their own layout geometry.
+    var standaloneMediaIndices: [Int] = []
     var contentHeight: CGFloat = 0.0
     var previousBlock: InstantPageBlock?
 
@@ -870,10 +924,30 @@ private func layoutBlockSequence(
         )
 
         // Translate local items by (0, contentHeight + spacing) and append.
+        // Track the actual item index: an image/video block may also emit caption items.
+        let isStandaloneMedia: Bool
+        if kind == .topLevel && context.fitToWidth {
+            switch block {
+            case .image, .video:
+                isStandaloneMedia = true
+            default:
+                isStandaloneMedia = false
+            }
+        } else {
+            isStandaloneMedia = false
+        }
         let dy = contentHeight + spacing
         var blockMaxY: CGFloat = 0.0
         for var item in localItems {
             item = item.offsetBy(CGPoint(x: 0.0, y: dy))
+            if isStandaloneMedia {
+                switch item {
+                case .mediaImage, .mediaVideo:
+                    standaloneMediaIndices.append(items.count)
+                default:
+                    break
+                }
+            }
             if case let .details(d) = item {
                 detailsIndices.append(d.index)
             }
@@ -918,11 +992,38 @@ private func layoutBlockSequence(
         // Then re-widen the bands to the width that SURVIVED the shrink — the same reason
         // `centerBlockFormulas` below runs after `contentSize` rather than before it.
         instantPageV2StretchCodeBands(in: &items, contentWidth: contentSize.width)
+        // Measure the bubble from unshifted item frames first. Centering against the
+        // ORIGINAL boundingWidth would leave narrow images misaligned in short bubbles.
+        for index in standaloneMediaIndices {
+            switch items[index] {
+            case var .mediaImage(image):
+                image.frame = instantPageV2CenteredStandaloneMediaFrame(image.frame, contentWidth: contentSize.width)
+                items[index] = .mediaImage(image)
+            case var .mediaVideo(video):
+                video.frame = instantPageV2CenteredStandaloneMediaFrame(video.frame, contentWidth: contentSize.width)
+                items[index] = .mediaVideo(video)
+            default:
+                break
+            }
+        }
     }
 
     centerBlockFormulas(in: &items, contentWidth: contentSize.width, horizontalInset: horizontalInset)
 
-    return InstantPageV2Layout(contentSize: contentSize, items: items, detailsIndices: detailsIndices, media: context.media, webpage: context.webpage)
+    return InstantPageV2Layout(contentSize: contentSize, items: items, detailsIndices: detailsIndices, standaloneMediaIndices: standaloneMediaIndices, media: context.media, webpage: context.webpage)
+}
+
+/// Center a standalone image/video in the width that survived the bubble's
+/// fitToWidth pass. A media-only bubble keeps its compact width and x = 0;
+/// wider text (including a caption) creates symmetric space around the media.
+/// Full-width items and their trailing bleed are never shifted.
+func instantPageV2CenteredStandaloneMediaFrame(_ frame: CGRect, contentWidth: CGFloat) -> CGRect {
+    guard frame.width > 0.0, contentWidth > frame.width else {
+        return frame
+    }
+    var result = frame
+    result.origin.x = max(frame.minX, floor((contentWidth - frame.width) / 2.0))
+    return result
 }
 
 /// Horizontally centers every narrow block formula in a finished sequence (see
@@ -2460,7 +2561,8 @@ private let instantPageV2MediaEdgeBleed: CGFloat = 4.0
 //
 // Returns the frame, the un-bled scaled content size (the caption is offset by
 // `scaledSize.height`), and the effective corner radius to stamp on the item.
-private func instantPageV2MediaFrame(
+// Internal so the geometry can be regression-tested without synthesizing a full InstantPage.
+func instantPageV2MediaFrame(
     naturalSize: CGSize,
     flush: Bool,
     cornerRadius: CGFloat,
@@ -2472,24 +2574,18 @@ private func instantPageV2MediaFrame(
     let availableWidth = flush ? boundingWidth : (boundingWidth - horizontalInset * 2.0)
     var scaledSize: CGSize
     if naturalSize.width > 0.0 && naturalSize.height > 0.0 {
-        let scale = min(availableWidth / naturalSize.width, 1.0)
+        // Apply one uniform scale for both limits. Clamping only the height leaves
+        // an oversized square frame around portrait media (and blurred side bars).
+        let widthScale = availableWidth / naturalSize.width
+        let heightScale = capHeight ? min(1000.0, availableWidth) / naturalSize.height : 1.0
+        let scale = min(1.0, min(widthScale, heightScale))
         scaledSize = CGSize(width: floor(naturalSize.width * scale), height: floor(naturalSize.height * scale))
     } else {
         scaledSize = CGSize(width: availableWidth, height: naturalSize.height)
     }
 
-    // Cap the displayed height at `min(1000, availableWidth)` — "media is never taller than its display
-    // width, up to 1000pt" — matching the RichText editor (`MediaBlockBox.imageDisplaySize`). A capped
-    // (portrait) box no longer matches the image aspect; the media view renders it aspect-fit + blurred
-    // backdrop (the single `.image`/`.video` items pass `fit: true`). The returned `scaledSize.height`
-    // is the capped value, so the caption offsets below the capped box. `capHeight` is opt-in so cover
-    // images / embed placeholders keep their prior (uncapped) sizing.
-    if capHeight {
-        let heightCap = min(1000.0, availableWidth)
-        if scaledSize.height > heightCap {
-            scaledSize.height = heightCap
-        }
-    }
+    // Only single image/video blocks request the height limit. Covers and embeds
+    // retain their prior uncapped behavior; the caption uses this fitted height.
 
     if flush {
         // `floor(x) > x - 1` always, so a full-width item (scaledSize.width == floor(availableWidth))

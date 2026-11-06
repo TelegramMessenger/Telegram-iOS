@@ -1254,6 +1254,20 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 }
 
                 return (boundingSize.width, { boundingWidth in
+                    // The bubble has now measured all of its constituents (including the
+                    // forwarded-from / author / reply header). Recenter standalone media in
+                    // a display-only layout of that final width, without modifying the
+                    // intrinsic layout cached for subsequent message updates.
+                    let displayedPageLayout = pageLayout?.centeredStandaloneMedia(
+                        toContentWidth: max(0.0, boundingWidth - pageContentInset * 2.0)
+                    )
+                    // Preserve the measure-stage decision to use an image-style status
+                    // pill, but move its anchor with the media in the display layout.
+                    let displayedMediaStatusFrame: CGRect? = mediaStatusFrame == nil
+                        ? nil
+                        : displayedPageLayout.flatMap(lastBottomVisualMediaFrame(in:))
+                    boundingSize.width = max(boundingSize.width, boundingWidth)
+
                     // Non-pill: pass `boundingWidth - sideInsets` (mirrors TextBubble) so the
                     // right-aligned date lands at the right text inset. For the overlaid pill,
                     // pass the status node's own suggested width so its internal `leftOffset`
@@ -1345,7 +1359,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                             // content and shoves the right-aligned date off the bubble). The status
                             // node positions the date trailing/below relative to this origin.
                             let statusFrame: CGRect
-                            if let mediaStatusFrame {
+                            if let mediaStatusFrame = displayedMediaStatusFrame {
                                 // Overlaid pill: anchor to the media item's bottom-right corner,
                                 // inset by the standard image status insets. page-coord (px,py)
                                 // maps to self-coord (px, 1.0 + py).
@@ -1353,7 +1367,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                                 // Full-width flush media frames are widened by instantPageV2MediaEdgeBleed
                                 // (4pt) past the visible/clipped right edge; clamp to the content width so
                                 // the pill's trailing inset matches image messages (6pt, not 2pt).
-                                let visibleMaxX = min(mediaStatusFrame.maxX, pageLayout?.contentSize.width ?? mediaStatusFrame.maxX)
+                                let visibleMaxX = min(mediaStatusFrame.maxX, displayedPageLayout?.contentSize.width ?? mediaStatusFrame.maxX)
                                 let statusX = visibleMaxX - insets.right - statusSizeAndApply.0.width
                                 let statusY = 1.0 + mediaStatusFrame.maxY - insets.bottom - statusSizeAndApply.0.height
                                 statusFrame = CGRect(origin: CGPoint(x: statusX, y: statusY + streamingHeaderOffset), size: statusSizeAndApply.0)
@@ -1435,7 +1449,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                         }
 
                         self.suspiciousSenderPage = suspiciousSenderPage
-                        if let pageLayout, let pageWebpage, let resolvedContent {
+                        if let pageLayout, let displayedPageLayout, let pageWebpage, let resolvedContent {
                             self.currentPageLayout = (
                                 suggestedBoundingWidth,
                                 ObjectIdentifier(item.presentationData.theme.theme),
@@ -1500,13 +1514,13 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                                 }
                                 self.openRichTextDocument?(file)
                             }
-                            pageView.update(layout: pageLayout, theme: pageTheme, animation: animation)
+                            pageView.update(layout: displayedPageLayout, theme: pageTheme, animation: animation)
                             // Flush inside `containerNode`, which supplies the inset on every side.
                             // This used to be -1, cancelling the container's horizontal inset so the
                             // page ran under the clip and lost its leading 1pt rather than sitting in.
                             pageView.frame = CGRect(
                                 origin: CGPoint(x: 0.0, y: streamingHeaderOffset),
-                                size: pageLayout.contentSize
+                                size: displayedPageLayout.contentSize
                             )
                             self.updatePageViewVisibilityRect()
                             if self.displayContentsUnderSpoilers {
