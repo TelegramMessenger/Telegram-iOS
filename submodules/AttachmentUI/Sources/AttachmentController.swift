@@ -1145,7 +1145,11 @@ public class AttachmentController: ViewController, MinimizableController {
             })
         }
 
-        private var isAnimating = false
+        private var isAnimating = false {
+            didSet {
+                self.container.isAnimatingTransition = self.isAnimating
+            }
+        }
         private var pendingRegularLayoutAnimateIn = false
 
         /// The attach-button morph of a glass appearance while it runs. Every dismissal that starts before it
