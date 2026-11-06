@@ -152,48 +152,89 @@ public func saveToCameraRoll(context: AccountContext, userLocation: MediaResourc
                         return
                     }
 
-                    let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
-                    if isImage, let videoData, let imageData = try? Data(contentsOf: URL(fileURLWithPath: mainData.path)) {
-                        let id = UUID().uuidString
+                    let id = UUID().uuidString
 
-                        let jpegWithID = addAssetIdentifierToJPEG(imageData, assetIdentifier: id)!
+                    // Builds a temporary path that preserves the source file's extension. Copying a
+                    // video to a hardcoded ".mp4" path makes `creationRequestForAssetFromVideo` reject
+                    // any container that isn't actually mp4 (e.g. .mov), so the asset silently never
+                    // appears in Photos. Falling back to "mov" matches the most common Telegram video.
+                    func temporaryPath(preservingExtensionOf sourcePath: String) -> String {
+                        let pathExtension = (sourcePath as NSString).pathExtension
+                        return NSTemporaryDirectory() + "\(UUID().uuidString)." + (pathExtension.isEmpty ? "mov" : pathExtension)
+                    }
+
+                    // Saves the plain photo or video. This is both the normal path for non-motion media
+                    // and the fallback when a motion-photo write fails, so it always finishes the signal
+                    // and the saved media still lands in Photos.
+                    func savePlainMedia() {
+                        let videoTempPath = temporaryPath(preservingExtensionOf: mainData.path)
+                        var didStageResource = false
+                        PHPhotoLibrary.shared().performChanges({
+                            if isImage {
+                                if let imageData = try? Data(contentsOf: URL(fileURLWithPath: mainData.path)) {
+                                    PHAssetCreationRequest.forAsset().addResource(with: .photo, data: imageData, options: nil)
+                                    didStageResource = true
+                                }
+                            } else {
+                                if let _ = try? FileManager.default.copyItem(atPath: mainData.path, toPath: videoTempPath) {
+                                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: URL(fileURLWithPath: videoTempPath))
+                                    didStageResource = true
+                                }
+                            }
+                        }, completionHandler: { success, error in
+                            // PhotoKit reports success even when the change block stages nothing, so a
+                            // failed read/copy would otherwise look like a successful save. Log when the
+                            // media did not actually land so the failure is diagnosable.
+                            if let error {
+                                print("SaveToCameraRoll: failed to save media: \(error)")
+                            } else if !didStageResource || !success {
+                                print("SaveToCameraRoll: media was not saved (didStageResource: \(didStageResource), success: \(success))")
+                            }
+                            let _ = try? FileManager.default.removeItem(atPath: videoTempPath)
+                            subscriber.putNext(1.0)
+                            subscriber.putCompletion()
+                        })
+                    }
+
+                    if isImage, let videoData,
+                       let imageData = try? Data(contentsOf: URL(fileURLWithPath: mainData.path)),
+                       let jpegWithID = addAssetIdentifierToJPEG(imageData, assetIdentifier: id) {
+                        let pairedVideoTempPath = temporaryPath(preservingExtensionOf: videoData.path)
                         let outputVideoURL = URL(fileURLWithPath: NSTemporaryDirectory() + "\(id).mov")
 
-                        try? FileManager.default.copyItem(atPath: videoData.path, toPath: tempVideoPath)
+                        let _ = try? FileManager.default.copyItem(atPath: videoData.path, toPath: pairedVideoTempPath)
 
-                        addAssetIdentifierToVideo(inputURL: URL(fileURLWithPath: tempVideoPath), outputURL: outputVideoURL, assetIdentifier: id) { success in
-                            guard success else { return }
+                        addAssetIdentifierToVideo(inputURL: URL(fileURLWithPath: pairedVideoTempPath), outputURL: outputVideoURL, assetIdentifier: id) { success in
+                            let _ = try? FileManager.default.removeItem(atPath: pairedVideoTempPath)
+                            guard success else {
+                                // The export that embeds the motion-photo identifier failed. Previously
+                                // the signal was left hanging forever and nothing was saved; instead fall
+                                // back to saving the still image so it still lands in Photos.
+                                savePlainMedia()
+                                return
+                            }
 
                             PHPhotoLibrary.shared().performChanges({
                                 let request = PHAssetCreationRequest.forAsset()
 
                                 request.addResource(with: .photo, data: jpegWithID, options: nil)
                                 request.addResource(with: .pairedVideo, fileURL: outputVideoURL, options: nil)
-                            }, completionHandler: { _, error in
-                                let _ = try? FileManager.default.removeItem(atPath: tempVideoPath)
-                                subscriber.putNext(1.0)
-                                subscriber.putCompletion()
+                            }, completionHandler: { success, error in
+                                let _ = try? FileManager.default.removeItem(at: outputVideoURL)
+                                if success {
+                                    subscriber.putNext(1.0)
+                                    subscriber.putCompletion()
+                                } else {
+                                    if let error {
+                                        print("SaveToCameraRoll: failed to save motion photo: \(error)")
+                                    }
+                                    // Saving the paired photo+video failed; fall back to the still image.
+                                    savePlainMedia()
+                                }
                             })
                         }
                     } else {
-                        PHPhotoLibrary.shared().performChanges({
-                            if isImage {
-                                if let imageData = try? Data(contentsOf: URL(fileURLWithPath: mainData.path)) {
-                                    PHAssetCreationRequest.forAsset().addResource(with: .photo, data: imageData, options: nil)
-                                }
-                            } else {
-                                if let _ = try? FileManager.default.copyItem(atPath: mainData.path, toPath: tempVideoPath) {
-                                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: URL(fileURLWithPath: tempVideoPath))
-                                }
-                            }
-                        }, completionHandler: { _, error in
-                            if let error {
-                                print("\(error)")
-                            }
-                            let _ = try? FileManager.default.removeItem(atPath: tempVideoPath)
-                            subscriber.putNext(1.0)
-                            subscriber.putCompletion()
-                        })
+                        savePlainMedia()
                     }
                 })
 
