@@ -1718,6 +1718,7 @@ plist_fragment(
         <string>yandextaxi</string>
         <string>yangoride</string>
         <string>comgooglemaps</string>
+        <string>om</string>
         <string>youtube</string>
         <string>twitter</string>
         <string>vk</string>
