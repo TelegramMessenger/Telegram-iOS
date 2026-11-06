@@ -1092,7 +1092,8 @@ swift_library(
     deps = [
         "//submodules/TelegramUI",
         "//submodules/PasscodeCore",
-        "//submodules/TelegramUI/Components/ShareExtensionContext"
+        "//submodules/TelegramUI/Components/ShareExtensionContext",
+        "//submodules/WebProxyTransport",
     ],
 )
 

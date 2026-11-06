@@ -1,4 +1,6 @@
 import UIKit
+import WebKit
+import WebProxyTransport
 import PasscodeCore
 import TelegramUI
 import BuildConfig
@@ -9,6 +11,7 @@ import TelegramCore
 @objc(ShareRootController)
 class ShareRootController: UIViewController {
     private var impl: ShareRootControllerImpl?
+    private var webProxyCarrierHost: ShareWebProxyCarrierHost?
     
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
@@ -84,11 +87,16 @@ class ShareRootController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        let host = ShareWebProxyCarrierHost(containerView: self.view)
+        self.webProxyCarrierHost = host
+        WebProxyTransport.shared.setViewHost(host)
         self.impl?.viewWillAppear()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        WebProxyTransport.shared.setViewHost(nil)
+        self.webProxyCarrierHost = nil
         self.impl?.viewWillDisappear()
     }
     
@@ -97,6 +105,10 @@ class ShareRootController: UIViewController {
         self.impl?.viewWillDisappear()
     }
     
+    deinit {
+        WebProxyTransport.shared.setViewHost(nil)
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         self.impl?.viewDidLayoutSubviews(view: self.view, traitCollection: self.traitCollection)
@@ -116,5 +128,32 @@ class ShareRootController: UIViewController {
             responder = responder?.next
         }
         return false
+    }
+}
+
+/// The transport is shared with macOS; UIKit hosting belongs to the visible extension.
+private final class ShareWebProxyCarrierHost: WebProxyCarrierViewHost {
+    private weak var containerView: UIView?
+
+    init(containerView: UIView) {
+        self.containerView = containerView
+    }
+
+    func attachCarrierWebView(_ webView: WKWebView) {
+        guard let containerView = self.containerView else { return }
+        webView.frame = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
+        webView.isUserInteractionEnabled = false
+        webView.isAccessibilityElement = false
+        webView.accessibilityElementsHidden = true
+        webView.allowsLinkPreview = false
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        // Zero alpha / a detached view lets WebKit throttle the long poll.
+        webView.alpha = 0.01
+        containerView.insertSubview(webView, at: 0)
+    }
+
+    func detachCarrierWebView(_ webView: WKWebView) {
+        webView.removeFromSuperview()
     }
 }
