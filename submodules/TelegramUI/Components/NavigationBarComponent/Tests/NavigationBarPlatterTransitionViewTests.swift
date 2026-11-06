@@ -79,8 +79,8 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         return NavigationBarComponent.Button(id: id, content: .custom(AnyComponent(PlatterTestButtonComponent(width: width, color: color))), tint: tint, action: { _ in })
     }
 
-    private func side(back: NavigationBarComponent.Back? = .back, left: NavigationBarComponent.Button? = nil, right: [NavigationBarComponent.Button]) -> NavigationBarPlatterTransitionView.Side {
-        let content = NavigationBarComponent.Content(title: .text(""), back: back, leftButton: left, rightButtons: right, backPressed: {})
+    private func side(back: NavigationBarComponent.Back? = .back, left: NavigationBarComponent.Button? = nil, right: [NavigationBarComponent.Button], badge: String? = nil) -> NavigationBarPlatterTransitionView.Side {
+        let content = NavigationBarComponent.Content(title: .text(""), back: back, leftButton: left, rightButtons: right, backPressed: {}, badge: badge)
         return NavigationBarPlatterTransitionView.Side(content: content, theme: self.makeTheme(), strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, trailingButtonsInset: 0.0, rowFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 44.0))
     }
 
@@ -902,6 +902,32 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertFalse(descendants(leaving).contains(where: { $0.backgroundColor == .blue }))
     }
 
+    // A pop whose destination's back badge changes while the glass settles (a message arriving): the back button is
+    // kept and takes the new count in place, as on a settled bar, rather than dematerializing and materializing again.
+    func test_badgeChangingMidTransition_keepsTheBackButton() {
+        let changes: [(String?, String?)] = [("3", "4"), (nil, "1"), ("1", nil)]
+        for (from, to) in changes {
+            let view = self.makeView(bottom: self.side(right: [], badge: from), top: self.side(right: [], badge: from))
+            view.beginTransition(isInteractive: false, toTop: false)
+            self.time.advance(by: 0.1)
+            let before = view.itemsStateForTesting(.leading)
+            XCTAssertEqual(before.count, 1, "\(before)")
+            view.setSides(bottom: self.side(right: [], badge: to), top: self.side(right: [], badge: from))
+            let after = view.itemsStateForTesting(.leading)
+            XCTAssertEqual(after.count, before.count, "\(from ?? "nil") -> \(to ?? "nil"): \(after)")
+            XCTAssertTrue(view.leavingItemsViewsForTesting(.leading).isEmpty, "\(from ?? "nil") -> \(to ?? "nil")")
+            XCTAssertEqual(after.first?.opacity ?? 0.0, 1.0, accuracy: 0.001)
+            XCTAssertEqual(after.first?.blur ?? 1.0, 0.0, accuracy: 0.001)
+        }
+    }
+
+    // Two bars' back buttons with different badges are still different items: the kept capsule swaps them.
+    func test_backBadgesDifferingBetweenBars_swapTheItems() {
+        let view = self.makeView(bottom: self.side(right: [], badge: "3"), top: self.side(right: [], badge: "4"))
+        view.beginTransition(isInteractive: false, toTop: false)
+        XCTAssertEqual(view.itemsStateForTesting(.leading).count, 2)
+    }
+
     // Under Reduce Motion SwiftUI's glass appears and disappears by opacity alone, with no scale or blur, for capsules and
     // for the items in them (glass RE §2.1, §3.3).
     func test_reduceMotion_materializesWithoutScaleOrBlur() {
@@ -1056,8 +1082,8 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         XCTAssertEqual(view.containerViewForTesting(.trailing(0))?.layer.animation(forKey: "navigationGlass.opacity")?.speed ?? 0.0, 0.1, accuracy: 1e-6)
     }
 
-    private func duoSide(back: NavigationBarComponent.Back? = .back, right: [NavigationBarComponent.Button], hidesColumnButtons: Bool = false) -> NavigationBarPlatterTransitionView.Side {
-        var side = self.side(back: back, right: right)
+    private func duoSide(back: NavigationBarComponent.Back? = .back, right: [NavigationBarComponent.Button], hidesColumnButtons: Bool = false, badge: String? = nil) -> NavigationBarPlatterTransitionView.Side {
+        var side = self.side(back: back, right: right, badge: badge)
         side.columnFrame = CGRect(x: 390.0 - 60.0, y: 120.0, width: 44.0, height: 478.0)
         side.hidesColumnButtons = hidesColumnButtons
         return side
@@ -1146,6 +1172,20 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         }
         XCTAssertEqual(badge.text, "3")
         XCTAssertNotNil(badge.view.superview)
+    }
+
+    // The column back's badge, drawn by the transition on the circle's corner, also takes a new count in place
+    // mid-transition: the circle keeps its items.
+    func test_columnBadgeChangingMidTransition_keepsTheBackCircle() {
+        let view = self.makeView(bottom: self.duoSide(right: [], badge: "3"), top: self.duoSide(right: [], badge: "3"))
+        view.beginTransition(isInteractive: false, toTop: false)
+        self.time.advance(by: 0.1)
+        let before = view.itemsStateForTesting(.column(0))
+        XCTAssertEqual(before.count, 1, "\(before)")
+        view.setSides(bottom: self.duoSide(right: [], badge: "4"), top: self.duoSide(right: [], badge: "3"))
+        XCTAssertEqual(view.itemsStateForTesting(.column(0)).count, before.count)
+        XCTAssertTrue(view.leavingItemsViewsForTesting(.column(0)).isEmpty)
+        XCTAssertEqual(view.badgeNodeForTesting(.column(0))?.text, "4")
     }
 
     // A push started from a button that stays in the row beside an iPhone Duo column: only the row's trailing capsule
