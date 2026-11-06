@@ -376,7 +376,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 for items in platter.items where !items.isLeaving {
                     let previous = items.side == .bottom ? self.bottomSide : self.topSide
                     let updated = items.side == .bottom ? bottom : top
-                    guard let previous, navigationBarCapsuleSignature(previous.content, role: role, columnLength: previous.columnFrame?.height, hidesColumnButtons: previous.hidesColumnButtons) != navigationBarCapsuleSignature(updated.content, role: role, columnLength: updated.columnFrame?.height, hidesColumnButtons: updated.hidesColumnButtons) else {
+                    // A badge is not an item change: the kept back button takes its new count in place, as on a
+                    // settled bar.
+                    guard let previous, navigationBarCapsuleSignature(previous.content, role: role, columnLength: previous.columnFrame?.height, hidesColumnButtons: previous.hidesColumnButtons, includesBadge: false) != navigationBarCapsuleSignature(updated.content, role: role, columnLength: updated.columnFrame?.height, hidesColumnButtons: updated.hidesColumnButtons, includesBadge: false) else {
                         continue
                     }
                     let contentView = items.side == .bottom ? self.bottomContentView : self.topContentView
@@ -1179,12 +1181,14 @@ public final class NavigationBarPlatterTransitionView: UIView {
 }
 
 /// What a capsule shows, to tell a change of its items, from where the bar places its buttons: the back button (with
-/// its badge) and the row's left button for the leading capsule, the row's right buttons for the trailing one; nil when
-/// the bar has no such capsule. A column slot is signed by the shape that takes it (`navigationBarColumnShapeSignature`).
-private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Content, role: NavigationBarPlatterTransitionView.Role, columnLength: CGFloat?, hidesColumnButtons: Bool) -> [AnyHashable]? {
+/// its badge, unless `includesBadge` is false) and the row's left button for the leading capsule, the row's right
+/// buttons for the trailing one; nil when the bar has no such capsule. Two bars' back buttons with different badges are
+/// different items, while one bar's badge changing is not. A column slot is signed by the shape that takes it
+/// (`navigationBarColumnShapeSignature`).
+private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Content, role: NavigationBarPlatterTransitionView.Role, columnLength: CGFloat?, hidesColumnButtons: Bool, includesBadge: Bool = true) -> [AnyHashable]? {
     let placement = navigationBarButtonPlacement(leftButton: content.leftButton, rightButtons: content.rightButtons, hasBack: content.back != nil, columnLength: columnLength)
     let backInColumn = content.back != nil && placement.columnLayout?.backFrame != nil
-    let backSignature: AnyHashable? = content.back.map { AnyHashable("\($0)-\(content.badge ?? "")") }
+    let backSignature: AnyHashable? = content.back.map { AnyHashable(includesBadge ? "\($0)-\(content.badge ?? "")" : "\($0)") }
     switch role {
     case .leading:
         var signature: [AnyHashable] = []
