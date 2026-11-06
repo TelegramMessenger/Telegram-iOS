@@ -164,12 +164,10 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 self.animationNode = animationNode
                 
                 let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fitSize: CGSize
-                if file.isCustomEmoji {
-                    fitSize = CGSize(width: 200.0, height: 200.0)
-                } else {
-                    fitSize = CGSize(width: 400.0, height: 400.0)
-                }
+                // Decode at native sticker size (capped 512) for peek/enlarged presentation.
+                // Previously custom emoji used a ~200px buffer while displayed on Retina,
+                // which upscaled a soft raster — same class of bug as Desktop media viewer.
+                let fitSize = CGSize(width: 512.0, height: 512.0)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
                 
                 if file.isCustomTemplateEmoji {
@@ -194,7 +192,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 self.animationNode = nil
             }
             
-            self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: file, small: false, fetched: true))
+            self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: false, blurThumbnail: false))
         } else if case .portal = item {
             self._ready.set(.single(true))
         }
@@ -267,7 +265,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize: CGSize
         if self.item.file?.isCustomEmoji == true {
-            boundingSize = CGSize(width: 120.0, height: 120.0)
+            boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
         } else if let _ = self.additionalAnimationNode {
             boundingSize = CGSize(width: 240.0, height: 240.0).fitted(size)
         } else {
