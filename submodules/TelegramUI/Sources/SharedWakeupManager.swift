@@ -177,13 +177,21 @@ public final class SharedWakeupManager {
             strongSelf.checkTasks()
         })
         
-        self.managedPausedInBackgroundPlayer = combineLatest(queue: .mainQueue(), mediaManager.activeGlobalMediaPlayerAccountId, inForeground).startStrict(next: { [weak mediaManager] accountAndActive, inForeground in
+        // Wait a moment before dropping: when a playlist moves on to its next item, the finished item
+        // reports paused until the next one starts, and dropping right away closed the audio output
+        // between two items (on CarPlay with the device locked, the next item then stayed silent).
+        self.managedPausedInBackgroundPlayer = (combineLatest(queue: .mainQueue(), mediaManager.activeGlobalMediaPlayerAccountId, inForeground)
+        |> mapToSignal { accountAndActive, inForeground -> Signal<Void, NoError> in
+            if !inForeground, let accountAndActive = accountAndActive, !accountAndActive.1 {
+                return .single(Void()) |> delay(0.5, queue: .mainQueue())
+            } else {
+                return .complete()
+            }
+        }).startStrict(next: { [weak mediaManager] _ in
             guard let mediaManager = mediaManager else {
                 return
             }
-            if !inForeground, let accountAndActive = accountAndActive, !accountAndActive.1 {
-                mediaManager.audioSession.dropAll()
-            }
+            mediaManager.audioSession.dropAll()
         })
         
         self.tasksDisposable = (activeAccounts
