@@ -1920,12 +1920,12 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.dismissAllTooltips()
                                         }
                                     },
-                                    deleteAction: { [weak self] in
+                                    deleteAction: { [weak self] sourceView in
                                         guard let self else {
                                             return
                                         }
                                         
-                                        self.performDeleteAction()
+                                        self.performDeleteAction(sourceView: sourceView)
                                     },
                                     moreAction: { [weak self] sourceView, gesture in
                                         guard let self else {
@@ -6059,13 +6059,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        private func performDeleteAction() {
+        private func performDeleteAction(sourceView: UIView? = nil) {
             guard let component = self.component else {
                 return
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-            let actionSheet = ActionSheetController(presentationData: presentationData)
             
             let deleteTitle: String
             if case let .user(user) = component.slice.peer, user.botInfo != nil {
@@ -6073,6 +6072,39 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 deleteTitle = component.strings.Story_ContextDeleteStory
             }
+            
+            // From the footer's delete button: confirm with the same context menu as the story's "more" menu.
+            if let sourceView, let controller = component.controller() {
+                self.dismissAllTooltips()
+                
+                let items: [ContextMenuItem] = [
+                    .action(ContextMenuActionItem(text: deleteTitle, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.delete()
+                    }))
+                ]
+                
+                let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                contextController.dismissed = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.contextController = nil
+                    self.updateIsProgressPaused()
+                }
+                self.contextController = contextController
+                self.updateIsProgressPaused()
+                controller.present(contextController, in: .window(.root))
+                return
+            }
+            
+            let actionSheet = ActionSheetController(presentationData: presentationData)
             
             actionSheet.setItemGroups([
                 ActionSheetItemGroup(items: [

@@ -48,7 +48,7 @@ public final class StoryFooterPanelComponent: Component {
     public let displayViews: Bool
     public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
-    public let deleteAction: () -> Void
+    public let deleteAction: (UIView) -> Void
     public let moreAction: (UIView, ContextGesture?) -> Void
     public let likeAction: () -> Void
     public let forwardAction: () -> Void
@@ -69,7 +69,7 @@ public final class StoryFooterPanelComponent: Component {
         displayViews: Bool,
         expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
-        deleteAction: @escaping () -> Void,
+        deleteAction: @escaping (UIView) -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
         likeAction: @escaping () -> Void,
         forwardAction: @escaping () -> Void,
@@ -1018,8 +1018,8 @@ public final class StoryFooterPanelComponent: Component {
                         }
                         if component.storyItem.isPending {
                             component.cancelUploadAction()
-                        } else {
-                            component.deleteAction()
+                        } else if let deleteButtonView = self.deleteButton.view {
+                            component.deleteAction(deleteButtonView)
                         }
                     }
                 ).minSize(CGSize(width: 44.0, height: baseHeight))),
