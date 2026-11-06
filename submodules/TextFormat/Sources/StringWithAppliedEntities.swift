@@ -36,6 +36,10 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
             string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
         case let .TextMention(peerId):
             string.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
+        case let .Custom(type) where type == ApplicationSpecificEntityType.AllMention:
+            if isValidAllMentionRange(in: text, range: range) {
+                string.addAttribute(ChatTextInputAttributes.allMention, value: true as NSNumber, range: range)
+            }
         case let .TextUrl(url):
             string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
         case let .FormattedDate(_, date):
@@ -461,6 +465,12 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     if let time = parseTimecodeString(text) {
                         string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode), value: TelegramTimecode(time: time, text: text), range: range)
                     }
+                } else if type == ApplicationSpecificEntityType.AllMention, isValidAllMentionRange(in: string.string, range: range) {
+                    string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
+                    if linkFont !== baseFont {
+                        string.addAttribute(NSAttributedString.Key.font, value: linkFont, range: range)
+                    }
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.AllMention), value: true as NSNumber, range: range)
                 } else if type == ApplicationSpecificEntityType.Button {
                     string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Button), value: true as NSNumber, range: range)
                     addFontAttributes(range, .smaller)

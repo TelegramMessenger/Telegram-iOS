@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Alle Mitglieder";
+"AllMention.PermissionTitle" = "Alle erwähnen";
+"AllMention.PermissionInfo" = "Erlaubt, mit @all alle Mitglieder zu erwähnen. Bis zu 3 Aufrufe hintereinander für die gesamte Gruppe, danach 5 Minuten Pause. Nach 5 Minuten ohne Aufruf beginnt eine neue Serie. Die Berechtigung und das Limit gelten auch für Administratoren.";
+"AllMention.AccessibilityMessage" = "Erwähnung aller Mitglieder.";
+"AllMention.SendError.TopicDeleted" = "Dieses Thema wurde gelöscht.";
+"AllMention.SendError.TopicClosed" = "Dieses Thema ist geschlossen.";
+"AllMention.SendError.PermissionDenied" = "Du darfst keine Nachrichten senden.";
+"AllMention.SendError.GroupUnavailable" = "Diese Gruppe ist nicht verfügbar.";
+"AllMention.SendError.ScheduledDestination" = "%@ Die Nachricht bleibt in den geplanten Nachrichten. Kopiere oder lösche sie oder versuche es erneut, sobald du wieder Zugriff hast.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Der geplante Aufruf wurde nicht gesendet: Erwähnungen aller Mitglieder sind deaktiviert. Die Nachricht bleibt in den geplanten Nachrichten.";
+"AllMention.SendError.ScheduledRateLimited" = "Zu viele Aufrufe. Die Nachricht bleibt in den geplanten Nachrichten. Versuche später erneut, sie zu senden.";
+"AllMention.SendError.RateLimited" = "Zu viele Aufrufe. Bitte warte etwas und versuche es erneut.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Geplante Nachrichten";
+"Conversation.StatusMembers_0" = "%@ Mitglieder";
+"Conversation.StatusMembers_1" = "%@ Mitglied";
+"Conversation.StatusMembers_2" = "%@ Mitglieder";
+"Conversation.StatusMembers_3_10" = "%@ Mitglieder";
+"Conversation.StatusMembers_many" = "%@ Mitglieder";
+"Conversation.StatusMembers_any" = "%@ Mitglieder";

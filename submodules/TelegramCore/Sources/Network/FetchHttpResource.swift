@@ -4,6 +4,9 @@ import SwiftSignalKit
 import MtProtoKit
 
 public func fetchHttpResource(url: String, preserveExactUrl: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    if allMentionDemoNetworkIsDisabled {
+        return .fail(.generic)
+    }
     var urlString: String? = url
     if !preserveExactUrl {
         urlString = url.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)

@@ -61,6 +61,8 @@ private let validTimecodePreviousSet: CharacterSet = {
 public struct ApplicationSpecificEntityType {
     public static let Timecode: Int32 = 1
     public static let Button: Int32 = 2
+    /// A client-local demo entity; apiEntitiesFromMessageTextEntities omits all .Custom entities.
+    public static let AllMention: Int32 = 3
 }
 
 private enum CurrentEntityType {
@@ -183,7 +185,11 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
             }
         }
     })
-    
+
+    for range in allMentionRanges(in: text) {
+        entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Custom(type: ApplicationSpecificEntityType.AllMention)))
+    }
+
     if generateLinks {
         for entity in generateTextEntities(text.string, enabledTypes: .allUrl) {
             if case .Url = entity.type {

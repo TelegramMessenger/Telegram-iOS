@@ -839,7 +839,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             switch contents.kind {
             case .quickReplyMessageInput, .welcomeMessages:
                 return true
-            case .businessLinkSetup, .hashTagSearch:
+            case .businessLinkSetup, .hashTagSearch, .allMentionDemo:
                 break
             }
         }
@@ -2638,7 +2638,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
                         
-            if case .customChatContents = item.associatedData.subject {
+            var hideCustomContentsStatus = false
+            if case let .customChatContents(contents) = item.associatedData.subject {
+                switch contents.kind {
+                case .allMentionDemo:
+                    break
+                default:
+                    hideCustomContentsStatus = true
+                }
+            }
+            if hideCustomContentsStatus {
             } else if (mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment) && (!hasText || item.message.invertMedia) {
                 let message = item.content.firstMessage
                 

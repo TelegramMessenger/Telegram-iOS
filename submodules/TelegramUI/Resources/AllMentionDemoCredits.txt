@@ -1,0 +1,13 @@
+Belgrade photograph
+
+all-mention-belgrade.jpg: "Belgrade. View to Kalemegdan fortress in evening sunset light"
+Author: Bestalex, 2015
+Original: https://commons.wikimedia.org/wiki/File:Belgrade._View_to_Kalemegdan_fortress_in_evening_sunset_light.jpg
+License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+The original JPEG is bundled unchanged. The chat displays it fitted to the native
+message frame. This photograph retains its CC BY-SA 4.0 license.
+
+All names, messages, reactions and group activity in the @all demonstration are
+fictional. The two voice-message sounds are generated locally and contain no speech.

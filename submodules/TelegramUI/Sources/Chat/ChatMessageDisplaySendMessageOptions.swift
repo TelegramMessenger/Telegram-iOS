@@ -5,6 +5,7 @@ import ContextUI
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramUIPreferences
 import TelegramNotices
 import ChatSendMessageActionUI
 import AccountContext
@@ -51,7 +52,7 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
     }
     
     let effectItems: Signal<[ReactionItem]?, NoError>
-    if peerId != selfController.context.account.peerId && peerId.namespace == Namespaces.Peer.CloudUser {
+    if (peerId != selfController.context.account.peerId && peerId.namespace == Namespaces.Peer.CloudUser) || AllMentionDemoConfiguration.isAvailable(accountPeerId: selfController.context.account.peerId, peerId: peerId) {
         effectItems = effectMessageReactions(context: selfController.context)
         |> map(Optional.init)
     } else {

@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "모든 멤버";
+"AllMention.PermissionTitle" = "모든 멤버 멘션";
+"AllMention.PermissionInfo" = "@all로 모든 멤버를 멘션할 수 있습니다. 그룹 전체에서 연속으로 최대 3회 호출한 뒤에는 5분 동안 기다려야 합니다. 5분 동안 호출이 없으면 새로 시작합니다. 이 권한과 제한은 관리자에게도 적용됩니다.";
+"AllMention.AccessibilityMessage" = "모든 멤버를 멘션한 메시지.";
+"AllMention.SendError.TopicDeleted" = "이 토픽은 삭제되었습니다.";
+"AllMention.SendError.TopicClosed" = "이 토픽은 닫혀 있습니다.";
+"AllMention.SendError.PermissionDenied" = "메시지를 보낼 권한이 없습니다.";
+"AllMention.SendError.GroupUnavailable" = "이 그룹을 이용할 수 없습니다.";
+"AllMention.SendError.ScheduledDestination" = "%@ 메시지는 예약 메시지에 남아 있습니다. 복사하거나 삭제하거나 접근 권한이 복구된 후 다시 보내세요.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "예약된 호출을 보내지 못했습니다. 모든 멤버 멘션이 비활성화되어 있습니다. 메시지는 예약 메시지에 남아 있습니다.";
+"AllMention.SendError.ScheduledRateLimited" = "호출이 너무 많습니다. 메시지는 예약 메시지에 남아 있습니다. 나중에 다시 보내세요.";
+"AllMention.SendError.RateLimited" = "호출이 너무 많습니다. 잠시 기다린 후 다시 시도하세요.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "예약 메시지";
+"Conversation.StatusMembers_0" = "참여자 %@명";
+"Conversation.StatusMembers_1" = "참여자 %@명";
+"Conversation.StatusMembers_2" = "참여자 %@명";
+"Conversation.StatusMembers_3_10" = "참여자 %@명";
+"Conversation.StatusMembers_many" = "참여자 %@명";
+"Conversation.StatusMembers_any" = "참여자 %@명";

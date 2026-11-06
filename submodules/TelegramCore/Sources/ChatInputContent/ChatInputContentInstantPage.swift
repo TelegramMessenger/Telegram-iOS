@@ -209,6 +209,9 @@ func richText(from runs: [ChatInputRun]) -> RichText {
                 rt = .textCustomEmoji(fileId: fileId, alt: run.text)
             case let .mention(peerId):
                 rt = .textMentionName(text: .plain(run.text), peerId: peerId.toInt64())
+            case .allMention:
+                // The server's rich-text schema has no collective-mention constructor.
+                rt = .plain(run.text)
             case let .url(url):
                 rt = .url(text: .plain(run.text), url: url, webpageId: nil)
             case let .date(date):

@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "همهٔ اعضا";
+"AllMention.PermissionTitle" = "اشاره به همه";
+"AllMention.PermissionInfo" = "اجازه می‌دهد با ⁦@all⁩ به همه اشاره شود. برای کل گروه حداکثر 3 فراخوان پیاپی مجاز است و سپس باید 5 دقیقه صبر کرد. پس از 5 دقیقه بدون فراخوان، دورهٔ تازه‌ای آغاز می‌شود. این مجوز و محدودیت برای مدیران نیز اعمال می‌شود.";
+"AllMention.AccessibilityMessage" = "اشاره به همهٔ اعضا.";
+"AllMention.SendError.TopicDeleted" = "این موضوع حذف شده است.";
+"AllMention.SendError.TopicClosed" = "این موضوع بسته است.";
+"AllMention.SendError.PermissionDenied" = "اجازهٔ ارسال پیام ندارید.";
+"AllMention.SendError.GroupUnavailable" = "این گروه در دسترس نیست.";
+"AllMention.SendError.ScheduledDestination" = "%@ پیام همچنان در پیام‌های زمان‌بندی‌شده باقی است. آن را کپی یا حذف کنید، یا پس از برقراری دوبارهٔ دسترسی، ارسال را دوباره امتحان کنید.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "فراخوان زمان‌بندی‌شده ارسال نشد: اشاره به همه غیرفعال است. پیام همچنان در پیام‌های زمان‌بندی‌شده باقی است.";
+"AllMention.SendError.ScheduledRateLimited" = "تعداد فراخوان‌ها بیش از حد است. پیام همچنان در پیام‌های زمان‌بندی‌شده باقی است. بعداً دوباره ارسال آن را امتحان کنید.";
+"AllMention.SendError.RateLimited" = "تعداد فراخوان‌ها بیش از حد است. کمی صبر کنید و دوباره امتحان کنید.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "پیام‌های زمان‌بندی‌شده";
+"Conversation.StatusMembers_0" = "%@ عضو";
+"Conversation.StatusMembers_1" = "%@ عضو";
+"Conversation.StatusMembers_2" = "%@ عضو";
+"Conversation.StatusMembers_3_10" = "%@ عضو";
+"Conversation.StatusMembers_many" = "%@ عضو";
+"Conversation.StatusMembers_any" = "%@ عضو";

@@ -294,7 +294,19 @@ final class AuthorizedApplicationContext {
         }))
 
         let engine = context.engine
-        self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
+        let notificationMessages: Signal<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)], NoError>
+        let demoQueues = AllMentionDemoConfiguration.groupPeerIds.compactMap { context.allMentionDemoContents(peerId: $0) }
+        if !demoQueues.isEmpty {
+            notificationMessages = Signal { subscriber in
+                let disposables = DisposableSet()
+                disposables.add(context.account.stateManager.notificationMessages.start(next: subscriber.putNext))
+                for demo in demoQueues { disposables.add(demo.incomingNotifications.start(next: subscriber.putNext)) }
+                return disposables
+            }
+        } else {
+            notificationMessages = context.account.stateManager.notificationMessages
+        }
+        self.notificationMessagesDisposable.set((notificationMessages
         |> mapToSignal { messageList in
             return engine.data.get(EngineDataMap(
                 messageList.compactMap { item -> TelegramEngine.EngineData.Item.Messages.ChatListIndex? in

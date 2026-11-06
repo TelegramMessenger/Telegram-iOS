@@ -60,7 +60,7 @@ public func textInputStateContextQueryRangeAndType(inputText: NSAttributedString
     let inputLength = inputString.length
     
     if inputLength != 0 {
-        if inputString.hasPrefix("@") && inputLength != 1 {
+        if inputString.hasPrefix("@") && inputLength != 1 && inputText.attribute(ChatTextInputAttributes.allMention, at: 0, effectiveRange: nil) == nil {
             let startIndex = 1
             var index = startIndex
             var contextAddressRange: NSRange?

@@ -71,6 +71,8 @@ public func attributedString(from content: ChatInputContent, renderListMarkers: 
             case let .mention(peerId):
                 piece.addAttribute(ChatTextInputAttributes.textMention,
                     value: ChatTextInputTextMentionAttribute(peerId: peerId), range: r)
+            case .allMention:
+                piece.addAttribute(ChatTextInputAttributes.allMention, value: marker, range: r)
             case let .url(url):
                 piece.addAttribute(ChatTextInputAttributes.textUrl,
                     value: ChatTextInputTextUrlAttribute(url: url), range: r)
@@ -212,6 +214,8 @@ public func entityPreservingFallbackAttributedString(
                 switch attributes.entity {
                 case let .mention(peerId):
                     piece.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
+                case .allMention:
+                    piece.addAttribute(ChatTextInputAttributes.allMention, value: marker, range: range)
                 case let .url(url):
                     piece.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
                 case let .date(timestamp):
@@ -327,6 +331,7 @@ public func chatInputRuns(fromAttributedString attributedText: NSAttributedStrin
         return runs
     }
     let full = attributedText.string as NSString
+    let selectedAllMentionRanges = allMentionRanges(in: attributedText)
     attributedText.enumerateAttributes(in: range, options: []) { dict, r, _ in
         var a = ChatInputInlineAttributes()
         if dict[ChatTextInputAttributes.bold] != nil { a.bold = true }
@@ -335,7 +340,9 @@ public func chatInputRuns(fromAttributedString attributedText: NSAttributedStrin
         if dict[ChatTextInputAttributes.strikethrough] != nil { a.strikethrough = true }
         if dict[ChatTextInputAttributes.underline] != nil { a.underline = true }
         if dict[ChatTextInputAttributes.spoiler] != nil { a.spoiler = true }
-        if let m = dict[ChatTextInputAttributes.textMention] as? ChatTextInputTextMentionAttribute {
+        if selectedAllMentionRanges.contains(where: { NSIntersectionRange($0, r) == r }) {
+            a.entity = .allMention
+        } else if let m = dict[ChatTextInputAttributes.textMention] as? ChatTextInputTextMentionAttribute {
             a.entity = .mention(m.peerId)
         } else if let d = dict[ChatTextInputAttributes.date] as? ChatTextInputTextDateAttribute {
             a.entity = .date(d.date)

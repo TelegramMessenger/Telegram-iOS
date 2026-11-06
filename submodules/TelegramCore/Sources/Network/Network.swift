@@ -12,6 +12,24 @@ import NetworkLogging
 
 import EncryptionProvider
 
+// This launch mode uses a separate, locally seeded account and must never contact Telegram.
+public let allMentionDemoNetworkIsDisabled: Bool = {
+    #if DEBUG
+    // The dedicated mock bundle also stays offline when relaunched from its icon,
+    // where SpringBoard does not pass the original debug arguments.
+    return ProcessInfo.processInfo.arguments.contains("--all-mention-demo") || Bundle.main.bundleIdentifier == "org.allmention.TelegramClient"
+    #else
+    return false
+    #endif
+}()
+
+private func effectiveNetworkProxy(_ configuredProxy: ProxyServerSettings?) -> ProxyServerSettings? {
+    if allMentionDemoNetworkIsDisabled {
+        return ProxyServerSettings(host: "127.0.0.1", port: 1, connection: .socks5(username: nil, password: nil))
+    }
+    return configuredProxy
+}
+
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork
     case connecting(proxyAddress: String?, proxyHasConnectionIssues: Bool)
@@ -550,12 +568,13 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
-            if let effectiveActiveServer = proxySettings?.effectiveActiveServer {
+            let initialActiveServer = effectiveNetworkProxy(proxySettings?.effectiveActiveServer)
+            if let effectiveActiveServer = initialActiveServer {
                 apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(effectiveActiveServer.mtProxySettings)
             }
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
-            apiEnvironment.accessHostOverride = networkSettings?.backupHostOverride
+            apiEnvironment.accessHostOverride = allMentionDemoNetworkIsDisabled ? nil : networkSettings?.backupHostOverride
             
             var appDataUpdatedImpl: ((Data?) -> Void)?
             let syncValue = Atomic<Data?>(value: nil)
@@ -577,7 +596,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             let useTempAuthKeys: Bool = true
             
             let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
-            context.refreshesTemporaryKeys = !supplementary
+            context.refreshesTemporaryKeys = !supplementary && !allMentionDemoNetworkIsDisabled
             
             if let networkSettings = networkSettings {
                 let useNetworkFramework: Bool
@@ -600,7 +619,6 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
 
             let baseTcpConnectionInterfaceFactory = context.makeTcpConnectionInterface
             let isAppExtension = Bundle.main.bundlePath.hasSuffix(".appex")
-            let initialActiveServer = proxySettings?.effectiveActiveServer
             let initialWebProxyConfiguration = initialActiveServer?.webProxyConfiguration
             WebProxyTransport.shared.apply(configuration: isAppExtension ? nil : initialWebProxyConfiguration)
             if initialActiveServer?.isWebProxy == true {
@@ -634,7 +652,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.keychain = keychain
             var wrappedAdditionalSource: MTSignal?
             #if os(iOS)
-            if #available(iOS 10.0, *), !supplementary, arguments.isICloudEnabled {
+            if #available(iOS 10.0, *), !supplementary, arguments.isICloudEnabled, !allMentionDemoNetworkIsDisabled {
                 var cloudDataContextValue: CloudDataContext?
                 if let value = cloudDataContext.with({ $0 }) {
                     cloudDataContextValue = value
@@ -658,7 +676,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             }
             #endif
             
-            if !supplementary {
+            if !supplementary && !allMentionDemoNetworkIsDisabled {
                 context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber, mainDatacenterId: datacenterId))
                 let externalRequestVerificationStream = arguments.externalRequestVerificationStream
                 context.setExternalRequestVerification({ nonce in
@@ -707,7 +725,8 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 rustDisabledReason = networkLivenessDisabledReason()
             }
             #endif
-            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
+            let networkEngineFactory = allMentionDemoNetworkIsDisabled ? nil : arguments.networkEngineFactory
+            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
             resolvedEngine.activate()
             let rustEngineDisabled = rustDisabledReason != nil
             // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
@@ -716,10 +735,10 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             // network runs the resolved engine directly, exactly as without a factory.
             #if os(macOS)
             let prefersRustEngine = (networkEngine.settings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
-            let rustEngineWaitsForWebProxy = arguments.networkEngineFactory != nil && !rustEngineDisabled && resolvedEngine.kind == .mtProtoKit && prefersRustEngine && initialActiveServer?.isWebProxy == true && arguments.networkEngineFactory?.supportsWebProxy != true
+            let rustEngineWaitsForWebProxy = networkEngineFactory != nil && !rustEngineDisabled && resolvedEngine.kind == .mtProtoKit && prefersRustEngine && initialActiveServer?.isWebProxy == true && networkEngineFactory?.supportsWebProxy != true
             // Live switching only ever moves a network off Rust, or back to Rust after a WEB proxy, so it
             // is needed only while Rust is in play; otherwise MtProtoKit runs directly.
-            let switchingEngine = arguments.networkEngineFactory != nil && (resolvedEngine.kind == .rust || rustEngineWaitsForWebProxy) ? SwitchingNetworkEngine(engine: resolvedEngine) : nil
+            let switchingEngine = networkEngineFactory != nil && (resolvedEngine.kind == .rust || rustEngineWaitsForWebProxy) ? SwitchingNetworkEngine(engine: resolvedEngine) : nil
             #else
             let rustEngineWaitsForWebProxy = false
             let switchingEngine: SwitchingNetworkEngine? = nil
@@ -749,7 +768,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 useExperimentalFeatures = false
             }
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, engine: engine, switchingEngine: switchingEngine, engineFactory: arguments.networkEngineFactory, rustEngineDisabled: rustEngineDisabled, rustEngineWaitsForWebProxy: rustEngineWaitsForWebProxy, mainSession: mainSession, mainSessionDelegate: mainSessionDelegate, telemetry: telemetry, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures, baseTcpConnectionInterfaceFactory: baseTcpConnectionInterfaceFactory, isAppExtension: isAppExtension, initialWebProxyActive: initialActiveServer?.isWebProxy == true)
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, engine: engine, switchingEngine: switchingEngine, engineFactory: networkEngineFactory, rustEngineDisabled: rustEngineDisabled, rustEngineWaitsForWebProxy: rustEngineWaitsForWebProxy, mainSession: mainSession, mainSessionDelegate: mainSessionDelegate, telemetry: telemetry, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures, baseTcpConnectionInterfaceFactory: baseTcpConnectionInterfaceFactory, isAppExtension: isAppExtension, initialWebProxyActive: initialActiveServer?.isWebProxy == true)
             
             if let data = appConfiguration.data, let notifyInterval = data["upload_premium_speedup_notify_period"] as? Double {
                 network.updateNetworkSpeedLimitedEventNotifyInterval(value: notifyInterval)
@@ -1059,6 +1078,9 @@ public final class Network: NSObject {
                 return .never()
             }
         }, isContextNetworkAccessAllowed: { [weak self] in
+            if allMentionDemoNetworkIsDisabled {
+                return .single(false)
+            }
             if let strongSelf = self {
                 return strongSelf.shouldKeepConnection.get() |> distinctUntilChanged
             } else {
@@ -1142,6 +1164,7 @@ public final class Network: NSObject {
         #endif
 
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
+        |> map { value in allMentionDemoNetworkIsDisabled ? false : value }
         |> distinctUntilChanged |> deliverOn(queue)
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
@@ -1178,6 +1201,7 @@ public final class Network: NSObject {
     }
 
     func updateProxySettings(_ activeServer: ProxyServerSettings?) {
+        let activeServer = effectiveNetworkProxy(activeServer)
         let webConfiguration = activeServer?.webProxyConfiguration
         WebProxyTransport.shared.apply(configuration: self.isAppExtension ? nil : webConfiguration)
         self.webProxyActive.set(activeServer?.isWebProxy == true)
@@ -1305,7 +1329,7 @@ public final class Network: NSObject {
         let queue = Queue.mainQueue()
         let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(queue: queue, self.shouldKeepConnection.get(), self.shouldExplicitelyKeepWorkerConnections.get(), self.shouldKeepBackgroundDownloadConnections.get())
         |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections, shouldKeepBackgroundDownloadConnections -> Bool in
-            return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections || (continueInBackground && shouldKeepBackgroundDownloadConnections)
+            return !allMentionDemoNetworkIsDisabled && (shouldKeepConnection || shouldExplicitelyKeepWorkerConnections || (continueInBackground && shouldKeepBackgroundDownloadConnections))
         }
         |> distinctUntilChanged
         return Download(queue: self.queue, engine: self.engine, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection, isUserOnline: self.isUserOnline.get(), useRequestTimeoutTimers: self.useRequestTimeoutTimers)

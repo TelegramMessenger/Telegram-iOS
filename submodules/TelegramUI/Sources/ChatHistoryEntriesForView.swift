@@ -805,7 +805,7 @@ func chatHistoryEntriesForView(
                 presentationData.strings.WelcomeMessages_ServiceHeader1,
                 presentationData.strings.WelcomeMessages_ServiceHeader2
             ]
-        case .businessLinkSetup, .hashTagSearch:
+        case .businessLinkSetup, .hashTagSearch, .allMentionDemo:
             break
         }
 

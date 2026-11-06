@@ -595,7 +595,7 @@ private final class MtProtoKitSession: NSObject, NetworkEngineSession, MTRequest
     }
     
     func setPaused(_ paused: Bool) {
-        if paused {
+        if paused || allMentionDemoNetworkIsDisabled {
             self.mtProto.pause()
         } else {
             self.mtProto.resume()

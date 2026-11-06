@@ -1,4 +1,6 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
 load(
     "@build_configuration//:variables.bzl",
@@ -18,6 +20,48 @@ filegroup(
 filegroup(
     name = "TelegramUIAssets",
     srcs = glob(["Images.xcassets/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Exercise the production effect and its real Core Animation layers directly.
+swift_library(
+    name = "AllMentionSendEffectTestsLib",
+    testonly = True,
+    srcs = [
+        "Sources/AllMentionSendEffectNode.swift",
+        "Tests/AllMentionSendEffectLifecycleTests.swift",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/LottieSettings:LottieSettings",
+    ],
+)
+
+ios_test_runner(
+    name = "AllMentionSendEffectTestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "AllMentionSendEffectTests",
+    minimum_os_version = "15.0",
+    runner = ":AllMentionSendEffectTestRunner",
+    resources = [
+        "Resources/AllMentionMegaphoneBell.tgs",
+        "Resources/AllMentionMegaphoneGrip.tgs",
+    ],
+    deps = [":AllMentionSendEffectTestsLib"],
+    visibility = ["//visibility:public"],
+)
+
+# Compile the same Foundation-only storage locator into focused native tests.
+filegroup(
+    name = "all_mention_demo_storage_source",
+    srcs = ["Sources/AllMentionDemoStorage.swift", "Sources/AllMentionDemoForumChronology.swift", "Sources/AllMentionDemoScheduledDestination.swift", "Sources/AllMentionDemoForumScenario.swift", "Sources/AllMentionDemoMessageReuse.swift"],
     visibility = ["//visibility:public"],
 )
 

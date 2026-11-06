@@ -170,7 +170,7 @@ minimum_os_version = "15.0"
 
 notificationServiceExtensionVersion = "v1"
 
-empty_languages = [
+bundled_languages = [
     "ar",
     "be",
     "ca",
@@ -189,14 +189,6 @@ empty_languages = [
     "tr",
     "uk",
     "uz",
-]
-
-[
-    genrule(
-        name = "Localizable_{}.strings".format(language),
-        outs = ["{}.lproj/Localizable.strings".format(language)],
-        cmd = "touch $(OUTS)",
-    ) for language in empty_languages
 ]
 
 objc_library(
@@ -222,6 +214,34 @@ objc_library(
     visibility = [
         "//visibility:public",
     ],
+)
+
+swift_library(
+    name = "AllMentionLocalizationTestsLib",
+    testonly = True,
+    srcs = ["Tests/AllMentionLocalizationTests.swift"],
+    deps = [
+        ":PresentationStrings",
+        "//submodules/AppBundle:AppBundle",
+    ],
+)
+
+ios_test_runner(
+    name = "AllMentionLocalizationTestRunner",
+    device_type = "iPhone 17",
+    os_version = "26.5",
+)
+
+ios_unit_test(
+    name = "AllMentionLocalizationTests",
+    minimum_os_version = minimum_os_version,
+    runner = ":AllMentionLocalizationTestRunner",
+    resources = [
+        ":AppStringResources",
+        ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
+    ],
+    deps = [":AllMentionLocalizationTestsLib"],
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
@@ -276,7 +296,7 @@ filegroup(
     srcs = [
         "Telegram-iOS/en.lproj/Localizable.strings",
     ] + [
-        "{}.lproj/Localizable.strings".format(language) for language in empty_languages
+        "Telegram-iOS/{}.lproj/Localizable.strings".format(language) for language in bundled_languages
     ],
     # //Tests/ComposerHarness bundles these. `defaultPresentationStrings` FORCE-UNWRAPS
     # `getAppBundle().path(forResource: "Localizable" …)`, so any standalone app that builds a

@@ -15,6 +15,7 @@ public struct ChatTextInputAttributes {
     public static let strikethrough = NSAttributedString.Key(rawValue: "Attribute__Strikethrough")
     public static let underline = NSAttributedString.Key(rawValue: "Attribute__Underline")
     public static let textMention = NSAttributedString.Key(rawValue: "Attribute__TextMention")
+    public static let allMention = NSAttributedString.Key(rawValue: "Attribute__AllMention")
     public static let textUrl = NSAttributedString.Key(rawValue: "Attribute__TextUrl")
     public static let date = NSAttributedString.Key(rawValue: "Attribute__Date")
     public static let spoiler = NSAttributedString.Key(rawValue: "Attribute__Spoiler")
@@ -22,7 +23,7 @@ public struct ChatTextInputAttributes {
     public static let block = NSAttributedString.Key(rawValue: "Attribute__Blockquote")
     public static let collapsedBlock = NSAttributedString.Key(rawValue: "Attribute__CollapsedBlockquote")
     
-    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.date, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji, ChatTextInputAttributes.block, ChatTextInputAttributes.collapsedBlock]
+    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.allMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.date, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji, ChatTextInputAttributes.block, ChatTextInputAttributes.collapsedBlock]
 }
 
 public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
@@ -237,7 +238,7 @@ public func textAttributedStringForStateText(context: AnyObject, stateText: NSAt
         var fontAttributes: ChatTextFontAttributes = []
         
         for (key, value) in attributes {
-            if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
+            if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.allMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
                 result.addAttribute(key, value: value, range: range)
                 result.addAttribute(NSAttributedString.Key.foregroundColor, value: accentTextColor, range: range)
                 if accentTextColor.isEqual(textColor) {
@@ -485,6 +486,19 @@ private func textUrlRangesEqual(_ lhs: [(NSRange, ChatTextInputTextUrlAttribute)
         }
     }
     return true
+}
+
+private func refreshAllMentions(attributedText: NSMutableAttributedString) {
+    let fullRange = NSRange(location: 0, length: attributedText.length)
+    var invalidRanges: [NSRange] = []
+    attributedText.enumerateAttribute(ChatTextInputAttributes.allMention, in: fullRange) { value, range, _ in
+        if value != nil && !isValidAllMentionRange(in: attributedText.string, range: range) {
+            invalidRanges.append(range)
+        }
+    }
+    for range in invalidRanges {
+        attributedText.removeAttribute(ChatTextInputAttributes.allMention, range: range)
+    }
 }
 
 private func refreshTextMentions(text: NSString, initialAttributedText: NSAttributedString, attributedText: NSMutableAttributedString, fullRange: NSRange) {
@@ -821,6 +835,7 @@ public func refreshChatTextInputAttributes(context: AnyObject, textView: UITextV
     var fullRange = NSRange(location: 0, length: initialAttributedText.length)
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
     refreshTextMentions(text: text, initialAttributedText: initialAttributedText, attributedText: attributedText, fullRange: fullRange)
+    refreshAllMentions(attributedText: attributedText)
     
     var resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
@@ -847,6 +862,7 @@ public func refreshChatTextInputAttributes(context: AnyObject, textView: UITextV
         textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
         textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.allMention, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.date, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
@@ -863,7 +879,7 @@ public func refreshChatTextInputAttributes(context: AnyObject, textView: UITextV
             var fontAttributes: ChatTextFontAttributes = []
             
             for (key, value) in attributes {
-                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
+                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.allMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
                     textView.textStorage.addAttribute(key, value: value, range: range)
                     textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: accentTextColor, range: range)
                     
@@ -976,6 +992,7 @@ public func refreshGenericTextInputAttributes(context: AnyObject, textView: UITe
         textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
         textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.allMention, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.date, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
@@ -987,7 +1004,7 @@ public func refreshGenericTextInputAttributes(context: AnyObject, textView: UITe
             var fontAttributes: ChatTextFontAttributes = []
             
             for (key, value) in attributes {
-                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
+                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.allMention || key == ChatTextInputAttributes.textUrl || key == ChatTextInputAttributes.date {
                     textView.textStorage.addAttribute(key, value: value, range: range)
                     textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.panelControlAccentColor, range: range)
                     

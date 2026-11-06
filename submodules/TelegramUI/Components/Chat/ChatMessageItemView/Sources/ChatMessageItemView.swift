@@ -449,6 +449,17 @@ public final class ChatMessageAccessibilityData {
                     traits.insert(.startsMediaSession)
                 }
                 
+                // Announce the semantic call, including in media captions. A
+                // literal or forwarded @all must keep its ordinary reading.
+                if message.attributes.contains(where: { attribute in
+                    guard let attribute = attribute as? TextEntitiesMessageAttribute else { return false }
+                    return attribute.entities.contains(where: { entity in
+                        return entity.type == .Custom(type: ApplicationSpecificEntityType.AllMention)
+                            && isValidAllMentionRange(in: message.text, range: NSRange(location: entity.range.lowerBound, length: entity.range.count))
+                    })
+                }) {
+                    result += item.presentationData.strings.AllMention_AccessibilityMessage + "\n"
+                }
                 result += "\(text)"
                 
                 let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)

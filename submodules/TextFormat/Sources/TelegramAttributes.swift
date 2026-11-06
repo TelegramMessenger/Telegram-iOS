@@ -45,6 +45,7 @@ public struct TelegramTextAttributes {
     public static let URL = "UrlAttributeT"
     public static let PeerMention = "TelegramPeerMention"
     public static let PeerTextMention = "TelegramPeerTextMention"
+    public static let AllMention = "TelegramAllMention"
     public static let BotCommand = "TelegramBotCommand"
     public static let Hashtag = "TelegramHashtag"
     public static let BankCard = "TelegramBankCard"

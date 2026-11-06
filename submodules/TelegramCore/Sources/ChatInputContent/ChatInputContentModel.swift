@@ -42,6 +42,8 @@ public struct ChatInputInlineAttributes: Equatable, Codable {
 
 public enum ChatInputInlineEntity: Equatable, Codable {
     case mention(EnginePeer.Id)
+    /// A local collective-mention atom. There is no corresponding server entity yet.
+    case allMention
     case url(String)
     case date(Int32)
     case customEmoji(fileId: Int64, file: TelegramMediaFile?, enableAnimation: Bool)
@@ -51,6 +53,7 @@ public enum ChatInputInlineEntity: Equatable, Codable {
     public static func == (lhs: ChatInputInlineEntity, rhs: ChatInputInlineEntity) -> Bool {
         switch (lhs, rhs) {
         case let (.mention(a), .mention(b)): return a == b
+        case (.allMention, .allMention): return true
         case let (.url(a), .url(b)): return a == b
         case let (.date(a), .date(b)): return a == b
         // `file` is a heavy media reference that is reconstructed from a side cache (and dropped by
@@ -77,6 +80,7 @@ public enum ChatInputInlineEntity: Equatable, Codable {
         case date
         case customEmoji
         case button
+        case allMention
     }
 
     public init(from decoder: Decoder) throws {
@@ -102,6 +106,8 @@ public enum ChatInputInlineEntity: Equatable, Codable {
             self = .customEmoji(fileId: fileId, file: nil, enableAnimation: enableAnimation)
         case .button:
             self = .button(try container.decode(ChatInputButton.self, forKey: .button))
+        case .allMention:
+            self = .allMention
         }
     }
 
@@ -128,6 +134,8 @@ public enum ChatInputInlineEntity: Equatable, Codable {
         case let .button(button):
             try container.encode(Kind.button.rawValue, forKey: .kind)
             try container.encode(button, forKey: .button)
+        case .allMention:
+            try container.encode(Kind.allMention.rawValue, forKey: .kind)
         }
     }
 }

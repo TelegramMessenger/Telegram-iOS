@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "جميع الأعضاء";
+"AllMention.PermissionTitle" = "الإشارة إلى الجميع";
+"AllMention.PermissionInfo" = "يسمح بالإشارة إلى الجميع باستخدام ⁦@all⁩. يمكن إرسال 3 نداءات متتالية للمجموعة كلها، ثم يجب الانتظار 5 دقائق. تبدأ سلسلة جديدة بعد 5 دقائق دون نداءات. ينطبق الإذن والحد على المشرفين أيضًا.";
+"AllMention.AccessibilityMessage" = "إشارة إلى جميع الأعضاء.";
+"AllMention.SendError.TopicDeleted" = "تم حذف هذا الموضوع.";
+"AllMention.SendError.TopicClosed" = "هذا الموضوع مغلق.";
+"AllMention.SendError.PermissionDenied" = "ليس لديك إذن بإرسال الرسائل.";
+"AllMention.SendError.GroupUnavailable" = "هذه المجموعة غير متاحة.";
+"AllMention.SendError.ScheduledDestination" = "%@ لا تزال الرسالة ضمن الرسائل المجدولة. انسخها أو احذفها أو أعد محاولة إرسالها بعد استعادة الوصول.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "لم يتم إرسال النداء المجدول: الإشارة إلى الجميع معطلة. لا تزال الرسالة ضمن الرسائل المجدولة.";
+"AllMention.SendError.ScheduledRateLimited" = "نداءات كثيرة جدًا. لا تزال الرسالة ضمن الرسائل المجدولة. حاول إرسالها لاحقًا.";
+"AllMention.SendError.RateLimited" = "نداءات كثيرة جدًا. يُرجى الانتظار قليلًا قبل المحاولة مجددًا.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "الرسائل المجدولة";
+"Conversation.StatusMembers_0" = "لا أعضاء";
+"Conversation.StatusMembers_1" = "عضو واحد";
+"Conversation.StatusMembers_2" = "عضوان";
+"Conversation.StatusMembers_3_10" = "%@ أعضاء";
+"Conversation.StatusMembers_many" = "%@ عضوًا";
+"Conversation.StatusMembers_any" = "%@ عضو";

@@ -1116,7 +1116,11 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue {
-                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
+                    if let demo = (context as? AccountContextImpl)?.allMentionDemoContents(peerId: strongSelf.chatLocation.peerId) {
+                        demo.consumeMentions(ids: Set(messageIds.map(\.messageId)))
+                    } else {
+                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
+                    }
                 } else {
                     strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
                 }
@@ -2003,8 +2007,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         
         let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
         
-        let deviceContactsNumbers = self.context.sharedContext.deviceContactPhoneNumbers.get()
-        |> distinctUntilChanged
+        let deviceContactsNumbers: Signal<Set<String>, NoError>
+        if AllMentionDemoBootstrap.isEnabled && context.account.peerId == AllMentionDemoBootstrap.selfPeerId {
+            // An isolated fictional account has no device-contact identity. The
+            // real contacts manager may never emit before permission is granted;
+            // waiting for it prevents the first native history transition.
+            deviceContactsNumbers = .single(Set())
+        } else {
+            deviceContactsNumbers = self.context.sharedContext.deviceContactPhoneNumbers.get()
+            |> distinctUntilChanged
+        }
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
         
@@ -2715,6 +2727,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 return dict
             }
             if apply {
+                if let demo = (strongSelf.context as? AccountContextImpl)?.allMentionDemoContents(peerId: messageIndex.id.peerId) {
+                    demo.markHistoryRead(through: messageIndex, threadId: strongSelf.chatLocation.threadId)
+                    return
+                }
                 switch strongSelf.chatLocation {
                 case .peer, .replyThread:
                     if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.account.isSupportUser {
@@ -2738,7 +2754,11 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
                         let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
                         strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                        if let demo = (context as? AccountContextImpl)?.allMentionDemoContents(peerId: strongSelf.chatLocation.peerId) {
+                            demo.consumeMentions(ids: messageIds)
+                        } else {
+                            context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                        }
                     }
                     
                     strongSelf.attemptReadingReactions()
@@ -4768,6 +4788,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     }
                 }
                 strongSelf.hasActiveTransition = false
+                strongSelf.historyTransactionCompleted?()
                 
                 if let previousCloneView {
                     previousCloneView.transform = strongSelf.view.transform
@@ -5498,6 +5519,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     private var currentAppliedDeleteAnimationCorrelationIds = Set<UInt32>()
 
     var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
+    var historyTransactionCompleted: (() -> Void)?
 
     final class SnapshotState {
         fileprivate let snapshotTopInset: CGFloat

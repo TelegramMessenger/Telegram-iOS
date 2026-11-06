@@ -17243,3 +17243,17 @@ Error: %8$@";
 "Gift.Delete.Title" = "Delete Gift";
 "Gift.Delete.Text" = "Do you want to delete this gift?\n\nIt will disappear from your profile and can't be restored.";
 "Gift.Delete.Success" = "Gift Deleted";
+
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "All members";
+"AllMention.PermissionTitle" = "Mention All Members";
+"AllMention.PermissionInfo" = "Allows @all to mention everyone. Up to 3 calls in a row for the whole group, then a 5-minute break. After 5 minutes without a call, a new series begins. The permission and limit also apply to administrators.";
+"AllMention.AccessibilityMessage" = "Mention to all members.";
+"AllMention.SendError.TopicDeleted" = "This topic was deleted.";
+"AllMention.SendError.TopicClosed" = "This topic is closed.";
+"AllMention.SendError.PermissionDenied" = "You do not have permission to send messages.";
+"AllMention.SendError.GroupUnavailable" = "This group is unavailable.";
+"AllMention.SendError.ScheduledDestination" = "%@ The message is still in Scheduled Messages. Copy it, delete it or retry after access is restored.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Scheduled call was not sent: mentioning everyone is disabled. The message is still in Scheduled Messages.";
+"AllMention.SendError.ScheduledRateLimited" = "Too many calls. The message is still in Scheduled Messages. Try sending it again later.";
+"AllMention.SendError.RateLimited" = "Too many calls. Please wait before trying again.";

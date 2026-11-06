@@ -1,0 +1,695 @@
+{
+  "build": "100044",
+  "methods": 97,
+  "passed": 97,
+  "failed": 0,
+  "skipped": 0,
+  "targets": 4,
+  "tests": [
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testAdoptsNewestCompleteLegacyStoreWithoutMovingItsKey",
+      "status": "passed",
+      "elapsed_seconds": 0.008,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testCorruptManifestDoesNotSilentlyCreateAnotherStore",
+      "status": "passed",
+      "elapsed_seconds": 0.009,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testDemoContainerSymlinkCannotWriteIntoNormalAccountDirectory",
+      "status": "passed",
+      "elapsed_seconds": 0.001,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testExplicitResetSelectsNewStoreAndKeepsPreviousStore",
+      "status": "passed",
+      "elapsed_seconds": 0.003,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testLaunchWithoutArgumentsRestoresModeAndExplicitChoiceOverridesIt",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testManifestCannotSelectNormalAccountsOrOutsideDirectory",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testMissingSavedStoreIsReportedInsteadOfReseeded",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testRecipientIntroMarkerSurvivesPostboxSerialization",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testReopeningUsesSameDirectoryAndLeavesExistingFilesIntact",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testSessionSymlinkCannotEscapeDemoDirectory",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testShowcaseSessionIsSeparateAndPreservesExistingQAStore",
+      "status": "passed",
+      "elapsed_seconds": 0.005,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionDemoStorageTests",
+      "method": "testUnknownManifestVersionLeavesExistingStoreUnchanged",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testOtherTopicMessageCannotAdvanceReadBoundary",
+      "status": "passed",
+      "elapsed_seconds": 0.052,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testOutgoingMessageDoesNotReadCallsInEitherTopic",
+      "status": "passed",
+      "elapsed_seconds": 0.042,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testPartialReadCountsIncomingOnlyAndIsIdempotent",
+      "status": "passed",
+      "elapsed_seconds": 0.038,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testQuotaAndPermissionAreSharedByTopicsAndSurviveTransactions",
+      "status": "passed",
+      "elapsed_seconds": 0.052,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testReadingOneTopicKeepsOtherTopicUnread",
+      "status": "passed",
+      "elapsed_seconds": 0.044,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testSeedChronologyRepairPreservesTopicsCallsAndReadState",
+      "status": "passed",
+      "elapsed_seconds": 0.043,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionForumTests",
+      "method": "testStoredTopicRoundTripPreservesReadStateAndNotificationSettings",
+      "status": "passed",
+      "elapsed_seconds": 0.04,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testConsumedMentionRemainsConsumedOnRepeatedRead",
+      "status": "passed",
+      "elapsed_seconds": 0.039,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testIncomingCallUsesNativeUnreadMentionTag",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testIncomingConversionPreservesSelectedEffectAndExistingFlags",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testOrdinaryIncomingMessageDoesNotBecomePersonalMention",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testProtectedAtAllDoesNotCreateRecipientMention",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testReadingClearsNativeMentionTagWithoutNetworkPendingState",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionIncomingMessageTests",
+      "method": "testSilentCallStillHasUnreadMentionAndNoSoundFlag",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testEditingExistingCallRetainsShiftedAtomWithoutReservingAgain",
+      "status": "passed",
+      "elapsed_seconds": 0.071,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testEditingQueuedRawTokenDoesNotPromoteIt",
+      "status": "passed",
+      "elapsed_seconds": 0.039,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testEditingSentOrdinaryMessageCannotCreateCallEvenWithExplicitAtom",
+      "status": "passed",
+      "elapsed_seconds": 0.039,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testExplicitQueuedAtomRequestsFutureCallWithoutReservingQuota",
+      "status": "passed",
+      "elapsed_seconds": 0.043,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testFailedQueuedEditPreservesDateTopicSilenceEffectAndFailure",
+      "status": "passed",
+      "elapsed_seconds": 0.036,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testForwardKeepsFormattingButDoesNotCopyCollectiveEffectOrReadState",
+      "status": "passed",
+      "elapsed_seconds": 0.036,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testForwardWithoutAuthorStillCannotCallEveryoneOrBePromotedByEdit",
+      "status": "passed",
+      "elapsed_seconds": 0.041,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testOldCallRemainsHistoricalWhenPermissionTurnsOff",
+      "status": "passed",
+      "elapsed_seconds": 0.042,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testQueuedEditCannotBypassDisabledPermissionOrProtectedText",
+      "status": "passed",
+      "elapsed_seconds": 0.047,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testRemovedSentAtomCannotBeResurrectedByAnotherEdit",
+      "status": "passed",
+      "elapsed_seconds": 0.053,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testScheduledForwardAllocatesDistinctIdsAfterDateReordering",
+      "status": "passed",
+      "elapsed_seconds": 0.048,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionMessageReuseTests",
+      "method": "testScheduledForwardRetainsNewSilenceButNeverRecreatesOriginalCall",
+      "status": "passed",
+      "elapsed_seconds": 0.048,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testBreakStartsAtThirdCall",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testDisabledByDefaultAndCannotReserve",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testExpirationRestoresCompleteBurstWithoutTimerMutation",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testFiveMinutesOfSilenceStartsNewSeries",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testLegacyPreferenceMigration",
+      "status": "passed",
+      "elapsed_seconds": 0.003,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testPermissionTogglePreservesPartialBurstAndBreak",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testStoredStateRoundTripDoesNotRestoreQuota",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionRateLimitTests",
+      "method": "testThreeConsecutiveCallsThenFourthIsBlocked",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testFailedScheduledMessageNeedsManualRetry",
+      "status": "passed",
+      "elapsed_seconds": 0.001,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testOrdinaryMessagesDoNotRequireCollectivePermission",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testPermissionIsCheckedAtDeliveryInsteadOfQueueTime",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testQueuedCollectiveIntentStillRespectsProtectedFormatting",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testQueueDoesNotConsumeQuotaBeforeDueTime",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testQueuedOrdinaryAtAllIsNeverPromotedAtDelivery",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testScheduledCollectiveCallUsesSameSharedBurst",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testScheduledConversionKeepsSilenceAndExplicitEffect",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDeliveryTests",
+      "method": "testSendNowSkipsDateButNeverSkipsPermissionOrQuota",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testClosedTopicRejectsOrdinaryMemberButAllowsOwnerAndManagers",
+      "status": "passed",
+      "elapsed_seconds": 0.021,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testDeletedTopicKeepsEntireBatchAndQuota",
+      "status": "passed",
+      "elapsed_seconds": 0.047,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testFailurePersistsAndRestoringAccessDoesNotRetryAutomatically",
+      "status": "passed",
+      "elapsed_seconds": 0.051,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testForceSendCannotBypassRevokedTextPermission",
+      "status": "passed",
+      "elapsed_seconds": 0.052,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testFutureQueueIsNotRejectedPrematurely",
+      "status": "passed",
+      "elapsed_seconds": 0.046,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testHiddenTopicStillAcceptsMessages",
+      "status": "passed",
+      "elapsed_seconds": 0.046,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testLeavingGroupBlocksEvenAnExistingTopic",
+      "status": "passed",
+      "elapsed_seconds": 0.055,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionScheduledDestinationTests",
+      "method": "testRestoringScenarioPreservesQueueAndNewReadBoundary",
+      "status": "passed",
+      "elapsed_seconds": 0.046,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testAutocompleteRejectsProtectedAndInvalidQueryRanges",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testEditedAtomsAndIdentifierBoundariesAreRejected",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testEditingAtomIntoUsernameRemovesCollectiveIdentity",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testLinksAndExplicitPersonalMentionsKeepTheirMeaning",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testLiteralTextDoesNotCreateProductionCollectiveEntity",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testLocalDemoRawPromotionFindsOnlyStandaloneTokens",
+      "status": "passed",
+      "elapsed_seconds": 0.017,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testMalformedRangesAreRejected",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testMessageEntityRestoresComposerIdentityWithoutPeerMention",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testMixedUTF16MessageOnlyCallsFromUnprotectedText",
+      "status": "passed",
+      "elapsed_seconds": 0.005,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testNativeEditorMarkerIsExactAndDistinctFromUserLinks",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testNativeMessageRenderingUsesDedicatedBlueAttribute",
+      "status": "passed",
+      "elapsed_seconds": 0.012,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testPersonalMentionsAndDatesRetainTheirExistingIdentity",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testRawMentionsInsideCodeAndQuotesDoNotBecomeCalls",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testSelectedAtomMovedIntoProtectedFormattingLosesCollectiveIdentity",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testSelectedAtomUsesUTF16OffsetsAndSurvivesInlineFormatting",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testSendBoundaryRemovesStaleSelectedAtomInsideCode",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testSendBoundaryStillHonorsPermissionAndOrdinaryMentions",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionTests",
+      "method": "testTypedContentAndPostboxDraftRoundTrip",
+      "status": "passed",
+      "elapsed_seconds": 0.009,
+      "target": "submodules/TextFormat:TextFormatTests"
+    },
+    {
+      "test_class": "AllMentionComposerTests",
+      "method": "testAutocompleteReplacementUsesUTF16AndPreservesHeading",
+      "status": "passed",
+      "elapsed_seconds": 0.004,
+      "target": "submodules/TelegramUI/Components/Chat/ChatRichTextEditorComposer:ChatRichTextEditorComposerTests"
+    },
+    {
+      "test_class": "AllMentionComposerTests",
+      "method": "testNativeDocumentRoundTripKeepsCollectiveIdentityAndOrdinaryMention",
+      "status": "passed",
+      "elapsed_seconds": 0.001,
+      "target": "submodules/TelegramUI/Components/Chat/ChatRichTextEditorComposer:ChatRichTextEditorComposerTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testAllDeclaredLanguagesResolveEveryFeatureKey",
+      "status": "passed",
+      "elapsed_seconds": 0.057,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testCustomLanguageInheritsBundledBaseLanguage",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testMentionLiteralKeepsVisualOrderInsideRTLText",
+      "status": "passed",
+      "elapsed_seconds": 0.077,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testNativeRussianAndArabicMemberPlurals",
+      "status": "passed",
+      "elapsed_seconds": 0.001,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testPartialBundleKeepsEnglishFallbackForExistingKeys",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testPrimaryRemoteTranslationOverridesBundledTranslations",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testRegionalLanguageUsesBundledParent",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testScheduledFailureFormatsLocalizedCauseAndUTF16Range",
+      "status": "passed",
+      "elapsed_seconds": 0.001,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testSecondaryRemoteTranslationOverridesPrimaryBundle",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionLocalizationTests",
+      "method": "testUnsupportedLanguageFallsBackToEnglish",
+      "status": "passed",
+      "elapsed_seconds": 0.0,
+      "target": "Telegram:AllMentionLocalizationTests"
+    },
+    {
+      "test_class": "AllMentionSendEffectLifecycleTests",
+      "method": "testCancellationRemovesAnimationsAndScheduledDeparture",
+      "status": "passed",
+      "elapsed_seconds": 1.966,
+      "target": "submodules/TelegramUI:AllMentionSendEffectTests"
+    },
+    {
+      "test_class": "AllMentionSendEffectLifecycleTests",
+      "method": "testCancelledPendingEffectCannotStartAfterLayout",
+      "status": "passed",
+      "elapsed_seconds": 0.002,
+      "target": "submodules/TelegramUI:AllMentionSendEffectTests"
+    },
+    {
+      "test_class": "AllMentionSendEffectLifecycleTests",
+      "method": "testLiveReduceMotionStopsFlightAndCannotRestartIt",
+      "status": "passed",
+      "elapsed_seconds": 0.325,
+      "target": "submodules/TelegramUI:AllMentionSendEffectTests"
+    },
+    {
+      "test_class": "AllMentionSendEffectLifecycleTests",
+      "method": "testReducedStartStaysReducedWhenPreferenceIsDisabled",
+      "status": "passed",
+      "elapsed_seconds": 0.789,
+      "target": "submodules/TelegramUI:AllMentionSendEffectTests"
+    }
+  ],
+  "tested_base": "5c20d095d1abe58fef9ced1a823c9b1fd3bc61a0",
+  "xcode": "27.0",
+  "simulator": "iPhone18Pro / iOS27.0",
+  "real_account_used": false,
+  "cache_test_results": false,
+  "date_utc": "2026-11-06T08:37:03.909433+00:00"
+}

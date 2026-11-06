@@ -1883,7 +1883,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             switch customChatContents.kind {
             case .quickReplyMessageInput, .welcomeMessages:
                 break
-            case .hashTagSearch:
+            case .hashTagSearch, .allMentionDemo:
                 break
             case .businessLinkSetup:
                 stickerContent = nil

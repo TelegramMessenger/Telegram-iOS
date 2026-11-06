@@ -627,7 +627,11 @@ extension ChatControllerImpl {
                             }
                         }
                         
-                        let _ = updateMessageReactionsInteractively(account: self.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: isLarge, storeAsRecentlyUsed: true).startStandalone()
+                        if case let .customChatContents(contents) = self.subject, let demo = contents as? AllMentionDemoChatContents {
+                            demo.updateReactions(messageId: message.id, reactions: mappedUpdatedReactions)
+                        } else {
+                            let _ = updateMessageReactionsInteractively(account: self.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: isLarge, storeAsRecentlyUsed: true).startStandalone()
+                        }
                     }
                 }
 

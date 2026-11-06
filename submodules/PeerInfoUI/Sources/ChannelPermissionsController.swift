@@ -25,6 +25,7 @@ private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
     
     let updatePermission: (TelegramChatBannedRightsFlags, Bool) -> Void
+    let updateAllMentionPermission: (Bool) -> Void
     let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     let addPeer: () -> Void
     let removePeer: (EnginePeer.Id) -> Void
@@ -40,9 +41,10 @@ private final class ChannelPermissionsControllerArguments {
     let openSetCustomStarsAmount: () -> Void
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, updateStarsAmount: @escaping (StarsAmount?, Bool) -> Void, openSetCustomStarsAmount: @escaping () -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(context: AccountContext, updateAllMentionPermission: @escaping (Bool) -> Void, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, updateStarsAmount: @escaping (StarsAmount?, Bool) -> Void, openSetCustomStarsAmount: @escaping () -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
+        self.updateAllMentionPermission = updateAllMentionPermission
         self.addPeer = addPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
@@ -62,6 +64,7 @@ private final class ChannelPermissionsControllerArguments {
 
 private enum ChannelPermissionsSection: Int32 {
     case permissions
+    case allMentions
     case slowmode
     case conversion
     case chargeForMessages
@@ -86,6 +89,8 @@ struct SubPermission: Equatable {
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permissionsHeader(PresentationTheme, String)
     case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?, [SubPermission], Bool)
+    case allMentionPermission(PresentationTheme, String, Bool)
+    case allMentionInfo(PresentationTheme, String)
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
@@ -112,6 +117,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case .permissionsHeader, .permission:
                 return ChannelPermissionsSection.permissions.rawValue
+            case .allMentionPermission, .allMentionInfo:
+                return ChannelPermissionsSection.allMentions.rawValue
             case .slowmodeHeader, .slowmode, .slowmodeInfo:
                 return ChannelPermissionsSection.slowmode.rawValue
             case .conversionHeader, .conversion, .conversionInfo:
@@ -135,6 +142,10 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(0)
             case let .permission(_, index, _, _, _, _, _, _):
                 return .index(1 + index)
+            case .allMentionPermission:
+                return .index(996)
+            case .allMentionInfo:
+                return .index(997)
             case .conversionHeader:
                 return .index(998)
             case .conversion:
@@ -188,6 +199,16 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .allMentionPermission(lhsTheme, lhsText, lhsValue):
+                if case let .allMentionPermission(rhsTheme, rhsText, rhsValue) = rhs {
+                    return lhsTheme === rhsTheme && lhsText == rhsText && lhsValue == rhsValue
+                }
+                return false
+            case let .allMentionInfo(lhsTheme, lhsText):
+                if case let .allMentionInfo(rhsTheme, rhsText) = rhs {
+                    return lhsTheme === rhsTheme && lhsText == rhsText
+                }
+                return false
             case let .slowmodeHeader(lhsTheme, lhsValue):
                 if case let .slowmodeHeader(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
@@ -399,6 +420,10 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                         arguments.presentRestrictedPermissionAlert(rights)
                     })
                 }
+            case let .allMentionPermission(_, title, value):
+                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, type: .icon, maximumNumberOfLines: 0, sectionId: self.section, style: .blocks, updated: arguments.updateAllMentionPermission)
+            case let .allMentionInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .slowmodeHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .slowmode(theme, strings, value):
@@ -682,8 +707,14 @@ func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> Tele
     }
 }
 
-private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: EngineRawPeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?, configuration: StarsSubscriptionConfiguration) -> [ChannelPermissionsEntry] {
+private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: EngineRawPeerView, state: ChannelPermissionsControllerState, allMentionEnabled: Bool, participants: [RenderedChannelParticipant]?, configuration: StarsSubscriptionConfiguration) -> [ChannelPermissionsEntry] {
     var entries: [ChannelPermissionsEntry] = []
+
+    func appendAllMentionPermission() {
+        guard AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: view.peerId) else { return }
+        entries.append(.allMentionPermission(presentationData.theme, presentationData.strings.AllMention_PermissionTitle, allMentionEnabled))
+        entries.append(.allMentionInfo(presentationData.theme, presentationData.strings.AllMention_PermissionInfo))
+    }
     
     if let channel = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights {
         var isDiscussion = false
@@ -731,6 +762,8 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             rightIndex += 1
         }
         
+        appendAllMentionPermission()
+
         let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
         if channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup), let memberCount = cachedData.participantsSummary.memberCount, memberCount > participantsLimit - 1000 {
             entries.append(.conversionHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastTitle.uppercased()))
@@ -815,6 +848,8 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             rightIndex += 1
         }
         
+        appendAllMentionPermission()
+
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
         entries.append(.slowmode(presentationData.theme, presentationData.strings, 0))
         entries.append(.slowmodeInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeInfo))
@@ -862,7 +897,12 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     actionsDisposable.add((sourcePeerId.get()
     |> deliverOnMainQueue).start(next: { peerId, updated in
-        if peerId.namespace == Namespaces.Peer.CloudGroup {
+        if AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: peerId), peerId.namespace == Namespaces.Peer.CloudChannel {
+            loadCompleted()
+            peersDisposable.set(nil)
+            let _ = loadMoreControl.swap(nil)
+            peersPromise.set(.single((peerId, [])))
+        } else if peerId.namespace == Namespaces.Peer.CloudGroup {
             loadCompleted()
             peersDisposable.set(nil)
             let _ = loadMoreControl.swap(nil)
@@ -902,7 +942,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     var upgradedToSupergroupImpl: ((EnginePeer.Id, @escaping () -> Void) -> Void)?
     
-    let arguments = ChannelPermissionsControllerArguments(context: context, updatePermission: { rights, value in
+    let arguments = ChannelPermissionsControllerArguments(context: context, updateAllMentionPermission: { value in
+        actionsDisposable.add(updateAllMentionGroupPermission(account: context.account, peerId: originalPeerId, isEnabled: value).start())
+    }, updatePermission: { rights, value in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { view in
@@ -1331,9 +1373,14 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     let previousExpandedPermissionsValue = Atomic<Set<TelegramChatBannedRightsFlags>?>(value: nil)
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), viewAndParticipants)
+    let allMentionPermissionSignal = sourcePeerId.get()
+    |> mapToSignal { peerId, _ -> Signal<Bool, NoError> in
+        guard AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: peerId) else { return .single(false) }
+        return allMentionGroupPermission(postbox: context.account.postbox, peerId: peerId)
+    }
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), viewAndParticipants, allMentionPermissionSignal)
     |> deliverOnMainQueue
-    |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, viewAndParticipants, allMentionEnabled -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (view, participants) = viewAndParticipants
         
         var rightNavigationButton: ItemListNavigationButton?
@@ -1388,7 +1435,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.GroupInfo_Permissions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants, configuration: configuration), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, allMentionEnabled: allMentionEnabled, participants: participants, configuration: configuration), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

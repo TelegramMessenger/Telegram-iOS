@@ -208,7 +208,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
             initialShortcut = shortcut
         case .businessLinkSetup:
             initialShortcut = ""
-        case .hashTagSearch:
+        case .hashTagSearch, .allMentionDemo:
             initialShortcut = ""
         case .welcomeMessages:
             initialShortcut = ""
@@ -248,7 +248,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
             }
         case .businessLinkSetup:
             break
-        case .hashTagSearch:
+        case .hashTagSearch, .allMentionDemo:
             break
         case .welcomeMessages:
             break

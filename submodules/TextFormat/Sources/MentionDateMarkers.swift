@@ -47,6 +47,7 @@ public func parseDate(fromURL url: String) -> Int32? {
 /// The classification of a `Document.link` string when re-emitting it as a chat attribute.
 public enum ChatLinkClass {
     case mention(EnginePeer.Id)
+    case allMention
     case date(Int32)
     case url(String)
 }
@@ -54,6 +55,9 @@ public enum ChatLinkClass {
 /// Single read-back chokepoint: decides whether a `link` is a mention, a date, or an ordinary URL.
 /// Precedence is prefix-ordered so a real user URL (or a near-miss like `tg://username`) falls to `.url`.
 public func classifyChatLink(_ link: String) -> ChatLinkClass {
+    if link == allMentionMarkdownURL() {
+        return .allMention
+    }
     if let peerId = parseMentionPeerId(fromURL: link) {
         return .mention(peerId)
     }
@@ -70,6 +74,8 @@ public func chatInputLinkAttribute(forLink link: String) -> (key: NSAttributedSt
     switch classifyChatLink(link) {
     case let .mention(peerId):
         return (ChatTextInputAttributes.textMention, ChatTextInputTextMentionAttribute(peerId: peerId))
+    case .allMention:
+        return (ChatTextInputAttributes.allMention, true as NSNumber)
     case let .date(timestamp):
         return (ChatTextInputAttributes.date, ChatTextInputTextDateAttribute(date: timestamp))
     case let .url(url):

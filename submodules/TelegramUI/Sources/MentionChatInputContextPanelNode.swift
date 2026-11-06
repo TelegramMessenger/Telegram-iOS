@@ -18,25 +18,43 @@ import ComponentFlow
 import ComponentDisplayAdapters
 import GlassBackgroundComponent
 
+private enum MentionChatInputContextPanelEntryId: Hashable {
+    case peer(Int64)
+    case allMembers
+}
+
+private enum MentionChatInputContextPanelTarget: Equatable {
+    case peer(EnginePeer)
+    case allMembers(AllMembersMentionSuggestion)
+}
+
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
-    let peer: EnginePeer
+    let target: MentionChatInputContextPanelTarget
     let revealed: Bool
     
-    var stableId: Int64 {
-        return self.peer.id.toInt64()
+    var stableId: MentionChatInputContextPanelEntryId {
+        switch self.target {
+        case let .peer(peer): return .peer(peer.id.toInt64())
+        case .allMembers: return .allMembers
+        }
     }
     
     static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer == rhs.peer && lhs.revealed == rhs.revealed
+        return lhs.index == rhs.index && lhs.target == rhs.target && lhs.revealed == rhs.revealed
     }
     
     static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
-    
-    func item(context: AccountContext, presentationData: PresentationData, inverted: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), inverted: inverted, peer: self.peer, revealed: self.revealed, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested)
+
+    func item(context: AccountContext, presentationData: PresentationData, inverted: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, allMembersSelected: @escaping () -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> ListViewItem {
+        switch self.target {
+        case let .peer(peer):
+            return MentionChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), inverted: inverted, peer: peer, revealed: self.revealed, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested)
+        case let .allMembers(suggestion):
+            return AllMembersMentionChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), suggestion: suggestion, action: allMembersSelected)
+        }
     }
 }
 
@@ -46,12 +64,12 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData, inverted: Bool, forceUpdate: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData, inverted: Bool, forceUpdate: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, allMembersSelected: @escaping () -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, allMembersSelected: allMembersSelected, removeRequested: removeRequested), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, allMembersSelected: allMembersSelected, removeRequested: removeRequested), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -69,6 +87,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private var currentEntries: [MentionChatInputContextPanelEntry]?
     
     private var currentResults: [EnginePeer] = []
+    private var currentAllMembers: AllMembersMentionSuggestion?
     private var revealedPeerId: EnginePeer.Id?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
@@ -120,11 +139,16 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
-    func updateResults(_ results: [EnginePeer]) {
+    func updateResults(_ results: [EnginePeer], allMembers: AllMembersMentionSuggestion? = nil) {
         self.currentResults = results
-        
+        self.currentAllMembers = allMembers
+
         var entries: [MentionChatInputContextPanelEntry] = []
         var index = 0
+        if let allMembers, self.mode == .input {
+            entries.append(MentionChatInputContextPanelEntry(index: index, target: .allMembers(allMembers), revealed: false))
+            index += 1
+        }
         var peerIdSet = Set<Int64>()
         for peer in results {
             let peerId = peer.id.toInt64()
@@ -132,7 +156,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 continue
             }
             peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, revealed: self.revealedPeerId == peer.id))
+            entries.append(MentionChatInputContextPanelEntry(index: index, target: .peer(peer), revealed: self.revealedPeerId == peer.id))
             index += 1
         }
         self.updateToEntries(entries: entries, forceUpdate: false)
@@ -144,7 +168,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: presentationData, inverted: self.mode == .search, forceUpdate: forceUpdate, setPeerIdRevealed: { [weak self] peerId in
             if let strongSelf = self {
                 strongSelf.revealedPeerId = peerId
-                strongSelf.updateResults(strongSelf.currentResults)
+                strongSelf.updateResults(strongSelf.currentResults, allMembers: strongSelf.currentAllMembers)
             }
         }, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
@@ -179,13 +203,27 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                         interfaceInteraction.beginMessageSearch(.member(peer._asPeer()), "")
                 }
             }
+        }, allMembersSelected: { [weak self] in
+            guard let self, self.currentAllMembers?.isEnabled == true,
+                  let interfaceInteraction = self.interfaceInteraction else { return }
+            interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                    guard type == [.mention], range.location > 0 else { continue }
+                    let query = (textInputState.inputText.string as NSString).substring(with: range).lowercased()
+                    guard "all".hasPrefix(query) else { continue }
+                    let replacement = NSMutableAttributedString(attributedString: allMentionInputString())
+                    replacement.append(NSAttributedString(string: " "))
+                    return (textInputState.replacingFlatRange(NSRange(location: range.location - 1, length: range.length + 1), with: replacement), inputMode)
+                }
+                return (textInputState, inputMode)
+            }
         }, removeRequested: { [weak self] peerId in
             if let strongSelf = self {
                 let _ = strongSelf.context.engine.peers.removeRecentlyUsedInlineBot(peerId: peerId).startStandalone()
                 
                 strongSelf.revealedPeerId = nil
                 strongSelf.currentResults = strongSelf.currentResults.filter { $0.id != peerId }
-                strongSelf.updateResults(strongSelf.currentResults)
+                strongSelf.updateResults(strongSelf.currentResults, allMembers: strongSelf.currentAllMembers)
             }
         })
         self.currentEntries = entries

@@ -302,6 +302,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
     private var didInitializeInputMediaNodeDataPromise: Bool = false
     private var inputMediaNodeDataDisposable: Disposable?
+    private var demoMessageEffectSentDisposable: Disposable?
+    private var allMentionApplicationActivityDisposable: Disposable?
+    private var allMentionApplicationIsActive = false
+    private var allMentionSendEffectNode: AllMentionSendEffectNode?
+    private var allMentionSendEffectDecoration: ChatMessageTransitionNodeDecorationItemNode?
+    private weak var allMentionSendEffectItemNode: ChatMessageItemView?
+    private var pendingDemoSendEffectMessageId: MessageId?
+    private var activeAllMentionSendEffectMessageId: MessageId?
+    private var allMentionSendEffectFrame: CGRect = .zero
     private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         
     let navigateButtons: ChatHistoryNavigationButtons
@@ -578,6 +587,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             return true
                         })
 
+                        if AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: message.id.peerId) {
+                            attributes = attributes.filter { !($0 is EffectMessageAttribute) && !($0 is ConsumablePersonalMentionMessageAttribute) }.map { attribute in
+                                if let entities = attribute as? TextEntitiesMessageAttribute {
+                                    return TextEntitiesMessageAttribute(entities: allMentionEntitiesForLocalDemo(text: message.text, entities: entities.entities, isEnabled: false))
+                                }
+                                return attribute
+                            }
+                        }
                         var messageText = message.text
                         var messageMedia = message.media
                         var hasDice = false
@@ -762,6 +779,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: nil, isSavedMusic: false, canReorder: false, richMessageId: nil, loadMore: nil)
             }
+        } else if case let .customChatContents(contents) = subject, case .allMentionDemo = contents.kind {
+            // Preserve the genuine group peer for navigation and the composer while
+            // sourcing history from the isolated local provider.
+            source = .customView(historyView: contents.historyView)
         } else if case .customChatContents = chatLocation {
             if case let .customChatContents(customChatContents) = subject {
                 source = .customView(historyView: customChatContents.historyView)
@@ -1071,6 +1092,34 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             strongSelf.inputMediaNodeData = value
         })
+
+        if let contents = (context as? AccountContextImpl)?.allMentionDemoContents(peerId: chatLocation.peerId), subject != .scheduledMessages {
+            self.allMentionApplicationActivityDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+            |> distinctUntilChanged
+            |> deliverOnMainQueue).start(next: { [weak self] isActive in
+                guard let self else { return }
+                self.allMentionApplicationIsActive = isActive
+                if !isActive {
+                    // Navigation focus survives backgrounding. Discard both
+                    // visible and pending effects so returning cannot replay one.
+                    self.removeAllMentionSendEffect()
+                }
+            })
+            self.historyNode.historyTransactionCompleted = { [weak self] in
+                self?.updateAllMentionSendEffectPlacement()
+                self?.tryPlayDemoSendEffect()
+            }
+            self.demoMessageEffectSentDisposable = (contents.messageEffectSent
+            |> mapToSignal { messageId -> Signal<MessageId?, NoError> in
+                return context.account.postbox.transaction { transaction in
+                    guard let message = transaction.getMessage(messageId), message.threadId == chatLocation.threadId else { return nil }
+                    return messageId
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] messageId in
+                if let messageId { self?.playDemoSendEffect(messageId: messageId) }
+            })
+        }
     }
     
     deinit {
@@ -1078,6 +1127,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.openStickersDisposable?.dispose()
         self.displayVideoUnmuteTipDisposable?.dispose()
         self.inputMediaNodeDataDisposable?.dispose()
+        self.demoMessageEffectSentDisposable?.dispose()
+        self.allMentionApplicationActivityDisposable?.dispose()
         self.inlineSearchResultsReadyDisposable?.dispose()
         self.loadMoreSearchResultsDisposable?.dispose()
     }
@@ -1180,9 +1231,128 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var isInFocus: Bool = false
     func inFocusUpdated(isInFocus: Bool) {
         self.isInFocus = isInFocus
+
+        if !isInFocus {
+            self.removeAllMentionSendEffect()
+        }
         
         if let inputNode = self.inputNode as? ChatEntityKeyboardInputNode {
             inputNode.simulateUpdateLayout(isVisible: isInFocus)
+        }
+    }
+
+    private func playDemoSendEffect(messageId: MessageId) {
+        guard self.isInFocus, self.allMentionApplicationIsActive else {
+            return
+        }
+        self.removeAllMentionSendEffect()
+        self.pendingDemoSendEffectMessageId = messageId
+        self.tryPlayDemoSendEffect()
+    }
+
+    private func tryPlayDemoSendEffect() {
+        guard self.isInFocus, self.allMentionApplicationIsActive, !self.allMentionSendEffectFrame.isEmpty,
+              let messageId = self.pendingDemoSendEffectMessageId else {
+            return
+        }
+        var messageItemNode: ChatMessageItemView?
+        self.historyNode.forEachVisibleMessageItemNode { itemNode in
+            if itemNode.matchesMessage(id: messageId), !itemNode.contentFrame().isEmpty {
+                messageItemNode = itemNode
+            }
+        }
+        guard let messageItemNode else {
+            // The Postbox commit can precede the history transaction. Its
+            // completion retries this exact id once the native row is present.
+            return
+        }
+        self.pendingDemoSendEffectMessageId = nil
+        if messageItemNode.item?.message.attributes.contains(where: { $0 is EffectMessageAttribute }) == true {
+            // Explicit selection wins. Local delivered messages skip the usual
+            // pending-to-sent transition, so ask the native player once here.
+            messageItemNode.playMessageEffect(force: false)
+            return
+        }
+        self.activeAllMentionSendEffectMessageId = messageId
+        self.allMentionSendEffectItemNode = messageItemNode
+        let effectNode = AllMentionSendEffectNode(reduceMotion: self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion)
+        self.allMentionSendEffectNode = effectNode
+        effectNode.frame = self.allMentionSendEffectCanvasFrame(for: messageItemNode)
+        effectNode.updateLayout(size: effectNode.bounds.size, transition: .immediate)
+        // The same decoration container used by native message effects follows
+        // this exact message through list scrolling and send transitions.
+        let decoration = self.messageTransitionNode.add(decorationView: effectNode.view, itemNode: messageItemNode, aboveEverything: false)
+        decoration.isUserInteractionEnabled = false
+        self.allMentionSendEffectDecoration = decoration
+        self.updateAllMentionSendEffectMask()
+        effectNode.play(completion: { [weak self, weak effectNode] in
+            if let self, self.allMentionSendEffectNode === effectNode {
+                self.removeAllMentionSendEffect()
+            }
+        })
+    }
+
+    private func allMentionSendEffectCanvasFrame(for itemNode: ChatMessageItemView) -> CGRect {
+        let bubble = itemNode.contentFrame()
+        let width = max(itemNode.bounds.width, bubble.maxX)
+        let horizontalMargin = min(100.0, width * 0.4)
+        // Incoming bubbles are left-aligned. Use the outgoing call's resting
+        // position so the recipient gets the same horn placement and stream room.
+        let anchorX = itemNode.item?.message.flags.contains(.Incoming) == true
+            ? width - horizontalMargin
+            : max(horizontalMargin, min(width - horizontalMargin, bubble.midX))
+        let anchor = CGPoint(
+            x: anchorX,
+            y: max(bubble.minY, bubble.maxY - 70.0) - 52.0
+        )
+        // Confetti keeps its momentum beyond the horn instead of collecting at
+        // a canvas edge. The horn's size and message attachment stay unchanged.
+        return CGRect(x: anchor.x - 310.0, y: anchor.y - 210.0, width: 620.0, height: 420.0)
+    }
+
+    private func updateAllMentionSendEffectPlacement() {
+        guard let effectNode = self.allMentionSendEffectNode,
+              let itemNode = self.allMentionSendEffectItemNode,
+              let messageId = self.activeAllMentionSendEffectMessageId else {
+            return
+        }
+        guard itemNode.matchesMessage(id: messageId) else {
+            self.removeAllMentionSendEffect()
+            return
+        }
+        effectNode.frame = self.allMentionSendEffectCanvasFrame(for: itemNode)
+        effectNode.updateLayout(size: effectNode.bounds.size, transition: .immediate)
+        self.updateAllMentionSendEffectMask()
+    }
+
+    private func updateAllMentionSendEffectMask() {
+        guard let decoration = self.allMentionSendEffectDecoration else {
+            return
+        }
+        decoration.frame = self.messageTransitionNode.bounds
+        let visibleRect = self.view.convert(self.frameForVisibleArea(), to: decoration.view)
+        let mask = (decoration.layer.mask as? CAShapeLayer) ?? CAShapeLayer()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        mask.frame = decoration.bounds
+        mask.fillColor = UIColor.black.cgColor
+        mask.path = UIBezierPath(rect: visibleRect).cgPath
+        decoration.layer.mask = mask
+        CATransaction.commit()
+    }
+
+    private func removeAllMentionSendEffect() {
+        let effectNode = self.allMentionSendEffectNode
+        self.pendingDemoSendEffectMessageId = nil
+        self.activeAllMentionSendEffectMessageId = nil
+        self.allMentionSendEffectItemNode = nil
+        self.allMentionSendEffectNode = nil
+        // Stop work synchronously even if an overlay still retains its view.
+        // Clear the identity first because cancellation completes the effect.
+        effectNode?.cancel()
+        if let decoration = self.allMentionSendEffectDecoration {
+            self.allMentionSendEffectDecoration = nil
+            self.messageTransitionNode.remove(decorationNode: decoration)
         }
     }
     
@@ -2516,6 +2686,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let visibleAreaInset = UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + inputPanelsHeight + 8.0 + 8.0, right: 0.0)
         self.visibleAreaInset = visibleAreaInset
+        self.allMentionSendEffectFrame = CGRect(x: 0.0, y: visibleAreaInset.top, width: layout.size.width, height: max(0.0, layout.size.height - visibleAreaInset.top - visibleAreaInset.bottom))
+        self.updateAllMentionSendEffectPlacement()
+        self.tryPlayDemoSendEffect()
         
         var loadingNodeInsets = visibleAreaInset
         loadingNodeInsets.left = layout.safeInsets.left
@@ -5385,7 +5558,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             var postEmptyMessages = false
             if case let .customChatContents(customChatContents) = self.chatPresentationInterfaceState.subject {
                 switch customChatContents.kind {
-                case .hashTagSearch:
+                case .hashTagSearch, .allMentionDemo:
                     break
                 case .quickReplyMessageInput:
                     break

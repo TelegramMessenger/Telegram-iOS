@@ -498,7 +498,11 @@ extension ChatControllerImpl {
                         }
                     }
                 case .customChatContents:
-                    break
+                    if case let .customChatContents(contents) = self.subject, case .allMentionDemo = contents.kind,
+                       let peer = self.presentationInterfaceState.renderedPeer?.peer,
+                       let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                        self.effectiveNavigationController?.pushViewController(infoController)
+                    }
                 }
             })
         case .search:

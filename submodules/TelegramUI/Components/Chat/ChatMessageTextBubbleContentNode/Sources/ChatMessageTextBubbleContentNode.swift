@@ -326,9 +326,15 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     break
                 }
                 if case let .customChatContents(contents) = item.associatedData.subject {
-                    if case .hashTagSearch = contents.kind {
+                    switch contents.kind {
+                    case .hashTagSearch:
                         displayStatus = true
-                    } else {
+                    case .allMentionDemo:
+                        // The local demo is a normal group conversation.
+                        if !item.presentationData.chatBubbleCorners.hasTails {
+                            displayStatus = false
+                        }
+                    default:
                         displayStatus = false
                     }
                 } else if !item.presentationData.chatBubbleCorners.hasTails {

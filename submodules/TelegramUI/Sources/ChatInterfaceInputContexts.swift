@@ -53,7 +53,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
             return []
         case .quickReplyMessageInput:
             break
-        case .welcomeMessages:
+        case .welcomeMessages, .allMentionDemo:
             break
         case .businessLinkSetup:
             return []
@@ -242,7 +242,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         break
                     case .quickReplyMessageInput:
                         break
-                    case .welcomeMessages:
+                    case .welcomeMessages, .allMentionDemo:
                         break
                     case .businessLinkSetup:
                         stickersEnabled = false

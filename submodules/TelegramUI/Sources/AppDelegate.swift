@@ -353,7 +353,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
-        CrashReportCollector.shared.start()
+        let isAllMentionDemo = AllMentionDemoBootstrap.isEnabled
+        if !isAllMentionDemo {
+            CrashReportCollector.shared.start()
+        }
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))
@@ -693,7 +696,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             // Only the main app passes a factory: extensions stay on MtProtoKit. Whether the Rust
             // engine runs is decided per account by resolveNetworkEngine (Debug Settings switch,
             // mtproto_engine_rust_disabled, the factory's own declines).
-            networkEngineFactory: RustNetworkEngineFactory()
+            networkEngineFactory: isAllMentionDemo ? nil : RustNetworkEngineFactory()
         )
         
         guard let appGroupUrl = maybeAppGroupUrl else {
@@ -719,14 +722,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let isUITest = CommandLine.arguments.contains("--ui-test")
 
         let rootPath: String
-        if isUITest {
+        if isAllMentionDemo {
+            rootPath = AllMentionDemoBootstrap.rootPath(in: appGroupUrl.path)
+        } else if isUITest {
             let testDataPath = appGroupUrl.path + "/telegram-ui-tests-data"
             let _ = try? FileManager.default.removeItem(atPath: testDataPath)
             rootPath = rootPathForBasePath(testDataPath)
         } else {
             rootPath = rootPathForBasePath(appGroupUrl.path)
         }
-        if !isUITest {
+        if !isUITest && !isAllMentionDemo {
             performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         }
         
@@ -1062,7 +1067,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         })
         
-        let accountManager: AccountManager<TelegramAccountManagerTypes> = setupAccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, resetLocalSecrets: {
+        let accountManager: AccountManager<TelegramAccountManagerTypes> = setupAccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: !isAllMentionDemo, resetLocalSecrets: {
             try resetWalletLocalSecrets()
         })
         self.accountManager = accountManager
@@ -1105,12 +1110,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return true
         }
 
-        let pushRegistry = PKPushRegistry(queue: .main)
-        if #available(iOS 9.0, *) {
-            pushRegistry.desiredPushTypes = Set([.voIP])
+        if !isAllMentionDemo {
+            let pushRegistry = PKPushRegistry(queue: .main)
+            if #available(iOS 9.0, *) {
+                pushRegistry.desiredPushTypes = Set([.voIP])
+            }
+            self.pushRegistry = pushRegistry
+            pushRegistry.delegate = self
         }
-        self.pushRegistry = pushRegistry
-        pushRegistry.delegate = self
 
         self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync())
         let _ = (accountManager.accountRecords()
@@ -1125,7 +1132,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         
-        let sharedContextSignal = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+        let demoPreparation: Signal<Void, NoError>
+        if isAllMentionDemo {
+            demoPreparation = AllMentionDemoBootstrap.prepare(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
+            |> map { _ in () }
+        } else {
+            demoPreparation = .single(())
+        }
+        let sharedContextSignal = demoPreparation
+        |> mapToSignal { _ in
+            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+        }
         |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
             return (accountManager, initialPresentationDataAndSettings)
         }
@@ -1133,7 +1150,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> mapToSignal { [self] accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
             self.mainWindow?.hostView.containerView.backgroundColor =  initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
-            let legacyBasePath = appGroupUrl.path
+            let legacyBasePath = isAllMentionDemo ? rootPath : appGroupUrl.path
             
             let presentationDataPromise = Promise<PresentationData>()
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
@@ -1426,6 +1443,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
                     self.mainWindow.debugAction = nil
                     self.mainWindow.viewController = context.rootController
+
+                    if isAllMentionDemo {
+                        guard let contents = context.context.allMentionDemoContents else { preconditionFailure("Missing isolated demo queue") }
+                        if !AllMentionDemoBootstrap.isRecipientDemo && !AllMentionDemoBootstrap.isForumDemo {
+                            let chatController = ChatControllerImpl(context: context.context, chatLocation: .peer(id: AllMentionDemoBootstrap.groupPeerId), subject: .customChatContents(contents: contents))
+                            context.rootController.pushViewController(chatController)
+                        } else if !AllMentionDemoBootstrap.isForumDemo && ProcessInfo.processInfo.arguments.contains("--all-mention-demo-history") {
+                            let chatController = ChatControllerImpl(context: context.context, chatLocation: .peer(id: AllMentionDemoBootstrap.groupPeerId), subject: .message(id: .id(AllMentionDemoBootstrap.messageId(4)), highlight: nil, timecode: nil, setupReply: false))
+                            context.rootController.pushViewController(chatController)
+                        }
+                        contents.startRecipientDemo()
+                    }
                     
                     if firstTime {
                         let layer = context.rootController.view.layer
@@ -1627,10 +1656,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         
-        self.maybeCheckForUpdates()
+        if !isAllMentionDemo {
+            self.maybeCheckForUpdates()
+        }
 
         #if canImport(AppCenter)
-        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
+        if !isAllMentionDemo, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
             AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
                 Crashes.self
             ])
@@ -1685,10 +1716,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         if #available(iOS 12.0, *) {
-            UIApplication.shared.registerForRemoteNotifications()
+            if !isAllMentionDemo {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
         }
         
-        let _ = self.urlSession(identifier: "\(baseAppBundleId).backroundSession")
+        if !isAllMentionDemo {
+            let _ = self.urlSession(identifier: "\(baseAppBundleId).backroundSession")
+        }
         
         var previousReportedMemoryConsumption = 0
         let _ = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { _ in
@@ -3135,6 +3170,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func requestNotificationTokenInvalidation() {
+        guard !AllMentionDemoBootstrap.isEnabled else {
+            return
+        }
         UIApplication.shared.unregisterForRemoteNotifications()
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
             UIApplication.shared.registerForRemoteNotifications()
@@ -3142,6 +3180,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     private func registerForNotifications(context: AccountContextImpl, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard !AllMentionDemoBootstrap.isEnabled else {
+            completion(false)
+            return
+        }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
@@ -3477,6 +3519,9 @@ private enum DownloadFileError {
 }
 
 private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
+    if AllMentionDemoBootstrap.isEnabled {
+        return .fail(.network)
+    }
     return Signal { subscriber in
         let completed = Atomic<Bool>(value: false)
         let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in

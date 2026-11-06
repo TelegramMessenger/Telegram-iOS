@@ -1760,7 +1760,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             switch customChatContents.kind {
             case .hashTagSearch:
                 break
-            case .quickReplyMessageInput, .welcomeMessages:
+            case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                 break
             case .businessLinkSetup:
                 displayMediaButton = false
@@ -2183,6 +2183,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         }
                     case .welcomeMessages:
                         placeholder = interfaceState.strings.Chat_Placeholder_WelcomeMessage
+                    case .allMentionDemo:
+                        break
                     case .businessLinkSetup:
                         placeholder = interfaceState.strings.Chat_Placeholder_BusinessLinkPreset
                     }
@@ -2212,7 +2214,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     switch customChatContents.kind {
                     case .hashTagSearch:
                         break
-                    case .quickReplyMessageInput, .welcomeMessages:
+                    case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                         break
                     case .businessLinkSetup:
                         sendButtonHasApplyIcon = true
@@ -4639,7 +4641,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     break
-                case .quickReplyMessageInput, .welcomeMessages:
+                case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                     break
                 case .businessLinkSetup:
                     keepSendButtonEnabled = true
@@ -4748,7 +4750,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     break
-                case .quickReplyMessageInput, .welcomeMessages:
+                case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                     break
                 case .businessLinkSetup:
                     hideMicButton = true
@@ -4892,7 +4894,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     break
-                case .quickReplyMessageInput, .welcomeMessages:
+                case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                     break
                 case .businessLinkSetup:
                     sendButtonHasApplyIcon = true

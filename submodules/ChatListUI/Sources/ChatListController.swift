@@ -3867,6 +3867,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 let _ = context.engine.peers.updateForumViewAsMessages(peerId: peerId, value: true).startStandalone()
             })))
+            if AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: peerId), peerId == AllMentionDemoConfiguration.forumPeerId {
+                items.append(.action(ContextMenuActionItem(text: strings.ScheduledMessages_Title, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak sourceController] _, action in
+                    action(.default)
+                    guard let navigationController = sourceController?.navigationController as? NavigationController else { return }
+                    let controller = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: .scheduledMessages, botStart: nil, mode: .standard(.default), params: nil)
+                    navigationController.pushViewController(controller, animated: true)
+                })))
+            }
             items.append(.separator)
             
             items.append(.action(ContextMenuActionItem(text: strings.GroupInfo_Title, icon: { theme in
@@ -6925,7 +6935,9 @@ private final class ChatListLocationContext {
         #elseif DEBUG && false
         networkState = .single(AccountNetworkState.connecting(proxy: nil))
         #else
-        let realNetworkState = context.account.networkState
+        // The isolated fixture has no network session; show the normal native
+        // chat-list title while demonstrating local incoming notifications.
+        let realNetworkState: Signal<AccountNetworkState, NoError> = AllMentionDemoConfiguration.isEnabled && context.account.peerId == AllMentionDemoConfiguration.accountPeerId ? .single(.online(proxy: nil)) : context.account.networkState
         networkState = Signal { subscriber in
             let currentValue = Atomic<AccountNetworkState?>(value: nil)
             let disposable = (realNetworkState

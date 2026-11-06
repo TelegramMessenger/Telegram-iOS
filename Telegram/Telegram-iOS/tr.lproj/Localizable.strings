@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Tüm üyeler";
+"AllMention.PermissionTitle" = "Herkesten bahsetme";
+"AllMention.PermissionInfo" = "@all ile herkesten bahsetmeye izin verir. Tüm grup için art arda en fazla 3 çağrı yapılabilir, ardından 5 dakika ara verilir. 5 dakika çağrı yapılmazsa yeni bir seri başlar. İzin ve sınır yöneticiler için de geçerlidir.";
+"AllMention.AccessibilityMessage" = "Tüm üyelerden bahsedildi.";
+"AllMention.SendError.TopicDeleted" = "Bu konu silindi.";
+"AllMention.SendError.TopicClosed" = "Bu konu kapalı.";
+"AllMention.SendError.PermissionDenied" = "Mesaj gönderme izniniz yok.";
+"AllMention.SendError.GroupUnavailable" = "Bu gruba erişilemiyor.";
+"AllMention.SendError.ScheduledDestination" = "%@ Mesaj, planlanmış mesajlarda kalır. Kopyalayın, silin veya erişim yeniden sağlandığında göndermeyi tekrar deneyin.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Planlanmış çağrı gönderilmedi: herkesten bahsetme kapalı. Mesaj, planlanmış mesajlarda kalır.";
+"AllMention.SendError.ScheduledRateLimited" = "Çok fazla çağrı yapıldı. Mesaj, planlanmış mesajlarda kalır. Daha sonra göndermeyi tekrar deneyin.";
+"AllMention.SendError.RateLimited" = "Çok fazla çağrı yapıldı. Tekrar denemeden önce biraz bekleyin.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Planlanmış Mesajlar";
+"Conversation.StatusMembers_0" = "%@ üye";
+"Conversation.StatusMembers_1" = "%@ üye";
+"Conversation.StatusMembers_2" = "%@ üye";
+"Conversation.StatusMembers_3_10" = "%@ üye";
+"Conversation.StatusMembers_many" = "%@ üye";
+"Conversation.StatusMembers_any" = "%@ üye";

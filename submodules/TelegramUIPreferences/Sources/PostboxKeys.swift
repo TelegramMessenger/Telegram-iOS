@@ -12,6 +12,7 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case walletState = 23
     case qrStudioLook = 24
     case qrStudioPeerLook = 25
+    case allMentionGroupPermission = 26
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -34,6 +35,13 @@ public struct ApplicationSpecificPreferencesKeys {
     public static func textProcessingEditingState(peerId: EnginePeer.Id) -> EngineDataBuffer {
         let key = EngineDataBuffer(length: 4 + 8)
         key.setInt32(0, value: ApplicationSpecificPreferencesKeyValues.textProcessingEditingState.rawValue)
+        key.setInt64(4, value: peerId.toInt64())
+        return key
+    }
+
+    public static func allMentionGroupPermission(peerId: EnginePeer.Id) -> EngineDataBuffer {
+        let key = EngineDataBuffer(length: 4 + 8)
+        key.setInt32(0, value: ApplicationSpecificPreferencesKeyValues.allMentionGroupPermission.rawValue)
         key.setInt64(4, value: peerId.toInt64())
         return key
     }

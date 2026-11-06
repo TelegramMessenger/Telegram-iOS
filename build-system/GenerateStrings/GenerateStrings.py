@@ -338,6 +338,43 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 
 @end
 
+// Bundled translations cover new keys before a remote language pack contains
+// them. Keep these separate so both remote components retain their precedence.
+static NSDictionary<NSString *, NSString *> *bundledStringsForLanguage(NSString *languageCode) {
+    static NSCache<NSString *, NSDictionary<NSString *, NSString *> *> *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+    });
+    NSDictionary<NSString *, NSString *> *cached = [cache objectForKey:languageCode];
+    if (cached) {
+        return cached;
+    }
+    NSString *candidate = [languageCode stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+    NSDictionary<NSString *, NSString *> *result = nil;
+    while (candidate.length != 0) {
+        NSString *directory = [getAppBundle() pathForResource:candidate ofType:@"lproj"];
+        if (directory) {
+            result = [NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:[directory stringByAppendingPathComponent:@"Localizable.strings"]]];
+            if (result.count != 0) {
+                break;
+            }
+        }
+        NSRange separator = [candidate rangeOfString:@"-" options:NSBackwardsSearch];
+        if (separator.location == NSNotFound) {
+            break;
+        }
+        candidate = [candidate substringToIndex:separator.location];
+    }
+    result = result ?: @{};
+    [cache setObject:result forKey:languageCode];
+    return result;
+}
+
+@interface _PresentationStringsComponent ()
+@property (nonatomic, strong, readonly) NSDictionary<NSString *, NSString *> *bundledDict;
+@end
+
 @implementation _PresentationStringsComponent
 
 - (instancetype _Nonnull)initWithLanguageCode:(NSString * _Nonnull)languageCode
@@ -350,6 +387,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
         _localizedName = localizedName;
         _pluralizationRulesCode = pluralizationRulesCode;
         _dict = dict;
+        _bundledDict = bundledStringsForLanguage(languageCode);
     }
     return self;
 }
@@ -453,26 +491,15 @@ static NSString * _Nonnull getSingle(_PresentationStrings * _Nullable strings, N
         if (!result) {
             result = strings.secondaryComponent.dict[key];
         }
+        if (!result) {
+            result = strings.primaryComponent.bundledDict[key];
+        }
+        if (!result) {
+            result = strings.secondaryComponent.bundledDict[key];
+        }
     }
     if (!result) {
-        static NSDictionary<NSString *, NSString *> *fallbackDict = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            NSString *lprojPath = [getAppBundle() pathForResource:@"en" ofType:@"lproj"];
-            if (!lprojPath) {
-                return;
-            }
-            NSBundle *bundle = [NSBundle bundleWithPath:lprojPath];
-            if (!bundle) {
-                return;
-            }
-            NSString *stringsPath = [bundle pathForResource:@"Localizable" ofType:@"strings"];
-            if (!stringsPath) {
-                return;
-            }
-            fallbackDict = [NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:stringsPath]];
-        });
-        result = fallbackDict[key]; 
+        result = bundledStringsForLanguage(@"en")[key];
     }
     if (!result) {
         result = key;

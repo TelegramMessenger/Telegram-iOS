@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Все участники";
+"AllMention.PermissionTitle" = "Упоминать всех";
+"AllMention.PermissionInfo" = "Разрешает упоминать всех через @all. До 3 призывов подряд на всю группу, затем перерыв 5 минут. После 5 минут без призывов серия начинается заново. Настройка и лимит действуют и для администраторов.";
+"AllMention.AccessibilityMessage" = "Упоминание всех участников.";
+"AllMention.SendError.TopicDeleted" = "Тема удалена.";
+"AllMention.SendError.TopicClosed" = "Тема закрыта.";
+"AllMention.SendError.PermissionDenied" = "У вас нет права отправлять сообщения.";
+"AllMention.SendError.GroupUnavailable" = "Группа недоступна.";
+"AllMention.SendError.ScheduledDestination" = "%@ Сообщение осталось в запланированных. Скопируйте, удалите или повторите отправку после восстановления доступа.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Запланированный призыв не отправлен: упоминание всех выключено. Сообщение сохранено в запланированных.";
+"AllMention.SendError.ScheduledRateLimited" = "Слишком много призывов. Сообщение осталось в запланированных — повторите отправку позже.";
+"AllMention.SendError.RateLimited" = "Слишком много призывов. Подождите немного и попробуйте снова.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Запланированные сообщения";
+"Conversation.StatusMembers_0" = "%@ участников";
+"Conversation.StatusMembers_1" = "%@ участник";
+"Conversation.StatusMembers_2" = "%@ участника";
+"Conversation.StatusMembers_3_10" = "%@ участника";
+"Conversation.StatusMembers_many" = "%@ участников";
+"Conversation.StatusMembers_any" = "%@ участника";

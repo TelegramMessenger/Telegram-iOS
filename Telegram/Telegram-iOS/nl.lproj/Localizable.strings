@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Alle leden";
+"AllMention.PermissionTitle" = "Iedereen vermelden";
+"AllMention.PermissionInfo" = "Staat toe om iedereen met @all te vermelden. Maximaal 3 oproepen achter elkaar voor de hele groep, daarna 5 minuten pauze. Na 5 minuten zonder oproep begint een nieuwe reeks. De toestemming en limiet gelden ook voor beheerders.";
+"AllMention.AccessibilityMessage" = "Vermelding van alle leden.";
+"AllMention.SendError.TopicDeleted" = "Dit onderwerp is verwijderd.";
+"AllMention.SendError.TopicClosed" = "Dit onderwerp is gesloten.";
+"AllMention.SendError.PermissionDenied" = "Je hebt geen toestemming om berichten te versturen.";
+"AllMention.SendError.GroupUnavailable" = "Deze groep is niet beschikbaar.";
+"AllMention.SendError.ScheduledDestination" = "%@ Het bericht blijft in de geplande berichten staan. Kopieer of verwijder het, of probeer het opnieuw te versturen zodra je weer toegang hebt.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "De geplande oproep is niet verstuurd: vermeldingen van iedereen zijn uitgeschakeld. Het bericht blijft in de geplande berichten staan.";
+"AllMention.SendError.ScheduledRateLimited" = "Te veel oproepen. Het bericht blijft in de geplande berichten staan. Probeer het later opnieuw te versturen.";
+"AllMention.SendError.RateLimited" = "Te veel oproepen. Wacht even voordat je het opnieuw probeert.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Geplande berichten";
+"Conversation.StatusMembers_0" = "%@ leden";
+"Conversation.StatusMembers_1" = "%@ lid";
+"Conversation.StatusMembers_2" = "%@ leden";
+"Conversation.StatusMembers_3_10" = "%@ leden";
+"Conversation.StatusMembers_many" = "%@ leden";
+"Conversation.StatusMembers_any" = "%@ leden";

@@ -38,6 +38,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         return (nil, nil)
     }
 
+    // The forum-wide recovery queue has no destination for a new message.
+    // Keep native editing and selection available for existing queue entries.
+    if AllMentionDemoBootstrap.isEnabled,
+       chatPresentationInterfaceState.chatLocation.peerId == AllMentionDemoBootstrap.forumPeerId,
+       chatPresentationInterfaceState.chatLocation.threadId == nil,
+       case .scheduledMessages = chatPresentationInterfaceState.subject,
+       chatPresentationInterfaceState.editMessageState == nil,
+       chatPresentationInterfaceState.interfaceState.selectionState == nil {
+        return (nil, nil)
+    }
+
     if chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil {
         return (nil, nil)
     }
@@ -449,7 +460,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         switch customChatContents.kind {
         case .hashTagSearch:
             displayInputTextPanel = false
-        case .quickReplyMessageInput, .businessLinkSetup, .welcomeMessages:
+        case .quickReplyMessageInput, .businessLinkSetup, .welcomeMessages, .allMentionDemo:
             displayInputTextPanel = true
         }
         

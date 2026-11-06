@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Tous les membres";
+"AllMention.PermissionTitle" = "Mentionner tout le monde";
+"AllMention.PermissionInfo" = "Permet de mentionner tout le monde avec @all. Jusqu’à 3 appels consécutifs pour l’ensemble du groupe, puis une pause de 5 minutes. Après 5 minutes sans appel, une nouvelle série commence. L’autorisation et la limite s’appliquent aussi aux administrateurs.";
+"AllMention.AccessibilityMessage" = "Mention de tous les membres.";
+"AllMention.SendError.TopicDeleted" = "Ce sujet a été supprimé.";
+"AllMention.SendError.TopicClosed" = "Ce sujet est fermé.";
+"AllMention.SendError.PermissionDenied" = "Vous n’avez pas l’autorisation d’envoyer des messages.";
+"AllMention.SendError.GroupUnavailable" = "Ce groupe est indisponible.";
+"AllMention.SendError.ScheduledDestination" = "%@ Le message reste dans les messages programmés. Copiez-le, supprimez-le ou réessayez de l’envoyer une fois l’accès rétabli.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "L’appel programmé n’a pas été envoyé : les mentions de tous les membres sont désactivées. Le message reste dans les messages programmés.";
+"AllMention.SendError.ScheduledRateLimited" = "Trop d’appels. Le message reste dans les messages programmés. Réessayez de l’envoyer plus tard.";
+"AllMention.SendError.RateLimited" = "Trop d’appels. Veuillez patienter avant de réessayer.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Messages programmés";
+"Conversation.StatusMembers_0" = "%@ membres";
+"Conversation.StatusMembers_1" = "%@ membre";
+"Conversation.StatusMembers_2" = "%@ membres";
+"Conversation.StatusMembers_3_10" = "%@ membres";
+"Conversation.StatusMembers_many" = "%@ membres";
+"Conversation.StatusMembers_any" = "%@ membres";

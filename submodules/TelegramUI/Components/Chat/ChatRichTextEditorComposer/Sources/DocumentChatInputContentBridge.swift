@@ -305,6 +305,8 @@ private func chatInputInlineAttributes(
         switch classifyChatLink(link) {
         case let .mention(peerId):
             entity = .mention(peerId)
+        case .allMention:
+            entity = .allMention
         case let .date(timestamp):
             entity = .date(timestamp)
         case let .url(url):
@@ -596,6 +598,8 @@ private func characterAttributes(
             result.emoji = registerEmoji(fileId, file)
         case let .mention(peerId):
             result.link = mentionMarkdownURL(peerId: peerId)
+        case .allMention:
+            result.link = allMentionMarkdownURL()
         case let .date(timestamp):
             result.link = dateMarkdownURL(timestamp: timestamp)
         case let .url(url):

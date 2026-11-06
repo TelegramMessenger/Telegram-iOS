@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Barcha aʼzolar";
+"AllMention.PermissionTitle" = "Barchani tilga olish";
+"AllMention.PermissionInfo" = "@all orqali barchani tilga olishga ruxsat beradi. Butun guruh uchun ketma-ket 3 tagacha chaqiriq yuborish mumkin, keyin 5 daqiqa tanaffus qilish kerak. 5 daqiqa davomida chaqiriq bo‘lmasa, yangi turkum boshlanadi. Ruxsat va cheklov administratorlarga ham amal qiladi.";
+"AllMention.AccessibilityMessage" = "Barcha aʼzolar tilga olingan.";
+"AllMention.SendError.TopicDeleted" = "Bu mavzu o‘chirilgan.";
+"AllMention.SendError.TopicClosed" = "Bu mavzu yopiq.";
+"AllMention.SendError.PermissionDenied" = "Sizda xabar yuborish ruxsati yo‘q.";
+"AllMention.SendError.GroupUnavailable" = "Bu guruh mavjud emas.";
+"AllMention.SendError.ScheduledDestination" = "%@ Xabar rejalashtirilgan xabarlarda qoladi. Uni nusxalang, o‘chiring yoki kirish tiklangandan keyin qayta yuborib ko‘ring.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Rejalashtirilgan chaqiriq yuborilmadi: barchani tilga olish o‘chirilgan. Xabar rejalashtirilgan xabarlarda qoladi.";
+"AllMention.SendError.ScheduledRateLimited" = "Chaqiriqlar juda ko‘p. Xabar rejalashtirilgan xabarlarda qoladi. Keyinroq qayta yuborib ko‘ring.";
+"AllMention.SendError.RateLimited" = "Chaqiriqlar juda ko‘p. Biroz kutib, qayta urinib ko‘ring.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Rejalashtirilgan xabarlar";
+"Conversation.StatusMembers_0" = "%@ aʼzo";
+"Conversation.StatusMembers_1" = "%@ aʼzo";
+"Conversation.StatusMembers_2" = "%@ aʼzo";
+"Conversation.StatusMembers_3_10" = "%@ aʼzo";
+"Conversation.StatusMembers_many" = "%@ aʼzo";
+"Conversation.StatusMembers_any" = "%@ aʼzo";

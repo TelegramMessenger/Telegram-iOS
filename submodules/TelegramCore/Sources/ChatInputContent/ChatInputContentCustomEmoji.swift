@@ -30,7 +30,7 @@ private func chatInputRunsResolvingCustomEmoji(_ runs: [ChatInputRun], files: [I
             var button = button
             button.label = chatInputRunsResolvingCustomEmoji(button.label, files: files)
             run.attributes.entity = .button(button)
-        case .mention, .url, .date, .none:
+        case .mention, .allMention, .url, .date, .none:
             break
         }
         return run
@@ -46,7 +46,7 @@ private func chatInputRunsCollectingUnresolvedCustomEmoji(_ runs: [ChatInputRun]
             }
         case let .button(button):
             chatInputRunsCollectingUnresolvedCustomEmoji(button.label, into: &result)
-        case .mention, .url, .date, .none:
+        case .mention, .allMention, .url, .date, .none:
             break
         }
     }

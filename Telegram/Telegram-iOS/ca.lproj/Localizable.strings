@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Tots els membres";
+"AllMention.PermissionTitle" = "Esmentar tothom";
+"AllMention.PermissionInfo" = "Permet esmentar tothom amb @all. Fins a 3 avisos seguits per a tot el grup i després una pausa de 5 minuts. Després de 5 minuts sense avisos, comença una nova sèrie. El permís i el límit també s’apliquen als administradors.";
+"AllMention.AccessibilityMessage" = "Esment a tots els membres.";
+"AllMention.SendError.TopicDeleted" = "Aquest tema s’ha suprimit.";
+"AllMention.SendError.TopicClosed" = "Aquest tema està tancat.";
+"AllMention.SendError.PermissionDenied" = "No tens permís per enviar missatges.";
+"AllMention.SendError.GroupUnavailable" = "Aquest grup no està disponible.";
+"AllMention.SendError.ScheduledDestination" = "%@ El missatge continua als missatges programats. Copia’l, suprimeix-lo o torna a enviar-lo quan es restableixi l’accés.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "L’avís programat no s’ha enviat: els esments a tothom estan desactivats. El missatge continua als missatges programats.";
+"AllMention.SendError.ScheduledRateLimited" = "Massa avisos. El missatge continua als missatges programats. Prova d’enviar-lo més tard.";
+"AllMention.SendError.RateLimited" = "Massa avisos. Espera una mica abans de tornar-ho a provar.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Missatges programats";
+"Conversation.StatusMembers_0" = "%@ membres";
+"Conversation.StatusMembers_1" = "%@ membre";
+"Conversation.StatusMembers_2" = "%@ membres";
+"Conversation.StatusMembers_3_10" = "%@ membres";
+"Conversation.StatusMembers_many" = "%@ membres";
+"Conversation.StatusMembers_any" = "%@ membres";

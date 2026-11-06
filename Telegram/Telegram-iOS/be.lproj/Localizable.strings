@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Усе ўдзельнікі";
+"AllMention.PermissionTitle" = "Згадваць усіх";
+"AllMention.PermissionInfo" = "Дазваляе згадваць усіх праз @all. Да 3 заклікаў запар для ўсёй групы, затым перапынак на 5 хвілін. Пасля 5 хвілін без заклікаў пачынаецца новая серыя. Налада і абмежаванне дзейнічаюць таксама для адміністратараў.";
+"AllMention.AccessibilityMessage" = "Згадка ўсіх удзельнікаў.";
+"AllMention.SendError.TopicDeleted" = "Гэтая тэма выдалена.";
+"AllMention.SendError.TopicClosed" = "Гэтая тэма закрыта.";
+"AllMention.SendError.PermissionDenied" = "У вас няма дазволу адпраўляць паведамленні.";
+"AllMention.SendError.GroupUnavailable" = "Гэтая група недаступная.";
+"AllMention.SendError.ScheduledDestination" = "%@ Паведамленне застаецца ў запланаваных. Скапіруйце, выдаліце яго або паўтарыце адпраўку пасля аднаўлення доступу.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Запланаваны заклік не адпраўлены: згадванне ўсіх выключана. Паведамленне застаецца ў запланаваных.";
+"AllMention.SendError.ScheduledRateLimited" = "Занадта шмат заклікаў. Паведамленне застаецца ў запланаваных. Паспрабуйце адправіць яго пазней.";
+"AllMention.SendError.RateLimited" = "Занадта шмат заклікаў. Крыху пачакайце і паспрабуйце зноў.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Запланаваныя паведамленні";
+"Conversation.StatusMembers_0" = "%@ удзельнікаў";
+"Conversation.StatusMembers_1" = "%@ удзельнік";
+"Conversation.StatusMembers_2" = "%@ удзельнікі";
+"Conversation.StatusMembers_3_10" = "%@ удзельнікі";
+"Conversation.StatusMembers_many" = "%@ удзельнікаў";
+"Conversation.StatusMembers_any" = "%@ удзельніка";

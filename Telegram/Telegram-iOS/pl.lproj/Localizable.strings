@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Wszyscy uczestnicy";
+"AllMention.PermissionTitle" = "Wspominanie wszystkich";
+"AllMention.PermissionInfo" = "Pozwala wspominać wszystkich za pomocą @all. Maksymalnie 3 wezwania z rzędu dla całej grupy, a następnie 5 minut przerwy. Po 5 minutach bez wezwania zaczyna się nowa seria. Uprawnienie i limit dotyczą również administratorów.";
+"AllMention.AccessibilityMessage" = "Wzmianka do wszystkich uczestników.";
+"AllMention.SendError.TopicDeleted" = "Ten temat został usunięty.";
+"AllMention.SendError.TopicClosed" = "Ten temat jest zamknięty.";
+"AllMention.SendError.PermissionDenied" = "Nie masz uprawnień do wysyłania wiadomości.";
+"AllMention.SendError.GroupUnavailable" = "Ta grupa jest niedostępna.";
+"AllMention.SendError.ScheduledDestination" = "%@ Wiadomość pozostaje w zaplanowanych wiadomościach. Skopiuj ją, usuń lub spróbuj wysłać ponownie po przywróceniu dostępu.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Zaplanowane wezwanie nie zostało wysłane: wspominanie wszystkich jest wyłączone. Wiadomość pozostaje w zaplanowanych wiadomościach.";
+"AllMention.SendError.ScheduledRateLimited" = "Zbyt wiele wezwań. Wiadomość pozostaje w zaplanowanych wiadomościach. Spróbuj wysłać ją później.";
+"AllMention.SendError.RateLimited" = "Zbyt wiele wezwań. Poczekaj chwilę i spróbuj ponownie.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Zaplanowane wiadomości";
+"Conversation.StatusMembers_0" = "%@ uczestników";
+"Conversation.StatusMembers_1" = "%@ uczestnik";
+"Conversation.StatusMembers_2" = "%@ uczestników";
+"Conversation.StatusMembers_3_10" = "%@ uczestników";
+"Conversation.StatusMembers_many" = "%@ uczestników";
+"Conversation.StatusMembers_any" = "%@ uczestnika";

@@ -1341,6 +1341,7 @@ public enum ChatCustomContentsKind: Equatable {
     case businessLinkSetup(link: TelegramBusinessChatLinks.Link)
     case hashTagSearch(publicPosts: Bool)
     case welcomeMessages
+    case allMentionDemo
 }
 
 public protocol ChatCustomContentsProtocol: AnyObject {

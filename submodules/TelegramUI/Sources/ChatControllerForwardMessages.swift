@@ -218,6 +218,11 @@ extension ChatControllerImpl {
                                         }
                                     }
                                     
+                                    if let demo = (strongSelf.context as? AccountContextImpl)?.allMentionDemoContents(peerId: peer.id) {
+                                        demo.enqueueMessages(messages: peerMessages)
+                                        displayPeers.append(peer)
+                                        continue
+                                    }
                                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: peerMessages)
                                     |> deliverOnMainQueue).startStandalone(next: { messageIds in
                                         if let strongSelf = self {

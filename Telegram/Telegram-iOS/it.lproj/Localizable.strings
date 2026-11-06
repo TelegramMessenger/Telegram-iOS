@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Tutti i membri";
+"AllMention.PermissionTitle" = "Menzionare tutti";
+"AllMention.PermissionInfo" = "Consente di menzionare tutti con @all. Fino a 3 richiami consecutivi per l’intero gruppo, poi una pausa di 5 minuti. Dopo 5 minuti senza richiami inizia una nuova serie. Il permesso e il limite si applicano anche agli amministratori.";
+"AllMention.AccessibilityMessage" = "Menzione di tutti i membri.";
+"AllMention.SendError.TopicDeleted" = "Questo argomento è stato eliminato.";
+"AllMention.SendError.TopicClosed" = "Questo argomento è chiuso.";
+"AllMention.SendError.PermissionDenied" = "Non hai il permesso di inviare messaggi.";
+"AllMention.SendError.GroupUnavailable" = "Questo gruppo non è disponibile.";
+"AllMention.SendError.ScheduledDestination" = "%@ Il messaggio rimane nei messaggi programmati. Copialo, eliminalo o riprova a inviarlo quando l’accesso sarà ripristinato.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Il richiamo programmato non è stato inviato: le menzioni a tutti sono disattivate. Il messaggio rimane nei messaggi programmati.";
+"AllMention.SendError.ScheduledRateLimited" = "Troppi richiami. Il messaggio rimane nei messaggi programmati. Riprova a inviarlo più tardi.";
+"AllMention.SendError.RateLimited" = "Troppi richiami. Attendi un po’ prima di riprovare.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Messaggi programmati";
+"Conversation.StatusMembers_0" = "%@ membri";
+"Conversation.StatusMembers_1" = "%@ membro";
+"Conversation.StatusMembers_2" = "%@ membri";
+"Conversation.StatusMembers_3_10" = "%@ membri";
+"Conversation.StatusMembers_many" = "%@ membri";
+"Conversation.StatusMembers_any" = "%@ membri";

@@ -380,8 +380,17 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             let dateText = stringForMessageTimestampStatus(context: item.context, message: EngineMessage(item.message), dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
 
+            var hideCustomContentsStatus = false
+            if case let .customChatContents(contents) = item.associatedData.subject {
+                switch contents.kind {
+                case .allMentionDemo:
+                    break
+                default:
+                    hideCustomContentsStatus = true
+                }
+            }
             let statusType: ChatMessageDateAndStatusType?
-            if case .customChatContents = item.associatedData.subject {
+            if hideCustomContentsStatus {
                 statusType = nil
             } else if item.message.timestamp == 0 {
                 statusType = nil

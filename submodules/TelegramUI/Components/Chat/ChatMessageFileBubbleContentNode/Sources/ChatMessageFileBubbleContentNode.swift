@@ -116,8 +116,17 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 incoming = false
             }
+            var hideCustomContentsStatus = false
+            if case let .customChatContents(contents) = item.associatedData.subject {
+                switch contents.kind {
+                case .allMentionDemo:
+                    break
+                default:
+                    hideCustomContentsStatus = true
+                }
+            }
             let statusType: ChatMessageDateAndStatusType?
-            if case .customChatContents = item.associatedData.subject {
+            if hideCustomContentsStatus {
                 statusType = nil
             } else if item.message.timestamp == 0 {
                 statusType = nil

@@ -153,10 +153,17 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
         
             let participants: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>
             if let peer {
-                participants = combineLatest(
-                    inlineBots,
-                    searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatLocation, query: query, scope: .mention)
-                )
+                let members: Signal<[EnginePeer], NoError>
+                if AllMentionDemoConfiguration.isAvailable(accountPeerId: context.account.peerId, peerId: peer.id) {
+                    members = context.account.postbox.transaction { transaction in
+                        return (0 ..< 24).compactMap { transaction.getPeer(AllMentionDemoBootstrap.userPeerId($0)) }.map(EnginePeer.init).filter {
+                            normalizedQuery.isEmpty || $0.indexName.matchesByTokens(normalizedQuery)
+                        }
+                    }
+                } else {
+                    members = searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatLocation, query: query, scope: .mention)
+                }
+                participants = combineLatest(inlineBots, members)
                 |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
                         if rating < 0.14 {

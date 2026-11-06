@@ -1,0 +1,126 @@
+{
+  "expected_methods": 97,
+  "expected_classes": 11,
+  "by_class": {
+    "AllMentionLocalizationTests": [
+      "testAllDeclaredLanguagesResolveEveryFeatureKey",
+      "testPrimaryRemoteTranslationOverridesBundledTranslations",
+      "testSecondaryRemoteTranslationOverridesPrimaryBundle",
+      "testCustomLanguageInheritsBundledBaseLanguage",
+      "testUnsupportedLanguageFallsBackToEnglish",
+      "testPartialBundleKeepsEnglishFallbackForExistingKeys",
+      "testRegionalLanguageUsesBundledParent",
+      "testScheduledFailureFormatsLocalizedCauseAndUTF16Range",
+      "testNativeRussianAndArabicMemberPlurals",
+      "testMentionLiteralKeepsVisualOrderInsideRTLText"
+    ],
+    "AllMentionIncomingMessageTests": [
+      "testIncomingCallUsesNativeUnreadMentionTag",
+      "testSilentCallStillHasUnreadMentionAndNoSoundFlag",
+      "testReadingClearsNativeMentionTagWithoutNetworkPendingState",
+      "testConsumedMentionRemainsConsumedOnRepeatedRead",
+      "testProtectedAtAllDoesNotCreateRecipientMention",
+      "testIncomingConversionPreservesSelectedEffectAndExistingFlags",
+      "testOrdinaryIncomingMessageDoesNotBecomePersonalMention"
+    ],
+    "AllMentionTests": [
+      "testLiteralTextDoesNotCreateProductionCollectiveEntity",
+      "testSelectedAtomUsesUTF16OffsetsAndSurvivesInlineFormatting",
+      "testEditedAtomsAndIdentifierBoundariesAreRejected",
+      "testMalformedRangesAreRejected",
+      "testLocalDemoRawPromotionFindsOnlyStandaloneTokens",
+      "testRawMentionsInsideCodeAndQuotesDoNotBecomeCalls",
+      "testMixedUTF16MessageOnlyCallsFromUnprotectedText",
+      "testSelectedAtomMovedIntoProtectedFormattingLosesCollectiveIdentity",
+      "testSendBoundaryRemovesStaleSelectedAtomInsideCode",
+      "testAutocompleteRejectsProtectedAndInvalidQueryRanges",
+      "testLinksAndExplicitPersonalMentionsKeepTheirMeaning",
+      "testSendBoundaryStillHonorsPermissionAndOrdinaryMentions",
+      "testTypedContentAndPostboxDraftRoundTrip",
+      "testEditingAtomIntoUsernameRemovesCollectiveIdentity",
+      "testMessageEntityRestoresComposerIdentityWithoutPeerMention",
+      "testNativeMessageRenderingUsesDedicatedBlueAttribute",
+      "testPersonalMentionsAndDatesRetainTheirExistingIdentity",
+      "testNativeEditorMarkerIsExactAndDistinctFromUserLinks"
+    ],
+    "AllMentionRateLimitTests": [
+      "testDisabledByDefaultAndCannotReserve",
+      "testThreeConsecutiveCallsThenFourthIsBlocked",
+      "testBreakStartsAtThirdCall",
+      "testExpirationRestoresCompleteBurstWithoutTimerMutation",
+      "testPermissionTogglePreservesPartialBurstAndBreak",
+      "testStoredStateRoundTripDoesNotRestoreQuota",
+      "testFiveMinutesOfSilenceStartsNewSeries",
+      "testLegacyPreferenceMigration"
+    ],
+    "AllMentionScheduledDeliveryTests": [
+      "testQueueDoesNotConsumeQuotaBeforeDueTime",
+      "testPermissionIsCheckedAtDeliveryInsteadOfQueueTime",
+      "testScheduledCollectiveCallUsesSameSharedBurst",
+      "testFailedScheduledMessageNeedsManualRetry",
+      "testSendNowSkipsDateButNeverSkipsPermissionOrQuota",
+      "testOrdinaryMessagesDoNotRequireCollectivePermission",
+      "testScheduledConversionKeepsSilenceAndExplicitEffect",
+      "testQueuedOrdinaryAtAllIsNeverPromotedAtDelivery",
+      "testQueuedCollectiveIntentStillRespectsProtectedFormatting"
+    ],
+    "AllMentionDemoStorageTests": [
+      "testReopeningUsesSameDirectoryAndLeavesExistingFilesIntact",
+      "testShowcaseSessionIsSeparateAndPreservesExistingQAStore",
+      "testAdoptsNewestCompleteLegacyStoreWithoutMovingItsKey",
+      "testExplicitResetSelectsNewStoreAndKeepsPreviousStore",
+      "testCorruptManifestDoesNotSilentlyCreateAnotherStore",
+      "testManifestCannotSelectNormalAccountsOrOutsideDirectory",
+      "testMissingSavedStoreIsReportedInsteadOfReseeded",
+      "testSessionSymlinkCannotEscapeDemoDirectory",
+      "testDemoContainerSymlinkCannotWriteIntoNormalAccountDirectory",
+      "testUnknownManifestVersionLeavesExistingStoreUnchanged",
+      "testLaunchWithoutArgumentsRestoresModeAndExplicitChoiceOverridesIt",
+      "testRecipientIntroMarkerSurvivesPostboxSerialization"
+    ],
+    "AllMentionMessageReuseTests": [
+      "testEditingSentOrdinaryMessageCannotCreateCallEvenWithExplicitAtom",
+      "testEditingExistingCallRetainsShiftedAtomWithoutReservingAgain",
+      "testOldCallRemainsHistoricalWhenPermissionTurnsOff",
+      "testRemovedSentAtomCannotBeResurrectedByAnotherEdit",
+      "testEditingQueuedRawTokenDoesNotPromoteIt",
+      "testExplicitQueuedAtomRequestsFutureCallWithoutReservingQuota",
+      "testQueuedEditCannotBypassDisabledPermissionOrProtectedText",
+      "testFailedQueuedEditPreservesDateTopicSilenceEffectAndFailure",
+      "testForwardKeepsFormattingButDoesNotCopyCollectiveEffectOrReadState",
+      "testForwardWithoutAuthorStillCannotCallEveryoneOrBePromotedByEdit",
+      "testScheduledForwardRetainsNewSilenceButNeverRecreatesOriginalCall",
+      "testScheduledForwardAllocatesDistinctIdsAfterDateReordering"
+    ],
+    "AllMentionForumTests": [
+      "testSeedChronologyRepairPreservesTopicsCallsAndReadState",
+      "testReadingOneTopicKeepsOtherTopicUnread",
+      "testOutgoingMessageDoesNotReadCallsInEitherTopic",
+      "testPartialReadCountsIncomingOnlyAndIsIdempotent",
+      "testOtherTopicMessageCannotAdvanceReadBoundary",
+      "testQuotaAndPermissionAreSharedByTopicsAndSurviveTransactions",
+      "testStoredTopicRoundTripPreservesReadStateAndNotificationSettings"
+    ],
+    "AllMentionScheduledDestinationTests": [
+      "testDeletedTopicKeepsEntireBatchAndQuota",
+      "testFutureQueueIsNotRejectedPrematurely",
+      "testClosedTopicRejectsOrdinaryMemberButAllowsOwnerAndManagers",
+      "testForceSendCannotBypassRevokedTextPermission",
+      "testLeavingGroupBlocksEvenAnExistingTopic",
+      "testHiddenTopicStillAcceptsMessages",
+      "testFailurePersistsAndRestoringAccessDoesNotRetryAutomatically",
+      "testRestoringScenarioPreservesQueueAndNewReadBoundary"
+    ],
+    "AllMentionSendEffectLifecycleTests": [
+      "testLiveReduceMotionStopsFlightAndCannotRestartIt",
+      "testCancellationRemovesAnimationsAndScheduledDeparture",
+      "testCancelledPendingEffectCannotStartAfterLayout",
+      "testReducedStartStaysReducedWhenPreferenceIsDisabled"
+    ],
+    "AllMentionComposerTests": [
+      "testAutocompleteReplacementUsesUTF16AndPreservesHeading",
+      "testNativeDocumentRoundTripKeepsCollectiveIdentityAndOrdinaryMention"
+    ]
+  },
+  "executed_methods_match_source": true
+}

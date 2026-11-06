@@ -1865,7 +1865,7 @@ extension ChatControllerImpl {
                 
                 if case let .customChatContents(customChatContents) = initialSubject {
                     switch customChatContents.kind {
-                    case .hashTagSearch:
+                    case .hashTagSearch, .allMentionDemo:
                         break
                     case let .quickReplyMessageInput(shortcut, shortcutType):
                         switch shortcutType {
@@ -2096,6 +2096,7 @@ extension ChatControllerImpl {
                 self.initialPersistentPeerData = value
             }
             |> map { _ -> Bool in true }
+
             
             self.isReady.set(combineLatest(queue: .mainQueue(), [
                 self.isPeerInfoReady.get(),

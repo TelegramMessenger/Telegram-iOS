@@ -30,9 +30,11 @@ swift_library(
     testonly = True,
     srcs = glob([
         "Tests/**/*.swift",
-    ]),
+    ]) + ["//submodules/TelegramUI:all_mention_demo_storage_source"],
     deps = [
         ":TextFormat",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Postbox:Postbox",

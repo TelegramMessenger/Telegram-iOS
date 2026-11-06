@@ -122,6 +122,17 @@ public final class AccountContextImpl: AccountContext {
         return self.sharedContextImpl
     }
     public let account: Account
+    private var allMentionDemoContentsByPeer: [PeerId: AllMentionDemoChatContents] = [:]
+    var allMentionDemoContents: AllMentionDemoChatContents? {
+        return self.allMentionDemoContents(peerId: AllMentionDemoBootstrap.selectedPeerId)
+    }
+    func allMentionDemoContents(peerId: PeerId?) -> AllMentionDemoChatContents? {
+        guard let peerId, AllMentionDemoConfiguration.isAvailable(accountPeerId: self.account.peerId, peerId: peerId) else { return nil }
+        if let contents = self.allMentionDemoContentsByPeer[peerId] { return contents }
+        let contents = AllMentionDemoChatContents(account: self.account, peerId: peerId)
+        self.allMentionDemoContentsByPeer[peerId] = contents
+        return contents
+    }
     public let engine: TelegramEngine
     
     public let fetchManager: FetchManager
@@ -336,7 +347,7 @@ public final class AccountContextImpl: AccountContext {
             self.liveLocationManager = nil
         }
         self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
-        if sharedContext.applicationBindings.isMainApp && !temp {
+        if sharedContext.applicationBindings.isMainApp && !temp && !AllMentionDemoBootstrap.isEnabled {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)

@@ -70,7 +70,9 @@ enum ComposerDocumentBridge {
                         if dict[ChatTextInputAttributes.strikethrough] != nil { ca.strikethrough = true }
                         if dict[ChatTextInputAttributes.underline] != nil { ca.underline = true }
                         if dict[ChatTextInputAttributes.spoiler] != nil { ca.spoiler = true }
-                        if let mention = dict[ChatTextInputAttributes.textMention] as? ChatTextInputTextMentionAttribute {
+                        if dict[ChatTextInputAttributes.allMention] != nil {
+                            ca.link = allMentionMarkdownURL()
+                        } else if let mention = dict[ChatTextInputAttributes.textMention] as? ChatTextInputTextMentionAttribute {
                             ca.link = mentionMarkdownURL(peerId: mention.peerId)
                         } else if let date = dict[ChatTextInputAttributes.date] as? ChatTextInputTextDateAttribute {
                             ca.link = dateMarkdownURL(timestamp: date.date)

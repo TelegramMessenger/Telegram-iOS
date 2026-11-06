@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Semua anggota";
+"AllMention.PermissionTitle" = "Sebut Semua Anggota";
+"AllMention.PermissionInfo" = "Mengizinkan @all untuk menyebut semua anggota. Maksimal 3 panggilan berturut-turut untuk seluruh grup, lalu jeda 5 menit. Setelah 5 menit tanpa panggilan, rangkaian baru dimulai. Izin dan batas ini juga berlaku bagi admin.";
+"AllMention.AccessibilityMessage" = "Sebutan untuk semua anggota.";
+"AllMention.SendError.TopicDeleted" = "Topik ini telah dihapus.";
+"AllMention.SendError.TopicClosed" = "Topik ini ditutup.";
+"AllMention.SendError.PermissionDenied" = "Anda tidak memiliki izin untuk mengirim pesan.";
+"AllMention.SendError.GroupUnavailable" = "Grup ini tidak tersedia.";
+"AllMention.SendError.ScheduledDestination" = "%@ Pesan tetap berada di Pesan Terjadwal. Salin, hapus, atau coba kirim lagi setelah akses dipulihkan.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "Panggilan terjadwal tidak terkirim: sebutan untuk semua anggota dinonaktifkan. Pesan tetap berada di Pesan Terjadwal.";
+"AllMention.SendError.ScheduledRateLimited" = "Terlalu banyak panggilan. Pesan tetap berada di Pesan Terjadwal. Coba kirim lagi nanti.";
+"AllMention.SendError.RateLimited" = "Terlalu banyak panggilan. Tunggu sebentar sebelum mencoba lagi.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Pesan Terjadwal";
+"Conversation.StatusMembers_0" = "%@ anggota";
+"Conversation.StatusMembers_1" = "%@ anggota";
+"Conversation.StatusMembers_2" = "%@ anggota";
+"Conversation.StatusMembers_3_10" = "%@ anggota";
+"Conversation.StatusMembers_many" = "%@ anggota";
+"Conversation.StatusMembers_any" = "%@ anggota";

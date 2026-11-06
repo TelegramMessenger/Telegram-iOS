@@ -5,6 +5,36 @@ import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import ChatInputContextPanelNode
+import ChatContextQuery
+import TextFormat
+
+private func allMembersMentionSuggestion(context: AccountContext, interfaceState: ChatPresentationInterfaceState) -> AllMembersMentionSuggestion? {
+    guard let contents = (context as? AccountContextImpl)?.allMentionDemoContents(peerId: interfaceState.renderedPeer?.peerId) else { return nil }
+    if let edit = interfaceState.interfaceState.editMessage, edit.messageId.namespace != Namespaces.Message.ScheduledCloud {
+        return nil
+    }
+    let peer = interfaceState.renderedPeer?.peer
+    let isGroup: Bool
+    if peer is TelegramGroup {
+        isGroup = true
+    } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+        isGroup = true
+    } else {
+        isGroup = false
+    }
+    guard isGroup, contents.canMentionAll else { return nil }
+    let input = interfaceState.interfaceState.effectiveInputState
+    for (range, type, _) in textInputStateContextQueryRangeAndType(input) {
+        guard type == [.mention], range.location > 0 else { continue }
+        let query = (input.inputText.string as NSString).substring(with: range).lowercased()
+        guard "all".hasPrefix(query) else { continue }
+        let atomRange = NSRange(location: range.location - 1, length: range.length + 1)
+        guard isAllMentionContextAllowed(in: input.inputText, range: atomRange) else { continue }
+        guard !allMentionRanges(in: input.inputText).contains(atomRange) else { continue }
+        return AllMembersMentionSuggestion(memberCount: contents.memberCount, isEnabled: contents.canMentionAll)
+    }
+    return nil
+}
 
 private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {
@@ -130,14 +160,15 @@ func textInputContextPanel(context: AccountContext, chatPresentationInterfaceSta
             }
         }*/
     case let .mentions(peers):
-        if !peers.isEmpty {
+        let allMembers = allMembersMentionSuggestion(context: context, interfaceState: chatPresentationInterfaceState)
+        if !peers.isEmpty || allMembers != nil {
             if let currentPanel = currentPanel as? MentionChatInputContextPanelNode, currentPanel.mode == .input {
-                currentPanel.updateResults(peers)
+                currentPanel.updateResults(peers, allMembers: allMembers)
                 return currentPanel
             } else {
                 let panel = MentionChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, mode: .input, chatPresentationContext: controllerInteraction.presentationContext)
                 panel.interfaceInteraction = interfaceInteraction
-                panel.updateResults(peers)
+                panel.updateResults(peers, allMembers: allMembers)
                 return panel
             }
         } else {

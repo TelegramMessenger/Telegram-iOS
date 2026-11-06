@@ -254,6 +254,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var didSetupDropToPaste: Bool = false
     
     let context: AccountContext
+    var allMentionDemoContents: AllMentionDemoChatContents? {
+        return (self.context as? AccountContextImpl)?.allMentionDemoContents(peerId: self.chatLocation.peerId)
+    }
     public internal(set) var chatLocation: ChatLocation
     public internal(set) var subject: ChatControllerSubject?
     var initialTextInputState: ChatTextInputState?
@@ -275,6 +278,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let preloadNextChatPeerIdDisposable = MetaDisposable()
     
     var accountPeerDisposable: Disposable?
+    var allMentionPermissionDisposable: Disposable?
     
     let cachedDataReady = Promise<Bool>()
     var didSetCachedDataReady = false
@@ -677,6 +681,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         initialTextInputState: ChatTextInputState? = nil,
         params: ChatControllerParams? = nil
     ) {
+        var subject = subject
+        if subject == nil && !AllMentionDemoBootstrap.isRecipientDemo && chatLocation.peerId == AllMentionDemoBootstrap.groupPeerId, let contents = (context as? AccountContextImpl)?.allMentionDemoContents(peerId: chatLocation.peerId) {
+            subject = .customChatContents(contents: contents)
+        }
         self.initTimestamp = CFAbsoluteTimeGetCurrent()
         
         let _ = ChatControllerCount.modify { value in
@@ -739,7 +747,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case .hashTagSearch:
                 break
-            case .welcomeMessages:
+            case .welcomeMessages, .allMentionDemo:
                 break
             }
         }
@@ -820,7 +828,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     return true
-                case .welcomeMessages:
+                case .welcomeMessages, .allMentionDemo:
                     return true
                 case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
@@ -2267,7 +2275,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                         
-                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
+                        if case let .customChatContents(contents) = strongSelf.subject, let demo = contents as? AllMentionDemoChatContents {
+                            demo.updateReactions(messageId: message.id, reactions: mappedUpdatedReactions)
+                        } else {
+                            let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
+                        }
                     }
                 }
             })
@@ -3846,7 +3858,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch customChatContents.kind {
                     case .quickReplyMessageInput, .welcomeMessages:
                         return .none
-                    case .businessLinkSetup, .hashTagSearch:
+                    case .businessLinkSetup, .hashTagSearch, .allMentionDemo:
                         break
                     }
                 }
@@ -4026,7 +4038,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 guard let self else {
                                     return
                                 }
-                                let _ = resendMessages(account: self.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                                if let demo = self.allMentionDemoContents {
+                                    demo.deliverScheduledMessages(ids: selectedGroup.map({ $0.id }), force: true)
+                                } else {
+                                    let _ = resendMessages(account: self.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                                }
                             })
                             f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                         }
@@ -4040,7 +4056,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let self else {
                                         return
                                     }
-                                    let _ = resendMessages(account: self.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                                    if let demo = self.allMentionDemoContents {
+                                        demo.deliverScheduledMessages(ids: messages.map({ $0.id }), force: true)
+                                    } else {
+                                        let _ = resendMessages(account: self.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                                    }
                                 })
                                 f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                             }
@@ -4398,6 +4418,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
+            if let demo = self.allMentionDemoContents {
+                demo.deliverScheduledMessages(ids: messageIds, force: true)
+                return
+            }
             guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 return
             }
@@ -4416,6 +4440,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                     |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
                         guard let strongSelf = self, let message = message else {
+                            return
+                        }
+                        if let demo = strongSelf.allMentionDemoContents {
+                            let silent = message.attributes.contains { ($0 as? NotificationInfoMessageAttribute)?.flags.contains(.muted) == true }
+                            strongSelf.presentScheduleTimePicker(selectedTime: message.timestamp, selectedRepeatPeriod: message._asMessage().scheduleRepeatPeriod, silentPosting: silent, completion: { result in
+                                demo.rescheduleMessages(ids: messageIds, time: result.time, repeatPeriod: result.repeatPeriod, silentPosting: result.silentPosting)
+                            })
                             return
                         }
                         strongSelf.presentScheduleTimePicker(selectedTime: message.timestamp, selectedRepeatPeriod: message._asMessage().scheduleRepeatPeriod, completion: { [weak self] time, repeatPeriod in
@@ -6465,6 +6496,53 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        if let contents = self.allMentionDemoContents {
+            let disposables = DisposableSet()
+            self.allMentionPermissionDisposable = disposables
+            disposables.add((contents.canMentionAllUpdated
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let self else { return }
+                if textInputStateContextQueryRangeAndType(self.presentationInterfaceState.interfaceState.effectiveInputState).contains(where: { $0.1 == [.mention] }) {
+                    self.updateChatPresentationInterfaceState(transition: .immediate, interactive: false, force: true, { $0 })
+                }
+            }))
+            disposables.add((contents.rateLimitFailures
+            |> deliverOnMainQueue).start(next: { [weak self] failure in
+                guard let self else { return }
+                guard self.effectiveNavigationController?.topViewController === self else { return }
+                // The native composer prepares a clear-on-delivery action before
+                // enqueueing. Cancel only this rejected send's action and snapshot.
+                if !failure.isScheduledDelivery, let pending = self.chatDisplayNode.historyNode.layoutActionOnViewTransition,
+                   pending.1 == nil || failure.correlationIds.contains(pending.1!) {
+                    self.chatDisplayNode.historyNode.layoutActionOnViewTransition = nil
+                    self.layoutActionOnViewTransitionAction = nil
+                    self.chatDisplayNode.messageTransitionNode.add(grouped: [])
+                }
+                let strings = self.presentationData.strings
+                let text: String
+                if let reason = failure.destinationFailure {
+                    let cause: String
+                    switch reason {
+                    case .topicDeleted: cause = strings.AllMention_SendError_TopicDeleted
+                    case .topicClosed: cause = strings.AllMention_SendError_TopicClosed
+                    case .sendPermissionDenied: cause = strings.AllMention_SendError_PermissionDenied
+                    case .groupUnavailable: cause = strings.AllMention_SendError_GroupUnavailable
+                    }
+                    text = failure.isScheduledDelivery ? strings.AllMention_SendError_ScheduledDestination(cause).string : cause
+                } else if failure.reason == .permissionDisabled {
+                    text = strings.AllMention_SendError_ScheduledPermissionDisabled
+                } else if failure.isScheduledDelivery {
+                    text = strings.AllMention_SendError_ScheduledRateLimited
+                } else {
+                    text = strings.AllMention_SendError_RateLimited
+                }
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: text, timeout: 4.0, customUndoText: nil), elevatedLayout: true, action: { _ in false }), in: .current)
+                if UIAccessibility.isVoiceOverRunning {
+                    UIAccessibility.post(notification: .announcement, argument: text)
+                }
+            }))
+        }
+
         self.accountPeerDisposable = (context.account.postbox.peerView(id: context.account.peerId)
         |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
             if let strongSelf = self {
@@ -7020,6 +7098,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.networkStateDisposable = (context.account.networkState |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             if let strongSelf = self, case .standard(.default) = strongSelf.presentationInterfaceState.mode {
+                if strongSelf.allMentionDemoContents != nil {
+                    return
+                }
                 strongSelf.chatTitleView?.updateNetworkState(networkState: state, transition: .spring(duration: 0.4))
             }
         })
@@ -7172,6 +7253,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.postedScheduledMessagesEventsDisposable?.dispose()
         self.updateChatLocationThreadDisposable?.dispose()
         self.accountPeerDisposable?.dispose()
+        self.allMentionPermissionDisposable?.dispose()
         self.contentDataDisposable?.dispose()
         self.newTopicEventsDisposable?.dispose()
         self.updateMessageTodoDisposables?.dispose()
@@ -10868,7 +10950,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    func presentScheduleTimePicker(style: ChatScheduleTimeControllerStyle = .default, selectedTime: Int32? = nil, selectedRepeatPeriod: Int32? = nil, dismissByTapOutside: Bool = true, presentInOverlay: Bool = false, completion: @escaping (ChatScheduleTimeScreen.Result) -> Void) {
+    func presentScheduleTimePicker(style: ChatScheduleTimeControllerStyle = .default, selectedTime: Int32? = nil, selectedRepeatPeriod: Int32? = nil, dismissByTapOutside: Bool = true, presentInOverlay: Bool = false, silentPosting: Bool? = nil, completion: @escaping (ChatScheduleTimeScreen.Result) -> Void) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -10899,7 +10981,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 currentTime: selectedTime,
                 currentRepeatPeriod: selectedRepeatPeriod,
                 minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout,
-                silentPosting: strongSelf.presentationInterfaceState.interfaceState.silentPosting,
+                silentPosting: silentPosting ?? strongSelf.presentationInterfaceState.interfaceState.silentPosting,
                 isDark: style == .media,
                 completion: { result in
                     completion(result)

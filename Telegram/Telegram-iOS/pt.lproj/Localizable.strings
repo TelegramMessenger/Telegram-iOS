@@ -1,0 +1,22 @@
+/* Collective mentions. Keep @all unchanged; %@ is a complete localized failure sentence. */
+"AllMention.SuggestionTitle" = "Todos os membros";
+"AllMention.PermissionTitle" = "Mencionar todos";
+"AllMention.PermissionInfo" = "Permite mencionar todos com @all. Até 3 chamadas seguidas para todo o grupo e depois uma pausa de 5 minutos. Após 5 minutos sem chamadas, começa uma nova série. A permissão e o limite também se aplicam aos administradores.";
+"AllMention.AccessibilityMessage" = "Menção a todos os membros.";
+"AllMention.SendError.TopicDeleted" = "Este tópico foi eliminado.";
+"AllMention.SendError.TopicClosed" = "Este tópico está fechado.";
+"AllMention.SendError.PermissionDenied" = "Não tem permissão para enviar mensagens.";
+"AllMention.SendError.GroupUnavailable" = "Este grupo está indisponível.";
+"AllMention.SendError.ScheduledDestination" = "%@ A mensagem permanece nas mensagens agendadas. Copie-a, elimine-a ou tente enviá-la novamente quando o acesso for restabelecido.";
+"AllMention.SendError.ScheduledPermissionDisabled" = "A chamada agendada não foi enviada: as menções a todos estão desativadas. A mensagem permanece nas mensagens agendadas.";
+"AllMention.SendError.ScheduledRateLimited" = "Demasiadas chamadas. A mensagem permanece nas mensagens agendadas. Tente enviá-la mais tarde.";
+"AllMention.SendError.RateLimited" = "Demasiadas chamadas. Aguarde um pouco antes de tentar novamente.";
+
+/* Existing native keys reused by the collective-mention UI. */
+"ScheduledMessages.Title" = "Mensagens agendadas";
+"Conversation.StatusMembers_0" = "%@ membros";
+"Conversation.StatusMembers_1" = "%@ membro";
+"Conversation.StatusMembers_2" = "%@ membros";
+"Conversation.StatusMembers_3_10" = "%@ membros";
+"Conversation.StatusMembers_many" = "%@ membros";
+"Conversation.StatusMembers_any" = "%@ membros";

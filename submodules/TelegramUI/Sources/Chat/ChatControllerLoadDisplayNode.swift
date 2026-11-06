@@ -653,6 +653,7 @@ extension ChatControllerImpl {
         #if DEBUG
         let initTimestamp = self.initTimestamp
         #endif
+
         
         self.ready.set(combineLatest(queue: .mainQueue(), [
             self.contentDataReady.get(),
@@ -1012,6 +1013,29 @@ extension ChatControllerImpl {
             }
             strongSelf.commitPurposefulAction()
             
+            // The demo retains a real peer location for Telegram's native header,
+            // so intercept it before the ordinary peer/network send branch.
+            if let contents = strongSelf.allMentionDemoContents {
+                let transformed = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? strongSelf.presentationInterfaceState.interfaceState.silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, postpone: postpone)
+                contents.enqueueMessages(messages: transformed, onScheduled: { [weak strongSelf] in
+                    guard let strongSelf else { return }
+                    let clear = strongSelf.layoutActionOnViewTransitionAction
+                    strongSelf.layoutActionOnViewTransitionAction = nil
+                    strongSelf.chatDisplayNode.historyNode.layoutActionOnViewTransition = nil
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(grouped: [])
+                    clear?()
+                    if strongSelf.subject != .scheduledMessages {
+                        // The local commit can finish before the native date
+                        // picker's dismissal completes. Open after that transition.
+                        Queue.mainQueue().after(0.4) { [weak strongSelf] in
+                            strongSelf?.openScheduledMessages()
+                        }
+                    }
+                })
+                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                return
+            }
+
             if let peerId = strongSelf.chatLocation.peerId {
                 var hasDisabledContent = false
                 if "".isEmpty {
@@ -1145,7 +1169,7 @@ extension ChatControllerImpl {
                 switch customChatContents.kind {
                 case .hashTagSearch:
                     break
-                case .quickReplyMessageInput, .welcomeMessages:
+                case .quickReplyMessageInput, .welcomeMessages, .allMentionDemo:
                     customChatContents.enqueueMessages(messages: messages)
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 case let .businessLinkSetup(link):
@@ -1441,7 +1465,11 @@ extension ChatControllerImpl {
                     guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                         return
                     }
-                    let _ = clearPeerUnseenPersonalMessagesInteractively(account: strongSelf.context.account, peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
+                    if let demo = strongSelf.allMentionDemoContents {
+                        demo.consumeMentions(threadId: strongSelf.chatLocation.threadId, playEffect: false)
+                    } else {
+                        let _ = clearPeerUnseenPersonalMessagesInteractively(account: strongSelf.context.account, peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
+                    }
                 }
             )))
             let items = ContextController.Items(content: .list(menuItems))
@@ -1873,6 +1901,11 @@ extension ChatControllerImpl {
             if messages.isEmpty {
                 return
             }
+            if let contents = self.allMentionDemoContents {
+                contents.deleteMessages(ids: messages.map(\.id))
+                completion(.default)
+                return
+            }
             guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 completion(.default)
                 return
@@ -2219,6 +2252,14 @@ extension ChatControllerImpl {
                     media = .keep
                 }
                 
+                if let contents = strongSelf.allMentionDemoContents {
+                    contents.editMessage(id: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) }).updatedEditMessageState(nil)
+                    })
+                    return
+                }
+
                 let _ = (strongSelf.context.account.postbox.messageAtId(editMessage.messageId)
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] currentMessage in
                     if let strongSelf = self {

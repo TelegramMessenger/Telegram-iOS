@@ -194,7 +194,7 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
                 break
             case let .businessLinkSetup(link):
                 self.link = link
-            case .hashTagSearch:
+            case .hashTagSearch, .allMentionDemo:
                 break
             case .welcomeMessages:
                 break
