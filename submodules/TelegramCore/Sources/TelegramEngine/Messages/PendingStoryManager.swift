@@ -11,10 +11,13 @@ public enum PendingStoryUploadPhase: Equatable {
 public struct PendingStoryUploadStatus: Equatable {
     public let progress: Float
     public let phase: PendingStoryUploadPhase
+    /// When the story was queued for upload.
+    public let timestamp: Int32
     
-    public init(progress: Float, phase: PendingStoryUploadPhase) {
+    public init(progress: Float, phase: PendingStoryUploadPhase, timestamp: Int32) {
         self.progress = progress
         self.phase = phase
+        self.timestamp = timestamp
     }
 }
 
@@ -343,6 +346,7 @@ final class PendingStoryManager {
         var currentPendingItemContext: PendingItemContext?
         var queuedPendingItems = Set<PeerId>()
         var queuedPendingItemStableIds = Set<Int32>()
+        var queuedPendingItemTimestamps: [Int32: Int32] = [:]
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
@@ -456,6 +460,7 @@ final class PendingStoryManager {
                 }
             })
             self.queuedPendingItemStableIds = Set(localState.items.map(\.stableId))
+            self.queuedPendingItemTimestamps = Dictionary(localState.items.map { ($0.stableId, $0.timestamp) }, uniquingKeysWith: { lhs, _ in lhs })
             
             if self.currentPendingItemContext == nil, let firstItem = localState.items.first {
                 let queue = self.queue
@@ -594,11 +599,11 @@ final class PendingStoryManager {
             var pendingStoryUploadStatuses: [Int32: PendingStoryUploadStatus] = [:]
             for stableId in self.queuedPendingItemStableIds {
                 pendingStoryUploads[stableId] = 0.0
-                pendingStoryUploadStatuses[stableId] = PendingStoryUploadStatus(progress: 0.0, phase: .uploading)
+                pendingStoryUploadStatuses[stableId] = PendingStoryUploadStatus(progress: 0.0, phase: .uploading, timestamp: self.queuedPendingItemTimestamps[stableId] ?? 0)
             }
             if let currentPendingItemContext = self.currentPendingItemContext {
                 pendingStoryUploads[currentPendingItemContext.item.stableId] = currentPendingItemContext.progress
-                pendingStoryUploadStatuses[currentPendingItemContext.item.stableId] = PendingStoryUploadStatus(progress: currentPendingItemContext.progress, phase: currentPendingItemContext.phase)
+                pendingStoryUploadStatuses[currentPendingItemContext.item.stableId] = PendingStoryUploadStatus(progress: currentPendingItemContext.progress, phase: currentPendingItemContext.phase, timestamp: currentPendingItemContext.item.timestamp)
             }
             
             if self.allStoriesUploadProgressValue != currentProgress {

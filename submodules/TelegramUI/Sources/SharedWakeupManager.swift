@@ -49,8 +49,6 @@ private struct AccountTasks {
     }
 }
 
-private let backgroundTaskSubmissionDelay: Double = 10.0
-
 private struct PendingMediaUploadKey: Hashable {
     let accountId: AccountRecordId
     let messageId: EngineMessage.Id
@@ -59,6 +57,301 @@ private struct PendingMediaUploadKey: Hashable {
 private struct PendingStoryUploadKey: Hashable {
     let accountId: AccountRecordId
     let stableId: Int32
+}
+
+/// Keeps uploads the user started running after the app moves to the background, using a
+/// continued processing task (iOS 26+). The system shows the task as a Live Activity with the
+/// title, subtitle and progress reported here, and offers a Stop button.
+///
+/// Apple's rules for this task type, which this class follows:
+/// - the request is submitted from the foreground, as the result of a user action: here, when
+///   an upload queued during this run of the app appears while the app is active, which happens
+///   when the user sends something. Uploads resumed from an earlier run never start a task;
+/// - the task keeps running when the app returns to the foreground, and ends when the work ends;
+/// - progress is reported continuously, since the system stops tasks that make no progress first;
+/// - expiration means the user tapped Stop or the system ended the task, and the app cannot tell
+///   which (the API carries no reason). The uploads the task covered are stopped through `stopped`:
+///   messages are left as failed, so they can be resent or deleted and nothing is lost silently.
+private typealias MessageUploadTask = ContinuedUploadTask<PendingMediaUploadKey>
+private typealias StoryUploadTask = ContinuedUploadTask<PendingStoryUploadKey>
+
+private final class ContinuedUploadTask<Key: Hashable> {
+    struct Item: Equatable {
+        var progress: Float
+        var needsForeground: Bool
+        /// Queued during this run of the app, so by a tap on Send. Uploads resumed at launch
+        /// from an earlier run never start a task: the user did not just ask for them.
+        var isFresh: Bool
+    }
+
+    struct Texts {
+        var title: String
+        var subtitle: String
+    }
+
+    private let kind: String
+    private let texts: ([Key: Item]) -> Texts
+    private let finishedSubtitle: () -> String
+    private let stopped: ([Key]) -> Void
+    private let stateUpdated: () -> Void
+
+    private var items: [Key: Item] = [:]
+    private var knownKeys = Set<Key>()
+    private var nextTaskIndex: Int = 0
+
+    /// Set from submission until the task ends; the task may not have launched yet.
+    private var taskId: String?
+    /// The launched `BGContinuedProcessingTask`.
+    private var task: AnyObject?
+    private var progressByKey: [Key: Float] = [:]
+    private var displayedTexts: Texts?
+    private var progressTimer: SwiftSignalKit.Timer?
+
+    /// True while the system runs the task, so the app is not suspended.
+    var isRunning: Bool {
+        return self.task != nil
+    }
+
+    init(kind: String, texts: @escaping ([Key: Item]) -> Texts, finishedSubtitle: @escaping () -> String, stopped: @escaping ([Key]) -> Void, stateUpdated: @escaping () -> Void) {
+        self.kind = kind
+        self.texts = texts
+        self.finishedSubtitle = finishedSubtitle
+        self.stopped = stopped
+        self.stateUpdated = stateUpdated
+    }
+
+    deinit {
+        self.progressTimer?.invalidate()
+    }
+
+    /// - Parameter canSubmit: whether a new task may be submitted now (feature enabled, app
+    ///   active in the foreground, Background App Refresh available).
+    func update(items: [Key: Item], canSubmit: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+
+        let hasNewKeys = items.contains(where: { key, item in
+            return item.isFresh && !self.knownKeys.contains(key)
+        })
+        self.knownKeys = Set(items.keys)
+        self.items = items
+
+        if let taskId = self.taskId {
+            if items.isEmpty {
+                if self.task != nil {
+                    self.finish()
+                } else {
+                    // Submitted but not launched yet: withdraw the request.
+                    Logger.shared.log("Wakeup", "Continued \(self.kind) task: no uploads left before launch, cancelling \(taskId)")
+                    if #available(iOS 26.0, *) {
+                        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskId)
+                    }
+                    self.reset()
+                }
+            } else if self.task != nil {
+                self.reportProgress()
+            }
+        } else if hasNewKeys && canSubmit && !items.isEmpty {
+            self.submit()
+        }
+    }
+
+    private func submit() {
+        guard #available(iOS 26.0, *) else {
+            return
+        }
+
+        let baseAppBundleId = Bundle.main.bundleIdentifier!
+        // Every task needs an identifier of its own: a second submission under one that was
+        // already used does not run. The prefix is covered by the `<bundle id>.upload.*`
+        // wildcard in BGTaskSchedulerPermittedIdentifiers.
+        let taskId = "\(baseAppBundleId).upload.\(self.kind).\(Int64(Date().timeIntervalSince1970 * 1000.0)).\(self.nextTaskIndex)"
+        self.nextTaskIndex += 1
+        self.taskId = taskId
+        self.progressByKey = [:]
+        self.displayedTexts = nil
+
+        let kind = self.kind
+        let registered = BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: nil, launchHandler: { [weak self] task in
+            guard let task = task as? BGContinuedProcessingTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            // Set right away, before the hop to the main queue, so that a stop arriving at any
+            // point after launch is seen. Stop on the Live Activity can arrive either way: as an
+            // expiration, or as a cancellation of the task's progress.
+            task.expirationHandler = { [weak self] in
+                Logger.shared.log("Wakeup", "Continued \(kind) task: expiration handler called for \(taskId)")
+                Queue.mainQueue().async {
+                    self?.expired(taskId: taskId)
+                }
+            }
+            task.progress.cancellationHandler = { [weak self] in
+                Logger.shared.log("Wakeup", "Continued \(kind) task: progress cancelled for \(taskId)")
+                Queue.mainQueue().async {
+                    self?.expired(taskId: taskId)
+                }
+            }
+            Queue.mainQueue().async {
+                guard let self else {
+                    task.setTaskCompleted(success: true)
+                    return
+                }
+                self.launched(task: task, taskId: taskId)
+            }
+        })
+        if !registered {
+            Logger.shared.log("Wakeup", "Continued \(self.kind) task: could not register \(taskId)")
+            self.reset()
+            return
+        }
+
+        let texts = self.texts(self.items)
+        let request = BGContinuedProcessingTaskRequest(identifier: taskId, title: texts.title, subtitle: texts.subtitle)
+        // Queue rather than fail: if the system cannot start the task right away, it starts it
+        // as soon as it can. Until then the app keeps its regular background time.
+        request.strategy = .queue
+
+        Logger.shared.log("Wakeup", "Continued \(self.kind) task: submitting \(taskId) for \(self.items.count) uploads")
+
+        let submissionFailed: (Error) -> Void = { [weak self] error in
+            Queue.mainQueue().async {
+                Logger.shared.log("Wakeup", "Continued \(taskId) submission failed: \(error)")
+                guard let self, self.taskId == taskId else {
+                    return
+                }
+                self.reset()
+            }
+        }
+        if #available(iOS 27.0, *) {
+            // Reports every submission error; must not be called on the main thread.
+            DispatchQueue.global(qos: .userInitiated).async {
+                BGTaskScheduler.shared.submitTaskRequest(request, completionHandler: { error in
+                    if let error {
+                        submissionFailed(error)
+                    } else {
+                        Logger.shared.log("Wakeup", "Continued \(kind) task: \(taskId) submission accepted")
+                    }
+                })
+            }
+        } else {
+            do {
+                try BGTaskScheduler.shared.submit(request)
+            } catch let error {
+                submissionFailed(error)
+            }
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func launched(task: BGContinuedProcessingTask, taskId: String) {
+        guard self.taskId == taskId, self.task == nil else {
+            // Already stopped (or replaced) before this launch reached the main queue.
+            Logger.shared.log("Wakeup", "Continued \(self.kind) task: \(taskId) launched after it was stopped")
+            task.setTaskCompleted(success: false)
+            return
+        }
+        guard !self.items.isEmpty else {
+            Logger.shared.log("Wakeup", "Continued \(self.kind) task: \(taskId) launched with nothing to do")
+            task.updateTitle(task.title, subtitle: self.finishedSubtitle())
+            task.setTaskCompleted(success: true)
+            self.reset()
+            return
+        }
+        Logger.shared.log("Wakeup", "Continued \(self.kind) task: launched \(taskId)")
+
+        self.task = task
+
+        let progressTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.reportProgress()
+        }, queue: Queue.mainQueue())
+        self.progressTimer = progressTimer
+        progressTimer.start()
+
+        self.reportProgress()
+        self.stateUpdated()
+    }
+
+    private func reportProgress() {
+        guard #available(iOS 26.0, *), let task = self.task as? BGContinuedProcessingTask else {
+            return
+        }
+        if self.items.isEmpty {
+            self.finish()
+            return
+        }
+        if task.progress.isCancelled, let taskId = self.taskId {
+            // Covers a cancellation whose handler did not reach us.
+            Logger.shared.log("Wakeup", "Continued \(self.kind) task: progress found cancelled")
+            self.expired(taskId: taskId)
+            return
+        }
+
+        // An item's progress never goes back, and an item that left the list (sent, failed or
+        // deleted) counts as done, so the bar only moves forward for a fixed set of items.
+        for (key, item) in self.items {
+            let progress = min(1.0, max(0.0, item.progress))
+            self.progressByKey[key] = max(self.progressByKey[key] ?? 0.0, progress)
+        }
+        for key in self.progressByKey.keys where self.items[key] == nil {
+            self.progressByKey[key] = 1.0
+        }
+
+        let precision: Int64 = 1000
+        let totalUnitCount = Int64(max(1, self.progressByKey.count)) * precision
+        var completedUnitCount: Int64 = 0
+        for progress in self.progressByKey.values {
+            completedUnitCount += Int64((progress * Float(precision)).rounded(.down))
+        }
+        task.progress.totalUnitCount = totalUnitCount
+        task.progress.completedUnitCount = min(totalUnitCount, max(0, completedUnitCount))
+
+        let texts = self.texts(self.items)
+        if self.displayedTexts?.title != texts.title || self.displayedTexts?.subtitle != texts.subtitle {
+            self.displayedTexts = texts
+            task.updateTitle(texts.title, subtitle: texts.subtitle)
+        }
+    }
+
+    private func finish() {
+        guard #available(iOS 26.0, *), let task = self.task as? BGContinuedProcessingTask else {
+            self.reset()
+            return
+        }
+        Logger.shared.log("Wakeup", "Continued \(self.kind) task: uploads finished, completing \(self.taskId ?? "")")
+        task.progress.completedUnitCount = task.progress.totalUnitCount
+        task.updateTitle(task.title, subtitle: self.finishedSubtitle())
+        task.setTaskCompleted(success: true)
+        self.reset()
+    }
+
+    private func expired(taskId: String) {
+        guard self.taskId == taskId else {
+            return
+        }
+        // The user tapped Stop, or the system ended the task.
+        let keys = Array(self.items.keys)
+        Logger.shared.log("Wakeup", "Continued \(self.kind) task: \(taskId) expired, stopping \(keys.count) uploads")
+        if #available(iOS 26.0, *), let task = self.task as? BGContinuedProcessingTask {
+            task.setTaskCompleted(success: false)
+        }
+        self.reset()
+        if !keys.isEmpty {
+            self.stopped(keys)
+        }
+    }
+
+    private func reset() {
+        let wasRunning = self.task != nil
+        self.taskId = nil
+        self.task = nil
+        self.progressByKey = [:]
+        self.displayedTexts = nil
+        self.progressTimer?.invalidate()
+        self.progressTimer = nil
+        if wasRunning {
+            self.stateUpdated()
+        }
+    }
 }
 
 public final class SharedWakeupManager {
@@ -94,22 +387,18 @@ public final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
+    private var messageUploadTask: MessageUploadTask!
+    /// Pending message uploads, and when each message was queued (0 while being looked up).
     private var pendingMediaUploadsByKey: [PendingMediaUploadKey: Float] = [:]
-    private var backgroundProcessingTaskProgressByKey: [PendingMediaUploadKey: Float] = [:]
-    private var nextBackgroundProcessingTaskId: Int = 0
-    private var backgroundProcessingTaskId: String?
-    private var backgroundProcessingTaskLaunched: Bool = false
-    private var backgroundProcessingTaskCancellationRequestedByApp: Bool = false
-    private var pendingBackgroundProcessingTaskTimer: SwiftSignalKit.Timer?
-
-    private var pendingStoryUploadsByKey: [PendingStoryUploadKey: Float] = [:]
-    private var pendingStoryUploadStatusesByKey: [PendingStoryUploadKey: PendingStoryUploadStatus] = [:]
-    private var backgroundStoryProcessingTaskProgressByKey: [PendingStoryUploadKey: Float] = [:]
-    private var nextBackgroundStoryProcessingTaskId: Int = 0
-    private var backgroundStoryProcessingTaskId: String?
-    private var backgroundStoryProcessingTaskLaunched: Bool = false
-    private var backgroundStoryProcessingTaskCancellationRequestedByApp: Bool = false
-    private var pendingBackgroundStoryProcessingTaskTimer: SwiftSignalKit.Timer?
+    private var pendingMediaUploadTimestamps: [PendingMediaUploadKey: Int32] = [:]
+    private var pendingMediaUploadTimestampLookups = Set<PendingMediaUploadKey>()
+    /// The start of this run of the app, per account in the clock messages are stamped with.
+    private var sessionStartTimestampByAccount: [AccountRecordId: Int32] = [:]
+    /// The start of this run of the app in the device clock, which pending stories are stamped with.
+    private let sessionStartTimestamp = Int32(Date().timeIntervalSince1970)
+    /// Writes that store stopped uploads as failed; the database stays writable until they finish.
+    private var pendingUploadStopWrites: Int = 0
+    private var storyUploadTask: StoryUploadTask!
 
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>, presentationData: @escaping () -> PresentationData?) {
         assert(Queue.mainQueue().isCurrent())
@@ -119,7 +408,39 @@ public final class SharedWakeupManager {
         self.backgroundTimeRemaining = backgroundTimeRemaining
         self.acquireIdleExtension = acquireIdleExtension
         self.presentationData = presentationData
-        
+
+        self.messageUploadTask = MessageUploadTask(kind: "message", texts: { [weak self] items in
+            guard let strings = self?.presentationData()?.strings else {
+                return MessageUploadTask.Texts(title: "", subtitle: "")
+            }
+            return MessageUploadTask.Texts(title: strings.BackgroundTasks_UploadingMedia(Int32(items.count)), subtitle: strings.BackgroundTasks_MediaSubtitle)
+        }, finishedSubtitle: { [weak self] in
+            return self?.presentationData()?.strings.BackgroundTasks_MediaFinished ?? ""
+        }, stopped: { [weak self] keys in
+            self?.stopMessageUploads(keys: keys)
+        }, stateUpdated: { [weak self] in
+            self?.checkTasks()
+        })
+        self.storyUploadTask = StoryUploadTask(kind: "story", texts: { [weak self] items in
+            guard let self, let strings = self.presentationData()?.strings else {
+                return StoryUploadTask.Texts(title: "", subtitle: "")
+            }
+            let subtitle: String
+            if !self.inForeground && items.values.contains(where: { $0.needsForeground }) {
+                // A story's video is still being prepared, which only continues in the app.
+                subtitle = strings.BackgroundTasks_StoryOpenAppToContinue
+            } else {
+                subtitle = strings.BackgroundTasks_StorySubtitle
+            }
+            return StoryUploadTask.Texts(title: strings.BackgroundTasks_UploadingStories(Int32(items.count)), subtitle: subtitle)
+        }, finishedSubtitle: { [weak self] in
+            return self?.presentationData()?.strings.BackgroundTasks_StoryFinished ?? ""
+        }, stopped: { [weak self] keys in
+            self?.stopStoryUploads(keys: keys)
+        }, stateUpdated: { [weak self] in
+            self?.checkTasks()
+        })
+
         self.accountSettingsDisposable = (activeAccounts
         |> mapToSignal { activeAccounts -> Signal<Bool, NoError> in
             guard let account = activeAccounts.primary else {
@@ -140,6 +461,7 @@ public final class SharedWakeupManager {
             guard let self else {
                 return
             }
+            Logger.shared.log("Wakeup", "Continued upload tasks enabled: \(isEnabled) (ios_killswitch_disable_bgtasks)")
             self.enableBackgroundTasks = isEnabled
         })
         
@@ -158,13 +480,7 @@ public final class SharedWakeupManager {
                 }
                 strongSelf.allowBackgroundTimeExtensionDeadlineTimer?.invalidate()
                 strongSelf.allowBackgroundTimeExtensionDeadlineTimer = nil
-                strongSelf.pendingBackgroundProcessingTaskTimer?.invalidate()
-                strongSelf.pendingBackgroundProcessingTaskTimer = nil
-                strongSelf.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
-                strongSelf.pendingBackgroundStoryProcessingTaskTimer = nil
             }
-            strongSelf.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
-            strongSelf.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
             strongSelf.checkTasks()
         })
         
@@ -269,6 +585,9 @@ public final class SharedWakeupManager {
                 return
             }
             strongSelf.accountsAndTasks = accountsAndTasks
+            for (account, _, _) in accountsAndTasks where strongSelf.sessionStartTimestampByAccount[account.id] == nil {
+                strongSelf.sessionStartTimestampByAccount[account.id] = account.network.getApproximateRemoteTimestamp()
+            }
             strongSelf.checkTasks()
         })
         
@@ -306,7 +625,8 @@ public final class SharedWakeupManager {
                 return
             }
             strongSelf.pendingMediaUploadsByKey = pendingMediaUploadsByKey
-            strongSelf.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
+            strongSelf.lookUpPendingMediaUploadTimestamps()
+            strongSelf.updateMessageUploadTask()
         })
         
         self.pendingStoryUploadsDisposable = (activeAccounts
@@ -342,16 +662,154 @@ public final class SharedWakeupManager {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.pendingStoryUploadStatusesByKey = pendingStoryUploadStatusesByKey
-            
-            var pendingStoryUploadsByKey: [PendingStoryUploadKey: Float] = [:]
-            pendingStoryUploadsByKey.reserveCapacity(pendingStoryUploadStatusesByKey.count)
-            for (key, status) in pendingStoryUploadStatusesByKey {
-                pendingStoryUploadsByKey[key] = status.progress
-            }
-            strongSelf.pendingStoryUploadsByKey = pendingStoryUploadsByKey
-            strongSelf.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
+            let sessionStartTimestamp = strongSelf.sessionStartTimestamp
+            strongSelf.storyUploadTask.update(items: pendingStoryUploadStatusesByKey.mapValues { status in
+                return StoryUploadTask.Item(progress: status.progress, needsForeground: status.phase == .processing, isFresh: status.timestamp >= sessionStartTimestamp)
+            }, canSubmit: strongSelf.canSubmitContinuedUploadTask())
         })
+    }
+
+    private func updateMessageUploadTask() {
+        // A message whose queue time is still being looked up is left out until it is known, so
+        // that a fresh send is never mistaken for a resumed one.
+        var items: [PendingMediaUploadKey: MessageUploadTask.Item] = [:]
+        for (key, progress) in self.pendingMediaUploadsByKey {
+            guard let timestamp = self.pendingMediaUploadTimestamps[key] else {
+                continue
+            }
+            let isFresh: Bool
+            if let sessionStartTimestamp = self.sessionStartTimestampByAccount[key.accountId] {
+                isFresh = timestamp >= sessionStartTimestamp
+            } else {
+                isFresh = false
+            }
+            items[key] = MessageUploadTask.Item(progress: progress, needsForeground: false, isFresh: isFresh)
+        }
+        self.messageUploadTask.update(items: items, canSubmit: self.canSubmitContinuedUploadTask())
+    }
+    
+    private func lookUpPendingMediaUploadTimestamps() {
+        for key in self.pendingMediaUploadTimestamps.keys where self.pendingMediaUploadsByKey[key] == nil {
+            self.pendingMediaUploadTimestamps.removeValue(forKey: key)
+        }
+        
+        var missingByAccount: [AccountRecordId: [EngineMessage.Id]] = [:]
+        for key in self.pendingMediaUploadsByKey.keys {
+            if self.pendingMediaUploadTimestamps[key] == nil && !self.pendingMediaUploadTimestampLookups.contains(key) {
+                missingByAccount[key.accountId, default: []].append(key.messageId)
+            }
+        }
+        for (accountId, messageIds) in missingByAccount {
+            guard let account = self.accountsAndTasks.first(where: { $0.0.id == accountId })?.0 else {
+                continue
+            }
+            for messageId in messageIds {
+                self.pendingMediaUploadTimestampLookups.insert(PendingMediaUploadKey(accountId: accountId, messageId: messageId))
+            }
+            let _ = (TelegramEngine(account: account).data.get(EngineDataMap(
+                messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:))
+            ))
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] messages in
+                guard let self else {
+                    return
+                }
+                for messageId in messageIds {
+                    let key = PendingMediaUploadKey(accountId: accountId, messageId: messageId)
+                    self.pendingMediaUploadTimestampLookups.remove(key)
+                    if self.pendingMediaUploadsByKey[key] != nil {
+                        let message: EngineMessage? = messages[messageId] ?? nil
+                        self.pendingMediaUploadTimestamps[key] = message?.timestamp ?? 0
+                    }
+                }
+                self.updateMessageUploadTask()
+            })
+        }
+    }
+    
+    /// The upload Live Activity was stopped: the messages it covered stop sending and are left as
+    /// failed, from where the user can resend or delete them.
+    private func stopMessageUploads(keys: [PendingMediaUploadKey]) {
+        var messageIdsByAccount: [AccountRecordId: [EngineMessage.Id]] = [:]
+        for key in keys {
+            messageIdsByAccount[key.accountId, default: []].append(key.messageId)
+        }
+        var signals: [Signal<Void, NoError>] = []
+        for (accountId, messageIds) in messageIdsByAccount {
+            guard let account = self.accountsAndTasks.first(where: { $0.0.id == accountId })?.0 else {
+                Logger.shared.log("Wakeup", "Continued message task stopped: missing account \(accountId.int64), skip \(messageIds.count) messages")
+                continue
+            }
+            Logger.shared.log("Wakeup", "Continued message task stopped: failing \(messageIds.count) messages in account \(accountId.int64)")
+            signals.append(TelegramEngine(account: account).messages.failPendingMessages(ids: messageIds))
+        }
+        if signals.isEmpty {
+            return
+        }
+        
+        // The system suspends the app right after the task ends: hold a short background task
+        // until the messages are stored as failed, or they would resume sending on the next launch.
+        final class BackgroundTaskBox {
+            var id: UIBackgroundTaskIdentifier?
+            var isFinished = false
+        }
+        let backgroundTask = BackgroundTaskBox()
+        self.pendingUploadStopWrites += 1
+        self.checkTasks()
+        let finish: () -> Void = { [weak self] in
+            Queue.mainQueue().async {
+                guard let self, !backgroundTask.isFinished else {
+                    return
+                }
+                backgroundTask.isFinished = true
+                self.pendingUploadStopWrites -= 1
+                self.checkTasks()
+                if let id = backgroundTask.id {
+                    backgroundTask.id = nil
+                    self.endBackgroundTask(id)
+                }
+            }
+        }
+        backgroundTask.id = self.beginBackgroundTask("continued-upload-stop", {
+            finish()
+        })
+        let _ = (combineLatest(signals)
+        |> deliverOnMainQueue).startStandalone(completed: {
+            Logger.shared.log("Wakeup", "Continued message task stopped: messages stored as failed")
+            finish()
+        })
+    }
+    
+    /// The upload Live Activity was stopped: the stories it covered are cancelled, as before.
+    private func stopStoryUploads(keys: [PendingStoryUploadKey]) {
+        for key in keys {
+            guard let account = self.accountsAndTasks.first(where: { $0.0.id == key.accountId })?.0 else {
+                Logger.shared.log("Wakeup", "Continued story task stopped: missing account \(key.accountId.int64)")
+                continue
+            }
+            Logger.shared.log("Wakeup", "Continued story task stopped: cancelling story \(key.stableId) in account \(key.accountId.int64)")
+            TelegramEngine(account: account).messages.cancelStoryUpload(stableId: key.stableId)
+        }
+    }
+    
+    /// A continued processing task may only be submitted from the foreground, in response to a
+    /// user action. An upload that appears while the app is active comes from the user sending
+    /// something (or from the app resuming the user's earlier send at launch).
+    private func canSubmitContinuedUploadTask() -> Bool {
+        guard #available(iOS 26.0, *) else {
+            return false
+        }
+        guard self.enableBackgroundTasks, self.inForeground, self.presentationData() != nil else {
+            return false
+        }
+        guard UIApplication.shared.applicationState == .active else {
+            return false
+        }
+        // Background App Refresh off makes continued processing unavailable: the system would
+        // show the task as failed.
+        guard UIApplication.shared.backgroundRefreshStatus == .available else {
+            return false
+        }
+        return true
     }
     
     deinit {
@@ -363,530 +821,9 @@ public final class SharedWakeupManager {
         self.pendingStoryUploadsDisposable?.dispose()
         self.managedPausedInBackgroundPlayer?.dispose()
         self.keepIdleDisposable?.dispose()
-        self.pendingBackgroundProcessingTaskTimer?.invalidate()
-        self.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
         if let (taskId, _, timer) = self.currentTask {
             timer.invalidate()
             self.endBackgroundTask(taskId)
-        }
-    }
-    
-    private func updateBackgroundProcessingTaskStateFromPendingMediaUploads() {
-        if !self.enableBackgroundTasks {
-            return
-        }
-        
-        let shouldHaveTask = !self.pendingMediaUploadsByKey.isEmpty && !self.inForeground
-        let hadTask = self.backgroundProcessingTaskId != nil
-
-        if shouldHaveTask {
-            if !hadTask && self.pendingBackgroundProcessingTaskTimer == nil {
-                let timer = SwiftSignalKit.Timer(timeout: backgroundTaskSubmissionDelay, repeat: false, completion: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.pendingBackgroundProcessingTaskTimer = nil
-                    self.startBackgroundProcessingTaskIfNeeded()
-                }, queue: .mainQueue())
-                self.pendingBackgroundProcessingTaskTimer = timer
-                timer.start()
-            }
-        } else {
-            self.pendingBackgroundProcessingTaskTimer?.invalidate()
-            self.pendingBackgroundProcessingTaskTimer = nil
-
-            if let backgroundProcessingTaskId = self.backgroundProcessingTaskId {
-                if !self.backgroundProcessingTaskCancellationRequestedByApp {
-                    self.backgroundProcessingTaskCancellationRequestedByApp = true
-                    BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: backgroundProcessingTaskId)
-                    Logger.shared.log("Wakeup", "Requested BG task cancellation by app: \(backgroundProcessingTaskId)")
-                }
-
-                if !self.backgroundProcessingTaskLaunched {
-                    self.backgroundProcessingTaskId = nil
-                    self.backgroundProcessingTaskProgressByKey = [:]
-                    self.backgroundProcessingTaskCancellationRequestedByApp = false
-                    self.checkTasks()
-                }
-            }
-        }
-    }
-    
-    private func updateBackgroundProcessingTaskStateFromPendingStoryUploads() {
-        if !self.enableBackgroundTasks {
-            return
-        }
-        
-        let shouldHaveTask = !self.pendingStoryUploadStatusesByKey.isEmpty && !self.inForeground
-        let hadTask = self.backgroundStoryProcessingTaskId != nil
-
-        if shouldHaveTask {
-            if !hadTask && self.pendingBackgroundStoryProcessingTaskTimer == nil {
-                let timer = SwiftSignalKit.Timer(timeout: backgroundTaskSubmissionDelay, repeat: false, completion: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.pendingBackgroundStoryProcessingTaskTimer = nil
-                    self.startBackgroundStoryProcessingTaskIfNeeded()
-                }, queue: .mainQueue())
-                self.pendingBackgroundStoryProcessingTaskTimer = timer
-                timer.start()
-            }
-        } else {
-            self.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
-            self.pendingBackgroundStoryProcessingTaskTimer = nil
-
-            if let backgroundStoryProcessingTaskId = self.backgroundStoryProcessingTaskId {
-                if !self.backgroundStoryProcessingTaskCancellationRequestedByApp {
-                    self.backgroundStoryProcessingTaskCancellationRequestedByApp = true
-                    BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: backgroundStoryProcessingTaskId)
-                    Logger.shared.log("Wakeup", "Requested story BG task cancellation by app: \(backgroundStoryProcessingTaskId)")
-                }
-
-                if !self.backgroundStoryProcessingTaskLaunched {
-                    self.backgroundStoryProcessingTaskId = nil
-                    self.backgroundStoryProcessingTaskProgressByKey = [:]
-                    self.backgroundStoryProcessingTaskCancellationRequestedByApp = false
-                    self.checkTasks()
-                }
-            }
-        }
-    }
-    
-    private func cancelUploadingMessagesForCurrentTask() {
-        let keys = Array(self.pendingMediaUploadsByKey.keys)
-        if keys.isEmpty {
-            Logger.shared.log("Wakeup", "BG task external cancel: no pending uploads to delete")
-            return
-        }
-        
-        var messageIdsByAccount: [AccountRecordId: [EngineMessage.Id]] = [:]
-        for key in keys {
-            if messageIdsByAccount[key.accountId] == nil {
-                messageIdsByAccount[key.accountId] = []
-            }
-            messageIdsByAccount[key.accountId]?.append(key.messageId)
-        }
-        
-        for key in keys {
-            self.pendingMediaUploadsByKey.removeValue(forKey: key)
-        }
-        
-        Logger.shared.log("Wakeup", "BG task external cancel: deleting \(keys.count) uploading messages across \(messageIdsByAccount.count) accounts")
-        
-        for (accountId, messageIds) in messageIdsByAccount {
-            guard let account = self.accountsAndTasks.first(where: { $0.0.id == accountId })?.0 else {
-                Logger.shared.log("Wakeup", "BG task external cancel: missing account \(accountId.int64), skip \(messageIds.count) messages")
-                continue
-            }
-            Logger.shared.log("Wakeup", "BG task external cancel: deleting \(messageIds.count) messages in account \(accountId.int64)")
-            let _ = TelegramEngine(account: account).messages.deleteMessagesInteractively(messageIds: messageIds, type: .forLocalPeer).startStandalone()
-        }
-    }
-    
-    private func cancelUploadingStoriesForCurrentTask() {
-        let keys = Array(self.pendingStoryUploadsByKey.keys)
-        if keys.isEmpty {
-            Logger.shared.log("Wakeup", "Story BG task external cancel: no pending uploads to cancel")
-            return
-        }
-        
-        var stableIdsByAccount: [AccountRecordId: [Int32]] = [:]
-        for key in keys {
-            if stableIdsByAccount[key.accountId] == nil {
-                stableIdsByAccount[key.accountId] = []
-            }
-            stableIdsByAccount[key.accountId]?.append(key.stableId)
-        }
-        
-        for key in keys {
-            self.pendingStoryUploadsByKey.removeValue(forKey: key)
-            self.pendingStoryUploadStatusesByKey.removeValue(forKey: key)
-        }
-        
-        Logger.shared.log("Wakeup", "Story BG task external cancel: cancelling \(keys.count) uploading stories across \(stableIdsByAccount.count) accounts")
-        
-        for (accountId, stableIds) in stableIdsByAccount {
-            guard let account = self.accountsAndTasks.first(where: { $0.0.id == accountId })?.0 else {
-                Logger.shared.log("Wakeup", "Story BG task external cancel: missing account \(accountId.int64), skip \(stableIds.count) stories")
-                continue
-            }
-            Logger.shared.log("Wakeup", "Story BG task external cancel: cancelling \(stableIds.count) stories in account \(accountId.int64)")
-            let engineMessages = TelegramEngine(account: account).messages
-            for stableId in stableIds {
-                engineMessages.cancelStoryUpload(stableId: stableId)
-            }
-        }
-    }
-    
-    private func startBackgroundProcessingTaskIfNeeded() {
-        guard #available(iOS 26.0, *) else {
-            return
-        }
-        guard !self.inForeground else {
-            return
-        }
-        guard self.backgroundProcessingTaskId == nil else {
-            return
-        }
-        guard let presentationData = self.presentationData() else {
-            return
-        }
-        
-        let baseAppBundleId = Bundle.main.bundleIdentifier!
-        let uploadTaskId = "\(baseAppBundleId).upload.message\(self.nextBackgroundProcessingTaskId)"
-        self.nextBackgroundProcessingTaskId += 1
-        self.backgroundProcessingTaskProgressByKey = [:]
-        self.backgroundProcessingTaskLaunched = false
-        self.backgroundProcessingTaskCancellationRequestedByApp = false
-        
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: uploadTaskId, using: nil, launchHandler: { [weak self] task in
-            guard let task = task as? BGContinuedProcessingTask else {
-                return
-            }
-            guard let self else {
-                task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
-                task.setTaskCompleted(success: true)
-                return
-            }
-            
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
-                if self.backgroundProcessingTaskId == task.identifier {
-                    self.backgroundProcessingTaskLaunched = true
-                }
-            }
-            
-            var wasExpired = false
-            
-            task.expirationHandler = { [weak self] in
-                wasExpired = true
-                
-                Queue.mainQueue().async {
-                    guard let self else {
-                        return
-                    }
-                    if self.backgroundProcessingTaskId == task.identifier {
-                        let cancelledByApp = self.backgroundProcessingTaskCancellationRequestedByApp
-                        self.backgroundProcessingTaskCancellationRequestedByApp = false
-                        if cancelledByApp {
-                            Logger.shared.log("Wakeup", "BG task expired after app cancellation: \(task.identifier)")
-                        } else {
-                            Logger.shared.log("Wakeup", "BG task expired externally, will delete uploading messages: \(task.identifier)")
-                            self.cancelUploadingMessagesForCurrentTask()
-                        }
-                        self.backgroundProcessingTaskId = nil
-                        self.backgroundProcessingTaskProgressByKey = [:]
-                        self.backgroundProcessingTaskLaunched = false
-                        self.checkTasks()
-                        self.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
-                    } else if !self.backgroundProcessingTaskCancellationRequestedByApp {
-                        Logger.shared.log("Wakeup", "Non-current BG task expired externally, will delete uploading messages: \(task.identifier)")
-                        self.cancelUploadingMessagesForCurrentTask()
-                        self.checkTasks()
-                        self.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
-                    }
-                }
-            }
-            
-            let _ = Task { @MainActor [weak self] in
-                guard let self else {
-                    task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
-                    task.setTaskCompleted(success: true)
-                    return
-                }
-                
-                var foregroundCancellationRequested = false
-                
-                while true {
-                    if wasExpired {
-                        break
-                    }
-                    
-                    if self.backgroundProcessingTaskId != task.identifier || self.pendingMediaUploadsByKey.isEmpty {
-                        self.backgroundProcessingTaskProgressByKey = [:]
-                        task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
-                        task.setTaskCompleted(success: true)
-                        if self.backgroundProcessingTaskId == task.identifier {
-                            self.backgroundProcessingTaskId = nil
-                            self.backgroundProcessingTaskLaunched = false
-                            self.backgroundProcessingTaskCancellationRequestedByApp = false
-                            self.checkTasks()
-                            self.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
-                        }
-                        return
-                    }
-                    
-                    if self.inForeground {
-                        if !foregroundCancellationRequested {
-                            foregroundCancellationRequested = true
-                            if !self.backgroundProcessingTaskCancellationRequestedByApp {
-                                self.backgroundProcessingTaskCancellationRequestedByApp = true
-                                BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: task.identifier)
-                                Logger.shared.log("Wakeup", "Requested BG task cancellation due to foreground: \(task.identifier)")
-                            }
-                            self.backgroundProcessingTaskProgressByKey = [:]
-                        }
-                        try await Task.sleep(for: .seconds(1.0))
-                        continue
-                    } else {
-                        foregroundCancellationRequested = false
-                    }
-                    
-                    if self.backgroundProcessingTaskId != task.identifier {
-                        return
-                    }
-                    
-                    var currentKeys = Set<PendingMediaUploadKey>()
-                    for (key, progress) in self.pendingMediaUploadsByKey {
-                        currentKeys.insert(key)
-                        let clampedProgress = min(1.0, max(0.0, progress))
-                        if let currentProgress = self.backgroundProcessingTaskProgressByKey[key] {
-                            self.backgroundProcessingTaskProgressByKey[key] = max(currentProgress, clampedProgress)
-                        } else {
-                            self.backgroundProcessingTaskProgressByKey[key] = clampedProgress
-                        }
-                    }
-                    for key in self.backgroundProcessingTaskProgressByKey.keys where !currentKeys.contains(key) {
-                        self.backgroundProcessingTaskProgressByKey[key] = 1.0
-                    }
-                    
-                    let progressPrecision: Int64 = 1000
-                    let totalItemCount = max(1, self.backgroundProcessingTaskProgressByKey.count)
-                    let totalUnitCount = Int64(totalItemCount) * progressPrecision
-                    
-                    var completedUnitCount: Int64 = 0
-                    for progress in self.backgroundProcessingTaskProgressByKey.values {
-                        completedUnitCount += Int64((progress * Float(progressPrecision)).rounded(.down))
-                    }
-                    completedUnitCount = min(totalUnitCount, max(0, completedUnitCount))
-                    
-                    task.progress.totalUnitCount = totalUnitCount
-                    task.progress.completedUnitCount = completedUnitCount
-                    
-                    let title: String = presentationData.strings.BackgroundTasks_UploadingMedia(Int32(self.pendingMediaUploadsByKey.count))
-                    if task.title != title {
-                        task.updateTitle(title, subtitle: presentationData.strings.BackgroundTasks_MediaSubtitle)
-                    }
-                    
-                    try await Task.sleep(for: .seconds(1.0))
-                }
-            }
-        })
-        
-        let title: String = presentationData.strings.BackgroundTasks_UploadingMedia(Int32(self.pendingMediaUploadsByKey.count))
-        
-        let request = BGContinuedProcessingTaskRequest(
-            identifier: uploadTaskId,
-            title: title,
-            subtitle: presentationData.strings.BackgroundTasks_MediaSubtitle
-        )
-        request.strategy = .fail
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            self.backgroundProcessingTaskId = uploadTaskId
-            self.backgroundProcessingTaskLaunched = false
-            self.checkTasks()
-        } catch let e {
-            Logger.shared.log("Wakeup", "BGTaskScheduler submit error: \(e)")
-        }
-    }
-    
-    private func startBackgroundStoryProcessingTaskIfNeeded() {
-        guard #available(iOS 26.0, *) else {
-            return
-        }
-        guard !self.inForeground else {
-            return
-        }
-        guard self.backgroundStoryProcessingTaskId == nil else {
-            return
-        }
-        guard let presentationData = self.presentationData() else {
-            return
-        }
-        
-        let baseAppBundleId = Bundle.main.bundleIdentifier!
-        let uploadTaskId = "\(baseAppBundleId).upload.story\(self.nextBackgroundStoryProcessingTaskId)"
-        self.nextBackgroundStoryProcessingTaskId += 1
-        self.backgroundStoryProcessingTaskProgressByKey = [:]
-        self.backgroundStoryProcessingTaskLaunched = false
-        self.backgroundStoryProcessingTaskCancellationRequestedByApp = false
-        
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: uploadTaskId, using: nil, launchHandler: { [weak self] task in
-            guard let task = task as? BGContinuedProcessingTask else {
-                return
-            }
-            guard let self else {
-                task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
-                task.setTaskCompleted(success: true)
-                return
-            }
-            
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
-                if self.backgroundStoryProcessingTaskId == task.identifier {
-                    self.backgroundStoryProcessingTaskLaunched = true
-                }
-            }
-            
-            var wasExpired = false
-            
-            task.expirationHandler = { [weak self] in
-                wasExpired = true
-                
-                Queue.mainQueue().async {
-                    guard let self else {
-                        return
-                    }
-                    if self.backgroundStoryProcessingTaskId == task.identifier {
-                        let cancelledByApp = self.backgroundStoryProcessingTaskCancellationRequestedByApp
-                        self.backgroundStoryProcessingTaskCancellationRequestedByApp = false
-                        if cancelledByApp {
-                            Logger.shared.log("Wakeup", "Story BG task expired after app cancellation: \(task.identifier)")
-                        } else {
-                            Logger.shared.log("Wakeup", "Story BG task expired externally, will cancel uploading stories: \(task.identifier)")
-                            self.cancelUploadingStoriesForCurrentTask()
-                        }
-                        self.backgroundStoryProcessingTaskId = nil
-                        self.backgroundStoryProcessingTaskProgressByKey = [:]
-                        self.backgroundStoryProcessingTaskLaunched = false
-                        self.checkTasks()
-                        self.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
-                    } else if !self.backgroundStoryProcessingTaskCancellationRequestedByApp {
-                        Logger.shared.log("Wakeup", "Non-current story BG task expired externally, will cancel uploading stories: \(task.identifier)")
-                        self.cancelUploadingStoriesForCurrentTask()
-                        self.checkTasks()
-                        self.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
-                    }
-                }
-            }
-            
-            let _ = Task { @MainActor [weak self] in
-                guard let self else {
-                    task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
-                    task.setTaskCompleted(success: true)
-                    return
-                }
-                
-                var foregroundCancellationRequested = false
-                var currentDisplayedTitle: String?
-                var currentDisplayedSubtitle: String?
-                
-                while true {
-                    if wasExpired {
-                        break
-                    }
-                    
-                    if self.backgroundStoryProcessingTaskId != task.identifier || self.pendingStoryUploadStatusesByKey.isEmpty {
-                        self.backgroundStoryProcessingTaskProgressByKey = [:]
-                        task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
-                        task.setTaskCompleted(success: true)
-                        if self.backgroundStoryProcessingTaskId == task.identifier {
-                            self.backgroundStoryProcessingTaskId = nil
-                            self.backgroundStoryProcessingTaskLaunched = false
-                            self.backgroundStoryProcessingTaskCancellationRequestedByApp = false
-                            self.checkTasks()
-                            self.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
-                        }
-                        return
-                    }
-                    
-                    if self.inForeground {
-                        if !foregroundCancellationRequested {
-                            foregroundCancellationRequested = true
-                            if !self.backgroundStoryProcessingTaskCancellationRequestedByApp {
-                                self.backgroundStoryProcessingTaskCancellationRequestedByApp = true
-                                BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: task.identifier)
-                                Logger.shared.log("Wakeup", "Requested story BG task cancellation due to foreground: \(task.identifier)")
-                            }
-                            self.backgroundStoryProcessingTaskProgressByKey = [:]
-                        }
-                        try await Task.sleep(for: .seconds(1.0))
-                        continue
-                    } else {
-                        foregroundCancellationRequested = false
-                    }
-                    
-                    if self.backgroundStoryProcessingTaskId != task.identifier {
-                        return
-                    }
-                    
-                    var currentKeys = Set<PendingStoryUploadKey>()
-                    for (key, status) in self.pendingStoryUploadStatusesByKey {
-                        currentKeys.insert(key)
-                        let clampedProgress = min(1.0, max(0.0, status.progress))
-                        if let currentProgress = self.backgroundStoryProcessingTaskProgressByKey[key] {
-                            self.backgroundStoryProcessingTaskProgressByKey[key] = max(currentProgress, clampedProgress)
-                        } else {
-                            self.backgroundStoryProcessingTaskProgressByKey[key] = clampedProgress
-                        }
-                    }
-                    for key in self.backgroundStoryProcessingTaskProgressByKey.keys where !currentKeys.contains(key) {
-                        self.backgroundStoryProcessingTaskProgressByKey[key] = 1.0
-                    }
-                    
-                    let progressPrecision: Int64 = 1000
-                    let totalItemCount = max(1, self.backgroundStoryProcessingTaskProgressByKey.count)
-                    let totalUnitCount = Int64(totalItemCount) * progressPrecision
-                    
-                    var completedUnitCount: Int64 = 0
-                    for progress in self.backgroundStoryProcessingTaskProgressByKey.values {
-                        completedUnitCount += Int64((progress * Float(progressPrecision)).rounded(.down))
-                    }
-                    completedUnitCount = min(totalUnitCount, max(0, completedUnitCount))
-                    
-                    task.progress.totalUnitCount = totalUnitCount
-                    task.progress.completedUnitCount = completedUnitCount
-                    
-                    let title: String = presentationData.strings.BackgroundTasks_UploadingStories(Int32(self.pendingStoryUploadsByKey.count))
-                    let subtitle: String
-                    if self.pendingStoryUploadStatusesByKey.values.contains(where: { $0.phase == .processing }) {
-                        subtitle = presentationData.strings.BackgroundTasks_StoryOpenAppToContinue
-                    } else {
-                        subtitle = presentationData.strings.BackgroundTasks_StorySubtitle
-                    }
-                    if currentDisplayedTitle != title || currentDisplayedSubtitle != subtitle {
-                        task.updateTitle(title, subtitle: subtitle)
-                        currentDisplayedTitle = title
-                        currentDisplayedSubtitle = subtitle
-                    }
-                    
-                    try await Task.sleep(for: .seconds(1.0))
-                }
-            }
-        })
-        
-        let title: String = presentationData.strings.BackgroundTasks_UploadingStories(Int32(self.pendingStoryUploadsByKey.count))
-        let subtitle: String
-        if self.pendingStoryUploadStatusesByKey.values.contains(where: { $0.phase == .processing }) {
-            subtitle = presentationData.strings.BackgroundTasks_StoryOpenAppToContinue
-        } else {
-            subtitle = presentationData.strings.BackgroundTasks_StorySubtitle
-        }
-        
-        let request = BGContinuedProcessingTaskRequest(
-            identifier: uploadTaskId,
-            title: title,
-            subtitle: subtitle
-        )
-        request.strategy = .fail
-        /*if BGTaskScheduler.supportedResources.contains(.gpu) {
-            request.requiredResources = .gpu
-        }*/
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            self.backgroundStoryProcessingTaskId = uploadTaskId
-            self.backgroundStoryProcessingTaskLaunched = false
-            self.checkTasks()
-        } catch let e {
-            Logger.shared.log("Wakeup", "Story BGTaskScheduler submit error: \(e)")
         }
     }
     
@@ -1135,7 +1072,7 @@ public final class SharedWakeupManager {
     private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
         let hasBackgroundLocationTask = self.accountsAndTasks.contains(where: { $0.2.backgroundLocation })
         
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || self.backgroundStoryProcessingTaskId != nil || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.messageUploadTask.isRunning || self.storyUploadTask.isRunning || self.pendingUploadStopWrites != 0 || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
             for (account, primary, tasks) in self.accountsAndTasks {

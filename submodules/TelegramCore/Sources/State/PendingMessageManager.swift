@@ -172,20 +172,33 @@ private func shouldPassFetchProgressForMessage(_ message: Message) -> Bool {
     return false
 }
 
-private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
-    let modify = postbox.transaction { transaction -> Void in
-        for id in ids {
-            transaction.updateMessage(id, update: { currentMessage in
-                var storeForwardInfo: StoreMessageForwardInfo?
-                if let forwardInfo = currentMessage.forwardInfo {
-                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
-                }
-                return .update(StoreMessage(id: id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-            })
-        }
+private func failMessages(transaction: Transaction, ids: [MessageId]) {
+    for id in ids {
+        transaction.updateMessage(id, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            return .update(StoreMessage(id: id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+        })
     }
-    
-    return modify
+}
+
+private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        failMessages(transaction: transaction, ids: ids)
+    }
+}
+
+/// Marks the messages that are still waiting to be sent as failed, which stops their upload.
+/// They stay in the chat with the failed indicator, from where the user can resend or delete them.
+func _internal_failPendingMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        let pendingIds = ids.filter { id in
+            return transaction.getMessage(id)?.flags.contains(.Unsent) ?? false
+        }
+        failMessages(transaction: transaction, ids: pendingIds)
+    }
 }
 
 final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
