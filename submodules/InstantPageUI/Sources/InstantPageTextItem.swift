@@ -9,17 +9,30 @@ import TextFormat
 import AccountContext
 import ContextUI
 
-public final class InstantPageUrlItem: Equatable {
+/// Foundation compares attribute values with nil when extending a range. Older Swift runtimes
+/// dereference nil in SwiftObject.isEqual:, so these payloads supply NSObject equality explicitly.
+public final class InstantPageUrlItem: NSObject {
     public let url: String
     public let webpageId: EngineMedia.Id?
     
     public init(url: String, webpageId: EngineMedia.Id?) {
         self.url = url
         self.webpageId = webpageId
+        super.init()
     }
     
-    public static func ==(lhs: InstantPageUrlItem, rhs: InstantPageUrlItem) -> Bool {
-        return lhs.url == rhs.url && lhs.webpageId == rhs.webpageId
+    public override func isEqual(_ object: Any?) -> Bool {
+        guard let other = object as? InstantPageUrlItem else {
+            return false
+        }
+        return self.url == other.url && self.webpageId == other.webpageId
+    }
+
+    public override var hash: Int {
+        var hasher = Hasher()
+        hasher.combine(self.url)
+        hasher.combine(self.webpageId)
+        return hasher.finalize()
     }
 }
 
@@ -37,15 +50,26 @@ public final class InstantPageTonAddressItem: NSObject {
 ///
 /// A class, mirroring `InstantPageUrlItem` above, because attributed-string attribute values are
 /// objects and the run-extent lookup compares them.
-public final class InstantPageButtonActionItem: Equatable {
+public final class InstantPageButtonActionItem: NSObject {
     public let button: InstantPageButton
 
     public init(button: InstantPageButton) {
         self.button = button
+        super.init()
     }
 
-    public static func ==(lhs: InstantPageButtonActionItem, rhs: InstantPageButtonActionItem) -> Bool {
-        return lhs.button == rhs.button
+    public override func isEqual(_ object: Any?) -> Bool {
+        guard let other = object as? InstantPageButtonActionItem else {
+            return false
+        }
+        return self.button == other.button
+    }
+
+    public override var hash: Int {
+        var hasher = Hasher()
+        hasher.combine(self.button.isLink)
+        hasher.combine(self.button.color?.rawValue)
+        return hasher.finalize()
     }
 }
 
