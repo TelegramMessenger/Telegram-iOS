@@ -965,49 +965,62 @@ private final class DecompressedData {
     private let dataRange: Range<Int>
     private let stream: UnsafeMutablePointer<compression_stream>
     private var isComplete = false
-    
+    // Bytes of dataRange already consumed by compression_stream_process. src_ptr
+    // cannot be cached across calls: it must be re-derived from a live
+    // withUnsafeBytes pointer every time (see read(bytes:count:) below).
+    private var consumedSrcBytes = 0
+
     init?(compressedData: Data, dataRange: Range<Int>) {
         self.compressedData = compressedData
         self.dataRange = dataRange
-        
+
         self.stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
         guard compression_stream_init(self.stream, COMPRESSION_STREAM_DECODE, algorithm) != COMPRESSION_STATUS_ERROR else {
             self.stream.deallocate()
             return nil
         }
-        
-        self.compressedData.withUnsafeBytes { bytes in
-            self.stream.pointee.src_ptr = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: dataRange.lowerBound)
-            self.stream.pointee.src_size = dataRange.upperBound - dataRange.lowerBound
-        }
     }
-    
+
     deinit {
         compression_stream_destroy(self.stream)
         self.stream.deallocate()
     }
-    
+
     func read(bytes: UnsafeMutablePointer<UInt8>, count: Int) throws {
         if self.isComplete {
             throw ReadError.didReadToEnd
         }
-        
-        self.stream.pointee.dst_ptr = bytes
-        self.stream.pointee.dst_size = count
-        
-        let status = compression_stream_process(self.stream, 0)
-        
-        if status == COMPRESSION_STATUS_ERROR {
-            self.isComplete = true
-            throw ReadError.didReadToEnd
-        } else if status == COMPRESSION_STATUS_END {
-            if self.stream.pointee.src_size == 0 {
+
+        // The pointer handed to a withUnsafeBytes closure is only valid for the
+        // duration of that closure (Data's storage can move/deallocate once it
+        // returns). The previous code stashed it into stream.pointee.src_ptr in
+        // init and kept using it across later read() calls — a dangling-pointer
+        // read that corrupted the heap and surfaced later as a malloc abort
+        // (SIGABRT inside libsystem_malloc, DCTMultiAnimationRenderer-FirstFrame
+        // queue, build 33196). Re-derive a live pointer here on every call
+        // instead, resuming from how many source bytes compression_stream_process
+        // has consumed so far.
+        try self.compressedData.withUnsafeBytes { (rawBytes: UnsafeRawBufferPointer) -> Void in
+            self.stream.pointee.src_ptr = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: self.dataRange.lowerBound + self.consumedSrcBytes)
+            self.stream.pointee.src_size = (self.dataRange.upperBound - self.dataRange.lowerBound) - self.consumedSrcBytes
+            self.stream.pointee.dst_ptr = bytes
+            self.stream.pointee.dst_size = count
+
+            let status = compression_stream_process(self.stream, 0)
+            self.consumedSrcBytes = (self.dataRange.upperBound - self.dataRange.lowerBound) - self.stream.pointee.src_size
+
+            if status == COMPRESSION_STATUS_ERROR {
                 self.isComplete = true
+                throw ReadError.didReadToEnd
+            } else if status == COMPRESSION_STATUS_END {
+                if self.stream.pointee.src_size == 0 {
+                    self.isComplete = true
+                }
             }
-        }
-         
-        if self.stream.pointee.dst_size != 0 {
-            throw ReadError.didReadToEnd
+
+            if self.stream.pointee.dst_size != 0 {
+                throw ReadError.didReadToEnd
+            }
         }
     }
     
