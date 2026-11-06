@@ -17342,3 +17342,17 @@ Error: %8$@";
 "VoiceOver.Reactions.ShowAll" = "Show All Reactions";
 "VoiceOver.Reactions.Premium" = "Premium Reactions";
 "VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";
+
+/* App Shortcuts: actions shown under Telegram in iOS Spotlight search, in the Shortcuts app and to Siri. Titles are short button labels (about 15 characters). Phrases are what the user says to Siri; %@ is the app name ("Telegram") and must be kept. These strings are bundled with the app at build time (Telegram/Telegram-iOS/UpdateAppShortcutsLocalizations.py). */
+/* Action that opens the screen for starting a new chat. */
+"Intents.Shortcut.NewChat.Title" = "New Chat";
+"Intents.Shortcut.NewChat.Phrase1" = "New chat in %@";
+"Intents.Shortcut.NewChat.Phrase2" = "Start a %@ chat";
+/* Action that opens the user's Saved Messages chat. */
+"Intents.Shortcut.SavedMessages.Title" = "Saved Messages";
+"Intents.Shortcut.SavedMessages.Phrase1" = "Open Saved Messages in %@";
+"Intents.Shortcut.SavedMessages.Phrase2" = "Show my %@ Saved Messages";
+/* Action that opens the camera to post a new story. */
+"Intents.Shortcut.NewStory.Title" = "New Story";
+"Intents.Shortcut.NewStory.Phrase1" = "New story in %@";
+"Intents.Shortcut.NewStory.Phrase2" = "Post a story on %@";

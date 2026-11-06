@@ -2915,6 +2915,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     context.openRootCompose()
                                 case .camera:
                                     context.openRootCamera()
+                                case .newStory:
+                                    context.openRootStoryCamera()
                                 case .savedMessages:
                                     self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil, storyId: nil)
                                 case .account:

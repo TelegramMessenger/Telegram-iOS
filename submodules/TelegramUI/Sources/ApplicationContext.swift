@@ -984,6 +984,12 @@ final class AuthorizedApplicationContext {
         self.rootController.openRootCamera()
     }
     
+    func openRootStoryCamera() {
+        self.rootController.popToRoot(animated: false)
+        let coordinator = self.rootController.openStoryCamera(mode: .photo, customTarget: nil, resumeLiveStream: false, transitionIn: nil, transitionedIn: {}, transitionOut: { _, _ in return nil })
+        coordinator?.animateIn()
+    }
+    
     func openAppIcon() {
         self.rootController.openAppIcon()
     }

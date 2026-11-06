@@ -7,6 +7,7 @@ enum ApplicationShortcutItemType: String {
     case search
     case compose
     case camera
+    case newStory
     case savedMessages
     case account
     case appIcon
@@ -27,7 +28,7 @@ extension ApplicationShortcutItem {
                 icon = UIApplicationShortcutIcon(type: .search)
             case .compose:
                 icon = UIApplicationShortcutIcon(type: .compose)
-            case .camera:
+            case .camera, .newStory:
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/Camera")
             case .savedMessages:
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/SavedMessages")
