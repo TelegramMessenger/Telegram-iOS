@@ -221,6 +221,9 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
                 
                 let engine = TelegramEngineUnauthorized(account: account)
                 let passkeyDataString = await engine.auth.requestPasskeyLoginData(apiId: self.apiId, apiHash: self.apiHash).get()
+                if !force && self.view.window == nil {
+                    return
+                }
                 guard let passkeyDataString, let passkeyData = passkeyDataString.data(using: .utf8) else {
                     return
                 }
@@ -313,8 +316,8 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
     }
     
     public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        guard let windowScene = self.view.window?.windowScene else {
-            preconditionFailure()
+        guard let windowScene = self.view.window?.windowScene ?? UIApplication.shared.allWindowSceneWindows.first?.windowScene else {
+            return ASPresentationAnchor()
         }
         return ASPresentationAnchor(windowScene: windowScene)
     }
