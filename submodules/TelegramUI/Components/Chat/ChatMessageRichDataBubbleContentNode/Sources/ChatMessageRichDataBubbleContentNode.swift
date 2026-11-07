@@ -2174,6 +2174,14 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
             return .hashtag(hashtag.peerName, hashtag.hashtag)
         } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
             return .bankCard(bankCard)
+        } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
+            // Inline monospace (`RichText.fixed`), e.g. a command in a table cell: tap copies it, as
+            // `ChatMessageTextBubbleContentNode` does for a `.Code` entity in a plain message. A hidden
+            // spoiler must not leak its text to the pasteboard.
+            if attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] != nil, !self.displayContentsUnderSpoilers {
+                return nil
+            }
+            return .copy(code)
         } else if let date = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Date)] as? Int32 {
             // The displayed string is unused downstream (ChatMessageBubbleItemNode matches `.date(date, _)`).
             return .date(date, "")

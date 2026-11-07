@@ -1037,7 +1037,15 @@ private func attributedStringForRichTextContent(_ text: RichText, styleStack: In
             styleStack.push(.fontFixed(true))
             let result = attributedStringForRichText(text, styleStack: styleStack, url: url, inlineButtonMaxWidth: inlineButtonMaxWidth, formatDate: formatDate, quoteSource: quoteSource)
             styleStack.pop()
-            return result
+            // Stamp the run the way `stringWithAppliedEntities` stamps a `.Code` entity in a plain
+            // message, so a rich message's tap handler can offer the same tap-to-copy. The value is
+            // the fixed run's plain text, not `result.string`: inline attachments (custom emoji,
+            // formulas) render as U+FFFC placeholders there and must not reach the pasteboard.
+            let mutable = result.mutableCopy() as! NSMutableAttributedString
+            if mutable.length != 0 {
+                mutable.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Code), value: text.plainText, range: NSRange(location: 0, length: mutable.length))
+            }
+            return mutable
         case let .url(text, url, webpageId):
             styleStack.push(.link(webpageId != nil))
             let result = attributedStringForRichText(text, styleStack: styleStack, url: InstantPageUrlItem(url: url, webpageId: webpageId), inlineButtonMaxWidth: inlineButtonMaxWidth, formatDate: formatDate, quoteSource: quoteSource)
