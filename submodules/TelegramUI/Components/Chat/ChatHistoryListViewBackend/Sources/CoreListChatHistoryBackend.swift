@@ -1856,6 +1856,66 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         CoreListScrollTrace.log("SCROLL-DIRECTION \(direction) distance=\(distance) \(self.traceLocation())")
         return self.coreList.scroll(by: direction == .up ? distance : -distance)
     }
+
+    override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
+        let scrollDirection: ListViewScrollDirection
+        switch direction {
+        case .down:
+            scrollDirection = self.rotated ? .up : .down
+        case .up:
+            scrollDirection = self.rotated ? .down : .up
+        default:
+            return false
+        }
+
+        let distance = floor(self.currentSize.height - self.currentInsets.top - self.currentInsets.bottom)
+        guard distance > 0.0 else {
+            return false
+        }
+
+        var focusedFrame: CGRect?
+        self.forEachVisibleItemNode { node in
+            guard focusedFrame == nil,
+                  let itemNode = node as? ListViewItemNode,
+                  let frame = self.loadedFrame(of: itemNode) else {
+                return
+            }
+            if coreListContainsAccessibilityFocus(itemNode.view) {
+                focusedFrame = frame
+            }
+        }
+
+        guard self.scrollWithDirection(scrollDirection, distance: distance) else {
+            return false
+        }
+
+        var didRestoreFocus = false
+        if let focusedFrame {
+            self.forEachVisibleItemNode { node in
+                guard !didRestoreFocus,
+                      let itemNode = node as? ListViewItemNode,
+                      let frame = self.loadedFrame(of: itemNode),
+                      frame.intersects(focusedFrame),
+                      let element = firstAccessibilityElement(in: itemNode.view) ?? itemNode.view else {
+                    return
+                }
+                didRestoreFocus = true
+                UIAccessibility.post(notification: .layoutChanged, argument: element)
+                if let index = self.loadedIndex(of: itemNode) {
+                    let scrollStatus = self.accessibilityPageScrolledString?("\(index + 1)", "\(self.entries.count)") ?? "Row \(index + 1) of \(self.entries.count)"
+                    UIAccessibility.post(notification: .pageScrolled, argument: scrollStatus)
+                }
+            }
+        }
+        return true
+    }
+}
+
+private func coreListContainsAccessibilityFocus(_ view: UIView) -> Bool {
+    if view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: coreListContainsAccessibilityFocus)
 }
 
 // A CoreListItem wrapping a ListViewItem.

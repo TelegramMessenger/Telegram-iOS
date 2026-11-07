@@ -112,6 +112,23 @@ class ChatNavigationContractTests(unittest.TestCase):
         ):
             self.assertIn(contract, history)
 
+    def test_core_list_chat_backend_handles_voiceover_page_scroll(self) -> None:
+        backend = source(
+            "submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift"
+        )
+        for contract in (
+            "override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool",
+            "self.scrollWithDirection(scrollDirection, distance: distance)",
+            "coreListContainsAccessibilityFocus(itemNode.view)",
+            "frame.intersects(focusedFrame)",
+            "firstAccessibilityElement(in: itemNode.view)",
+            "UIAccessibility.post(notification: .layoutChanged, argument: element)",
+            "UIAccessibility.post(notification: .pageScrolled, argument: scrollStatus)",
+            "self.accessibilityPageScrolledString?",
+            "self.loadedIndex(of: itemNode)",
+        ):
+            self.assertIn(contract, backend)
+
     def test_input_exposes_stable_hit_target_and_screen_frame(self) -> None:
         contents = source(
             "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift"
@@ -329,22 +346,21 @@ class AccessibilityPreferencesContractTests(unittest.TestCase):
         for contract in (
             "baseFontSize: CGFloat",
             "item.presentationData.fontSize.baseDisplaySize",
-            "let fontScale = baseFontSize / 17.0",
-            "scaledFontSize(17.0)",
+            "contentScale: instantPageChatMessageContentScale(baseFontSize: baseFontSize)",
+            "InstantPageTextCategories.chatMessage(",
             "current.baseFontSize == baseFontSize",
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, contents)
-        for fixed_size in (
-            "size: 19.0",
-            "size: 18.0",
-            "size: 17.0",
-            "size: 15.0",
-            "size: 14.0",
-            "size: 13.0",
+
+        shared_theme = source("submodules/InstantPageUI/Sources/InstantPageChatMessageTheme.swift")
+        for contract in (
+            "instantPageChatMessageAuthoredFontSize: CGFloat = 17.0",
+            "baseFontSize / instantPageChatMessageAuthoredFontSize",
+            "static func chatMessage(primaryText: UIColor, secondaryText: UIColor)",
         ):
-            with self.subTest(fixed_size=fixed_size):
-                self.assertNotIn(fixed_size, contents)
+            with self.subTest(contract=contract):
+                self.assertIn(contract, shared_theme)
 
     def test_settings_rows_have_voice_control_names_and_stable_targets(self) -> None:
         owners = (
