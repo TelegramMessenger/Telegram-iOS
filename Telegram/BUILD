@@ -1384,7 +1384,7 @@ plist_fragment(
             <key>IntentsSupported</key>
             <array>
                 <string>INSendMessageIntent</string>
-                <string>INStartAudioCallIntent</string>
+                <string>INStartCallIntent</string>
                 <string>INSearchForMessagesIntent</string>
                 <string>INSetMessageAttributeIntent</string>
                 <string>INSearchCallHistoryIntent</string>
@@ -1780,6 +1780,7 @@ plist_fragment(
     <key>NSUserActivityTypes</key>
     <array>
         <string>INSendMessageIntent</string>
+        <string>INStartCallIntent</string>
         <string>RemindAboutChatIntent</string>
     </array>
     <key>UIAppFonts</key>

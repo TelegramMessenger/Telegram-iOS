@@ -14,7 +14,7 @@
 		</dict>
 		<dict>
 			<key>IntentName</key>
-			<string>INStartAudioCallIntent</string>
+			<string>INStartCallIntent</string>
 			<key>IntentExamples</key>
 			<array>
 				<string>Telegram으로 앨리스에게 전화해 줘</string>
