@@ -499,6 +499,10 @@ public final class CallListController: TelegramBaseController {
         self.beginCallImpl()
     }
     
+    public func openNewCall() {
+        self.beginCallImpl()
+    }
+    
     @objc private func deleteAllPressed(buttonNode: DeleteAllButtonNode) {
         var items: [ContextMenuItem] = []
         

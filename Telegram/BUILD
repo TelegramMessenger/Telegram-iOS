@@ -292,6 +292,13 @@ filegroup(
 )
 
 filegroup(
+    name = "AppShortcutsStringResources",
+    srcs = glob([
+        "Telegram-iOS/*.lproj/AppShortcuts.strings",
+    ], exclude = ["Telegram-iOS/*.lproj/**/.*"]),
+)
+
+filegroup(
     name = "InfoPlistStringResources",
     srcs = glob([
         "Telegram-iOS/*.lproj/InfoPlist.strings",
@@ -381,12 +388,14 @@ swift_library(
     module_name = "Lib",
     srcs = glob([
         "Telegram-iOS/Application.swift",
+        "Telegram-iOS/AppShortcuts.swift",
     ]),
     data = [
         ":Icons",
         ":AppResources",
         ":AppIntentVocabularyResources",
         ":InfoPlistStringResources",
+        ":AppShortcutsStringResources",
         "//submodules/LegacyComponents:LegacyComponentsResources",
         "//submodules/LegacyComponents:LegacyComponentsAssets",
         "//submodules/OverlayStatusController:OverlayStatusControllerResources",
@@ -402,6 +411,10 @@ swift_library(
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         "//third-party/boringssl:crypto",
+    ],
+    # AppIntents is iOS 16+; weak-link it so the app still launches on iOS 15.
+    linkopts = [
+        "-Wl,-weak_framework,AppIntents",
     ],
 )
 
@@ -1939,6 +1952,9 @@ ios_application(
     ],
     strings = [
         ":AppStringResources",
+    ],
+    app_intents = [
+        ":Lib",
     ],
     extensions = select({
         ":disableExtensionsSetting": [],
