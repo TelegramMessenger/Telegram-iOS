@@ -40,6 +40,33 @@ struct NewStoryAppIntent: AppIntent {
     }
 }
 
+// Actions offered only in the Shortcuts app: they are not part of TelegramAppShortcuts, so Spotlight
+// doesn't show them and Siri has no phrase for them.
+
+@available(iOS 16.0, *)
+struct CallAppIntent: AppIntent {
+    static let title: LocalizedStringResource = LocalizedStringResource("Intents.Shortcut.Call.Title", defaultValue: "Call", table: "AppShortcuts")
+    static let openAppWhenRun: Bool = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        let _ = performApplicationShortcut(type: "call")
+        return .result()
+    }
+}
+
+@available(iOS 16.0, *)
+struct ScanQrCodeAppIntent: AppIntent {
+    static let title: LocalizedStringResource = LocalizedStringResource("Intents.Shortcut.ScanQrCode.Title", defaultValue: "Scan QR Code", table: "AppShortcuts")
+    static let openAppWhenRun: Bool = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        let _ = performApplicationShortcut(type: "qrCodeScan")
+        return .result()
+    }
+}
+
 @available(iOS 16.0, *)
 struct TelegramAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {

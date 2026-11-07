@@ -17356,3 +17356,8 @@ Error: %8$@";
 "Intents.Shortcut.NewStory.Title" = "New Story";
 "Intents.Shortcut.NewStory.Phrase1" = "New story in %@";
 "Intents.Shortcut.NewStory.Phrase2" = "Post a story on %@";
+/* Shortcuts-app-only actions (not shown in Spotlight, no Siri phrase). Titles are action names in the Shortcuts app. */
+/* Action that opens the New Call screen to pick who to call. */
+"Intents.Shortcut.Call.Title" = "Call";
+/* Action that opens the camera to scan a Telegram QR code. */
+"Intents.Shortcut.ScanQrCode.Title" = "Scan QR Code";

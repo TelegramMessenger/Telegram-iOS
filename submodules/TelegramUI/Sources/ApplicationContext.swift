@@ -33,6 +33,7 @@ import AttachmentUI
 import MinimizedContainer
 import BrowserUI
 import NewsFeedSupport
+import QrCodeUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -988,6 +989,38 @@ final class AuthorizedApplicationContext {
         self.rootController.popToRoot(animated: false)
         let coordinator = self.rootController.openStoryCamera(mode: .photo, customTarget: nil, resumeLiveStream: false, transitionIn: nil, transitionedIn: {}, transitionOut: { _, _ in return nil })
         coordinator?.animateIn()
+    }
+    
+    func openRootNewCall() {
+        self.rootController.popToRoot(animated: false)
+        self.rootController.callListController?.openNewCall()
+    }
+    
+    func openRootQrCodeScan() {
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        DeviceAccess.authorizeAccess(to: .camera(.qrCode), presentationData: presentationData, present: { c, a in
+            c.presentationArguments = a
+            context.sharedContext.mainWindow?.present(c, on: .root)
+        }, openSettings: {
+            context.sharedContext.applicationBindings.openSettings()
+        }, { [weak self] granted in
+            guard let self, granted else {
+                return
+            }
+            self.rootController.popToRoot(animated: false)
+            let controller = QrCodeScanScreen(context: context, subject: .peer)
+            controller.showMyCode = { [weak controller] in
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                    guard let peer, let controller else {
+                        return
+                    }
+                    controller.present(context.sharedContext.makeChatQrCodeScreen(context: context, peer: peer, threadId: nil, temporary: false), in: .window(.root))
+                })
+            }
+            self.rootController.pushViewController(controller)
+        })
     }
     
     func openAppIcon() {
