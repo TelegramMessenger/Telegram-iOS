@@ -823,7 +823,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }))
     }
     
-    // MARK: - INStartAudioCallIntentHandling
+    // MARK: - INStartCallIntentHandling
     public func resolveContacts(for intent: INStartCallIntent, with completion: @escaping ([INStartCallContactResolutionResult]) -> Void) {
         if let appGroupUrl = self.appGroupUrl {
             let rootPath = rootPathForBasePath(appGroupUrl.path)
@@ -855,6 +855,14 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 completion(response)
                 return
             }
+        }
+        
+        if let contact = intent.contacts?.first, !(contact.customIdentifier ?? "").hasPrefix("tg") {
+            // resolveContacts didn't match the person (no contacts access): the app matches the
+            // contact identifier or phone number Siri passes against the account's contacts.
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INStartCallIntent.self))
+            completion(INStartCallIntentResponse(code: .continueInApp, userActivity: userActivity))
+            return
         }
         
         self.actionDisposable.set((self.accountPromise.get()

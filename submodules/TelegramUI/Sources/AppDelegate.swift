@@ -175,18 +175,6 @@ private func legacyDocumentsPath() -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/legacy"
 }
 
-protocol SupportedStartCallIntent {
-    @available(iOS 10.0, *)
-    var contacts: [INPerson]? { get }
-}
-
-extension INStartCallIntent: SupportedStartCallIntent {}
-
-protocol SupportedStartVideoCallIntent {
-    @available(iOS 10.0, *)
-    var contacts: [INPerson]? { get }
-}
-
 private enum QueuedWakeup: Int32 {
     case call
     case backgroundLocation
@@ -2733,12 +2721,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         if #available(iOS 10.0, *) {
             var startCallContacts: [INPerson]?
             var isVideo = false
-            if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
+            if let startCallIntent = userActivity.interaction?.intent as? INStartCallIntent {
                 startCallContacts = startCallIntent.contacts
-                isVideo = false
-            } else if let startCallIntent = userActivity.interaction?.intent as? SupportedStartVideoCallIntent {
-                startCallContacts = startCallIntent.contacts
-                isVideo = true
+                isVideo = startCallIntent.callCapability == .videoCall
             }
             
             if let startCallContacts = startCallContacts {
