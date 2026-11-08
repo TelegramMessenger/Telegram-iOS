@@ -271,7 +271,7 @@ public final class JokerLocalGreetingController: ViewController {
     }
 
     @objc private func toggleEnabled() {
-        setJokerLocalGreeting(enabled: self.enableSwitch.isOn, text: self.textView.text)
+        setJokerLocalGreeting(enabled: self.enableSwitch.isOn, text: self.textView.text ?? "")
     }
 
     @objc private func save() {
