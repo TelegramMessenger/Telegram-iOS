@@ -17,6 +17,7 @@ private final class JokerSettingsControllerArguments {
     let updateKeepDeletedMessages: (Bool) -> Void
     let updateFreezeLastSeen: (Bool) -> Void
     let updateBypassCopyProtection: (Bool) -> Void
+    let updateStoryStealthMode: (Bool) -> Void
     let openBusinessGreetingMessages: () -> Void
     let openBusinessQuickReplies: () -> Void
 
@@ -28,6 +29,7 @@ private final class JokerSettingsControllerArguments {
         updateKeepDeletedMessages: @escaping (Bool) -> Void,
         updateFreezeLastSeen: @escaping (Bool) -> Void,
         updateBypassCopyProtection: @escaping (Bool) -> Void,
+        updateStoryStealthMode: @escaping (Bool) -> Void,
         openBusinessGreetingMessages: @escaping () -> Void,
         openBusinessQuickReplies: @escaping () -> Void
     ) {
@@ -38,6 +40,7 @@ private final class JokerSettingsControllerArguments {
         self.updateKeepDeletedMessages = updateKeepDeletedMessages
         self.updateFreezeLastSeen = updateFreezeLastSeen
         self.updateBypassCopyProtection = updateBypassCopyProtection
+        self.updateStoryStealthMode = updateStoryStealthMode
         self.openBusinessGreetingMessages = openBusinessGreetingMessages
         self.openBusinessQuickReplies = openBusinessQuickReplies
     }
@@ -62,6 +65,7 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
     case freezeLastSeenToggle(String, String, Bool)
     case bypassCopyProtectionToggle(String, String, Bool)
     case keepDeletedMessagesToggle(String, String, Bool)
+    case storyStealthModeToggle(String, String, Bool)
 
     case businessHeader(String)
     case businessGreetingMessages(String, String)
@@ -72,7 +76,7 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
 
     var section: ItemListSectionId {
         switch self {
-        case .featuresHeader, .autoSaveMediaToggle, .allow100AccountsToggle, .ghostModeToggle, .forcePremiumTranslationToggle, .freezeLastSeenToggle, .bypassCopyProtectionToggle, .keepDeletedMessagesToggle:
+        case .featuresHeader, .autoSaveMediaToggle, .allow100AccountsToggle, .ghostModeToggle, .forcePremiumTranslationToggle, .freezeLastSeenToggle, .bypassCopyProtectionToggle, .keepDeletedMessagesToggle, .storyStealthModeToggle:
             return JokerSettingsControllerSection.features.rawValue
         case .businessHeader, .businessGreetingMessages, .businessQuickReplies:
             return JokerSettingsControllerSection.business.rawValue
@@ -99,6 +103,8 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
             return 16
         case .keepDeletedMessagesToggle:
             return 17
+        case .storyStealthModeToggle:
+            return 21
         case .businessHeader:
             return 18
         case .businessGreetingMessages:
@@ -149,6 +155,10 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, text: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateKeepDeletedMessages(value)
             })
+        case let .storyStealthModeToggle(title, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, text: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateStoryStealthMode(value)
+            })
         case let .businessHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .businessGreetingMessages(title, text):
@@ -178,6 +188,7 @@ private func jokerSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.freezeLastSeenToggle(jokerLocalized(presentationData, "تجميد آخر ظهور", "Freeze Last Seen"), jokerLocalized(presentationData, "إخفاء حالة آخر ظهور الخاصة بك وعدم إرسال تحديثات الحضور إلى الخادم.", "Hide your last seen status and stop sending presence updates to the server."), settings.freezeLastSeen))
     entries.append(.bypassCopyProtectionToggle(jokerLocalized(presentationData, "تجاوز حماية المحتوى", "Bypass Copy Protection"), jokerLocalized(presentationData, "تجاوز قيود حماية النسخ في القنوات المحمية: نسخ caption، وحفظ الصور، وإعادة توجيه الرسالة بالكامل (الصورة مع caption).", "Bypass copy protection in protected channels: copy captions, save images, and forward the full message (image with caption)."), settings.bypassCopyProtection))
     entries.append(.keepDeletedMessagesToggle(jokerLocalized(presentationData, "الاحتفاظ بالرسائل المحذوفة", "Keep Deleted Messages"), jokerLocalized(presentationData, "الاحتفاظ بالرسائل المحذوفة محلياً مع علامة x بجانب الفقاعة. مسح المحادثة يحذف كل شيء نهائياً.", "Keep deleted messages locally with an 'x' mark next to the bubble. Clearing history deletes everything permanently."), settings.keepDeletedMessages))
+    entries.append(.storyStealthModeToggle(jokerLocalized(presentationData, "الستوري بدون ظهورك (محلي)", "Invisible Story Views (Local)"), jokerLocalized(presentationData, "شاهد ستوريات الآخرين دون ظهورك في قائمة المشاهدين. ميزة محلية بالكامل، بدون اشتراك وبدون Telegram Business.", "Watch other people’s stories without appearing in their viewers list. Completely local, no subscription, no Telegram Business."), settings.storyStealthMode))
 
     entries.append(.businessHeader(jokerLocalized(presentationData, "ميزات محلية", "Local Features")))
     entries.append(.businessGreetingMessages(jokerLocalized(presentationData, "رسالة ترحيبية محلية", "Local Greeting Message"), jokerLocalized(presentationData, "خزّن رسالة ترحيبية على جهازك واستخدمها للعملاء الجدد. ليست Telegram Business.", "Store a greeting message on your device for new customers. Not Telegram Business.")))
@@ -212,6 +223,9 @@ public func jokerSettingsController(context: AccountContext) -> ViewController {
         },
         updateBypassCopyProtection: { value in
             let _ = updateJokerSettingsInteractively(accountManager: context.sharedContext.accountManager, { $0.withUpdatedBypassCopyProtection(value) }).start()
+        },
+        updateStoryStealthMode: { value in
+            let _ = updateJokerSettingsInteractively(accountManager: context.sharedContext.accountManager, { $0.withUpdatedStoryStealthMode(value) }).start()
         },
         openBusinessGreetingMessages: {
             guard let settingsController else {

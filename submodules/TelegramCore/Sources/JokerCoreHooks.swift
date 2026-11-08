@@ -33,6 +33,10 @@ public enum JokerCoreHooks {
         return boolFlag("joker_ghost_mode")
     }
 
+    public static func storyStealthModeEnabled() -> Bool {
+        return boolFlag("joker_story_stealth")
+    }
+
     public static func requireSubscriptionGateEnabled() -> Bool {
         return boolFlag("joker_require_subscription", defaultOnIfUnset: true)
     }
