@@ -175,6 +175,27 @@ private func legacyDocumentsPath() -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/legacy"
 }
 
+/// Returns the shared application group container when the entitlement is available.
+/// Sideloaded builds signed with a personal certificate cannot use the app group, so
+/// fall back to the app's own Application Support directory instead of failing to launch.
+private func talogramSharedContainerURL(appGroupName: String) -> URL {
+    if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName) {
+        return url
+    }
+    
+    let fileManager = FileManager.default
+    let basePath = NSSearchPathForDirectoriesInDomains(.applicationSupportDirectory, .userDomainMask, true).first ?? NSTemporaryDirectory()
+    var fallbackURL = URL(fileURLWithPath: basePath, isDirectory: true).appendingPathComponent("TalogramSharedContainer", isDirectory: true)
+    do {
+        try fileManager.createDirectory(at: fallbackURL, withIntermediateDirectories: true, attributes: nil)
+    } catch {
+        fallbackURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("TalogramSharedContainer", isDirectory: true)
+        try? fileManager.createDirectory(at: fallbackURL, withIntermediateDirectories: true, attributes: nil)
+    }
+    NSLog("[Talogram] Application group %@ is unavailable; using local container at %@", appGroupName, fallbackURL.path)
+    return fallbackURL
+}
+
 protocol SupportedStartCallIntent {
     @available(iOS 10.0, *)
     var contacts: [INPerson]? { get }
@@ -568,7 +589,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         try! PasscodeEnvironment.shared.configure(PasscodeConfiguration(appGroupIdentifier: appGroupName, processRole: .mainApp, biometricKeychainService: walletBiometricKeychainService), privateAccessGroup: {
             BuildConfig.keychainAccessGroup(baseAppBundleId: baseAppBundleId)
         })
-        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        let appGroupUrl = talogramSharedContainerURL(appGroupName: appGroupName)
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig
@@ -691,11 +712,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             networkEngineFactory: RustNetworkEngineFactory()
         )
         
-        guard let appGroupUrl = maybeAppGroupUrl else {
-            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
-            return true
-        }
-        
         var isDebugConfiguration = false
         #if DEBUG
         isDebugConfiguration = true
@@ -705,10 +721,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             isDebugConfiguration = true
         }
         
+        // Talogram diagnostic build: always keep a file log so a failed login can be inspected.
         if isDebugConfiguration || buildConfig.isInternalBuild {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         } else {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
+            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         }
         
         let isUITest = CommandLine.arguments.contains("--ui-test")
@@ -778,6 +795,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let logsPath = rootPath + "/logs/app-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: logsPath))
+        Logger.shared.log("TalogramDiag", "AppDelegate: file logging enabled at \(logsPath)")
 
         setManagedAudioSessionLogger({ s in
             Logger.shared.log("ManagedAudioSession", s)
@@ -959,35 +977,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }, requestSiriAuthorization: { completion in
             if #available(iOS 10, *) {
-                INPreferences.requestSiriAuthorization { status in
-                    if case .authorized = status {
-                        completion(true)
-                    } else {
-                        completion(false)
-                    }
-                }
+                completion(false)
             } else {
                 completion(false)
             }
         }, siriAuthorization: {
-            if buildConfig.isSiriEnabled {
-                if #available(iOS 10, *) {
-                    switch INPreferences.siriAuthorizationStatus() {
-                    case .authorized:
-                        return .allowed
-                    case .denied, .restricted:
-                        return .denied
-                    case .notDetermined:
-                        return .notDetermined
-                    @unknown default:
-                        return .notDetermined
-                    }
-                } else {
-                    return .denied
-                }
-            } else {
-                return .denied
-            }
+            return .notDetermined
         }, getWindowHost: {
             return self.nativeWindow
         }, presentNativeController: { controller in
@@ -1273,7 +1268,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.sharedContextPromise.set(sharedContextSignal
         |> mapToSignal { sharedApplicationContext, loggingSettings -> Signal<SharedApplicationContext, NoError> in
-            Logger.shared.logToFile = loggingSettings.logToFile
+            Logger.shared.logToFile = true
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             

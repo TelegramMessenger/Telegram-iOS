@@ -15,6 +15,7 @@ private final class AccountPresenceManagerImpl {
     private var shouldKeepOnlinePresenceDisposable: Disposable?
     private let currentRequestDisposable = MetaDisposable()
     private var onlineTimer: SignalKitTimer?
+    private var jokerSubscriptionTimer: SignalKitTimer?
     
     private var wasOnline: Bool = false
     
@@ -33,6 +34,17 @@ private final class AccountPresenceManagerImpl {
                 self.updatePresence(value)
             }
         })
+
+        // Joker Mod - strict subscription gate: re-validate channel membership while the account runs.
+        let _ = JokerCoreHooks.refreshChannelSubscription(network: self.network).start()
+        let jokerSubscriptionTimer = SignalKitTimer(timeout: 300.0, repeat: true, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = JokerCoreHooks.refreshChannelSubscription(network: strongSelf.network).start()
+        }, queue: self.queue)
+        self.jokerSubscriptionTimer = jokerSubscriptionTimer
+        jokerSubscriptionTimer.start()
     }
     
     deinit {
@@ -40,9 +52,15 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
         self.onlineTimer?.invalidate()
+        self.jokerSubscriptionTimer?.invalidate()
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        // Joker Mod - freeze last seen: never send presence updates to the server
+        if JokerCoreHooks.freezeLastSeenEnabled() {
+            self.isPerformingUpdate.set(false)
+            return
+        }
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in

@@ -5,6 +5,7 @@ import AccountContext
 import SwiftSignalKit
 import TelegramCore
 import SettingsUI
+import TelegramUIPreferences
 import PeerInfoStoryGridScreen
 import CallListUI
 import ContactListUI
@@ -220,21 +221,27 @@ extension PeerInfoScreenNode {
             }
             push(usernameSetupController(context: self.context))
         case .addAccount:
-            let _ = (activeAccountsAndPeers(context: context)
+            let _ = (combineLatest(
+                activeAccountsAndPeers(context: context),
+                getJokerSettings(accountManager: context.sharedContext.accountManager)
+            )
             |> take(1)
             |> deliverOnMainQueue
-            ).startStandalone(next: { [weak self] accountAndPeer, accountsAndPeers in
+            ).startStandalone(next: { [weak self] result in
                 guard let strongSelf = self else {
                     return
                 }
+                let ((accountAndPeer, accountsAndPeers), jokerSettings) = result
                 var maximumAvailableAccounts: Int = 3
-                if accountAndPeer?.1.isPremium == true && !strongSelf.context.account.testingEnvironment {
+                if jokerSettings.allow100Accounts {
+                    maximumAvailableAccounts = 100
+                } else if accountAndPeer?.1.isPremium == true && !strongSelf.context.account.testingEnvironment {
                     maximumAvailableAccounts = 4
                 }
                 var count: Int = 1
                 for (accountContext, peer, _) in accountsAndPeers {
                     if !accountContext.account.testingEnvironment {
-                        if peer.isPremium {
+                        if peer.isPremium && !jokerSettings.allow100Accounts {
                             maximumAvailableAccounts = 4
                         }
                         count += 1
@@ -310,6 +317,44 @@ extension PeerInfoScreenNode {
                 return
             }
             push(self.context.sharedContext.makeWalletScreen(context: self.context))
+        case .jokerSettings:
+            // Joker Mod - subscription gate: verify membership against the Telegram API.
+            // The cached flag alone is not enough: it is only written after a successful check.
+            let context = self.context
+            if !JokerCoreHooks.requireSubscriptionGateEnabled() {
+                push(jokerSettingsController(context: context))
+                return
+            }
+            let sample = presentationData.strings.Common_Back
+            let presentSubscriptionAlert: () -> Void = { [weak self] in
+                guard let self else {
+                    return
+                }
+                let title = jokerLocalize(sample: sample, arValue: "الاشتراك مطلوب", enValue: "Subscription Required")
+                let text = jokerLocalize(sample: sample, arValue: "للتفعيل مميزات الجوكر، يرجى الاشتراك في قناة @aljokeruserbot ثم إعادة المحاولة.", enValue: "To activate Joker features, please join @aljokeruserbot then retry.")
+                let joinTitle = jokerLocalize(sample: sample, arValue: "انضم للقناة", enValue: "Join Channel")
+                let retryTitle = jokerLocalize(sample: sample, arValue: "تحقق مجدداً", enValue: "Check Again")
+                let cancelTitle = jokerLocalize(sample: sample, arValue: "إلغاء", enValue: "Cancel")
+                let alertController = UIAlertController(title: title, message: text, preferredStyle: .alert)
+                alertController.addAction(UIAlertAction(title: joinTitle, style: .default, handler: { _ in
+                    let url = JokerChannelSubscriptionManager.channelLink
+                    self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: self.context.sharedContext.currentPresentationData.with({ $0 }), navigationController: self.controller?.navigationController as? NavigationController, dismissInput: {})
+                }))
+                alertController.addAction(UIAlertAction(title: retryTitle, style: .default, handler: { _ in
+                    self.openSettings(section: .jokerSettings)
+                }))
+                alertController.addAction(UIAlertAction(title: cancelTitle, style: .cancel, handler: nil))
+                self.controller?.present(alertController, animated: true, completion: nil)
+            }
+            let _ = (JokerCoreHooks.checkChannelSubscription(network: context.account.network, username: JokerChannelSubscriptionManager.channelUsername)
+            |> deliverOnMainQueue).startStandalone(next: { isSubscribed in
+                JokerChannelSubscriptionManager.saveSubscriptionStatus(isSubscribed)
+                if isSubscribed {
+                    push(jokerSettingsController(context: context))
+                } else {
+                    presentSubscriptionAlert()
+                }
+            })
         }
     }
 
@@ -377,3 +422,4 @@ extension PeerInfoScreenNode {
         }))
     }
 }
+

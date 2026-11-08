@@ -81,6 +81,25 @@ public enum SendAuthorizationCodeResult {
     case loggedIn
 }
 
+private var isICloudKeyValueStoreAvailable: Bool {
+    return FileManager.default.ubiquityIdentityToken != nil
+}
+
+private func cloudLoginTokens() -> [Data] {
+    guard isICloudKeyValueStoreAvailable else {
+        return []
+    }
+    guard let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] else {
+        return []
+    }
+    return list.compactMap { string -> Data? in
+        guard let stringData = string.data(using: .utf8) else {
+            return nil
+        }
+        return Data(base64Encoded: stringData)
+    }
+}
+
 func storeFutureLoginToken(accountManager: AccountManager<TelegramAccountManagerTypes>, token: Data) {
     let _ = (accountManager.transaction { transaction -> Void in
         var tokens = transaction.getStoredLoginTokens()
@@ -89,15 +108,7 @@ func storeFutureLoginToken(accountManager: AccountManager<TelegramAccountManager
         tokens.removeAll()
         #endif
         
-        var cloudValue: [Data] = []
-        if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
-            cloudValue = list.compactMap { string -> Data? in
-                guard let stringData = string.data(using: .utf8) else {
-                    return nil
-                }
-                return Data(base64Encoded: stringData)
-            }
-        }
+        let cloudValue = cloudLoginTokens()
         for data in cloudValue {
             if !tokens.contains(data) {
                 tokens.insert(data, at: 0)
@@ -108,8 +119,10 @@ func storeFutureLoginToken(accountManager: AccountManager<TelegramAccountManager
             tokens.removeLast(tokens.count - 20)
         }
         
-        NSUbiquitousKeyValueStore.default.set(tokens.map { $0.base64EncodedString() }, forKey: "T_SLTokens")
-        NSUbiquitousKeyValueStore.default.synchronize()
+        if isICloudKeyValueStoreAvailable {
+            NSUbiquitousKeyValueStore.default.set(tokens.map { $0.base64EncodedString() }, forKey: "T_SLTokens")
+            NSUbiquitousKeyValueStore.default.synchronize()
+        }
         
         transaction.setStoredLoginTokens(tokens)
     }).start()
@@ -142,15 +155,7 @@ func sendFirebaseAuthorizationCode(network: Network, phoneNumber: String, apiId:
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>, syncContacts: Bool, disableAuthTokens: Bool = false, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
-    var cloudValue: [Data] = []
-    if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
-        cloudValue = list.compactMap { string -> Data? in
-            guard let stringData = string.data(using: .utf8) else {
-                return nil
-            }
-            return Data(base64Encoded: stringData)
-        }
-    }
+    let cloudValue = cloudLoginTokens()
     return accountManager.transaction { transaction -> [Data] in
         return transaction.getStoredLoginTokens()
     }
@@ -186,6 +191,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
         }
         
         let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(.init(flags: flags, logoutTokens: authTokens.map { Buffer(data: $0) }, token: token, appSandbox: appSandbox)))
+        Logger.shared.log("TalogramDiag", "sendAuthorizationCode: dc=\(account.masterDatacenterId) engine=\(account.network.engineKind) testing=\(account.testingEnvironment) apiId=\(apiId)")
         
         enum SendCodeResult {
             case password(hint: String?)
@@ -223,6 +229,10 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             }
                         }
                     }
+                case Regex("RECAPTCHA_CHECK_"):
+                    // Talogram: server requires reCAPTCHA verification (like Nicegram-Android).
+                    // Return a specific error so the UI can show a clear message.
+                    return .fail(error)
                 case _:
                     return .fail(error)
             }

@@ -1088,8 +1088,8 @@ extension ChatControllerImpl {
                     strongSelf.state.canStopIncomingStreamingMessage = canStopIncomingStreamingMessage
                     strongSelf.state.autoremoveTimeout = autoremoveTimeout
                     strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
-                    strongSelf.state.copyProtectionEnabled = copyProtectionEnabled
-                    strongSelf.state.myCopyProtectionEnabled = myCopyProtectionEnabled
+                    strongSelf.state.copyProtectionEnabled = JokerCoreHooks.bypassCopyProtectionEnabled() ? false : copyProtectionEnabled
+                    strongSelf.state.myCopyProtectionEnabled = JokerCoreHooks.bypassCopyProtectionEnabled() ? false : myCopyProtectionEnabled
                     strongSelf.state.hasSearchTags = hasSearchTags
                     strongSelf.state.isPremiumRequiredForMessaging = isPremiumRequiredForMessaging
                     strongSelf.state.sendPaidMessageStars = sendPaidMessageStars
@@ -1803,7 +1803,7 @@ extension ChatControllerImpl {
                         strongSelf.state.explicitelyCanPinMessages = explicitelyCanPinMessages
                         strongSelf.state.hasScheduledMessages = hasScheduledMessages
                         strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
-                        strongSelf.state.copyProtectionEnabled = copyProtectionEnabled
+                        strongSelf.state.copyProtectionEnabled = JokerCoreHooks.bypassCopyProtectionEnabled() ? false : copyProtectionEnabled
                         strongSelf.state.hasSearchTags = hasSearchTags
                         strongSelf.state.isPremiumRequiredForMessaging = isPremiumRequiredForMessaging
                         strongSelf.state.hasSavedChats = hasSavedChats
@@ -2211,9 +2211,11 @@ extension ChatControllerImpl {
                     if baseLanguageCode.contains("-") {
                         baseLanguageCode = baseLanguageCode.components(separatedBy: "-").first ?? baseLanguageCode
                     }
+                    // Joker Mod - الترجمة الخاصة بالبريميوم مجانية عند تفعيل خيار الجوكر
+                    let jokerForcePremiumTranslation = UserDefaults.standard.bool(forKey: "joker_force_premium_translation")
                     let isPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                     |> map { peer -> Bool in
-                        return peer?.isPremium ?? false
+                        return (peer?.isPremium ?? false) || jokerForcePremiumTranslation
                     } |> distinctUntilChanged
                     
                     let isHidden = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: peerId))

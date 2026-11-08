@@ -12,6 +12,7 @@ import ItemListPeerItem
 import DeviceAccess
 import TelegramStringFormatting
 import PeerNameColorItem
+import TelegramUIPreferences
 import WalletContext
 
 enum SettingsSection: Int, CaseIterable {
@@ -345,6 +346,11 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
                 interaction.openSettings(.watch)
             }))
         }
+        
+        // Joker Settings Entry
+        items[.extra]!.append(PeerInfoScreenDisclosureItem(id: 2, text: jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "إعدادات الجوكر", enValue: "Joker Settings"), icon: UIImage(bundleImageName: "Settings/Joker"), action: {
+            interaction.openSettings(.jokerSettings)
+        }))
     }
     
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {

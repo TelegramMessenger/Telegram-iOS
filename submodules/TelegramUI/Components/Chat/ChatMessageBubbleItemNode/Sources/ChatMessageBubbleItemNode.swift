@@ -89,6 +89,7 @@ import TelegramAnimatedStickerNode
 import AvatarNode
 import ChatMessageSuggestedPostInfoNode
 import PremiumAlertController
+import TelegramUIPreferences
 
 /// Without bubbles, the time after the author's name (and a post's views after it), as offsets from the end of the name.
 private struct BubblelessHeaderTime {
@@ -827,6 +828,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var ephemeralBadgeTextNode: TextNode?
     private var ephemeralBadgeIconNode: UIImageView?
 
+    private var deletedMessageMark: JokerDeletedMessageMark?
+
     private var credibilityIconView: ComponentHostView<Empty>?
     private var credibilityIconComponent: EmojiStatusComponent?
     private var credibilityIconContent: EmojiStatusComponent.Content?
@@ -994,6 +997,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         super.init(rotated: rotated)
         
+        self.deletedMessageMark = JokerDeletedMessageMark()
+        
         //self.addSubnode(self.debugNode)
         
         self.mainContainerNode.shouldBeginWithCustomActivationProcess = { [weak self] location in
@@ -1075,6 +1080,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         self.mainContainerNode.addSubnode(self.mainContextSourceNode)
         self.mainContainerNode.targetNodeForActivationProgress = self.mainContextSourceNode.contentNode
         self.addSubnode(self.mainContainerNode)
+        
+        if let deletedMessageMark = self.deletedMessageMark {
+            self.addSubnode(deletedMessageMark)
+        }
         
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundNode)
@@ -6037,6 +6046,32 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             mosaicStatusNode.removeFromSupernode()
         }
         
+        if let deletedMessageMark = strongSelf.deletedMessageMark {
+            let isKeptDeleted = JokerCoreHooks.isKeptDeletedMessage(
+                peerId: item.message.id.peerId,
+                namespace: item.message.id.namespace,
+                id: item.message.id.id
+            )
+            if isKeptDeleted {
+                let isIncoming = item.message.flags.contains(.Incoming)
+                let markSize = CGSize(width: 24.0, height: 24.0)
+                var markX: CGFloat
+                if isIncoming {
+                    markX = backgroundFrame.maxX + 4.0
+                } else {
+                    markX = backgroundFrame.minX - markSize.width - 4.0
+                }
+                markX = max(2.0, min(markX, strongSelf.bounds.width - markSize.width - 2.0))
+                let markFrame = CGRect(
+                    origin: CGPoint(x: floor(markX), y: floor(backgroundFrame.midY - markSize.height / 2.0)),
+                    size: markSize
+                )
+                deletedMessageMark.setDeletedMarkVisible(true, frame: markFrame)
+            } else {
+                deletedMessageMark.setDeletedMarkVisible(false, frame: .zero)
+            }
+        }
+
         if let unlockButtonPosition {
             let (size, apply) = unlockButtonSizeAndApply
             var unlockButtonNodeAnimation = animation

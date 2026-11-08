@@ -300,6 +300,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                     case .timeout:
                                         text = strongSelf.presentationData.strings.Login_NetworkError
                                         actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                        Logger.shared.log("TalogramDiag", "sendAuthorizationCode: 20s timeout reached")
+                                        let talogramDiagnostics = TalogramLoginDiagnostics(account: strongSelf.account, apiId: strongSelf.apiId, applicationBindings: strongSelf.sharedContext.applicationBindings)
+                                        actions.append(TextAlertAction(type: .genericAction, title: "Share diagnostic", action: {
+                                            talogramDiagnostics.share()
+                                        }))
+                                        actions.append(TextAlertAction(type: .genericAction, title: "Copy diagnostic", action: {
+                                            talogramDiagnostics.copyToPasteboard()
+                                        }))
                                         actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
                                             guard let strongSelf = self, let controller = controller else {
                                                 return
@@ -1474,3 +1482,194 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         AuthorizationSequenceController.presentEmailComposeController(sharedContext: sharedContext, address: "sms@telegram.org", subject: presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: emailBody, from: controller, presentationData: presentationData)
     }
 }
+
+
+private final class TalogramLoginDiagnostics {
+    private let account: UnauthorizedAccount
+    private let apiId: Int32
+    private let applicationBindings: TelegramApplicationBindings
+
+    private let reportLock = NSLock()
+    private var probeLines: [String] = []
+    private var logSection: String = ""
+    private let reportURL: URL
+    private let probeGroup = DispatchGroup()
+    private var logsDisposable: Disposable?
+
+    init(account: UnauthorizedAccount, apiId: Int32, applicationBindings: TelegramApplicationBindings) {
+        self.account = account
+        self.apiId = apiId
+        self.applicationBindings = applicationBindings
+
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+        self.reportURL = documentsPath.appendingPathComponent("Talogram-diagnostic.txt")
+        self.writeCurrentReport()
+
+        self.loadLogs()
+        self.runProbes()
+    }
+
+    func share() {
+        self.writeCurrentReport()
+        let activity = UIActivityViewController(activityItems: [self.reportURL], applicationActivities: nil)
+        if let popover = activity.popoverPresentationController, let window = self.applicationBindings.getTopWindow() {
+            popover.sourceView = window
+            popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 1.0, height: 1.0)
+            popover.permittedArrowDirections = []
+        }
+        self.applicationBindings.presentNativeController(activity)
+    }
+
+    func copyToPasteboard() {
+        UIPasteboard.general.string = self.snapshotReport()
+    }
+
+    private func snapshotReport() -> String {
+        self.reportLock.lock()
+        let probes = self.probeLines
+        let logs = self.logSection
+        self.reportLock.unlock()
+        let base = TalogramLoginDiagnostics.makeBaseReport(account: self.account, apiId: self.apiId, applicationBindings: self.applicationBindings)
+        return TalogramLoginDiagnostics.composeReport(base: base, probes: probes, logs: logs)
+    }
+
+    private func writeCurrentReport() {
+        do {
+            try self.snapshotReport().write(to: self.reportURL, atomically: true, encoding: .utf8)
+        } catch {
+            Logger.shared.log("TalogramDiag", "failed to write report: \(error)")
+        }
+    }
+
+    private func updateReport() {
+        self.writeCurrentReport()
+    }
+
+    private func runProbes() {
+        let probes: [(String, String)] = [
+            ("google-204", "https://www.google.com/generate_204"),
+            ("telegram-api", "https://api.telegram.org/"),
+            ("telegram-core", "https://core.telegram.org/"),
+            ("dc1-149.154.175.50", "https://149.154.175.50:443/"),
+            ("dc2-149.154.167.50", "https://149.154.167.50:443/"),
+            ("dc2-95.161.76.100", "https://95.161.76.100:443/"),
+            ("dc4-149.154.167.91", "https://149.154.167.91:443/")
+        ]
+        for (name, value) in probes {
+            guard let url = URL(string: value) else {
+                continue
+            }
+            self.probeGroup.enter()
+            var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8.0)
+            request.httpMethod = "GET"
+            request.setValue("Talogram diagnostic", forHTTPHeaderField: "User-Agent")
+            let start = Date()
+            URLSession.shared.dataTask(with: request, completionHandler: { [weak self] _, response, error in
+                guard let self else {
+                    return
+                }
+                let elapsed = Int(Date().timeIntervalSince(start) * 1000.0)
+                let line: String
+                if let error = error as NSError? {
+                    line = "\(name): ERROR domain=\(error.domain) code=\(error.code) \(error.localizedDescription) (\(elapsed)ms)"
+                } else if let http = response as? HTTPURLResponse {
+                    line = "\(name): HTTP \(http.statusCode) (\(elapsed)ms)"
+                } else {
+                    line = "\(name): response (\(elapsed)ms)"
+                }
+                self.reportLock.lock()
+                self.probeLines.append(line)
+                self.reportLock.unlock()
+                self.probeGroup.leave()
+            }).resume()
+        }
+        self.probeGroup.notify(queue: .main, execute: { [weak self] in
+            self?.updateReport()
+        })
+    }
+
+    private func loadLogs() {
+        Logger.shared.sync()
+        self.logsDisposable = Logger.shared.collectLogs().start(next: { [weak self] entries in
+            var section = ""
+            for (_, path) in entries.suffix(3) {
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let content = String(data: data, encoding: .utf8) else {
+                    continue
+                }
+                section += "\n===== \(path) =====\n"
+                if content.count > 300_000 {
+                    section += String(content.suffix(300_000))
+                } else {
+                    section += content
+                }
+                section += "\n"
+            }
+            if section.isEmpty {
+                section = "(no log files found)\n"
+            }
+            self?.reportLock.lock()
+            self?.logSection = section
+            self?.reportLock.unlock()
+            DispatchQueue.main.async {
+                self?.updateReport()
+            }
+        })
+    }
+
+    private static func makeBaseReport(account: UnauthorizedAccount, apiId: Int32, applicationBindings: TelegramApplicationBindings) -> String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let build = info?["CFBundleVersion"] as? String ?? "unknown"
+        let bundleId = Bundle.main.bundleIdentifier ?? "unknown"
+        let foreground = TalogramLoginDiagnostics.currentValue(applicationBindings.applicationInForeground)
+        let keepConnection = TalogramLoginDiagnostics.currentValue(account.network.shouldKeepConnection.get())
+        let connectionStatus = TalogramLoginDiagnostics.currentValue(account.network.connectionStatus)
+
+        var lines: [String] = []
+        lines.append("Talogram login diagnostic")
+        let formatter = ISO8601DateFormatter()
+        lines.append("timestamp: \(formatter.string(from: Date()))")
+        lines.append("app: \(version) (\(build)) [\(bundleId)]")
+        lines.append("device: \(UIDevice.current.model) / iOS \(UIDevice.current.systemVersion)")
+        lines.append("locale: \(Locale.current.identifier)")
+        lines.append("apiId: \(apiId)")
+        lines.append("testingEnvironment: \(account.testingEnvironment)")
+        lines.append("masterDatacenterId: \(account.masterDatacenterId)")
+        lines.append("networkDatacenterId: \(account.network.datacenterId)")
+        lines.append("engine: \(String(describing: account.network.engineKind))")
+        lines.append("applicationInForeground: \(foreground.map { String(describing: $0) } ?? "unknown")")
+        lines.append("shouldKeepConnection: \(keepConnection.map { String(describing: $0) } ?? "unknown")")
+        lines.append("connectionStatus: \(connectionStatus.map { String(describing: $0) } ?? "unknown")")
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    private static func currentValue<T>(_ signal: Signal<T, NoError>) -> T? {
+        var value: T?
+        let disposable = signal.start(next: { next in
+            value = next
+        })
+        disposable.dispose()
+        return value
+    }
+
+    private static func composeReport(base: String, probes: [String], logs: String) -> String {
+        var report = base
+        report += "\n--- probes ---\n"
+        if probes.isEmpty {
+            report += "pending\n"
+        } else {
+            for line in probes {
+                report += line
+                report += "\n"
+            }
+        }
+        report += "\n--- logs (tail) ---\n"
+        if logs.isEmpty {
+            report += "pending\n"
+        } else {
+            report += logs
+        }
+        return report
+    }
+}
+

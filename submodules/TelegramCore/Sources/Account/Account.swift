@@ -188,12 +188,15 @@ public class UnauthorizedAccount {
         
         network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()
         |> map { mode -> Bool in
+            let keepConnection: Bool
             switch mode {
                 case .now, .always:
-                    return true
+                    keepConnection = true
                 case .never:
-                    return false
+                    keepConnection = false
             }
+            Logger.shared.log("TalogramDiag", "UnauthorizedAccount: shouldBeServiceTaskMaster=\(mode) -> shouldKeepConnection=\(keepConnection)")
+            return keepConnection
         })
         
         // The Rust engine makes and binds its own temporary keys, so only the permanent keys are made

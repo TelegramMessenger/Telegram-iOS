@@ -8,6 +8,7 @@ import TelegramCore
 import SwiftUI
 import Translation
 import Combine
+import TelegramUIPreferences
 
 // Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
 private final class LinkHelperClass: NSObject {
@@ -190,7 +191,10 @@ public func canTranslateChats(context: AccountContext) -> Bool {
 }
 
 public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
-    guard showTranslate || showTranslateIfTopical, text.count > 0 else {
+    // Joker Mod: Force premium translation for all users
+    let jokerForcePremium = UserDefaults.standard.bool(forKey: "joker_force_premium_translation")
+    
+    guard showTranslate || showTranslateIfTopical || jokerForcePremium, text.count > 0 else {
         return (false, nil)
     }
 
@@ -207,7 +211,7 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         break
     }
     
-    let showTranslate = showTranslate && translateButtonAvailable
+    let showTranslate = (showTranslate || jokerForcePremium) && translateButtonAvailable
         
     if #available(iOS 12.0, *) {
         if context.sharedContext.immediateExperimentalUISettings.disableLanguageRecognition {

@@ -1,109 +1,80 @@
-name: CI
+name: Build Talogram IPA
 
 on:
   push:
     branches: [ master ]
-
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talogram-ipa-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: macos-13
-
+    if: github.ref == 'refs/heads/master'
+    runs-on: xcode-27
+    timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out repository and submodules
+        uses: actions/checkout@v7
         with:
-          submodules: 'recursive'
-          fetch-depth: '0'
+          submodules: recursive
 
-      - name: Set active Xcode path
+      - name: Check build environment
         run: |
-          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
-          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          xcodebuild -version
+          EXPECTED_XCODE="$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          ACTUAL_XCODE="$(xcodebuild -version | awk 'NR == 1 {print $2}')"
+          if [ "$ACTUAL_XCODE" != "$EXPECTED_XCODE" ]; then
+            echo "::error::This project requires Xcode $EXPECTED_XCODE, but the runner has Xcode $ACTUAL_XCODE."
+            exit 1
+          fi
+          python3 --version
+          git submodule status
+          if git submodule status --recursive | grep -Eq '^[-+U]'; then
+            echo "::error::One or more pinned Git submodules were not checked out correctly."
+            exit 1
+          fi
 
-      - name: Create canonical source directory
+      - name: Generate fresh verification provisioning profiles
         run: |
-          set -x
-          sudo mkdir -p /Users/Shared
-          cp -R $GITHUB_WORKSPACE /Users/Shared/
-          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
+          python3 build-system/Make/Make.py \
+            generate-verification-profiles \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build-system/fake-codesigning \
+            --destination build/verification-codesigning/profiles \
+            --extendExpiration
+          mkdir -p build/verification-codesigning/certs
+          cp build-system/fake-codesigning/certs/* build/verification-codesigning/certs/
 
-      - name: Build the App
+      - name: Build IPA for iPASide signing
         run: |
-          set -x
-
-          # source code paths are included in the final binary, so we need to make them stable across builds
-          SOURCE_DIR=/Users/Shared/telegram-ios
-
-          # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
-
-          cd $SOURCE_DIR
-
-          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
-
-          export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
-          export COMMIT_COUNT=$(git rev-list --count HEAD)
-          export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
-          export BUILD_NUMBER="$COMMIT_COUNT"
-          echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
-          echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
-
-          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
-          python3 -u build-system/Make/Make.py \
-            --bazelUserRoot="$BAZEL_USER_ROOT" \
+          python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
             build \
-            --configurationPath="build-system/appstore-configuration.json" \
-            --codesigningInformationPath=build-system/fake-codesigning \
-            --configuration=release_arm64 \
-            --buildNumber="$BUILD_NUMBER"
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber "$GITHUB_RUN_NUMBER" \
+            --configuration release_arm64 \
+            --outputBuildArtifactsPath build/artifacts
 
-          # collect ipa
-          OUTPUT_PATH="build/artifacts"
-          rm -rf "$OUTPUT_PATH"
-          mkdir -p "$OUTPUT_PATH"
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/
-          done
+      - name: Verify IPA package
+        run: |
+          test -s build/artifacts/Telegram.ipa
+          unzip -t build/artifacts/Telegram.ipa
+          TEMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TEMP_DIR"' EXIT
+          unzip -q build/artifacts/Telegram.ipa -d "$TEMP_DIR"
+          APP_PATH="$(find "$TEMP_DIR/Payload" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
 
-          # collect dsym
-          mkdir -p build/DSYMs
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
-            cp -R "$f" build/DSYMs/
-          done
-          zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload IPA for iPASide
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: build-${{ env.BUILD_NUMBER }}
-          release_name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
-          body: |
-            An unsigned build of Telegram for iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
-          draft: false
-          prerelease: false
-
-      - name: Upload Release IPA
-        id: upload-release-ipa 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
-          asset_name: Telegram.ipa
-          asset_content_type: application/zip
-
-      - name: Upload Release DSYM
-        id: upload-release-dsym 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
-          asset_name: Telegram.DSYMs.zip
-          asset_content_type: application/zip
+          name: Talogram-IPA-for-iPASide
+          path: build/artifacts/Telegram.ipa
+          if-no-files-found: error
+          retention-days: 7

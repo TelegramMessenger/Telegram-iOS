@@ -64,13 +64,11 @@ final class UnauthorizedApplicationContext {
         
         self.isReady.set(self.rootController.ready.get())
         
-        account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
-            if value {
-                return .always
-            } else {
-                return .never
-            }
-        })
+        // Talogram diagnostic build: keep the login screen's network active regardless of
+        // scene-activation races. Without this, shouldKeepConnection can stay false and
+        // auth.sendCode times out after 20 seconds without ever reaching Telegram.
+        account.shouldBeServiceTaskMaster.set(.single(.always))
+        Logger.shared.log("TalogramDiag", "UnauthorizedApplicationContext: shouldBeServiceTaskMaster forced to .always")
         
         DeviceAccess.authorizeAccess(to: .cellularData, presentationData: sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
             if let strongSelf = self {

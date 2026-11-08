@@ -2250,15 +2250,18 @@ public struct TranslationConfiguration {
     }
     
     public static func with(appConfiguration: AppConfiguration) -> TranslationConfiguration {
+        // Joker Mod - تفعيل ترجمة البريميوم مجاناً للجميع عند تفعيل خيار الجوكر:
+        // نفس سلوك ميزة "الترجمة" في البريميوم داخل كل المحادثات والقنوات
+        let jokerForcePremiumTranslation = UserDefaults.standard.bool(forKey: "joker_force_premium_translation")
         if let data = appConfiguration.data {
             let manualValue = data["translations_manual_enabled"] as? String ?? "disabled"
             var autoValue = data["translations_auto_enabled"] as? String ?? "disabled"
             if autoValue == "alternative" {
                 autoValue = "disabled"
             }
-            return TranslationConfiguration(manual: TranslationAvailability(string: manualValue), auto: TranslationAvailability(string: autoValue))
+            return TranslationConfiguration(manual: jokerForcePremiumTranslation ? .enabled : TranslationAvailability(string: manualValue), auto: jokerForcePremiumTranslation ? .enabled : TranslationAvailability(string: autoValue))
         } else {
-            return .defaultValue
+            return jokerForcePremiumTranslation ? TranslationConfiguration(manual: .enabled, auto: .enabled) : .defaultValue
         }
     }
 }

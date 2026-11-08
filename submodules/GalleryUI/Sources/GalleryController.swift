@@ -876,6 +876,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     guard let message = transaction.getMessage(messageId) else {
                         return nil
                     }
+                    // Joker Mod - bypass copy protection in protected chats and channels
+                    if JokerCoreHooks.bypassCopyProtectionEnabled() {
+                        return (message, false)
+                    }
                     if let peer = message.peers[message.id.peerId] as? TelegramGroup, let migrationPeerId = peer.migrationReference?.peerId, let migrationPeer = transaction.getPeer(migrationPeerId) {
                         return (message, migrationPeer.isCopyProtectionEnabled)
                     } else if let peer = message.peers[message.id.peerId] as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peer.id) as? CachedUserData {

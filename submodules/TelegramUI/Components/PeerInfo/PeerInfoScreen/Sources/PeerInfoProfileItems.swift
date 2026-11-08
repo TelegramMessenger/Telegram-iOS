@@ -898,6 +898,12 @@ func infoItems(
         }
     }
     
+    if let peer = data.peer {
+        items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 1000001, label: "ID", text: "\(peer.id.id._internalGetInt64Value())", textColor: .primary, action: nil, requestLayout: { animated in
+            interaction.requestLayout(animated)
+        }))
+    }
+    
     if let peer = data.peer, let members = data.members, case let .shortList(_, memberList) = members {
         var canAddMembers = false
         if case let .legacyGroup(group) = data.peer {
