@@ -5989,48 +5989,6 @@ public final class StoryItemSetContainerComponent: Component {
             self.component?.controller()?.push(controller)
         }
         
-        private func presentSaveUpgradeScreen() {
-            guard let component = self.component else {
-                return
-            }
-            
-            self.dismissAllTooltips()
-            
-            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-            let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
-            component.presentController(UndoOverlayController(
-                presentationData: presentationData,
-                content: .universal(
-                    animation: "anim_infotip",
-                    scale: 1.0,
-                    colors: [
-                        "info1.info1.stroke": animationBackgroundColor,
-                        "info2.info2.Fill": animationBackgroundColor
-                    ],
-                    title: nil,
-                    text: component.strings.Story_ToastPremiumSaveToGallery,
-                    customUndoText: nil,
-                    timeout: nil
-                ),
-                elevatedLayout: false,
-                animateInAsReplacement: false,
-                appearance: UndoOverlayController.Appearance(isBlurred: true),
-                action: { [weak self] action in
-                    guard let self else {
-                        return false
-                    }
-                    switch action {
-                    case .info:
-                        self.presentStoriesUpgradeScreen(source: .storiesDownload)
-                        return true
-                    default:
-                        break
-                    }
-                    return false
-                }
-            ), nil)
-        }
-        
         private func presentQualityUpgradeScreen() {
             self.sendMessageContext.presentQualityUpgrade(view: self, action: { [weak self] in
                 guard let self else {
