@@ -114,6 +114,7 @@ final class AuthorizedApplicationContext {
     private let loggedOutDisposable = MetaDisposable()
     private let inAppNotificationSettingsDisposable = MetaDisposable()
     private let notificationMessagesDisposable = MetaDisposable()
+    private let greetingMessagesDisposable = MetaDisposable()
     private let termsOfServiceUpdatesDisposable = MetaDisposable()
     private let termsOfServiceProceedToBotDisposable = MetaDisposable()
     private let watchNavigateToMessageDisposable = MetaDisposable()
@@ -292,6 +293,19 @@ final class AuthorizedApplicationContext {
         }))
 
         let engine = context.engine
+        self.greetingMessagesDisposable.set((self.context.account.stateManager.notificationMessages
+        |> mapToSignal { messageList -> Signal<[Message], NoError> in
+            var messages: [Message] = []
+            for (itemMessages, _, _, _) in messageList {
+                messages.append(contentsOf: itemMessages)
+            }
+            return .single(messages)
+        }).start(next: { [weak self] messages in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = JokerCoreHooks.sendGreetingIfNeeded(account: strongSelf.context.account, messages: messages).startStandalone()
+        }))
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
         |> mapToSignal { messageList in
             return engine.data.get(EngineDataMap(
@@ -850,6 +864,7 @@ final class AuthorizedApplicationContext {
         self.loggedOutDisposable.dispose()
         self.inAppNotificationSettingsDisposable.dispose()
         self.notificationMessagesDisposable.dispose()
+        self.greetingMessagesDisposable.dispose()
         self.termsOfServiceUpdatesDisposable.dispose()
         self.passcodeLockDisposable.dispose()
         self.passcodeStatusDisposable.dispose()

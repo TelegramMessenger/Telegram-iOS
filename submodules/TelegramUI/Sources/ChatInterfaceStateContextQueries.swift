@@ -264,10 +264,19 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         sortedCommands.append(.shortcut(shortcut))
                     }
                 }
+                let localReplies = getJokerLocalQuickReplies().filter { reply in
+                    if normalizedQuery.isEmpty {
+                        return true
+                    }
+                    return reply.text.lowercased().hasPrefix(normalizedQuery)
+                }.prefix(10)
+                for reply in localReplies {
+                    sortedCommands.append(.localShortcut(reply.id, reply.text))
+                }
                 return { _ in return .commands(ChatInputQueryCommandsResult(
                     commands: sortedCommands,
                     accountPeer: accountPeer,
-                    hasShortcuts: !shortcuts.isEmpty,
+                    hasShortcuts: !shortcuts.isEmpty || !localReplies.isEmpty,
                     query: normalizedQuery
                 )) }
             }

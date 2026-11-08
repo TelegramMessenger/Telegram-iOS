@@ -319,6 +319,101 @@ public enum JokerCoreHooks {
             }
         }
     }
+    private static func jokerLocalGreeting() -> (enabled: Bool, text: String) {
+        let enabled = UserDefaults.standard.bool(forKey: "joker_greeting_enabled")
+        let text = UserDefaults.standard.string(forKey: "joker_greeting_text") ?? ""
+        return (enabled, text)
+    }
+
+    private static func jokerLocalGreetedPeers() -> Set<Int64> {
+        return Set((UserDefaults.standard.array(forKey: "joker_greeting_sent_peers") as? [Int64]) ?? [])
+    }
+
+    private static func markJokerLocalGreetedPeer(_ id: Int64) {
+        var peers = (UserDefaults.standard.array(forKey: "joker_greeting_sent_peers") as? [Int64]) ?? []
+        if !peers.contains(id) {
+            peers.append(id)
+            UserDefaults.standard.set(peers, forKey: "joker_greeting_sent_peers")
+        }
+    }
+
+    private static func jokerStandaloneAuxiliaryMethods() -> AccountAuxiliaryMethods {
+        return AccountAuxiliaryMethods(fetchResource: { _, _, _, _ in
+            return nil
+        }, fetchResourceMediaReferenceHash: { _ in
+            return .single(nil)
+        }, prepareSecretThumbnailData: { _ in
+            return nil
+        }, backgroundUpload: { _, _, _ in
+            return .single(nil)
+        })
+    }
+
+    public static func sendGreetingIfNeeded(account: Account, messages: [Message]) -> Signal<Void, NoError> {
+        let greeting = jokerLocalGreeting()
+        guard greeting.enabled else {
+            return .complete()
+        }
+        let text = greeting.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            return .complete()
+        }
+
+        var seenPeers = Set<PeerId>()
+        var candidateIds: [MessageId] = []
+        for message in messages {
+            guard message.flags.contains(.Incoming) else { continue }
+            if message.threadId != nil { continue }
+            let peerId = message.id.peerId
+            guard peerId.namespace == Namespaces.Peer.CloudUser else { continue }
+            if seenPeers.contains(peerId) { continue }
+            seenPeers.insert(peerId)
+            candidateIds.append(message.id)
+        }
+        guard !candidateIds.isEmpty else {
+            return .complete()
+        }
+
+        let accountPeerId = account.peerId
+        return account.postbox.transaction { transaction -> [PeerId] in
+            var result: [PeerId] = []
+            let greeted = jokerLocalGreetedPeers()
+            for id in candidateIds {
+                guard let message = transaction.getMessage(id) else { continue }
+                let peerId = message.id.peerId
+                if greeted.contains(peerId.id._internalGetInt64Value()) { continue }
+                if let user = transaction.getPeer(peerId) as? TelegramUser, user.botInfo != nil { continue }
+                if transaction.isPeerContact(peerId: peerId) { continue }
+                var hasOutgoing = false
+                transaction.withAllMessages(peerId: peerId, namespace: Namespaces.Message.Cloud) { message in
+                    if !message.flags.contains(.Incoming) {
+                        hasOutgoing = true
+                        return false
+                    }
+                    return true
+                }
+                if hasOutgoing { continue }
+                result.append(peerId)
+            }
+            return result
+        }
+        |> mapToSignal { peers -> Signal<Void, NoError> in
+            var signals: [Signal<Void, NoError>] = []
+            for peerId in peers {
+                markJokerLocalGreetedPeer(peerId.id._internalGetInt64Value())
+                let message = StandaloneSendEnqueueMessage(content: .text(text: StandaloneSendEnqueueMessage.Text(string: text, entities: [])), replyToMessageId: nil)
+                signals.append(standaloneSendEnqueueMessages(accountPeerId: accountPeerId, postbox: account.postbox, network: account.network, stateManager: account.stateManager, auxiliaryMethods: jokerStandaloneAuxiliaryMethods(), peerId: peerId, threadId: nil, messages: [message])
+                |> map { _ -> Void in
+                    return ()
+                }
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .complete()
+                })
+            }
+            return signals.reduce(Signal<Void, NoError>.single(())) { $0 |> then($1) }
+        }
+    }
+
     private static let keptDeletedStorageKey = "joker_kept_deleted_ids"
 
     public static func recordKeptDeletedMessages(_ messageIds: [MessageId]) {

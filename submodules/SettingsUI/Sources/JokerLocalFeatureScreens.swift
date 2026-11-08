@@ -7,40 +7,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-struct JokerQuickReply: Codable, Equatable {
-    let id: String
-    let text: String
-
-    static func ==(lhs: JokerQuickReply, rhs: JokerQuickReply) -> Bool {
-        return lhs.id == rhs.id && lhs.text == rhs.text
-    }
-}
-
-private enum JokerLocalKeys {
-    static let quickReplies = "joker_quick_replies_json"
-    static let greetingEnabled = "joker_greeting_enabled"
-    static let greetingText = "joker_greeting_text"
-}
-
-public func getJokerLocalQuickReplies() -> [JokerQuickReply] {
-    guard let data = UserDefaults.standard.data(forKey: JokerLocalKeys.quickReplies) else {
-        return []
-    }
-    return (try? JSONDecoder().decode([JokerQuickReply].self, from: data)) ?? []
-}
-
-public func getJokerLocalGreeting() -> (enabled: Bool, text: String) {
-    let enabled = UserDefaults.standard.bool(forKey: JokerLocalKeys.greetingEnabled)
-    let text = UserDefaults.standard.string(forKey: JokerLocalKeys.greetingText) ?? ""
-    return (enabled, text)
-}
-
-private func saveJokerLocalQuickReplies(_ replies: [JokerQuickReply]) {
-    let data = try? JSONEncoder().encode(replies)
-    UserDefaults.standard.set(data, forKey: JokerLocalKeys.quickReplies)
-    UserDefaults.standard.synchronize()
-}
-
 public final class JokerLocalQuickRepliesController: ViewController, UITableViewDataSource, UITableViewDelegate {
     private let context: AccountContext
     private let tableView: UITableView
@@ -231,7 +197,7 @@ public final class JokerLocalGreetingController: ViewController {
         self.descriptionLabel.numberOfLines = 0
         self.descriptionLabel.font = Font.regular(14.0)
         self.descriptionLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
-        self.descriptionLabel.text = jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "هذه الرسالة ليست من Telegram Business. تُحفظ على هاتفك وتستخدم لإرسال رد تلقائي للعملاء الجدد.", enValue: "This is not Telegram Business. It is stored on your device and can be used to reply to new customers.")
+        self.descriptionLabel.text = jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "تُرسل هذه الرسالة تلقائيًا لمرة واحدة لمن يراسلك لأول مرة (خاص، غير جهة اتصال). تُحفظ على هاتفك وليست من Telegram Business.", enValue: "This message is sent once automatically to people messaging you for the first time (private, not a contact). It is stored on your device and is not Telegram Business.")
         self.view.addSubview(self.descriptionLabel)
 
         self.enableLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -305,14 +271,11 @@ public final class JokerLocalGreetingController: ViewController {
     }
 
     @objc private func toggleEnabled() {
-        UserDefaults.standard.set(self.enableSwitch.isOn, forKey: JokerLocalKeys.greetingEnabled)
-        UserDefaults.standard.synchronize()
+        setJokerLocalGreeting(enabled: self.enableSwitch.isOn, text: self.textView.text)
     }
 
     @objc private func save() {
-        UserDefaults.standard.set(self.enableSwitch.isOn, forKey: JokerLocalKeys.greetingEnabled)
-        UserDefaults.standard.set(self.textView.text, forKey: JokerLocalKeys.greetingText)
-        UserDefaults.standard.synchronize()
+        setJokerLocalGreeting(enabled: self.enableSwitch.isOn, text: self.textView.text ?? "")
         self.navigationController?.popViewController(animated: true)
     }
 }
