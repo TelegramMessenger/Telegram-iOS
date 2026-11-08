@@ -7,7 +7,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
-import UndoUI
 import AccountContext
 
 private final class JokerSettingsControllerArguments {
@@ -20,7 +19,6 @@ private final class JokerSettingsControllerArguments {
     let updateBypassCopyProtection: (Bool) -> Void
     let openBusinessGreetingMessages: () -> Void
     let openBusinessQuickReplies: () -> Void
-    let activateStoryStealthMode: () -> Void
 
     init(
         updateAutoSaveMedia: @escaping (Bool) -> Void,
@@ -31,8 +29,7 @@ private final class JokerSettingsControllerArguments {
         updateFreezeLastSeen: @escaping (Bool) -> Void,
         updateBypassCopyProtection: @escaping (Bool) -> Void,
         openBusinessGreetingMessages: @escaping () -> Void,
-        openBusinessQuickReplies: @escaping () -> Void,
-        activateStoryStealthMode: @escaping () -> Void
+        openBusinessQuickReplies: @escaping () -> Void
     ) {
         self.updateAutoSaveMedia = updateAutoSaveMedia
         self.updateAllow100Accounts = updateAllow100Accounts
@@ -43,7 +40,6 @@ private final class JokerSettingsControllerArguments {
         self.updateBypassCopyProtection = updateBypassCopyProtection
         self.openBusinessGreetingMessages = openBusinessGreetingMessages
         self.openBusinessQuickReplies = openBusinessQuickReplies
-        self.activateStoryStealthMode = activateStoryStealthMode
     }
 }
 
@@ -70,7 +66,6 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
     case businessHeader(String)
     case businessGreetingMessages(String, String)
     case businessQuickReplies(String, String)
-    case storyStealthMode(String, String)
 
     case creditsHeader(String)
     case creditsText(String)
@@ -79,7 +74,7 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
         switch self {
         case .featuresHeader, .autoSaveMediaToggle, .allow100AccountsToggle, .ghostModeToggle, .forcePremiumTranslationToggle, .freezeLastSeenToggle, .bypassCopyProtectionToggle, .keepDeletedMessagesToggle:
             return JokerSettingsControllerSection.features.rawValue
-        case .businessHeader, .businessGreetingMessages, .businessQuickReplies, .storyStealthMode:
+        case .businessHeader, .businessGreetingMessages, .businessQuickReplies:
             return JokerSettingsControllerSection.business.rawValue
         case .creditsHeader, .creditsText:
             return JokerSettingsControllerSection.credits.rawValue
@@ -110,8 +105,6 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
             return 19
         case .businessQuickReplies:
             return 20
-        case .storyStealthMode:
-            return 21
         case .creditsHeader:
             return 22
         case .creditsText:
@@ -166,10 +159,6 @@ private enum JokerSettingsControllerEntry: ItemListNodeEntry {
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: nil, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, action: {
                 arguments.openBusinessQuickReplies()
             })
-        case let .storyStealthMode(title, text):
-            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: nil, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, action: {
-                arguments.activateStoryStealthMode()
-            })
         case let .creditsHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .creditsText(text):
@@ -190,10 +179,9 @@ private func jokerSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.bypassCopyProtectionToggle(jokerLocalized(presentationData, "تجاوز حماية المحتوى", "Bypass Copy Protection"), jokerLocalized(presentationData, "تجاوز قيود حماية النسخ في القنوات المحمية: نسخ caption، وحفظ الصور، وإعادة توجيه الرسالة بالكامل (الصورة مع caption).", "Bypass copy protection in protected channels: copy captions, save images, and forward the full message (image with caption)."), settings.bypassCopyProtection))
     entries.append(.keepDeletedMessagesToggle(jokerLocalized(presentationData, "الاحتفاظ بالرسائل المحذوفة", "Keep Deleted Messages"), jokerLocalized(presentationData, "الاحتفاظ بالرسائل المحذوفة محلياً مع علامة x بجانب الفقاعة. مسح المحادثة يحذف كل شيء نهائياً.", "Keep deleted messages locally with an 'x' mark next to the bubble. Clearing history deletes everything permanently."), settings.keepDeletedMessages))
 
-    entries.append(.businessHeader(jokerLocalized(presentationData, "تيليجرام بزنس", "Telegram Business")))
-    entries.append(.businessGreetingMessages(jokerLocalized(presentationData, "رسائل ترحيبية", "Greeting Messages"), jokerLocalized(presentationData, "إنشاء رسائل ترحيبية تلقائياً تُرسل للعملاء الجدد عند التواصل معك لأول مرة.", "Create greeting messages automatically sent to new customers when they message you for the first time.")))
-    entries.append(.businessQuickReplies(jokerLocalized(presentationData, "ردود سريعة", "Quick Replies"), jokerLocalized(presentationData, "إنشاء ردود سريعة قابلة لإعادة الاستخدام لرد أسرع على الرسائل الشائعة.", "Create reusable quick replies to answer common messages faster.")))
-    entries.append(.storyStealthMode(jokerLocalized(presentationData, "الوضع المتخفي للستوريات", "Story Stealth Mode"), jokerLocalized(presentationData, "مشاهدة ستوريات الآخرين دون ظهورك ضمن المشاهدين.", "View other people's stories without appearing in their viewers list.")))
+    entries.append(.businessHeader(jokerLocalized(presentationData, "ميزات محلية", "Local Features")))
+    entries.append(.businessGreetingMessages(jokerLocalized(presentationData, "رسالة ترحيبية محلية", "Local Greeting Message"), jokerLocalized(presentationData, "خزّن رسالة ترحيبية على جهازك واستخدمها للعملاء الجدد. ليست Telegram Business.", "Store a greeting message on your device for new customers. Not Telegram Business.")))
+    entries.append(.businessQuickReplies(jokerLocalized(presentationData, "ردود سريعة محلية", "Local Quick Replies"), jokerLocalized(presentationData, "أنشئ وأدر ردودًا سريعة محلية على هذا الجهاز. ليست Telegram Business.", "Create and manage local quick replies on this device. Not Telegram Business.")))
 
     entries.append(.creditsHeader(jokerLocalized(presentationData, "حقوق المصدر", "Source Credits")))
     entries.append(.creditsText(jokerLocalized(presentationData, "إصدار معدّل من Talogram - المصدر بواسطة @aljokeruserbot", "Talogram Modified Version - Source by @aljokeruserbot")))
@@ -229,35 +217,15 @@ public func jokerSettingsController(context: AccountContext) -> ViewController {
             guard let settingsController else {
                 return
             }
-            let _ = (context.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: context)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { initialData in
-                let controller = context.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: context, initialData: initialData, isAwayMode: false)
-                controller.navigationPresentation = .modal
-                settingsController.push(controller)
-            })
+            let controller = JokerLocalGreetingController(context: context)
+            settingsController.push(controller)
         },
         openBusinessQuickReplies: {
             guard let settingsController else {
                 return
             }
-            let _ = (context.sharedContext.makeQuickReplySetupScreenInitialData(context: context)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { initialData in
-                let controller = context.sharedContext.makeQuickReplySetupScreen(context: context, initialData: initialData)
-                controller.navigationPresentation = .modal
-                settingsController.push(controller)
-            })
-        },
-        activateStoryStealthMode: {
-            guard let settingsController else {
-                return
-            }
-            let _ = context.engine.messages.enableStoryStealthMode().startStandalone()
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            settingsController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: jokerLocalized(presentationData, "تم تفعيل الوضع المتخفي للستوريات", "Story stealth mode enabled"), timeout: 3, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
-                return false
-            }), in: .current)
+            let controller = JokerLocalQuickRepliesController(context: context)
+            settingsController.push(controller)
         }
     )
 
