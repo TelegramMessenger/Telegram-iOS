@@ -1063,10 +1063,11 @@ extension ChatControllerImpl {
                     case .quickReply:
                         let replies = getJokerLocalQuickReplies()
                         let languageSample = presentationData.strings.Common_Back
+                        strongSelf.attachmentController?.dismiss(animated: true)
                         if replies.isEmpty {
                             let alert = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "لا توجد ردود سريعة", enValue: "No Quick Replies"), message: jokerLocalize(sample: languageSample, arValue: "أضف ردودًا سريعة محلية من إعدادات الجوكر ← ميزات محلية ← ردود سريعة محلية.", enValue: "Add local quick replies in Joker Settings → Local Features → Local Quick Replies."), preferredStyle: .alert)
                             alert.addAction(UIAlertAction(title: presentationData.strings.Common_Done, style: .default))
-                            strongSelf.present(alert, in: .current)
+                            strongSelf.present(alert, in: .window(.root))
                             return true
                         }
                         let actionSheet = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "الردود السريعة", enValue: "Quick Replies"), message: nil, preferredStyle: .actionSheet)
@@ -1077,13 +1078,12 @@ extension ChatControllerImpl {
                                 guard let strongSelf else {
                                     return
                                 }
-                                strongSelf.attachmentController?.dismiss(animated: true)
                                 let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
                                 strongSelf.sendMessages([.message(text: reply.text, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                             })
                         }
                         actionSheet.addAction(UIAlertAction(title: presentationData.strings.Common_Cancel, style: .cancel))
-                        strongSelf.present(actionSheet, in: .current)
+                        strongSelf.present(actionSheet, in: .window(.root))
                         return true
                     case .richText:
                         let buildRichTextContent: (ChatControllerImpl, RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> (text: String, attributes: [EngineMessage.Attribute])? = { strongSelf, document, media, emojiFiles, sendWithoutFormatting in
