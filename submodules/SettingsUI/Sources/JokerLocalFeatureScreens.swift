@@ -18,14 +18,14 @@ public final class JokerLocalQuickRepliesController: ViewController, UITableView
         self.tableView = UITableView(frame: .zero, style: .insetGrouped)
         self.emptyLabel = UILabel()
         self.replies = getJokerLocalQuickReplies()
-        super.init(nibName: nil, bundle: nil)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.title = jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "ردود سريعة محلية", enValue: "Local Quick Replies")
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(self.addReply))
     }
 
-    required public init?(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
@@ -176,12 +176,12 @@ public final class JokerLocalGreetingController: ViewController {
         self.textView = UITextView()
         self.saveButton = UIButton(type: .system)
 
-        super.init(nibName: nil, bundle: nil)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
 
         self.title = jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "رسائل ترحيبية محلية", enValue: "Local Greeting Messages")
     }
 
-    required public init?(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
