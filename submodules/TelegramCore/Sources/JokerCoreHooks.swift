@@ -233,8 +233,35 @@ public enum JokerCoreHooks {
         }
     }
 
+    private static let autoSavedMessageIdsKey = "joker_auto_saved_message_ids"
+
+    private static func autoSavedMessageKey(_ messageId: MessageId) -> String {
+        return "\(messageId.namespace):\(messageId.id):\(messageId.peerId.id._internalGetInt64Value())"
+    }
+
+    private static func isAlreadyAutoSaved(messageId: MessageId) -> Bool {
+        let ids = (UserDefaults.standard.array(forKey: autoSavedMessageIdsKey) as? [String]) ?? []
+        return ids.contains(autoSavedMessageKey(messageId))
+    }
+
+    private static func markAutoSaved(messageId: MessageId) {
+        var ids = (UserDefaults.standard.array(forKey: autoSavedMessageIdsKey) as? [String]) ?? []
+        let key = autoSavedMessageKey(messageId)
+        if !ids.contains(key) {
+            ids.append(key)
+            if ids.count > 5000 {
+                ids = Array(ids.suffix(5000))
+            }
+            UserDefaults.standard.set(ids, forKey: autoSavedMessageIdsKey)
+            UserDefaults.standard.synchronize()
+        }
+    }
+
     public static func saveConsumedMediaIfNeeded(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
         guard autoSaveMediaEnabled() else {
+            return .complete()
+        }
+        if messageId.peerId == account.peerId {
             return .complete()
         }
         struct SavedMediaItem {
@@ -248,6 +275,9 @@ public enum JokerCoreHooks {
         }
         return account.postbox.transaction { transaction -> (media: SavedMediaItem, caption: String, entities: [MessageTextEntity])? in
             guard let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) else {
+                return nil
+            }
+            if isAlreadyAutoSaved(messageId: messageId) {
                 return nil
             }
             var isSelfDestruct = false
@@ -264,6 +294,7 @@ public enum JokerCoreHooks {
             guard isSelfDestruct else {
                 return nil
             }
+            markAutoSaved(messageId: messageId)
             let caption = message.text
             var entities: [MessageTextEntity] = []
             if let entitiesAttribute = message.attributes.first(where: { $0 is TextEntitiesMessageAttribute }) as? TextEntitiesMessageAttribute {
