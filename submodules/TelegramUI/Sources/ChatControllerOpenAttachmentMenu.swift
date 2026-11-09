@@ -1067,7 +1067,7 @@ extension ChatControllerImpl {
                         if replies.isEmpty {
                             let alert = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "لا توجد ردود سريعة", enValue: "No Quick Replies"), message: jokerLocalize(sample: languageSample, arValue: "أضف ردودًا سريعة محلية من إعدادات الجوكر ← ميزات محلية ← ردود سريعة محلية.", enValue: "Add local quick replies in Joker Settings → Local Features → Local Quick Replies."), preferredStyle: .alert)
                             alert.addAction(UIAlertAction(title: presentationData.strings.Common_Done, style: .default))
-                            strongSelf.present(alert, in: .window(.root))
+                            strongSelf.present(alert, animated: true)
                             return true
                         }
                         let actionSheet = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "الردود السريعة", enValue: "Quick Replies"), message: nil, preferredStyle: .actionSheet)
@@ -1083,7 +1083,7 @@ extension ChatControllerImpl {
                             })
                         }
                         actionSheet.addAction(UIAlertAction(title: presentationData.strings.Common_Cancel, style: .cancel))
-                        strongSelf.present(actionSheet, in: .window(.root))
+                        strongSelf.present(actionSheet, animated: true)
                         return true
                     case .richText:
                         let buildRichTextContent: (ChatControllerImpl, RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> (text: String, attributes: [EngineMessage.Attribute])? = { strongSelf, document, media, emojiFiles, sendWithoutFormatting in

@@ -294,12 +294,8 @@ final class AuthorizedApplicationContext {
 
         let engine = context.engine
         self.greetingMessagesDisposable.set((self.context.account.stateManager.notificationMessages
-        |> mapToSignal { messageList -> Signal<[Message], NoError> in
-            var messages: [Message] = []
-            for (itemMessages, _, _, _) in messageList {
-                messages.append(contentsOf: itemMessages)
-            }
-            return .single(messages)
+        |> map { messageList in
+            return messageList.flatMap { $0.0 }
         }).start(next: { [weak self] messages in
             guard let strongSelf = self else {
                 return
