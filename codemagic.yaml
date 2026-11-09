@@ -1,0 +1,126 @@
+workflows:
+  talogram-ipa:
+    name: Talogram IPA (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      xcode: 27.1
+    cache:
+      cache_paths:
+        - $HOME/telegram-bazel-cache
+    scripts:
+      - name: Check out submodules
+        script: |
+          git submodule update --init --recursive
+          if git submodule status --recursive | grep -Eq '^[-+U]'; then
+            echo "One or more pinned Git submodules were not checked out correctly."
+            exit 1
+          fi
+
+      - name: Check build environment
+        script: |
+          xcodebuild -version
+          EXPECTED_XCODE="$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          ACTUAL_XCODE="$(xcodebuild -version | awk 'NR == 1 {print $2}')"
+          if [ "$ACTUAL_XCODE" != "$EXPECTED_XCODE" ]; then
+            echo "This project requires Xcode $EXPECTED_XCODE, but the machine has Xcode $ACTUAL_XCODE."
+            exit 1
+          fi
+          python3 --version
+
+      - name: Install and mount Metal Toolchain
+        script: |
+          set -e
+          DEVELOPER_PATH="$(xcode-select -p)"
+          echo "Using Xcode: $DEVELOPER_PATH"
+
+          if xcrun metal --version >/dev/null 2>&1; then
+            echo "Metal Toolchain is already available."
+          else
+            METAL_DMG="$(sudo find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -path '*/AssetData/Restore/*.dmg' -print 2>/dev/null | head -n 1 || true)"
+            if [ -z "$METAL_DMG" ]; then
+              echo "Downloading Metal Toolchain (about 840 MB)..."
+              if ! env DEVELOPER_DIR="$DEVELOPER_PATH" "$DEVELOPER_PATH/usr/bin/xcodebuild" -downloadComponent MetalToolchain; then
+                echo "Retrying Metal Toolchain download with sudo..."
+                sudo env DEVELOPER_DIR="$DEVELOPER_PATH" "$DEVELOPER_PATH/usr/bin/xcodebuild" -downloadComponent MetalToolchain
+              fi
+              METAL_DMG="$(sudo find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -path '*/AssetData/Restore/*.dmg' -print 2>/dev/null | head -n 1 || true)"
+            fi
+
+            METAL_REAL=/Volumes/MetalToolchainCryptex/Metal.xctoolchain/usr/bin/metal
+            if [ ! -x "$METAL_REAL" ] && [ -n "$METAL_DMG" ]; then
+              echo "Mounting Metal Toolchain DMG: $METAL_DMG"
+              sudo mkdir -p /Volumes/MetalToolchainCryptex
+              sudo hdiutil attach "$METAL_DMG" -mountpoint /Volumes/MetalToolchainCryptex -nobrowse -readonly || true
+            fi
+
+            if [ -x "$METAL_REAL" ] && ! xcrun metal --version >/dev/null 2>&1; then
+              echo "Pointing xcrun metal at the real Metal compiler..."
+              sudo ln -sf "$METAL_REAL" "$DEVELOPER_PATH/Toolchains/XcodeDefault.xctoolchain/usr/bin/metal" || true
+            fi
+          fi
+
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcodebuild -showComponent MetalToolchain || true
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcrun metal --version
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcrun -f metallib
+
+      - name: Generate fresh verification provisioning profiles
+        script: |
+          python3 build-system/Make/Make.py \
+            generate-verification-profiles \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build-system/fake-codesigning \
+            --destination build/verification-codesigning/profiles \
+            --extendExpiration
+          mkdir -p build/verification-codesigning/certs
+          cp build-system/fake-codesigning/certs/* build/verification-codesigning/certs/
+
+      - name: Import verification signing certificate
+        script: |
+          set -e
+          KEYCHAIN_NAME="talogram-verification.keychain"
+          KEYCHAIN_PASSWORD="talogram"
+          security delete-keychain "$KEYCHAIN_NAME" >/dev/null 2>&1 || true
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          for item in build/verification-codesigning/certs/*; do
+            security import "$item" -k "$KEYCHAIN_NAME" -P "" -T /usr/bin/codesign -T /usr/bin/security || echo "warning: could not import $item"
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME" || echo "warning: could not set key partition list"
+          security list-keychains -d user -s "$KEYCHAIN_NAME" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_NAME"
+          CERTIFICATE="build/verification-codesigning/certs/Public.cer"
+          echo "Trusting the verification certificate in the system trust domain..."
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$CERTIFICATE" || \
+            sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERTIFICATE"
+          IDENTITIES="$(security find-identity -v -p codesigning)"
+          printf '%s\n' "$IDENTITIES"
+          if ! printf '%s' "$IDENTITIES" | grep -q "Apple Distribution"; then
+            echo "The verification signing identity was not imported into the keychain."
+            exit 1
+          fi
+
+      - name: Build IPA for iPASide signing
+        script: |
+          python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber "$BUILD_NUMBER" \
+            --configuration release_arm64 \
+            --outputBuildArtifactsPath build/artifacts
+
+      - name: Verify IPA package
+        script: |
+          test -s build/artifacts/Telegram.ipa
+          unzip -t build/artifacts/Telegram.ipa
+          TEMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TEMP_DIR"' EXIT
+          unzip -q build/artifacts/Telegram.ipa -d "$TEMP_DIR"
+          APP_PATH="$(find "$TEMP_DIR/Payload" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+
+    artifacts:
+      - build/artifacts/Telegram.ipa

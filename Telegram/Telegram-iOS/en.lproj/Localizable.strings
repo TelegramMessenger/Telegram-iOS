@@ -15095,7 +15095,6 @@ Sorry for the inconvenience.";
 
 2. (OPTIONAL) WRITE YOUR COMMENT HERE:
 
-=================================================
 Device: %1$@
 OS version: %2$@
 Locale: %3$@
@@ -17342,3 +17341,35 @@ Error: %8$@";
 "VoiceOver.Reactions.ShowAll" = "Show All Reactions";
 "VoiceOver.Reactions.Premium" = "Premium Reactions";
 "VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";
+// Joker Mod Settings - Talogram
+"JokerSettings_Title" = "Joker Settings";
+"JokerSettings_ChannelSubscription_Header" = "Channel Subscription";
+"JokerSettings_ChannelSubscription_Title" = "Subscribe to @aljokeruserbot";
+"JokerSettings_ChannelSubscription_Text" = "You must subscribe to @aljokeruserbot channel to enable Joker features.";
+"JokerSettings_SubscribeButton" = "Subscribe to Channel";
+"JokerSettings_SubscribeButtonText" = "Open @aljokeruserbot in Telegram";
+"JokerSettings_Features_Header" = "Joker Features";
+"JokerSettings_AutoSaveMedia_Title" = "Auto Save Self-Destructing Media";
+"JokerSettings_AutoSaveMedia_Text" = "Automatically save self-destructing photos, videos, and voice messages to Saved Messages when opened.";
+"JokerSettings_Allow100Accounts_Title" = "Allow 100 Accounts";
+"JokerSettings_Allow100Accounts_Text" = "Allow adding up to 100 accounts in the app.";
+"JokerSettings_GhostMode_Title" = "Ghost Mode";
+"JokerSettings_GhostMode_Text" = "Hide read receipts. Add an eye icon to messages - tap to mark as read.";
+"JokerSettings_ForcePremiumTranslation_Title" = "Force Premium Translation";
+"JokerSettings_ForcePremiumTranslation_Text" = "Enable automatic translation feature (Premium) for all users.";
+"JokerSettings_KeepDeletedMessages_Title" = "Keep Deleted Messages";
+"JokerSettings_KeepDeletedMessages_Text" = "Keep deleted messages locally with an 'x' mark. Clearing history deletes everything permanently.";
+"JokerSettings_RequireSubscription_Title" = "Require Channel Subscription";
+"JokerSettings_RequireSubscription_Text" = "Require subscription to @aljokeruserbot before enabling any Joker feature.";
+"JokerSettings_Credits_Header" = "Source Credits";
+"JokerSettings_Credits_Title" = "Source by @aljokeruserbot";
+"JokerSettings_Credits_Text" = "Talogram Modified Version - Source by @aljokeruserbot";
+"JokerSettings_FreezeLastSeen_Title" = "Freeze Last Seen";
+"JokerSettings_FreezeLastSeen_Text" = "Hide your last seen status and stop sending presence updates to the server.";
+"JokerSettings_BypassCopyProtection_Title" = "Bypass Copy Protection";
+"JokerSettings_BypassCopyProtection_Text" = "Bypass copy protection and forwarding restrictions in protected chats and channels.";
+
+// Joker Alerts
+"JokerAlert_SubscriptionRequired_Title" = "Subscription Required";
+"JokerAlert_SubscriptionRequired_Text" = "You must subscribe to @aljokeruserbot channel to use Joker features.";
+"JokerAlert_SubscribeButton" = "Subscribe";

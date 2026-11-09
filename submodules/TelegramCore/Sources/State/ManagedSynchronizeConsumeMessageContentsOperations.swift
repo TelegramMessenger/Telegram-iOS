@@ -110,8 +110,14 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
 }
 
 private func synchronizeConsumeMessageContents(transaction: Transaction, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
+    // Joker Mod - الحفظ التلقائي للوسائط ذاتية التدمير يتم من واجهة المعاينة
+    // (PeerMessagesMediaPlaylist / SecretMediaPreviewController) قبل الاستهلاك
+    // Joker ghost mode: suppress outgoing message-content read receipts (auto-saving still applies)
+    if JokerCoreHooks.ghostModeEnabled() {
+        return .single(Void())
+    }
     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-        return network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
+        return .single(Void()) |> then(network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
             return .single(nil)
@@ -125,17 +131,17 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, network
                 }
             }
             return .complete()
-        }
+        })
     } else if peerId.namespace == Namespaces.Peer.CloudChannel {
         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: operation.messageIds.map { $0.id }))
+            return .single(Void()) |> then(network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: operation.messageIds.map { $0.id }))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                 return .single(nil)
             }
             |> mapToSignal { result -> Signal<Void, NoError> in
                 return .complete()
-            }
+            })
         } else {
             return .complete()
         }

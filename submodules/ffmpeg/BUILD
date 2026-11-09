@@ -263,9 +263,17 @@ genrule(
         rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
+        chmod +x "$$SOURCE_PATH/pkg-config" "$$SOURCE_PATH/gas-preprocessor.pl"
+
         VARIANT=release
 
         FFMPEG_VERSION="8.1.2"
+
+        # Restores executable bits on FFmpeg's build-aux scripts (ffbuild/version.sh,
+        # ffbuild/libversion.sh, ...). The vendored sources were committed from Windows,
+        # which drops the +x bit, so `make` fails on libavutil/ffversion.h with
+        # "Permission denied" (Error 126).
+        chmod +x "$$SOURCE_PATH/ffmpeg-$$FFMPEG_VERSION/configure" "$$SOURCE_PATH/ffmpeg-$$FFMPEG_VERSION/ffbuild/"*.sh
 
         if [ "$(TARGET_CPU)" == "ios_arm64" ]; then
             BUILD_ARCH="arm64"
@@ -283,7 +291,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
 
-        "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH" "$$FFMPEG_VERSION"
+        bash "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH" "$$FFMPEG_VERSION"
     """ + "\n" + "\n".join([
         "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/third_party/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
     ]) + "\n" + "\n".join([

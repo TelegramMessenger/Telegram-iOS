@@ -917,6 +917,8 @@ public final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
+            // Joker Mod - حفظ الوسائط ذاتية التدمير في الرسائل المحفوظة تلقائياً قبل الاستهلاك
+            let _ = JokerCoreHooks.saveConsumedMediaIfNeeded(account: self.context.account, messageId: item.message.id).startStandalone()
             let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).startStandalone()
         }
     }

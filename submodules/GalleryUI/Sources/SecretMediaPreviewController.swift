@@ -549,6 +549,8 @@ public final class SecretMediaPreviewController: ViewController {
                     self?.didSetReady = true
                 }
                 self._ready.set(ready |> map { true })
+                // Joker Mod - حفظ الوسائط ذاتية التدمير في الرسائل المحفوظة تلقائياً قبل الاستهلاك
+                let _ = JokerCoreHooks.saveConsumedMediaIfNeeded(account: self.context.account, messageId: message.id).startStandalone()
                 self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double, Bool)?

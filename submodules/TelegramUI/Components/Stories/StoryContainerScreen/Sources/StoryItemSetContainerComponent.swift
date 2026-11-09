@@ -475,6 +475,7 @@ public final class StoryItemSetContainerComponent: Component {
         let moreButton = ComponentView<Empty>()
         var currentSoundButtonState: Bool?
         let soundButton = ComponentView<Empty>()
+        let downloadButton = ComponentView<Empty>()
         var privacyIcon: ComponentView<Empty>?
         var pictureInPictureIcon: ComponentView<Empty>?
         
@@ -2300,6 +2301,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: 0.0, to: soundButtonView.alpha, duration: 0.25)
                 }
+                if let downloadButtonView = self.downloadButton.view {
+                    downloadButtonView.layer.animateAlpha(from: 0.0, to: downloadButtonView.alpha, duration: 0.25)
+                }
                 if let closeFriendIcon = self.privacyIcon?.view {
                     closeFriendIcon.layer.animateAlpha(from: 0.0, to: closeFriendIcon.alpha, duration: 0.25)
                 }
@@ -2492,6 +2496,9 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: soundButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                }
+                if let downloadButtonView = self.downloadButton.view {
+                    downloadButtonView.layer.animateAlpha(from: downloadButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let closeFriendIconView = self.privacyIcon?.view {
                     closeFriendIconView.layer.animateAlpha(from: closeFriendIconView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
@@ -4230,6 +4237,42 @@ public final class StoryItemSetContainerComponent: Component {
                 headerRightOffset -= moreButtonSize.width + 12.0
             }
             
+            var isLiveStreamMedia = false
+            if case .liveStream = component.slice.item.storyItem.media {
+                isLiveStreamMedia = true
+            }
+            if !isLiveStreamMedia && !component.isEmbeddedInCamera {
+                let downloadButtonSize = self.downloadButton.update(
+                    transition: transition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Context Menu/Download",
+                            tintColor: .white
+                        )),
+                        effectAlignment: .center,
+                        minSize: CGSize(width: 33.0, height: 64.0),
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.requestSave()
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Story_Context_SaveToGallery)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 33.0, height: 64.0)
+                )
+                if let downloadButtonView = self.downloadButton.view {
+                    if downloadButtonView.superview == nil {
+                        self.controlsClippingView.addSubview(downloadButtonView)
+                    }
+                    downloadButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
+                    transition.setFrame(view: downloadButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - downloadButtonSize.width, y: 2.0), size: downloadButtonSize))
+                    transition.setAlpha(view: downloadButtonView, alpha: component.slice.item.storyItem.isPending ? 0.5 : 1.0)
+                    headerRightOffset -= downloadButtonSize.width + 12.0
+                }
+            }
+            
             var isSilentVideo = false
             var isVideo = false
             var soundAlpha: CGFloat = 0.0
@@ -5946,63 +5989,12 @@ public final class StoryItemSetContainerComponent: Component {
             self.component?.controller()?.push(controller)
         }
         
-        private func presentSaveUpgradeScreen() {
-            guard let component = self.component else {
-                return
-            }
-            
-            self.dismissAllTooltips()
-            
-            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-            let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
-            component.presentController(UndoOverlayController(
-                presentationData: presentationData,
-                content: .universal(
-                    animation: "anim_infotip",
-                    scale: 1.0,
-                    colors: [
-                        "info1.info1.stroke": animationBackgroundColor,
-                        "info2.info2.Fill": animationBackgroundColor
-                    ],
-                    title: nil,
-                    text: component.strings.Story_ToastPremiumSaveToGallery,
-                    customUndoText: nil,
-                    timeout: nil
-                ),
-                elevatedLayout: false,
-                animateInAsReplacement: false,
-                appearance: UndoOverlayController.Appearance(isBlurred: true),
-                action: { [weak self] action in
-                    guard let self else {
-                        return false
-                    }
-                    switch action {
-                    case .info:
-                        self.presentStoriesUpgradeScreen(source: .storiesDownload)
-                        return true
-                    default:
-                        break
-                    }
-                    return false
-                }
-            ), nil)
-        }
-        
         private func presentQualityUpgradeScreen() {
             self.sendMessageContext.presentQualityUpgrade(view: self, action: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.presentStoriesUpgradeScreen(source: .storiesHigherQuality)
-            })
-        }
-        
-        private func presentStealthModeUpgradeScreen() {
-            self.sendMessageContext.presentStealthModeUpgrade(view: self, action: { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
             })
         }
         
@@ -6836,23 +6828,6 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.requestSave()
                     })))
-                    
-                    if case let .user(accountUser) = component.slice.effectivePeer, !isLiveStream {
-                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            if accountUser.isPremium {
-                                self.sendMessageContext.requestStealthMode(view: self)
-                            } else {
-                                self.presentStealthModeUpgradeScreen()
-                            }
-                        })))
-                    }
                 }
                 
                 if component.slice.item.storyItem.isPublic && (component.slice.effectivePeer.addressName != nil || !component.slice.effectivePeer.usernames.isEmpty) && (component.slice.item.storyItem.expirationTimestamp > Int32(Date().timeIntervalSince1970) || component.slice.item.storyItem.isPinned) {
@@ -7580,39 +7555,17 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             self.beginPictureInPicture()
                         })))
-                    } else if !component.slice.item.storyItem.isForwardingDisabled {
+                    } else {
                         let saveText: String = component.strings.Story_Context_SaveToGallery
                         items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Download" : "Chat/Context Menu/DownloadLocked"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
                             
                             guard let self else {
                                 return
                             }
-                            
-                            if accountUser.isPremium {
-                                self.requestSave()
-                            } else {
-                                self.presentSaveUpgradeScreen()
-                            }
-                        })))
-                    }
-                    
-                    if case .user = component.slice.effectivePeer, !isLiveStream {
-                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            if accountUser.isPremium {
-                                self.sendMessageContext.requestStealthMode(view: self)
-                            } else {
-                                self.presentStealthModeUpgradeScreen()
-                            }
+                            self.requestSave()
                         })))
                     }
                     

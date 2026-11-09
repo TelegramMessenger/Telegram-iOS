@@ -1,0 +1,240 @@
+name: Quick compile check
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+concurrency:
+  group: talogram-quick-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Compile check (no IPA)
+    runs-on: xcode-27
+    timeout-minutes: 240
+    env:
+      MAKE_RETRY_ATTEMPTS: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check out submodules
+        run: |
+          git submodule update --init --recursive
+          if git submodule status --recursive | grep -Eq '^[-+U]'; then
+            echo "One or more pinned Git submodules were not checked out correctly."
+            exit 1
+          fi
+
+      - name: Configure persistent Bazel repository cache
+        run: |
+          printf '\nbuild --repository_cache=%s\nbuild --downloader_config=%s\n' \
+            "$HOME/bazel-repository-cache" \
+            "$PWD/.github/scripts/bazel-downloader.cfg" >> .bazelrc
+
+      - name: Restore Bazel repository cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/bazel-repository-cache
+          key: bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-
+            bazel-repositories-${{ runner.os }}-
+
+      - name: Prefetch Bazel dependencies into the repository cache
+        continue-on-error: true
+        run: bash .github/scripts/prefetch-bazel-deps.sh
+
+      - name: Check build environment
+        run: |
+          xcodebuild -version
+          EXPECTED_XCODE="$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          ACTUAL_XCODE="$(xcodebuild -version | awk 'NR == 1 {print $2}')"
+          if [ "$ACTUAL_XCODE" != "$EXPECTED_XCODE" ]; then
+            echo "Warning: This project expects Xcode $EXPECTED_XCODE, but the machine has Xcode $ACTUAL_XCODE. The build will continue."
+          fi
+
+      - name: Force iOS device platform for standalone module builds
+        run: |
+          echo 'build --platforms=@build_bazel_apple_support//platforms:ios_arm64' >> .bazelrc
+
+      - name: Relax warnings-as-errors for quick check only
+        run: |
+          python3 - <<'PY'
+          import os
+          for root, dirs, files in os.walk('.'):
+              dirs[:] = [d for d in dirs if d != '.git']
+              for name in files:
+                  if name != 'BUILD' and name != 'BUILD.bazel':
+                      continue
+                  path = os.path.join(root, name)
+                  try:
+                      with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                          text = f.read()
+                  except OSError:
+                      continue
+                  if '-warnings-as-errors' not in text:
+                      continue
+                  new_text = text.replace('"-warnings-as-errors",', '').replace('"-warnings-as-errors"', '')
+                  if new_text != text:
+                      with open(path, 'w', encoding='utf-8') as f:
+                          f.write(new_text)
+          PY
+
+      - name: Generate verification provisioning profiles
+        run: |
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            generate-verification-profiles \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build-system/fake-codesigning \
+            --destination build/verification-codesigning/profiles \
+            --extendExpiration
+          mkdir -p build/verification-codesigning/certs
+          cp build-system/fake-codesigning/certs/* build/verification-codesigning/certs/
+
+      - name: Compile TelegramCore
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/TelegramCore:TelegramCore \
+            2>&1 | tee check-telegramcore.log
+
+      - name: Compile ChatTitleView
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/TelegramUI/Components/ChatTitleView:ChatTitleView \
+            2>&1 | tee check-chattitleview.log
+
+      - name: Compile PeerInfoScreen
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen:PeerInfoScreen \
+            2>&1 | tee check-peerinfoscreen.log
+
+      - name: Compile SettingsUI
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/SettingsUI:SettingsUI \
+            2>&1 | tee check-settingsui.log
+
+      - name: Compile TelegramUIPreferences
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/TelegramUIPreferences:TelegramUIPreferences \
+            2>&1 | tee check-uipreferences.log
+
+      - name: Compile ChatMessageBubbleItemNode
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+            --cacheDir "$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath build-system/appstore-configuration.json \
+            --codesigningInformationPath build/verification-codesigning \
+            --buildNumber 1 \
+            --configuration debug_arm64 \
+            --continueOnError \
+            --target //submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode:ChatMessageBubbleItemNode \
+            2>&1 | tee check-chatmessagebubbleitemnode.log
+
+      - name: Publish errors to summary
+        if: always()
+        run: |
+          {
+            echo "## Compile check summary"
+            echo ""
+            if grep -h -E "^[^ ]+\.(swift|m|mm|c|cc|cpp|h|hpp):[0-9]+:[0-9]+: (fatal )?error:|^error: " check-*.log > /tmp/quick-check-errors.txt 2>/dev/null; then
+              echo '```'
+              sort -u /tmp/quick-check-errors.txt | head -n 120
+              echo '```'
+            else
+              echo "No compile errors found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quick-check-logs-${{ github.run_number }}
+          path: check-*.log
+          if-no-files-found: ignore
+
+      - name: Fail if compile errors were found
+        run: |
+          failed=0
+          for log in check-*.log; do
+            if ! grep -q 'MAKE_RETRY_RESULT: success' "$log"; then
+              echo "::error::$log did not complete successfully (compile errors or persistent download failures)."
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+
+      # Save even when the check failed, so archives downloaded on this runner
+      # are reused by the next run instead of being fetched from GitHub again.
+      - name: Save Bazel repository cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/bazel-repository-cache
+          key: bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}

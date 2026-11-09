@@ -7,8 +7,11 @@ import plistlib
 import argparse
 import subprocess
 import base64
+import datetime
 
 from BuildEnvironment import run_executable_with_output, check_run_system
+
+VERIFICATION_PROFILE_LIFETIME_DAYS = 3650
 
 
 def setup_temp_keychain(p12_path, p12_password=''):
@@ -97,11 +100,17 @@ def get_certificate_base64_from_p12(p12_path, p12_password=''):
     return base64.b64encode(cert_der).decode('utf-8')
 
 
-def process_provisioning_profile(source, destination, certificate_data, signing_identity, keychain_name):
+def process_provisioning_profile(source, destination, certificate_data, signing_identity, keychain_name, extend_expiration):
     parsed_plist = run_executable_with_output('security', arguments=['cms', '-D', '-i', source], check_result=True)
     parsed_plist_file = tempfile.mktemp()
-    with open(parsed_plist_file, 'w+') as file:
-        file.write(parsed_plist)
+    profile = plistlib.loads(parsed_plist.encode('utf-8'))
+    if extend_expiration:
+        profile['ExpirationDate'] = (
+            datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            + datetime.timedelta(days=VERIFICATION_PROFILE_LIFETIME_DAYS)
+        )
+    with open(parsed_plist_file, 'wb') as file:
+        plistlib.dump(profile, file)
 
     # Remove all existing developer certificates
     while True:
@@ -126,7 +135,7 @@ def process_provisioning_profile(source, destination, certificate_data, signing_
     os.unlink(parsed_plist_file)
 
 
-def generate_provisioning_profiles(source_path, destination_path, certs_path):
+def generate_provisioning_profiles(source_path, destination_path, certs_path, extend_expiration=False):
     p12_path = os.path.join(certs_path, 'SelfSigned.p12')
 
     if not os.path.exists(p12_path):
@@ -160,7 +169,8 @@ def generate_provisioning_profiles(source_path, destination_path, certs_path):
                     destination=os.path.join(destination_path, file_name),
                     certificate_data=certificate_data,
                     signing_identity=signing_identity,
-                    keychain_name=keychain_name
+                    keychain_name=keychain_name,
+                    extend_expiration=extend_expiration
                 )
         print('Done. Generated {} profiles.'.format(
             len([f for f in os.listdir(destination_path) if f.endswith('.mobileprovision')])

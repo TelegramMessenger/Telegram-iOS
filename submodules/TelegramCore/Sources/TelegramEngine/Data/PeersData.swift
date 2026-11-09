@@ -2385,6 +2385,10 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             func extract(view: PostboxView) -> Result {
+                // Joker Mod - bypass copy protection in protected chats and channels
+                if JokerCoreHooks.bypassCopyProtectionEnabled() {
+                    return false
+                }
                 guard let view = view as? PeerView else {
                     preconditionFailure()
                 }
@@ -2420,6 +2424,10 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             func extract(view: PostboxView) -> Result {
+                // Joker Mod - bypass copy protection in protected chats and channels
+                if JokerCoreHooks.bypassCopyProtectionEnabled() {
+                    return false
+                }
                 guard let view = view as? CachedPeerDataView else {
                     preconditionFailure()
                 }

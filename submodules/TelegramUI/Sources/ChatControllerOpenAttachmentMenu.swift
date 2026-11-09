@@ -1061,23 +1061,29 @@ extension ChatControllerImpl {
                         }
                         return true
                     case .quickReply:
-                        let _ = (strongSelf.context.sharedContext.makeQuickReplySetupScreenInitialData(context: strongSelf.context)
-                                 |> take(1)
-                                 |> deliverOnMainQueue).start(next: { [weak strongSelf] initialData in
-                            guard let strongSelf else {
-                                return
-                            }
-                            
-                            let controller = QuickReplySetupScreen(context: strongSelf.context, initialData: initialData as! QuickReplySetupScreen.InitialData, mode: .select(completion: { [weak strongSelf] shortcutId in
+                        let replies = getJokerLocalQuickReplies()
+                        let languageSample = presentationData.strings.Common_Back
+                        strongSelf.attachmentController?.dismiss(animated: true)
+                        if replies.isEmpty {
+                            let alert = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "لا توجد ردود سريعة", enValue: "No Quick Replies"), message: jokerLocalize(sample: languageSample, arValue: "أضف ردودًا سريعة محلية من إعدادات الجوكر ← ميزات محلية ← ردود سريعة محلية.", enValue: "Add local quick replies in Joker Settings → Local Features → Local Quick Replies."), preferredStyle: .alert)
+                            alert.addAction(UIAlertAction(title: presentationData.strings.Common_Done, style: .default))
+                            strongSelf.present(alert, animated: true)
+                            return true
+                        }
+                        let actionSheet = UIAlertController(title: jokerLocalize(sample: languageSample, arValue: "الردود السريعة", enValue: "Quick Replies"), message: nil, preferredStyle: .actionSheet)
+                        for reply in replies.prefix(12) {
+                            let title = reply.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let truncated = title.count > 80 ? String(title.prefix(80)) + "…" : title
+                            actionSheet.addAction(UIAlertAction(title: truncated, style: .default) { [weak strongSelf] _ in
                                 guard let strongSelf else {
                                     return
                                 }
-                                strongSelf.attachmentController?.dismiss(animated: true)
-                                strongSelf.interfaceInteraction?.sendShortcut(shortcutId)
-                            }))
-                            completion(controller, controller.mediaPickerContext)
-                            strongSelf.controllerNavigationDisposable.set(nil)
-                        })
+                                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
+                                strongSelf.sendMessages([.message(text: reply.text, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                            })
+                        }
+                        actionSheet.addAction(UIAlertAction(title: presentationData.strings.Common_Cancel, style: .cancel))
+                        strongSelf.present(actionSheet, animated: true)
                         return true
                     case .richText:
                         let buildRichTextContent: (ChatControllerImpl, RichTextAttachmentScreen.Document, [String: EngineMedia], [Int64: TelegramMediaFile], Bool) -> (text: String, attributes: [EngineMessage.Attribute])? = { strongSelf, document, media, emojiFiles, sendWithoutFormatting in

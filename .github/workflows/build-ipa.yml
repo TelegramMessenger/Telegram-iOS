@@ -1,0 +1,172 @@
+name: Talogram IPA (unsigned)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: talogram-ipa
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Telegram.ipa (macOS 27, Xcode 27.1)
+    runs-on: xcode-27
+    timeout-minutes: 350
+    env:
+      MAKE_RETRY_ATTEMPTS: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check out submodules
+        run: |
+          git submodule update --init --recursive
+          if git submodule status --recursive | grep -Eq '^[-+U]'; then
+            echo "One or more pinned Git submodules were not checked out correctly."
+            exit 1
+          fi
+
+      - name: Configure persistent Bazel repository cache
+        run: |
+          printf '\nbuild --repository_cache=%s\nbuild --downloader_config=%s\n' \
+            "$HOME/bazel-repository-cache" \
+            "$PWD/.github/scripts/bazel-downloader.cfg" >> .bazelrc
+
+      - name: Restore Bazel repository cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/bazel-repository-cache
+          key: bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-
+            bazel-repositories-${{ runner.os }}-
+
+      - name: Prefetch Bazel dependencies into the repository cache
+        continue-on-error: true
+        run: bash .github/scripts/prefetch-bazel-deps.sh
+
+      - name: Check build environment
+        run: |
+          xcodebuild -version
+          EXPECTED_XCODE="$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          ACTUAL_XCODE="$(xcodebuild -version | awk 'NR == 1 {print $2}')"
+          if [ "$ACTUAL_XCODE" != "$EXPECTED_XCODE" ]; then
+            echo "Warning: This project expects Xcode $EXPECTED_XCODE, but the machine has Xcode $ACTUAL_XCODE. The build will continue. Update versions.json if it fails."
+          fi
+
+      - name: Install and mount Metal Toolchain
+        run: |
+          set -e
+          DEVELOPER_PATH="$(xcode-select -p)"
+          echo "Using Xcode: $DEVELOPER_PATH"
+
+          if xcrun metal --version >/dev/null 2>&1; then
+            echo "Metal Toolchain is already available."
+          else
+            METAL_DMG="$(sudo find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -path '*/AssetData/Restore/*.dmg' -print 2>/dev/null | head -n 1 || true)"
+            if [ -z "$METAL_DMG" ]; then
+              echo "Downloading Metal Toolchain (about 840 MB)..."
+              if ! env DEVELOPER_DIR="$DEVELOPER_PATH" "$DEVELOPER_PATH/usr/bin/xcodebuild" -downloadComponent MetalToolchain; then
+                echo "Retrying Metal Toolchain download with sudo..."
+                sudo env DEVELOPER_DIR="$DEVELOPER_PATH" "$DEVELOPER_PATH/usr/bin/xcodebuild" -downloadComponent MetalToolchain
+              fi
+              METAL_DMG="$(sudo find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -path '*/AssetData/Restore/*.dmg' -print 2>/dev/null | head -n 1 || true)"
+            fi
+
+            METAL_REAL=/Volumes/MetalToolchainCryptex/Metal.xctoolchain/usr/bin/metal
+            if [ ! -x "$METAL_REAL" ] && [ -n "$METAL_DMG" ]; then
+              echo "Mounting Metal Toolchain DMG: $METAL_DMG"
+              sudo mkdir -p /Volumes/MetalToolchainCryptex
+              sudo hdiutil attach "$METAL_DMG" -mountpoint /Volumes/MetalToolchainCryptex -nobrowse -readonly || true
+            fi
+
+            if [ -x "$METAL_REAL" ] && ! xcrun metal --version >/dev/null 2>&1; then
+              echo "Pointing xcrun metal at the real Metal compiler..."
+              sudo ln -sf "$METAL_REAL" "$DEVELOPER_PATH/Toolchains/XcodeDefault.xctoolchain/usr/bin/metal" || true
+            fi
+          fi
+
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcodebuild -showComponent MetalToolchain || true
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcrun metal --version
+          env DEVELOPER_DIR="$DEVELOPER_PATH" xcrun -f metallib
+
+      - name: Generate fresh verification provisioning profiles
+        run: |
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+              generate-verification-profiles \
+              --configurationPath build-system/appstore-configuration.json \
+              --codesigningInformationPath build-system/fake-codesigning \
+              --destination build/verification-codesigning/profiles \
+              --extendExpiration
+          mkdir -p build/verification-codesigning/certs
+          cp build-system/fake-codesigning/certs/* build/verification-codesigning/certs/
+
+      - name: Import verification signing certificate
+        run: |
+          set -e
+          KEYCHAIN_NAME="talogram-verification.keychain"
+          KEYCHAIN_PASSWORD="talogram"
+          security delete-keychain "$KEYCHAIN_NAME" >/dev/null 2>&1 || true
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          for item in build/verification-codesigning/certs/*; do
+            security import "$item" -k "$KEYCHAIN_NAME" -P "" -T /usr/bin/codesign -T /usr/bin/security || echo "warning: could not import $item"
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME" || echo "warning: could not set key partition list"
+          security list-keychains -d user -s "$KEYCHAIN_NAME" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_NAME"
+          CERTIFICATE="build/verification-codesigning/certs/Public.cer"
+          echo "Trusting the verification certificate in the system trust domain..."
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$CERTIFICATE" || \
+            sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERTIFICATE"
+          IDENTITIES="$(security find-identity -v -p codesigning)"
+          printf '%s\n' "$IDENTITIES"
+          if ! printf '%s' "$IDENTITIES" | grep -q "Apple Distribution"; then
+            echo "The verification signing identity was not imported into the keychain."
+            exit 1
+          fi
+
+      - name: Build IPA for iPASide signing
+        run: |
+          bash .github/scripts/make-with-network-retry.sh \
+            python3 build-system/Make/Make.py \
+              --cacheDir "$HOME/telegram-bazel-cache" \
+              build \
+              --configurationPath build-system/appstore-configuration.json \
+              --codesigningInformationPath build/verification-codesigning \
+              --buildNumber "$((GITHUB_RUN_NUMBER + 100))" \
+              --configuration release_arm64 \
+              --outputBuildArtifactsPath build/artifacts
+
+      - name: Verify IPA package
+        run: |
+          test -s build/artifacts/Telegram.ipa
+          unzip -t build/artifacts/Telegram.ipa
+          TEMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TEMP_DIR"' EXIT
+          unzip -q build/artifacts/Telegram.ipa -d "$TEMP_DIR"
+          APP_PATH="$(find "$TEMP_DIR/Payload" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Telegram-ipa-${{ github.run_number }}
+          path: build/artifacts/Telegram.ipa
+          if-no-files-found: error
+          compression-level: 0
+
+      # Save even when the build failed, so the archives that did download on
+      # this runner are reused by the next attempt instead of being fetched
+      # from GitHub again.
+      - name: Save Bazel repository cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/bazel-repository-cache
+          key: bazel-repositories-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}

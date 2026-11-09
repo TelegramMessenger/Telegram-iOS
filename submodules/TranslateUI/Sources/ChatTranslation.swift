@@ -358,7 +358,8 @@ private func chatTranslationLocationState(context: AccountContext, peerId: Engin
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
         )
         |> mapToSignal { settings, autoTranslateEnabled in
-            if !settings.translateChats && !autoTranslateEnabled {
+            let jokerForcePremiumTranslation = UserDefaults.standard.bool(forKey: "joker_force_premium_translation")
+            if !settings.translateChats && !autoTranslateEnabled && !jokerForcePremiumTranslation {
                 return .single(nil)
             }
             

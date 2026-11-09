@@ -1028,6 +1028,7 @@ public enum ChatControllerPresentationMode: Equatable {
 public enum ChatInputTextCommand: Equatable {
     case command(PeerCommand)
     case shortcut(ShortcutMessageList.Item)
+    case localShortcut(String, String)
 }
 
 public struct ChatInputQueryCommandsResult: Equatable {

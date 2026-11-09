@@ -21,6 +21,7 @@ private enum CommandChatInputContextPanelEntryStableId: Hashable {
     case editShortcuts
     case command(PeerCommand)
     case shortcut(Int32)
+    case localShortcut(String)
 }
 
 private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
@@ -71,6 +72,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                 } else {
                     return .shortcut(0)
                 }
+            case let .localShortcut(id, _):
+                return .localShortcut(id)
             }
         }
     }
@@ -91,6 +94,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                 return CommandChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), command: command, commandSelected: { value, sendImmediately in
                     commandSelected(.command(value), sendImmediately)
                 })
+            case let .localShortcut(id, text):
+                return LocalShortcutChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), shortcutId: id, text: text, commandSelected: commandSelected)
             case let .shortcut(shortcut):
                 let chatListNodeInteraction = ChatListNodeInteraction(
                     context: context,
@@ -390,6 +395,21 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                 if let shortcutId = shortcut.id {
                     interfaceInteraction.sendShortcut(shortcutId)
                 }
+            case let .localShortcut(_, text):
+                interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                    var commandQueryRange: NSRange?
+                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                        if type == [.command] {
+                            commandQueryRange = range
+                            break inner
+                        }
+                    }
+                    
+                    if let range = commandQueryRange {
+                        return (textInputState.replacingFlatRange(range, with: text), inputMode)
+                    }
+                    return (textInputState, inputMode)
+                }
             }
         }, openEditShortcuts: { [weak self] in
             guard let self, let interfaceInteraction = self.interfaceInteraction else {
@@ -475,6 +495,8 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                         itemHeight = MentionChatInputPanelItemNode.itemHeight
                     case .shortcut:
                         itemHeight = 58.0
+                    case .localShortcut:
+                        itemHeight = LocalShortcutChatInputPanelItemNode.itemHeight
                     }
                 }
                 if indexLimit >= 4 && i == indexLimit {

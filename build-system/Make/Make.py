@@ -1226,6 +1226,12 @@ if __name__ == '__main__':
         default='build-system/fake-codesigning/certs',
         help='Path to the directory containing SelfSigned.p12 certificate.'
     )
+    generate_profiles_build_parser.add_argument(
+        '--extendExpiration',
+        action='store_true',
+        default=False,
+        help='Extend generated verification profiles by ten years for non-App-Store IPA builds.'
+    )
 
     remote_upload_testflight_parser = subparsers.add_parser('remote-deploy-testflight', help='Build the app using a remote environment.')
     remote_upload_testflight_parser.add_argument(
@@ -1520,7 +1526,12 @@ if __name__ == '__main__':
                 additional_codesigning_output_path=remote_input_path
             )
 
-            GenerateProfiles.generate_provisioning_profiles(source_path=remote_input_path + '/profiles', destination_path=args.destination, certs_path=args.certsPath)
+            GenerateProfiles.generate_provisioning_profiles(
+                source_path=remote_input_path + '/profiles',
+                destination_path=args.destination,
+                certs_path=args.certsPath,
+                extend_expiration=args.extendExpiration
+            )
         elif args.commandName == 'remote-deploy-testflight':
             env = os.environ
             if 'APPSTORE_CONNECT_USERNAME' not in env:

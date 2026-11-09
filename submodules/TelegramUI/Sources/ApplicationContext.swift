@@ -64,13 +64,11 @@ final class UnauthorizedApplicationContext {
         
         self.isReady.set(self.rootController.ready.get())
         
-        account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
-            if value {
-                return .always
-            } else {
-                return .never
-            }
-        })
+        // Talogram diagnostic build: keep the login screen's network active regardless of
+        // scene-activation races. Without this, shouldKeepConnection can stay false and
+        // auth.sendCode times out after 20 seconds without ever reaching Telegram.
+        account.shouldBeServiceTaskMaster.set(.single(.always))
+        Logger.shared.log("TalogramDiag", "UnauthorizedApplicationContext: shouldBeServiceTaskMaster forced to .always")
         
         DeviceAccess.authorizeAccess(to: .cellularData, presentationData: sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
             if let strongSelf = self {
@@ -116,6 +114,7 @@ final class AuthorizedApplicationContext {
     private let loggedOutDisposable = MetaDisposable()
     private let inAppNotificationSettingsDisposable = MetaDisposable()
     private let notificationMessagesDisposable = MetaDisposable()
+    private let greetingMessagesDisposable = MetaDisposable()
     private let termsOfServiceUpdatesDisposable = MetaDisposable()
     private let termsOfServiceProceedToBotDisposable = MetaDisposable()
     private let watchNavigateToMessageDisposable = MetaDisposable()
@@ -294,6 +293,15 @@ final class AuthorizedApplicationContext {
         }))
 
         let engine = context.engine
+        self.greetingMessagesDisposable.set((self.context.account.stateManager.notificationMessages
+        |> map { messageList in
+            return messageList.flatMap { $0.0 }
+        }).start(next: { [weak self] messages in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = JokerCoreHooks.sendGreetingIfNeeded(account: strongSelf.context.account, messages: messages).startStandalone()
+        }))
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
         |> mapToSignal { messageList in
             return engine.data.get(EngineDataMap(
@@ -852,6 +860,7 @@ final class AuthorizedApplicationContext {
         self.loggedOutDisposable.dispose()
         self.inAppNotificationSettingsDisposable.dispose()
         self.notificationMessagesDisposable.dispose()
+        self.greetingMessagesDisposable.dispose()
         self.termsOfServiceUpdatesDisposable.dispose()
         self.passcodeLockDisposable.dispose()
         self.passcodeStatusDisposable.dispose()

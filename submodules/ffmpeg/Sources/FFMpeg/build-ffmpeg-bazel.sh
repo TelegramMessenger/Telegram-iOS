@@ -184,7 +184,7 @@ then
 		else
 			mkdir -p "$THIN/$RAW_ARCH"
 			if [ "$PLATFORM" = "linux" ]; then
-				TMPDIR=${TMPDIR/%\/} "$SOURCE/configure" \
+				TMPDIR=${TMPDIR/%\/} bash "$SOURCE/configure" \
 				    --target-os=linux \
 				    --arch=$ARCH \
 				    --cc="$CC" \
@@ -198,7 +198,7 @@ then
 				    --pkg-config-flags="--libopus_path $LIBOPUS_PATH --libvpx_path $LIBVPX_PATH --libdav1d_path $LIBDAV1D_PATH" \
 				|| exit 1
 			else
-				TMPDIR=${TMPDIR/%\/} "$SOURCE/configure" \
+				TMPDIR=${TMPDIR/%\/} bash "$SOURCE/configure" \
 				    --target-os=darwin \
 				    --arch=$ARCH \
 				    --cc="$CC" \

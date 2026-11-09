@@ -2592,17 +2592,8 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            let _ = (self.context.sharedContext.makeQuickReplySetupScreenInitialData(context: self.context)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] initialData in
-                guard let self else {
-                    return
-                }
-                
-                let controller = self.context.sharedContext.makeQuickReplySetupScreen(context: self.context, initialData: initialData)
-                controller.navigationPresentation = .modal
-                self.push(controller)
-            })
+            let controller = JokerLocalQuickRepliesController(context: self.context)
+            self.push(controller)
         }, sendBotStart: { [weak self] payload in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 strongSelf.startBot(payload)

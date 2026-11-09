@@ -1,0 +1,32 @@
+// Joker Mod Settings - Talogram (Arabic)
+"JokerSettings_Title" = "إعدادات الجوكر";
+"JokerSettings_ChannelSubscription_Header" = "اشتراك القناة";
+"JokerSettings_ChannelSubscription_Title" = "اشترك في قناة @aljokeruserbot";
+"JokerSettings_ChannelSubscription_Text" = "يجب الاشتراك في قناة @aljokeruserbot لتفعيل مميزات الجوكر.";
+"JokerSettings_SubscribeButton" = "اشترك في القناة";
+"JokerSettings_SubscribeButtonText" = "افتح @aljokeruserbot في تليجرام";
+"JokerSettings_Features_Header" = "مميزات الجوكر";
+"JokerSettings_AutoSaveMedia_Title" = "حفظ الوسائط ذاتية التدمير تلقائياً";
+"JokerSettings_AutoSaveMedia_Text" = "حفظ الصور والفيديوهات والرسائل الصوتية ذاتية التدمير تلقائياً في الرسائل المحفوظة عند فتحها.";
+"JokerSettings_Allow100Accounts_Title" = "السماح بـ 100 حساب";
+"JokerSettings_Allow100Accounts_Text" = "السماح بإضافة حتى 100 حساب في التطبيق.";
+"JokerSettings_GhostMode_Title" = "وضع الشبح";
+"JokerSettings_GhostMode_Text" = "إخفاء علامات القراءة. إضافة أيقونة عين على الرسائل - اضغط عليها لتحديد الرسالة كمقروءة.";
+"JokerSettings_ForcePremiumTranslation_Title" = "تفعيل الترجمة التلقائية للبريميوم";
+"JokerSettings_ForcePremiumTranslation_Text" = "تفعيل ميزة الترجمة التلقائية الخاصة بالبريميوم لجميع المستخدمين.";
+"JokerSettings_KeepDeletedMessages_Title" = "الاحتفاظ بالرسائل المحذوفة";
+"JokerSettings_KeepDeletedMessages_Text" = "الاحتفاظ بالرسائل المحذوفة محلياً مع علامة x. حذف المحادثة بين الطرفين يحذف كل شيء نهائياً.";
+"JokerSettings_RequireSubscription_Title" = "اشتراط الاشتراك في القناة";
+"JokerSettings_RequireSubscription_Text" = "الاشتراك في قناة @aljokeruserbot قبل تفعيل أي ميزة من مميزات الجوكر.";
+"JokerSettings_Credits_Header" = "حقوق المصدر";
+"JokerSettings_Credits_Title" = "المصدر بواسطة @aljokeruserbot";
+"JokerSettings_Credits_Text" = "إصدار معدل من Talogram - المصدر بواسطة @aljokeruserbot";
+"JokerSettings_FreezeLastSeen_Title" = "تجميد آخر ظهور";
+"JokerSettings_FreezeLastSeen_Text" = "إخفاء حالة آخر ظهور الخاصة بك وعدم إرسال تحديثات الحضور إلى الخادم.";
+"JokerSettings_BypassCopyProtection_Title" = "تجاوز حماية النسخ";
+"JokerSettings_BypassCopyProtection_Text" = "تجاوز قيود حماية النسخ وإعادة التوجيه في الدردشات والقنوات المحمية.";
+
+// Joker Alerts (Arabic)
+"JokerAlert_SubscriptionRequired_Title" = "الاشتراك مطلوب";
+"JokerAlert_SubscriptionRequired_Text" = "يجب الاشتراك في قناة @aljokeruserbot لاستخدام مميزات الجوكر.";
+"JokerAlert_SubscribeButton" = "اشترك";
