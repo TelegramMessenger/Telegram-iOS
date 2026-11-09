@@ -18,9 +18,9 @@ public final class JokerLocalQuickRepliesController: ViewController, UITableView
         self.tableView = UITableView(frame: .zero, style: .insetGrouped)
         self.emptyLabel = UILabel()
         self.replies = getJokerLocalQuickReplies()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
 
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.title = jokerLocalize(sample: presentationData.strings.Common_Back, arValue: "ردود سريعة محلية", enValue: "Local Quick Replies")
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(self.addReply))
     }
