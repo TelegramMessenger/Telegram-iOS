@@ -21,6 +21,15 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         switch option {
                             case let .dcOption(dcOptionData):
                                 let (flags, id, ipAddress, port, secret) = (dcOptionData.flags, dcOptionData.id, dcOptionData.ipAddress, dcOptionData.port, dcOptionData.secret)
+                                // Gramsrv: only accept the configured DC. help.getConfig
+                                // on gramsrv returns DC 2 only, but if a config ever
+                                // carried another DC (e.g. an official Telegram DC),
+                                // applying it would redirect this client back to
+                                // Telegram. Drop anything else.
+                                guard Int(id) == GramsrvConfig.dcId else {
+                                    Logger.shared.log("ManagedConfigurationUpdates", "Ignoring non-gramsrv DC option id=\(id) ip=\(ipAddress)")
+                                    continue
+                                }
                                 let preferForMedia = (flags & (1 << 1)) != 0
                                 if addressList[Int(id)] == nil {
                                     addressList[Int(id)] = []

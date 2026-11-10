@@ -78,6 +78,15 @@ public struct RustNetworkEngineFactory: NetworkEngineFactory {
     }
 
     public func makeEngine(context: MTContext, isAppExtension: Bool) -> NetworkEngine? {
+        return makeEngine(context: context, isAppExtension: isAppExtension, serverPublicKeys: nil)
+    }
+
+    /// Gramsrv: `serverPublicKeys` carries the RSA key fetched from
+    /// `/owpengram/server-info` (see GramsrvConfig). It is forwarded to
+    /// `RustNetworkEngine`, which otherwise falls back to the compiled-in
+    /// defaults in `MTDatacenterAuthMessageService.m`. `nil` keeps the
+    /// compiled-in defaults (the live gramsrv key in a gramsrv build).
+    public func makeEngine(context: MTContext, isAppExtension: Bool, serverPublicKeys: [String]?) -> NetworkEngine? {
         if isAppExtension {
             rustEngineImportantLog("[MTProtoRust] declined: app extension")
             return nil
@@ -91,6 +100,6 @@ public struct RustNetworkEngineFactory: NetworkEngineFactory {
             rustEngineImportantLog("[MTProtoRust] declined: engine is unavailable")
             return nil
         }
-        return RustNetworkEngine(runtime: runtime, context: context)
+        return RustNetworkEngine(runtime: runtime, context: context, serverPublicKeys: serverPublicKeys)
     }
 }

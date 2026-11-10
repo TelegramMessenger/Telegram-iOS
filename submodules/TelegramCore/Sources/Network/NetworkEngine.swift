@@ -394,4 +394,16 @@ public extension NetworkEngineFactory {
     var supportsWebProxy: Bool {
         return false
     }
+
+    /// Creates an engine that authenticates with the given server RSA public
+    /// keys (PEM). The default implementation ignores them and calls
+    /// `makeEngine(context:isAppExtension:)`; engines that authenticate
+    /// outside MtProtoKit's `MTDatacenterAuthMessageService` (the Rust engine)
+    /// override this to forward the keys. Gramsrv uses it to hand the key
+    /// fetched from `/owpengram/server-info` to the Rust engine — the default
+    /// engine on macOS — so a server key rotation reaches it without a client
+    /// release. `nil` means "use the compiled-in defaults".
+    func makeEngine(context: MTContext, isAppExtension: Bool, serverPublicKeys: [String]?) -> NetworkEngine? {
+        return makeEngine(context: context, isAppExtension: isAppExtension)
+    }
 }

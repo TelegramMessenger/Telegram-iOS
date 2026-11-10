@@ -260,7 +260,16 @@ typedef enum {
             _stage = MTDatacenterAuthStagePQ;
         }
     } else {
-        _publicKeys = defaultPublicKeys(!mtProto.context.isTestingEnvironment);
+        // Gramsrv: prefer keys registered into the context (fetched from
+        // /owpengram/server-info by GramsrvConfig) over the compiled-in
+        // defaults, so a server key rotation is picked up without a client
+        // release. Falls back to the compiled-in live gramsrv key.
+        NSArray<MTDatacenterAuthPublicKey *> *contextKeys = [self convertPublicKeysFromDictionaries:[mtProto.context publicKeysForDatacenterWithId:mtProto.datacenterId]];
+        if (contextKeys.count != 0) {
+            _publicKeys = contextKeys;
+        } else {
+            _publicKeys = defaultPublicKeys(!mtProto.context.isTestingEnvironment);
+        }
         _stage = MTDatacenterAuthStagePQ;
     }
     

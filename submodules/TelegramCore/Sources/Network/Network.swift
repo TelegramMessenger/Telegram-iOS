@@ -6,10 +6,6 @@ import SwiftSignalKit
 import MtProtoKit
 import NetworkLogging
 
-#if os(iOS)
-    import CloudData
-#endif
-
 import EncryptionProvider
 
 public enum ConnectionStatus: Equatable {
@@ -401,10 +397,6 @@ public struct NetworkInitializationArguments {
         self.networkEngineFactory = networkEngineFactory
     }
 }
-#if os(iOS)
-private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
-#endif
-
 func networkEngineRustDisabled(appConfiguration: AppConfiguration) -> Bool {
     guard let data = appConfiguration.data, let value = data["mtproto_engine_rust_disabled"] else {
         return false
@@ -449,7 +441,7 @@ func networkEngineRustDisabledReason(appConfiguration: AppConfiguration, engineS
     return nil
 }
 
-private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, rustDisabledReason: String?, isAppExtension: Bool) -> NetworkEngine {
+private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, rustDisabledReason: String?, isAppExtension: Bool, serverPublicKeys: [String]? = nil) -> NetworkEngine {
     let preferredEngine = settings?.engine ?? NetworkEngineSettings.defaultSettings.engine
     guard let factory = factory else {
         Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (no factory, preferred \(preferredEngine.rawValue))")
@@ -464,7 +456,7 @@ private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext
         Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit")
         return MtProtoKitEngine(context: context)
     case .rust:
-        if let engine = factory.makeEngine(context: context, isAppExtension: isAppExtension) {
+        if let engine = factory.makeEngine(context: context, isAppExtension: isAppExtension, serverPublicKeys: serverPublicKeys) {
             Logger.shared.log("Network", "Account \(accountId.int64): engine \(engine.kind.rawValue)")
             return engine
         } else {
@@ -545,6 +537,13 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             var apiEnvironment = MTApiEnvironment(deviceModelName: arguments.deviceModelName)
             
             apiEnvironment.apiId = arguments.apiId
+            if apiEnvironment.apiId == 0 {
+                // Gramsrv mode exempts api_id (WebA parity: 0 / '' allowed; the
+                // server does not validate it, there is no app registry). Carry
+                // the configured placeholder instead of 0.
+                Logger.shared.log("Network", "Gramsrv api_id was 0, using placeholder \(GramsrvConfig.apiId)")
+                apiEnvironment.apiId = GramsrvConfig.apiId
+            }
             apiEnvironment.langPack = arguments.languagesCategory
             apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
             apiEnvironment.disableUpdates = supplementary
@@ -609,45 +608,54 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
             }
             
-            // Gramsrv: single DC, raw TCP to the gramsrv seed only. Port 2398,
-            // restrictToTcp so no HTTP transport is ever attempted for this DC.
+            // Gramsrv (WebA parity): resolve DC + RSA from the server before the
+            // first MTProto connection, like WebA's loadLocalGramsrvServerInfo().
+            // The fetched key is registered into the context;
+            // MTDatacenterAuthMessageService prefers context-registered keys over
+            // its hardcoded ones, and the Rust engine receives the same key
+            // through the factory (see resolveNetworkEngine below). On any
+            // failure we fall back to the hardcoded live values — never to
+            // Telegram's official DCs or keys — and log it.
+            let gramsrvDcId: Int
+            let gramsrvRsaPem: String
+            if let serverInfo = GramsrvConfig.fetchServerInfo(), serverInfo.dc_id == datacenterId {
+                gramsrvDcId = serverInfo.dc_id
+                gramsrvRsaPem = serverInfo.rsa_public_key_pem
+                Logger.shared.log("Network", "Gramsrv server-info: dcId=\(gramsrvDcId), RSA key from server")
+            } else {
+                gramsrvDcId = GramsrvConfig.dcId
+                gramsrvRsaPem = GramsrvConfig.fallbackRsaPublicKeyPem
+                Logger.shared.log("Network", "Gramsrv server-info unavailable or dc_id mismatch, using fallback dcId=\(GramsrvConfig.dcId) host=\(GramsrvConfig.fallbackHost):\(GramsrvConfig.fallbackPort)")
+            }
+            let gramsrvRsaDict: NSDictionary = ["key": gramsrvRsaPem]
+            context.updatePublicKeysForDatacenter(withId: gramsrvDcId, publicKeys: [gramsrvRsaDict])
+            
+            // Transport short-circuit (WebA parity: getWebSocketLink returns the
+            // configured gramsrv endpoint and ignores ip/port). macOS has no WS
+            // endpoint to return — it connects raw TCP to the gramsrv seed only:
+            // single DC, port 2398, restrictToTcp so no HTTP transport is ever
+            // attempted for this DC.
             let seedAddressList: [Int: [String]] = [
-                2: ["13.140.210.172"]
+                gramsrvDcId: [GramsrvConfig.fallbackHost]
             ]
             
             for (id, ips) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: 2398, preferForMedia: false, restrictToTcp: true, cdn: false, preferForProxy: false, secret: nil) }))
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: UInt16(GramsrvConfig.fallbackPort), preferForMedia: false, restrictToTcp: true, cdn: false, preferForProxy: false, secret: nil) }))
             }
             
             context.keychain = keychain
-            var wrappedAdditionalSource: MTSignal?
-            #if os(iOS)
-            if #available(iOS 10.0, *), !supplementary, arguments.isICloudEnabled {
-                var cloudDataContextValue: CloudDataContext?
-                if let value = cloudDataContext.with({ $0 }) {
-                    cloudDataContextValue = value
-                } else {
-                    cloudDataContextValue = makeCloudDataContext(encryptionProvider: arguments.encryptionProvider)
-                    let _ = cloudDataContext.swap(cloudDataContextValue)
-                }
-                
-                if let cloudDataContext = cloudDataContextValue {
-                    wrappedAdditionalSource = MTSignal(generator: { subscriber in
-                        let disposable = cloudDataContext.get(phoneNumber: .single(phoneNumber)).start(next: { value in
-                            subscriber?.putNext(value)
-                        }, completed: {
-                            subscriber?.putCompletion()
-                        })
-                        return MTBlockDisposable(block: {
-                            disposable.dispose()
-                        })
-                    })
-                }
-            }
-            #endif
             
             if !supplementary {
-                context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber, mainDatacenterId: datacenterId))
+                // Gramsrv: backup-DC discovery is DISABLED. It fetches Telegram's
+                // official DC list via Google DNS TXT (apv3.stel.com) and would
+                // overwrite the gramsrv seed with official DC addresses
+                // (MTBackupAddressSignals.fetchBackupIps -> fetchConfigFromAddress
+                // -> updateAddressSet). There is no WebA equivalent; this is
+                // macOS/iOS-only. help.getConfig on gramsrv returns DC 2 only, so no
+                // backup source is needed. The iCloud additional source is dropped
+                // with it: it could only ever carry addresses from a previous
+                // install of this same gramsrv-only build.
+                // context.setDiscoverBackupAddressListSignal(...) intentionally omitted.
                 let externalRequestVerificationStream = arguments.externalRequestVerificationStream
                 context.setExternalRequestVerification({ nonce in
                     return MTSignal(generator: { subscriber in
@@ -695,7 +703,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 rustDisabledReason = networkLivenessDisabledReason()
             }
             #endif
-            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
+            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension, serverPublicKeys: [gramsrvRsaPem])
             resolvedEngine.activate()
             let rustEngineDisabled = rustDisabledReason != nil
             // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
@@ -737,7 +745,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 useExperimentalFeatures = false
             }
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, engine: engine, switchingEngine: switchingEngine, engineFactory: arguments.networkEngineFactory, rustEngineDisabled: rustEngineDisabled, rustEngineWaitsForWebProxy: rustEngineWaitsForWebProxy, mainSession: mainSession, mainSessionDelegate: mainSessionDelegate, telemetry: telemetry, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures, baseTcpConnectionInterfaceFactory: baseTcpConnectionInterfaceFactory, isAppExtension: isAppExtension, initialWebProxyActive: initialActiveServer?.isWebProxy == true)
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, engine: engine, switchingEngine: switchingEngine, engineFactory: arguments.networkEngineFactory, serverPublicKeys: [gramsrvRsaPem], rustEngineDisabled: rustEngineDisabled, rustEngineWaitsForWebProxy: rustEngineWaitsForWebProxy, mainSession: mainSession, mainSessionDelegate: mainSessionDelegate, telemetry: telemetry, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures, baseTcpConnectionInterfaceFactory: baseTcpConnectionInterfaceFactory, isAppExtension: isAppExtension, initialWebProxyActive: initialActiveServer?.isWebProxy == true)
             
             if let data = appConfiguration.data, let notifyInterval = data["upload_premium_speedup_notify_period"] as? Double {
                 network.updateNetworkSpeedLimitedEventNotifyInterval(value: notifyInterval)
@@ -901,6 +909,12 @@ public final class Network: NSObject {
     private let engine: NetworkEngine
     private let switchingEngine: SwitchingNetworkEngine?
     private let engineFactory: NetworkEngineFactory?
+    /// Server RSA public keys (PEM) for the Rust engine, resolved from
+    /// `/owpengram/server-info` when the network started (see GramsrvConfig).
+    /// Reused when the engine is live-switched, so a re-created Rust engine
+    /// authenticates with the same key as the first one. Nil means "use the
+    /// compiled-in defaults".
+    private let serverPublicKeys: [String]?
     private let rustEngineDisabled: Atomic<Bool>
     private let rustEngineWaitsForWebProxy: Atomic<Bool>
     let mainSession: NetworkEngineSession
@@ -983,7 +997,7 @@ public final class Network: NSObject {
         return self.engine.kind
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, engine: NetworkEngine, switchingEngine: SwitchingNetworkEngine?, engineFactory: NetworkEngineFactory?, rustEngineDisabled: Bool, rustEngineWaitsForWebProxy: Bool, mainSession: NetworkEngineSession, mainSessionDelegate: NetworkMainSessionDelegate, telemetry: NetworkTelemetry?, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool, baseTcpConnectionInterfaceFactory: ((MTTcpConnectionInterfaceDelegate, DispatchQueue) -> MTTcpConnectionInterface)?, isAppExtension: Bool, initialWebProxyActive: Bool) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, engine: NetworkEngine, switchingEngine: SwitchingNetworkEngine?, engineFactory: NetworkEngineFactory?, serverPublicKeys: [String]? = nil, rustEngineDisabled: Bool, rustEngineWaitsForWebProxy: Bool, mainSession: NetworkEngineSession, mainSessionDelegate: NetworkMainSessionDelegate, telemetry: NetworkTelemetry?, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool, baseTcpConnectionInterfaceFactory: ((MTTcpConnectionInterfaceDelegate, DispatchQueue) -> MTTcpConnectionInterface)?, isAppExtension: Bool, initialWebProxyActive: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
@@ -993,6 +1007,7 @@ public final class Network: NSObject {
         self.engine = engine
         self.switchingEngine = switchingEngine
         self.engineFactory = engineFactory
+        self.serverPublicKeys = serverPublicKeys
         self.rustEngineDisabled = Atomic(value: rustEngineDisabled)
         self.rustEngineWaitsForWebProxy = Atomic(value: rustEngineWaitsForWebProxy)
         self.mainSession = mainSession
@@ -1257,7 +1272,7 @@ public final class Network: NSObject {
             case .mtProtoKit:
                 replacement = MtProtoKitEngine(context: context)
             case .rust:
-                replacement = engineFactory?.makeEngine(context: context, isAppExtension: isAppExtension)
+                replacement = engineFactory?.makeEngine(context: context, isAppExtension: isAppExtension, serverPublicKeys: self.serverPublicKeys)
             }
             if replacement == nil {
                 Logger.shared.log("Network", "Engine switch to \(kind.rawValue) declined: \(reason)")
@@ -1567,12 +1582,3 @@ class Keychain: NSObject, MTKeychain {
         self.remove(group + ":" + aKey)
     }
 }
-#if os(iOS)
-func makeCloudDataContext(encryptionProvider: EncryptionProvider) -> CloudDataContext? {
-    if #available(iOS 10.0, *) {
-        return CloudDataContextImpl(encryptionProvider: encryptionProvider)
-    } else {
-        return nil
-    }
-}
-#endif
