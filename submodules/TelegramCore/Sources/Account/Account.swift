@@ -392,11 +392,9 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                             }
                         }
                         
-                        #if DEBUG
-                        let initialDatacenterId: Int = 1
-                        #else
+                        // Gramsrv: always DC 2 (the gramsrv DC). Upstream uses 1 in
+                        // DEBUG builds, which would point at a non-existent test DC.
                         let initialDatacenterId: Int = 2
-                        #endif
                         
                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: initialDatacenterId, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                         |> map { network -> AccountResult in
