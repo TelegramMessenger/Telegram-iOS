@@ -248,6 +248,13 @@ final class MessageHistoryHoleIndexTable: Table {
         return result
     }
     
+    /// The first hole of each space whose upper bound is strictly above `id`: the range query starts after the
+    /// key of `id` (`valueBox.range` excludes its start key), so a hole ending exactly at `id` is NOT returned,
+    /// and the lower bound is NOT checked, so the hole returned can lie wholly above `id`.
+    /// `MessageHistoryTable.incomingMessageStatsInIndices` uses this answer as it is (a hole above a removed
+    /// unread message invalidates the read state), as does `MessageHistoryIndexTable.incomingMessageCountInIds`
+    /// (no caller today); `Transaction.getHole(containing:)` asks it from `id - 1` and keeps only the holes that
+    /// contain `id`. Pinned by HoleContainingTests.
     func containing(id: MessageId) -> [MessageHistoryHoleSpace: ClosedRange<MessageId.Id>] {
         self.ensureInitialized(peerId: id.peerId)
         

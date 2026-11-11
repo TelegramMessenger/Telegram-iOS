@@ -146,20 +146,6 @@ final class NewsForYouFeedBinding {
         })
     }
 
-    /// The posts the feed holds, for the search.
-    var searchCorpus: NewsSearchCorpus {
-        guard let state = self.state else {
-            return NewsSearchCorpus()
-        }
-        var entries: [EngineFeedEntry] = []
-        for item in state.items {
-            if case let .post(entry) = item {
-                entries.append(entry)
-            }
-        }
-        return NewsSearchCorpus(entries: entries, messages: self.messages)
-    }
-
     /// The feed's posts in order, with their channels, for the "Post hidden" flow.
     var feedbackPosts: [(post: AnyHashable, channel: EnginePeer.Id)] {
         guard let state = self.state else {

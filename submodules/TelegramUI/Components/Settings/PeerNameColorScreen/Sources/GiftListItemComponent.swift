@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -311,8 +310,7 @@ final class GiftListItemComponent: Component {
                 let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "Style"),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        content: LottieComponent.AppBundleContent(name: "Style")
                     )),
                     environment: {},
                     containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
@@ -493,7 +491,9 @@ final class GiftListItemComponent: Component {
                                     }
                                     component.selectionUpdated(gift)
                                 },
-                                animateAlpha: false
+                                animateAlpha: false,
+                                // VoiceOver: the collectible as "Title #number", selected while it is the chosen one.
+                                accessibility: ComponentAccessibility(label: gift.title.contains("#\(gift.number)") ? gift.title : "\(gift.title) #\(gift.number)", traits: gift.id == component.selectedId ? .selected : [])
                             )
                         ),
                         environment: {},

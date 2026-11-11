@@ -398,7 +398,13 @@
     TGMediaAsset *asset = [self _itemAtIndexPath:indexPath];
 
     TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;
-    if (UIAccessibilityIsVoiceOverRunning() && selectionContext != nil) {
+    BOOL voiceOverForLayout = UIAccessibilityIsVoiceOverRunning();
+#ifdef DEBUG
+    if (!voiceOverForLayout && [NSProcessInfo.processInfo.arguments containsObject:@"--force-voiceover-layout"]) {
+        voiceOverForLayout = true;
+    }
+#endif
+    if (voiceOverForLayout && selectionContext != nil) {
         [selectionContext toggleItemSelection:asset success:nil];
         return;
     }

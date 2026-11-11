@@ -856,6 +856,11 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
     }
 }
 
+public protocol SparseItemGridScrollingTarget: AnyObject {
+    var scrollingTargetContentOffset: CGFloat { get }
+    var scrollingTargetMaxContentOffset: CGFloat { get }
+}
+
 public final class SparseItemGridScrollingArea: ASDisplayNode {
     private struct ShouldBegin {
         var shouldDelay: Bool
@@ -1003,11 +1008,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     public private(set) var isDragging: Bool = false
 
     private weak var draggingScrollView: UIScrollView?
+    private weak var draggingTarget: SparseItemGridScrollingTarget?
     private var scrollingInitialOffset: CGFloat?
 
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var beginScrollingTarget: (() -> SparseItemGridScrollingTarget?)?
     public var finishedScrolling: (() -> Void)?
     public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
@@ -1094,6 +1101,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     strongSelf.draggingScrollView = scrollView
                     strongSelf.scrollingInitialOffset = scrollView.contentOffset.y
                     strongSelf.setContentOffset?(scrollView.contentOffset)
+                } else if let target = strongSelf.beginScrollingTarget?() {
+                    strongSelf.draggingTarget = target
+                    strongSelf.scrollingInitialOffset = target.scrollingTargetContentOffset
+                    strongSelf.setContentOffset?(CGPoint(x: 0.0, y: target.scrollingTargetContentOffset))
                 }
 
                 strongSelf.updateActivityTimer(isScrolling: false)
@@ -1104,6 +1115,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     return
                 }
                 strongSelf.draggingScrollView = nil
+                strongSelf.draggingTarget = nil
 
                 if strongSelf.offsetBarTimer != nil {
                     strongSelf.offsetBarTimer?.invalidate()
@@ -1127,7 +1139,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                guard let scrollView = strongSelf.draggingScrollView, let scrollingInitialOffset = strongSelf.scrollingInitialOffset else {
+                let maxContentOffset: CGFloat
+                if let scrollView = strongSelf.draggingScrollView {
+                    maxContentOffset = scrollView.contentSize.height - scrollView.bounds.height
+                } else if let target = strongSelf.draggingTarget {
+                    maxContentOffset = target.scrollingTargetMaxContentOffset
+                } else {
+                    return
+                }
+                guard let scrollingInitialOffset = strongSelf.scrollingInitialOffset else {
                     return
                 }
                 guard let projectionData = strongSelf.projectionData else {
@@ -1147,12 +1167,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 if offset < 0.0 {
                     offset = 0.0
                 }
-                if offset > scrollView.contentSize.height - scrollView.bounds.height {
-                    offset = scrollView.contentSize.height - scrollView.bounds.height
+                if offset > maxContentOffset {
+                    offset = maxContentOffset
                 }
 
                 strongSelf.setContentOffset?(CGPoint(x: 0.0, y: offset))
-                let _ = scrollView
                 let _ = projectionData
             }
         )
@@ -1178,6 +1197,22 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var isScrolling: Bool = false
     
     private var isDateIndicatorVisible = false
+
+    private struct IndicatorInputs: Equatable {
+        var containerSize: CGSize
+        var date: String
+        var tag: Int32
+        var previousDate: String?
+        var previousTag: Int32?
+        var isVisible: Bool
+        var theme: PresentationTheme
+
+        static func ==(lhs: IndicatorInputs, rhs: IndicatorInputs) -> Bool {
+            return lhs.containerSize == rhs.containerSize && lhs.date == rhs.date && lhs.tag == rhs.tag && lhs.previousDate == rhs.previousDate && lhs.previousTag == rhs.previousTag && lhs.isVisible == rhs.isVisible && lhs.theme === rhs.theme
+        }
+    }
+
+    private var lastIndicator: (inputs: IndicatorInputs, size: CGSize)?
     
     private func requestUpdate(animated: Bool) {
         guard let containerSize = self.containerSize else {
@@ -1189,6 +1224,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private func updateIndicator(containerSize: CGSize, previousDate: (String, Int32)? = nil, animated: Bool) -> CGSize {
         guard let theme = self.theme, let date = self.currentDate else {
             return .zero
+        }
+        let indicatorInputs = IndicatorInputs(containerSize: containerSize, date: date.0, tag: date.1, previousDate: previousDate?.0, previousTag: previousDate?.1, isVisible: self.isDateIndicatorVisible, theme: theme)
+        if !animated, let lastIndicator = self.lastIndicator, lastIndicator.inputs == indicatorInputs {
+            return lastIndicator.size
         }
         let indicatorSize = self.dateIndicator.update(
             transition: animated ? .easeInOut(duration: 0.2) : .immediate,
@@ -1204,6 +1243,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             environment: {},
             containerSize: containerSize
         )
+        self.lastIndicator = (indicatorInputs, indicatorSize)
         return indicatorSize
     }
     

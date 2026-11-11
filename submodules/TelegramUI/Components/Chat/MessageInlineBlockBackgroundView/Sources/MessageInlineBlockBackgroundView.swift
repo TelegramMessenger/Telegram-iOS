@@ -593,8 +593,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
                 type: AnimationCacheAnimationType(file: patternFile),
                 keyframeOnly: false,
-                customColor: .white,
-                lottieSettings: pattern.context.lottieRenderingSettings
+                customColor: .white
             ),
             completion: { [weak self] _, _ in
                 guard let self else {
@@ -876,6 +875,35 @@ public final class MessageInlineBlockBackgroundView: UIView {
             }
         }
         
+        if self.clipCornerRadius != nil || self.appliesClipCornerRadius {
+            self.applyClipCornerRadius()
+        }
         self.updateAnimations()
+    }
+    
+    /// A corner radius larger than the one the block is drawn with, which the view then clips to: without bubbles the
+    /// blocks on the page round more than ones in a bubble. Nil leaves the layer as the drawing sets it.
+    public var clipCornerRadius: CGFloat? {
+        didSet {
+            if self.clipCornerRadius != oldValue {
+                self.applyClipCornerRadius()
+            }
+        }
+    }
+    /// Whether the layer's corners are this view's clip rather than the drawing's, so that only a clip that was applied
+    /// is ever undone.
+    private var appliesClipCornerRadius = false
+    
+    private func applyClipCornerRadius() {
+        if let clipCornerRadius = self.clipCornerRadius {
+            self.appliesClipCornerRadius = true
+            self.layer.cornerRadius = clipCornerRadius
+            self.layer.masksToBounds = true
+        } else if self.appliesClipCornerRadius {
+            self.appliesClipCornerRadius = false
+            let hasPattern = self.params?.pattern.flatMap({ $0.fileId != 0 }) ?? false
+            self.layer.cornerRadius = hasPattern ? radius : 0.0
+            self.layer.masksToBounds = hasPattern
+        }
     }
 }

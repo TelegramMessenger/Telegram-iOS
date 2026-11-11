@@ -1,0 +1,88 @@
+stop -
+drive idle
+bridge ready []
+refused-loads 0
+
+== dom
+<html><head><meta name="tw-bot" content="rsvp">
+<style></style>
+</head><body><div class="hd"><div id="cal" class="tn x"><b id="mo"></b><i id="dy"></i></div><div>
+<h1 id="t">Who's in?</h1>
+<div class="m x" id="wr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span id="w"></span></div>
+<div class="m x" id="pr"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6-7-11.5a7 7 0 0 1 14 0C19 15 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg><span id="p"></span></div>
+</div></div>
+<div class="sp"><span><b id="n">0</b><span id="of"> going</span></span><span id="lf"></span></div>
+<div id="br" class="tn x"><i id="fl" style="width: 0%;"></i></div>
+<div id="pe"><div id="av" class="x"></div><div id="nm" class="h">Nobody is in yet</div><div class="h" id="mb"></div></div>
+<div id="sg" class="tn x"><i id="th" style="opacity: 0;"></i><button data-k="in">I'm in</button><button data-k="may">Maybe</button><button data-k="out">Can't</button></div>
+<div id="st" class="h">Answers are closed here</div>
+<div id="fw" class="m x"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6 6 0 0 1 3.5 5.5"></path></svg>Join in the group chat</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 145.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 121.2
+    div 14 14 332 23.4
+      div 0 0 0 0
+        -tag-before 0 0 0 0
+        b 0 0 0 0
+        i 0 0 0 0
+      div 14 14 332 20.4
+        h1 14 14 332 20.4
+        div 0 0 0 0
+          svg 0 0 0 0
+            circle 0 0 0 0
+            path 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          svg 0 0 0 0
+            path 0 0 0 0
+            circle 0 0 0 0
+          span 0 0 0 0
+    div 14 53.4 332 29.7
+      span 14 53.4 58 29.7
+        b 14 53.4 0 0
+        span 14 53.4 0 0
+      span 346 71.4 0 0
+    div 0 0 0 0
+      -tag-before 0 0 0 0
+      i 0 0 0 0
+    div 14 90.1 332 19.55
+      div 0 0 0 0
+      div 14 90.1 332 17.55
+      div 14 109.65 332 0
+    div 0 0 0 0
+      -tag-before 0 0 0 0
+      i 0 0 0 0
+      button 0 0 0 0
+      button 0 0 0 0
+      button 0 0 0 0
+    div 14 117.65 332 17.55
+    div 0 0 0 0
+      svg 0 0 0 0
+        circle 0 0 0 0
+        path 0 0 0 0
+
+== paint
+root 360x145.2 items=12
+  text bounds=(6,8,56,32) pos=(14,16,40,16) color=#000000ff text="Who's" font=f1 glyphs=5 advance=40
+  text bounds=(54,8,40,32) pos=(62,16,24,16) color=#000000ff text="in?" font=f1 glyphs=3 advance=24
+  text bounds=(6,51,24,32) pos=(14,59,8,16) color=#000000ff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(24,51,56,32) pos=(32,59,40,16) color=#707579ff text="going" font=f3 glyphs=5 advance=40
+  text bounds=(6,82,64,32) pos=(14,90,48,16) color=#707579ff text="Nobody" font=f4 glyphs=6 advance=48
+  text bounds=(62,82,32,32) pos=(70,90,16,16) color=#707579ff text="is" font=f4 glyphs=2 advance=16
+  text bounds=(86,82,32,32) pos=(94,90,16,16) color=#707579ff text="in" font=f4 glyphs=2 advance=16
+  text bounds=(110,82,40,32) pos=(118,90,24,16) color=#707579ff text="yet" font=f4 glyphs=3 advance=24
+  text bounds=(80,110,72,32) pos=(88,118,56,16) color=#707579ff text="Answers" font=f4 glyphs=7 advance=56
+  text bounds=(144,110,40,32) pos=(152,118,24,16) color=#707579ff text="are" font=f4 glyphs=3 advance=24
+  text bounds=(176,110,64,32) pos=(184,118,48,16) color=#707579ff text="closed" font=f4 glyphs=6 advance=48
+  text bounds=(232,110,48,32) pos=(240,118,32,16) color=#707579ff text="here" font=f4 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f2 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

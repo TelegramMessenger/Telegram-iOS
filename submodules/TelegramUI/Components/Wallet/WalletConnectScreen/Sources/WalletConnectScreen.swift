@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
+import AvatarComponent
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -29,20 +30,25 @@ public final class WalletConnectAppIconComponent: Component {
     let icon: WalletTonConnectIcon?
     let size: CGFloat
     let cornerRadius: CGFloat?
+    /// A Telegram peer that asks instead of a dApp (a message widget's bot, widget-sandbox v0.5.0): its avatar replaces
+    /// the manifest's icon.
+    let peer: EnginePeer?
 
-    public init(context: AccountContext, applicationName: String, icon: WalletTonConnectIcon?, size: CGFloat = 88.0, cornerRadius: CGFloat? = nil) {
+    public init(context: AccountContext, applicationName: String, icon: WalletTonConnectIcon?, size: CGFloat = 88.0, cornerRadius: CGFloat? = nil, peer: EnginePeer? = nil) {
         self.applicationName = applicationName
         self.context = context
         self.icon = icon
         self.size = size
         self.cornerRadius = cornerRadius
+        self.peer = peer
     }
 
     public static func ==(lhs: WalletConnectAppIconComponent, rhs: WalletConnectAppIconComponent) -> Bool {
-        return lhs.applicationName == rhs.applicationName && lhs.context === rhs.context && lhs.icon == rhs.icon && lhs.size == rhs.size && lhs.cornerRadius == rhs.cornerRadius
+        return lhs.applicationName == rhs.applicationName && lhs.context === rhs.context && lhs.icon == rhs.icon && lhs.size == rhs.size && lhs.cornerRadius == rhs.cornerRadius && lhs.peer == rhs.peer
     }
 
     public final class View: UIView {
+        private let avatar = ComponentView<Empty>()
         private let imageView = UIImageView()
         private let fallbackLabel = UILabel()
         private var currentIcon: WalletTonConnectIcon?
@@ -79,6 +85,27 @@ public final class WalletConnectAppIconComponent: Component {
             self.imageView.frame = CGRect(origin: .zero, size: size)
             self.fallbackLabel.frame = CGRect(origin: .zero, size: size)
             self.fallbackLabel.text = component.applicationName.first.map { String($0).uppercased() }
+
+            if let peer = component.peer {
+                let theme = component.context.sharedContext.currentPresentationData.with { $0 }.theme
+                let _ = self.avatar.update(
+                    transition: .immediate,
+                    component: AnyComponent(AvatarComponent(context: component.context, theme: theme, peer: peer, size: size)),
+                    environment: {},
+                    containerSize: size
+                )
+                if let avatarView = self.avatar.view {
+                    if avatarView.superview == nil {
+                        self.addSubview(avatarView)
+                    }
+                    avatarView.frame = CGRect(origin: .zero, size: size)
+                }
+                self.imageView.isHidden = true
+                self.fallbackLabel.isHidden = true
+                return size
+            }
+            self.avatar.view?.removeFromSuperview()
+            self.imageView.isHidden = false
 
             if self.currentIcon != component.icon || self.accountContext !== component.context {
                 self.currentIcon = component.icon

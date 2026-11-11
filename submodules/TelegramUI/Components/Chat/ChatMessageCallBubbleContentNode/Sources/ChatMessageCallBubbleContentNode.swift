@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -32,11 +31,13 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     private var peopleTextNode: TextNode?
 
     private let iconNode: ASImageNode
+    /// Whether the line under the title is hidden because the call, a card without bubbles, has no duration.
+    private var hidesLabelLine = false
     private let buttonNode: HighlightableButtonNode
     
     private var activeConferenceUpdateTimer: SwiftSignalKit.Timer?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.titleNode = TextNode()
         self.labelNode = TextNode()
         
@@ -48,7 +49,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode = HighlightableButtonNode()
         self.buttonNode.isAccessibilityElement = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
                 
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .topLeft
@@ -248,15 +249,23 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let dateText = stringForMessageTimestampStatus(context: item.context, message: EngineMessage(item.message), dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
                 
+                // Without bubbles an incoming call is a card under the author header, which has the time: the line
+                // under the title keeps only the duration, and a call without one is a single line.
+                let isBubblelessCard = item.bubbleStyle == .bubblelessCard
                 var statusText: String
                 if let callDuration = callDuration, callDuration > 1 {
-                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).string
+                    if isBubblelessCard {
+                        statusText = callDurationString(strings: item.presentationData.strings, value: callDuration)
+                    } else {
+                        statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).string
+                    }
                 } else {
-                    statusText = dateText
+                    statusText = isBubblelessCard ? "" : dateText
                 }
-                if peopleTextString != nil || !peopleAvatars.isEmpty {
+                if (!isBubblelessCard || !statusText.isEmpty) && (peopleTextString != nil || !peopleAvatars.isEmpty) {
                     statusText.append(",")
                 }
+                let hasLabelLine = !isBubblelessCard || !statusText.isEmpty || peopleTextString != nil || !peopleAvatars.isEmpty
                 
                 let attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: messageTheme.fileDurationColor)
 
@@ -291,7 +300,8 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     labelsWidth += peopleTextLayoutAndApply.0.size.width
                 }
 
-                boundingSize = CGSize(width: max(titleFrame.size.width, labelsWidth + 14.0), height: 47.0)
+                // A single line keeps its title where a two-line call has it and gets shorter instead.
+                boundingSize = CGSize(width: max(titleFrame.size.width, labelsWidth + 14.0), height: hasLabelLine ? 47.0 : titleSize.height + 8.0)
                 
                 boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
@@ -353,10 +363,19 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX + 1.0, y: labelFrame.minY + 4.0), size: callIcon.size)
                             }
+                            if !hasLabelLine {
+                                strongSelf.hidesLabelLine = true
+                                strongSelf.iconNode.isHidden = true
+                                strongSelf.labelNode.isHidden = true
+                            } else if strongSelf.hidesLabelLine {
+                                strongSelf.hidesLabelLine = false
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.labelNode.isHidden = false
+                            }
                             
                             if let buttonImage = buttonImage {
                                 strongSelf.buttonNode.setImage(buttonImage, for: [])
-                                strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: boundingWidth - buttonImage.size.width - 8.0, y: 15.0), size: buttonImage.size)
+                                strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: boundingWidth - buttonImage.size.width - 8.0, y: hasLabelLine ? 15.0 : floorToScreenPixels(titleFrame.midY - buttonImage.size.height / 2.0)), size: buttonImage.size)
                             }
                             
                             if let activeConferenceUpdateTimer = strongSelf.activeConferenceUpdateTimer {

@@ -220,7 +220,7 @@ public func stringWithAppliedCustomEmojiEntities(_ string: NSAttributedString, e
     return updatedString
 }
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], strings: PresentationStrings? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, codeBlockTitleColor: UIColor? = nil, codeBlockAccentColor: UIColor? = nil, codeBlockBackgroundColor: UIColor? = nil, codeBlockFillColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: EngineRawMessage?, entityFiles: [EngineMedia.Id: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false, cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight? = nil, paragraphAlignment: NSTextAlignment? = nil) -> NSAttributedString {
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], strings: PresentationStrings? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, codeBlockTitleColor: UIColor? = nil, codeBlockAccentColor: UIColor? = nil, codeBlockBackgroundColor: UIColor? = nil, codeBlockFillColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, blockFonts: ChatMessageTextFonts? = nil, underlineLinks: Bool = true, external: Bool = false, message: EngineRawMessage?, entityFiles: [EngineMedia.Id: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false, cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight? = nil, paragraphAlignment: NSTextAlignment? = nil) -> NSAttributedString {
     let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
     
     var nsString: NSString?
@@ -401,7 +401,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 if let codeBlockTitleColor, let codeBlockAccentColor, let codeBlockBackgroundColor {
                     var title: NSAttributedString?
                     if let language, !language.isEmpty {
-                        title = NSAttributedString(string: language.capitalized, font: boldFont.withSize(round(boldFont.pointSize * 0.8235294117647058)), textColor: codeBlockTitleColor)
+                        let titleFont = blockFonts?.bold ?? boldFont
+                        title = NSAttributedString(string: language.capitalized, font: titleFont.withSize(round(titleFont.pointSize * 0.8235294117647058)), textColor: codeBlockTitleColor)
                     }
                     string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .code(language: language), title: title, color: codeBlockAccentColor, secondaryColor: nil, tertiaryColor: nil, backgroundColor: codeBlockBackgroundColor, fillColor: codeBlockFillColor, isCollapsible: false), range: range)
                 }
@@ -487,18 +488,21 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 fontAttributes.remove(.blockQuote)
                 isQuote = true
             }
+            // A quote keeps the block family when the body is set in another one (New York without bubbles).
+            let quoteFonts = isQuote ? blockFonts : nil
             if fontAttributes == [.bold, .italic] {
-                font = boldItalicFont
+                font = quoteFonts?.boldItalic ?? boldItalicFont
             } else if fontAttributes == [.bold] {
-                font = boldFont
+                font = quoteFonts?.bold ?? boldFont
             } else if fontAttributes == [.italic] {
-                font = italicFont
+                font = quoteFonts?.italic ?? italicFont
             } else if fontAttributes == [.monospace] {
                 font = fixedFont
             } else if fontAttributes == [.smaller] {
-                font = baseFont.withSize(floor(baseFont.pointSize * 0.9))
+                let smallerBaseFont = quoteFonts?.regular ?? baseFont
+                font = smallerBaseFont.withSize(floor(smallerBaseFont.pointSize * 0.9))
             } else {
-                font = baseFont
+                font = quoteFonts?.regular ?? baseFont
             }
             
             if adjustQuoteFontSize, isQuote {
@@ -749,7 +753,10 @@ public func asyncUpdateMessageSyntaxHighlight(engine: TelegramEngine, messageId:
         }
         
         if let entry = EngineCodableEntry(CachedMessageSyntaxHighlight(values: updated)) {
-            return engine.messages.storeLocallyDerivedData(messageId: messageId, data: ["code": entry]).start(completed: {
+            // Merge: replacing the whole dictionary would erase the message's other derived keys ("mps", "widget").
+            return engine.messages.updateLocallyDerivedData(messageId: messageId, update: { current in
+                return derivedDataSetting(current, key: "code", to: entry)
+            }).start(completed: {
                 subscriber.putCompletion()
             })
         } else {

@@ -2,8 +2,8 @@ import Foundation
 import Postbox
 internal import TelegramApi
 
-// The feed API is parked (layer 232): what converts a removed type is behind TELEGRAM_NEWS_FEED_API, the parsed
-// shapes and forYouBatchElements stay compiled.
+// The feed API is parked (layer 233 has none): what converts a removed type is behind TELEGRAM_NEWS_FEED_API, the
+// parsed shapes and forYouBatchElements stay compiled.
 
 #if TELEGRAM_NEWS_FEED_API
 private func apiFeedPeer(_ peerId: PeerId) -> Api.Peer {

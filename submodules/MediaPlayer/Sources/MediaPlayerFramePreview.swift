@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import FFMpegBinding
 import VideoToolbox
+import HLSPlayback
 
 public enum FramePreviewResult {
     case image(UIImage)
@@ -156,11 +157,11 @@ public final class MediaPlayerFramePreview: FramePreview {
 public final class MediaPlayerFramePreviewHLS: FramePreview {
     private final class Impl {
         private struct Part {
-            var timestamp: Int
-            var duration: Int
-            var range: Range<Int>
+            var timestamp: Double
+            var duration: Double
+            var range: Range<Int64>
             
-            init(timestamp: Int, duration: Int, range: Range<Int>) {
+            init(timestamp: Double, duration: Double, range: Range<Int64>) {
                 self.timestamp = timestamp
                 self.duration = duration
                 self.range = range
@@ -192,7 +193,7 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
         private var fetchPlaylistDisposable: Disposable?
         private var playlistDisposable: Disposable?
         
-        private var pendingFrame: (Int, FFMpegLookahead)?
+        private var pendingFrame: (Double, FFMpegLookahead)?
         private let nextRequestedFrame: Atomic<Double?>
         
         let framePipe = ValuePipe<FramePreviewResult>()
@@ -248,58 +249,15 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
                         return .never()
                     }
                     
-                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let text = String(data: data, encoding: .utf8), let playlist = try? HLSMediaPlaylist.parse(text), !playlist.segments.isEmpty else {
                         return .single(nil)
                     }
-                    guard let playlistString = String(data: data, encoding: .utf8) else {
-                        return .single(nil)
+                    // The part the player gets too: the init alone, then the segment.
+                    let initializationPart = Part(timestamp: 0.0, duration: 0.0, range: playlist.initSegment)
+                    let parts = playlist.segments.map { segment in
+                        return Part(timestamp: segment.start, duration: segment.duration, range: segment.byteRange)
                     }
-                    
-                    var durations: [Int] = []
-                    var byteRanges: [Range<Int>] = []
-                    
-                    let extinfRegex = try! NSRegularExpression(pattern: "EXTINF:(\\d+)", options: [])
-                    let byteRangeRegex = try! NSRegularExpression(pattern: "EXT-X-BYTERANGE:(\\d+)@(\\d+)", options: [])
-                    
-                    let extinfResults = extinfRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
-                    for result in extinfResults {
-                        if let durationRange = Range(result.range(at: 1), in: playlistString) {
-                            if let duration = Int(String(playlistString[durationRange])) {
-                                durations.append(duration)
-                            }
-                        }
-                    }
-                    
-                    let byteRangeResults = byteRangeRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
-                    for result in byteRangeResults {
-                        if let lengthRange = Range(result.range(at: 1), in: playlistString), let upperBoundRange = Range(result.range(at: 2), in: playlistString) {
-                            if let length = Int(String(playlistString[lengthRange])), let lowerBound = Int(String(playlistString[upperBoundRange])) {
-                                byteRanges.append(lowerBound ..< (lowerBound + length))
-                            }
-                        }
-                    }
-                    
-                    if durations.count != byteRanges.count {
-                        return .single(nil)
-                    }
-                    
-                    var durationOffset = 0
-                    var initializationPart: Part?
-                    var parts: [Part] = []
-                    for i in 0 ..< durations.count {
-                        let part = Part(timestamp: durationOffset, duration: durations[i], range: byteRanges[i])
-                        if i == 0 {
-                            initializationPart = Part(timestamp: 0, duration: 0, range: 0 ..< byteRanges[i].lowerBound)
-                        }
-                        parts.append(part)
-                        durationOffset += durations[i]
-                    }
-                    
-                    if let initializationPart {
-                        return .single(Playlist(dataFile: dataFile, initializationPart: initializationPart, parts: parts))
-                    } else {
-                        return .single(nil)
-                    }
+                    return .single(Playlist(dataFile: dataFile, initializationPart: initializationPart, parts: parts))
                 }
             }
             
@@ -353,10 +311,10 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
             var allPlaylists: [Playlist] = [playlist]
             allPlaylists.append(contentsOf: self.alternativePlaylists)
             outer: for playlist in allPlaylists {
-                if let dataFileSize = playlist.dataFile.media.size, let part = playlist.parts.first(where: { $0.timestamp <= Int(nextRequestedFrame) && ($0.timestamp + $0.duration) > Int(nextRequestedFrame) }) {
+                if let dataFileSize = playlist.dataFile.media.size, let part = playlist.parts.first(where: { $0.timestamp <= nextRequestedFrame && ($0.timestamp + $0.duration) > nextRequestedFrame }) {
                     let mappedRanges: [Range<Int64>] = [
-                        Int64(playlist.initializationPart.range.lowerBound) ..< Int64(playlist.initializationPart.range.upperBound),
-                        Int64(part.range.lowerBound) ..< Int64(part.range.upperBound)
+                        playlist.initializationPart.range,
+                        part.range
                     ]
                     for mappedRange in mappedRanges {
                         if !self.postbox.mediaBox.internal_resourceDataIsCached(id: playlist.dataFile.media.resource.id, size: dataFileSize, in: mappedRange) {
@@ -403,7 +361,7 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
             }
             
             let initializationPart = playlist.initializationPart
-            guard let part = playlist.parts.first(where: { $0.timestamp <= Int(nextRequestedFrame) && ($0.timestamp + $0.duration) > Int(nextRequestedFrame) }) else {
+            guard let part = playlist.parts.first(where: { $0.timestamp <= nextRequestedFrame && ($0.timestamp + $0.duration) > nextRequestedFrame }) else {
                 return
             }
             guard let dataFileSize = self.mainDataFile.media.size else {
@@ -416,11 +374,9 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
             let userContentType = self.userContentType
             let dataFile = self.mainDataFile
             
-            let partRange: Range<Int64> = Int64(part.range.lowerBound) ..< Int64(part.range.upperBound)
-            
             let mappedRanges: [Range<Int64>] = [
-                Int64(initializationPart.range.lowerBound) ..< Int64(initializationPart.range.upperBound),
-                partRange
+                initializationPart.range,
+                part.range
             ]
             var mappedSize: Int64 = 0
             for range in mappedRanges {

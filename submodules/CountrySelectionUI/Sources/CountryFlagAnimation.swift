@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
-import LottieSettings
 
 public let anonymousNumbersCountryId = "FT"
 private let anonymousNumbersFlagAnimationName = "GramDiamond"
@@ -97,7 +96,7 @@ public final class CountryFlagTextAnimations {
             if i < self.animationNodes.count {
                 animationNode = self.animationNodes[i]
             } else {
-                animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+                animationNode = DefaultAnimatedStickerNodeImpl()
                 animationNode.isUserInteractionEnabled = false
                 let pixelSide = Int(frame.width * UIScreenScale)
                 animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: pixelSide, height: pixelSide, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
@@ -123,6 +122,9 @@ open class CountryButtonNode: ASButtonNode {
 
     public func setCountryTitle(countryId: String, name: String, font: UIFont, color: UIColor) {
         self.setAttributedTitle(countryFlagAndNameAttributedString(countryId: countryId, name: name, font: font, textColor: color), for: [])
+        // The title begins with the flag's placeholder; VoiceOver reads the country's name.
+        self.accessibilityLabel = name
+        self.accessibilityTraits = .button
     }
 
     override open func layout() {

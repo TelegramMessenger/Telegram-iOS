@@ -210,7 +210,6 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             self.textNode.textField.textColor = item.secondaryStyle ? item.presentationData.theme.list.itemSecondaryTextColor : item.presentationData.theme.list.itemPrimaryTextColor
             self.textNode.textField.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
             self.textNode.textField.tintColor = item.presentationData.theme.list.itemAccentColor
-            self.textNode.textField.accessibilityHint = item.placeholder
         } else {
             self.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0)]
             self.textNode.textField.font = Font.regular(17.0)
@@ -464,7 +463,16 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                     
                     if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
-                        strongSelf.textNode.textField.accessibilityHint = attributedPlaceholderText.string
+                    }
+                    // The field is labelled by the title shown beside it ("Password"), or by its placeholder when
+                    // there is no title; a placeholder that differs from the label stays the hint.
+                    let accessibilityTitle = item.title.string.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if accessibilityTitle.isEmpty {
+                        strongSelf.textNode.textField.accessibilityLabel = attributedPlaceholderText.string
+                        strongSelf.textNode.textField.accessibilityHint = nil
+                    } else {
+                        strongSelf.textNode.textField.accessibilityLabel = accessibilityTitle
+                        strongSelf.textNode.textField.accessibilityHint = attributedPlaceholderText.string.isEmpty || attributedPlaceholderText.string == accessibilityTitle ? nil : attributedPlaceholderText.string
                     }
                     
                     strongSelf.textNode.isUserInteractionEnabled = item.enabled
@@ -491,7 +499,9 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         }
         self.clearIconNode.isHidden = isHidden
         self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
+        // The flag was inverted: the shown button was a container nobody could focus, the hidden one an element.
+        self.clearButtonNode.isAccessibilityElement = !isHidden
+        self.clearButtonNode.accessibilityTraits = .button
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {

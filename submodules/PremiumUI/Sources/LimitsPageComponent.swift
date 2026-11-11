@@ -6,7 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import MultilineTextComponent
-import BlurredBackgroundComponent
+import EdgeEffect
 import Markdown
 import TelegramPresentationData
 import ScrollComponent
@@ -97,6 +97,39 @@ private final class LimitComponent: CombinedComponent {
             return false
         }
         return true
+    }
+    
+    /// VoiceOver: one element per limit, read as shown ("Pinned Chats, Pin up to 10 chats…, Free, 5, Premium, 10").
+    private final class RowView: UIView {
+        override var isAccessibilityElement: Bool {
+            get {
+                return true
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                // The title and text first, then the limit bars (whose view spans the row); walking `self` would ask
+                // this getter again.
+                let texts = self.subviews.filter { $0 is ImmediateTextView }.sorted(by: { $0.frame.minY < $1.frame.minY })
+                let parts = texts + self.subviews.filter { !($0 is ImmediateTextView) }
+                let words = parts.flatMap { $0.accessibilityDisplayedContent().texts }
+                return words.isEmpty ? nil : words.joined(separator: ", ")
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return .staticText
+            } set(value) {
+            }
+        }
+    }
+    
+    func makeView() -> UIView {
+        return RowView()
     }
     
     static var body: Body {
@@ -421,112 +454,48 @@ private final class LimitsListComponent: CombinedComponent {
 
 final class LimitsPageComponent: CombinedComponent {
     typealias EnvironmentType = DemoPageEnvironment
-    
+
     let context: AccountContext
     let theme: PresentationTheme
-    let neighbors: PageNeighbors
     let bottomInset: CGFloat
-    let updatedBottomAlpha: (CGFloat) -> Void
-    let updatedDismissOffset: (CGFloat) -> Void
-    let updatedIsDisplaying: (Bool) -> Void
+    let scrollViewUpdated: (UIScrollView) -> Void
 
-    init(context: AccountContext, theme: PresentationTheme, neighbors: PageNeighbors, bottomInset: CGFloat, updatedBottomAlpha: @escaping (CGFloat) -> Void, updatedDismissOffset: @escaping (CGFloat) -> Void, updatedIsDisplaying: @escaping (Bool) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, bottomInset: CGFloat, scrollViewUpdated: @escaping (UIScrollView) -> Void) {
         self.context = context
         self.theme = theme
-        self.neighbors = neighbors
         self.bottomInset = bottomInset
-        self.updatedBottomAlpha = updatedBottomAlpha
-        self.updatedDismissOffset = updatedDismissOffset
-        self.updatedIsDisplaying = updatedIsDisplaying
+        self.scrollViewUpdated = scrollViewUpdated
     }
-    
+
     static func ==(lhs: LimitsPageComponent, rhs: LimitsPageComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.neighbors != rhs.neighbors {
-            return false
-        }
-        if lhs.bottomInset != rhs.bottomInset {
-            return false
-        }
-        return true
+        return lhs.context === rhs.context && lhs.theme === rhs.theme && lhs.bottomInset == rhs.bottomInset
     }
-    
+
     final class State: ComponentState {
-        let updateBottomAlpha: (CGFloat) -> Void
-        let updateDismissOffset: (CGFloat) -> Void
-        let updatedIsDisplaying: (Bool) -> Void
-        
+        let scrollExternalState = ScrollComponent<Empty>.ExternalState()
         var resetScroll: ActionSlot<CGPoint?>?
-        
         var topContentOffset: CGFloat = 0.0
-        var bottomContentOffset: CGFloat = 100.0 {
-            didSet {
-                self.updateAlpha()
-            }
-        }
-        
-        var position: CGFloat? {
-            didSet {
-                self.updateAlpha()
-            }
-        }
-        
         var isDisplaying = false {
             didSet {
-                if oldValue != self.isDisplaying {
-                    self.updatedIsDisplaying(self.isDisplaying)
-                    
-                    if !self.isDisplaying {
-                        self.resetScroll?.invoke(nil)
-                    }
+                if oldValue != self.isDisplaying && !self.isDisplaying {
+                    self.resetScroll?.invoke(nil)
                 }
             }
         }
-        
-        var neighbors = PageNeighbors(leftIsList: false, rightIsList: false)
-        
-        init(updateBottomAlpha: @escaping (CGFloat) -> Void, updateDismissOffset: @escaping (CGFloat) -> Void, updateIsDisplaying: @escaping (Bool) -> Void) {
-            self.updateBottomAlpha = updateBottomAlpha
-            self.updateDismissOffset = updateDismissOffset
-            self.updatedIsDisplaying = updateIsDisplaying
-            
-            super.init()
-        }
-        
-        func updateAlpha() {
-            var dismissToLeft = false
-            if let position = self.position, position > 0.0 {
-                dismissToLeft = true
-            }
-            var dismissPosition = min(1.0, abs(self.position ?? 0.0) / 1.3333)
-            var position = min(1.0, abs(self.position ?? 0.0))
-            if position > 0.001, (dismissToLeft && self.neighbors.leftIsList) || (!dismissToLeft && self.neighbors.rightIsList) {
-                dismissPosition = 0.0
-                position = 0.0
-            }
-            self.updateDismissOffset(dismissPosition)
-            
-            let verticalPosition = 1.0 - min(30.0, self.bottomContentOffset) / 30.0
-            
-            let backgroundAlpha: CGFloat = max(position, verticalPosition)
-            self.updateBottomAlpha(backgroundAlpha)
-        }
+    }
+
+    func makeView() -> UIView {
+        return PremiumScrollPageView()
     }
     
     func makeState() -> State {
-        return State(updateBottomAlpha: self.updatedBottomAlpha, updateDismissOffset: self.updatedDismissOffset, updateIsDisplaying: self.updatedIsDisplaying)
+        return State()
     }
-        
+
     static var body: Body {
         let background = Child(Rectangle.self)
         let scroll = Child(ScrollComponent<Empty>.self)
-        let topPanel = Child(BlurredBackgroundComponent.self)
-        let topSeparator = Child(Rectangle.self)
+        let topPanel = Child(EdgeEffectComponent.self)
         let title = Child(MultilineTextComponent.self)
         
         let resetScroll = ActionSlot<CGPoint?>()
@@ -535,15 +504,13 @@ final class LimitsPageComponent: CombinedComponent {
             let state = context.state
             
             let environment = context.environment[DemoPageEnvironment.self].value
-            state.neighbors = context.component.neighbors
             state.resetScroll = resetScroll
-            state.position = environment.position
             state.isDisplaying = environment.isDisplaying
             
             let theme = context.component.theme
             let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
-            let topInset: CGFloat = 56.0
+            let topInset: CGFloat = 76.0
             
             let scroll = scroll.update(
                 component: ScrollComponent<Empty>(
@@ -555,10 +522,10 @@ final class LimitsPageComponent: CombinedComponent {
                             bottomInset: context.component.bottomInset
                         )
                     ),
+                    externalState: state.scrollExternalState,
                     contentInsets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0),
-                    contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
+                    contentOffsetUpdated: { [weak state] topContentOffset, _ in
                         state?.topContentOffset = topContentOffset
-                        state?.bottomContentOffset = bottomContentOffset
                         Queue.mainQueue().justDispatch {
                             state?.updated(transition: .immediate)
                         }
@@ -570,6 +537,10 @@ final class LimitsPageComponent: CombinedComponent {
                 transition: context.transition
             )
                         
+            if let scrollView = state.scrollExternalState.scrollView {
+                context.component.scrollViewUpdated(scrollView)
+            }
+
             let background = background.update(
                 component: Rectangle(color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor),
                 availableSize: scroll.size,
@@ -584,21 +555,18 @@ final class LimitsPageComponent: CombinedComponent {
             )
             
             let topPanel = topPanel.update(
-                component: BlurredBackgroundComponent(
-                    color: theme.rootController.navigationBar.blurredBackgroundColor
+                component: EdgeEffectComponent(
+                    color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor,
+                    blur: true,
+                    alpha: 1.0,
+                    size: CGSize(width: context.availableSize.width, height: 80.0),
+                    edge: .top,
+                    edgeSize: 80.0
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: topInset),
+                availableSize: CGSize(width: context.availableSize.width, height: 80.0),
                 transition: context.transition
             )
-            
-            let topSeparator = topSeparator.update(
-                component: Rectangle(
-                    color: theme.rootController.navigationBar.separatorColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
-                transition: context.transition
-            )
-            
+
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(string: strings.Premium_DoubledLimits, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
@@ -606,21 +574,19 @@ final class LimitsPageComponent: CombinedComponent {
                     truncationType: .end,
                     maximumNumberOfLines: 1
                 ),
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: max(0.0, context.availableSize.width - 144.0), height: topInset),
                 transition: context.transition
             )
                   
-            let topPanelAlpha: CGFloat = min(30.0, state.topContentOffset) / 30.0
+            let topPanelAlpha: CGFloat = max(0.0, min(30.0, state.topContentOffset)) / 30.0
             context.add(topPanel
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
                 .opacity(topPanelAlpha)
             )
-            context.add(topSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height))
-                .opacity(topPanelAlpha)
-            )
+
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 38.0))
+                .accessibilityTraits(.header)
             )
                         
             return scroll.size

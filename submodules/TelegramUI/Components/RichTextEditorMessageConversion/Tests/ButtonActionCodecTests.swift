@@ -13,6 +13,7 @@ final class ButtonActionCodecTests: XCTestCase {
     func testNamedActionsRoundTrip() {
         assertRoundTrips(.url("https://telegram.org"))
         assertRoundTrips(.copyText(payload: "hello"))
+        assertRoundTrips(.openUserProfile(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(123456789))))
         assertRoundTrips(.disabled)
     }
 
@@ -20,6 +21,8 @@ final class ButtonActionCodecTests: XCTestCase {
         XCTAssertEqual(buttonAction(from: .url("https://telegram.org")), .url("https://telegram.org"))
         XCTAssertEqual(buttonAction(from: .copyText(payload: "hi")), .copyText("hi"))
         XCTAssertEqual(buttonAction(from: .disabled), .disabled)
+        let peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(777))
+        XCTAssertEqual(buttonAction(from: .openUserProfile(peerId: peerId)), .userProfile(peerId: peerId.toInt64()))
     }
 
     /// Every action Core cannot name must survive verbatim through the opaque blob.
@@ -45,6 +48,13 @@ final class ButtonActionCodecTests: XCTestCase {
     func testUnknownBlobDegradesToDisabled() {
         XCTAssertEqual(replyMarkupButtonAction(from: .unsupported(kind: "notARealKind", payload: "%%%")), .disabled)
         XCTAssertEqual(replyMarkupButtonAction(from: .unsupported(kind: "notARealKind", payload: "")), .disabled)
+    }
+
+    /// The profile button names a user; a chat or channel id (a crafted clipboard or .rtdoc) must not
+    /// go out as a `user_id`.
+    func testProfileOfANonUserDegradesToDisabled() {
+        let channelId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(777))
+        XCTAssertEqual(replyMarkupButtonAction(from: .userProfile(peerId: channelId.toInt64())), .disabled)
     }
 
     func testColorAndAlignmentMapBothWays() {

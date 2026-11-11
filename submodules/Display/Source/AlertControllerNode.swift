@@ -32,6 +32,8 @@ final class AlertControllerNode: ASDisplayNode {
         
         self.centerDimView = UIImageView()
         self.centerDimView.backgroundColor = dimColor
+        // The dimming around the alert's rounded corners: decoration.
+        self.centerDimView.accessibilityElementsHidden = true
         
         self.topDimView = UIView()
         self.topDimView.backgroundColor = dimColor
@@ -176,9 +178,11 @@ final class AlertControllerNode: ASDisplayNode {
         let contentAvailableFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: layout.size.width - insets.right, height: layout.size.height - insets.top - insets.bottom))
         let contentSize = self.contentNode.updateLayout(size: contentAvailableFrame.size, transition: transition)
         let containerSize = CGSize(width: contentSize.width, height: contentSize.height)
-        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
-        // the full width's center.
-        let containerFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - containerSize.width) / 2.0), y: contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)), size: containerSize)
+        let containerY = contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)
+        // Beside iPhone Duo's side strip (`centeredAlertSideInsets`): the screen's center in portrait unless the alert
+        // reaches a corner block, the band's in landscape, as the sheets; with equal insets the full width's center.
+        let sideInsets = centeredAlertSideInsets(alertWidth: containerSize.width, alertMinY: containerY, alertMaxY: containerY + containerSize.height, containerSize: layout.size, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners)
+        let containerFrame = CGRect(origin: CGPoint(x: sideInsets.left + floor((layout.size.width - sideInsets.left - sideInsets.right - containerSize.width) / 2.0), y: containerY), size: containerSize)
         
         let outerEdge: CGFloat = 100.0
         
@@ -202,5 +206,16 @@ final class AlertControllerNode: ASDisplayNode {
         if case .ended = recognizer.state {
             self.dismiss?()
         }
+    }
+    
+    /// VoiceOver escape: a tap outside the alert. An alert that does not dismiss on outside taps still consumes the
+    /// escape (returns true without dismissing), so it does not reach the navigation controller and pop the screen under it.
+    var dismissesOnEscape: (() -> Bool)?
+    
+    override func accessibilityPerformEscape() -> Bool {
+        if let dismissesOnEscape = self.dismissesOnEscape, dismissesOnEscape() {
+            self.dismiss?()
+        }
+        return true
     }
 }

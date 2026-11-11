@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; font: 16px system-ui; }
+button { display: block; width: 100%; height: 64px; font-size: 18px; }
+</style></head>
+<body>
+<button id="tg">Open the harness's Telegram link</button>
+<button id="web">Open the harness's web link</button>
+<script>
+document.getElementById('tg').addEventListener('click', () => TelegramWidget.openTelegramLink('https://t.me/harness'));
+document.getElementById('web').addEventListener('click', () => TelegramWidget.openLink('https://example.org/harness'));
+</script>
+</body></html>

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -61,7 +60,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     
     private var countryName: String?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.titleNode = TextNode()
         self.titleBadgeLabel = TextNode()
         self.textClippingNode = ASDisplayNode()
@@ -71,7 +70,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         self.statusNode = ChatMessageDateAndStatusNode()
         self.lineNode = ASDisplayNode()
 
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.textClippingNode.clipsToBounds = true
         self.addSubnode(self.textClippingNode)
@@ -286,7 +285,14 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let maxTextWidth = CGFloat.greatestFiniteMagnitude
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - (horizontalInset - 2.0) * 2.0), height: constrainedSize.height)
+                // Without bubbles the block pads its text 9pt on each side: there are no bubble insets to derive it from.
+                let bubblelessBlockInset: CGFloat? = item.bubbleStyle.isBubbleless ? 9.0 : nil
+                let textConstrainedSize: CGSize
+                if let bubblelessBlockInset {
+                    textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - bubblelessBlockInset * 2.0), height: constrainedSize.height)
+                } else {
+                    textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - (horizontalInset - 2.0) * 2.0), height: constrainedSize.height)
+                }
                 
                 var edited = false
                 if item.attributes.updatingMedia != nil {
@@ -335,7 +341,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
-                            statusType = .BubbleIncoming
+                            statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .BubbleIncoming
                         } else {
                             if message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
@@ -412,7 +418,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 }
                 
                 var titleFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: titleLayout.size)
-                titleFrame = titleFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left * 2.0 - 2.0, dy: layoutConstants.text.bubbleInsets.top - 3.0)
+                titleFrame = titleFrame.offsetBy(dx: bubblelessBlockInset.flatMap({ layoutConstants.text.bubbleInsets.left + $0 }) ?? (layoutConstants.text.bubbleInsets.left * 2.0 - 2.0), dy: layoutConstants.text.bubbleInsets.top - 3.0)
                 var titleFrameWithoutInsets = CGRect(origin: CGPoint(x: titleFrame.origin.x + textInsets.left, y: titleFrame.origin.y + textInsets.top), size: CGSize(width: titleFrame.width - textInsets.left - textInsets.right, height: titleFrame.height - textInsets.top - textInsets.bottom))
                 titleFrameWithoutInsets = titleFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
@@ -466,8 +472,12 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
                 suggestedBoundingWidth = max(suggestedBoundingWidth, additionalTextFrameWithoutInsets.width)
-                let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                suggestedBoundingWidth += (sideInsets - 2.0) * 2.0
+                if let bubblelessBlockInset {
+                    suggestedBoundingWidth += horizontalInset + bubblelessBlockInset * 2.0
+                } else {
+                    let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                    suggestedBoundingWidth += (sideInsets - 2.0) * 2.0
+                }
                 
                 return (suggestedBoundingWidth, { [weak self] boundingWidth in
                     var boundingSize: CGSize
@@ -505,6 +515,8 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 strongSelf.view.insertSubview(backgroundView, at: 0)
                                 strongSelf.backgroundView = backgroundView
                             }
+                            // Without bubbles the block sits on the page, where it is rounder.
+                            backgroundView.clipCornerRadius = bubblelessBlockInset != nil ? chatMessageBubblelessInlineBlockCornerRadius : nil
                             
                             if themeUpdated {
                                 strongSelf.lineNode.backgroundColor = mainColor.withAlphaComponent(0.15)
@@ -648,7 +660,8 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 
                                 var expandIconFrame: CGRect = .zero
                                 if let icon = strongSelf.expandIcon.image {
-                                    expandIconFrame = CGRect(origin: CGPoint(x: boundingWidth - icon.size.width - 19.0, y: backgroundFrame.maxY - icon.size.height - 6.0), size: icon.size)
+                                    // Without bubbles the chevron keeps 8pt from the block's edge.
+                                    expandIconFrame = CGRect(origin: CGPoint(x: bubblelessBlockInset != nil ? (backgroundFrame.maxX - icon.size.width - 8.0) : (boundingWidth - icon.size.width - 19.0), y: backgroundFrame.maxY - icon.size.height - 6.0), size: icon.size)
                                     if wasHidden || isFirstTime {
                                         strongSelf.expandIcon.position = expandIconFrame.center
                                     } else {

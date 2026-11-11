@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -312,6 +311,8 @@ final class BusinessLocationSetupScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        // VoiceOver: the bar reads this title where its own is (NavigationBarNode), as the heading.
+                        navigationTitleView.accessibilityTraits = [.staticText, .header]
                         navigationBar.view.addSubview(navigationTitleView)
                     }
                 }
@@ -334,8 +335,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "MapEmoji"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)

@@ -6,10 +6,51 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
-import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
 import AppBundle
+import ComponentFlow
+import SliderComponent
+
+private func fontSizeSliderValue(_ fontSize: PresentationFontSize) -> Int {
+    switch fontSize {
+    case .extraSmall:
+        return 0
+    case .small:
+        return 1
+    case .medium:
+        return 2
+    case .regular:
+        return 3
+    case .large:
+        return 4
+    case .extraLarge:
+        return 5
+    case .extraLargeX2:
+        return 6
+    }
+}
+
+private func fontSizeForSliderValue(_ value: Int) -> PresentationFontSize {
+    switch value {
+    case 0:
+        return .extraSmall
+    case 1:
+        return .small
+    case 2:
+        return .medium
+    case 3:
+        return .regular
+    case 4:
+        return .large
+    case 5:
+        return .extraLarge
+    case 6:
+        return .extraLargeX2
+    default:
+        return .regular
+    }
+}
 
 class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
@@ -23,7 +64,11 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    /// VoiceOver name of the slider ("Text Size").
+    let accessibilityLabel: String?
+    
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil, accessibilityLabel: String? = nil) {
+        self.accessibilityLabel = accessibilityLabel
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
@@ -76,7 +121,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var sliderView: TGPhotoEditorSliderView?
+    private let slider = ComponentView<Empty>()
     private let leftIconNode: ASImageNode
     private let rightIconNode: ASImageNode
     private let disabledOverlayNode: ASDisplayNode
@@ -118,56 +163,6 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.disabledOverlayNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        let sliderView = TGPhotoEditorSliderView()
-        sliderView.enablePanHandling = true
-        sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 4.0
-        sliderView.dotSize = 8.0
-        sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 6.0
-        sliderView.startValue = 0.0
-        sliderView.positionsCount = 7
-        sliderView.useLinesForPositions = true
-        sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        if let item = self.item, let params = self.layoutParams {
-            sliderView.isUserInteractionEnabled = item.enabled
-            
-            let value: CGFloat
-            switch item.fontSize {
-                case .extraSmall:
-                    value = 0.0
-                case .small:
-                    value = 1.0
-                case .medium:
-                    value = 2.0
-                case .regular:
-                    value = 3.0
-                case .large:
-                    value = 4.0
-                case .extraLarge:
-                    value = 5.0
-                case .extraLargeX2:
-                    value = 6.0
-            }
-            sliderView.value = value
-            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
-            sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
-            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
-            
-            let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
-            
-            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
-        }
-        self.view.insertSubview(sliderView, belowSubview: self.disabledOverlayNode.view)
-        sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
-        self.sliderView = sliderView
-    }
-    
     func asyncLayout() -> (_ item: ThemeSettingsFontSizeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
@@ -175,10 +170,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             var updatedLeftIcon: UIImage?
             var updatedRightIcon: UIImage?
             
-            var themeUpdated = false
             if currentItem?.theme !== item.theme {
-                themeUpdated = true
-                
                 updatedLeftIcon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/SettingsFontMinIcon"), color: item.theme.list.itemPrimaryTextColor)
                 updatedRightIcon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/SettingsFontMaxIcon"), color: item.theme.list.itemPrimaryTextColor)
             }
@@ -200,7 +192,6 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    let firstTime = strongSelf.item == nil || item.force
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
@@ -272,39 +263,40 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.leftIconNode.isHidden = !item.displayIcons
                     strongSelf.rightIconNode.isHidden = !item.displayIcons
                     
-                    if let sliderView = strongSelf.sliderView {
+                    let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
+                    let sliderSize = strongSelf.slider.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            SliderComponent(
+                                content: .discrete(.init(
+                                    valueCount: 7,
+                                    value: fontSizeSliderValue(item.fontSize),
+                                    markPositions: true,
+                                    valueUpdated: { [weak self] value in
+                                        guard let self, let item = self.item else {
+                                            return
+                                        }
+                                        let fontSize = fontSizeForSliderValue(value)
+                                        if fontSize != item.fontSize {
+                                            item.updated(fontSize)
+                                        }
+                                    }
+                                )),
+                                useNative: true,
+                                trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
+                                trackForegroundColor: item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor,
+                                accessibilityLabel: item.accessibilityLabel
+                            )
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0)
+                    )
+                    if let sliderView = strongSelf.slider.view {
+                        if sliderView.superview == nil {
+                            strongSelf.view.insertSubview(sliderView, belowSubview: strongSelf.disabledOverlayNode.view)
+                        }
+                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 8.0), size: sliderSize)
                         sliderView.isUserInteractionEnabled = item.enabled
-                        sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
-                        
-                        if themeUpdated {
-                            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
-                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
-                        }
-                        
-                        let value: CGFloat
-                        switch item.fontSize {
-                        case .extraSmall:
-                            value = 0.0
-                        case .small:
-                            value = 1.0
-                        case .medium:
-                            value = 2.0
-                        case .regular:
-                            value = 3.0
-                        case .large:
-                            value = 4.0
-                        case .extraLarge:
-                            value = 5.0
-                        case .extraLargeX2:
-                            value = 6.0
-                        }
-                        if firstTime {
-                            sliderView.value = value
-                        }
-                        
-                        let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
-                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
                     }
                 }
             })
@@ -318,31 +310,4 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
-    
-    @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
-            return
-        }
-        let fontSize: PresentationFontSize
-        switch Int(sliderView.value) {
-            case 0:
-                fontSize = .extraSmall
-            case 1:
-                fontSize = .small
-            case 2:
-                fontSize = .medium
-            case 3:
-                fontSize = .regular
-            case 4:
-                fontSize = .large
-            case 5:
-                fontSize = .extraLarge
-            case 6:
-                fontSize = .extraLargeX2
-            default:
-                fontSize = .regular
-        }
-        self.item?.updated(fontSize)
-    }
 }
-

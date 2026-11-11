@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -15,6 +14,7 @@ import EmojiStatusComponent
 import TelegramStringFormatting
 import TelegramNotices
 import EntityKeyboard
+import ChatEntityKeyboardInputNode
 import PagerComponent
 import Markdown
 import GradientBackground
@@ -593,25 +593,17 @@ final class AvatarEditorScreenComponent: Component {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller?() else {
                         return
                     }
                     let context = controller.context
                     let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
                     if groupId == AnyHashable("recent") {
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Emoji_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
                             let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                        })
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("popular") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
@@ -727,25 +719,17 @@ final class AvatarEditorScreenComponent: Component {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller?() else {
                         return
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Stickers_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
                             let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                        })
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("featuredTop") {
                         let _ = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks))
                         |> take(1)
@@ -1360,8 +1344,7 @@ final class AvatarEditorScreenComponent: Component {
                     color: theme.list.itemCheckColors.foregroundColor,
                     startingPosition: .begin,
                     size: CGSize(width: 30.0, height: 30.0),
-                    loop: true,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: true
                 ))))
             }
             
@@ -1545,6 +1528,7 @@ final class AvatarEditorScreenComponent: Component {
                         cropRotation: 0.0,
                         cropMirroring: false,
                         cropOrientation: nil,
+                        cropPerspective: .zero,
                         gradientColors: nil,
                         videoTrimRange: nil,
                         videoBounce: false,

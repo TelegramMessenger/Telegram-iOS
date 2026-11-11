@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -122,7 +121,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.strings = strings
         self.theme = theme
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
@@ -131,7 +130,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleNode.displaysAsynchronously = false
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
-        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
         self.titleActivateAreaNode.accessibilityIdentifier = "Auth.CodeEntry.Title"
 
         self.titleIconNode = ASImageNode()
@@ -181,6 +180,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.textField.returnKeyType = .done
         self.codeInputView.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeInputView.textField.accessibilityIdentifier = "Auth.CodeEntry.CodeField"
+        self.codeInputView.textField.accessibilityLabel = self.strings.Login_Code
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             self.codeInputView.textField.textContentType = .oneTimeCode
         }
@@ -514,20 +514,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             layout = layout.withUpdatedInputHeight(previousInputHeight)
         }
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
-        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let maximumWidth: CGFloat = min(430.0, bandWidth)
         let inset: CGFloat = 24.0
         
-        // The bottom buttons (and the divider above Sign in with Apple) span iPhone Duo's side strip; they keep clear
-        // only of a corner block at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        // iPhone Duo: the bottom buttons (and the divider above Sign in with Apple) keep to the content's axis
+        // (authorizationBottomBand): unfolded they span the side strip, clear only of a corner block at the bottom;
+        // folded they keep to the content band.
+        let (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
         let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         var insets = layout.insets(options: [])
@@ -649,11 +647,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if layout.size.width > 320.0 {
             items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             self.animationNode.updateLayout(size: animationSize)
-            self.animationNode.isHidden = false
-            self.animationNode.visibility = true
         } else {
             insets.top = navigationBarHeight
-            self.animationNode.isHidden = true
         }
         
         var additionalBottomInset: CGFloat = 20.0
@@ -815,6 +810,17 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         }
         
+        if items.first?.node === self.animationNode, !authorizationLayoutItemsFit(height: layout.size.height - insets.top - insets.bottom - additionalBottomInset, items: items) {
+            items.removeFirst()
+            insets.top = navigationBarHeight
+        }
+        if items.first?.node === self.animationNode {
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+        } else {
+            self.animationNode.isHidden = true
+        }
+        
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: bandMinX, y: insets.top), size: CGSize(width: bandWidth, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
         if let codeType = self.codeType {
@@ -834,6 +840,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 }
                 
                 self.hintTextNode.attributedText = NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
+                self.hintButtonNode.accessibilityLabel = actionTitle
+                self.hintButtonNode.accessibilityTraits = .button
                 
                 let originY: CGFloat
                 if !self.codeInputView.isHidden {
@@ -857,6 +865,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 self.hintButtonNode.isUserInteractionEnabled = false
                 
                 self.hintTextNode.attributedText = NSAttributedString(string: self.strings.Login_EnterPhraseHint, font: Font.regular(13.0), textColor: self.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                self.hintButtonNode.accessibilityLabel = self.strings.Login_EnterPhraseHint
+                self.hintButtonNode.accessibilityTraits = .staticText
                 
                 let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: bandWidth - 48.0, height: .greatestFiniteMagnitude))
                 transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - hintTextSize.width) / 2.0), y: self.textField.frame.maxY + yOffset), size: hintTextSize))
@@ -956,12 +966,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
+        // The error appears under the field (the shake is not seen): VoiceOver says it.
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .announcement, argument: text)
+        }
         
         if let (layout, _) = self.layoutArguments {
-            // iPhone Duo: centered under the field in the band between the side insets, as containerLayoutUpdated lays it out.
-            let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-            let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-            let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            // iPhone Duo: centered under the field in the content band, as containerLayoutUpdated lays it out.
+            let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
             
             let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: bandWidth - 48.0, height: .greatestFiniteMagnitude))
             let yOffset: CGFloat = layout.size.width > 320.0 ? errorOriginOffset + 13.0 : errorOriginOffset

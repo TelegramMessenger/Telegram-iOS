@@ -486,7 +486,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
                 strongSelf.addSubnode(node)
             }
             if file.fileId != node.file?.fileId {
-                node.setup(account: item.context.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads, lottieSettings: item.context.lottieRenderingSettings)
+                node.setup(account: item.context.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
             }
             if item.theme !== node.theme {
                 node.update(theme: item.theme, listAppearance: item.listAppearance)

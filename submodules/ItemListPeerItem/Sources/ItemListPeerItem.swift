@@ -721,6 +721,18 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
 private let badgeFont = Font.regular(15.0)
 
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
+    /// VoiceOver: a host that handles the row's tap itself (no `action` on the item) marks the row as a button and
+    /// gives the activation that tap runs.
+    private var accessibilityActionNames: [String]?
+    
+    public var accessibilityActivateAction: (() -> Void)? {
+        didSet {
+            if let item = self.layoutParams?.0 {
+                self.updateAccessibilityTraits(item: item)
+            }
+        }
+    }
+    
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -1328,15 +1340,37 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.avatarNode.font = avatarPlaceholderFont(size: avatarFontSize)
                     
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    var combinedValues: [String] = []
                     if let statusString = statusAttributedString?.string, !statusString.isEmpty {
-                        combinedValueString.append(statusString)
+                        combinedValues.append(statusString)
                     }
                     if let labelString = labelAttributedString?.string, !labelString.isEmpty {
-                        combinedValueString.append(", \(labelString)")
+                        combinedValues.append(labelString)
                     }
                     
-                    strongSelf.accessibilityValue = combinedValueString
+                    strongSelf.accessibilityValue = combinedValues.joined(separator: ", ")
+                    strongSelf.updateAccessibilityTraits(item: item)
+                    
+                    // The swipe options and the long-press menu as custom actions, through the gestures' own paths. Built
+                    // only when their names change (layout runs often; the handlers read the current item when invoked).
+                    var accessibilityActionNames: [String] = peerRevealOptions.map { $0.title }
+                    if item.contextAction != nil {
+                        accessibilityActionNames.append(item.presentationData.strings.Common_More)
+                    }
+                    if strongSelf.accessibilityActionNames != accessibilityActionNames {
+                        strongSelf.accessibilityActionNames = accessibilityActionNames
+                        var accessibilityCustomActions: [UIAccessibilityCustomAction] = strongSelf.revealOptionsAccessibilityCustomActions(peerRevealOptions)
+                        if item.contextAction != nil {
+                            accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                guard let strongSelf, let contextAction = strongSelf.layoutParams?.0.contextAction else {
+                                    return false
+                                }
+                                contextAction(strongSelf.containerNode, nil)
+                                return true
+                            }))
+                        }
+                        strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
+                    }
                     
                     if let updateArrowImage = updateArrowImage {
                         strongSelf.labelArrowNode?.image = updateArrowImage
@@ -2023,6 +2057,29 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
 
         self.updateIsHighlighted(transition: transition)
+    }
+    
+    private func updateAccessibilityTraits(item: ItemListPeerItem) {
+        var traits: UIAccessibilityTraits = []
+        if self.accessibilityActivateAction != nil || (item.action != nil && item.selectable) {
+            traits.insert(.button)
+        }
+        if traits.isEmpty {
+            // A row with no action (the owner in an admins list) is text, not a traitless element.
+            traits.insert(.staticText)
+        }
+        if !item.enabled {
+            traits.insert(.notEnabled)
+        }
+        self.accessibilityTraits = traits
+    }
+    
+    override public func accessibilityActivate() -> Bool {
+        if let accessibilityActivateAction = self.accessibilityActivateAction {
+            accessibilityActivateAction()
+            return true
+        }
+        return super.accessibilityActivate()
     }
     
     override public func revealOptionsInteractivelyOpened() {

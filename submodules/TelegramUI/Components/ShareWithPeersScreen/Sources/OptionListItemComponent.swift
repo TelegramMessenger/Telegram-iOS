@@ -75,6 +75,15 @@ final class OptionListItemComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        /// VoiceOver: the row is one switch element, its title and on/off; activation flips the switch.
+        override func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.selectionChanged(!component.selected)
+            return true
+        }
+        
         @objc private func pressed() {
 //            guard let component = self.component else {
 //                return
@@ -142,6 +151,12 @@ final class OptionListItemComponent: Component {
             
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: verticalInset), size: CGSize(width: availableSize.width, height: height - verticalInset * 2.0))
             transition.setFrame(view: self.containerButton, frame: containerFrame)
+            
+            let toggle = ComponentAccessibility.toggleDefaults(isOn: component.selected)
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = component.title
+            self.accessibilityValue = toggle.value
+            self.accessibilityTraits = toggle.traits
             
             return CGSize(width: availableSize.width, height: height)
         }

@@ -20,6 +20,9 @@ public protocol NavigationBarTransitionSource: AnyObject {
     /// `interrupted` when it is touched or its content or layout changes, so that the transition's glass hands over at
     /// once. Returns whether the bar holds its glass; one that cannot is handed back at once.
     func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool
+    /// `holdGlass(_:interrupted:)`, and the bar calls `titlePillMoved` when a layout only moves its title pill (the chat
+    /// header), so that the glass follows the pill there instead of settling where the bar no longer draws it.
+    func holdGlass(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)?) -> Bool
     /// The bar's back button frame in `view`'s coordinates, nil without one: a push's back-button hole.
     func backButtonFrame(in view: UIView) -> CGRect?
 }
@@ -27,6 +30,10 @@ public protocol NavigationBarTransitionSource: AnyObject {
 public extension NavigationBarTransitionSource {
     func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {
         return false
+    }
+
+    func holdGlass(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)?) -> Bool {
+        return self.holdGlass(held, interrupted: interrupted)
     }
 
     func backButtonFrame(in view: UIView) -> CGRect? {

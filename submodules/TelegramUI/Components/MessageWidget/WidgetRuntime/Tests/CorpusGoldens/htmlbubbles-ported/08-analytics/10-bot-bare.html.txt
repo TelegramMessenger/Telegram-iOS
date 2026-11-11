@@ -1,0 +1,881 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card lb" id="root">
+  <div class="hd"><div class="row"><b class="grow" style="font-size: 16px">🏆 Sales leaderboard</b><span class="badge purple" id="pbadge">October</span></div>
+    <div class="row between" style="margin-top: 8px"><span class="seg" id="metrics"><span data-act="metric" data-value="0" class="on">Points</span><span data-act="metric" data-value="1">Deals</span><span data-act="metric" data-value="2">Revenue</span></span><span class="seg" id="periods"><span data-act="period" data-value="0">Week</span><span data-act="period" data-value="1" class="on">Month</span><span data-act="period" data-value="2">Quarter</span></span></div></div>
+  <div class="th"><span style="width: 30px; text-align: center">#</span><span class="grow">Rep · click for stats</span><span style="width: 100px">vs leader</span><span style="width: 64px; text-align: right" id="mlabel">Points</span><span style="width: 38px">&nbsp;</span></div>
+  <div class="list" id="list" style="height: 380.0px;"><div class="rw" data-act="open" data-value="0" style="top: 0.0px; height: 38.0px;"><div class="mn"><span class="rk">🥇</span><span class="nm"><span class="av" style="background-color: #ff2d55; margin-right: 8px">AC</span>Ava Chen</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 100.0%;"></div></div><span class="pts">9,800</span><span class="tr muted">–</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>41</b></div><div><div class="tiny muted">Avg deal</div><b>€3.9k</b></div><div><div class="tiny muted">Win rate</div><b>28%</b></div><div><div class="tiny muted">Quota</div><b>109%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff2d55" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,12.0 10.6,7.9 19.1,7.6 27.7,10.4 36.3,9.3 44.9,13.5 53.4,5.9 62.0,15.2"></polyline></svg></div></div><div class="rw" data-act="open" data-value="1" style="top: 38.0px; height: 38.0px;"><div class="mn"><span class="rk">🥈</span><span class="nm"><span class="av" style="background-color: #ff9500; margin-right: 8px">LH</span>Liam Haddad</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 99.0%;"></div></div><span class="pts">9,699</span><span class="tr t-green">▲7</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>34</b></div><div><div class="tiny muted">Avg deal</div><b>€4.1k</b></div><div><div class="tiny muted">Win rate</div><b>24%</b></div><div><div class="tiny muted">Quota</div><b>108%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff9500" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,15.4 10.6,5.1 19.1,12.9 27.7,11.4 36.3,5.1 44.9,10.6 53.4,8.1 62.0,14.8"></polyline></svg></div></div><div class="rw" data-act="open" data-value="2" style="top: 76.0px; height: 38.0px;"><div class="mn"><span class="rk">🥉</span><span class="nm"><span class="av" style="background-color: #34c759; margin-right: 8px">MN</span>Mia Nielsen</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 96.7%;"></div></div><span class="pts">9,477</span><span class="tr t-red">▼1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>46</b></div><div><div class="tiny muted">Avg deal</div><b>€4.2k</b></div><div><div class="tiny muted">Win rate</div><b>39%</b></div><div><div class="tiny muted">Quota</div><b>105%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#34c759" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,15.8 10.6,11.7 19.1,15.1 27.7,9.4 36.3,13.8 44.9,9.1 53.4,8.4 62.0,16.1"></polyline></svg></div></div><div class="rw" data-act="open" data-value="3" style="top: 114.0px; height: 38.0px;"><div class="mn"><span class="rk">4</span><span class="nm"><span class="av" style="background-color: #007aff; margin-right: 8px">NO</span>Noah Okafor</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 95.4%;"></div></div><span class="pts">9,352</span><span class="tr t-green">▲3</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>32</b></div><div><div class="tiny muted">Avg deal</div><b>€4.6k</b></div><div><div class="tiny muted">Win rate</div><b>37%</b></div><div><div class="tiny muted">Quota</div><b>104%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#007aff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,10.3 10.6,8.1 19.1,6.8 27.7,8.6 36.3,10.1 44.9,7.4 53.4,10.2 62.0,14.5"></polyline></svg></div></div><div class="rw" data-act="open" data-value="4" style="top: 152.0px; height: 38.0px;"><div class="mn"><span class="rk">5</span><span class="nm"><span class="av" style="background-color: #5856d6; margin-right: 8px">ZL</span>Zoe Larsen</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 94.6%;"></div></div><span class="pts">9,274</span><span class="tr t-red">▼2</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>38</b></div><div><div class="tiny muted">Avg deal</div><b>€4.0k</b></div><div><div class="tiny muted">Win rate</div><b>40%</b></div><div><div class="tiny muted">Quota</div><b>103%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#5856d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,14.6 10.6,9.2 19.1,15.2 27.7,11.3 36.3,9.9 44.9,8.9 53.4,13.2 62.0,7.6"></polyline></svg></div></div><div class="rw" data-act="open" data-value="5" style="top: 190.0px; height: 38.0px;"><div class="mn"><span class="rk">6</span><span class="nm"><span class="av" style="background-color: #af52de; margin-right: 8px">EI</span>Ethan Ivanova</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 93.8%;"></div></div><span class="pts">9,195</span><span class="tr t-green">▲6</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>36</b></div><div><div class="tiny muted">Avg deal</div><b>€4.2k</b></div><div><div class="tiny muted">Win rate</div><b>33%</b></div><div><div class="tiny muted">Quota</div><b>102%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#af52de" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,15.1 10.6,9.6 19.1,9.3 27.7,10.7 36.3,15.6 44.9,4.1 53.4,6.8 62.0,14.0"></polyline></svg></div></div><div class="rw" data-act="open" data-value="6" style="top: 228.0px; height: 38.0px;"><div class="mn"><span class="rk">7</span><span class="nm"><span class="av" style="background-color: #30b0c7; margin-right: 8px">IN</span>Ivy Novak</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 92.4%;"></div></div><span class="pts">9,051</span><span class="tr t-red">▼2</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>33</b></div><div><div class="tiny muted">Avg deal</div><b>€5.2k</b></div><div><div class="tiny muted">Win rate</div><b>31%</b></div><div><div class="tiny muted">Quota</div><b>101%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#30b0c7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,5.9 10.6,8.7 19.1,14.6 27.7,11.2 36.3,12.2 44.9,13.5 53.4,4.2 62.0,15.0"></polyline></svg></div></div><div class="rw" data-act="open" data-value="7" style="top: 266.0px; height: 38.0px;"><div class="mn"><span class="rk">8</span><span class="nm"><span class="av" style="background-color: #a2845e; margin-right: 8px">LT</span>Lucas Tanaka</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 91.8%;"></div></div><span class="pts">8,996</span><span class="tr t-red">▼4</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>43</b></div><div><div class="tiny muted">Avg deal</div><b>€3.6k</b></div><div><div class="tiny muted">Win rate</div><b>40%</b></div><div><div class="tiny muted">Quota</div><b>100%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#a2845e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,9.3 10.6,15.0 19.1,10.2 27.7,14.0 36.3,15.5 44.9,9.2 53.4,10.1 62.0,9.1"></polyline></svg></div></div><div class="rw" data-act="open" data-value="8" style="top: 304.1px; height: 38.0px;"><div class="mn"><span class="rk">9</span><span class="nm"><span class="av" style="background-color: #ff3b30; margin-right: 8px">NC</span>Nora Costa</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 89.4%;"></div></div><span class="pts">8,757</span><span class="tr t-red">▼1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>31</b></div><div><div class="tiny muted">Avg deal</div><b>€4.5k</b></div><div><div class="tiny muted">Win rate</div><b>32%</b></div><div><div class="tiny muted">Quota</div><b>97%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff3b30" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,7.5 10.6,12.7 19.1,4.2 27.7,8.0 36.3,8.4 44.9,8.8 53.4,6.9 62.0,9.2"></polyline></svg></div></div><div class="rw" data-act="open" data-value="9" style="top: 342.5px; height: 38.0px;"><div class="mn"><span class="rk">10</span><span class="nm"><span class="av" style="background-color: #32ade6; margin-right: 8px">OS</span>Omar Silva</span>
+      <div class="mini"><div style="background-color: #5856d6; width: 87.9%;"></div></div><span class="pts">8,611</span><span class="tr t-green">▲1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>45</b></div><div><div class="tiny muted">Avg deal</div><b>€4.6k</b></div><div><div class="tiny muted">Win rate</div><b>23%</b></div><div><div class="tiny muted">Quota</div><b>96%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#32ade6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,4.8 10.6,15.0 19.1,6.8 27.7,7.5 36.3,12.5 44.9,13.4 53.4,13.6 62.0,10.6"></polyline></svg></div></div><div class="rw" data-act="open" data-value="10" hidden=""><div class="mn"><span class="rk">11</span><span class="nm"><span class="av" style="background-color: #ff2d55; margin-right: 8px">PD</span>Priya Dubois</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼5</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>34</b></div><div><div class="tiny muted">Avg deal</div><b>€4.4k</b></div><div><div class="tiny muted">Win rate</div><b>28%</b></div><div><div class="tiny muted">Quota</div><b>95%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff2d55" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,5.2 10.6,12.6 19.1,6.9 27.7,10.6 36.3,8.0 44.9,12.1 53.4,6.9 62.0,6.6"></polyline></svg></div></div><div class="rw" data-act="open" data-value="11" hidden=""><div class="mn"><span class="rk">12</span><span class="nm"><span class="av" style="background-color: #ff9500; margin-right: 8px">KW</span>Kenji Weber</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>29</b></div><div><div class="tiny muted">Avg deal</div><b>€3.5k</b></div><div><div class="tiny muted">Win rate</div><b>28%</b></div><div><div class="tiny muted">Quota</div><b>92%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff9500" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,13.0 10.6,4.9 19.1,15.1 27.7,7.0 36.3,4.1 44.9,7.7 53.4,10.0 62.0,15.6"></polyline></svg></div></div><div class="rw" data-act="open" data-value="12" hidden=""><div class="mn"><span class="rk">13</span><span class="nm"><span class="av" style="background-color: #34c759; margin-right: 8px">LK</span>Lena Kim</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼3</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>30</b></div><div><div class="tiny muted">Avg deal</div><b>€4.8k</b></div><div><div class="tiny muted">Win rate</div><b>26%</b></div><div><div class="tiny muted">Quota</div><b>91%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#34c759" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,11.8 10.6,6.3 19.1,7.4 27.7,5.5 36.3,15.7 44.9,9.9 53.4,14.0 62.0,14.5"></polyline></svg></div></div><div class="rw" data-act="open" data-value="13" hidden=""><div class="mn"><span class="rk">14</span><span class="nm"><span class="av" style="background-color: #007aff; margin-right: 8px">MK</span>Mateo Kowalski</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr muted">–</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>28</b></div><div><div class="tiny muted">Avg deal</div><b>€4.4k</b></div><div><div class="tiny muted">Win rate</div><b>22%</b></div><div><div class="tiny muted">Quota</div><b>90%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#007aff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,6.4 10.6,7.0 19.1,8.0 27.7,5.1 36.3,14.0 44.9,8.9 53.4,4.4 62.0,7.4"></polyline></svg></div></div><div class="rw" data-act="open" data-value="14" hidden=""><div class="mn"><span class="rk">15</span><span class="nm"><span class="av" style="background-color: #5856d6; margin-right: 8px">SS</span>Sara Singh</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲2</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>41</b></div><div><div class="tiny muted">Avg deal</div><b>€5.1k</b></div><div><div class="tiny muted">Win rate</div><b>37%</b></div><div><div class="tiny muted">Quota</div><b>88%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#5856d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,13.9 10.6,14.2 19.1,5.8 27.7,14.0 36.3,6.1 44.9,13.7 53.4,9.8 62.0,14.5"></polyline></svg></div></div><div class="rw" data-act="open" data-value="15" hidden=""><div class="mn"><span class="rk">16</span><span class="nm"><span class="av" style="background-color: #af52de; margin-right: 8px">TM</span>Theo Müller</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲4</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>31</b></div><div><div class="tiny muted">Avg deal</div><b>€4.1k</b></div><div><div class="tiny muted">Win rate</div><b>38%</b></div><div><div class="tiny muted">Quota</div><b>87%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#af52de" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,10.7 10.6,11.2 19.1,11.6 27.7,14.3 36.3,6.0 44.9,15.7 53.4,6.1 62.0,13.5"></polyline></svg></div></div><div class="rw" data-act="open" data-value="16" hidden=""><div class="mn"><span class="rk">17</span><span class="nm"><span class="av" style="background-color: #30b0c7; margin-right: 8px">YA</span>Yara Ahmed</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>41</b></div><div><div class="tiny muted">Avg deal</div><b>€3.3k</b></div><div><div class="tiny muted">Win rate</div><b>31%</b></div><div><div class="tiny muted">Quota</div><b>85%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#30b0c7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,7.7 10.6,15.3 19.1,13.1 27.7,14.0 36.3,14.9 44.9,9.0 53.4,15.5 62.0,9.3"></polyline></svg></div></div><div class="rw" data-act="open" data-value="17" hidden=""><div class="mn"><span class="rk">18</span><span class="nm"><span class="av" style="background-color: #a2845e; margin-right: 8px">HM</span>Hugo Moreau</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲5</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>40</b></div><div><div class="tiny muted">Avg deal</div><b>€5.3k</b></div><div><div class="tiny muted">Win rate</div><b>40%</b></div><div><div class="tiny muted">Quota</div><b>83%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#a2845e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,9.8 10.6,5.0 19.1,6.6 27.7,11.0 36.3,6.5 44.9,15.2 53.4,9.5 62.0,8.6"></polyline></svg></div></div><div class="rw" data-act="open" data-value="18" hidden=""><div class="mn"><span class="rk">19</span><span class="nm"><span class="av" style="background-color: #ff3b30; margin-right: 8px">AR</span>Aisha Rossi</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr muted">–</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>39</b></div><div><div class="tiny muted">Avg deal</div><b>€3.7k</b></div><div><div class="tiny muted">Win rate</div><b>36%</b></div><div><div class="tiny muted">Quota</div><b>82%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff3b30" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,11.7 10.6,16.0 19.1,11.4 27.7,6.8 36.3,4.0 44.9,4.4 53.4,5.5 62.0,12.9"></polyline></svg></div></div><div class="rw" data-act="open" data-value="19" hidden=""><div class="mn"><span class="rk">20</span><span class="nm"><span class="av" style="background-color: #32ade6; margin-right: 8px">FG</span>Felix Garcia</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼4</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>38</b></div><div><div class="tiny muted">Avg deal</div><b>€4.3k</b></div><div><div class="tiny muted">Win rate</div><b>39%</b></div><div><div class="tiny muted">Quota</div><b>80%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#32ade6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,11.7 10.6,5.9 19.1,9.3 27.7,7.4 36.3,7.1 44.9,5.5 53.4,5.7 62.0,14.3"></polyline></svg></div></div><div class="rw" data-act="open" data-value="20" hidden=""><div class="mn"><span class="rk">21</span><span class="nm"><span class="av" style="background-color: #ff2d55; margin-right: 8px">CC</span>Chloe Chen</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼6</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>34</b></div><div><div class="tiny muted">Avg deal</div><b>€4.8k</b></div><div><div class="tiny muted">Win rate</div><b>39%</b></div><div><div class="tiny muted">Quota</div><b>79%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff2d55" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,15.5 10.6,11.2 19.1,7.5 27.7,13.6 36.3,8.1 44.9,7.1 53.4,4.5 62.0,15.0"></polyline></svg></div></div><div class="rw" data-act="open" data-value="21" hidden=""><div class="mn"><span class="rk">22</span><span class="nm"><span class="av" style="background-color: #ff9500; margin-right: 8px">DH</span>Diego Haddad</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-green">▲2</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>29</b></div><div><div class="tiny muted">Avg deal</div><b>€4.2k</b></div><div><div class="tiny muted">Win rate</div><b>33%</b></div><div><div class="tiny muted">Quota</div><b>78%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#ff9500" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,13.7 10.6,8.2 19.1,15.1 27.7,14.9 36.3,7.0 44.9,9.5 53.4,7.0 62.0,10.5"></polyline></svg></div></div><div class="rw" data-act="open" data-value="22" hidden=""><div class="mn"><span class="rk">23</span><span class="nm"><span class="av" style="background-color: #34c759; margin-right: 8px">EN</span>Elif Nielsen</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼1</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>29</b></div><div><div class="tiny muted">Avg deal</div><b>€3.9k</b></div><div><div class="tiny muted">Win rate</div><b>26%</b></div><div><div class="tiny muted">Quota</div><b>75%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#34c759" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,9.4 10.6,5.2 19.1,7.6 27.7,11.4 36.3,15.7 44.9,11.6 53.4,15.4 62.0,14.0"></polyline></svg></div></div><div class="rw" data-act="open" data-value="23" hidden=""><div class="mn"><span class="rk">24</span><span class="nm"><span class="av" style="background-color: #007aff; margin-right: 8px">FO</span>Finn Okafor</span>
+      <div class="mini"><div style="background-color: #5856d6;"></div></div><span class="pts"></span><span class="tr t-red">▼3</span></div>
+    <div class="more" hidden=""><div><div class="tiny muted">Deals</div><b>32</b></div><div><div class="tiny muted">Avg deal</div><b>€3.5k</b></div><div><div class="tiny muted">Win rate</div><b>24%</b></div><div><div class="tiny muted">Quota</div><b>74%</b></div><svg width="64" height="28" viewBox="0 0 64 28"><polyline fill="none" stroke="#007aff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="2.0,15.8 10.6,12.4 19.1,10.7 27.7,6.7 36.3,10.7 44.9,15.0 53.4,6.7 62.0,11.6"></polyline></svg></div></div></div>
+  <a class="sh t-purple" href="#" data-act="more" id="more">Show top 20 ▾</a>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 550.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 550.9
+    div 1 1 358 548.9
+      div 15 13 330 74.7
+        div 15 13 330 20.8
+          b 15 13 258 20.8
+          span 281 16.25 56 14.3
+        div 15 41.8 330 45.9
+          span 17 43.8 168 41.9
+            span 25 46.8 48 14.95
+            span 89 46.8 40 14.95
+            span 25 67.75 56 14.95
+          span 189 43.8 154 41.9
+            span 197 46.8 32 14.95
+            span 245 46.8 40 14.95
+            span 197 67.75 56 14.95
+      div 9 99.7 342 26
+        span 9 99.7 25.1471 26
+        span 34.1471 99.7 147.529 26
+        span 181.676 99.7 83.8235 26
+        span 265.5 99.7 53.6471 26
+        span 319.147 99.7 31.8529 26
+      div 9 130.7 342 380
+        div 9 130.7 342 38
+          div 9 130.7 342 37
+            span 9 140.75 30 16.9
+            span 39 137.2 110 24
+              span 39 137.2 24 24
+            div 159 146.2 80 6
+              div 159 146.2 80 6
+            span 249 141.4 64 15.6
+            span 313 142.05 34 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 168.7 342 38
+          div 9 168.7 342 37
+            span 9 178.75 30 16.9
+            span 39 175.2 115.973 24
+              span 39 175.2 24 24
+            div 164.973 184.2 77.3154 6
+              div 164.973 184.2 76.5423 6
+            span 252.289 179.4 61.8523 15.6
+            span 314.141 180.05 32.8591 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 206.7 342 38
+          div 9 206.7 342 37
+            span 9 216.75 30 16.9
+            span 39 213.2 115.973 24
+              span 39 213.2 24 24
+            div 164.973 222.2 77.3154 6
+              div 164.973 222.2 74.764 6
+            span 252.289 217.4 61.8523 15.6
+            span 314.141 218.05 32.8591 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 244.7 342 38
+          div 9 244.7 342 37
+            span 9 254.75 29.0854 16.9
+            span 38.0854 251.2 116.341 24
+              span 38.0854 251.2 24 24
+            div 164.427 260.2 77.561 6
+              div 164.427 260.2 73.9932 6
+            span 251.988 255.4 62.0488 15.6
+            span 314.037 256.05 32.9634 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 282.7 342 38
+          div 9 282.7 342 37
+            span 9 292.75 29.8125 16.9
+            span 38.8125 289.2 111.3 24
+              span 38.8125 289.2 24 24
+            div 160.113 298.2 79.5 6
+              div 160.113 298.2 75.207 6
+            span 249.613 293.4 63.6 15.6
+            span 313.212 294.05 33.7875 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 320.7 342 38
+          div 9 320.7 342 37
+            span 9 330.75 27.6774 16.9
+            span 36.6774 327.2 125.471 24
+              span 36.6774 327.2 24 24
+            div 172.148 336.2 73.8064 6
+              div 172.148 336.2 69.2305 6
+            span 255.955 331.4 59.0452 15.6
+            span 315 332.05 32 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 358.7 342 38
+          div 9 358.7 342 37
+            span 9 368.75 30 16.9
+            span 39 365.2 110 24
+              span 39 365.2 24 24
+            div 159 374.2 80 6
+              div 159 374.2 73.92 6
+            span 249 369.4 64 15.6
+            span 313 370.05 34 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 396.7 342 38
+          div 9 396.7 342 37
+            span 9 406.75 28.3929 16.9
+            span 37.3929 403.2 121.143 24
+              span 37.3929 403.2 24 24
+            div 168.536 412.2 75.7143 6
+              div 168.536 412.2 69.5057 6
+            span 254.25 407.4 60.5714 15.6
+            span 314.821 408.05 32.1786 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 434.8 342 38
+          div 9 434.8 342 37
+            span 9 444.85 29.8125 16.9
+            span 38.8125 441.3 111.3 24
+              span 38.8125 441.3 24 24
+            div 160.113 450.3 79.5 6
+              div 160.113 450.3 71.073 6
+            span 249.613 445.5 63.6 15.6
+            span 313.212 446.15 33.7875 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 9 473.2 342 38
+          div 9 473.2 342 37
+            span 9 483.25 29.8125 16.9
+            span 38.8125 479.7 111.3 24
+              span 38.8125 479.7 24 24
+            div 160.113 488.7 79.5 6
+              div 160.113 488.7 69.8805 6
+            span 249.613 483.9 63.6 15.6
+            span 313.212 484.55 33.7875 14.3
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              b 0 0 0 0
+            svg 0 0 0 0
+              polyline 0 0 0 0
+      a 9 523.7 342 18.2
+
+== paint
+root 360x550.9 items=201
+  solid-fill bounds=(0,0,360,551) layer=(border=(0,0,360,551),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,551),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,551) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,551) root=0
+  set-clip bounds=(1,1,358,548.9) pos=(1,1,358,548.9) radius=(13,13,13,13,13,13,13,13)
+  solid-fill bounds=(273,15,72,17) layer=(border=(273,15,72,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(273,15,72,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52de29
+  solid-fill bounds=(15,42,172,46) layer=(border=(15,42,172,46),radius=(9,9,9,9,9,9,9,9),clip=(15,42,172,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(187,42,158,46) layer=(border=(187,42,158,46),radius=(9,9,9,9,9,9,9,9),clip=(187,42,158,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  borders bounds=(9,96,342,35) borders=(left=(0,0,#8e8e93ff),top=(0,0,#8e8e93ff),right=(0,0,#8e8e93ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(9,96,342,35) root=0
+  borders bounds=(1,515,358,35) borders=(left=(0,0,#af52deff),top=(1,4,#7f7f7f33),right=(0,0,#af52deff),bottom=(0,0,#af52deff),radius=(0,0,0,0,0,0,0,0)) pos=(1,515,358,35) root=0
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(1,1,358,548.9) pos=(1,1,358,548.9) radius=(13,13,13,13,13,13,13,13)
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="🏆" font=f1 glyphs=4 advance=32
+  text bounds=(47,7,56,32) pos=(55,15,40,16) color=#000000ff text="Sales" font=f1 glyphs=5 advance=40
+  text bounds=(95,7,104,32) pos=(103,15,88,16) color=#000000ff text="leaderboard" font=f1 glyphs=11 advance=88
+  text bounds=(273,8,72,32) pos=(281,16,56,16) color=#af52deff text="October" font=f2 glyphs=7 advance=56
+  solid-fill bounds=(17,44,64,21) layer=(border=(17,44,64,21),radius=(7,7,7,7,7,7,7,7),clip=(17,44,64,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(17,39,64,32) pos=(25,47,48,16) color=#ffffffff text="Points" font=f3 glyphs=6 advance=48
+  text bounds=(81,39,56,32) pos=(89,47,40,16) color=#000000ff text="Deals" font=f3 glyphs=5 advance=40
+  text bounds=(17,60,72,32) pos=(25,68,56,16) color=#000000ff text="Revenue" font=f3 glyphs=7 advance=56
+  text bounds=(189,39,48,32) pos=(197,47,32,16) color=#000000ff text="Week" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(237,44,56,21) layer=(border=(237,44,56,21),radius=(7,7,7,7,7,7,7,7),clip=(237,44,56,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(237,39,56,32) pos=(245,47,40,16) color=#ffffffff text="Month" font=f3 glyphs=5 advance=40
+  text bounds=(189,60,72,32) pos=(197,68,56,16) color=#000000ff text="Quarter" font=f3 glyphs=7 advance=56
+  text bounds=(9.57353,91,24,32) pos=(17.5735,99,8,16) color=#8e8e93ff text="#" font=f4 glyphs=1 advance=8
+  text bounds=(26.1471,91,40,32) pos=(34.1471,99,24,16) color=#8e8e93ff text="REP" font=f4 glyphs=3 advance=24
+  text bounds=(58.1471,91,32,32) pos=(66.1471,99,16,16) color=#8e8e93ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(82.1471,91,56,32) pos=(90.1471,99,40,16) color=#8e8e93ff text="CLICK" font=f4 glyphs=5 advance=40
+  text bounds=(130.147,91,40,32) pos=(138.147,99,24,16) color=#8e8e93ff text="FOR" font=f4 glyphs=3 advance=24
+  text bounds=(26.1471,104,56,32) pos=(34.1471,112,40,16) color=#8e8e93ff text="STATS" font=f4 glyphs=5 advance=40
+  text bounds=(173.676,91,32,32) pos=(181.676,99,16,16) color=#8e8e93ff text="VS" font=f4 glyphs=2 advance=16
+  text bounds=(197.676,91,64,32) pos=(205.676,99,48,16) color=#8e8e93ff text="LEADER" font=f4 glyphs=6 advance=48
+  text bounds=(263.147,91,64,32) pos=(271.147,99,48,16) color=#8e8e93ff text="POINTS" font=f4 glyphs=6 advance=48
+  text bounds=(311.147,91,32,32) pos=(319.147,99,16,16) color=#8e8e93ff text=" " font=f4 glyphs=2 advance=16
+  text bounds=(112,517,48,32) pos=(120,525,32,16) color=#af52deff text="Show" font=f5 glyphs=4 advance=32
+  text bounds=(152,517,40,32) pos=(160,525,24,16) color=#af52deff text="top" font=f5 glyphs=3 advance=24
+  text bounds=(184,517,32,32) pos=(192,525,16,16) color=#af52deff text="20" font=f5 glyphs=2 advance=16
+  text bounds=(208,517,40,32) pos=(216,525,24,16) color=#af52deff text="▾" font=f5 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(1,1,358,548.9) pos=(1,1,358,548.9) radius=(13,13,13,13,13,13,13,13)
+  set-clip bounds=(9,130.7,342,380) pos=(9,130.7,342,380) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(9,130.7,342,38) pos=(9,130.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,131,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,131,342,38) root=0
+  solid-fill bounds=(159,146,80,6) layer=(border=(159,146,80,6),radius=(3,3,3,3,3,3,3,3),clip=(159,146,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(159,146,80,6) layer=(border=(159,146,80,6),radius=(3,3,3,3,3,3,3,3),clip=(159,146,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,130.7,342,38) pos=(9,130.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(1,133,48,32) pos=(9,141,32,16) color=#8e8e93ff text="🥇" font=f6 glyphs=4 advance=32
+  set-clip bounds=(39,137.2,110,24) pos=(39,137.2,110,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,137,24,24) layer=(border=(39,137,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,137,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  text bounds=(35,133,32,32) pos=(43,141,16,16) color=#ffffffff text="AC" font=f4 glyphs=2 advance=16
+  text bounds=(63,133,40,32) pos=(71,141,24,16) color=#000000ff text="Ava" font=f7 glyphs=3 advance=24
+  text bounds=(95,133,48,32) pos=(103,141,32,16) color=#000000ff text="Chen" font=f7 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  text bounds=(265,133,56,32) pos=(273,141,40,16) color=#000000ff text="9,800" font=f8 glyphs=5 advance=40
+  text bounds=(315,134,40,32) pos=(323,142,24,16) color=#6e6e73ff text="–" font=f2 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,168.7,342,38) pos=(9,168.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,169,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,169,342,38) root=0
+  solid-fill bounds=(165,184,77,6) layer=(border=(165,184,77,6),radius=(3,3,3,3,3,3,3,3),clip=(165,184,77,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(165,184,77,6) layer=(border=(165,184,77,6),radius=(3,3,3,3,3,3,3,3),clip=(165,184,77,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,168.7,342,38) pos=(9,168.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(1,171,48,32) pos=(9,179,32,16) color=#8e8e93ff text="🥈" font=f6 glyphs=4 advance=32
+  set-clip bounds=(39,175.2,115.973,24) pos=(39,175.2,115.973,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,175,24,24) layer=(border=(39,175,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,175,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(35,171,32,32) pos=(43,179,16,16) color=#ffffffff text="LH" font=f4 glyphs=2 advance=16
+  text bounds=(63,171,48,32) pos=(71,179,32,16) color=#000000ff text="Liam" font=f7 glyphs=4 advance=32
+  text bounds=(103,171,64,32) pos=(111,179,48,16) color=#000000ff text="Haddad" font=f7 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(266.141,171,56,32) pos=(274.141,179,40,16) color=#000000ff text="9,699" font=f8 glyphs=5 advance=40
+  text bounds=(307,172,48,32) pos=(315,180,32,16) color=#34c759ff text="▲7" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,206.7,342,38) pos=(9,206.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,207,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,207,342,38) root=0
+  solid-fill bounds=(165,222,77,6) layer=(border=(165,222,77,6),radius=(3,3,3,3,3,3,3,3),clip=(165,222,77,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(165,222,75,6) layer=(border=(165,222,75,6),radius=(3,3,3,3,3,3,3,3),clip=(165,222,75,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,206.7,342,38) pos=(9,206.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(1,209,48,32) pos=(9,217,32,16) color=#8e8e93ff text="🥉" font=f6 glyphs=4 advance=32
+  set-clip bounds=(39,213.2,115.973,24) pos=(39,213.2,115.973,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,213,24,24) layer=(border=(39,213,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,213,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(35,209,32,32) pos=(43,217,16,16) color=#ffffffff text="MN" font=f4 glyphs=2 advance=16
+  text bounds=(63,209,40,32) pos=(71,217,24,16) color=#000000ff text="Mia" font=f7 glyphs=3 advance=24
+  text bounds=(95,209,72,32) pos=(103,217,56,16) color=#000000ff text="Nielsen" font=f7 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  text bounds=(266.141,209,56,32) pos=(274.141,217,40,16) color=#000000ff text="9,477" font=f8 glyphs=5 advance=40
+  text bounds=(307,210,48,32) pos=(315,218,32,16) color=#ff3b30ff text="▼1" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,244.7,342,38) pos=(9,244.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,245,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,245,342,38) root=0
+  solid-fill bounds=(164,260,78,6) layer=(border=(164,260,78,6),radius=(3,3,3,3,3,3,3,3),clip=(164,260,78,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(164,260,74,6) layer=(border=(164,260,74,6),radius=(3,3,3,3,3,3,3,3),clip=(164,260,74,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,244.7,342,38) pos=(9,244.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(11.5427,247,24,32) pos=(19.5427,255,8,16) color=#8e8e93ff text="4" font=f6 glyphs=1 advance=8
+  set-clip bounds=(38.0854,251.2,116.341,24) pos=(38.0854,251.2,116.341,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(38,251,24,24) layer=(border=(38,251,24,24),radius=(12,12,12,12,12,12,12,12),clip=(38,251,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(34.0854,247,32,32) pos=(42.0854,255,16,16) color=#ffffffff text="NO" font=f4 glyphs=2 advance=16
+  text bounds=(62.0854,247,48,32) pos=(70.0854,255,32,16) color=#000000ff text="Noah" font=f7 glyphs=4 advance=32
+  text bounds=(102.085,247,64,32) pos=(110.085,255,48,16) color=#000000ff text="Okafor" font=f7 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(266.037,247,56,32) pos=(274.037,255,40,16) color=#000000ff text="9,352" font=f8 glyphs=5 advance=40
+  text bounds=(307,248,48,32) pos=(315,256,32,16) color=#34c759ff text="▲3" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,282.7,342,38) pos=(9,282.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,283,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,283,342,38) root=0
+  solid-fill bounds=(160,298,80,6) layer=(border=(160,298,80,6),radius=(3,3,3,3,3,3,3,3),clip=(160,298,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(160,298,75,6) layer=(border=(160,298,75,6),radius=(3,3,3,3,3,3,3,3),clip=(160,298,75,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,282.7,342,38) pos=(9,282.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(11.9062,285,24,32) pos=(19.9062,293,8,16) color=#8e8e93ff text="5" font=f6 glyphs=1 advance=8
+  set-clip bounds=(38.8125,289.2,111.3,24) pos=(38.8125,289.2,111.3,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,289,24,24) layer=(border=(39,289,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,289,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(34.8125,285,32,32) pos=(42.8125,293,16,16) color=#ffffffff text="ZL" font=f4 glyphs=2 advance=16
+  text bounds=(62.8125,285,40,32) pos=(70.8125,293,24,16) color=#000000ff text="Zoe" font=f7 glyphs=3 advance=24
+  text bounds=(94.8125,285,64,32) pos=(102.812,293,48,16) color=#000000ff text="Larsen" font=f7 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(265.212,285,56,32) pos=(273.212,293,40,16) color=#000000ff text="9,274" font=f8 glyphs=5 advance=40
+  text bounds=(307,286,48,32) pos=(315,294,32,16) color=#ff3b30ff text="▼2" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,320.7,342,38) pos=(9,320.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,321,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,321,342,38) root=0
+  solid-fill bounds=(172,336,74,6) layer=(border=(172,336,74,6),radius=(3,3,3,3,3,3,3,3),clip=(172,336,74,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(172,336,69,6) layer=(border=(172,336,69,6),radius=(3,3,3,3,3,3,3,3),clip=(172,336,69,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,320.7,342,38) pos=(9,320.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(10.8387,323,24,32) pos=(18.8387,331,8,16) color=#8e8e93ff text="6" font=f6 glyphs=1 advance=8
+  set-clip bounds=(36.6774,327.2,125.471,24) pos=(36.6774,327.2,125.471,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(37,327,24,24) layer=(border=(37,327,24,24),radius=(12,12,12,12,12,12,12,12),clip=(37,327,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  text bounds=(32.6774,323,32,32) pos=(40.6774,331,16,16) color=#ffffffff text="EI" font=f4 glyphs=2 advance=16
+  text bounds=(60.6774,323,56,32) pos=(68.6774,331,40,16) color=#000000ff text="Ethan" font=f7 glyphs=5 advance=40
+  text bounds=(108.677,323,72,32) pos=(116.677,331,56,16) color=#000000ff text="Ivanova" font=f7 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  text bounds=(267,323,56,32) pos=(275,331,40,16) color=#000000ff text="9,195" font=f8 glyphs=5 advance=40
+  text bounds=(307,324,48,32) pos=(315,332,32,16) color=#34c759ff text="▲6" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,358.7,342,38) pos=(9,358.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,359,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,359,342,38) root=0
+  solid-fill bounds=(159,374,80,6) layer=(border=(159,374,80,6),radius=(3,3,3,3,3,3,3,3),clip=(159,374,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(159,374,74,6) layer=(border=(159,374,74,6),radius=(3,3,3,3,3,3,3,3),clip=(159,374,74,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,358.7,342,38) pos=(9,358.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(12,361,24,32) pos=(20,369,8,16) color=#8e8e93ff text="7" font=f6 glyphs=1 advance=8
+  set-clip bounds=(39,365.2,110,24) pos=(39,365.2,110,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,365,24,24) layer=(border=(39,365,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,365,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#30b0c7ff
+  text bounds=(35,361,32,32) pos=(43,369,16,16) color=#ffffffff text="IN" font=f4 glyphs=2 advance=16
+  text bounds=(63,361,40,32) pos=(71,369,24,16) color=#000000ff text="Ivy" font=f7 glyphs=3 advance=24
+  text bounds=(95,361,56,32) pos=(103,369,40,16) color=#000000ff text="Novak" font=f7 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(265,361,56,32) pos=(273,369,40,16) color=#000000ff text="9,051" font=f8 glyphs=5 advance=40
+  text bounds=(307,362,48,32) pos=(315,370,32,16) color=#ff3b30ff text="▼2" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,396.7,342,38) pos=(9,396.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,397,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,397,342,38) root=0
+  solid-fill bounds=(169,412,75,6) layer=(border=(169,412,75,6),radius=(3,3,3,3,3,3,3,3),clip=(169,412,75,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(169,412,69,6) layer=(border=(169,412,69,6),radius=(3,3,3,3,3,3,3,3),clip=(169,412,69,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,396.7,342,38) pos=(9,396.7,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(11.1964,399,24,32) pos=(19.1964,407,8,16) color=#8e8e93ff text="8" font=f6 glyphs=1 advance=8
+  set-clip bounds=(37.3929,403.2,121.143,24) pos=(37.3929,403.2,121.143,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(37,403,24,24) layer=(border=(37,403,24,24),radius=(12,12,12,12,12,12,12,12),clip=(37,403,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a2845eff
+  text bounds=(33.3929,399,32,32) pos=(41.3929,407,16,16) color=#ffffffff text="LT" font=f4 glyphs=2 advance=16
+  text bounds=(61.3929,399,56,32) pos=(69.3929,407,40,16) color=#000000ff text="Lucas" font=f7 glyphs=5 advance=40
+  text bounds=(109.393,399,64,32) pos=(117.393,407,48,16) color=#000000ff text="Tanaka" font=f7 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(266.821,399,56,32) pos=(274.821,407,40,16) color=#000000ff text="8,996" font=f8 glyphs=5 advance=40
+  text bounds=(307,400,48,32) pos=(315,408,32,16) color=#ff3b30ff text="▼4" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,434.8,342,38) pos=(9,434.8,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,435,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,435,342,38) root=0
+  solid-fill bounds=(160,450,80,6) layer=(border=(160,450,80,6),radius=(3,3,3,3,3,3,3,3),clip=(160,450,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(160,450,71,6) layer=(border=(160,450,71,6),radius=(3,3,3,3,3,3,3,3),clip=(160,450,71,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,434.8,342,38) pos=(9,434.8,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(11.9062,437,24,32) pos=(19.9062,445,8,16) color=#8e8e93ff text="9" font=f6 glyphs=1 advance=8
+  set-clip bounds=(38.8125,441.3,111.3,24) pos=(38.8125,441.3,111.3,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,441,24,24) layer=(border=(39,441,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,441,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  text bounds=(34.8125,437,32,32) pos=(42.8125,445,16,16) color=#ffffffff text="NC" font=f4 glyphs=2 advance=16
+  text bounds=(62.8125,437,48,32) pos=(70.8125,445,32,16) color=#000000ff text="Nora" font=f7 glyphs=4 advance=32
+  text bounds=(102.812,437,56,32) pos=(110.812,445,40,16) color=#000000ff text="Costa" font=f7 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(265.212,438,56,32) pos=(273.212,446,40,16) color=#000000ff text="8,757" font=f8 glyphs=5 advance=40
+  text bounds=(307,438,48,32) pos=(315,446,32,16) color=#ff3b30ff text="▼1" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,473.2,342,38) pos=(9,473.2,342,38) radius=(8,8,8,8,8,8,8,8)
+  borders bounds=(9,473,342,38) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f1f),radius=(0,0,0,0,0,0,0,0)) pos=(9,473,342,38) root=0
+  solid-fill bounds=(160,489,80,6) layer=(border=(160,489,80,6),radius=(3,3,3,3,3,3,3,3),clip=(160,489,80,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  solid-fill bounds=(160,489,70,6) layer=(border=(160,489,70,6),radius=(3,3,3,3,3,3,3,3),clip=(160,489,70,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(9,473.2,342,38) pos=(9,473.2,342,38) radius=(8,8,8,8,8,8,8,8)
+  text bounds=(7.90625,475,32,32) pos=(15.9062,483,16,16) color=#8e8e93ff text="10" font=f6 glyphs=2 advance=16
+  set-clip bounds=(38.8125,479.7,111.3,24) pos=(38.8125,479.7,111.3,24) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(39,480,24,24) layer=(border=(39,480,24,24),radius=(12,12,12,12,12,12,12,12),clip=(39,480,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#32ade6ff
+  text bounds=(34.8125,476,32,32) pos=(42.8125,484,16,16) color=#ffffffff text="OS" font=f4 glyphs=2 advance=16
+  text bounds=(62.8125,476,48,32) pos=(70.8125,484,32,16) color=#000000ff text="Omar" font=f7 glyphs=4 advance=32
+  text bounds=(102.812,476,56,32) pos=(110.812,484,40,16) color=#000000ff text="Silva" font=f7 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(265.212,476,56,32) pos=(273.212,484,40,16) color=#000000ff text="8,611" font=f8 glyphs=5 advance=40
+  text bounds=(307,477,48,32) pos=(315,485,32,16) color=#34c759ff text="▲1" font=f2 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11.5,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(-2147483648,predef0,0,#af52deff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

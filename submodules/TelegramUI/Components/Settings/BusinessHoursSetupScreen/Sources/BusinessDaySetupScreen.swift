@@ -297,6 +297,8 @@ final class BusinessDaySetupScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        // VoiceOver: the bar reads this title where its own is (NavigationBarNode), as the heading.
+                        navigationTitleView.accessibilityTraits = [.staticText, .header]
                         navigationBar.view.addSubview(navigationTitleView)
                     }
                 }
@@ -308,7 +310,7 @@ final class BusinessDaySetupScreenComponent: Component {
             // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
-            let sectionSpacing: CGFloat = 24.0
+            let sectionSpacing: CGFloat = 30.0
             
             let _ = bottomContentInset
             let _ = sectionSpacing
@@ -322,11 +324,13 @@ final class BusinessDaySetupScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
+                    style: .glass,
                     header: nil,
                     footer: nil,
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
+                            style: .glass,
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
@@ -386,6 +390,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     let isOpenTime = i == 0
                     rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
+                        style: .glass,
                         title: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
@@ -425,6 +430,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 
                 rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
                     theme: environment.theme,
+                    style: .glass,
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
@@ -450,6 +456,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     transition: rangeSectionTransition,
                     component: AnyComponent(ListSectionComponent(
                         theme: environment.theme,
+                        style: .glass,
                         header: nil,
                         footer: nil,
                         items: rangeSectionItems
@@ -515,6 +522,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
+                    style: .glass,
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
@@ -527,6 +535,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
+                            style: .glass,
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(

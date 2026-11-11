@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -559,8 +558,7 @@ private final class ProfileLevelInfoSheetComponent: CombinedComponent {
                 color: environment.theme.list.itemCheckColors.foregroundColor,
                 startingPosition: .begin,
                 size: CGSize(width: 28.0, height: 28.0),
-                playOnce: playButtonAnimation,
-                lottieSettings: context.component.context.lottieRenderingSettings
+                playOnce: playButtonAnimation
             ))))
             buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                 text: actionButtonTitle,

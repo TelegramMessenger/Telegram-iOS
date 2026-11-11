@@ -28,6 +28,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/Premium/PremiumDiamondComponent",
         "//submodules/QrCode",
+        "//submodules/WalletContext",
     ],
     visibility = [
         "//visibility:public",

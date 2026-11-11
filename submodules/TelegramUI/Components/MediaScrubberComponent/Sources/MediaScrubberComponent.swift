@@ -90,6 +90,7 @@ public final class MediaScrubberComponent: Component {
     
     let tracks: [Track]
     let isCollage: Bool
+    let allowsTrimming: Bool
     let isCollageSelected: Bool
     let collageSamples: (samples: Data, peak: Int32)?
     
@@ -118,6 +119,7 @@ public final class MediaScrubberComponent: Component {
         isPlaying: Bool,
         tracks: [Track],
         isCollage: Bool,
+        allowsTrimming: Bool = true,
         isCollageSelected: Bool = false,
         collageSamples: (samples: Data, peak: Int32)? = nil,
         cover: (position: Double, image: UIImage)? = nil,
@@ -142,6 +144,7 @@ public final class MediaScrubberComponent: Component {
         self.isPlaying = isPlaying
         self.tracks = tracks
         self.isCollage = isCollage
+        self.allowsTrimming = allowsTrimming
         self.isCollageSelected = isCollageSelected
         self.collageSamples = collageSamples
         self.cover = cover
@@ -185,6 +188,9 @@ public final class MediaScrubberComponent: Component {
             return false
         }
         if lhs.isCollage != rhs.isCollage {
+            return false
+        }
+        if lhs.allowsTrimming != rhs.allowsTrimming {
             return false
         }
         if lhs.isCollageSelected != rhs.isCollageSelected {
@@ -804,6 +810,9 @@ public final class MediaScrubberComponent: Component {
             if component.isCollage && !component.isCollageSelected {
                 trimVisible = false
                 trimViewFrame = trimViewFrame.offsetBy(dx: 0.0, dy: collapsedTrackHeight - trackHeight)
+            }
+            if !component.allowsTrimming {
+                trimVisible = false
             }
             
             transition.setFrame(view: self.trimView, frame: trimViewFrame)

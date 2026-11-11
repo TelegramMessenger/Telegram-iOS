@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import ComponentFlow
 import ListSectionComponent
@@ -10,7 +11,61 @@ import TelegramCore
 import TextNodeWithEntities
 import MultilineTextComponent
 import TextFormat
-import ListItemSwipeOptionContainer
+import ItemListUI
+
+private final class BusinessLinkRevealNode: ItemListRevealOptionsItemNode {
+    let contentNode = ASDisplayNode()
+    let highlightedBackgroundNode = ASDisplayNode()
+    var interactivelyOpened: (() -> Void)?
+    var separatorAlphaUpdated: (() -> Void)?
+    var optionSelected: ((Int32) -> Void)?
+
+    init() {
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
+        self.clipsToBounds = true
+        self.highlightedBackgroundNode.isUserInteractionEnabled = false
+        self.highlightedBackgroundNode.alpha = 0.0
+        self.addSubnode(self.contentNode)
+    }
+
+    func update(size: CGSize, options: [ItemListRevealOption], highlightColor: UIColor) {
+        self.frame = CGRect(origin: CGPoint(), size: size)
+        self.contentNode.bounds = CGRect(origin: CGPoint(), size: size)
+        self.contentNode.position = CGPoint(x: size.width / 2.0 + self.revealOffset, y: size.height / 2.0)
+        self.highlightedBackgroundNode.backgroundColor = highlightColor
+        self.updateRevealOptionsHighlightedBackgroundFrame(self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: false, transition: .immediate, aboveNodes: [])
+        self.updateLayout(size: size, leftInset: 0.0, rightInset: 0.0)
+        self.setRevealOptions((left: [], right: options))
+    }
+
+    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.contentNode.position = CGPoint(x: self.bounds.width / 2.0 + offset, y: self.bounds.height / 2.0)
+    }
+
+    override func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
+        super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
+        self.contentNode.isUserInteractionEnabled = !isActive
+        self.contentNode.view.accessibilityElementsHidden = isActive
+    }
+
+    override func revealOptionsSeparatorAlphaUpdated() {
+        super.revealOptionsSeparatorAlphaUpdated()
+        self.separatorAlphaUpdated?()
+    }
+
+    override func revealOptionsInteractivelyOpened() {
+        self.interactivelyOpened?()
+    }
+
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        self.setRevealOptionsOpened(false, animated: true)
+        self.optionSelected?(option.key)
+    }
+}
+
+private let businessLinkShareOptionKey: Int32 = 0
+private let businessLinkDeleteOptionKey: Int32 = 1
 
 final class BusinessLinkListItemComponent: Component {
     let context: AccountContext
@@ -58,10 +113,11 @@ final class BusinessLinkListItemComponent: Component {
         return true
     }
 
-    final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
+    final class View: UIView, ListSectionComponent.ChildView, ListSectionComponentChildRevealView {
+        private let contextSourceView: ContextControllerSourceView
         private let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
-        private let swipeOptionContainer: ListItemSwipeOptionContainer
+        private let revealNode: BusinessLinkRevealNode
         
         private let iconView = UIImageView()
         private let viewCount = ComponentView<Empty>()
@@ -74,6 +130,8 @@ final class BusinessLinkListItemComponent: Component {
         var customUpdateIsHighlighted: ((Bool) -> Void)?
         var enumerateSiblings: (((UIView) -> Void) -> Void)?
         private(set) var separatorInset: CGFloat = 0.0
+        var revealOptionsSeparatorAlpha: CGFloat { self.revealNode.revealOptionsSeparatorAlpha }
+        var revealOptionsSeparatorAlphaUpdated: (() -> Void)?
         
         private var isExtractedToContextMenu: Bool = false
         
@@ -83,14 +141,15 @@ final class BusinessLinkListItemComponent: Component {
             self.containerButton.layer.anchorPoint = CGPoint()
             self.containerButton.isExclusiveTouch = true
             
-            self.swipeOptionContainer = ListItemSwipeOptionContainer(frame: CGRect())
+            self.revealNode = BusinessLinkRevealNode()
+            self.contextSourceView = ContextControllerSourceView()
             
             super.init(frame: frame)
             
-            self.addSubview(self.extractedContainerView)
-            self.targetViewForActivationProgress = self.extractedContainerView.contentView
-            
-            self.extractedContainerView.contentView.addSubview(self.swipeOptionContainer)
+            self.addSubview(self.revealNode.view)
+            self.revealNode.contentNode.view.addSubview(self.contextSourceView)
+            self.contextSourceView.addSubview(self.extractedContainerView)
+            self.contextSourceView.targetViewForActivationProgress = self.extractedContainerView.contentView
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.containerButton.internalHighligthedChanged = { [weak self] isHighlighted in
@@ -102,25 +161,22 @@ final class BusinessLinkListItemComponent: Component {
                 }
             }
             
-            self.swipeOptionContainer.updateRevealOffset = { [weak self] offset, transition in
+            self.revealNode.interactivelyOpened = { [weak self] in
                 guard let self else {
                     return
                 }
-                transition.setBounds(view: self.containerButton, bounds: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: self.containerButton.bounds.size))
+                self.enumerateSiblings? { view in
+                    (view as? View)?.revealNode.setRevealOptionsOpened(false, animated: true)
+                }
             }
-            self.swipeOptionContainer.revealOptionSelected = { [weak self] option, _ in
-                guard let self, let component = self.component else {
-                    return
-                }
-                self.swipeOptionContainer.setRevealOptionsOpened(false, animated: true)
-                if option.key == AnyHashable(0 as Int) {
-                    component.shareAction()
-                } else {
-                    component.deleteAction()
-                }
+            self.revealNode.separatorAlphaUpdated = { [weak self] in
+                self?.revealOptionsSeparatorAlphaUpdated?()
+            }
+            self.revealNode.optionSelected = { [weak self] key in
+                self?.performOption(key: key)
             }
             
-            self.swipeOptionContainer.addSubview(self.containerButton)
+            self.extractedContainerView.contentView.addSubview(self.containerButton)
             
             self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
                 guard let self, let component = self.component else {
@@ -128,13 +184,16 @@ final class BusinessLinkListItemComponent: Component {
                 }
                 self.containerButton.clipsToBounds = value
                 self.containerButton.backgroundColor = value ? component.theme.list.itemBlocksBackgroundColor : nil
-                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+                self.containerButton.layer.cornerRadius = value ? 26.0 : 0.0
             }
             self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
                 guard let self else {
                     return
                 }
                 self.isExtractedToContextMenu = value
+                if value {
+                    self.revealNode.setRevealOptionsOpened(false, animated: false)
+                }
                 
                 let mappedTransition: ComponentTransition
                 if value {
@@ -145,7 +204,7 @@ final class BusinessLinkListItemComponent: Component {
                 self.componentState?.updated(transition: mappedTransition)
             }
             
-            self.activated = { [weak self] gesture, _ in
+            self.contextSourceView.activated = { [weak self] gesture, _ in
                 guard let self, let component = self.component else {
                     gesture.cancel()
                     return
@@ -160,6 +219,17 @@ final class BusinessLinkListItemComponent: Component {
         
         @objc private func pressed() {
             self.component?.action()
+        }
+        
+        private func performOption(key: Int32) {
+            guard let component = self.component else {
+                return
+            }
+            if key == businessLinkShareOptionKey {
+                component.shareAction()
+            } else if key == businessLinkDeleteOptionKey {
+                component.deleteAction()
+            }
         }
         
         func update(component: BusinessLinkListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -290,39 +360,52 @@ final class BusinessLinkListItemComponent: Component {
                 transition.setFrame(view: self.iconView, frame: iconFrame)
             }
             
-            let swipeOptionContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
-            transition.setFrame(view: self.swipeOptionContainer, frame: swipeOptionContainerFrame)
+            let shareColors = component.theme.list.itemDisclosureActions.accent
+            let deleteColors = component.theme.list.itemDisclosureActions.destructive
+            self.revealNode.update(
+                size: size,
+                options: [
+                    ItemListRevealOption(
+                        key: businessLinkShareOptionKey,
+                        title: component.strings.Business_Links_ItemActionShare,
+                        icon: .none,
+                        color: shareColors.fillColor,
+                        iconColor: shareColors.foregroundColor,
+                        textColor: shareColors.foregroundColor
+                    ),
+                    ItemListRevealOption(
+                        key: businessLinkDeleteOptionKey,
+                        title: component.strings.Common_Delete,
+                        icon: .none,
+                        color: deleteColors.fillColor,
+                        iconColor: deleteColors.foregroundColor,
+                        textColor: deleteColors.foregroundColor,
+                        isDestructive: true
+                    )
+                ],
+                highlightColor: component.theme.list.itemHighlightedBackgroundColor
+            )
+            self.containerButton.accessibilityCustomActions = [
+                UIAccessibilityCustomAction(name: component.strings.Business_Links_ItemActionShare, actionHandler: { [weak self] _ in
+                    self?.performOption(key: businessLinkShareOptionKey)
+                    return true
+                }),
+                UIAccessibilityCustomAction(name: component.strings.Common_Delete, actionHandler: { [weak self] _ in
+                    self?.performOption(key: businessLinkDeleteOptionKey)
+                    return true
+                })
+            ]
             
             let containerButtonFrame = CGRect(origin: CGPoint(x: innerInsets.left, y: innerInsets.top), size: CGSize(width: size.width - innerInsets.left - innerInsets.right, height: size.height - innerInsets.top - innerInsets.bottom))
             
             transition.setPosition(view: self.containerButton, position: containerButtonFrame.origin)
-            transition.setBounds(view: self.containerButton, bounds: CGRect(origin: self.containerButton.bounds.origin, size: containerButtonFrame.size))
-            
-            self.swipeOptionContainer.updateLayout(size: swipeOptionContainerFrame.size, leftInset: 0.0, rightInset: 0.0)
+            transition.setBounds(view: self.containerButton, bounds: CGRect(origin: CGPoint(), size: containerButtonFrame.size))
             
             let resultBounds = CGRect(origin: CGPoint(), size: size)
+            transition.setFrame(view: self.contextSourceView, frame: resultBounds)
             transition.setFrame(view: self.extractedContainerView, frame: resultBounds)
             transition.setFrame(view: self.extractedContainerView.contentView, frame: resultBounds)
             self.extractedContainerView.contentRect = resultBounds
-            
-            var rightOptions: [ListItemSwipeOptionContainer.Option] = []
-            rightOptions = [
-                ListItemSwipeOptionContainer.Option(
-                    key: 0,
-                    title: component.strings.Business_Links_ItemActionShare,
-                    icon: .none,
-                    color: component.theme.list.itemDisclosureActions.accent.fillColor,
-                    textColor: component.theme.list.itemDisclosureActions.accent.foregroundColor
-                ),
-                ListItemSwipeOptionContainer.Option(
-                    key: 1,
-                    title: component.strings.Common_Delete,
-                    icon: .none,
-                    color: component.theme.list.itemDisclosureActions.destructive.fillColor,
-                    textColor: component.theme.list.itemDisclosureActions.destructive.foregroundColor
-                )
-            ]
-            self.swipeOptionContainer.setRevealOptions(([], rightOptions))
             
             self.separatorInset = leftContentInset
             

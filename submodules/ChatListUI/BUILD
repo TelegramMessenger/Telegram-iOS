@@ -13,7 +13,6 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
@@ -84,6 +83,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/ForumCreateTopicScreen:ForumCreateTopicScreen",
         "//submodules/TelegramUI/Components/ChatTitleView",
+        "//submodules/TelegramUI/Components/NavigationExpansionTransition",
         "//submodules/TelegramUI/Components/ChatTimerScreen",
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
         "//submodules/AnimationUI:AnimationUI",
@@ -150,6 +150,7 @@ swift_library(
     srcs = glob(["Tests/**/*.swift"]),
     deps = [
         ":ChatListUI",
+        "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramPresentationData:TelegramPresentationData",

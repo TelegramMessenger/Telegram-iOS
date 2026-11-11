@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import MosaicLayout
 
 /// A pure multiset diff of media identities against an existing keyed pool, so an add/remove reuses the
 /// cells whose media is unchanged (never rebuilding them → the image fetch is not re-issued). Duplicate
@@ -41,5 +42,23 @@ enum MosaicCellDiff {
         }
         let removed = poolKeys.filter { !used.contains($0) }
         return Plan(reuse: reuse, removed: removed)
+    }
+}
+
+/// The photo/video cell frames of a mosaic container `size` wide: the album engine packed within
+/// `width × min(1000, width)` (the cap `MediaBlockBox.mosaicSize` reserves), then scaled to fit and centred
+/// when the width-driven pack still exceeds the cap. Needs >= 2 items (the engine has no 1-item case).
+enum MosaicCellFrames {
+    static func frames(itemSizes: [CGSize], size: CGSize) -> [CGRect] {
+        let cap = min(1000.0, size.width)
+        let (rawFrames, naturalSize) = chatMessageBubbleMosaicLayout(
+            maxSize: CGSize(width: size.width, height: cap),
+            itemSizes: itemSizes)
+        let scale: CGFloat = naturalSize.height > cap ? cap / naturalSize.height : 1.0
+        let xOffset = floor((size.width - naturalSize.width * scale) / 2.0)
+        return rawFrames.map { frame, _ in
+            CGRect(x: xOffset + frame.minX * scale, y: frame.minY * scale,
+                   width: frame.width * scale, height: frame.height * scale)
+        }
     }
 }

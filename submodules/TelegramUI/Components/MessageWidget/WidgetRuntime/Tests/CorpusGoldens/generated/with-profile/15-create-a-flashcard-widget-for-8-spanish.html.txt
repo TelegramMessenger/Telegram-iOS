@@ -1,0 +1,80 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spanish Flashcards</title>
+<style></style>
+</head>
+<body>
+<h2>🇪🇸 Spanish Flashcards</h2>
+<div class="prog" id="prog">Card 1 of 8 · 0 known</div>
+<div id="stage">
+  <div class="scene"><button class="card" id="card" aria-label="flip card"><div class="face front" id="front">hola<small>tap to flip</small></div><div class="face back" id="back">hello<small>hola</small></div></button></div>
+  <div class="btns"><button class="no" id="no">✗ Don't know</button><button class="yes" id="yes">✓ Know</button></div>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 305.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 277.6
+    h2 14 14 332 21.25
+    div 14 39.25 332 17.55
+    div 14 68.8 332 222.8
+      div 14 68.8 332 170
+        button 14 68.8 332 170
+          div 14 68.8 332 170
+            small 136 168.6 88 14.4
+          div 16 70.8 328 166
+            small 164 168.6 32 14.4
+      div 14 254.8 332 36.8
+        button 69 264.8 112 16.8
+        button 227 264.8 64 16.8
+
+== paint
+root 360x305.6 items=27
+  solid-fill bounds=(0,0,360,306) layer=(border=(0,0,360,306),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,306),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(51,255,148,37) layer=(border=(51,255,148,37),radius=(8,8,8,8,8,8,8,8),clip=(51,255,148,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  solid-fill bounds=(209,255,100,37) layer=(border=(209,255,100,37),radius=(8,8,8,8,8,8,8,8),clip=(209,255,100,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#22c55eff
+  text bounds=(64,8,80,32) pos=(72,16,64,16) color=#1f2937ff text="🇪🇸" font=f1 glyphs=8 advance=64
+  text bounds=(136,8,72,32) pos=(144,16,56,16) color=#1f2937ff text="Spanish" font=f1 glyphs=7 advance=56
+  text bounds=(200,8,96,32) pos=(208,16,80,16) color=#1f2937ff text="Flashcards" font=f1 glyphs=10 advance=80
+  text bounds=(84,31,48,32) pos=(92,39,32,16) color=#6b7280ff text="Card" font=f2 glyphs=4 advance=32
+  text bounds=(124,31,24,32) pos=(132,39,8,16) color=#6b7280ff text="1" font=f2 glyphs=1 advance=8
+  text bounds=(140,31,32,32) pos=(148,39,16,16) color=#6b7280ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(164,31,24,32) pos=(172,39,8,16) color=#6b7280ff text="8" font=f2 glyphs=1 advance=8
+  text bounds=(180,31,32,32) pos=(188,39,16,16) color=#6b7280ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(204,31,24,32) pos=(212,39,8,16) color=#6b7280ff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(220,31,56,32) pos=(228,39,40,16) color=#6b7280ff text="known" font=f2 glyphs=5 advance=40
+  text bounds=(61,257,40,32) pos=(69,265,24,16) color=#ffffffff text="✗" font=f3 glyphs=3 advance=24
+  text bounds=(93,257,56,32) pos=(101,265,40,16) color=#ffffffff text="Don't" font=f3 glyphs=5 advance=40
+  text bounds=(141,257,48,32) pos=(149,265,32,16) color=#ffffffff text="know" font=f3 glyphs=4 advance=32
+  text bounds=(219,257,40,32) pos=(227,265,24,16) color=#ffffffff text="✓" font=f3 glyphs=3 advance=24
+  text bounds=(251,257,48,32) pos=(259,265,32,16) color=#ffffffff text="Know" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(14,69,332,170) layer=(border=(14,69,332,170),radius=(16,16,16,16,16,16,16,16),clip=(14,69,332,170),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a21cafff
+  group opacity=0.7 matrix=(1,0,0,1,0,0) backface=0 bounds=(126,158.6,108,36) exact=1
+    text bounds=(128,161,40,32) pos=(136,169,24,16) color=#ffffffff text="tap" font=f4 glyphs=3 advance=24
+    text bounds=(160,161,32,32) pos=(168,169,16,16) color=#ffffffff text="to" font=f4 glyphs=2 advance=16
+    text bounds=(184,161,48,32) pos=(192,169,32,16) color=#ffffffff text="flip" font=f4 glyphs=4 advance=32
+  text bounds=(156,127,48,32) pos=(164,135,32,16) color=#ffffffff text="hola" font=f5 glyphs=4 advance=32
+  group opacity=1 matrix=(0,0,0,1,180,0) backface=0 bounds=(14,68.8,332,170) exact=0
+    solid-fill bounds=(14,69,332,170) layer=(border=(14,69,332,170),radius=(16,16,16,16,16,16,16,16),clip=(14,69,332,170),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#faf5ffff
+    borders bounds=(14,69,332,170) borders=(left=(2,4,#e9d5ffff),top=(2,4,#e9d5ffff),right=(2,4,#e9d5ffff),bottom=(2,4,#e9d5ffff),radius=(16,16,16,16,16,16,16,16)) pos=(14,69,332,170) root=0
+    group opacity=0.7 matrix=(1,0,0,1,0,0) backface=0 bounds=(154,158.6,52,36) exact=1
+      text bounds=(156,161,48,32) pos=(164,169,32,16) color=#581c87ff text="hola" font=f4 glyphs=4 advance=32
+    text bounds=(152,127,56,32) pos=(160,135,40,16) color=#581c87ff text="hello" font=f5 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=30,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

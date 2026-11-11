@@ -8,6 +8,7 @@ import TelegramPresentationData
 import MergeLists
 import AccountContext
 import ContactListUI
+import NavigationBarNode
 import ChatListUI
 import AnimationCache
 import MultiAnimationRenderer
@@ -293,6 +294,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.addSubnode(self.contentNode.node)
         self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        // The token field under the bar is read by VoiceOver after the bar's buttons.
+        (self.navigationBar as? NavigationBarNode)?.exposesAdditionalContentToAccessibility = true
         
         switch self.contentNode {
         case let .contacts(contactsNode):
@@ -346,6 +349,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         searchResultsNode.removeFromSupernode()
                         strongSelf.searchResultsNode = nil
                     }
+                    // VoiceOver: the list under the search results is read again once they are gone.
+                    strongSelf.contentNode.node.accessibilityElementsHidden = false
                 } else {
                     if strongSelf.searchResultsNode == nil {
                         var selectionState: ContactListNodeGroupSelectionState?
@@ -429,6 +434,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         strongSelf.searchResultsReadyDisposable.set((searchResultsNode.ready |> deliverOnMainQueue).startStrict(next: { _ in
                             if let strongSelf = self, let searchResultsNode = strongSelf.searchResultsNode {
                                 strongSelf.insertSubnode(searchResultsNode, aboveSubnode: strongSelf.contentNode.node)
+                                // VoiceOver: the opaque results cover the list; only the results are read.
+                                strongSelf.contentNode.node.accessibilityElementsHidden = true
                             }
                         }))
                     }
@@ -501,7 +508,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                     footerPanelNode.content = FooterPanelNode.Content(title: callTitle, badge: "")
                 } else {
-                    footerPanelNode.content = FooterPanelNode.Content(title: "Call", badge: "\(count)")
+                    footerPanelNode.content = FooterPanelNode.Content(title: self.presentationData.strings.NewCall_ActionCallMultiple, badge: "\(count)")
                 }
             } else {
                 footerPanelNode.content = FooterPanelNode.Content(title: self.presentationData.strings.Premium_Gift_ContactSelection_Proceed, badge: count == 0 ? "" : "\(count)")

@@ -504,6 +504,30 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
     
     public func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
         self.updateHeadingTransforms(mapHeading: CGFloat(mapView.camera.heading))
+
+        if !self.ignoreRegionChanges && !self.isDragging && self.isInteractiveGestureActive {
+            self.beginInteractiveDragging()
+        }
+    }
+
+    public var isInteractiveGestureActive: Bool {
+        guard let gestureRecognizers = self.mapView?.subviews.first?.gestureRecognizers else {
+            return false
+        }
+        return gestureRecognizers.contains { gestureRecognizer in
+            guard gestureRecognizer is UIPanGestureRecognizer || gestureRecognizer is UIPinchGestureRecognizer || gestureRecognizer is UIRotationGestureRecognizer else {
+                return false
+            }
+            return gestureRecognizer.state == .began || gestureRecognizer.state == .changed
+        }
+    }
+
+    private func beginInteractiveDragging() {
+        self.isDragging = true
+        self.returnedToUserLocation = false
+        self.beganInteractiveDragging?()
+
+        self.switchToPicking(raise: true, animated: true)
     }
 
     public func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
@@ -513,11 +537,7 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
         
         for gestureRecognizer in gestureRecognizers {
             if gestureRecognizer.state == .began || gestureRecognizer.state == .ended {
-                self.isDragging = true
-                self.returnedToUserLocation = false
-                self.beganInteractiveDragging?()
-                
-                self.switchToPicking(raise: true, animated: true)
+                self.beginInteractiveDragging()
                 break
             }
         }

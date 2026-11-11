@@ -664,6 +664,46 @@ private func stringForCommunityRight(strings: PresentationStrings, right: Telegr
     }
 }
 
+private func channelAdminRightsErrorText(strings: PresentationStrings, error: UpdateChannelAdminRightsError, isBroadcast: Bool, adminPeer: EnginePeer?) -> String {
+    switch error {
+    case .generic:
+        return strings.Login_UnknownError
+    case .adminsTooMuch:
+        return isBroadcast ? strings.Channel_ErrorAdminsTooMuch : strings.Group_ErrorAdminsTooMuch
+    case .notMemberCannotInvite:
+        return strings.Channel_Members_AddAdminErrorNotAMember
+    case .userBlocked:
+        return isBroadcast ? strings.Channel_ErrorAddBlocked : strings.Group_ErrorAddBlocked
+    case let .addMemberError(addMemberError):
+        switch addMemberError {
+        case .restricted:
+            if let adminPeer {
+                if isBroadcast {
+                    return strings.Privacy_GroupsAndChannels_InviteToChannelError(adminPeer.compactDisplayTitle, adminPeer.compactDisplayTitle).string
+                } else {
+                    return strings.Privacy_GroupsAndChannels_InviteToGroupError(adminPeer.compactDisplayTitle, adminPeer.compactDisplayTitle).string
+                }
+            } else {
+                return isBroadcast ? strings.Channel_ErrorAddBlocked : strings.Group_ErrorAddBlocked
+            }
+        case .notMutualContact:
+            return isBroadcast ? strings.Channel_AddUserLeftError : strings.GroupInfo_AddUserLeftError
+        case .tooMuchJoined:
+            return strings.Invite_ChannelsTooMuch
+        case .limitExceeded:
+            return strings.Channel_ErrorAddTooMuch
+        case .botDoesntSupportGroups:
+            return strings.Channel_BotDoesntSupportGroups
+        case .tooMuchBots:
+            return strings.Channel_TooMuchBots
+        case .kicked:
+            return strings.Channel_AddAdminKickedError
+        case .generic, .bot:
+            return strings.Login_UnknownError
+        }
+    }
+}
+
 private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: EnginePeer, initialParticipant: ChannelParticipant?) -> Bool {
     if case let .channel(channel) = channelPeer {
         if channel.flags.contains(.isCreator) {
@@ -1661,7 +1701,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         var text = presentationData.strings.Login_UnknownError
                         switch error {
                         case .tooMuchJoined:
-                            text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                            text = presentationData.strings.Invite_ChannelsTooMuch
                         case .restricted:
                             if let admin = adminPeer {
                                 switch channel.info {
@@ -1748,7 +1788,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             case let .addMemberError(addMemberError):
                                 switch addMemberError {
                                 case .tooMuchJoined:
-                                    text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                    text = presentationData.strings.Invite_ChannelsTooMuch
                                 case .restricted:
                                     if let admin = adminPeer {
                                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToCommunityError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
@@ -1760,6 +1800,10 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                 }
                             case .adminsTooMuch:
                                 text = presentationData.strings.Group_ErrorAdminsTooMuch
+                            case .notMemberCannotInvite:
+                                text = presentationData.strings.Channel_Members_AddAdminErrorNotAMember
+                            case .userBlocked:
+                                text = presentationData.strings.Group_ErrorAddBlocked
                             }
                             presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {
@@ -1780,6 +1824,12 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                     }
                 }
             } else if case let .channel(channel) = channelPeer {
+                let isBroadcast: Bool
+                if case .broadcast = channel.info {
+                    isBroadcast = true
+                } else {
+                    isBroadcast = false
+                }
                 if let initialParticipant = initialParticipant {
                     var updateFlags: TelegramChatAdminRightsFlags?
                     var updateRank: String?
@@ -1836,39 +1886,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             }
                             
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            var text = presentationData.strings.Login_UnknownError
-                            switch error {
-                            case .generic:
-                                break
-                            case let .addMemberError(addMemberError):
-                                switch addMemberError {
-                                case .tooMuchJoined:
-                                    text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
-                                case .restricted:
-                                    if let admin = adminPeer {
-                                        switch channel.info {
-                                            case .broadcast:
-                                                text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
-                                            case .group:
-                                                text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
-                                        }
-                                    }
-                                case .notMutualContact:
-                                    if case .broadcast = channel.info {
-                                        text = presentationData.strings.Channel_AddUserLeftError
-                                    } else {
-                                        text = presentationData.strings.GroupInfo_AddUserLeftError
-                                    }
-                                default:
-                                    break
-                                }
-                            case .adminsTooMuch:
-                                if case .broadcast = channel.info {
-                                    text = presentationData.strings.Channel_ErrorAdminsTooMuch
-                                } else {
-                                    text = presentationData.strings.Group_ErrorAdminsTooMuch
-                                }
-                            }
+                            let text = channelAdminRightsErrorText(strings: presentationData.strings, error: error, isBroadcast: isBroadcast, adminPeer: adminPeer)
                             presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {
                             finishAfterSaving(TelegramChatAdminRights(rights: updateFlags), true)
@@ -1877,8 +1895,14 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         updateState { current in
                             return current.withUpdatedUpdating(true)
                         }
-                        updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: currentFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { _ in
-                            
+                        updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: currentFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
+                            updateState { current in
+                                return current.withUpdatedUpdating(false)
+                            }
+
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let text = channelAdminRightsErrorText(strings: presentationData.strings, error: error, isBroadcast: isBroadcast, adminPeer: adminPeer)
+                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {
                             finishAfterSaving(TelegramChatAdminRights(rights: currentFlags), true)
                         }))
@@ -1916,47 +1940,23 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             return current.withUpdatedUpdating(true)
                         }
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
-                            if case let .addMemberError(addMemberError) = error, case let .restricted(forbiddenPeer) = addMemberError, let admin = adminPeer {
-                                if let channelPeer {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: channelPeer, link: exportedInvitation?.link), peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: admin, canInviteWithPremium: false, premiumRequiredToContact: false)])
-                                    pushControllerImpl?(inviteScreen)
-                                    
-                                    dismissImpl?()
-                                    
-                                    return
-                                }
-                                
-                                var text = presentationData.strings.Login_UnknownError
-                                switch addMemberError {
-                                    case .tooMuchJoined:
-                                        text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
-                                    case .restricted:
-                                        switch channel.info {
-                                            case .broadcast:
-                                                text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
-                                            case .group:
-                                                text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
-                                        }
-                                    case .notMutualContact:
-                                        if case .broadcast = channel.info {
-                                            text = presentationData.strings.Channel_AddUserLeftError
-                                        } else {
-                                            text = presentationData.strings.GroupInfo_AddUserLeftError
-                                        }
-                                    default:
-                                        break
-                                }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            } else if case .adminsTooMuch = error {
-                                let text: String
-                                if case .broadcast = channel.info {
-                                    text = presentationData.strings.Channel_ErrorAdminsTooMuch
-                                } else {
-                                    text = presentationData.strings.Group_ErrorAdminsTooMuch
-                                }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            if case let .addMemberError(addMemberError) = error, case let .restricted(forbiddenPeer) = addMemberError, let admin = adminPeer, let channelPeer {
+                                let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: channelPeer, link: exportedInvitation?.link), peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: admin, canInviteWithPremium: false, premiumRequiredToContact: false)])
+                                pushControllerImpl?(inviteScreen)
+
+                                dismissImpl?()
+
+                                return
                             }
-                            dismissImpl?()
+
+                            // Every other refusal keeps the editor open with an explanation; closing it silently looked like a successful add.
+                            updateState { current in
+                                return current.withUpdatedUpdating(false)
+                            }
+
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let text = channelAdminRightsErrorText(strings: presentationData.strings, error: error, isBroadcast: isBroadcast, adminPeer: adminPeer)
+                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {
                             finishAfterSaving(TelegramChatAdminRights(rights: updateFlags), true)
                         }))

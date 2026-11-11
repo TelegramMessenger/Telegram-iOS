@@ -330,6 +330,81 @@ open class ImmediateTextView: TextView {
         }
     }
     
+    /// VoiceOver: the tappable ranges of the text (where `highlightAttributeAction` picks an attribute), with their
+    /// words, in text order. Image attachments (an arrow glyph) are not words.
+    public func accessibilityLinks() -> [(text: String, attributes: [NSAttributedString.Key: Any], index: Int)] {
+        guard let attributedText = self.attributedText, let highlightAttributeAction = self.highlightAttributeAction else {
+            return []
+        }
+        var result: [(text: String, attributes: [NSAttributedString.Key: Any], index: Int)] = []
+        attributedText.enumerateAttributes(in: NSRange(location: 0, length: attributedText.length), options: []) { attributes, range, _ in
+            guard highlightAttributeAction(attributes) != nil, attributes[.attachment] == nil else {
+                return
+            }
+            let text = (attributedText.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+            if text.isEmpty {
+                return
+            }
+            result.append((text, attributes, range.location))
+        }
+        return result
+    }
+    
+    /// VoiceOver: the text as read, without image attachments.
+    public var accessibilityDisplayedText: String {
+        guard let attributedText = self.attributedText else {
+            return ""
+        }
+        let mutable = NSMutableAttributedString(attributedString: attributedText)
+        attributedText.enumerateAttribute(.attachment, in: NSRange(location: 0, length: attributedText.length), options: [.reverse]) { value, range, _ in
+            if value != nil {
+                mutable.deleteCharacters(in: range)
+            }
+        }
+        return mutable.string.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    /// Activating a text element with links follows its first link, as a tap on it does.
+    override open func accessibilityActivate() -> Bool {
+        if self.isAccessibilityElement, let tapAttributeAction = self.tapAttributeAction, let link = self.accessibilityLinks().first {
+            tapAttributeAction(link.attributes, link.index)
+            return true
+        }
+        return super.accessibilityActivate()
+    }
+
+    /// A text with several links (terms, policy, "Restore Purchases"): each link is reachable as a custom action named
+    /// by its text, opened as a tap on it does. Built only when VoiceOver asks.
+    override open var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            if let explicit = super.accessibilityCustomActions, !explicit.isEmpty {
+                return explicit
+            }
+            guard self.isAccessibilityElement, self.tapAttributeAction != nil else {
+                return nil
+            }
+            if accessibilityIsInsideViewElementsSubtree(self) {
+                // Inside the chat's history subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
+                return nil
+            }
+            let links = self.accessibilityLinks()
+            if links.count < 2 {
+                return nil
+            }
+            return links.map { link in
+                return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                    guard let self, let tapAttributeAction = self.tapAttributeAction else {
+                        return false
+                    }
+                    tapAttributeAction(link.attributes, link.index)
+                    return true
+                })
+            }
+        } set(value) {
+            super.accessibilityCustomActions = value
+        }
+    }
+    
     private func updateInteractiveActions() {
         if self.highlightAttributeAction != nil {
             if self.tapRecognizer == nil {

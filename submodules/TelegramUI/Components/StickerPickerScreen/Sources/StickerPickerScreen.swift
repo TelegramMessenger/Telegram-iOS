@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -26,6 +25,7 @@ import LottieComponentResourceContent
 import UndoUI
 import TextLoadingEffect
 import TelegramStringFormatting
+import ImagePlayground
 
 private final class StickerSelectionComponent: Component {
     typealias EnvironmentType = Empty
@@ -258,7 +258,8 @@ private final class StickerSelectionComponent: Component {
             self.component = component
             self.state = state
             
-            let topPanelHeight: CGFloat = 42.0
+            let topPanelHeight: CGFloat = 48.0
+            let topPanelStripOffset: CGFloat = 11.0
             let topInset = component.topInset
             
             let controller = component.getController()
@@ -285,7 +286,7 @@ private final class StickerSelectionComponent: Component {
                     strings: component.strings,
                     isContentInFocus: true,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0 + topInset, left: 0.0, bottom: component.bottomInset, right: 0.0),
-                    topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    topPanelInsets: UIEdgeInsets(top: 0.0, left: 5.0, bottom: 0.0, right: 5.0),
                     emojiContent: component.content.emoji,
                     stickerContent: component.content.stickers,
                     maskContent: nil,
@@ -394,7 +395,7 @@ private final class StickerSelectionComponent: Component {
                 self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight - topInset, left: 0.0, bottom: 0.0, right: 0.0)
                 
                 transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: -topPanelHeight - topInset), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: topInset + topPanelStripOffset), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
                 transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: topPanelHeight + topInset)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
@@ -576,6 +577,9 @@ public class StickerPickerScreen: ViewController {
                 }
                 self.storyStickersContentView?.weatherAction = { [weak self] in
                     self?.controller?.addWeather()
+                }
+                self.storyStickersContentView?.imageAction = { [weak self] in
+                    self?.controller?.addImage()
                 }
             }
             
@@ -982,7 +986,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
@@ -992,18 +996,10 @@ public class StickerPickerScreen: ViewController {
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Emoji_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
                             let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                        })
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("popular") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
@@ -1399,7 +1395,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
@@ -1409,18 +1405,10 @@ public class StickerPickerScreen: ViewController {
                         if controller.forceDark {
                             presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                         }
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Stickers_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
                             let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                        })
+                        controller.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("featuredTop") {
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Collections.FeaturedStickerPacks())
                         |> deliverOnMainQueue).start(next: { featuredStickerPacks in
@@ -1729,16 +1717,9 @@ public class StickerPickerScreen: ViewController {
                 if isLandscape {
                     self.containerView.layer.cornerRadius = 0.0
                 } else {
-                    self.containerView.layer.cornerRadius = 10.0
+                    self.containerView.layer.cornerRadius = 30.0
                 }
-                
-                if #available(iOS 11.0, *) {
-                    if layout.safeInsets.bottom.isZero {
-                        self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-                    } else {
-                        self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-                    }
-                }
+                self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
                 
                 if isLandscape {
                     clipFrame = CGRect(origin: CGPoint(), size: layout.size)
@@ -1763,6 +1744,7 @@ public class StickerPickerScreen: ViewController {
             } else {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
                 self.containerView.layer.cornerRadius = 10.0
+                self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                 
                 let verticalInset: CGFloat = 44.0
                 
@@ -2107,6 +2089,7 @@ public class StickerPickerScreen: ViewController {
     public var addReaction: () -> Void = { }
     public var addLink: () -> Void = { }
     public var addWeather: () -> Void = { }
+    public var addImage: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInput, NoError>, forceDark: Bool = false, expanded: Bool = false, defaultToEmoji: Bool = false, hasEmoji: Bool = true, hasGifs: Bool = false, hasInteractiveStickers: Bool = true, weather: Signal<StickerPickerScreen.Weather, NoError> = .single(.none)) {
         self.context = context
@@ -2270,13 +2253,14 @@ private final class InteractiveStickerButtonContent: Component {
                                 content: LottieComponent.ResourceContent(context: component.context, file: iconFile, attemptSynchronously: true, providesPlaceholder: true),
                                 color: nil,
                                 placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.4),
-                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? ""),
-                                lottieSettings: component.context.lottieRenderingSettings
+                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? "")
                             )
                         ),
                         environment: {},
                         containerSize: CGSize(width: 20.0, height: 20.0)
                     )
+                } else if component.iconName == nil {
+                    iconSize = .zero
                 } else {
                     iconSize = self.icon.update(
                         transition: .immediate,
@@ -2300,8 +2284,8 @@ private final class InteractiveStickerButtonContent: Component {
                     containerSize: availableSize
                 )
                 
-                let padding: CGFloat = 7.0
-                let spacing: CGFloat = 4.0
+                let padding: CGFloat = iconSize.width.isZero ? 10.0 : 7.0
+                let spacing: CGFloat = iconSize.width.isZero ? 0.0 : 4.0
                 buttonSize = CGSize(width: padding + iconSize.width + spacing + titleSize.width + padding, height: 34.0)
                 
                 if let view = self.icon.view {
@@ -2669,6 +2653,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
     var reactionAction: () -> Void = {}
     var linkAction: () -> Void = {}
     var weatherAction: () -> Void = {}
+    var imageAction: () -> Void = {}
         
     private var params: (theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize)?
     
@@ -2847,6 +2832,36 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
             )
         )
         
+        if #available(iOS 18.1, *), ImagePlaygroundViewController.isAvailable {
+            maxHorizontalItems = 3
+            items.append(
+                AnyComponentWithIdentity(
+                    id: "image",
+                    component: AnyComponent(
+                        CameraButton(
+                            content: AnyComponentWithIdentity(
+                                id: "image",
+                                component: AnyComponent(
+                                    InteractiveStickerButtonContent(
+                                        context: self.context,
+                                        theme: theme,
+                                        title: strings.MediaEditor_AddGeneratedImage,
+                                        iconName: "Media Editor/AI",
+                                        useOpaqueTheme: useOpaqueTheme,
+                                        tintContainerView: self.tintContainerView
+                                    )
+                                )
+                            ),
+                            action: { [weak self] in
+                                if let self {
+                                    self.imageAction()
+                                }
+                            })
+                    )
+                )
+            )
+        }
+        
         items.append(
             AnyComponentWithIdentity(
                 id: "reaction",
@@ -2889,6 +2904,20 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
         }
         
         return CGSize(width: size.width, height: size.height + padding * 2.0 - 12.0)
+    }
+}
+
+private final class StickerPickerClearGroupReferenceContentSource: ContextReferenceContentSource {
+    private let sourceView: UIView
+    private let insets: UIEdgeInsets
+
+    init(sourceView: UIView, insets: UIEdgeInsets) {
+        self.sourceView = sourceView
+        self.insets = insets
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, insets: self.insets)
     }
 }
 

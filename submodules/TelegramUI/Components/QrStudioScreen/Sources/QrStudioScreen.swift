@@ -114,8 +114,8 @@ final class QrStudioScreenComponent: Component {
         private var rawSettings: QrStudioLookSettings?
         private var customEmojiFiles: [Int64: TelegramMediaFile] = [:]
         private var isLookModified = false
-        private let codeMenuCooldown = QrStudioMenuCooldown()
-        private let shareMenuCooldown = QrStudioMenuCooldown()
+        private let codeMenuCooldown = ContextMenuCooldown()
+        private let shareMenuCooldown = ContextMenuCooldown()
         private var syncedServerLook: QrStudioServerLook?
         private var pendingServerLook: QrStudioServerLook?
         private var shareThemeDisposable: Disposable?
@@ -656,11 +656,17 @@ final class QrStudioScreenComponent: Component {
                 guard let gift = self.look.gifts.first(where: { $0.id == giftId }) else {
                     return
                 }
-                update = .gift(gift.reference ?? .slug(slug: gift.gift.slug))
+                update = .gift(gift: gift.gift, reference: gift.reference ?? .slug(slug: gift.gift.slug))
             }
             self.syncedServerLook = local
             self.pendingServerLook = nil
-            let _ = context.engine.peers.setShareTheme(peerId: component.peer.id, theme: update).startStandalone()
+            let _ = (context.engine.peers.setShareTheme(peerId: component.peer.id, theme: update)
+            |> deliverOnMainQueue).startStandalone(error: { [weak self] _ in
+                guard let self, self.syncedServerLook == local else {
+                    return
+                }
+                self.syncedServerLook = nil
+            })
             self.saveWorkItem?.perform()
             self.saveWorkItem?.cancel()
             self.saveWorkItem = nil
@@ -894,11 +900,6 @@ final class QrStudioScreenComponent: Component {
         }
 
         private func showToast(_ icon: QrStudioToastIcon, _ text: String, action: QrStudioToast.Action? = nil) {
-            if self.toastView.superview == nil {
-                if let component = self.component {
-                    self.toastView.lottieSettings = component.context.lottieRenderingSettings
-                }
-            }
             self.presentationContainer.addSubview(self.toastView)
             self.toastView.show(QrStudioToast(icon: icon, text: text, action: action), isLight: self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop))
             self.layoutToast()
@@ -1359,6 +1360,24 @@ final class QrStudioScreenComponent: Component {
             (self.card.view as? QrStudioCardComponent.View)?.playCodeReveal(delay: 0.03)
         }
 
+        /// VoiceOver order, top to bottom as the screen reads: Close, Scan, the code card (its username), the fee pill,
+        /// Share, the style tabs (or the open sheet), Save, and a toast when one shows. The background is decoration.
+        override var accessibilityElements: [Any]? {
+            get {
+                func isShown(_ view: UIView?) -> Bool {
+                    guard let view else {
+                        return false
+                    }
+                    return view.superview != nil && !view.isHidden && view.alpha > 0.01
+                }
+                // The open style sheet covers the bottom row (Share, Save).
+                let isSheetOpen = self.sheetView.isOpen
+                let candidates: [UIView?] = [self.closeButton, self.scanButton, self.card.view, self.codePill, isSheetOpen ? nil : self.shareButtonView, self.emojiStripView, self.sheetView, isSheetOpen ? nil : self.saveButton, self.toastView]
+                return candidates.compactMap({ $0 }).filter({ isShown($0) })
+            } set(value) {
+            }
+        }
+        
         func lendForExpansion(isOpening: Bool) -> ExpansionViews {
             let backgroundView = UIView(frame: self.presentationContainer.bounds)
             backgroundView.isUserInteractionEnabled = false
@@ -1756,6 +1775,20 @@ final class QrStudioScreenComponent: Component {
             controller.push(giftsController)
         }
 
+        /// VoiceOver's escape closes the open style sheet, as a tap beside it does (with the keyboard up, it ends
+        /// editing first, as that tap does). With the sheet closed the screen's own dismissal applies.
+        override func accessibilityPerformEscape() -> Bool {
+            guard self.sheetView.isOpen else {
+                return false
+            }
+            if let environment = self.environment, environment.inputHeight > 0.0 {
+                self.endEditing(true)
+            } else {
+                self.sheetView.close()
+            }
+            return true
+        }
+        
         @objc private func handleStageTap(_ recognizer: UITapGestureRecognizer) {
             guard case .ended = recognizer.state, self.sheetView.isOpen else {
                 return
@@ -2183,7 +2216,7 @@ final class QrStudioScreenComponent: Component {
             controller.push(QrCodeScanScreen(context: component.context, subject: .peer))
         }
 
-        private func updateGlassButton(_ button: QrStudioGlassButtonView, icon: String? = nil, title: String? = nil, isDark: Bool, glassTint: GlassBackgroundView.TintColor, frame: CGRect, transition: ComponentTransition, action: @escaping () -> Void) {
+        private func updateGlassButton(_ button: QrStudioGlassButtonView, icon: String? = nil, title: String? = nil, accessibilityLabel: String? = nil, isDark: Bool, glassTint: GlassBackgroundView.TintColor, frame: CGRect, transition: ComponentTransition, action: @escaping () -> Void) {
             if button.superview == nil {
                 self.presentationContainer.addSubview(button)
                 button.action = { _ in
@@ -2191,7 +2224,7 @@ final class QrStudioScreenComponent: Component {
                 }
             }
             transition.setFrame(view: button, frame: frame)
-            button.update(size: frame.size, isDark: isDark, glassTint: glassTint, icon: icon, title: title, transition: transition)
+            button.update(size: frame.size, isDark: isDark, glassTint: glassTint, icon: icon, title: title, accessibilityLabel: accessibilityLabel, transition: transition)
         }
 
         func update(component: QrStudioScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -2269,6 +2302,11 @@ final class QrStudioScreenComponent: Component {
             self.sheetView.frame = CGRect(origin: CGPoint(), size: availableSize)
             self.sheetView.isHidden = !self.canEdit(component)
             self.sheetView.compactHeights[.gift] = self.areGiftsLoaded ? QrStudioGiftsTabView.compactHeight(count: self.look.gifts.count, width: availableSize.width, bottomInset: environment.safeInsets.bottom) : nil
+            self.sheetView.tabAccessibilityLabels = [
+                .color: environment.strings.QrStudio_Colors_Profile,
+                .emoji: environment.strings.EmojiInput_TabEmoji,
+                .gift: environment.strings.QrStudio_Gifts_Title
+            ]
             self.sheetView.update(
                 size: availableSize,
                 safeBottom: bottomInset,
@@ -2338,6 +2376,7 @@ final class QrStudioScreenComponent: Component {
             self.updateGlassButton(
                 self.closeButton,
                 icon: "Navigation/Close",
+                accessibilityLabel: environment.strings.Common_Close,
                 isDark: isDark,
                 glassTint: glassTint,
                 frame: closeFrame,
@@ -2375,10 +2414,11 @@ final class QrStudioScreenComponent: Component {
                 }
             }
             transition.setFrame(view: self.shareButtonView, frame: CGRect(x: sideInset + bottomSideInsets.left, y: bottomRowY, width: buttonSide, height: buttonSide))
-            self.shareButtonView.update(size: CGSize(width: buttonSide, height: buttonSide), isDark: isDark, glassTint: glassTint, icon: "Navigation/Share", transition: transition)
+            self.shareButtonView.update(size: CGSize(width: buttonSide, height: buttonSide), isDark: isDark, glassTint: glassTint, icon: "Navigation/Share", accessibilityLabel: environment.strings.Conversation_ContextMenuShare, transition: transition)
             self.updateGlassButton(
                 self.saveButton,
                 icon: "sf:arrow.down.to.line",
+                accessibilityLabel: environment.strings.Gallery_SaveImage,
                 isDark: isDark,
                 glassTint: glassTint,
                 frame: CGRect(x: availableSize.width - sideInset - bottomSideInsets.right - buttonSide, y: bottomRowY, width: buttonSide, height: buttonSide),
@@ -2500,56 +2540,6 @@ private func qrStudioRemoveFeeParts(_ strings: PresentationStrings) -> (prefix: 
     let prefix = string.substring(to: range.location).trimmingCharacters(in: .whitespaces)
     let suffix = string.substring(from: range.location + range.length).trimmingCharacters(in: .whitespaces)
     return (prefix, suffix)
-}
-
-private final class QrStudioMenuCooldown {
-    static var interval: Double {
-        if #available(iOS 27.0, *) {
-            return 1.0
-        } else if #available(iOS 26.0, *) {
-            return 1.2
-        } else {
-            return 0.0
-        }
-    }
-
-    private var openedAt: Double = 0.0
-    private var closedAt: Double = 0.0
-    private var pending: DispatchWorkItem?
-
-    var dismissDelay: Double {
-        return max(0.0, QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.openedAt))
-    }
-
-    func markOpened() {
-        self.openedAt = CACurrentMediaTime()
-    }
-
-    func markClosed() {
-        self.closedAt = CACurrentMediaTime()
-    }
-
-    func perform(_ action: @escaping () -> Void) {
-        let remaining = QrStudioMenuCooldown.interval - (CACurrentMediaTime() - self.closedAt)
-        guard remaining > 0.0 else {
-            action()
-            return
-        }
-        guard self.pending == nil else {
-            return
-        }
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.pending = nil
-            action()
-        }
-        self.pending = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + remaining, execute: workItem)
-    }
-
-    func cancel() {
-        self.pending?.cancel()
-        self.pending = nil
-    }
 }
 
 public final class QrStudioScreen: ViewControllerComponentContainer, ChatQrCodeScreen {

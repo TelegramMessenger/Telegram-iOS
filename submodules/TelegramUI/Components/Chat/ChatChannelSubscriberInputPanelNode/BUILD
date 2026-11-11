@@ -32,6 +32,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
         "//submodules/TelegramUI/Components/News/NewsChannelIsland",
+        "//submodules/TelegramUI/Components/Chat/ChatOverscrollIsland",
     ],
     visibility = [
         "//visibility:public",

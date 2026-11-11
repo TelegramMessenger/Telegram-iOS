@@ -16,6 +16,8 @@ private let apiPrefixLength = apiPrefix.count
 
 private let redactChildrenOfType: [String: Set<String>] = [
     "Message.message": Set(["message"]),
+    "MessageMedia.messageMediaWidget": Set(["payload", "publicData", "chatData"]),
+    "InputMedia.inputMediaWidget": Set(["html"]),
     "Updates.updateShortMessage": Set(["message"]),
     "Updates.updateShortChatMessage": Set(["message"]),
     "BotInlineMessage.botInlineMessageText": Set(["message"]),
@@ -31,6 +33,10 @@ private let redactFunctionParameters: [String: Set<String>] = [
     "messages.sendMedia": Set(["message"]),
     "messages.saveDraft": Set(["message"]),
     "messages.getWebPagePreview": Set(["message"])
+]
+
+private let alwaysRedactFunctionParameters: [String: Set<String>] = [
+    "agent.connect": Set(["key"])
 ]
 
 func apiFunctionDescription(of desc: FunctionDescription) -> String {
@@ -52,7 +58,7 @@ func apiFunctionDescription(of desc: FunctionDescription) -> String {
                 redactParam = redactParams.contains(param.0)
             }
             
-            if redactParam, Logger.shared.redactSensitiveData {
+            if alwaysRedactFunctionParameters[desc.name]?.contains(param.0) == true || (redactParam && Logger.shared.redactSensitiveData) {
                 result.append("[[redacted]]")
             } else {
                 result.append(recursiveDescription(redact: Logger.shared.redactSensitiveData, of: param.1))
@@ -260,7 +266,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 232
+        return 233
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

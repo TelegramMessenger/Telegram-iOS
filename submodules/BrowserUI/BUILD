@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
         "//submodules/TelegramCore",
@@ -62,6 +61,7 @@ swift_library(
         "//submodules/TelegramUI/Components/GlassControls",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramUI/Components/AuthConfirmationScreen",
+        "//submodules/WalletContext",
     ],
     visibility = [
         "//visibility:public",

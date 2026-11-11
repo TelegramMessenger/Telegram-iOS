@@ -93,6 +93,8 @@ final class TitleBarContentComponent: Component {
                 }
                 transition.setPosition(view: titleContentView, position: titleContentFrame.center)
                 titleContentView.bounds = CGRect(origin: .zero, size: titleContentFrame.size)
+                // The page title is the screen's heading.
+                titleContentView.accessibilityTraits = [.staticText, .header]
             }
             
             let expandedBackgroundWidth = availableSize.width - 14.0 * 2.0

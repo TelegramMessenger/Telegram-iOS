@@ -149,6 +149,14 @@ final class NavigationBarItemContentTests: XCTestCase {
         XCTAssertNil(navigationBarButton(for: UIBarButtonItem(title: "___close", style: .plain, target: nil, action: nil)).overflow)
     }
 
+    // UIKit returns the title as the default label while an accessibility client runs; a sentinel is still no label.
+    func test_sentinelAccessibilityLabel_isNoLabel() {
+        let done = UIBarButtonItem(title: "___done", style: .done, target: nil, action: nil)
+        done.accessibilityLabel = "___done"
+        XCTAssertNil(navigationBarItemLabel(done))
+        XCTAssertNil(navigationBarButton(for: done).overflow)
+    }
+
     func test_buttonAction_runsTheItem() {
         let target = ActionTarget()
         let button = navigationBarButton(for: UIBarButtonItem(title: "Edit", style: .plain, target: target, action: #selector(ActionTarget.fire)))

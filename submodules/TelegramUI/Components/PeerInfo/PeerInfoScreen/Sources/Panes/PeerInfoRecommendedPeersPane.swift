@@ -18,7 +18,10 @@ import PeerInfoVisualMediaPaneNode
 import ChatControllerInteraction
 import MultilineTextComponent
 import Markdown
-import SolidRoundedButtonNode
+import ButtonComponent
+import EdgeEffect
+import ComponentDisplayAdapters
+import LottieComponent
 import PeerInfoPaneNode
 
 private struct RecommendedPeersListTransaction {
@@ -124,13 +127,12 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private var enqueuedTransactions: [RecommendedPeersListTransaction] = []
     private var currentState: (RecommendedPeers?, Bool)?
     
-    private var unlockBackground: UIImageView?
+    private var unlockBackground: EdgeEffectView?
     private var unlockText: ComponentView<Empty>?
-    private var unlockButton: SolidRoundedButtonNode?
+    private var unlockButton: ComponentView<Empty>?
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
     
-    private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
     
     private let ready = Promise<Bool>()
@@ -325,12 +327,9 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             let bottomInset = currentParams.bottomInset
             let presentationData = currentParams.presentationData
           
-            let themeUpdated = self.theme !== presentationData.theme
-            self.theme = presentationData.theme
-            
             let unlockText: ComponentView<Empty>
-            let unlockBackground: UIImageView
-            let unlockButton: SolidRoundedButtonNode
+            let unlockBackground: EdgeEffectView
+            let unlockButton: ComponentView<Empty>
             if let current = self.unlockText {
                 unlockText = current
             } else {
@@ -342,8 +341,7 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             if let current = self.unlockBackground {
                 unlockBackground = current
             } else {
-                unlockBackground = UIImageView()
-                unlockBackground.contentMode = .scaleToFill
+                unlockBackground = EdgeEffectView()
                 self.view.addSubview(unlockBackground)
                 self.unlockBackground = unlockBackground
             }
@@ -356,25 +354,8 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             if let current = self.unlockButton {
                 unlockButton = current
             } else {
-                unlockButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0)
-                self.view.addSubview(unlockButton.view)
+                unlockButton = ComponentView<Empty>()
                 self.unlockButton = unlockButton
-            
-                unlockButton.animationLoopTime = 2.5
-                unlockButton.animation = "premium_unlock"
-                unlockButton.iconPosition = .right
-                unlockButton.title = isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore
-                
-                unlockButton.pressed = { [weak self] in
-                    self?.unlockPressed()
-                }
-            }
-        
-            if themeUpdated {
-                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
-                let bottomColor = presentationData.theme.list.plainBackgroundColor
-                unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
-                unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
             }
             
             let textFont = Font.regular(15.0)
@@ -411,17 +392,62 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: size.height - bottomInset - unlockSize.height - 13.0 + scrollOffset), size: unlockSize))
             }
             
-            transition.updateFrame(view: unlockBackground, frame: CGRect(x: 0.0, y: size.height - bottomInset - 170.0 + scrollOffset, width: size.width, height: bottomInset + 170.0))
+            let buttonForegroundColor = presentationData.theme.list.itemCheckColors.foregroundColor
+            let buttonSideInset = sideInset + 30.0
+            let buttonSize = unlockButton.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: presentationData.theme.list.itemCheckColors.fillColor,
+                        foreground: buttonForegroundColor,
+                        pressedColor: presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                    ),
+                    content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore, font: Font.semibold(17.0), color: buttonForegroundColor))),
+                            AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(LottieComponent(
+                                content: LottieComponent.AppBundleContent(name: "premium_unlock"),
+                                color: buttonForegroundColor,
+                                startingPosition: .begin,
+                                size: CGSize(width: 30.0, height: 30.0),
+                                loop: true
+                            )))
+                        ], spacing: 4.0)
+                    )),
+                    action: { [weak self] in
+                        self?.unlockPressed()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width - buttonSideInset * 2.0, height: 52.0)
+            )
+            let buttonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0 + scrollOffset), size: buttonSize)
             
-            let buttonSideInset = sideInset + 16.0
-            let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-            transition.updateFrame(node: unlockButton, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0 + scrollOffset), size: buttonSize))
-            let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
+            let edgeEffectInset: CGFloat = 24.0
+            let edgeEffectFrame = CGRect(x: 0.0, y: buttonFrame.minY - edgeEffectInset, width: size.width, height: size.height + scrollOffset - buttonFrame.minY + edgeEffectInset)
+            transition.updateFrame(view: unlockBackground, frame: edgeEffectFrame)
+            unlockBackground.update(
+                content: presentationData.theme.list.plainBackgroundColor,
+                blur: true,
+                alpha: 1.0,
+                rect: edgeEffectFrame,
+                edge: .bottom,
+                edgeSize: edgeEffectInset + floor(buttonSize.height * 0.5),
+                transition: ComponentTransition(transition)
+            )
+            
+            if let buttonView = unlockButton.view {
+                if buttonView.superview == nil {
+                    self.view.addSubview(buttonView)
+                }
+                transition.updateFrame(view: buttonView, frame: buttonFrame)
+            }
         } else {
             self.unlockBackground?.removeFromSuperview()
             self.unlockBackground = nil
             
-            self.unlockButton?.view.removeFromSuperview()
+            self.unlockButton?.view?.removeFromSuperview()
             self.unlockButton = nil
                         
             self.unlockText?.view?.removeFromSuperview()

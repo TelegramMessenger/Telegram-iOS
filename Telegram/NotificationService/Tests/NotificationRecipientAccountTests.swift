@@ -39,17 +39,32 @@ final class NotificationRecipientAccountTests: XCTestCase {
     // MARK: - When, and which name
 
     func testASingleAccountIsNotNamed() {
-        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1)]))
+        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1)], notificationsFromAllAccounts: true, isCurrentAccount: true))
+        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1)], notificationsFromAllAccounts: false, isCurrentAccount: true))
     }
 
     func testSeveralAccountsAreNamed() {
-        XCTAssertTrue(notificationsNameRecipientAccount(records: [self.record(1), self.record(2)]))
+        XCTAssertTrue(notificationsNameRecipientAccount(records: [self.record(1), self.record(2)], notificationsFromAllAccounts: true, isCurrentAccount: true))
+        XCTAssertTrue(notificationsNameRecipientAccount(records: [self.record(1), self.record(2)], notificationsFromAllAccounts: true, isCurrentAccount: false))
     }
 
     /// A logged-out record lingers until its cleanup finishes, but it is no longer an account the
     /// user has to tell apart.
     func testALoggedOutRecordDoesNotCountAsAnotherAccount() {
-        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1), self.record(2, loggedOut: true)]))
+        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1), self.record(2, loggedOut: true)], notificationsFromAllAccounts: true, isCurrentAccount: true))
+    }
+
+    /// With Settings ▸ Notifications ▸ "Show Notifications From All Accounts" off, only the current
+    /// account notifies, so naming it tells the user nothing.
+    func testTheCurrentAccountIsNotNamedWhenOtherAccountsDoNotNotify() {
+        XCTAssertFalse(notificationsNameRecipientAccount(records: [self.record(1), self.record(2)], notificationsFromAllAccounts: false, isCurrentAccount: true))
+    }
+
+    /// A notification for another account can still arrive with the setting off (one sent before
+    /// the app unregistered that account's token, after a switch of the current account). It is
+    /// not for the account the user is looking at, so it keeps the name.
+    func testAnotherAccountIsStillNamedWhenOtherAccountsDoNotNotify() {
+        XCTAssertTrue(notificationsNameRecipientAccount(records: [self.record(1), self.record(2)], notificationsFromAllAccounts: false, isCurrentAccount: false))
     }
 
     func testTheUsernameNamesTheAccount() {

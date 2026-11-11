@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -82,7 +81,7 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
             self.doneButtonSolidTitleNode.displaysAsynchronously = false
             self.doneButtonSolidTitleNode.isUserInteractionEnabled = false
 
-            self.animationNode = SimpleAnimationNode(animationName: "premium_unlock", size: CGSize(width: 30.0, height: 30.0), lottieSettings: .noAccountFallback)
+            self.animationNode = SimpleAnimationNode(animationName: "premium_unlock", size: CGSize(width: 30.0, height: 30.0))
             self.animationNode.customColor = .white
             self.animationNode.isHidden = true
 
@@ -432,7 +431,9 @@ public final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalle
         let cancelFrame = CGRect(x: sideInset + stripInsets.left, y: buttonY, width: buttonWidth, height: buttonHeight)
         let doneFrame = CGRect(x: cancelFrame.maxX + spacing, y: buttonY, width: max(1.0, size.width - sideInset - stripInsets.right - cancelFrame.maxX - spacing), height: buttonHeight)
 
-        let glassColor = UIColor(white: 1.0, alpha: 0.0)
+        // ButtonComponent's `.actualGlass` takes its dark/light glass from this colour's brightness, so the clear
+        // colour carries the theme's appearance.
+        let glassColor = UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.0)
         let foregroundColor = self.theme.list.itemPrimaryTextColor
         let componentTransition = ComponentTransition(transition)
 

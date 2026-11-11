@@ -57,19 +57,75 @@ public func resizableSheetHorizontalPlacement(containerSize: CGSize, safeInsets:
     return SheetHorizontalPlacement(minX: minX, width: width, contentSideInsets: contentSideInsets)
 }
 
-/// The insets of the band a full-width sheet's content keeps to (`SheetComponent`), or nil where it spans
-/// the container as it always has.
+/// Where a full-width sheet (`SheetComponent`) sits instead of spanning its container, or nil where it spans the
+/// container as it always has.
 ///
-/// Only a landscape layout beside a side strip has one: there the strip runs the full height and carries a
-/// corner block at one end, which a sheet tall enough to reach it would run under (folded landscape-left: the
-/// bottom-right block beside the sheet's bottom button). The sheet's background still spans the container;
-/// the content keeps to the band and has no side inset of its own. In portrait the sheet stays a bottom panel
-/// across the strip, below the status corner.
-public func sheetContentBandInsets(containerSize: CGSize, safeInsets: UIEdgeInsets) -> UIEdgeInsets? {
+/// Only a landscape layout beside a side strip has one: there the strip runs the full height and carries a corner
+/// block at one end (the unfolded screen's status corner at the top, folded landscape-left's block at the bottom),
+/// which a sheet spanning the container would run under, with its content kept to the band off the sheet's centre.
+/// The whole sheet keeps to the band instead, clear of the strip and its block, and its content has no side inset
+/// to keep. In portrait the sheet stays a bottom panel across the strip, below the status corner.
+public func sheetBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) -> SheetHorizontalPlacement? {
     if containerSize.width <= containerSize.height || safeInsets.left == safeInsets.right {
         return nil
     }
-    return UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: 0.0, right: safeInsets.right)
+    return SheetHorizontalPlacement(minX: safeInsets.left, width: containerSize.width - safeInsets.left - safeInsets.right, contentSideInsets: UIEdgeInsets())
+}
+
+/// The frame of a sheet shown as a centered card (where the layout `presentsFloatingPanels`) whose content is
+/// `contentHeight` high, in a container `containerSize` large: as wide as `SheetComponent`'s and the modal
+/// container's centered cards (half the longer side, at least 10pt from each edge), at most the shorter side less
+/// 44pt above and below, centered on the container.
+public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat) -> CGRect {
+    let verticalInset: CGFloat = 44.0
+    let maxSide = max(containerSize.width, containerSize.height)
+    let minSide = min(containerSize.width, containerSize.height)
+    let width = min(containerSize.width - 20.0, floor(maxSide / 2.0))
+    let height = max(0.0, min(contentHeight, minSide - verticalInset * 2.0))
+    return CGRect(origin: CGPoint(x: floor((containerSize.width - width) / 2.0), y: floor((containerSize.height - height) / 2.0)), size: CGSize(width: width, height: height))
+}
+
+/// A centered card (`centeredSheetFrame`) whose bottom stays at `maxY`, where it rests, while its content is
+/// `contentHeight` high: a card whose list rubber-bands grows and shrinks at its top only, as a bottom sheet does.
+/// Its top never rises above the tallest card's: past that the card grows downward, within the margins.
+public func centeredSheetFrame(containerSize: CGSize, contentHeight: CGFloat, maxY: CGFloat) -> CGRect {
+    let tallest = centeredSheetFrame(containerSize: containerSize, contentHeight: .greatestFiniteMagnitude)
+    let height = max(0.0, contentHeight)
+    let minY = max(tallest.minY, maxY - height)
+    return CGRect(origin: CGPoint(x: tallest.minX, y: minY), size: CGSize(width: tallest.width, height: height))
+}
+
+/// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) `alertWidth` wide, from `alertMinY` to
+/// `alertMaxY`, centers between in a container `containerSize` large: the axis of the screen's sheets.
+///
+/// In portrait, where sheets span iPhone Duo's side strip below the status corner, a strip side counts only where the
+/// screen-centered alert would reach one of its corner blocks (lifted by the keyboard in folded portrait), overlapping
+/// it by more than 1pt (a 300pt alert on the 466pt folded screen ends 1pt inside the 84pt block), so the alert centers
+/// on the screen whatever is behind it. In landscape, where sheets keep to the band (`resizableSheetHorizontalPlacement`,
+/// `sheetBandPlacement`), the safe insets. Without corner blocks (every other device) the safe insets.
+public func centeredAlertSideInsets(alertWidth: CGFloat, alertMinY: CGFloat, alertMaxY: CGFloat, containerSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> (left: CGFloat, right: CGFloat) {
+    if containerSize.width > containerSize.height {
+        return (safeInsets.left, safeInsets.right)
+    }
+    let rowInsets = bandSideInsets(forBandFrom: alertMinY, to: alertMaxY, containerHeight: containerSize.height, safeInsets: safeInsets, reservedCorners: reservedCorners)
+    let alertMinX = (containerSize.width - alertWidth) / 2.0
+    let alertMaxX = alertMinX + alertWidth
+    // A side whose inset is a corner block's strip (`bandSideInsets`' test) and whose blocks the alert's rows reach
+    // keeps it only if the screen-centered alert also reaches into one of them horizontally.
+    func inset(_ rowInset: CGFloat, blocks: [CGSize?], reaches: (CGSize) -> Bool) -> CGFloat {
+        if rowInset <= 0.0 {
+            return rowInset
+        }
+        let stripBlocks = blocks.compactMap { $0 }.filter { abs($0.width - rowInset) <= 1.0 }
+        if stripBlocks.isEmpty {
+            return rowInset
+        }
+        return stripBlocks.contains(where: reaches) ? rowInset : 0.0
+    }
+    return (
+        inset(rowInsets.left, blocks: [reservedCorners.topLeft, reservedCorners.bottomLeft], reaches: { alertMinX < $0.width - 1.0 }),
+        inset(rowInsets.right, blocks: [reservedCorners.topRight, reservedCorners.bottomRight], reaches: { alertMaxX > containerSize.width - $0.width + 1.0 })
+    )
 }
 
 /// How much further in a sheet's header controls (close, title, trailing button) move on each side so they do
@@ -88,4 +144,19 @@ public func sheetHeaderCornerInsets(containerWidth: CGFloat, sheetMinX: CGFloat,
         result.right = max(0.0, topRight.width - (containerWidth - sheetMinX - sheetWidth))
     }
     return result
+}
+
+/// The scroll offset a full-width sheet (`SheetComponent`) rests at: its bottom at the container's bottom, as always,
+/// unless it is taller than the container. Such a sheet (the report reasons on iPhone Duo's unfolded landscape, 669pt
+/// high, or any phone in landscape) rests with its top at the container's top, as it already opened and snapped back,
+/// and scrolls up to its bottom; resting on its bottom after a rotation or a content change, it showed its header
+/// (close button, title) above the screen. A sheet that grew by the keyboard's height, or cannot scroll to
+/// its bottom (`keepsBottomVisible`), still rests on its bottom, keeping what is just above the keyboard, or its
+/// action, in view.
+public func sheetRestingScrollOffset(contentHeight: CGFloat, containerHeight: CGFloat, keepsBottomVisible: Bool) -> CGFloat {
+    let bottomResting = contentHeight - containerHeight
+    if keepsBottomVisible {
+        return bottomResting
+    }
+    return min(bottomResting, 0.0)
 }

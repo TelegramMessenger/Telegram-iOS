@@ -18,15 +18,17 @@ final class WalletTransferNavigationAppIconComponent: Component {
     let context: AccountContext
     let applicationName: String
     let icon: WalletTonConnectIcon?
+    let peer: EnginePeer?
 
-    init(context: AccountContext, applicationName: String, icon: WalletTonConnectIcon?) {
+    init(context: AccountContext, applicationName: String, icon: WalletTonConnectIcon?, peer: EnginePeer?) {
         self.context = context
         self.applicationName = applicationName
         self.icon = icon
+        self.peer = peer
     }
 
     static func ==(lhs: WalletTransferNavigationAppIconComponent, rhs: WalletTransferNavigationAppIconComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.applicationName == rhs.applicationName && lhs.icon == rhs.icon
+        return lhs.context === rhs.context && lhs.applicationName == rhs.applicationName && lhs.icon == rhs.icon && lhs.peer == rhs.peer
     }
 
     final class View: UIView {
@@ -44,7 +46,8 @@ final class WalletTransferNavigationAppIconComponent: Component {
                 component: AnyComponent(WalletConnectAppIconComponent(
                     context: component.context,
                     applicationName: component.applicationName,
-                    icon: component.icon
+                    icon: component.icon,
+                    peer: component.peer
                 )),
                 environment: {},
                 containerSize: size

@@ -13,13 +13,14 @@ import TelegramNotices
 import AppBundle
 import TooltipUI
 import CallScreen
+import ContextUI
 
 protocol CallControllerNodeProtocol: AnyObject {
     var isMuted: Bool { get set }
     
     var toggleMute: (() -> Void)? { get set }
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)? { get set }
-    var beginAudioOuputSelection: ((Bool) -> Void)? { get set }
+    var beginAudioOuputSelection: ((Bool, UIView?) -> Void)? { get set }
     var acceptCall: (() -> Void)? { get set }
     var endCall: (() -> Void)? { get set }
     var back: (() -> Void)? { get set }
@@ -39,6 +40,61 @@ protocol CallControllerNodeProtocol: AnyObject {
     func expandFromPipIfPossible()
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition)
+}
+
+final class CallAudioRouteContextReferenceContentSource: ContextReferenceContentSource {
+    private weak var sourceView: UIView?
+    
+    init(sourceView: UIView) {
+        self.sourceView = sourceView
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        guard let sourceView = self.sourceView else {
+            return nil
+        }
+        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
+    }
+}
+
+func callAudioRouteContextMenuItems(strings: PresentationStrings, availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?, isMuted: Bool?, selectOutput: @escaping (AudioSessionOutput) -> Void, toggleMute: @escaping () -> Void) -> [ContextMenuItem] {
+    var items: [ContextMenuItem] = []
+    for output in availableOutputs {
+        let title: String
+        switch output {
+        case .builtin:
+            title = UIDevice.current.model
+        case .speaker:
+            title = strings.Call_AudioRouteSpeaker
+        case .headphones:
+            title = strings.Call_AudioRouteHeadphones
+        case let .port(port):
+            title = port.name
+        }
+        items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+            if output == currentOutput {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+            } else {
+                return UIImage()
+            }
+        }, action: { _, f in
+            f(.default)
+            selectOutput(output)
+        })))
+    }
+    if let isMuted {
+        items.append(.action(ContextMenuActionItem(text: strings.Call_AudioRouteMute, icon: { theme in
+            if isMuted {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+            } else {
+                return UIImage()
+            }
+        }, action: { _, f in
+            f(.default)
+            toggleMute()
+        })))
+    }
+    return items
 }
 
 public final class CallController: ViewController {
@@ -187,7 +243,7 @@ public final class CallController: ViewController {
             self?.call.setCurrentAudioOutput(output)
         }
         
-        self.controllerNode.beginAudioOuputSelection = { [weak self] hasMute in
+        self.controllerNode.beginAudioOuputSelection = { [weak self] hasMute, sourceView in
             guard let strongSelf = self, let (availableOutputs, currentOutput) = strongSelf.audioOutputState else {
                 return
             }
@@ -202,57 +258,29 @@ public final class CallController: ViewController {
                     }
                 }
             } else {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                var items: [ActionSheetItem] = []
-                for output in availableOutputs {
-                    if hasMute, case .builtin = output {
-                        continue
-                    }
-                    let title: String
-                    var icon: UIImage?
-                    switch output {
-                        case .builtin:
-                            title = UIDevice.current.model
-                        case .speaker:
-                            title = strongSelf.presentationData.strings.Call_AudioRouteSpeaker
-                            icon = generateScaledImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), size: CGSize(width: 48.0, height: 48.0), opaque: false)
-                        case .headphones:
-                            title = strongSelf.presentationData.strings.Call_AudioRouteHeadphones
-                        case let .port(port):
-                            title = port.name
-                            if port.type == .bluetooth {
-                                var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
-                                let portName = port.name.lowercased()
-                                if portName.contains("airpods max") {
-                                    image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
-                                } else if portName.contains("airpods pro") {
-                                    image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
-                                } else if portName.contains("airpods") {
-                                    image = UIImage(bundleImageName: "Call/CallAirpodsButton")
-                                }
-                                icon = generateScaledImage(image: image, size: CGSize(width: 48.0, height: 48.0), opaque: false)
-                            }
-                    }
-                    items.append(CallRouteActionSheetItem(title: title, icon: icon, selected: output == currentOutput, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                let items = callAudioRouteContextMenuItems(
+                    strings: strongSelf.presentationData.strings,
+                    availableOutputs: availableOutputs.filter { output in
+                        if hasMute, case .builtin = output {
+                            return false
+                        }
+                        return true
+                    },
+                    currentOutput: currentOutput,
+                    isMuted: hasMute ? strongSelf.isMuted : nil,
+                    selectOutput: { output in
                         self?.call.setCurrentAudioOutput(output)
-                    }))
-                }
-                
-                if hasMute {
-                    items.append(CallRouteActionSheetItem(title: strongSelf.presentationData.strings.Call_AudioRouteMute, icon:  generateScaledImage(image: UIImage(bundleImageName: "Call/CallMuteButton"), size: CGSize(width: 48.0, height: 48.0), opaque: false), selected: strongSelf.isMuted, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    },
+                    toggleMute: {
                         self?.call.toggleIsMuted()
-                    }))
-                }
-                
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Call_AudioRouteHide, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                strongSelf.present(actionSheet, in: .window(.calls))
+                    }
+                )
+                let contextController = makeContextController(
+                    presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme),
+                    source: .reference(CallAudioRouteContextReferenceContentSource(sourceView: sourceView ?? strongSelf.view)),
+                    items: .single(ContextController.Items(content: .list(items)))
+                )
+                strongSelf.presentInGlobalOverlay(contextController)
             }
         }
         
@@ -478,10 +506,13 @@ public final class CallController: ViewController {
     }
     
     private func conferenceAddParticipant() {
-        var disablePeerIds: [EnginePeer.Id] = []
-        disablePeerIds.append(self.call.context.account.peerId)
-        disablePeerIds.append(self.call.peerId)
-        let controller = CallController.openConferenceAddParticipant(context: self.call.context, disablePeerIds: disablePeerIds, shareLink: nil, completion: { [weak self] peers in
+        let selection = ConferenceAddParticipantSelection(
+            accountPeerId: self.call.context.account.peerId,
+            participantPeerIds: [self.call.peerId],
+            totalParticipantCount: 0,
+            invitedPeerIds: []
+        )
+        let controller = CallController.openConferenceAddParticipant(context: self.call.context, selection: selection, shareLink: nil, completion: { [weak self] peers in
             guard let self else {
                 return
             }
@@ -492,7 +523,8 @@ public final class CallController: ViewController {
         self.push(controller)
     }
     
-    static func openConferenceAddParticipant(context: AccountContext, disablePeerIds: [EnginePeer.Id], shareLink: (() -> Void)?, completion: @escaping ([(id: EnginePeer.Id, isVideo: Bool)]) -> Void) -> ViewController {
+    /// The call-creation multi-select picker, inviting everyone selected to an ongoing call at once.
+    static func openConferenceAddParticipant(context: AccountContext, selection: ConferenceAddParticipantSelection, shareLink: (() -> Void)?, completion: @escaping ([(id: EnginePeer.Id, isVideo: Bool)]) -> Void) -> ViewController {
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var options: [ContactListAdditionalOption] = []
@@ -503,50 +535,17 @@ public final class CallController: ViewController {
             }, clearHighlightAutomatically: false))
         }
         
-        let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
             context: context,
             updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
-            mode: .generic,
-            title: { strings in
-                return strings.Call_AddMemberTitle
-            },
+            title: presentationData.strings.Call_AddMemberTitle,
+            mode: .groupCreation(isCall: true),
             options: .single(options),
-            displayCallIcons: true,
-            multipleSelection: .disabled,
-            confirmation: { peer in
-                switch peer {
-                case let .peer(peer, _, _):
-                    guard case let .user(user) = peer else {
-                        return .single(false)
-                    }
-                    if disablePeerIds.contains(user.id) {
-                        return .single(false)
-                    }
-                    if user.botInfo != nil {
-                        return .single(false)
-                    }
-                    return .single(true)
-                default:
-                    return .single(false)
-                }
-            },
+            filters: [.excludeSelf],
             isPeerEnabled: { peer in
-                switch peer {
-                case let .peer(peer, _, _):
-                    guard case let .user(user) = peer else {
-                        return false
-                    }
-                    if disablePeerIds.contains(user.id) {
-                        return false
-                    }
-                    if user.botInfo != nil {
-                        return false
-                    }
-                    return true
-                default:
-                    return false
-                }
-            }
+                return selection.isPeerEnabled(peer)
+            },
+            existingCallParticipantCount: selection.occupiedSlotCount
         ))
         
         openShareLinkImpl = { [weak controller] in
@@ -556,24 +555,16 @@ public final class CallController: ViewController {
         
         controller.navigationPresentation = .modal
         let _ = (controller.result |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in
-            guard let result, let peer = result.0.first, case let .peer(peer, _, _) = peer else {
+            guard case let .result(peerIds, _) = result else {
                 controller?.dismiss()
                 return
             }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                controller?.dismiss()
+            let invites = selection.invites(selectedPeerIds: peerIds, isVideo: controller?.isCallVideoOptionSelected ?? false)
+            controller?.dismiss()
+            if invites.isEmpty {
+                return
             }
-            
-            var isVideo = false
-            switch result.1 {
-            case .videoCall:
-                isVideo = true
-            default:
-                break
-            }
-            
-            completion([(peer.id, isVideo)])
+            completion(invites)
         })
         
         return controller

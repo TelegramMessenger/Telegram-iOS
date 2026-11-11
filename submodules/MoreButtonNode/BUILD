@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/Display:Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",

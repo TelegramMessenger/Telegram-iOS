@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -325,6 +324,12 @@ final class CountriesMultiselectionScreenComponent: Component {
             }
         }
                         
+        // iPhone Duo: the list and the header keep to the band beside the side strip (and clear of the status corner
+        // at its end); the backgrounds still span the screen. Equal insets keep the full width.
+        private func bandInsets(environment: ViewControllerComponentContainer.Environment) -> (left: CGFloat, right: CGFloat) {
+            return environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+        }
+        
         private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
@@ -361,7 +366,9 @@ final class CountriesMultiselectionScreenComponent: Component {
                 
                 var minSectionHeader: UIView?
                 do {
-                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
+                    // A pinned header (outside the list's clipping) spans the side strip, its title in the band.
+                    let sectionHeaderBandInsets = self.bandInsets(environment: environment)
+                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset - sectionHeaderBandInsets.left, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width + sectionHeaderBandInsets.left + sectionHeaderBandInsets.right, height: section.insets.top))
       
                     let sectionHeaderMinY = topOffset + itemLayout.containerInset + itemLayout.navigationHeight
                     let sectionHeaderMaxY = itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset + section.totalHeight - 28.0
@@ -391,7 +398,9 @@ final class CountriesMultiselectionScreenComponent: Component {
                                 style: .plain,
                                 title: sectionTitle,
                                 actionTitle: nil,
-                                action: nil
+                                action: nil,
+                                leftInset: sectionHeaderBandInsets.left,
+                                rightInset: sectionHeaderBandInsets.right
                             )),
                             environment: {},
                             containerSize: sectionHeaderFrame.size
@@ -569,8 +578,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
                     )),
                     environment: {},
                     containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
@@ -648,7 +656,7 @@ final class CountriesMultiselectionScreenComponent: Component {
             
             // iPhone Duo: the list and the header keep to the band beside the side strip (and clear of the status corner
             // at its end); the backgrounds still span the screen. Equal insets keep the full width.
-            let bandInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+            let bandInsets = self.bandInsets(environment: environment)
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width - bandInsets.left - bandInsets.right
             
@@ -747,6 +755,8 @@ final class CountriesMultiselectionScreenComponent: Component {
                     placeholder: placeholder,
                     tokens: tokens,
                     sideInset: sideInset,
+                    leftInset: bandInsets.left,
+                    rightInset: bandInsets.right,
                     deleteToken: { [weak self] tokenId in
                         guard let self else {
                             return
@@ -758,7 +768,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: contentWidth, height: 1000.0)
+                containerSize: CGSize(width: containerWidth, height: 1000.0)
             )
             
             if !self.navigationTextFieldState.text.isEmpty {
@@ -904,7 +914,9 @@ final class CountriesMultiselectionScreenComponent: Component {
                 navigationTitleView.bounds = CGRect(origin: CGPoint(), size: navigationTitleFrame.size)
             }
             
-            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: contentSideInset, y: navigationHeight), size: navigationTextFieldSize)
+            // iPhone Duo: the search field and its separator span the side strip, as the header's background does; its
+            // tokens and text keep to the band.
+            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: navigationTextFieldSize)
             if let navigationTextFieldView = self.navigationTextField.view {
                 if navigationTextFieldView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTextFieldView)
@@ -1032,6 +1044,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 let indexSections = stateValue.sections.map { $0.0 }
                 self.indexNode.update(size: CGSize(width: indexNodeFrame.width, height: indexNodeFrame.height), color: environment.theme.list.itemAccentColor, sections: indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
                 self.indexNode.isUserInteractionEnabled = !indexSections.isEmpty
+                self.indexNode.accessibilityLabel = environment.strings.VoiceOver_Common_SectionIndex
             }
             
             return availableSize

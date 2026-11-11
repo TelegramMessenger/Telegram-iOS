@@ -49,6 +49,7 @@ final class MediaEditorRenderer {
         case texture(MTLTexture, CMTime, Bool, CGRect?, CGFloat, CGPoint)
         case videoBuffer(VideoPixelBuffer, CGRect?, CGFloat, CGPoint)
         case ciImage(CIImage, CMTime)
+        case entityFrame(MediaEditorComposerEntityFrame, CMTime)
         
         var timestamp: CMTime {
             switch self {
@@ -58,13 +59,15 @@ final class MediaEditorRenderer {
                 return videoBuffer.timestamp
             case let .ciImage(_, timestamp):
                 return timestamp
+            case let .entityFrame(_, timestamp):
+                return timestamp
             }
         }
     }
     
     private var device: MTLDevice?
     private var library: MTLLibrary?
-    private var commandQueue: MTLCommandQueue?
+    private(set) var commandQueue: MTLCommandQueue?
     private var textureCache: CVMetalTextureCache?
     private var semaphore = DispatchSemaphore(value: 3)
     /// Permits actually taken from `semaphore`.
@@ -80,6 +83,8 @@ final class MediaEditorRenderer {
     private let mainVideoInputPass = VideoInputPass()
     private var additionalVideoInputPass: [Int : VideoInputPass] = [:]
     let videoFinishPass = VideoFinishPass()
+    var frameCompositor: MediaEditorFrameCompositor?
+    private let entityFrameColorSpace = CGColorSpaceCreateDeviceRGB()
     
     private let outputRenderPass = OutputRenderPass()
     private weak var renderTarget: RenderTarget? {
@@ -100,6 +105,7 @@ final class MediaEditorRenderer {
     private(set) var resultTexture: MTLTexture?
     
     var displayEnabled = true
+    var waitsForOffscreenFrames = true
     var skipEditingPasses = false
     var needsDisplay = false
     
@@ -176,14 +182,6 @@ final class MediaEditorRenderer {
         self.outputRenderPass.setup(device: device, library: library)
     }
     
-    func setupForComposer(composer: MediaEditorComposer) {
-        guard let device = composer.device else {
-            return
-        }
-        self.device = device
-        self.commonSetup(device: device)
-    }
-    
     func setupForStandaloneDevice(device: MTLDevice) {
         self.device = device
         self.commonSetup(device: device)
@@ -212,6 +210,22 @@ final class MediaEditorRenderer {
                 }
             case let .ciImage(image, _):
                 if let texture = self.ciInputPass.processCIImage(image, device: device, commandBuffer: commandBuffer) {
+                    return VideoFinishPass.Input(texture: texture, hasTransparency: true, rect: nil, scale: 1.0, offset: .zero)
+                } else {
+                    return nil
+                }
+            case let .entityFrame(frame, _):
+                guard let frameCompositor = self.frameCompositor else {
+                    return nil
+                }
+                let texture: MTLTexture?
+                switch frame.content {
+                case let .pixelBuffer(pixelBuffer):
+                    texture = frameCompositor.texture(for: pixelBuffer, convertingTo: self.entityFrameColorSpace, extendedRange: false)
+                case let .image(image):
+                    texture = frameCompositor.texture(for: image)
+                }
+                if let texture {
                     return VideoFinishPass.Input(texture: texture, hasTransparency: true, rect: nil, scale: 1.0, offset: .zero)
                 } else {
                     return nil
@@ -284,7 +298,7 @@ final class MediaEditorRenderer {
                 self.needsDisplay = true
                 renderTarget.redraw()
             }
-        } else {
+        } else if self.waitsForOffscreenFrames {
             commandBuffer.waitUntilCompleted()
         }
     }
@@ -382,7 +396,7 @@ final class MediaEditorRenderer {
         self.renderTarget?.redraw()
     }
     
-    func finalRenderedCIImage() -> CIImage? {
+    func finalRenderedTexture() -> MTLTexture? {
         guard let texture = self.resultTexture, let device = self.effectiveDevice, let commandBuffer = self.commandQueue?.makeCommandBuffer() else {
             return nil
         }
@@ -399,7 +413,7 @@ final class MediaEditorRenderer {
         guard commandBuffer.status == .completed else {
             return nil
         }
-        return getTextureCIImage(texture: snapshot)
+        return snapshot
     }
 
     func finalRenderedImage(mirror: Bool = false) -> UIImage? {

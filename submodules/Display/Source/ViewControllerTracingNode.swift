@@ -16,9 +16,26 @@ private final class ViewControllerTracingNodeView: UITracingLayerView {
             return result
         }
     }
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            if let node = self.asyncdisplaykit_node as? ViewControllerTracingNode, let elements = node.screenAccessibilityElements {
+                return elements
+            }
+            return super.accessibilityElements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
 }
 
 open class ViewControllerTracingNode: ASDisplayNode {
+    /// VoiceOver: an explicit order of the screen's top-level views, or nil for UIKit's own. This node's view is not an
+    /// `_ASDisplayView`, so an `accessibilityElements` override on the node is never consulted; override this instead.
+    open var screenAccessibilityElements: [Any]? {
+        return nil
+    }
+    
     override public init() {
         super.init()
         

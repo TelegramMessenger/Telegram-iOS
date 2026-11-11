@@ -499,7 +499,7 @@ public final class EmojiStatusSelectionController: ViewController {
                             }
                         })
                     },
-                    clearGroup: { groupId in
+                    clearGroup: { groupId, _, _ in
                     },
                     editAction: { _ in },
                     pushController: { c in
@@ -799,6 +799,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     stateContext: nil,
                     addImage: nil
                 )
+                emojiContent.inputInteractionHolder.inputInteraction?.exposesItemsToAccessibility = true
                 
                 strongSelf.refreshLayout(transition: .immediate)
             })

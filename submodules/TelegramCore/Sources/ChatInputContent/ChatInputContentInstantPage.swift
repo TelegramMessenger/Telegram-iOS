@@ -208,7 +208,13 @@ func richText(from runs: [ChatInputRun]) -> RichText {
             case let .customEmoji(fileId, _, _):
                 rt = .textCustomEmoji(fileId: fileId, alt: run.text)
             case let .mention(peerId):
-                rt = .textMentionName(text: .plain(run.text), peerId: peerId.toInt64())
+                // `textMentionName` carries the raw user id (`user_id:long`), not a packed `PeerId`: the two
+                // differ for every id of 2^32 and above. Only a user can be mentioned by name.
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    rt = .textMentionName(text: .plain(run.text), peerId: peerId.id._internalGetInt64Value())
+                } else {
+                    rt = .plain(run.text)
+                }
             case let .url(url):
                 rt = .url(text: .plain(run.text), url: url, webpageId: nil)
             case let .date(date):
@@ -535,8 +541,11 @@ func chatInputRun(fromSinglePart rt: RichText, attributes: ChatInputInlineAttrib
     case let .textSpoiler(inner):
         attributes.spoiler = true
         return chatInputRun(fromSinglePart: inner, attributes: attributes)
-    case let .textMentionName(inner, peerId):
-        attributes.entity = .mention(EnginePeer.Id(peerId))
+    case let .textMentionName(inner, userId):
+        // An id no user can have (only a bogus page carries one) leaves the text plain.
+        if userId > 0 {
+            attributes.entity = .mention(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId)))
+        }
         return chatInputRun(fromSinglePart: inner, attributes: attributes)
     case let .url(inner, url, _):
         attributes.entity = .url(url)

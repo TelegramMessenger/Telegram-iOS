@@ -25,6 +25,8 @@ final class ActionSheetItemGroupNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.centerDimView = UIImageView()
         self.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: self.theme.dimColor)
+        // The dimming drawn around the group's rounded corners, not content.
+        self.centerDimView.accessibilityElementsHidden = true
         
         self.topDimView = UIView()
         self.topDimView.backgroundColor = self.theme.dimColor

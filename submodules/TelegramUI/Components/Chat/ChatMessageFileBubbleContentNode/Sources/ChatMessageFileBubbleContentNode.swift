@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -33,10 +32,10 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.interactiveFileNode = ChatMessageInteractiveFileNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.interactiveFileNode)
         
@@ -96,6 +95,14 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override public func bubblelessLiftParts() -> [ChatMessageBubblelessLiftPart] {
+        // Without bubbles a file keeps half a block gap above and below it, which the card leaves out.
+        if let item = self.item, item.bubbleStyle.isBubbleless {
+            return [.block(self.bounds.insetBy(dx: 0.0, dy: chatMessageBubblelessBlockGap * 0.5))]
+        }
+        return super.bubblelessLiftParts()
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
@@ -125,7 +132,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if incoming {
-                        statusType = .BubbleIncoming
+                        statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .BubbleIncoming
                     } else {
                         if item.message.flags.contains(.Failed) {
                             statusType = .BubbleOutgoing(.Failed)
@@ -139,6 +146,18 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     statusType = nil
                 }
             }
+            
+            // Without bubbles a file sits on the page like text: on the text column, keeping half of the block gap above
+            // and below it.
+            let isBubbleless = item.bubbleStyle == .bubbleless
+            var fileInsets = layoutConstants.file.bubbleInsets
+            if isBubbleless {
+                fileInsets = UIEdgeInsets(top: chatMessageBubblelessBlockGap * 0.5, left: 0.0, bottom: chatMessageBubblelessBlockGap * 0.5, right: 0.0)
+            }
+            // A voice message's 44pt play button starts 3pt above its 38pt row and hangs 3pt below it, which a bubble's
+            // padding absorbs. Without one the block takes the button's extent, so the spacing is measured from it.
+            let voiceButtonOverhang: CGFloat = (isBubbleless && selectedFile?.isVoice == true) ? chatMessageBubblelessVoiceButtonOverhang : 0.0
+            let voiceRowHeight: CGFloat = 38.0
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile.flatMap(EngineMedia.file))
             
@@ -163,21 +182,33 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 messageSelection: item.message.groupingKey != nil ? selection : nil,
                 isAttachedContentBlock: false,
                 layoutConstants: layoutConstants,
-                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height),
-                controllerInteraction: item.controllerInteraction
+                constrainedSize: CGSize(width: constrainedSize.width - fileInsets.left - fileInsets.right, height: constrainedSize.height),
+                controllerInteraction: item.controllerInteraction,
+                bubbleStyle: item.bubbleStyle
             ))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
-            return (contentProperties, nil, initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { [weak self] constrainedSize, position in
-                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
+            return (contentProperties, nil, initialWidth + fileInsets.left + fileInsets.right, { [weak self] constrainedSize, position in
+                // Under the author header a file starts as far under the name as in a bubble.
+                var fileInsets = fileInsets
+                var isUnderHeader = false
+                if isBubbleless, case let .linear(top, _) = position, case .Neighbour(_, .header, _) = top {
+                    isUnderHeader = true
+                }
+                fileInsets.top = chatMessageBubblelessFileTopInset(baseTop: fileInsets.top, underHeader: isUnderHeader, voiceButtonOverhang: voiceButtonOverhang)
+                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - fileInsets.left - fileInsets.right, height: constrainedSize.height))
                 
-                return (refinedWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { [weak self] boundingWidth in
-                    let (fileSize, fileApply) = finishLayout(boundingWidth - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right)
+                return (refinedWidth + fileInsets.left + fileInsets.right, { [weak self] boundingWidth in
+                    let (fileSize, fileApply) = finishLayout(boundingWidth - fileInsets.left - fileInsets.right)
                     
-                    var bottomInset = layoutConstants.file.bubbleInsets.bottom
+                    var bottomInset = fileInsets.bottom
+                    // Only while nothing (a transcription) follows the row does the button hang past the layout.
+                    if !voiceButtonOverhang.isZero {
+                        bottomInset += max(0.0, voiceRowHeight + voiceButtonOverhang - fileSize.height)
+                    }
                     
-                    if case let .linear(_, bottom) = position {
+                    if !isBubbleless, case let .linear(_, bottom) = position {
                         if case .Neighbour(_, _, .condensed) = bottom {
                             if selectedFile?.isMusic ?? false {
                                 bottomInset -= 14.0
@@ -187,11 +218,11 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] animation, synchronousLoads, applyInfo in
+                    return (CGSize(width: fileSize.width + fileInsets.left + fileInsets.right, height: fileSize.height + fileInsets.top + bottomInset), { [weak self] animation, synchronousLoads, applyInfo in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            strongSelf.interactiveFileNode.frame = CGRect(origin: CGPoint(x: layoutConstants.file.bubbleInsets.left, y: layoutConstants.file.bubbleInsets.top), size: fileSize)
+                            strongSelf.interactiveFileNode.frame = CGRect(origin: CGPoint(x: fileInsets.left, y: fileInsets.top), size: fileSize)
                             
                             fileApply(synchronousLoads, animation, applyInfo)
                         }

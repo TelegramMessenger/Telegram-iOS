@@ -39,6 +39,32 @@ private final class QrStudioSwatchCache {
     }
 }
 
+/// A scroll view whose VoiceOver elements are supplied by its owner (the swatch grid is drawn in layers).
+final class QrStudioAccessibleScrollView: UIScrollView {
+    var accessibilityElementsProvider: (() -> [Any]?)?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            return self.accessibilityElementsProvider?() ?? super.accessibilityElements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
+/// A grid cell for VoiceOver: activation is the cell's tap.
+final class QrStudioGridAccessibilityElement: UIAccessibilityElement {
+    var activate: (() -> Void)?
+    
+    override func accessibilityActivate() -> Bool {
+        guard let activate = self.activate else {
+            return false
+        }
+        activate()
+        return true
+    }
+}
+
 enum QrStudioColorsSelection: Equatable {
     case palette(QrStudioPaletteId)
     case theme(String)
@@ -50,8 +76,14 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
         let frame: CGRect
     }
 
-    let scrollView = UIScrollView()
+    let scrollView: UIScrollView = QrStudioAccessibleScrollView()
     var selected: ((QrStudioPaletteId) -> Void)?
+    
+    // VoiceOver: the section titles, then a button per swatch (themes by their emoji, colours as "Color n"), the current
+    // one selected; built when asked, kept until the cells or the selection change.
+    private var accessibilityStrings: PresentationStrings?
+    private var accessibilitySelection: QrStudioColorsSelection?
+    private var cachedAccessibilityElements: [Any]?
     var selectedTheme: ((String) -> Void)?
     var themeImage: ((QrStudioTheme, Int) -> Signal<CGImage?, NoError>)?
 
@@ -103,6 +135,57 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
         self.layer.mask = self.fadeMask
 
         self.scrollView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
+        
+        (self.scrollView as? QrStudioAccessibleScrollView)?.accessibilityElementsProvider = { [weak self] in
+            return self?.makeAccessibilityElements()
+        }
+    }
+    
+    private func makeAccessibilityElements() -> [Any] {
+        if let cachedAccessibilityElements = self.cachedAccessibilityElements {
+            return cachedAccessibilityElements
+        }
+        var items: [(frame: CGRect, element: Any)] = []
+        for label in self.labels where !label.isHidden && !(label.attributedText?.string ?? "").isEmpty {
+            label.accessibilityTraits = .header
+            items.append((label.frame, label))
+        }
+        var colorIndex = 0
+        for cell in self.cells {
+            let element = QrStudioGridAccessibilityElement(accessibilityContainer: self.scrollView)
+            element.accessibilityFrameInContainerSpace = cell.frame
+            switch cell.selection {
+            case .palette:
+                colorIndex += 1
+                element.accessibilityLabel = self.accessibilityStrings?.VoiceOver_Common_ColorNumber("\(colorIndex)").string ?? "\(colorIndex)"
+            case let .theme(id):
+                element.accessibilityLabel = self.accessibilityStrings?.Appearance_VoiceOver_Theme(id).string ?? id
+            }
+            element.accessibilityTraits = cell.selection == self.accessibilitySelection ? [.button, .selected] : .button
+            let selection = cell.selection
+            element.activate = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.hapticFeedback.tap()
+                switch selection {
+                case let .palette(id):
+                    self.selected?(id)
+                case let .theme(id):
+                    self.selectedTheme?(id)
+                }
+            }
+            items.append((cell.frame, element))
+        }
+        items.sort { lhs, rhs in
+            if abs(lhs.frame.minY - rhs.frame.minY) > 1.0 {
+                return lhs.frame.minY < rhs.frame.minY
+            }
+            return lhs.frame.minX < rhs.frame.minX
+        }
+        let elements = items.map { $0.element }
+        self.cachedAccessibilityElements = elements
+        return elements
     }
 
     required init?(coder: NSCoder) {
@@ -200,6 +283,11 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
 
     func update(size: CGSize, theme: PresentationTheme, strings: PresentationStrings, themes: [QrStudioTheme], palettes: [QrStudioPalette], selection: QrStudioColorsSelection?, revealSelection: Bool) {
         let sizeChanged = self.size != size
+        if self.accessibilityStrings !== strings || self.accessibilitySelection != selection {
+            self.accessibilityStrings = strings
+            self.accessibilitySelection = selection
+            self.cachedAccessibilityElements = nil
+        }
         let themesChanged = themes.map { $0.id } != self.themeIds || palettes.compactMap({ $0.id }) != self.paletteIds
         self.size = size
         self.updateThemeLayers(themes)
@@ -263,6 +351,7 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
                 y += CGFloat(rows) * cellSide + CGFloat(max(0, rows - 1)) * rowSpacing + 18.0
             }
             self.cells = cells
+            self.cachedAccessibilityElements = nil
             self.scrollView.contentSize = CGSize(width: size.width, height: y + 34.0)
         }
 

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -489,8 +488,7 @@ public final class MessageInputActionButtonComponent: Component {
                         content: LottieComponent.AppBundleContent(name: animationName),
                         color: .white,
                         startingPosition: startingPosition,
-                        playOnce: playOnce,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        playOnce: playOnce
                     )),
                     environment: {},
                     containerSize: CGSize(width: 30.0, height: 30.0)
@@ -505,6 +503,63 @@ public final class MessageInputActionButtonComponent: Component {
                 }
             default:
                 break
+            }
+            
+            // VoiceOver: the button by what it does. The voice and video modes are the recording button's own element;
+            // the caption-position modes and `.none` are not read.
+            var accessibilityLabel: String?
+            var accessibilityValue: String?
+            var accessibilityTraits: UIAccessibilityTraits = .button
+            switch component.mode {
+            case .send, .stars:
+                accessibilityLabel = component.strings.VoiceOver_MessageContextSend
+            case .apply:
+                accessibilityLabel = component.strings.Common_Done
+            case .delete, .removeVideoInput:
+                accessibilityLabel = component.strings.Common_Delete
+            case .attach:
+                accessibilityLabel = component.strings.VoiceOver_AttachMedia
+            case .forward:
+                accessibilityLabel = component.strings.VoiceOver_MessageContextShare
+            case .close:
+                accessibilityLabel = component.strings.Common_Close
+            case .repost:
+                accessibilityLabel = component.strings.VoiceOver_Stories_Repost
+            case let .like(reaction, _, _):
+                accessibilityLabel = component.strings.VoiceOver_Stories_Like
+                if let reaction {
+                    accessibilityTraits.insert(.selected)
+                    if case let .builtin(value) = reaction {
+                        accessibilityValue = value
+                    }
+                }
+            case .none, .more, .captionUp, .captionDown, .voiceInput, .videoInput, .unavailableVoiceInput:
+                break
+            }
+            if let moreButton = self.moreButton {
+                // `.more` shows its own "…" button over this one.
+                moreButton.view.isAccessibilityElement = component.mode == .more
+                moreButton.view.accessibilityLabel = component.strings.Common_More
+                moreButton.view.accessibilityTraits = .button
+            }
+            self.button.isAccessibilityElement = accessibilityLabel != nil
+            self.button.accessibilityLabel = accessibilityLabel
+            self.button.accessibilityValue = accessibilityValue
+            self.button.accessibilityTraits = accessibilityTraits
+            self.button.view.accessibilityElementsHidden = accessibilityLabel == nil
+            // The long press (Like's reaction picker, Send's options) as a "More" action, while the long press is on.
+            if component.longPressAction != nil && accessibilityLabel != nil {
+                if self.button.accessibilityCustomActions == nil {
+                    self.button.accessibilityCustomActions = [UIAccessibilityCustomAction(name: component.strings.Common_More, actionHandler: { [weak self] _ in
+                        guard let self, let longPressAction = self.component?.longPressAction else {
+                            return false
+                        }
+                        longPressAction(self.button.view, nil)
+                        return true
+                    })]
+                }
+            } else {
+                self.button.accessibilityCustomActions = nil
             }
             
             var sendAlpha: CGFloat = 0.0
@@ -841,6 +896,25 @@ public final class MessageInputActionButtonComponent: Component {
                 }
                 
                 transition.setAlpha(view: micButton, alpha: microphoneAlpha)
+                // VoiceOver: the record button by its mode, as the chat names it (ChatTextInputActionButtonsNode); not read while
+                // another mode's button covers it.
+                switch component.mode {
+                case .voiceInput, .unavailableVoiceInput:
+                    micButton.isAccessibilityElement = true
+                    micButton.accessibilityElementsHidden = false
+                    micButton.accessibilityLabel = component.strings.VoiceOver_Chat_RecordModeVoiceMessage
+                    micButton.accessibilityHint = nil
+                    micButton.accessibilityTraits = component.mode == .unavailableVoiceInput ? [.button, .notEnabled] : .button
+                case .videoInput:
+                    micButton.isAccessibilityElement = true
+                    micButton.accessibilityElementsHidden = false
+                    micButton.accessibilityLabel = component.strings.VoiceOver_Chat_RecordModeVideoMessage
+                    micButton.accessibilityHint = nil
+                    micButton.accessibilityTraits = .button
+                default:
+                    micButton.isAccessibilityElement = false
+                    micButton.accessibilityElementsHidden = true
+                }
                 transition.setScale(view: micButton, scale: microphoneAlpha == 0.0 ? 0.01 : 1.0)
             }
             

@@ -54,6 +54,12 @@ final class CoreVirtualListCoreTests: XCTestCase {
         XCTAssertNil(CoreVirtualListView.firstDuplicatePair(in: items([0, 1])))
     }
 
+    func test_duplicateIdentityValidation_reportsTheEarliestItemThatHasALaterDuplicate() throws {
+        let pair = try XCTUnwrap(CoreVirtualListView.firstDuplicatePair(in: items([0, 1, 1, 0])))
+        XCTAssertEqual(pair.first, 0)
+        XCTAssertEqual(pair.second, 3)
+    }
+
     func test_noChangeIdentityDiff_preservesWindowViewsOffsetAndFrames() {
         let source = items(Array(0..<20))
         let fixture = VirtualListFixture(

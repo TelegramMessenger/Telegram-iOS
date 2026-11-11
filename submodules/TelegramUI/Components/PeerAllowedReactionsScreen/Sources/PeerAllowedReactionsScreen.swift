@@ -118,6 +118,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private let stableEmptyResultEmojiDisposable = MetaDisposable()
         
         private var caretPosition: Int?
+        private var selectedReactionRange: NSRange?
         
         private var displayInput: Bool = false
         private var recenterOnCaret: Bool = false
@@ -371,6 +372,33 @@ final class PeerAllowedReactionsScreenComponent: Component {
             self.environment?.controller()?.push(statsController)
         }
         
+        // The selection in the reaction field, as `TextSelectionNode` reports it; an empty range is a caret.
+        private var nonEmptySelectedReactionRange: NSRange? {
+            guard let range = self.selectedReactionRange, range.length != 0, let enabledReactions = self.enabledReactions, range.location >= 0, range.location + range.length <= enabledReactions.count else {
+                return nil
+            }
+            return range
+        }
+        
+        private func deleteReactions(in range: NSRange) {
+            guard !self.isApplyingSettings, var enabledReactions = self.enabledReactions, range.location >= 0, range.length != 0, range.location + range.length <= enabledReactions.count else {
+                return
+            }
+            enabledReactions.removeSubrange(range.location ..< range.location + range.length)
+            self.enabledReactions = enabledReactions
+            self.selectedReactionRange = nil
+            self.caretPosition = range.location
+            self.recenterOnCaret = true
+            
+            if !enabledReactions.contains(where: { $0.reaction == .stars }) {
+                self.areStarsReactionsEnabled = false
+            }
+            
+            if !self.isUpdating {
+                self.state?.updated(transition: .spring(duration: 0.25))
+            }
+        }
+        
         func update(component: PeerAllowedReactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -492,12 +520,32 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             
                             AudioServicesPlaySystemSound(0x450)
                             
-                            if let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
+                            // An item picked over a selection replaces it, as typed text replaces selected text, and is
+                            // then inserted (moved, if it is elsewhere in the list) rather than toggled off.
+                            var isReplacingSelection = false
+                            if let selectedRange = self.nonEmptySelectedReactionRange {
+                                isReplacingSelection = true
+                                enabledReactions.removeSubrange(selectedRange.location ..< selectedRange.location + selectedRange.length)
+                                self.caretPosition = selectedRange.location
+                                if !enabledReactions.contains(where: { $0.reaction == .stars }) {
+                                    self.areStarsReactionsEnabled = false
+                                }
+                            }
+                            self.selectedReactionRange = nil
+                            
+                            if !isReplacingSelection, let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
                                 enabledReactions.remove(at: index)
                                 if let caretPosition = self.caretPosition, caretPosition > index {
                                     self.caretPosition = max(0, caretPosition - 1)
                                 }
                             } else {
+                                if let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
+                                    enabledReactions.remove(at: index)
+                                    if let caretPosition = self.caretPosition, caretPosition > index {
+                                        self.caretPosition = max(0, caretPosition - 1)
+                                    }
+                                }
+                                
                                 if enabledReactions.count >= 100 {
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                     
@@ -574,7 +622,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         },
                         addGroupAction: { _, _, _ in
                         },
-                        clearGroup: { _ in
+                        clearGroup: { _, _, _ in
                         },
                         editAction: { _ in
                         },
@@ -1010,6 +1058,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         }
                         if self.isEnabled != value {
                             self.isEnabled = value
+                            self.selectedReactionRange = nil
                             
                             if self.isEnabled {
                                 if var enabledReactions = self.enabledReactions, enabledReactions.isEmpty {
@@ -1100,6 +1149,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let reactionsTitleTextFrame = CGRect(origin: CGPoint(x: sideInset + textSideInset, y: contentHeight), size: reactionsTitleTextSize)
                 if let reactionsTitleTextView = reactionsTitleText.view {
                     if reactionsTitleTextView.superview == nil {
+                        // A section title, read as a heading like the list's own section headers.
+                        reactionsTitleTextView.accessibilityTraits = [.staticText, .header]
                         reactionsTitleTextView.layer.anchorPoint = CGPoint()
                         self.scrollView.addSubview(reactionsTitleTextView)
                     }
@@ -1130,10 +1181,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     component: AnyComponent(EmojiListInputComponent(
                         context: component.context,
                         theme: environment.theme,
+                        strings: environment.strings,
                         placeholder: environment.strings.ChannelReactions_InputPlaceholder,
                         reactionItems: enabledReactions,
                         isInputActive: self.displayInput,
                         caretPosition: caretPosition,
+                        selectedRange: self.selectedReactionRange,
                         activateInput: { [weak self] in
                             guard let self else {
                                 return
@@ -1148,10 +1201,35 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            if self.caretPosition != value {
+                            if self.caretPosition != value || self.selectedReactionRange != nil {
                                 self.caretPosition = value
+                                self.selectedReactionRange = nil
                                 self.state?.updated(transition: .immediate)
                             }
+                        },
+                        updateSelectedRange: { [weak self] range in
+                            guard let self else {
+                                return
+                            }
+                            if self.selectedReactionRange != range {
+                                self.selectedReactionRange = range
+                                // A knob dragged onto the other one collapses the selection to a caret, as in text.
+                                if let range, range.length == 0 {
+                                    self.caretPosition = range.location
+                                }
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .immediate)
+                                }
+                            }
+                        },
+                        deleteRange: { [weak self] range in
+                            self?.deleteReactions(in: range)
+                        },
+                        present: { [weak self] c, a in
+                            self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                        },
+                        rootView: { [weak self] in
+                            return self
                         }
                     )),
                     environment: {},
@@ -1303,7 +1381,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         self.state?.updated(transition: .immediate)
                                     }
                                 )),
-                                preferNative: true
+                                preferNative: true,
+                                accessibilityLabel: environment.strings.PeerInfo_AllowedReactions_MaxCountSectionTitle
                             )))
                         ],
                         displaySeparators: false
@@ -1391,6 +1470,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                             return
                                         }
                                         self.areStarsReactionsEnabled = value
+                                        self.selectedReactionRange = nil
                                         
                                         var enabledReactions = self.enabledReactions ?? []
                                         if self.areStarsReactionsEnabled {
@@ -1609,6 +1689,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             guard let self, var enabledReactions = self.enabledReactions, !enabledReactions.isEmpty else {
                                 return
                             }
+                            if let selectedRange = self.nonEmptySelectedReactionRange {
+                                self.deleteReactions(in: selectedRange)
+                                return
+                            }
+                            self.selectedReactionRange = nil
                             if let caretPosition = self.caretPosition, caretPosition < enabledReactions.count {
                                 if caretPosition > 0 {
                                     enabledReactions.remove(at: caretPosition - 1)

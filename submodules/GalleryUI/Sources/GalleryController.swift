@@ -379,7 +379,18 @@ public func galleryItemForEntry(
                     }
                     
                     if isHLS {
-                        content = HLSVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos, autoFetchFullSizeThumbnail: true, codecConfiguration: HLSCodecConfiguration(context: context))
+                        // Where the item's player will seek once it owns the content, by the same precedence. A forwarded
+                        // timestamp only for the item the gallery opens on: a neighbour swiped to that already shows its
+                        // video plays from 0, so loading at its timestamp would be wasted, and one that does not seeks.
+                        var startTimestamp = timecode
+                        if startTimestamp == nil && isCentral {
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                                    startTimestamp = Double(attribute.timestamp)
+                                }
+                            }
+                        }
+                        content = HLSVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos, autoFetchFullSizeThumbnail: true, captureProtected: captureProtected, codecConfiguration: HLSCodecConfiguration(context: context), startTimestamp: startTimestamp)
                     } else {
                         content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: captureProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
                     }

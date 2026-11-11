@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -205,6 +204,8 @@ public class PremiumLimitDisplayComponent: Component {
             
             self.badgeIcon = UIImageView()
             self.badgeIcon.contentMode = .center
+            // The badge's icon illustrates the count beside it, which is read.
+            self.badgeIcon.accessibilityElementsHidden = true
                         
             self.badgeLabel = BadgeLabelView()
             let _ = self.badgeLabel.update(value: "0", suffix: nil, transition: .immediate)
@@ -1480,8 +1481,7 @@ private final class LimitSheetContent: CombinedComponent {
                         color: .white,
                         startingPosition: .begin,
                         size: CGSize(width: 30.0, height: 30.0),
-                        loop: true,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: true
                     ))))
                 }
                 let button = button.update(

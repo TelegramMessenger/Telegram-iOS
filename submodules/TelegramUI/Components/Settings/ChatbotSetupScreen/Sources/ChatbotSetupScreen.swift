@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Photos
 import Display
@@ -715,8 +714,7 @@ final class ChatbotSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "ChatAutomation"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 140.0, height: 140.0)
@@ -794,6 +792,7 @@ final class ChatbotSetupScreenComponent: Component {
                 initialText: "",
                 resetText: resetQueryText.flatMap { ListTextFieldItemComponent.ResetText(value: $0) },
                 placeholder: environment.strings.ChatbotSetup_BotSearchPlaceholder,
+                clearButtonAccessibilityLabel: environment.strings.WebSearch_RecentSectionClear,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 updated: { [weak self] value in

@@ -149,11 +149,15 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         }
         
         self.activateAreaNode.accessibilityLabel = title.string
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
         if locked {
-            self.activateAreaNode.accessibilityTraits = [.button, .notEnabled]
-        } else {
-            self.activateAreaNode.accessibilityTraits = [.button]
+            accessibilityTraits.insert(.notEnabled)
         }
+        if selected {
+            // The current icon (the accent border and title on screen).
+            accessibilityTraits.insert(.selected)
+        }
+        self.activateAreaNode.accessibilityTraits = accessibilityTraits
         
         self.setNeedsLayout()
     }

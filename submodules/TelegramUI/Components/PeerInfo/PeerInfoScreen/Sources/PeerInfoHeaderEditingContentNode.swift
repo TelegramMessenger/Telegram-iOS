@@ -65,6 +65,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         transition: ContainedViewLayoutTransition
     ) -> CGFloat {
         let avatarSize: CGFloat = presentedInFormSheet ? 200.0 : 100.0
+        self.avatarNode.updateAccessibility(label: presentationData.strings.Privacy_ProfilePhoto)
         // iPhone Duo: with a strip the insets differ and the avatar and its button are centered in the band
         // between them, on the regular header's axis (PeerInfoHeaderNode's `bandCenteredOrigin`).
         func bandCenteredOrigin(_ elementWidth: CGFloat) -> CGFloat {
@@ -82,6 +83,9 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
             let setPhotoTitle = peer?.smallProfileImage != nil ? presentationData.strings.Settings_ChangePhoto : presentationData.strings.Settings_SetPhoto
             self.avatarTextNode.attributedText = NSAttributedString(string: setPhotoTitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
             self.avatarButtonNode.accessibilityLabel = self.avatarTextNode.attributedText?.string
+            self.avatarButtonNode.accessibilityTraits = .button
+            self.avatarButtonNode.isAccessibilityElement = true
+            self.avatarTextNode.isAccessibilityElement = false
             
             let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
             transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))

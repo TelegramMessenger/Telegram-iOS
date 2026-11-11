@@ -66,34 +66,7 @@ func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @esca
                 return
             }
             uploadStarted = true
-            let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-            let statusDisposable = (Signal<Never, NoError> { subscriber in
-                present(statusController)
-                return ActionDisposable {
-                    statusController.dismiss()
-                }
-            }
-            |> runOn(.mainQueue())
-            |> delay(0.1, queue: .mainQueue())).start()
-            
-            let _ = (processedLegacySecureIdAttachmentItems(signal: signal)
-            |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
-                switch type {
-                    case .generic, .idCard:
-                        if recognizeDocumentData {
-                            return recognizedResources(postbox: context.account.postbox, resources: resources, shouldBeDriversLicense: false)
-                                |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
-                                    return (resources, data)
-                            }
-                        }
-                    default:
-                        break
-                }
-                return .single((resources, nil))
-            }
-            |> deliverOnMainQueue).start(next: { resourcesAndData in
-                completion(resourcesAndData.0, resourcesAndData.1)
-                statusDisposable.dispose()
+            performSecureIdAttachmentUpload(context: context, present: present, type: type, recognizeDocumentData: recognizeDocumentData, resources: processedLegacySecureIdAttachmentItems(signal: signal), completion: completion, completed: {
                 completed?()
             })
         } else {
@@ -108,6 +81,57 @@ func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @esca
     }
     attachMenu.customRemoveFromParentViewController = { [weak legacyController] in
         legacyController?.dismiss()
+    }
+}
+
+func performSecureIdAttachmentUpload(context: AccountContext, present: @escaping (ViewController) -> Void, type: SecureIdAttachmentMenuType, recognizeDocumentData: Bool, resources: Signal<[TelegramMediaResource], NoError>, completion: @escaping ([TelegramMediaResource], SecureIdRecognizedDocumentData?) -> Void, completed: @escaping () -> Void) {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+    let statusDisposable = (Signal<Never, NoError> { subscriber in
+        present(statusController)
+        return ActionDisposable {
+            statusController.dismiss()
+        }
+    }
+    |> runOn(.mainQueue())
+    |> delay(0.1, queue: .mainQueue())).start()
+    
+    let _ = (resources
+    |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
+        switch type {
+            case .generic, .idCard:
+                if recognizeDocumentData {
+                    return recognizedResources(postbox: context.account.postbox, resources: resources, shouldBeDriversLicense: false)
+                        |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
+                            return (resources, data)
+                    }
+                }
+            default:
+                break
+        }
+        return .single((resources, nil))
+    }
+    |> deliverOnMainQueue).start(next: { resourcesAndData in
+        completion(resourcesAndData.0, resourcesAndData.1)
+        statusDisposable.dispose()
+        completed()
+    })
+}
+
+private func secureIdAttachmentResources(image: UIImage) -> [TelegramMediaResource] {
+    let randomId = Int64.random(in: Int64.min ... Int64.max)
+    let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
+    let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
+    let tempFile = TempBox.shared.tempFile(fileName: "file")
+    defer {
+        TempBox.shared.dispose(tempFile)
+    }
+    if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: Float(passportImageCompressionQuality), tempFilePath: tempFile.path) {
+        let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+        let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+        return [resource]
+    } else {
+        return []
     }
 }
 
@@ -158,20 +182,7 @@ private func processedLegacySecureIdAttachmentItems(signal: SSignal) -> Signal<[
         guard let image = image else {
             return []
         }
-        let randomId = Int64.random(in: Int64.min ... Int64.max)
-        let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-        let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
-        let tempFile = TempBox.shared.tempFile(fileName: "file")
-        defer {
-            TempBox.shared.dispose(tempFile)
-        }
-        if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84, tempFilePath: tempFile.path) {
-            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
-            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-            return [resource]
-        } else {
-            return []
-        }
+        return secureIdAttachmentResources(image: image)
     }
 
     let collectedItems: Signal<[TelegramMediaResource], NoError> = collectedSignal

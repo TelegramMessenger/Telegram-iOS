@@ -27,6 +27,7 @@ extension VideoChatScreenComponent.View {
         }
         
         let muteStatePromise = Promise<GroupCallParticipantsContext.Participant.MuteState?>(participant.muteState)
+        let contentSource = ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)
            
         let itemsForEntry: (GroupCallParticipantsContext.Participant.MuteState?) -> [ContextMenuItem] = { [weak self] muteState in
             guard let self, let environment = self.environment, let currentCall = self.currentCall else {
@@ -253,6 +254,23 @@ extension VideoChatScreenComponent.View {
                     }
                     self.openPeer(peer)
                     
+                    contentSource.returnsToList = false
+                    f(.dismissWithoutContent)
+                })))
+                
+                var isChannel = false
+                if case let .channel(peer) = peer, case .broadcast = peer.info {
+                    isChannel = true
+                }
+                items.append(.action(ContextMenuActionItem(text: isChannel ? environment.strings.Conversation_ContextMenuOpenChannelProfile : environment.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    guard let self else {
+                        return
+                    }
+                    self.openPeerInfo(peer)
+                    
+                    contentSource.returnsToList = false
                     f(.dismissWithoutContent)
                 })))
             
@@ -337,7 +355,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView)),
+            source: .extracted(contentSource),
             items: items |> map { items in
                 return ContextController.Items(content: .list(items))
             },
@@ -365,6 +383,8 @@ extension VideoChatScreenComponent.View {
         guard case .group = self.currentCall else {
             return
         }
+        
+        let contentSource = ParticipantExtractedContentSource(contentView: sourceView, participantsView: self.participants.view as? VideoChatParticipantsComponent.View)
            
         let itemsForEntry: () -> [ContextMenuItem] = { [weak self] in
             guard let self, let environment = self.environment else {
@@ -376,6 +396,7 @@ extension VideoChatScreenComponent.View {
             items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { [weak self] c, _ in
+                contentSource.returnsToList = false
                 c?.dismiss(result: .dismissWithoutContent, completion: nil)
                 
                 guard let self else {
@@ -395,7 +416,7 @@ extension VideoChatScreenComponent.View {
         let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = makeContextController(
             presentationData: presentationData,
-            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView)),
+            source: .extracted(contentSource),
             items: .single(ContextController.Items(content: .list(items))),
             recognizer: nil,
             gesture: gesture
@@ -429,6 +450,28 @@ extension VideoChatScreenComponent.View {
         })
     }
     
+    func openPeerInfo(_ peer: EnginePeer) {
+        guard let environment = self.environment, let currentCall = self.currentCall else {
+            return
+        }
+        guard let controller = environment.controller() as? VideoChatScreenV2Impl, let navigationController = controller.parentNavigationController else {
+            return
+        }
+        let context = currentCall.accountContext
+        let avatarInitiallyExpanded = videoChatParticipantProfileAvatarInitiallyExpanded(hasProfilePhoto: peer.smallProfileImage != nil, isTablet: environment.deviceMetrics.type == .tablet)
+        controller.dismiss(completion: { [weak navigationController] in
+            Queue.mainQueue().after(0.1) {
+                guard let navigationController else {
+                    return
+                }
+                guard let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: avatarInitiallyExpanded, fromChat: false, requestsContext: nil) else {
+                    return
+                }
+                navigationController.pushViewController(infoController)
+            }
+        })
+    }
+    
     private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
         guard let currentCall = self.currentCall else {
             return
@@ -447,6 +490,28 @@ extension VideoChatScreenComponent.View {
                 return
             }
             guard let peer else {
+                return
+            }
+            
+            if currentCall.accountContext.routesToChatMediaEditorV2(.videoChatAvatar), let parentController = environment.controller() {
+                self.endEditing(true)
+                let context = currentCall.accountContext
+                context.sharedContext.displaySetPhoto(
+                    parentController: parentController,
+                    context: context,
+                    peer: peer,
+                    canDelete: videoChatAvatarCanDelete(hasPhotos: !peer.profileImageRepresentations.isEmpty, fromGallery: fromGallery),
+                    performDelete: { [weak self] in
+                        self?.presentAvatarRemovalConfirmation(peerId: peerId)
+                    },
+                    options: SetPhotoOptions(forceDark: true, allowsEmojiAvatar: false, splitsVideoExportProgress: true),
+                    completion: { _ in },
+                    completedWithUploadingImage: { [weak self] image, uploadStatus in
+                        completion()
+                        self?.displayUploadingAvatar(image: image, uploadStatus: uploadStatus)
+                        return nil
+                    }
+                )
                 return
             }
             
@@ -535,6 +600,71 @@ extension VideoChatScreenComponent.View {
                 }
             }
         })
+    }
+    
+    private func presentAvatarRemovalConfirmation(peerId: EnginePeer.Id) {
+        guard let currentCall = self.currentCall, let environment = self.environment else {
+            return
+        }
+        let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+        
+        let proceed = { [weak self] in
+            guard let self, let currentCall = self.currentCall else {
+                return
+            }
+            self.updateAvatarDisposable.set((currentCall.accountContext.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                return mapResourceToAvatarSizes(engine: currentCall.accountContext.engine, resource: resource, representations: representations)
+            })
+            |> deliverOnMainQueue).start())
+        }
+        
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        let items: [ActionSheetItem] = [
+            ActionSheetButtonItem(title: environment.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                proceed()
+            })
+        ]
+        
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        environment.controller()?.present(actionSheet, in: .window(.root))
+    }
+    
+    private func displayUploadingAvatar(image: UIImage, uploadStatus: Signal<PeerInfoAvatarUploadStatus, NoError>) {
+        guard let currentCall = self.currentCall else {
+            return
+        }
+        guard let data = image.jpegData(compressionQuality: 0.6) else {
+            return
+        }
+        
+        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+        currentCall.accountContext.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
+        
+        self.currentUpdatingAvatar = (representation, 0.0)
+        
+        self.updateAvatarDisposable.set((uploadStatus
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            if let progress = videoChatAvatarUploadProgress(status) {
+                self.currentUpdatingAvatar = (representation, Float(progress))
+            } else {
+                self.currentUpdatingAvatar = nil
+            }
+            self.state?.updated(transition: .spring(duration: 0.4))
+        }))
+        
+        self.state?.updated(transition: .spring(duration: 0.4))
     }
     
     private func updateProfilePhoto(_ image: UIImage) {
@@ -716,15 +846,28 @@ extension VideoChatScreenComponent.View {
     }
 }
 
+/// A participant's profile opens with the avatar expanded when there is a photo to expand, except on a
+/// tablet, as the chat header's profile does.
+func videoChatParticipantProfileAvatarInitiallyExpanded(hasProfilePhoto: Bool, isTablet: Bool) -> Bool {
+    return hasProfilePhoto && !isTablet
+}
+
 private final class ParticipantExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = false
     let blurBackground: Bool = true
     
     private let contentView: ContextExtractedContentContainingView
+    private weak var participantsView: VideoChatParticipantsComponent.View?
     
-    init(contentView: ContextExtractedContentContainingView) {
+    /// Cleared by an action that dismisses the menu without its content (`.dismissWithoutContent`): the item then
+    /// fades out where the menu shows it, and must not be put back into the list's transition surface, where it would
+    /// appear in its list slot at once and outlive a removal of its row.
+    var returnsToList: Bool = true
+    
+    init(contentView: ContextExtractedContentContainingView, participantsView: VideoChatParticipantsComponent.View?) {
         self.contentView = contentView
+        self.participantsView = participantsView
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
@@ -732,6 +875,6 @@ private final class ParticipantExtractedContentSource: ContextExtractedContentSo
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds, sourceTransitionSurface: self.returnsToList ? self.participantsView?.contextMenuTransitionSurface(for: self.contentView) : nil)
     }
 }

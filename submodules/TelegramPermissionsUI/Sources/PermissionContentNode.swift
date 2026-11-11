@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -76,7 +75,7 @@ public final class PermissionContentNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         
         if case let .animation(animation) = icon {
-            self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+            self.animationNode = DefaultAnimatedStickerNodeImpl()
             
             self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: animation), width: 320, height: 320, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationNode?.visibility = true
@@ -90,25 +89,28 @@ public final class PermissionContentNode: ASDisplayNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isAccessibilityElement = true
+        self.titleNode.accessibilityTraits = .header
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.maximumNumberOfLines = 1
         self.subtitleNode.textAlignment = .center
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
-        self.subtitleNode.isAccessibilityElement = true
+        // Read only when there is a subtitle (set below); an empty one was an empty element.
+        self.subtitleNode.isAccessibilityElement = false
         
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
         self.textNode.isAccessibilityElement = true
+        self.textNode.accessibilityTraits = .staticText
         self.textNode.lineSpacing = 0.1
         
         self.footerNode = ImmediateTextNode()
         self.footerNode.textAlignment = .center
         self.footerNode.maximumNumberOfLines = 0
         self.footerNode.displaysAsynchronously = false
-        self.footerNode.isAccessibilityElement = true
+        self.footerNode.isAccessibilityElement = false
         
         self.privacyPolicyButton = HighlightableButtonNode()
         self.privacyPolicyButton.setTitle(secondaryButtonTitle ?? strings.Permissions_PrivacyPolicy, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
@@ -129,17 +131,22 @@ public final class PermissionContentNode: ASDisplayNode {
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: secondaryButtonTitle != nil ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         self.textNode.attributedText = parseMarkdownIntoAttributedString(text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: secondaryText ? .natural : .center)
+        self.textNode.accessibilityLabel = self.textNode.attributedText?.string
         
         self.privacyPolicyButton.isHidden = openPrivacyPolicy == nil
         
         if let subtitle = subtitle {
             self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
             self.subtitleNode.accessibilityLabel = subtitle
+            self.subtitleNode.isAccessibilityElement = true
+            self.subtitleNode.accessibilityTraits = .staticText
         }
         
         if let footerText = footerText {
             self.footerNode.attributedText = NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
             self.footerNode.accessibilityLabel = footerText
+            self.footerNode.isAccessibilityElement = true
+            self.footerNode.accessibilityTraits = .staticText
         }
         
         self.addSubnode(self.iconNode)

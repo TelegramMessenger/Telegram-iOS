@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Photos
 import Display
@@ -198,7 +197,7 @@ final class ForumSettingsScreenComponent: Component {
                         let context = component.context
                         let mode = self.mode
                         let signal: Signal<EnginePeer.Id?, NoError> = context.engine.peers.convertGroupToSupergroup(peerId: peer.id, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
-                            return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: mode == .tabs)
+                            return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: mode != .list, displayForumAsSidebar: mode == .sidebar)
                         })
                         |> map(Optional.init)
                         |> `catch` { [weak self] error -> Signal<EnginePeer.Id?, NoError> in
@@ -232,7 +231,7 @@ final class ForumSettingsScreenComponent: Component {
                             if let resultPeerId {
                                 self.peerIdPromise.set(resultPeerId)
                                 
-                                let _ = component.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: true, displayForumAsTabs: self.mode == .tabs).startStandalone()
+                                let _ = component.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: true, displayForumAsTabs: self.mode != .list, displayForumAsSidebar: self.mode == .sidebar).startStandalone()
                              
                                 if let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
                                     var viewControllers = navigationController.viewControllers
@@ -269,10 +268,10 @@ final class ForumSettingsScreenComponent: Component {
                         
                         return false
                     } else {
-                        let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: true, displayForumAsTabs: self.mode == .tabs).startStandalone()
+                        let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: true, displayForumAsTabs: self.mode != .list, displayForumAsSidebar: self.mode == .sidebar).startStandalone()
                     }
                 } else {
-                    let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: false, displayForumAsTabs: false).startStandalone()
+                    let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: false, displayForumAsTabs: false, displayForumAsSidebar: false).startStandalone()
                 }
             }
             
@@ -300,7 +299,13 @@ final class ForumSettingsScreenComponent: Component {
                     if case let .channel(channel) = peer {
                         self.isOn = channel.flags.contains(.isForum)
                         if self.isOn {
-                            self.mode = channel.flags.contains(.displayForumAsTabs) ? .tabs : .list
+                            if channel.flags.contains(.displayForumAsSidebar) {
+                                self.mode = .sidebar
+                            } else if channel.flags.contains(.displayForumAsTabs) {
+                                self.mode = .tabs
+                            } else {
+                                self.mode = .list
+                            }
                             self.initialOnMode = self.mode
                         } else {
                             self.initialOnMode = nil
@@ -338,6 +343,8 @@ final class ForumSettingsScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        // VoiceOver: the bar reads this title where its own is (NavigationBarNode), as the heading.
+                        navigationTitleView.accessibilityTraits = [.staticText, .header]
                         navigationBar.view.addSubview(navigationTitleView)
                     }
                 }
@@ -360,8 +367,7 @@ final class ForumSettingsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "Topics"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -369,6 +375,8 @@ final class ForumSettingsScreenComponent: Component {
             let iconFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - iconSize.width * 0.5), y: contentHeight + 8.0), size: iconSize)
             if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
+                    // Decoration: the text below says what topics are.
+                    iconView.accessibilityElementsHidden = true
                     self.scrollView.addSubview(iconView)
                     iconView.playOnce()
                 }

@@ -207,11 +207,8 @@ private final class WebBrowserItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
-                    if item.checked {
-                        strongSelf.activateArea.accessibilityValue = "Selected"
-                    } else {
-                        strongSelf.activateArea.accessibilityValue = ""
-                    }
+                    strongSelf.activateArea.accessibilityValue = nil
+                    strongSelf.activateArea.accessibilityTraits = item.checked ? [.button, .selected] : [.button]
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     

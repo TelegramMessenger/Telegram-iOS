@@ -15,6 +15,13 @@ class CameraInput {
         }
     }
     
+    func hasAudioInput(in session: CameraSession) -> Bool {
+        guard let audioInput = self.audioInput else {
+            return false
+        }
+        return session.session.inputs.contains(where: { $0 === audioInput })
+    }
+    
     func invalidate(for session: CameraSession, switchAudio: Bool = true) {
         if let videoInput = self.videoInput, session.session.inputs.contains(where: { $0 === videoInput }) {
             session.session.removeInput(videoInput)

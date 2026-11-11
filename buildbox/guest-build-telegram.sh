@@ -7,7 +7,7 @@ if [ -z "BUILD_NUMBER" ]; then
 	exit 1
 fi
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "testinghockeyapp" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "testinghockeyapp" ]; then
 	CERTS_PATH="$HOME/codesigning_data/certs/enterprise"
 elif [ "$1" == "testinghockeyapp-local" ]; then
 	CERTS_PATH="$HOME/codesigning_data/certs/enterprise"
@@ -83,7 +83,7 @@ security import "build-system/AppleWWDRCAG3.cer" -k "$MY_KEYCHAIN" -P "" -T /usr
 
 security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "appstore-development" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appstore-development" ]; then
 	APP_CONFIGURATION="release_arm64"
 elif [ "$1" == "appstore" ]; then
 	APP_CONFIGURATION="release_universal"

@@ -307,7 +307,19 @@ final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
-                    strongSelf.activateArea.accessibilityLabel = "\(titleAttributedString.string))"
+                    strongSelf.activateArea.accessibilityLabel = titleAttributedString.string
+                    strongSelf.activateArea.accessibilityValue = item.label
+                    var accessibilityTraits: UIAccessibilityTraits = []
+                    if !item.isAllChats {
+                        // Every folder but "All Chats" opens its settings.
+                        accessibilityTraits.insert(.button)
+                    }
+                    if item.isDisabled {
+                        accessibilityTraits.insert(.notEnabled)
+                    }
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
+                    let accessibilityCustomActions = strongSelf.revealOptionsAccessibilityCustomActions(peerRevealOptions)
+                    strongSelf.activateArea.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor

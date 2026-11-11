@@ -9,12 +9,15 @@ import MoreButtonNode
 import AccountContext
 import TelegramPresentationData
 import LottieAnimationComponent
+import EmojiStatusComponent
 
 final class FullscreenControlsComponent: Component {
     let context: AccountContext
     let strings: PresentationStrings
     let title: String
     let isVerified: Bool
+    /// The bot's third-party verification icon (a custom emoji), drawn left of the title.
+    let verificationIconFileId: Int64?
     let insets: UIEdgeInsets
     let statusBarStyle: StatusBarStyle
     var hasBack: Bool
@@ -30,6 +33,7 @@ final class FullscreenControlsComponent: Component {
         strings: PresentationStrings,
         title: String,
         isVerified: Bool,
+        verificationIconFileId: Int64?,
         insets: UIEdgeInsets,
         statusBarStyle: StatusBarStyle,
         hasBack: Bool,
@@ -42,6 +46,7 @@ final class FullscreenControlsComponent: Component {
         self.strings = strings
         self.title = title
         self.isVerified = isVerified
+        self.verificationIconFileId = verificationIconFileId
         self.insets = insets
         self.statusBarStyle = statusBarStyle
         self.hasBack = hasBack
@@ -59,6 +64,9 @@ final class FullscreenControlsComponent: Component {
             return false
         }
         if lhs.isVerified != rhs.isVerified {
+            return false
+        }
+        if lhs.verificationIconFileId != rhs.verificationIconFileId {
             return false
         }
         if lhs.insets != rhs.insets {
@@ -86,6 +94,7 @@ final class FullscreenControlsComponent: Component {
         private let titleClippingView = UIView()
         private let title = ComponentView<Empty>()
         private let credibility = ComponentView<Empty>()
+        private var verificationIcon: ComponentView<Empty>?
         private let buttonTitle = ComponentView<Empty>()
         private let minimizeButton = ComponentView<Empty>()
         private let moreNode = MoreButtonNode(theme: defaultPresentationTheme, size: CGSize(width: 36.0, height: 36.0), encircled: false)
@@ -192,13 +201,46 @@ final class FullscreenControlsComponent: Component {
             self.moreNode.updateColor(textColor, transition: .immediate)
             
             var additionalLeftWidth: CGFloat = 0.0
+            
+            // Sized and dimmed as the pill's own verified check (14pt at 0.6, 2pt from the title) to sit with its 13pt
+            // title; the chat header's 20pt would dwarf it.
+            let verificationIconSpacing: CGFloat = 2.0
+            let verificationIconAlpha: CGFloat = 0.6
+            var verificationIconSize: CGSize?
+            if let verificationIconFileId = component.verificationIconFileId {
+                let verificationIcon: ComponentView<Empty>
+                if let current = self.verificationIcon {
+                    verificationIcon = current
+                } else {
+                    verificationIcon = ComponentView<Empty>()
+                    self.verificationIcon = verificationIcon
+                }
+                verificationIconSize = verificationIcon.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        content: .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: textColor.withMultipliedAlpha(0.2), themeColor: textColor, loopMode: .count(2)),
+                        isVisibleForAnimations: true,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 14.0, height: 14.0)
+                )
+            } else if let verificationIcon = self.verificationIcon {
+                self.verificationIcon = nil
+                verificationIcon.view?.removeFromSuperview()
+            }
+            let leadingIconsWidth: CGFloat = verificationIconSize.flatMap { $0.width + verificationIconSpacing } ?? 0.0
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.title, font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: textColor)))),
                 environment: {},
                 containerSize: availableSize
             )
-            let titleFrame = CGRect(origin: CGPoint(x: self.displayTitle ? 3.0 : -titleSize.width - 15.0, y: floorToScreenPixels((leftBackgroundSize.height - titleSize.height) / 2.0)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: self.displayTitle ? 3.0 + leadingIconsWidth : -titleSize.width - 15.0, y: floorToScreenPixels((leftBackgroundSize.height - titleSize.height) / 2.0)), size: titleSize)
             if let view = self.title.view {
                 if view.superview == nil {
                     self.titleClippingView.addSubview(view)
@@ -210,6 +252,17 @@ final class FullscreenControlsComponent: Component {
                 
                 transition.setFrame(view: view, frame: titleFrame)
                 transition.setAlpha(view: view, alpha: self.displayTitle ? 1.0 : 0.0)
+            }
+            if let verificationIconSize, let view = self.verificationIcon?.view {
+                let verificationIconFrame = CGRect(origin: CGPoint(x: titleFrame.minX - verificationIconSpacing - verificationIconSize.width, y: floorToScreenPixels((leftBackgroundSize.height - verificationIconSize.height) / 2.0)), size: verificationIconSize)
+                if view.superview == nil {
+                    view.isUserInteractionEnabled = false
+                    view.alpha = self.displayTitle ? verificationIconAlpha : 0.0
+                    self.titleClippingView.addSubview(view)
+                    view.frame = verificationIconFrame
+                }
+                transition.setFrame(view: view, frame: verificationIconFrame)
+                transition.setAlpha(view: view, alpha: self.displayTitle ? verificationIconAlpha : 0.0)
             }
             
             let buttonTitleUpdated = (previousComponent?.hasBack ?? false) != component.hasBack
@@ -234,7 +287,7 @@ final class FullscreenControlsComponent: Component {
             )
             
             if self.displayTitle {
-                additionalLeftWidth += titleSize.width + 10.0
+                additionalLeftWidth += leadingIconsWidth + titleSize.width + 10.0
             } else {
                 additionalLeftWidth += buttonTitleSize.width + 10.0
             }

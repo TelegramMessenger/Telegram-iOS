@@ -9,6 +9,19 @@ import EdgeEffect
 import ComponentFlow
 import ComponentDisplayAdapters
 
+private final class GalleryControllerNodeView: UITracingLayerView {
+    override var accessibilityElements: [Any]? {
+        get {
+            guard let node = self.asyncdisplaykit_node as? GalleryControllerNode else {
+                return super.accessibilityElements
+            }
+            return node.accessibilityOrderedSubviews(self.subviews)
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
 open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum CustomDismissType {
         case `default`
@@ -60,6 +73,21 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         }
     }
     
+    /// VoiceOver: the navigation bar, then the title (author, date), then the page and its controls, then the footer.
+    /// The page is added first and the title after the footer, so UIKit's order would read the page before the bar and
+    /// the title last.
+    fileprivate func accessibilityOrderedSubviews(_ subviews: [UIView]) -> [Any] {
+        var elements: [UIView] = subviews.filter { !$0.isHidden && $0.alpha >= 0.01 && !$0.accessibilityElementsHidden }
+        var leading: [UIView] = []
+        if let navigationBarView = self.navigationBar?.view, let barIndex = elements.firstIndex(where: { $0 === navigationBarView }) {
+            leading.append(elements.remove(at: barIndex))
+        }
+        if let titleView = self.titleView, let titleIndex = elements.firstIndex(where: { $0 === titleView }) {
+            leading.append(elements.remove(at: titleIndex))
+        }
+        return leading + elements
+    }
+    
     public init(context: AccountContext, controllerInteraction: GalleryControllerInteraction, titleView: GalleryTitleView?, pageGap: CGFloat = 20.0, disableTapNavigation: Bool = false) {
         self.context = context
         self.backgroundNode = ASDisplayNode()
@@ -76,12 +104,16 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         self.headerEdgeEffectView.isUserInteractionEnabled = false
 
         self.pager = GalleryPagerNode(pageGap: pageGap, disableTapNavigation: disableTapNavigation)
+        let accessibilityStrings = context.sharedContext.currentPresentationData.with { $0 }.strings
+        self.pager.accessibilityPageLabel = accessibilityStrings.VoiceOver_Common_Page
+        // No "N of M" value: the pager holds a window of the loaded items, not the whole album, so its count would mislead.
+        // The title above reads the item's author and date.
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
         super.init()
         
         self.setViewBlock({
-            return UITracingLayerView()
+            return GalleryControllerNodeView()
         })
         
         self.pager.toggleControlsVisibility = { [weak self] in

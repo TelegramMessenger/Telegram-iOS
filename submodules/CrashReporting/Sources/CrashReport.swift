@@ -96,20 +96,35 @@ public struct CrashReport: Codable, Equatable {
         return lines.joined(separator: "\n")
     }
 
-    public func exportMetadata() throws -> Data {
+    public func exportMetadata(bundleId: String) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(ExportMetadata(reportID: self.id, isTestReport: self.isTestReport, metadata: self.metadata, intervalStart: self.intervalStart, intervalEnd: self.intervalEnd, receivedAt: self.receivedAt))
+        return try encoder.encode(ExportMetadata(
+            reportId: self.id,
+            bundleId: bundleId,
+            metadata: ExportMetadata.AppMetadata(
+                applicationVersion: self.metadata.applicationVersion,
+                buildVersion: self.metadata.buildVersion,
+                osVersion: self.metadata.osVersion,
+                deviceType: self.metadata.deviceType
+            ),
+            receivedAt: self.receivedAt
+        ))
     }
 }
 
 private struct ExportMetadata: Encodable {
-    let reportID: String
-    let isTestReport: Bool
-    let metadata: CrashReportMetadata
-    let intervalStart: Date
-    let intervalEnd: Date
+    struct AppMetadata: Encodable {
+        let applicationVersion: String
+        let buildVersion: String
+        let osVersion: String
+        let deviceType: String
+    }
+
+    let reportId: String
+    let bundleId: String
+    let metadata: AppMetadata
     let receivedAt: Date
 }
 

@@ -15,6 +15,7 @@ import PhotoResources
 import TextFormat
 import CompositeTextNode
 import ChatInterfaceState
+import TelegramNotices
 
 private func generateCloseIcon() -> UIImage {
     return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
@@ -88,6 +89,8 @@ private func textStringForForwardedMessage(_ message: EngineMessage, strings: Pr
             return (NSAttributedString(string: strings.ForwardedPolls(1)), [], true)
         case let todo as TelegramMediaTodo:
             return (NSAttributedString(string: todo.text), [], true)
+        case _ as TelegramMediaWidget where message.text.isEmpty:
+            return (NSAttributedString(string: strings.Message_Widget), [], true)
         case let dice as TelegramMediaDice:
             return (NSAttributedString(string: dice.emoji), [], true)
         case let invoice as TelegramMediaInvoice:
@@ -269,9 +272,13 @@ public final class ChatInputMessageAccessoryPanel: Component {
         private let longPressGestureRecognizer: UILongPressGestureRecognizer
         
         private let lineView: UIImageView
+        private let imageNode: TransformImageNode
+        private var previousMediaReference: AnyMediaReference?
         private let titleNode: CompositeTextNode
         private let text = ComponentView<Empty>()
         private let tintText = ComponentView<Empty>()
+        private let hintText = ComponentView<Empty>()
+        private let hintTintText = ComponentView<Empty>()
         
         public let contentTintView: UIView
         
@@ -283,18 +290,23 @@ public final class ChatInputMessageAccessoryPanel: Component {
         private var messages: [EngineMessage] = []
         private var contentDisposable: Disposable?
         
+        private var optionsHintDisposable: Disposable?
+        private var optionsHintTimer: SwiftSignalKit.Timer?
+        private var isOptionsHintVisible: Bool = false
+        private var isOptionsHintDisabled: Bool = false
+        
         private var inlineTextStarImage: UIImage?
         private var inlineTextTonImage: (UIImage, UIColor)?
         
         public var transitionData: ChatInputAccessoryPanelTransitionData? {
-            guard let textView = self.text.view else {
+            guard let textView = self.isOptionsHintVisible ? self.hintText.view : self.text.view else {
                 return nil
             }
             return ChatInputAccessoryPanelTransitionData(
                 titleView: self.titleNode.view,
                 textView: textView,
                 lineView: self.lineView,
-                imageView: nil
+                imageView: self.imageNode.isHidden ? nil : self.imageNode.view
             )
         }
         
@@ -308,12 +320,16 @@ public final class ChatInputMessageAccessoryPanel: Component {
             self.longPressGestureRecognizer = UILongPressGestureRecognizer()
             
             self.lineView = UIImageView()
+            self.imageNode = TransformImageNode()
+            self.imageNode.contentAnimations = [.subsequentUpdates]
+            self.imageNode.isHidden = true
             self.titleNode = CompositeTextNode()
             self.titleNode.displaysAsynchronously = false
             
             super.init(frame: frame)
             
             self.addSubview(self.lineView)
+            self.addSubview(self.imageNode.view)
             self.addSubview(self.titleNode.view)
             
             self.addSubview(self.closeButtonIcon)
@@ -335,6 +351,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
         
         deinit {
             self.contentDisposable?.dispose()
+            self.optionsHintDisposable?.dispose()
+            self.optionsHintTimer?.invalidate()
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -342,7 +360,68 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 return
             }
             if case .ended = recognizer.state {
+                if component.action != nil {
+                    self.hideOptionsHint()
+                }
                 component.action?(self)
+            }
+        }
+        
+        // As the pre-glass reply and forward panels did, the panels show the message preview first and, 3 seconds after
+        // they appear, "Tap here for reply/forward options" in its place, until the panel is tapped; at most 3 times in
+        // total. Opening the options sets the counter to 3 (the panel's action, in ChatInterfaceStateAccessoryPanels),
+        // so it never shows again after that.
+        private func startOptionsHintIfNeeded(component: ChatInputMessageAccessoryPanel) {
+            let accountManager = component.context.sharedContext.accountManager
+            let getCount: Signal<Int32, NoError>
+            let incrementCount: Signal<Int, NoError>
+            switch component.contents {
+            case .reply:
+                getCount = ApplicationSpecificNotice.getChatReplyOptionsTip(accountManager: accountManager)
+                incrementCount = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: accountManager)
+            case .forward:
+                getCount = ApplicationSpecificNotice.getChatForwardOptionsTip(accountManager: accountManager)
+                incrementCount = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: accountManager)
+            case .edit, .linkPreview, .suggestPost:
+                return
+            }
+            self.optionsHintDisposable = (getCount
+            |> take(1)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] count in
+                guard let self, count < 3, !self.isOptionsHintDisabled else {
+                    return
+                }
+                self.optionsHintTimer?.invalidate()
+                let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+                    // A panel no longer in a window (its chat closed within the 3 seconds) shows nothing and uses up no show.
+                    guard let self, !self.isOptionsHintDisabled, self.window != nil else {
+                        return
+                    }
+                    self.optionsHintTimer = nil
+                    // Counted when shown: a panel closed within the 3 seconds does not use up a show.
+                    let _ = incrementCount.startStandalone()
+
+                    self.isOptionsHintVisible = true
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
+                    }
+                }, queue: Queue.mainQueue())
+                self.optionsHintTimer = timer
+                timer.start()
+            })
+        }
+
+        private func hideOptionsHint() {
+            self.isOptionsHintDisabled = true
+            self.optionsHintDisposable?.dispose()
+            self.optionsHintDisposable = nil
+            self.optionsHintTimer?.invalidate()
+            self.optionsHintTimer = nil
+            if self.isOptionsHintVisible {
+                self.isOptionsHintVisible = false
+                if !self.isUpdating {
+                    self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
+                }
             }
         }
         
@@ -406,9 +485,14 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 }
             }
             
+            let isFirstUpdate = self.component == nil
+            
             self.component = component
             self.state = state
             self.environment = environment
+            if isFirstUpdate {
+                self.startOptionsHintIfNeeded(component: component)
+            }
             self.longPressGestureRecognizer.isEnabled = component.longPressAction != nil
             
             if self.closeButtonIcon.image == nil {
@@ -446,6 +530,11 @@ public final class ChatInputMessageAccessoryPanel: Component {
             
             var textString: NSAttributedString
             var isPhoto = false
+            var thumbnailMediaReference: AnyMediaReference?
+            var thumbnailDimensions: CGSize?
+            var isRoundThumbnail = false
+            var thumbnailHasSpoiler = false
+            var thumbnailPeerId: EnginePeer.Id?
             if self.messages.count == 1, let message = self.messages.first {
                 var text = ""
                 let effectiveMessage = message
@@ -463,62 +552,31 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 )
                 text = attributedText.string
                 
-                var updatedMediaReference: AnyMediaReference?
-                var imageDimensions: CGSize?
                 if !message._asMessage().containsSecretMedia {
-                    var candidateMediaReference: AnyMediaReference?
                     for media in message.media {
-                        if media is TelegramMediaImage || media is TelegramMediaFile {
-                            candidateMediaReference = .message(message: MessageReference(message._asMessage()), media: media)
+                        if let image = media as? TelegramMediaImage {
+                            thumbnailMediaReference = .message(message: MessageReference(message._asMessage()), media: image)
+                            if let representation = largestRepresentationForPhoto(image) {
+                                thumbnailDimensions = representation.dimensions.cgSize
+                            }
+                            break
+                        } else if let file = media as? TelegramMediaFile {
+                            thumbnailMediaReference = .message(message: MessageReference(message._asMessage()), media: file)
+                            isRoundThumbnail = file.isInstantVideo
+                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker && !file.isAnimatedSticker {
+                                thumbnailDimensions = representation.dimensions.cgSize
+                            }
                             break
                         }
                     }
-                    
-                    if let imageReference = candidateMediaReference?.concrete(TelegramMediaImage.self) {
-                        updatedMediaReference = imageReference.abstract
-                        if let representation = largestRepresentationForPhoto(imageReference.media) {
-                            imageDimensions = representation.dimensions.cgSize
-                        }
-                    } else if let fileReference = candidateMediaReference?.concrete(TelegramMediaFile.self) {
-                        updatedMediaReference = fileReference.abstract
-                        if !fileReference.media.isInstantVideo, let representation = largestImageRepresentation(fileReference.media.previewRepresentations), !fileReference.media.isSticker {
-                            imageDimensions = representation.dimensions.cgSize
-                        }
-                    }
                 }
-                
-                /*let imageNodeLayout = self.imageNode.asyncLayout()
-                 var applyImage: (() -> Void)?
-                 if let imageDimensions = imageDimensions {
-                 let boundingSize = CGSize(width: 35.0, height: 35.0)
-                 applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
-                 }
-                 
-                 var mediaUpdated = false
-                 if let updatedMediaReference = updatedMediaReference, let previousMediaReference = self.previousMediaReference {
-                 mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
-                 } else if (updatedMediaReference != nil) != (self.previousMediaReference != nil) {
-                 mediaUpdated = true
-                 }
-                 self.previousMediaReference = updatedMediaReference*/
-                
-                let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
-                
-                var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-                let _ = updateImageSignal
-                if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
-                    if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
-                        isPhoto = true
-                    } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
-                        if fileReference.media.isVideo {
-                            updateImageSignal = chatMessageVideoThumbnail(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), fileReference: fileReference, blurred: hasSpoiler)
-                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
-                        }
-                    }
-                } else {
-                    updateImageSignal = .single({ _ in return nil })
+                if thumbnailDimensions == nil {
+                    thumbnailMediaReference = nil
+                }
+                thumbnailHasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+                thumbnailPeerId = message.id.peerId
+                if thumbnailMediaReference?.concrete(TelegramMediaImage.self) != nil {
+                    isPhoto = true
                 }
                 
                 let isMedia: Bool
@@ -911,12 +969,59 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 }
             }
             
-            let textInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 0.0, right: 44.0)
+            var mediaUpdated = false
+            if let thumbnailMediaReference, let previousMediaReference = self.previousMediaReference {
+                mediaUpdated = !thumbnailMediaReference.media.isEqual(to: previousMediaReference.media)
+            } else if (thumbnailMediaReference != nil) != (self.previousMediaReference != nil) {
+                mediaUpdated = true
+            }
+            self.previousMediaReference = thumbnailMediaReference
+            
+            let imageSize = CGSize(width: 35.0, height: 35.0)
+            var imageTextInset: CGFloat = 0.0
+            if let thumbnailMediaReference, let thumbnailDimensions, let thumbnailPeerId {
+                if mediaUpdated {
+                    var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                    if let imageReference = thumbnailMediaReference.concrete(TelegramMediaImage.self) {
+                        updateImageSignal = chatMessagePhotoThumbnail(account: component.context.account, userLocation: .peer(thumbnailPeerId), photoReference: imageReference, blurred: thumbnailHasSpoiler)
+                    } else if let fileReference = thumbnailMediaReference.concrete(TelegramMediaFile.self) {
+                        if fileReference.media.isVideo {
+                            updateImageSignal = chatMessageVideoThumbnail(account: component.context.account, userLocation: .peer(thumbnailPeerId), fileReference: fileReference, blurred: thumbnailHasSpoiler)
+                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                            updateImageSignal = chatWebpageSnippetFile(account: component.context.account, userLocation: .peer(thumbnailPeerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                        }
+                    }
+                    if let updateImageSignal {
+                        self.imageNode.setSignal(updateImageSignal)
+                    }
+                }
+                
+                var radius: CGFloat = 2.0
+                var fittedImageSize = thumbnailDimensions.aspectFilled(imageSize)
+                if isRoundThumbnail {
+                    radius = floor(imageSize.width / 2.0)
+                    fittedImageSize.width += 2.0
+                    fittedImageSize.height += 2.0
+                }
+                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: fittedImageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                self.imageNode.isHidden = false
+                imageTextInset = 9.0 + imageSize.width
+            } else {
+                if mediaUpdated {
+                    self.imageNode.setSignal(.single({ _ in return nil }))
+                }
+                self.imageNode.isHidden = true
+            }
+            let imageFrame = CGRect(origin: CGPoint(x: lineFrame.maxX + 7.0, y: lineFrame.minY + floor((lineFrame.height - imageSize.height) * 0.5)), size: imageSize)
+            transition.setFrame(view: self.imageNode.view, frame: imageFrame)
+            
+            let textInsets = UIEdgeInsets(top: 10.0, left: 8.0 + imageTextInset, bottom: 0.0, right: 44.0)
             
             self.titleNode.components = titleText
             let titleSize = self.titleNode.update(constrainedSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0))
             
             let textRenderInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
+            let textContainerWidth = availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextWithEntitiesComponent(
@@ -931,7 +1036,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     displaysAsynchronously: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
+                containerSize: CGSize(width: textContainerWidth, height: 100.0)
             )
             let tintTextString = NSMutableAttributedString(attributedString: textString)
             tintTextString.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintTextString.length))
@@ -949,8 +1054,55 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     displaysAsynchronously: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
+                containerSize: CGSize(width: textContainerWidth, height: 100.0)
             )
+            
+            let hintFont = Font.regular(14.0)
+            let fittingHintString: (String, String) -> String = { full, short in
+                let fullWidth = NSAttributedString(string: full, font: hintFont, textColor: .black).boundingRect(with: CGSize(width: 1000.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).width
+                return ceil(fullWidth) + textRenderInsets.left + textRenderInsets.right <= textContainerWidth ? full : short
+            }
+            let hintString: String?
+            switch component.contents {
+            case .reply:
+                hintString = fittingHintString(environment.strings.Chat_ReplyPanel_HintReplyOptions, environment.strings.Chat_ReplyPanel_HintReplyOptionsShort)
+            case .forward:
+                hintString = fittingHintString(environment.strings.Conversation_ForwardOptions_TapForOptions, environment.strings.Conversation_ForwardOptions_TapForOptionsShort)
+            case .edit, .linkPreview, .suggestPost:
+                hintString = nil
+            }
+            var hintTextSize: CGSize?
+            if let hintString {
+                hintTextSize = self.hintText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        placeholderColor: environment.theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.1),
+                        text: .plain(NSAttributedString(string: hintString, font: hintFont, textColor: secondaryTextColor)),
+                        insets: textRenderInsets,
+                        displaysAsynchronously: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: textContainerWidth, height: 100.0)
+                )
+                let _ = self.hintTintText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        placeholderColor: UIColor.black.withAlphaComponent(0.1),
+                        text: .plain(NSAttributedString(string: hintString, font: hintFont, textColor: .black)),
+                        insets: textRenderInsets,
+                        displaysAsynchronously: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: textContainerWidth, height: 100.0)
+                )
+            }
+            let isOptionsHintVisible = self.isOptionsHintVisible && hintTextSize != nil
             
             let titleTextSpacing: CGFloat = 1.0
             
@@ -972,6 +1124,30 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 
                 transition.setPosition(view: tintTextView, position: textFrame.origin)
                 tintTextView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
+                
+                transition.setAlpha(view: textView, alpha: isOptionsHintVisible ? 0.0 : 1.0)
+                transition.setAlpha(view: tintTextView, alpha: isOptionsHintVisible ? 0.0 : 1.0)
+            }
+            
+            if let hintTextSize, let hintTextView = self.hintText.view, let hintTintTextView = self.hintTintText.view {
+                let hintTextFrame = CGRect(origin: textFrame.origin, size: hintTextSize)
+                if hintTextView.superview == nil {
+                    hintTextView.alpha = 0.0
+                    hintTextView.frame = hintTextFrame
+                    self.addSubview(hintTextView)
+                    
+                    hintTintTextView.alpha = 0.0
+                    hintTintTextView.frame = hintTextFrame
+                    self.contentTintView.addSubview(hintTintTextView)
+                }
+                transition.setFrame(view: hintTextView, frame: hintTextFrame)
+                transition.setFrame(view: hintTintTextView, frame: hintTextFrame)
+                
+                transition.setAlpha(view: hintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
+                transition.setAlpha(view: hintTintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
+            } else {
+                self.hintText.view?.alpha = 0.0
+                self.hintTintText.view?.alpha = 0.0
             }
             
             return size

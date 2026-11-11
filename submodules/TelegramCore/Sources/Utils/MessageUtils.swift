@@ -547,13 +547,11 @@ public extension Message {
         }
     }
     
-    func isSensitiveContent(platform: String) -> Bool {
-        if let rule = self.restrictedContentAttribute?.rules.first(where: { $0.reason == "sensitive" }) {
-            if rule.platform == "all" || rule.platform == platform {
-                return true
-            }
+    func isSensitiveContent(platform: String, contentSettings: ContentSettings) -> Bool {
+        if let rules = self.restrictedContentAttribute?.rules, rules.containsSensitiveRule(platform: platform, contentSettings: contentSettings) {
+            return true
         }
-        if let peer = self.peers[self.id.peerId], peer.hasSensitiveContent(platform: platform) {
+        if let peer = self.peers[self.id.peerId], peer.hasSensitiveContent(platform: platform, contentSettings: contentSettings) {
             return true
         }
         return false

@@ -1,17 +1,18 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-load(
-    "@build_configuration//:variables.bzl",
-    "telegram_bundle_id",
-)
-
-
 filegroup(
     name = "TelegramUIResources",
     srcs = glob([
         "Sounds/**/*",
         "Resources/**/*",
     ], exclude = ["Sounds/**/.*", "Resources/**/.*"]),
+    visibility = ["//visibility:public"],
+)
+
+# The static glass assets alone (they are also in TelegramUIResources), for hosts that need only them.
+filegroup(
+    name = "StaticGlassResources",
+    srcs = glob(["Resources/StaticGlass/*.bin"]),
     visibility = ["//visibility:public"],
 )
 
@@ -43,17 +44,6 @@ filegroup(
 #    ], exclude = ["Telegram-iOS/Icons.xcassets/**/.*"]),
 #)
 
-internal_bundle_ids = [
-    "org.telegram.Telegram-iOS",
-]
-
-available_appcenter_targets = [
-    "@appcenter_sdk//:AppCenter",
-    "@appcenter_sdk//:AppCenterCrashes",
-]
-
-appcenter_targets = available_appcenter_targets if telegram_bundle_id in internal_bundle_ids else []
-
 swift_library(
     name = "TelegramUI",
     module_name = "TelegramUI",
@@ -63,6 +53,17 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
+    # DEBUG builds only: widget-sandbox's conformance set and the client's game examples, for Debug Settings' widget insertion
+    # (DebugSettingsUI/Sources/WidgetDebugPosts.swift reads them from this framework's bundle).
+    data = select({
+        "//third-party/widget-sandbox:debug_build": [
+            "//third-party/widget-sandbox:WidgetConformanceBundle",
+            "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
+            # The renderer stress kit, for Debug Settings' "Run widget stress kit" (widget-sandbox v0.3.0).
+            "//third-party/widget-sandbox:WidgetStressBundle",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         "//submodules/CrashReporting:CrashReporting",
         "//third-party/recaptcha:RecaptchaEnterprise",
@@ -91,7 +92,6 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/BuildConfigExtra:BuildConfigExtra",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/TelegramUpdateUI:TelegramUpdateUI",
         "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",
@@ -332,11 +332,16 @@ swift_library(
         "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
         "//submodules/TelegramUI/Components/CoreListComponentHost",
+        "//submodules/TelegramUI/Components/ListViewItemCoreListHost",
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
         "//submodules/TelegramUI/Components/News/NewsScreen",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/CameraScreen",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
+        "//submodules/TelegramUI/Components/ChatMediaEditorScreen",
+        "//submodules/TelegramUI/Components/MediaEditorBottomControls",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/ICloudResources",
         "//submodules/TelegramUI/Components/LegacyCamera",
@@ -376,6 +381,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatUserInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatNewThreadInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/TelegramUI/Components/TabBarLayout",
         "//submodules/TelegramUI/Components/Chat/ChatButtonKeyboardInputNode",
         "//submodules/TelegramUI/Components/Chat/ChatChannelSubscriberInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatContextResultPeekContent",
@@ -527,6 +533,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PostSuggestionsSettingsScreen",
         "//submodules/TelegramUI/Components/ForumSettingsScreen",
         "//submodules/TelegramUI/Components/Chat/ChatSideTopicsPanel",
+        "//submodules/TelegramUI/Components/Chat/ChatSideListPanel",
         "//submodules/TelegramUI/Components/GifVideoLayer",
         "//submodules/TelegramUI/Components/BatchVideoRendering",
         "//submodules/TelegramUI/Components/ComposeTodoScreen",
@@ -558,6 +565,8 @@ swift_library(
         "//submodules/TelegramUI/Components/TranslateHeaderPanelComponent",
         "//submodules/TelegramUI/Components/AdPanelHeaderPanelComponent",
         "//submodules/TelegramUI/Components/MessageFeeHeaderPanelComponent",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/LegacyChatHeaderPanelComponent",
         "//submodules/TelegramUI/Components/GroupCallHeaderPanelComponent",
         "//submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode",
@@ -566,6 +575,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiGameStakeScreen",
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertHeaderComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
         "//submodules/TelegramUI/Components/Chat/ChatAgeRestrictionAlertController",
         "//submodules/TelegramUI/Components/CocoonInfoScreen",
         "//submodules/TelegramUI/Components/ProxyServerPreviewScreen",
@@ -587,10 +597,7 @@ swift_library(
         "//submodules/WalletContext",
         "//submodules/PasscodeCore",
         "//submodules/MTProtoRustEngine:MTProtoRustEngine",
-    ] + select({
-        "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
-        "//build-system:ios_sim_arm64": [],
-    }),
+    ],
     visibility = [
         "//visibility:public",
     ],

@@ -72,6 +72,9 @@ public final class ShareScreenHostController: ViewController {
         self.navigation.isOpaqueWhenInOverlay = false
         super.init(navigationBarPresentationData: nil)
         self.statusBar.statusBarStyle = .Ignore
+        // VoiceOver: while the sheet is up only the sheet is read (the screen under it is hidden), as for alerts.
+        // Nothing else reads this flag: it is not opacity and does not change what is drawn.
+        self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .default
         screen.navigationPresentation = .default
         self.navigation.setViewControllers([screen], animated: false)
@@ -173,6 +176,7 @@ private final class ShareScreenHeaderComponent: Component {
 
         func update(component: ShareScreenHeaderComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.isUserInteractionEnabled = !component.isHidden
+            self.accessibilityElementsHidden = component.isHidden
             transition.setAlpha(view: self, alpha: component.isHidden ? 0.0 : 1.0)
             transition.setBlur(layer: self.layer, radius: component.isHidden ? 8.0 : 0.0)
             // Keep the sheet's title slot independent of the subtitle's measured width.
@@ -200,6 +204,8 @@ private final class ShareScreenHeaderComponent: Component {
                     }
                 }
                 view.frame = CGRect(x: floorToScreenPixels((size.width - titleSize.width) * 0.5), y: 0.0, width: titleSize.width, height: titleSize.height)
+                // The sheet's title ("Share with", or the opened forum/community) is its heading.
+                view.accessibilityTraits = [.staticText, .header]
             }
             let subtitleFont = Font.regular(12.0)
             var subtitleItems: [AnimatedTextComponent.Item] = []
@@ -272,7 +278,10 @@ private final class ShareScreenHeaderComponent: Component {
 public final class ShareScreen: ViewControllerComponentContainer {
     public typealias Subject = ShareScreenSubject
 
-    public var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
+    public var sent: (([EnginePeer.Id]) -> Void)?
+    public var enqueued: (([EnginePeer.Id], [Int64]) -> Void)? {
+        didSet { self.sender.enqueued = self.enqueued }
+    }
     public var actionCompleted: (() -> Void)?
     public var linkCopied: ((Int32?) -> Void)?
     public var dismissed: (() -> Void)?
@@ -472,16 +481,17 @@ public final class ShareScreen: ViewControllerComponentContainer {
             let environment: ShareControllerEnvironment = self.externalConfiguration?.environment ?? ShareControllerAppEnvironment(sharedContext: self.context.sharedContext)
             environment.donateSendMessageIntent(account: ShareControllerAppAccountContext(context: self.context), peerIds: ids)
         }
-        self.sender.enqueued = { [weak self] ids, correlations in
+        self.sender.sent = { [weak self] ids in
             guard let self else { return }
             let haptic = HapticFeedback()
             let hapticDelay = ids.count == 1 && ids.first == self.context.account.peerId ? 0.88 : 0.44
             Queue.mainQueue().after(hapticDelay) {
                 haptic.success()
             }
-            self.enqueued?(ids, correlations)
+            self.sent?(ids)
             self.close()
         }
+        self.sender.enqueued = self.enqueued
         self.sender.externalStatusUpdated = { [weak self] status in self?.updateExternalStatus(status) }
         self.sender.mediaStartTimestamp = self.effectiveStartTimestamp
     }
@@ -492,7 +502,6 @@ public final class ShareScreen: ViewControllerComponentContainer {
 
     fileprivate func presentAccountMenu(source: GlassContextExtractableContainer) {
         guard !self.sender.isSending, let configuration = self.externalConfiguration else { return }
-        source.morphsIntoContextMenu = true
         let data = self.context.sharedContext.currentPresentationData.with { $0 }
         let items: [ContextMenuItem] = configuration.accounts.map { account in
             .custom(AccountPeerContextItem(context: account.context, account: account.context.account, peer: account.peer, action: { [weak self] _, dismiss in
@@ -1028,7 +1037,9 @@ private final class ShareScreenComponent: Component {
                 slidesOutBottomItem: isEmbedded,
                 animatesAppearance: self.animatesSheetAppearance,
                 scrollsContentWhenCentered: true,
-                centeredSize: environment.metrics.widthClass == .regular ? CGSize(width: min(414.0, availableSize.width - 20.0), height: min(670.0, availableSize.height - 88.0)) : nil,
+                // A centered card where floating panels are shown; iPhone Duo's regular-width unfolded landscape keeps
+                // the phone sheet, in the band beside the strip.
+                centeredSize: environment.presentsFloatingPanels ? CGSize(width: min(414.0, availableSize.width - 20.0), height: min(670.0, availableSize.height - 88.0)) : nil,
                 defaultHeight: sheetDefaultHeight, externalState: self.externalState, animateOut: component.animateOut
             )), environment: {
                 environment

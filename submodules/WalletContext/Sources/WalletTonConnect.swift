@@ -1211,6 +1211,18 @@ extension WalletContextImpl {
         manifest: TonConnectManifestInfo,
         preview: SendPreview
     ) -> WalletContext.TonConnectOperationRequest {
+        return Self.tonConnectOperation(id: id, applicationName: manifest.name, domain: manifest.domain, icon: manifest.icon, preview: preview)
+    }
+
+    /// The window's request for a transaction `preview` from the requester named `applicationName` and `domain`: a dApp's
+    /// manifest, or a message widget's bot (sdk-v1 §2.18).
+    static func tonConnectOperation(
+        id: String,
+        applicationName: String,
+        domain: String,
+        icon: WalletTonConnectIcon?,
+        preview: SendPreview
+    ) -> WalletContext.TonConnectOperationRequest {
         let messages = preview.messages.enumerated().map { index, value in
             let amount: String
             switch value.amount {
@@ -1237,9 +1249,9 @@ extension WalletContextImpl {
         }
         return WalletContext.TonConnectOperationRequest(
             id: id,
-            applicationName: manifest.name,
-            domain: manifest.domain,
-            icon: manifest.icon,
+            applicationName: applicationName,
+            domain: domain,
+            icon: icon,
             method: .sendTransaction,
             messages: messages,
             feeNanograms: preview.emulation.walletFeesNanograms,

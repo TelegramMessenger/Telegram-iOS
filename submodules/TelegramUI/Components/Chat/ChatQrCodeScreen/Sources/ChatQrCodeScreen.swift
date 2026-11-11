@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import AVFoundation
 import UIKit
 import Display
@@ -509,7 +508,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -1754,7 +1753,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         self.codeMarkersNode = TransformImageNode()
         self.codeIconBackgroundNode = ASImageNode()
         
-        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl()
         
         if isStatic {
             let codeStaticIconNode = ASImageNode()
@@ -1764,7 +1763,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = codeStaticIconNode
             self.codeAnimatedIconNode = nil
         } else {
-            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl()
             codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
             codeAnimatedIconNode.visibility = true
             self.codeAnimatedIconNode = codeAnimatedIconNode

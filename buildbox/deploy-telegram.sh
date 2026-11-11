@@ -38,10 +38,7 @@ else
 	BUILD_NUMBER="$2"
 fi
 
-if [ "$CONFIGURATION" == "hockeyapp" ] || [ "$CONFIGURATION" == "appcenter-experimental" ] || [ "$CONFIGURATION" == "appcenter-experimental-2" ] || [ "$CONFIGURATION" == "appstore-development" ]; then
-	FASTLANE_PASSWORD=""
-	FASTLANE_ITC_TEAM_NAME=""
-elif [ "$CONFIGURATION" == "appstore" ]; then
+if [ "$CONFIGURATION" == "appstore" ]; then
 	FASTLANE_PASSWORD="$TELEGRAM_BUILD_APPSTORE_PASSWORD"
 	FASTLANE_ITC_TEAM_NAME="$TELEGRAM_BUILD_APPSTORE_TEAM_NAME"
 	FASTLANE_ITC_USERNAME="$TELEGRAM_BUILD_APPSTORE_USERNAME"
@@ -67,8 +64,4 @@ fi
 if [ "$1" == "appstore" ]; then
 	export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
 	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" xcrun altool --upload-app --type ios --file "$IPA_PATH" --username "$FASTLANE_ITC_USERNAME" --password "@env:FASTLANE_PASSWORD"
-elif [ "$1" == "hockeyapp" ]; then
-	API_USER_NAME="$API_USER_NAME" API_APP_NAME="$API_APP_NAME" API_TOKEN="$API_TOKEN" sh buildbox/deploy-appcenter.sh
-elif [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "appstore-development" ]; then
-	API_USER_NAME="$API_USER_NAME" API_APP_NAME="$API_APP_NAME" API_TOKEN="$API_TOKEN" sh buildbox/deploy-appcenter.sh
 fi

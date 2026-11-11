@@ -23,7 +23,7 @@ enum RichTextInputBackendKind {
 }
 
 /// Which `BlockLayoutEngine` conformer backs every box the harness builds, mirroring the
-/// `BlockLayoutBackend.forceTextKit1` runtime toggle (`PKG/CLAUDE.md`, "Dual layout-engine back-port").
+/// `BlockLayoutBackend.forceTextKit1` runtime toggle (`Sources/RichTextEditorUIKit/CLAUDE.md`, "Dual layout-engine back-port").
 enum RichTextInputHarnessLayoutEngine {
     case textKit2
     case textKit1

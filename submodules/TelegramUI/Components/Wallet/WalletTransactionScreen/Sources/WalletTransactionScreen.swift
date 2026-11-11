@@ -1921,9 +1921,11 @@ private final class WalletTransactionContentComponent: Component {
             |> mapToSignal { state -> Signal<WalletContext.PreparedTransfer, WalletContext.WalletError> in
                 if collectible == nil {
                     guard let balance = state.balance.currentValue, requestedAmount <= balance else {
+                        Logger.shared.log("WalletTransactionScreen", "event=wallet_send_ui_failed error=insufficient_balance reason=\(state.balance.currentValue == nil ? "balance_unknown" : "amount_exceeds_balance")")
                         return .fail(.insufficientBalance(required: requestedAmount))
                     }
                     if sendAll && balance != requestedAmount {
+                        Logger.shared.log("WalletTransactionScreen", "event=wallet_send_ui_failed error=preview_failed reason=send_all_balance_changed")
                         return .fail(.previewFailed)
                     }
                 }
@@ -2634,10 +2636,10 @@ private final class WalletTransactionContentComponent: Component {
                         action: { [weak self] in
                             guard let self,
                                   let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
-                                  let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
+                                  let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
                                 return
                             }
-                            self.openExplorer(sourceView: sourceView)
+                            self.openExplorer(sourceView: rightItemView.menuSourceView)
                         }
                     )],
                     background: controlsBackground
@@ -3374,7 +3376,9 @@ private final class WalletTransactionContentComponent: Component {
                             )),
                             action: { [weak self] in
                                 self?.presentFeesAlert(transaction: transaction)
-                            }
+                            },
+                            // VoiceOver: "?" opens the network fees explanation; named by its title.
+                            accessibility: ComponentAccessibility(label: environment.strings.Wallet_Transaction_NetworkFeesTitle)
                         )),
                         spacing: 6.0,
                         alignSendButtonToTop: false
@@ -3565,8 +3569,7 @@ private final class WalletTransactionContentComponent: Component {
                                 ),
                                 color: commentEncrypted ? theme.actionSheet.controlAccentColor : theme.actionSheet.inputPlaceholderColor,
                                 startingPosition: .end,
-                                size: CGSize(width: 24.0, height: 24.0),
-                                lottieSettings: component.context.lottieRenderingSettings
+                                size: CGSize(width: 24.0, height: 24.0)
                             )),
                             minSize: commentEncryptionButtonSize,
                             action: { [weak self] in

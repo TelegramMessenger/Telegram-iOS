@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1026,7 +1025,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                         guard let self else {
                             return
                         }
-                        if let profileGiftsContext = controller?.profileGiftsContext {
+                        if let controller, let deleteGift = controller.deleteGift {
+                            controller.actionsAfterDismiss.append({
+                                deleteGift(reference)
+                            })
+                        } else if let profileGiftsContext = controller?.profileGiftsContext {
                             profileGiftsContext.deleteStarGift(reference: reference)
                         } else {
                             let _ = self.context.engine.payments.deleteStarGift(reference: reference).startStandalone()
@@ -2134,9 +2137,10 @@ private final class GiftViewSheetContent: CombinedComponent {
             guard let controller = self.getController() as? GiftViewScreen else {
                 return
             }
-            guard let controlsView = controller.node.hostView.findTaggedView(tag: self.controlButtonsTag) as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, let sourceView = rightItemView.itemView(id: AnyHashable("more")) else {
+            guard let controlsView = controller.node.hostView.findTaggedView(tag: self.controlButtonsTag) as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
                 return
             }
+            let sourceView = rightItemView.menuSourceView
             
             guard let arguments = self.subject.arguments else {
                 return
@@ -6001,8 +6005,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             name: "GiftUpgrade"
                                         ),
                                         size: CGSize(width: 30.0, height: 30.0),
-                                        loop: true,
-                                        lottieSettings: component.context.lottieRenderingSettings
+                                        loop: true
                                     )
                                 ))
                             ], spacing: 5.0))
@@ -6989,6 +6992,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     fileprivate let profileGiftsContext: ProfileGiftsContext?
     fileprivate let updateSavedToProfile: ((StarGiftReference, Bool) -> Void)?
     fileprivate let convertToStars: ((StarGiftReference) -> Void)?
+    fileprivate let deleteGift: ((StarGiftReference) -> Void)?
+    fileprivate var actionsAfterDismiss: [() -> Void] = []
     fileprivate let dropOriginalDetails: ((StarGiftReference) -> Signal<Never, DropStarGiftOriginalDetailsError>)?
     fileprivate let transferGift: ((Bool, StarGiftReference, EnginePeer.Id) -> Signal<Never, TransferStarGiftError>)?
     fileprivate let upgradeGift: ((Int64?, StarGiftReference, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)?
@@ -7010,6 +7015,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         profileGiftsContext: ProfileGiftsContext? = nil,
         updateSavedToProfile: ((StarGiftReference, Bool) -> Void)? = nil,
         convertToStars: ((StarGiftReference) -> Void)? = nil,
+        deleteGift: ((StarGiftReference) -> Void)? = nil,
         dropOriginalDetails: ((StarGiftReference) -> Signal<Never, DropStarGiftOriginalDetailsError>)? = nil,
         transferGift: ((Bool, StarGiftReference, EnginePeer.Id) -> Signal<Never, TransferStarGiftError>)? = nil,
         upgradeGift: ((Int64?, StarGiftReference, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)? = nil,
@@ -7026,6 +7032,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         self.profileGiftsContext = profileGiftsContext
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
+        self.deleteGift = deleteGift
         self.dropOriginalDetails = dropOriginalDetails
         self.transferGift = transferGift
         self.upgradeGift = upgradeGift
@@ -7098,6 +7105,20 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     deinit {
         self.disposed()
         self.upgradableDisposable?.dispose()
+        self.performActionsAfterDismiss()
+    }
+    
+    private func performActionsAfterDismiss() {
+        let actions = self.actionsAfterDismiss
+        self.actionsAfterDismiss.removeAll()
+        for action in actions {
+            action()
+        }
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
+        self.performActionsAfterDismiss()
     }
     
     fileprivate func switchToNextUpgradable() {

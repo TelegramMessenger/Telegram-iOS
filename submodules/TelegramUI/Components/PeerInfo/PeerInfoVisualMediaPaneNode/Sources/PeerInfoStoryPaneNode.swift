@@ -1389,6 +1389,39 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         }
         self.onTapImpl?(item, itemLayer, point)
     }
+    
+    var accessibilityContextMenuEnabledImpl: (() -> Bool)?
+    var accessibilityContextActionImpl: ((VisualMediaItem, CALayer) -> Bool)?
+    
+    /// VoiceOver: a tile reads "Story", then a video's duration (the tile shows it) and the date; selection is `.selected`; the
+    /// long-press menu is "More" while the gesture is on.
+    func accessibilityItem(item: SparseItemGrid.Item) -> SparseItemGrid.AccessibilityItem? {
+        guard let item = item as? VisualMediaItem else {
+            return nil
+        }
+        var value: String?
+        if case let .file(file) = item.story.media, file.isVideo, let duration = file.duration {
+            value = stringForDuration(Int32(floor(duration)))
+        }
+        // The date tells otherwise identical tiles apart.
+        let date = stringForMediumDate(timestamp: item.story.timestamp, strings: self.strings, dateTimeFormat: self.chatPresentationData.dateTimeFormat, withTime: false)
+        value = [value, date].compactMap { $0 }.joined(separator: ", ")
+        var traits: UIAccessibilityTraits = .button
+        if !item.isEnabled {
+            traits.insert(.notEnabled)
+        } else if let selectedIds = self.itemInteraction?.selectedIds, selectedIds.contains(item.story.id) {
+            traits.insert(.selected)
+        }
+        let contextActionName = (self.accessibilityContextMenuEnabledImpl?() ?? false) ? self.strings.Common_More : nil
+        return SparseItemGrid.AccessibilityItem(label: self.strings.Message_Story, value: value, traits: traits, contextActionName: contextActionName)
+    }
+    
+    func accessibilityPerformContextAction(item: SparseItemGrid.Item, itemLayer: CALayer) -> Bool {
+        guard let item = item as? VisualMediaItem else {
+            return false
+        }
+        return self.accessibilityContextActionImpl?(item, itemLayer) ?? false
+    }
 
     func onTagTap() {
         self.onTagTapImpl?()
@@ -2301,6 +2334,25 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
         }
 
+        self.itemGrid.accessibilityItemFocused = { [weak self] rect in
+            guard let self else {
+                return
+            }
+            // A focused story below the fold: the profile scrolls the pane up, as for a story opened from elsewhere.
+            self.ensureRectVisible?(self.itemGrid.view, rect)
+        }
+        self.itemGridBinding.accessibilityContextMenuEnabledImpl = { [weak self] in
+            return self?.contextGestureContainerNode.isGestureEnabled ?? false
+        }
+        self.itemGridBinding.accessibilityContextActionImpl = { [weak self] item, itemLayer in
+            guard let self, let itemLayer = itemLayer as? ItemLayer, self.contextGestureContainerNode.isGestureEnabled else {
+                return false
+            }
+            let rect = self.itemGrid.frameForItem(layer: itemLayer)
+            self.openContextMenu(item: item.story, itemLayer: itemLayer, rect: rect, gesture: nil)
+            return true
+        }
+        
         self.contextGestureContainerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let currentGestureItem = strongSelf.currentGestureItem else {
                 return
@@ -2473,6 +2525,23 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                 }
             })
+        }
+    }
+    
+    /// VoiceOver: the album tabs above the grid, then the grid. The grid's container starts at the pane's top (under
+    /// the tabs), so the frame sort would read the stories before the tabs.
+    override public var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if self.contextGestureContainerNode.isNodeLoaded, let folderTabView = self.folderTab?.view, let gridIndex = elements.firstIndex(where: { ($0 as AnyObject) === self.contextGestureContainerNode.view }), let tabIndex = elements.firstIndex(where: { ($0 as AnyObject) === folderTabView }), gridIndex < tabIndex {
+                let grid = elements.remove(at: gridIndex)
+                elements.insert(grid, at: tabIndex)
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
         }
     }
     
@@ -3986,7 +4055,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             )
                             controller.presentInGlobalOverlay(contextController)
                         }
-                    }
+                    },
+                    contextAccessibilityLabel: self.presentationData.strings.Common_More
                 ))
             }
         }

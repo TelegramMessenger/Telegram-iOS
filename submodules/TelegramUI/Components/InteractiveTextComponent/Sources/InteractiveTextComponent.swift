@@ -217,6 +217,11 @@ public final class InteractiveTextNodeSegment {
         return self.blockQuote != nil
     }
     
+    /// The frame of this segment's quote or code background, in the layout's coordinates (inside its insets).
+    public var blockQuoteFrame: CGRect? {
+        return self.blockQuote?.frame
+    }
+    
     fileprivate init(
         lines: [InteractiveTextNodeLine],
         visibleLineCount: Int,
@@ -836,12 +841,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
                         if lineRange.location != rangeValue.location {
-                            leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                            leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                         }
                         var rightOffset: CGFloat = line.frame.width
                         if lineRange.location + lineRange.length != rangeValue.length {
                             var secondaryOffset: CGFloat = 0.0
-                            let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                            let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                             rightOffset = ceil(rawOffset)
                             if !rawOffset.isEqual(to: secondaryOffset) {
                                 rightOffset = ceil(secondaryOffset)
@@ -901,12 +906,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                         if lineRange.length != 0 {
                             var leftOffset: CGFloat = 0.0
                             if lineRange.location != rangeValue.location {
-                                leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                                leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                             }
                             var rightOffset: CGFloat = line.frame.width
                             if lineRange.location + lineRange.length != rangeValue.length {
                                 var secondaryOffset: CGFloat = 0.0
-                                let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                                let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                                 rightOffset = ceil(rawOffset)
                                 if !rawOffset.isEqual(to: secondaryOffset) {
                                     rightOffset = ceil(secondaryOffset)
@@ -957,12 +962,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                         if lineRange.length != 0 {
                             var leftOffset: CGFloat = 0.0
                             if lineRange.location != rangeValue.location || line.isRTL {
-                                leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                                leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                             }
                             var rightOffset: CGFloat = line.frame.width
                             if lineRange.location + lineRange.length != rangeValue.length || line.isRTL {
                                 var secondaryOffset: CGFloat = 0.0
-                                let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                                let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                                 rightOffset = ceil(rawOffset)
                                 if !rawOffset.isEqual(to: secondaryOffset) {
                                     rightOffset = ceil(secondaryOffset)
@@ -1003,12 +1008,12 @@ public final class InteractiveTextNodeLayout: NSObject {
                 if lineRange.length != 0 {
                     var leftOffset: CGFloat = 0.0
                     if lineRange.location != rangeValue.location || line.isRTL {
-                        leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                        leftOffset = floor(lineOffsetForStringIndex(line, lineRange.location, nil))
                     }
                     var rightOffset: CGFloat = line.frame.width
                     if lineRange.location + lineRange.length != rangeValue.upperBound || line.isRTL {
                         var secondaryOffset: CGFloat = 0.0
-                        let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                        let rawOffset = lineOffsetForStringIndex(line, lineRange.location + lineRange.length, &secondaryOffset)
                         rightOffset = ceil(rawOffset)
                         if !rawOffset.isEqual(to: secondaryOffset) {
                             rightOffset = ceil(secondaryOffset)
@@ -1020,7 +1025,7 @@ public final class InteractiveTextNodeLayout: NSObject {
                     let width = max(0.0, abs(rightOffset - leftOffset))
                     
                     if rangeValue.contains(range.lowerBound) {
-                        let offsetX = floor(CTLineGetOffsetForStringIndex(line.line, range.lowerBound, nil))
+                        let offsetX = floor(lineOffsetForStringIndex(line, range.lowerBound, nil))
                         startEdge = TextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
                     }
                     if rangeValue.contains(range.upperBound - 1) {
@@ -1029,9 +1034,9 @@ public final class InteractiveTextNodeLayout: NSObject {
                             offsetX = lineFrame.maxX
                         } else {
                             var secondaryOffset: CGFloat = 0.0
-                            let primaryOffset = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound - 1, &secondaryOffset))
+                            let primaryOffset = floor(lineOffsetForStringIndex(line, range.upperBound - 1, &secondaryOffset))
                             secondaryOffset = floor(secondaryOffset)
-                            let nextOffet = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound, &secondaryOffset))
+                            let nextOffet = floor(lineOffsetForStringIndex(line, range.upperBound, &secondaryOffset))
                             
                             if primaryOffset != secondaryOffset {
                                 offsetX = secondaryOffset
@@ -1185,16 +1190,68 @@ public final class InteractiveTextNodeLayout: NSObject {
     }*/
 }
 
+/// A line made by `CTLineCreateTruncatedLine` (without a token: the token is drawn as `additionalTrailingLine`) keeps
+/// its whole original string range, and so do its runs; only their glyphs stop at the cut. CoreText has no offset (0)
+/// for the text past the cut, nor for the end of the visible text, so a custom emoji, spoiler or strikethrough laid out
+/// from there lands at the line's start, over its first letter. This is the cut: the string index of the last visible
+/// glyph and the trailing edge of its character.
+private func truncatedLineEnd(_ line: CTLine) -> (lastIndex: Int, trailingEdge: CGFloat)? {
+    var result: (lastIndex: Int, trailingEdge: CGFloat)?
+    for run in CTLineGetGlyphRuns(line) as NSArray {
+        let run = run as! CTRun
+        let glyphCount = CTRunGetGlyphCount(run)
+        if glyphCount == 0 {
+            continue
+        }
+        let isRTL = CTRunGetStatus(run).contains(.rightToLeft)
+        var stringIndices = [CFIndex](repeating: 0, count: glyphCount)
+        CTRunGetStringIndices(run, CFRangeMake(0, glyphCount), &stringIndices)
+        var positions = [CGPoint](repeating: CGPoint(), count: glyphCount)
+        CTRunGetPositions(run, CFRangeMake(0, glyphCount), &positions)
+        var advances = [CGSize](repeating: CGSize(), count: glyphCount)
+        CTRunGetAdvances(run, CFRangeMake(0, glyphCount), &advances)
+        for i in 0 ..< glyphCount {
+            let trailingEdge = isRTL ? positions[i].x : (positions[i].x + advances[i].width)
+            if let current = result, stringIndices[i] <= current.lastIndex {
+                if stringIndices[i] == current.lastIndex {
+                    result = (current.lastIndex, isRTL ? min(current.trailingEdge, trailingEdge) : max(current.trailingEdge, trailingEdge))
+                }
+            } else {
+                result = (stringIndices[i], trailingEdge)
+            }
+        }
+    }
+    return result
+}
+
+/// The part of a truncated line's `lineRange` that it still shows (`truncatedLineEnd`).
+private func truncatedLineVisibleRange(line: CTLine, lineRange: NSRange, string: NSString) -> NSRange {
+    guard let lastIndex = truncatedLineEnd(line)?.lastIndex, lastIndex >= lineRange.location, lastIndex < string.length else {
+        return NSRange(location: lineRange.location, length: 0)
+    }
+    let upperBound = NSMaxRange(string.rangeOfComposedCharacterSequence(at: lastIndex))
+    return NSRange(location: lineRange.location, length: min(upperBound, lineRange.upperBound) - lineRange.location)
+}
+
+/// `CTLineGetOffsetForStringIndex`, also for the end of a truncated line's visible text (`truncatedLineEnd`).
+private func lineOffsetForStringIndex(_ line: InteractiveTextNodeLine, _ index: Int, _ secondaryOffset: UnsafeMutablePointer<CGFloat>?) -> CGFloat {
+    if line.isTruncated, let end = truncatedLineEnd(line.line), index > end.lastIndex {
+        secondaryOffset?.pointee = end.trailingEdge
+        return end.trailingEdge
+    }
+    return CTLineGetOffsetForStringIndex(line.line, index, secondaryOffset)
+}
+
 private func addSpoiler(line: InteractiveTextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
     var secondaryLeftOffset: CGFloat = 0.0
-    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    let rawLeftOffset = lineOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
     if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
         leftOffset = floor(secondaryLeftOffset)
     }
     
     var secondaryRightOffset: CGFloat = 0.0
-    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    let rawRightOffset = lineOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
     var rightOffset = ceil(rawRightOffset)
     if !rawRightOffset.isEqual(to: secondaryRightOffset) {
         rightOffset = ceil(secondaryRightOffset)
@@ -1205,14 +1262,14 @@ private func addSpoiler(line: InteractiveTextNodeLine, ascent: CGFloat, descent:
 
 private func addSpoilerWord(line: InteractiveTextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
     var secondaryLeftOffset: CGFloat = 0.0
-    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    let rawLeftOffset = lineOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
     if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
         leftOffset = floor(secondaryLeftOffset)
     }
     
     var secondaryRightOffset: CGFloat = 0.0
-    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    let rawRightOffset = lineOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
     var rightOffset = ceil(rawRightOffset)
     if !rawRightOffset.isEqual(to: secondaryRightOffset) {
         rightOffset = ceil(secondaryRightOffset)
@@ -1223,14 +1280,14 @@ private func addSpoilerWord(line: InteractiveTextNodeLine, ascent: CGFloat, desc
 
 private func addEmbeddedItem(item: AnyHashable, isHiddenBySpoiler: Bool, line: InteractiveTextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
     var secondaryLeftOffset: CGFloat = 0.0
-    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    let rawLeftOffset = lineOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
     if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
         leftOffset = floor(secondaryLeftOffset)
     }
     
     var secondaryRightOffset: CGFloat = 0.0
-    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    let rawRightOffset = lineOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
     var rightOffset = ceil(rawRightOffset)
     if !rawRightOffset.isEqual(to: secondaryRightOffset) {
         rightOffset = ceil(secondaryRightOffset)
@@ -1241,14 +1298,14 @@ private func addEmbeddedItem(item: AnyHashable, isHiddenBySpoiler: Bool, line: I
 
 private func addAttachment(attachment: UIImage, line: InteractiveTextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
     var secondaryLeftOffset: CGFloat = 0.0
-    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    let rawLeftOffset = lineOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
     var leftOffset = floor(rawLeftOffset)
     if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
         leftOffset = floor(secondaryLeftOffset)
     }
     
     var secondaryRightOffset: CGFloat = 0.0
-    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    let rawRightOffset = lineOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
     var rightOffset = ceil(rawRightOffset)
     if !rawRightOffset.isEqual(to: secondaryRightOffset) {
         rightOffset = ceil(secondaryRightOffset)
@@ -1311,6 +1368,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         public let areContentAnimationsEnabled: Bool
         public let spoilerExpandRect: CGRect?
         public var crossfadeContents: ((UIView) -> Void)?
+        /// Rounds quote and code blocks more than they are drawn (`MessageInlineBlockBackgroundView.clipCornerRadius`).
+        public let blockCornerRadius: CGFloat?
         
         public init(
             animation: ListViewItemUpdateAnimation,
@@ -1318,7 +1377,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             spoilerEffectColor: UIColor,
             areContentAnimationsEnabled: Bool,
             spoilerExpandRect: CGRect?,
-            crossfadeContents: ((UIView) -> Void)? = nil
+            crossfadeContents: ((UIView) -> Void)? = nil,
+            blockCornerRadius: CGFloat? = nil
         ) {
             self.animation = animation
             self.spoilerTextColor = spoilerTextColor
@@ -1326,6 +1386,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             self.areContentAnimationsEnabled = areContentAnimationsEnabled
             self.spoilerExpandRect = spoilerExpandRect
             self.crossfadeContents = crossfadeContents
+            self.blockCornerRadius = blockCornerRadius
         }
     }
     
@@ -1926,7 +1987,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 }
                 blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width + additionalTrailingWidth)
                 
-                if let range = line.range {
+                if let lineRange = line.range {
+                    let range = line.isTruncated ? truncatedLineVisibleRange(line: line.line, lineRange: lineRange, string: attributedString.string as NSString) : lineRange
                     attributedString.enumerateAttributes(in: range, options: []) { attributes, range, _ in
                         let isSpoiler = attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil
                         if isSpoiler {
@@ -1961,13 +2023,13 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         }
 
                         if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
-                            let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
+                            let lowerX = floor(lineOffsetForStringIndex(line, range.location, nil))
+                            let upperX = ceil(lineOffsetForStringIndex(line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
                             line.strikethroughs.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), isSpoiler: isSpoiler))
                         } else if let underlineStyle = attributes[NSAttributedString.Key.underlineStyle] as? Int {
-                            let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
+                            let lowerX = floor(lineOffsetForStringIndex(line, range.location, nil))
+                            let upperX = ceil(lineOffsetForStringIndex(line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
                             line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single, isSpoiler: isSpoiler))
                         }
@@ -2184,7 +2246,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                     item: contentItem,
                     spoilerTextColor: arguments.spoilerTextColor,
                     spoilerEffectColor: arguments.spoilerEffectColor,
-                    areContentAnimationsEnabled: arguments.areContentAnimationsEnabled
+                    areContentAnimationsEnabled: arguments.areContentAnimationsEnabled,
+                    blockCornerRadius: arguments.blockCornerRadius
                 ),
                 animation: contentItemAnimation,
                 synchronously: synchronous,
@@ -2404,17 +2467,20 @@ final class TextContentItemLayer: SimpleLayer {
         let spoilerTextColor: UIColor
         let spoilerEffectColor: UIColor
         let areContentAnimationsEnabled: Bool
+        let blockCornerRadius: CGFloat?
         
         init(
             item: TextContentItem,
             spoilerTextColor: UIColor,
             spoilerEffectColor: UIColor,
-            areContentAnimationsEnabled: Bool
+            areContentAnimationsEnabled: Bool,
+            blockCornerRadius: CGFloat?
         ) {
             self.item = item
             self.spoilerTextColor = spoilerTextColor
             self.spoilerEffectColor = spoilerEffectColor
             self.areContentAnimationsEnabled = areContentAnimationsEnabled
+            self.blockCornerRadius = blockCornerRadius
         }
     }
     
@@ -3183,6 +3249,7 @@ final class TextContentItemLayer: SimpleLayer {
             } else {
                 blockBackgroundView.layer.frame = blockBackgroundFrame
             }
+            blockBackgroundView.clipCornerRadius = params.blockCornerRadius
             blockBackgroundView.update(
                 size: blockBackgroundFrame.size,
                 isTransparent: false,

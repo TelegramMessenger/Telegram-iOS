@@ -23,6 +23,15 @@ extension ComponentTransition {
     }
 }
 
+/// A number item as the component draws it: the decimal digits, zero-padded to `minDigits` (any Int width).
+public func animatedTextNumberString(_ value: Int, minDigits: Int) -> String {
+    var valueText: String = "\(value)"
+    while valueText.count < minDigits {
+        valueText.insert("0", at: valueText.startIndex)
+    }
+    return valueText
+}
+
 public final class AnimatedTextComponent: Component {
     public struct Item: Equatable {
         public enum Content: Equatable {
@@ -132,6 +141,69 @@ public final class AnimatedTextComponent: Component {
         
         private var component: AnimatedTextComponent?
         private weak var state: EmptyComponentState?
+        
+        // VoiceOver: a visible text is a static-text element reading exactly what it shows, unless a call site
+        // decides otherwise (anything it sets wins). A parent that is itself an element (a button) hides it as usual.
+        // Computed in the getters, so nothing runs while no accessibility client asks.
+        private var explicitIsAccessibilityElement: Bool?
+        private var explicitAccessibilityLabel: String??
+        private var explicitAccessibilityTraits: UIAccessibilityTraits?
+        
+        override public var isAccessibilityElement: Bool {
+            get {
+                if let explicitIsAccessibilityElement = self.explicitIsAccessibilityElement {
+                    return explicitIsAccessibilityElement
+                }
+                if self.isHidden || self.alpha < 0.01 {
+                    return false
+                }
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
+            } set(value) {
+                self.explicitIsAccessibilityElement = value
+            }
+        }
+        
+        override public var accessibilityLabel: String? {
+            get {
+                if let explicitAccessibilityLabel = self.explicitAccessibilityLabel {
+                    return explicitAccessibilityLabel
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    // Turned off by the call site: nothing to announce from here either.
+                    return nil
+                }
+                return self.component.flatMap { component -> String? in
+                    let text = component.items.compactMap { item -> String? in
+                        switch item.content {
+                        case let .text(value):
+                            return value
+                        case let .number(value, minDigits):
+                            return animatedTextNumberString(value, minDigits: minDigits)
+                        case .icon:
+                            return nil
+                        }
+                    }.joined()
+                    return text.isEmpty ? nil : text
+                }
+            } set(value) {
+                self.explicitAccessibilityLabel = .some(value)
+            }
+        }
+        
+        override public var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                if let explicitAccessibilityTraits = self.explicitAccessibilityTraits {
+                    return explicitAccessibilityTraits
+                }
+                return self.explicitIsAccessibilityElement == false ? [] : .staticText
+            } set(value) {
+                self.explicitAccessibilityTraits = value
+            }
+        }
         
         override init(frame: CGRect) {
             super.init(frame: frame)

@@ -45,12 +45,41 @@ private func fetchAddedFeedPage(account: Account, filterId: Int32, offsetToMaxRe
         }
     }
 #else
-    // The feed API is parked (layer 232): an empty page with no read mark, nothing sent.
+    // The feed API is parked (layer 233 has none): an empty page with no read mark, nothing sent.
     return .single(AddedFeedPage(entries: [], readMaxPosition: nil))
 #endif
 }
 
-private final class AddedFeedContextImpl {
+/// What `AddedFeedContext` drives: the server's feed, or the device-built one (`LocalChannelsFeedContextImpl`).
+protocol AddedFeedContextSource: AnyObject {
+    var stateSignal: Signal<AddedFeedContext.State, NoError> { get }
+    func loadInitial()
+    func loadNewer(force: Bool)
+    func loadOlder()
+    func jumpToNewest(completion: @escaping (Bool) -> Void)
+    func revalidate()
+    func markRead(upTo position: EngineFeedPosition)
+    func markAllRead()
+}
+
+/// A source as `QueueLocalObject` holds it (a class, which an existential is not).
+final class AddedFeedSourceBox {
+    let source: AddedFeedContextSource
+
+    init(source: AddedFeedContextSource) {
+        self.source = source
+    }
+}
+
+/// Where an Added feed's posts come from.
+public enum AddedFeedSource {
+    /// `feed.getFeed`, for accounts the server offers the feed to.
+    case server
+    /// Built on the device from the subscribed channels' local history.
+    case localChannels
+}
+
+private final class AddedFeedContextImpl: AddedFeedContextSource {
     private let queue: Queue
     private let account: Account
     private let filterId: Int32
@@ -249,7 +278,7 @@ private final class AddedFeedContextImpl {
         }))
     }
 
-    func jumpToNewest() {
+    func jumpToNewest(completion: @escaping (Bool) -> Void) {
         self.newerDisposable.set(nil)
         self.olderDisposable.set(nil)
         self.state.isLoadingOlder = false
@@ -263,6 +292,7 @@ private final class AddedFeedContextImpl {
             self.state.isLoadingNewer = false
             guard let page else {
                 self.pushState()
+                completion(false)
                 return
             }
             self.state.entries = page.entries
@@ -274,6 +304,7 @@ private final class AddedFeedContextImpl {
             self.state.windowReadMarkPosition = nil
             self.pushState()
             self.persist()
+            completion(true)
         }))
     }
 
@@ -342,7 +373,7 @@ private final class AddedFeedContextImpl {
             }
         }))
 #else
-        // The feed API is parked (layer 232): the read mark stays local.
+        // The feed API is parked (layer 233 has none): the read mark stays local.
         self.readRequestDisposables.add(applyLocally.start())
 #endif
         self.persist()
@@ -390,13 +421,13 @@ public final class AddedFeedContext {
     }
 
     private let queue: Queue = .mainQueue()
-    private let impl: QueueLocalObject<AddedFeedContextImpl>
+    private let impl: QueueLocalObject<AddedFeedSourceBox>
 
     public var state: Signal<State, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.stateSignal.start(next: { value in
+                disposable.set(impl.source.stateSignal.start(next: { value in
                     subscriber.putNext(value)
                 }))
             }
@@ -404,54 +435,61 @@ public final class AddedFeedContext {
         }
     }
 
-    init(account: Account, filterId: Int32) {
+    init(account: Account, filterId: Int32, source: AddedFeedSource) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return AddedFeedContextImpl(queue: queue, account: account, filterId: filterId)
+            switch source {
+            case .server:
+                return AddedFeedSourceBox(source: AddedFeedContextImpl(queue: queue, account: account, filterId: filterId))
+            case .localChannels:
+                return AddedFeedSourceBox(source: LocalChannelsFeedContextImpl(queue: queue, account: account))
+            }
         })
     }
 
     /// `force`: load even when the window is believed to reach the newest post (a pull to refresh).
     public func loadNewer(force: Bool = false) {
         self.impl.with { impl in
-            impl.loadNewer(force: force)
+            impl.source.loadNewer(force: force)
         }
     }
 
     public func loadOlder() {
         self.impl.with { impl in
-            impl.loadOlder()
+            impl.source.loadOlder()
         }
     }
 
-    public func jumpToNewest() {
+    /// Replaces the window with the newest page. `completion` (on the main queue) is false when the server refused
+    /// the page; a request waiting for the network does not complete.
+    public func jumpToNewest(completion: @escaping (Bool) -> Void) {
         self.impl.with { impl in
-            impl.jumpToNewest()
+            impl.source.jumpToNewest(completion: completion)
         }
     }
 
     /// On tab appear and app foreground: re-checks the newest post and loads newer posts when at the top.
     public func revalidate() {
         self.impl.with { impl in
-            impl.revalidate()
+            impl.source.revalidate()
         }
     }
 
     public func reload() {
         self.impl.with { impl in
-            impl.loadInitial()
+            impl.source.loadInitial()
         }
     }
 
     public func markRead(upTo position: EngineFeedPosition) {
         self.impl.with { impl in
-            impl.markRead(upTo: position)
+            impl.source.markRead(upTo: position)
         }
     }
 
     public func markAllRead() {
         self.impl.with { impl in
-            impl.markAllRead()
+            impl.source.markAllRead()
         }
     }
 }

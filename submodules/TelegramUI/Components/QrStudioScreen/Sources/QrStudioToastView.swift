@@ -5,7 +5,6 @@ import ComponentFlow
 import GlassBackgroundComponent
 import UIKitRuntimeUtils
 import LottieComponent
-import LottieSettings
 
 enum QrStudioToastIcon: Equatable {
     case star
@@ -142,7 +141,6 @@ final class QrStudioToastView: UIView {
     private var isLight = false
     private var foregroundColor = UIColor.white
     private var displayLink: SharedDisplayLinkDriver.Link?
-    var lottieSettings: LottieRenderingSettings = .noAccountFallback
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -231,7 +229,7 @@ final class QrStudioToastView: UIView {
         if let name = icon.animationName {
             let _ = self.animationIcon.update(
                 transition: .immediate,
-                component: AnyComponent(LottieComponent(content: LottieComponent.AppBundleContent(name: name), color: self.foregroundColor, startingPosition: .begin, size: CGSize(width: 30.0, height: 30.0), lottieSettings: self.lottieSettings)),
+                component: AnyComponent(LottieComponent(content: LottieComponent.AppBundleContent(name: name), color: self.foregroundColor, startingPosition: .begin, size: CGSize(width: 30.0, height: 30.0))),
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )

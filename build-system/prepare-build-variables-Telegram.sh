@@ -30,7 +30,6 @@ prepare_build_variables () {
 		DEVELOPMENT_TEAM \
 		API_ID \
 		API_HASH \
-		APP_CENTER_ID \
 		IS_INTERNAL_BUILD \
 		IS_APPSTORE_BUILD \
 		APPSTORE_ID \
@@ -62,7 +61,6 @@ prepare_build_variables () {
 	echo "telegram_api_id = \"$API_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_team_id = \"$DEVELOPMENT_TEAM\"" >> "$VARIABLES_PATH"
 	echo "telegram_api_hash = \"$API_HASH\"" >> "$VARIABLES_PATH"
-	echo "telegram_app_center_id = \"$APP_CENTER_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_is_internal_build = \"$IS_INTERNAL_BUILD\"" >> "$VARIABLES_PATH"
 	echo "telegram_is_appstore_build = \"$IS_APPSTORE_BUILD\"" >> "$VARIABLES_PATH"
 	echo "telegram_appstore_id = \"$APPSTORE_ID\"" >> "$VARIABLES_PATH"

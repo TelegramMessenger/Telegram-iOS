@@ -436,6 +436,15 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
 //                    strongSelf.activateArea.accessibilityLabel = item.title
 //                    strongSelf.activateArea.accessibilityValue = item.label
                     strongSelf.activateArea.accessibilityTraits = []
+                    // VoiceOver: the item's own controls speak (the area around them has nothing to say): the link field
+                    // (tap copies it), "More" for its menu, the buttons, and the joined line (opens the joined list).
+                    strongSelf.activateArea.accessibilityElementsHidden = true
+                    strongSelf.fieldButtonNode.accessibilityLabel = item.invite.flatMap({ $0.link?.replacingOccurrences(of: "https://", with: "") })
+                    strongSelf.fieldButtonNode.accessibilityTraits = item.invite != nil && item.copyAction != nil ? .button : [.button, .notEnabled]
+                    strongSelf.addressButtonNode.accessibilityLabel = item.presentationData.strings.Common_More
+                    strongSelf.addressButtonNode.accessibilityTraits = item.invite != nil ? .button : [.button, .notEnabled]
+                    strongSelf.avatarsButtonNode.accessibilityLabel = subtitle
+                    strongSelf.avatarsButtonNode.accessibilityTraits = !item.peers.isEmpty && item.invite != nil ? .button : .staticText
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

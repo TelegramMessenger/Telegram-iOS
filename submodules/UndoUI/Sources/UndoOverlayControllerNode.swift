@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -521,12 +520,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
-                // The .emoji and .mediaSaved cases carry no AccountContext (several other
-                // UndoOverlayContent cases do), and neither UndoOverlayControllerNode.init
-                // nor UndoOverlayController.init takes one — threading it would reach every
-                // toast call site in the app. These are bundled local animations in a
-                // transient toast, so this surface stays on rlottie.
-                self.animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+                self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 self.animatedStickerNode?.visibility = true
                 self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 100, height: 100, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 
@@ -638,7 +632,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case .still:
                         break
                     case let .animated(resource, _, isVideo):
-                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                         self.animatedStickerNode = animatedStickerNode
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))
                     }
@@ -681,7 +675,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 
                 if dice.emoji == "🎰" {
-                    let slotMachineNode = SlotMachineAnimationNode(account: context.account, size: CGSize(width: 42.0, height: 42.0), lottieSettings: context.lottieRenderingSettings)
+                    let slotMachineNode = SlotMachineAnimationNode(account: context.account, size: CGSize(width: 42.0, height: 42.0))
                     self.slotMachineNode = slotMachineNode
                     
                     slotMachineNode.setState(.rolling)
@@ -689,7 +683,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         slotMachineNode.setState(.value(value, true))
                     }
                 } else {
-                    let animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                    let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                     self.animatedStickerNode = animatedStickerNode
                     
                     let _ = (context.engine.stickers.loadedStickerPack(reference: .dice(dice.emoji), forceActualized: false)
@@ -972,7 +966,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case .still:
                         break
                     case let .animated(resource):
-                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                         self.animatedStickerNode = animatedStickerNode
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, playbackMode: loop ? .loop : .once, mode: .cached)
                     }
@@ -1057,12 +1051,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 
-                // The .emoji and .mediaSaved cases carry no AccountContext (several other
-                // UndoOverlayContent cases do), and neither UndoOverlayControllerNode.init
-                // nor UndoOverlayController.init takes one — threading it would reach every
-                // toast call site in the app. These are bundled local animations in a
-                // transient toast, so this surface stays on rlottie.
-                let animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+                let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 self.animatedStickerNode = animatedStickerNode
                 
                 animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "anim_savemedia"), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
@@ -1946,19 +1935,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var contentHeight: CGFloat = 20.0
         
         let margin: CGFloat = self.appearance?.sideInset ?? 12.0
-        let leftMargin = margin + layout.insets(options: []).left
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let buttonMinX: CGFloat
-        if self.undoButtonNode.supernode != nil {
-            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0
-        } else {
-            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset
-        }
+        let horizontalLayout = undoOverlayHorizontalLayout(width: layout.size.width, safeInsets: layout.safeInsets, intrinsicInsets: layout.insets(options: []), metrics: layout.metrics, margin: margin, leadingInset: leftInset, trailingInset: rightInset, buttonWidth: self.undoButtonNode.supernode != nil ? buttonTextSize.width : nil, isNarrow: self.appearance?.isNarrow == true)
+        let leftMargin = horizontalLayout.sideMargin
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - leftMargin, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: horizontalLayout.textMaxWidth, height: .greatestFiniteMagnitude))
         
-        let maxTextSize = CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - leftMargin, height: .greatestFiniteMagnitude)
+        let maxTextSize = CGSize(width: horizontalLayout.textMaxWidth, height: .greatestFiniteMagnitude)
         
         let textSize: CGSize
         if let animatedTextItems = self.animatedTextItems {
@@ -2012,14 +1996,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
-        var panelWidth = layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right
-        if self.appearance?.isNarrow == true {
-            panelWidth = 210.0
-        }
-        
-        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
-        // the full width's center.
-        let panelX = floorToScreenPixels(layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelWidth) / 2.0)
+        let panelWidth = horizontalLayout.panelWidth
+        let panelX = horizontalLayout.panelX
         var panelFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         var panelWrapperFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         
@@ -2036,8 +2014,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: panelWidth, height: contentHeight)
         
-        var buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
-        var undoButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - leftMargin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + leftMargin, height: contentHeight))
+        var buttonTextFrame = CGRect(origin: CGPoint(x: horizontalLayout.contentWidth - rightInset - buttonTextSize.width, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
+        var undoButtonFrame = CGRect(origin: CGPoint(x: horizontalLayout.contentWidth - rightInset - buttonTextSize.width - 8.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + leftMargin, height: contentHeight))
         if case .starsSent = self.content {
             let buttonOffset: CGFloat = -34.0
             undoButtonFrame.origin.x += buttonOffset
@@ -2162,7 +2140,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
    
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         if case .starsSent = self.content {
-            transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset + floor((rightInset - timerTextSize.width) * 0.5) - 46.0)), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
+            transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((horizontalLayout.contentWidth + leftMargin * 2.0 - rightInset + floor((rightInset - timerTextSize.width) * 0.5) - 46.0)), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         } else {
             transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         }
@@ -2171,7 +2149,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let statusSize: CGFloat = 30.0
             var statusFrame = CGRect(origin: CGPoint(x: floor((leftInset - statusSize) / 2.0), y: floor((contentHeight - statusSize) / 2.0)), size: CGSize(width: statusSize, height: statusSize))
             if case .starsSent = self.content {
-                statusFrame.origin.x = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - statusSize - 23.0
+                statusFrame.origin.x = horizontalLayout.contentWidth + leftMargin * 2.0 - rightInset - statusSize - 23.0
             }
             transition.updateFrame(node: statusNode, frame: statusFrame)
             if !self.didStartStatusNode {

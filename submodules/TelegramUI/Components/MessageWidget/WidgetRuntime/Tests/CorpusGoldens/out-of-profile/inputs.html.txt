@@ -1,0 +1,62 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div class="ctl"><label for="color">Color</label><input type="color" id="color" value="#2481cc"><output id="o-color">#2481cc</output></div>
+<div class="ctl"><label for="radius">Radius</label><input type="range" id="radius" min="0" max="35" value="12"><output id="o-radius">12</output></div>
+<div class="ctl"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0" max="100" value="100" step="5"><output id="o-opacity">100</output></div>
+<div class="ctl"><label for="size">Height</label><input type="range" id="size" min="40" max="120" value="70"><output id="o-size">70</output></div>
+<div class="ctl"><label>Options</label><span><label><input type="checkbox" id="border"> border</label> <label><input type="checkbox" id="shadow" checked=""> shadow</label></span><span></span></div>
+<div id="preview" style="background: #2481cc; border-radius: 12px; opacity: 1; height: 70px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,.3);">preview</div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 225.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 197.75
+    div 14 14 332 17.55
+      span 14 14 70 17.55
+      span 92 14 196 17.55
+    div 14 39.55 332 17.55
+      span 14 39.55 70 17.55
+      span 92 39.55 196 17.55
+    div 14 65.1 332 17.55
+      span 14 65.1 70 17.55
+      span 92 65.1 196 17.55
+    div 14 90.65 332 17.55
+      span 14 90.65 70 17.55
+      span 92 90.65 196 17.55
+    div 14 116.2 332 17.55
+      span 14 116.2 70 17.55
+      span 92 116.2 196 17.55
+        span 92 116.2 0 0
+        span 92 116.2 0 0
+      span 296 124.975 50 0
+    div 14 141.75 332 70
+
+== paint
+root 360x225.75 items=15
+  solid-fill bounds=(0,0,360,226) layer=(border=(0,0,360,226),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,226),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  box-shadow bounds=(-4,124,368,106) box=(14,142,332,70) radius=(12,12,12,12,12,12,12,12) shadow=(0,4,12,0,#0000004d,0)
+  solid-fill bounds=(14,142,332,70) layer=(border=(14,142,332,70),radius=(12,12,12,12,12,12,12,12),clip=(14,142,332,70),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(6,6,56,32) pos=(14,14,40,16) color=#222222ff text="Color" font=f1 glyphs=5 advance=40
+  text bounds=(84,6,72,32) pos=(92,14,56,16) color=#222222ff text="#2481cc" font=f1 glyphs=7 advance=56
+  text bounds=(6,32,64,32) pos=(14,40,48,16) color=#222222ff text="Radius" font=f1 glyphs=6 advance=48
+  text bounds=(84,32,32,32) pos=(92,40,16,16) color=#222222ff text="12" font=f1 glyphs=2 advance=16
+  text bounds=(6,57,72,32) pos=(14,65,56,16) color=#222222ff text="Opacity" font=f1 glyphs=7 advance=56
+  text bounds=(84,57,40,32) pos=(92,65,24,16) color=#222222ff text="100" font=f1 glyphs=3 advance=24
+  text bounds=(6,83,64,32) pos=(14,91,48,16) color=#222222ff text="Height" font=f1 glyphs=6 advance=48
+  text bounds=(84,83,32,32) pos=(92,91,16,16) color=#222222ff text="70" font=f1 glyphs=2 advance=16
+  text bounds=(6,108,72,32) pos=(14,116,56,16) color=#222222ff text="Options" font=f1 glyphs=7 advance=56
+  text bounds=(84,108,64,32) pos=(92,116,48,16) color=#222222ff text="border" font=f1 glyphs=6 advance=48
+  text bounds=(140,108,64,32) pos=(148,116,48,16) color=#222222ff text="shadow" font=f1 glyphs=6 advance=48
+  text bounds=(144,161,72,32) pos=(152,169,56,16) color=#ffffffff text="preview" font=f2 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

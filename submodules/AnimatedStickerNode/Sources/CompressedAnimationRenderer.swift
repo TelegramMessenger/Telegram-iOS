@@ -111,7 +111,7 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 highlightedContentNode.alpha = 1.0
             } else {
                 let highlightedContentNode = ASDisplayNode(viewBlock: {
-                    return UIImageView()
+                    return makeAnimationRendererImageView()
                 }, didLoad: nil)
                 highlightedContentNode.displaysAsynchronously = false
                 

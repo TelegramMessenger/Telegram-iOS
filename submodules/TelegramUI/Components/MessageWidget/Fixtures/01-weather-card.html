@@ -1,0 +1,34 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--line:light-dark(#e6e6e6,#3a3a3a)}
+body{margin:0;padding:0;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+.hero{padding:16px;border-radius:14px;color:#fff;background:linear-gradient(160deg,#4a9ff5,#2b6fd6 60%,#1d4fa8)}
+.row{display:flex;align-items:center;justify-content:space-between}
+.city{font-size:17px;font-weight:600}
+.cond{opacity:.85;font-size:13px}
+.t{font-size:56px;font-weight:200;line-height:1;margin:12px 0 6px}
+.hl{font-size:13px;opacity:.9}
+.sun{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff7c2,#ffd23f 55%,#ffb300);box-shadow:0 0 0 6px rgba(255,210,63,.25)}
+.days{margin-top:8px}
+.d{display:flex;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.d:last-child{border-bottom:0}
+.day{width:44px;font-weight:500}
+.c{flex:1;color:var(--mut)}
+.lo,.hi{width:30px;text-align:right}
+.bar{width:90px;height:4px;border-radius:2px;background:var(--line);margin:0 8px;position:relative}
+.fill{position:absolute;top:0;bottom:0;border-radius:2px;background:linear-gradient(90deg,#5ac8fa,#ffcc00)}
+</style>
+<div class="hero">
+  <div class="row">
+    <div><div class="city">Lisbon</div><div class="cond">Mostly sunny</div></div>
+    <div class="sun"></div>
+  </div>
+  <div class="t">24°</div>
+  <div class="hl">H 27° · L 18° · Wind 12 km/h · UV 6</div>
+</div>
+<div class="days">
+  <div class="d"><span class="day">Wed</span><span class="c">Sunny</span><span class="lo">18°</span><div class="bar"><div class="fill" style="left:20%;right:12%"></div></div><span class="hi">27°</span></div>
+  <div class="d"><span class="day">Thu</span><span class="c">Clouds</span><span class="lo">17°</span><div class="bar"><div class="fill" style="left:12%;right:30%"></div></div><span class="hi">23°</span></div>
+  <div class="d"><span class="day">Fri</span><span class="c">Showers</span><span class="lo">15°</span><div class="bar"><div class="fill" style="left:0;right:40%"></div></div><span class="hi">20°</span></div>
+  <div class="d"><span class="day">Sat</span><span class="c">Sunny</span><span class="lo">19°</span><div class="bar"><div class="fill" style="left:28%;right:5%"></div></div><span class="hi">28°</span></div>
+</div>

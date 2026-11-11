@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -18,6 +17,7 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import GalleryUI
 import Markdown
+import ShimmerEffect
 import ComponentFlow
 import AvatarStoryIndicatorComponent
 import AvatarNode
@@ -30,6 +30,8 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let subtitleNode: TextNode
     private let imageNode: TransformImageNode
+    /// Over the story's circle while the story is being fetched.
+    private var storySkeletonNode: ShimmerEffectNode?
     private let storyIndicator = ComponentView<Empty>()
     
     private let buttonNode: HighlightTrackingButtonNode
@@ -39,7 +41,7 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     
     private let fetchDisposable = MetaDisposable()
             
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
@@ -59,7 +61,7 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.subtitleNode)
@@ -270,6 +272,33 @@ public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.imageNode.frame = imageFrame
                                     }
                                 }
+                            }
+                            
+                            var storyIsLoading = false
+                            if let storyMedia, item.message.associatedStories[storyMedia.storyId] == nil {
+                                storyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                            }
+                            if storyIsLoading {
+                                let skeletonNode: ShimmerEffectNode
+                                if let current = strongSelf.storySkeletonNode {
+                                    skeletonNode = current
+                                } else {
+                                    skeletonNode = ShimmerEffectNode()
+                                    skeletonNode.isUserInteractionEnabled = false
+                                    strongSelf.storySkeletonNode = skeletonNode
+                                    strongSelf.addSubnode(skeletonNode)
+                                }
+                                let baseColor = primaryTextColor.withMultipliedAlpha(0.15)
+                                // Reduce Motion: the sweep is the circle's own colour, so nothing moves.
+                                let sweepColor = UIAccessibility.isReduceMotionEnabled ? baseColor : primaryTextColor.withMultipliedAlpha(0.3)
+                                skeletonNode.frame = imageFrame
+                                skeletonNode.update(backgroundColor: .clear, foregroundColor: baseColor, shimmeringColor: sweepColor, shapes: [.circle(CGRect(origin: CGPoint(), size: imageFrame.size))], horizontal: true, size: imageFrame.size, mask: true)
+                                skeletonNode.updateAbsoluteRect(imageFrame, within: imageFrame.size)
+                            } else if let skeletonNode = strongSelf.storySkeletonNode {
+                                strongSelf.storySkeletonNode = nil
+                                skeletonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak skeletonNode] _ in
+                                    skeletonNode?.removeFromSupernode()
+                                })
                             }
                             
                             if let storyMedia {

@@ -100,6 +100,7 @@ public final class AlertCheckComponent: Component {
             }
             if self.component == nil {
                 component.externalState.value = component.initialValue
+                self.valuePromise.set(component.initialValue)
                 component.externalState.valuePromise.set(self.valuePromise.get())
             }
             self.component = component

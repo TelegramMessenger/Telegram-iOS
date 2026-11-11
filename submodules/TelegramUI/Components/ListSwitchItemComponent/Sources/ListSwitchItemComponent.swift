@@ -11,17 +11,20 @@ public final class ListSwitchItemComponent: Component {
     let title: String
     let value: Bool
     let valueUpdated: (Bool) -> Void
+    let accessibility: ComponentAccessibility?
     
     public init(
         theme: PresentationTheme,
         title: String,
         value: Bool,
-        valueUpdated: @escaping (Bool) -> Void
+        valueUpdated: @escaping (Bool) -> Void,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.theme = theme
         self.title = title
         self.value = value
         self.valueUpdated = valueUpdated
+        self.accessibility = accessibility
     }
     
     public static func ==(lhs: ListSwitchItemComponent, rhs: ListSwitchItemComponent) -> Bool {
@@ -32,6 +35,9 @@ public final class ListSwitchItemComponent: Component {
             return false
         }
         if lhs.value != rhs.value {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -50,6 +56,14 @@ public final class ListSwitchItemComponent: Component {
         
         required init(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.valueUpdated(!component.value)
+            return true
         }
         
         func update(component: ListSwitchItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -101,6 +115,20 @@ public final class ListSwitchItemComponent: Component {
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
+            
+            // The row is one element: the title and the switch are not reachable on their own. Activating it flips the
+            // switch through the same callback.
+            let toggleDefaults = ComponentAccessibility.toggleDefaults(isOn: component.value)
+            var accessibility = component.accessibility ?? ComponentAccessibility()
+            if !accessibility.isHidden {
+                if accessibility.label == nil {
+                    accessibility.label = component.title
+                }
+                if accessibility.value == nil {
+                    accessibility.value = toggleDefaults.value
+                }
+            }
+            self.apply(accessibility: accessibility, defaultTraits: toggleDefaults.traits)
             
             return size
         }

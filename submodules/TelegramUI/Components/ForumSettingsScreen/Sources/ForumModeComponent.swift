@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -14,6 +13,7 @@ final class ForumModeComponent: Component {
     enum Mode: Equatable {
         case tabs
         case list
+        case sidebar
     }
     let context: AccountContext
     let theme: PresentationTheme
@@ -53,6 +53,7 @@ final class ForumModeComponent: Component {
     final class View: UIView {
         private let tabs = ComponentView<Empty>()
         private let list = ComponentView<Empty>()
+        private let sidebar = ComponentView<Empty>()
         
         private var component: ForumModeComponent?
         private weak var state: EmptyComponentState?
@@ -71,7 +72,39 @@ final class ForumModeComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: 224.0)
             
-            let sideInset = (size.width - 160.0 * 2.0) / 2.0
+            let itemWidth = min(160.0, floorToScreenPixels(size.width / 3.0))
+            let sideInset = (size.width - itemWidth * 3.0) / 2.0
+            
+            let sidebarSize = self.sidebar.update(
+                transition: transition,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(
+                            ItemComponent(
+                                context: component.context,
+                                theme: component.theme,
+                                animation: "ForumSidebar",
+                                title: component.strings.PeerInfo_Topics_Sidebar,
+                                isSelected: component.mode == .sidebar
+                            )
+                        ),
+                        effectAlignment: .center,
+                        action: {
+                            component.modeUpdated(.sidebar)
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: itemWidth, height: size.height)
+            )
+            if let sidebarView = self.sidebar.view {
+                if sidebarView.superview == nil {
+                    self.addSubview(sidebarView)
+                }
+                transition.setFrame(view: sidebarView, frame: CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: sidebarSize))
+            }
+            
             let tabsSize = self.tabs.update(
                 transition: transition,
                 component: AnyComponent(
@@ -93,13 +126,13 @@ final class ForumModeComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: 160.0, height: size.height)
+                containerSize: CGSize(width: itemWidth, height: size.height)
             )
             if let tabsView = self.tabs.view {
                 if tabsView.superview == nil {
                     self.addSubview(tabsView)
                 }
-                transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: tabsSize))
+                transition.setFrame(view: tabsView, frame: CGRect(origin: CGPoint(x: sideInset + sidebarSize.width, y: 0.0), size: tabsSize))
             }
             
             let listSize = self.list.update(
@@ -123,13 +156,13 @@ final class ForumModeComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: 160.0, height: size.height)
+                containerSize: CGSize(width: itemWidth, height: size.height)
             )
             if let listView = self.list.view {
                 if listView.superview == nil {
                     self.addSubview(listView)
                 }
-                transition.setFrame(view: listView, frame: CGRect(origin: CGPoint(x: sideInset + tabsSize.width, y: 0.0), size: listSize))
+                transition.setFrame(view: listView, frame: CGRect(origin: CGPoint(x: sideInset + sidebarSize.width + tabsSize.width, y: 0.0), size: listSize))
             }
             
             return size
@@ -207,24 +240,24 @@ private final class ItemComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: 224.0)
             
+            let animationDimension = min(170.0, size.width + 10.0)
             let animationSize = self.animation.update(
                 transition: transition,
                 component: AnyComponent(
                     LottieComponent(
                         content: LottieComponent.AppBundleContent(name: component.animation),
                         color: component.isSelected ? component.theme.list.itemCheckColors.fillColor : component.theme.list.itemSecondaryTextColor,
-                        loop: false,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: false
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: 170.0, height: 170.0)
+                containerSize: CGSize(width: animationDimension, height: animationDimension)
             )
             if let animationView = self.animation.view {
                 if animationView.superview == nil {
                     self.addSubview(animationView)
                 }
-                transition.setFrame(view: animationView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - animationSize.width) / 2.0), y: 9.0), size: animationSize))
+                transition.setFrame(view: animationView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - animationSize.width) / 2.0), y: 9.0 + floorToScreenPixels((170.0 - animationSize.height) / 2.0)), size: animationSize))
             }
             
             let titleSize = self.title.update(

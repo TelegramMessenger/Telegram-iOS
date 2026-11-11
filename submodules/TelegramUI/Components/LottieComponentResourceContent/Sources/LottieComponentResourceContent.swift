@@ -89,7 +89,7 @@ public extension LottieComponent {
                     }
                     return
                 }
-                f(.animation(data: data, cacheKey: nil))
+                f(.animation(data: data))
             })
         }
     }

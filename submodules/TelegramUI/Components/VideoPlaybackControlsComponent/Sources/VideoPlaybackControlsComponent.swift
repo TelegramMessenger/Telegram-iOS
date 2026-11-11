@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import TelegramPresentationData
@@ -28,6 +27,8 @@ public final class VideoPlaybackControlsComponent: Component {
     let displaySeekControls: Bool
     let togglePlayback: () -> Void
     let seek: (Bool) -> Void
+    /// VoiceOver: the buttons' names (play, pause, back, forward); without them the controls are not read.
+    let accessibilityStrings: PresentationStrings?
     
     public init(
         layoutParams: LayoutParams,
@@ -35,7 +36,8 @@ public final class VideoPlaybackControlsComponent: Component {
         isPlaying: Bool,
         displaySeekControls: Bool,
         togglePlayback: @escaping () -> Void,
-        seek: @escaping (Bool) -> Void
+        seek: @escaping (Bool) -> Void,
+        accessibilityStrings: PresentationStrings? = nil
     ) {
         self.layoutParams = layoutParams
         self.isVisible = isVisible
@@ -43,6 +45,7 @@ public final class VideoPlaybackControlsComponent: Component {
         self.displaySeekControls = displaySeekControls
         self.togglePlayback = togglePlayback
         self.seek = seek
+        self.accessibilityStrings = accessibilityStrings
     }
     
     public static func ==(lhs: VideoPlaybackControlsComponent, rhs: VideoPlaybackControlsComponent) -> Bool {
@@ -59,6 +62,18 @@ public final class VideoPlaybackControlsComponent: Component {
             return false
         }
         return true
+    }
+    
+    private final class ControlAccessibilityElement: UIAccessibilityElement {
+        var activate: (() -> Void)?
+        
+        override func accessibilityActivate() -> Bool {
+            guard let activate = self.activate else {
+                return false
+            }
+            activate()
+            return true
+        }
     }
     
     public final class View: UIView {
@@ -106,6 +121,38 @@ public final class VideoPlaybackControlsComponent: Component {
         }
         
         deinit {
+        }
+        
+        private var accessibilityButtons: [ControlAccessibilityElement] = []
+        
+        /// VoiceOver: the visible controls as buttons (back, play/pause, forward), activating as their taps do; nothing
+        /// while the controls are hidden. The glass circles themselves are not elements.
+        override public var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component, component.isVisible, let strings = component.accessibilityStrings else {
+                    return []
+                }
+                if self.accessibilityButtons.isEmpty {
+                    self.accessibilityButtons = (0 ..< 3).map { _ in ControlAccessibilityElement(accessibilityContainer: self) }
+                }
+                var elements: [Any] = []
+                let sideVisible = component.displaySeekControls
+                let entries: [(UIView, String, () -> Void, Bool)] = [
+                    (self.leftButtonBackgroundView, strings.VoiceOver_Gallery_SeekBackward, { [weak self] in self?.component?.seek(false) }, sideVisible),
+                    (self.centerButtonBackgroundView, component.isPlaying ? strings.VoiceOver_Media_PlaybackPause : strings.VoiceOver_Media_PlaybackPlay, { [weak self] in self?.component?.togglePlayback() }, true),
+                    (self.rightButtonBackgroundView, strings.VoiceOver_Gallery_SeekForward, { [weak self] in self?.component?.seek(true) }, sideVisible)
+                ]
+                for (index, entry) in entries.enumerated() where entry.3 {
+                    let element = self.accessibilityButtons[index]
+                    element.accessibilityLabel = entry.1
+                    element.accessibilityTraits = .button
+                    element.accessibilityFrameInContainerSpace = entry.0.convert(entry.0.bounds, to: self)
+                    element.activate = entry.2
+                    elements.append(element)
+                }
+                return elements
+            } set(value) {
+            }
         }
         
         @objc private func onLeftTapGesture(_ gesture: UITapGestureRecognizer) {
@@ -197,7 +244,7 @@ public final class VideoPlaybackControlsComponent: Component {
             if let current = self.centerButtonIconNode, current.size == centerButtonIconSize {
                 centerButtonIconNode = current
             } else {
-                centerButtonIconNode = PlayPauseIconNode(size: centerButtonIconSize, lottieSettings: .noAccountFallback)
+                centerButtonIconNode = PlayPauseIconNode(size: centerButtonIconSize)
                 if let current = self.centerButtonIconNode {
                     centerButtonIconNode.frame = current.frame
                     current.view.removeFromSuperview()
@@ -236,10 +283,10 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    override init(size: CGSize, lottieSettings: LottieRenderingSettings) {
+    override init(size: CGSize) {
         self.size = size
         
-        super.init(size: size, lottieSettings: lottieSettings)
+        super.init(size: size)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

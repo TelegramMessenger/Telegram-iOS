@@ -2050,6 +2050,7 @@ private final class CommunityEditScreenComponent: Component {
                             initialText: self.currentTitle,
                             resetText: resetTitleText.flatMap { ListTextFieldItemComponent.ResetText(value: $0) },
                             placeholder: self.isCreateMode ? presentationData.strings.Community_Edit_CommunityNamePlaceholder : "",
+                            clearButtonAccessibilityLabel: presentationData.strings.WebSearch_RecentSectionClear,
                             characterLimit: 128,
                             autocapitalizationType: .words,
                             autocorrectionType: .yes,

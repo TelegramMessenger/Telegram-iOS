@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -146,8 +145,7 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
                         ),
                         color: nil,
                         placeholderColor: UIColor(rgb: 0x000000, alpha: 0.1),
-                        loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(self.weatherEntity.emoji),
-                        lottieSettings: context.lottieRenderingSettings
+                        loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(self.weatherEntity.emoji)
                     )
                 ),
                 environment: {},

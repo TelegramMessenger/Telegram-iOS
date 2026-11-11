@@ -158,6 +158,15 @@ final class StoragePeerTypeItemComponent: Component {
             let previousComponent = self.component
             self.component = component
             
+            // VoiceOver: one button, "Private Chats" = "Never" (the subtitle, when shown, follows the value).
+            self.accessibilityLabel = component.title
+            if let subtitle = component.subtitle, !subtitle.isEmpty {
+                self.accessibilityValue = "\(component.value), \(subtitle)"
+            } else {
+                self.accessibilityValue = component.value
+            }
+            self.accessibilityTraits = .button
+            
             let leftInset: CGFloat = 62.0
             let rightInset: CGFloat = 32.0
             

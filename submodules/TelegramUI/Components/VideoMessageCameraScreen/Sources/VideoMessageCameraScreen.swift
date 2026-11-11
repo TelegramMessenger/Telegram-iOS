@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -140,6 +139,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
     let containerSize: CGSize
     let previewFrame: CGRect
     let safeInsets: UIEdgeInsets
+    let layoutHeight: CGFloat
     let isPreviewing: Bool
     let isMuted: Bool
     let totalDuration: Double
@@ -157,6 +157,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         containerSize: CGSize,
         previewFrame: CGRect,
         safeInsets: UIEdgeInsets,
+        layoutHeight: CGFloat,
         isPreviewing: Bool,
         isMuted: Bool,
         totalDuration: Double,
@@ -173,6 +174,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         self.containerSize = containerSize
         self.previewFrame = previewFrame
         self.safeInsets = safeInsets
+        self.layoutHeight = layoutHeight
         self.isPreviewing = isPreviewing
         self.isMuted = isMuted
         self.totalDuration = totalDuration
@@ -193,6 +195,9 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.safeInsets != rhs.safeInsets {
+            return false
+        }
+        if lhs.layoutHeight != rhs.layoutHeight {
             return false
         }
         if lhs.cameraState != rhs.cameraState {
@@ -685,8 +690,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                                 startingPosition: !component.cameraState.flashModeDidChange ? .end : .begin,
                                 size: CGSize(width: 40.0, height: 40.0),
                                 loop: false,
-                                playOnce: flashAction,
-                                lottieSettings: component.context.lottieRenderingSettings
+                                playOnce: flashAction
                             )
                         )
                     )
@@ -747,6 +751,19 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                 }
             }
             
+            // The view-once and record-more buttons (40pt circles) share one column, which keeps clear of a corner
+            // block that reaches either of them.
+            let trailingButtonSize: CGFloat = 40.0
+            var trailingColumnRows: (minY: CGFloat, maxY: CGFloat)?
+            if showViewOnce {
+                trailingColumnRows = (availableSize.height - 8.0 - viewOnceOffset - trailingButtonSize, availableSize.height - 8.0 - viewOnceOffset)
+            }
+            if showRecordMore {
+                let recordMoreRows: (minY: CGFloat, maxY: CGFloat) = (availableSize.height - 22.0 - trailingButtonSize, availableSize.height - 22.0)
+                trailingColumnRows = trailingColumnRows.map { (min($0.minY, recordMoreRows.minY), max($0.maxY, recordMoreRows.maxY)) } ?? recordMoreRows
+            }
+            let trailingColumnInset = trailingColumnRows.map { videoMessageCameraTrailingControlInset(minY: $0.minY, maxY: $0.maxY, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners) } ?? 0.0
+            
             if showViewOnce {
                 let viewOnceButton = viewOnceButton.update(
                     component: PlainButtonComponent(
@@ -787,7 +804,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(viewOnceButton
-                    .position(CGPoint(x: availableSize.width - viewOnceButton.size.width / 2.0 - sideInset, y: availableSize.height - viewOnceButton.size.height / 2.0 - 8.0 - viewOnceOffset))
+                    .position(CGPoint(x: availableSize.width - trailingColumnInset - viewOnceButton.size.width / 2.0 - sideInset, y: availableSize.height - viewOnceButton.size.height / 2.0 - 8.0 - viewOnceOffset))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
@@ -827,7 +844,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(recordMoreButton
-                    .position(CGPoint(x: availableSize.width - recordMoreButton.size.width / 2.0 - sideInset, y: availableSize.height - recordMoreButton.size.height / 2.0 - 22.0))
+                    .position(CGPoint(x: availableSize.width - trailingColumnInset - recordMoreButton.size.width / 2.0 - sideInset, y: availableSize.height - recordMoreButton.size.height / 2.0 - 22.0))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
@@ -1362,23 +1379,27 @@ public class VideoMessageCameraScreen: ViewController {
             // is only as tall as the input panel's top edge, so on a small screen the controls pinned to
             // its bottom edge sit inside that square's bottom corners while remaining outside the circle.
             // `super.hitTest` has already resolved which of the two the touch really landed on, so only
-            // fall back to the preview when it did not land on a control.
+            // fall back to the preview when it did not land on a control. Over the input panel's rows the
+            // square's corners cover the panel's trash and send, so there only the circle is the preview's.
+            var passesToInputPanel = false
+            if let controller = self.controller, let layout = self.validLayout {
+                let insets = layout.insets(options: .input)
+                passesToInputPanel = videoMessageCameraPassesTouchToInputPanel(y: point.y, layoutHeight: layout.size.height, bottomInset: max(insets.bottom, layout.additionalInsets.bottom), inputPanelFrame: controller.inputPanelFrame.0, hasInputNode: controller.inputPanelFrame.1)
+            }
+            
             if let resultPreviewView = self.resultPreviewView, !self.isComponentControl(result) {
-                if resultPreviewView.bounds.contains(self.view.convert(point, to: resultPreviewView)) {
+                if videoMessageCameraPreviewClaimsTouch(point: self.view.convert(point, to: resultPreviewView), bounds: resultPreviewView.bounds, overInputPanel: passesToInputPanel) {
                     return resultPreviewView
                 }
             }
             
-            if let controller = self.controller, let layout = self.validLayout {
-                let insets = layout.insets(options: .input)
-                if point.y > layout.size.height - max(insets.bottom, layout.additionalInsets.bottom) - controller.inputPanelFrame.0.height {
-                    if layout.metrics.isTablet {
-                        if point.x < layout.size.width * 0.33 {
-                            return result
-                        }
+            if passesToInputPanel, let layout = self.validLayout {
+                if layout.metrics.isTablet {
+                    if point.x < layout.size.width * 0.33 {
+                        return result
                     }
-                    return nil
                 }
+                return nil
             }
             
             return result
@@ -1454,7 +1475,13 @@ public class VideoMessageCameraScreen: ViewController {
             self.dismissAllTooltips()
             
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: self.view)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX - 20.0, y: absoluteFrame.midY + 53.0), size: CGSize())
+            // The tooltip points at the chat's pause button, under the view-once button unless that one keeps clear of
+            // iPhone Duo's status corner (the pause button stays in the input panel's column).
+            var columnInset: CGFloat = 0.0
+            if let layout = self.validLayout {
+                columnInset = videoMessageCameraTrailingControlInset(minY: absoluteFrame.minY, maxY: absoluteFrame.maxY, containerHeight: layout.size.height, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners)
+            }
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX + columnInset - 20.0, y: absoluteFrame.midY + 53.0), size: CGSize())
             
             let tooltipController = TooltipScreen(
                 account: context.account,
@@ -1542,6 +1569,7 @@ public class VideoMessageCameraScreen: ViewController {
                     bottom: 44.0,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
@@ -1578,7 +1606,7 @@ public class VideoMessageCameraScreen: ViewController {
             let previewBandInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
             let previewBandWidth = layout.size.width - previewBandInsets.left - previewBandInsets.right
             let previewSide = min(369.0, previewBandWidth - 24.0)
-            let previewFrame: CGRect
+            var previewFrame: CGRect
             if layout.metrics.isTablet {
                 // Use the scene this view actually lives in; `connectedScenes` is unordered and a
                 // tablet can have several window scenes.
@@ -1594,12 +1622,16 @@ public class VideoMessageCameraScreen: ViewController {
                 }
             } else {
                 previewFrame = CGRect(origin: CGPoint(x: previewBandInsets.left + floorToScreenPixels((previewBandWidth - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                // iPhone Duo: the folded screen is too short for the phone placement above a keyboard.
+                if layout.reservedCorners != .none {
+                    previewFrame = videoMessageCameraPreviewFrameAbovePanel(frame: previewFrame, bandMinX: previewBandInsets.left, bandMaxX: layout.size.width - previewBandInsets.right, topY: max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top) + 12.0, panelTop: backgroundFrame.maxY)
+                }
             }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
                 transition.setFrame(view: self.previewContainerContentView, frame: CGRect(origin: CGPoint(), size: previewFrame.size))
             }
-            transition.setCornerRadius(layer: self.previewContainerContentView.layer, cornerRadius: previewSide / 2.0)
+            transition.setCornerRadius(layer: self.previewContainerContentView.layer, cornerRadius: previewFrame.width / 2.0)
                         
             let previewBounds = CGRect(origin: .zero, size: previewFrame.size)
            
@@ -1642,6 +1674,7 @@ public class VideoMessageCameraScreen: ViewController {
                         containerSize: backgroundFrame.size,
                         previewFrame: previewFrame,
                         safeInsets: layout.safeInsets,
+                        layoutHeight: layout.size.height,
                         isPreviewing: self.previewState != nil || self.transitioningToPreview,
                         isMuted: self.previewState?.isMuted ?? true,
                         totalDuration: self.previewState?.composition.duration.seconds ?? 0.0,
@@ -2030,6 +2063,7 @@ public class VideoMessageCameraScreen: ViewController {
                     cropRotation: 0.0,
                     cropMirroring: false,
                     cropOrientation: nil,
+                    cropPerspective: .zero,
                     gradientColors: nil,
                     videoTrimRange: self.node.previewState?.trimRange,
                     videoBounce: false,

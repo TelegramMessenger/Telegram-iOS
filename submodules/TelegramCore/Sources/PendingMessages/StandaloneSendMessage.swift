@@ -444,7 +444,7 @@ private func sendUploadedMessageContent(
                 } else if let attribute = attribute as? SuggestedPostMessageAttribute {
                     suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 } else if let attribute = attribute as? RichTextMessageAttribute {
-                    apiRichMessage = attribute.apiInputRichMessage()
+                    apiRichMessage = attribute.apiInputRichMessage(users: apiInputRichMessageUsers(attribute.instantPage, peer: transaction.getPeer))
                     flags |= Int32(1 << 23)
                 }
             }
@@ -746,7 +746,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 } else if let attribute = attribute as? SuggestedPostMessageAttribute {
                     suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 } else if let attribute = attribute as? RichTextMessageAttribute {
-                    apiRichMessage = attribute.apiInputRichMessage()
+                    apiRichMessage = attribute.apiInputRichMessage(users: apiInputRichMessageUsers(attribute.instantPage, peer: transaction.getPeer))
                     flags |= Int32(1 << 23)
                 }
             }

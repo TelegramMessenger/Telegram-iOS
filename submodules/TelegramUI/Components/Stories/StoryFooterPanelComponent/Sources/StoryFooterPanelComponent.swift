@@ -358,6 +358,10 @@ public final class StoryFooterPanelComponent: Component {
                 transition.setFrame(view: statusButton, frame: statusButtonFrame)
                 
                 transition.setAlpha(view: statusButton, alpha: 1.0 - sideContentFraction)
+                // VoiceOver: "Uploading..." with the progress the ring shows; activation cancels as the tap does.
+                statusButton.accessibilityLabel = component.strings.Story_Footer_Uploading
+                statusButton.accessibilityValue = "\(Int(max(0.0, min(1.0, self.uploadProgress)) * 100.0))%"
+                statusButton.accessibilityTraits = .button
                 
                 avatarsAlpha = 0.0
             } else {
@@ -1001,6 +1005,26 @@ public final class StoryFooterPanelComponent: Component {
             self.viewStatsButton.isUserInteractionEnabled = component.expandFraction == 0.0
             
             let isPending = component.storyItem.isPending
+            // VoiceOver: the views line as one button, in the words it shows ("No views", "3 views"); it opens the
+            // viewers list only where the tap does.
+            if viewPart.isEmpty || isPending {
+                self.viewStatsButton.isAccessibilityElement = false
+                self.viewStatsButton.accessibilityElementsHidden = true
+            } else {
+                self.viewStatsButton.accessibilityElementsHidden = false
+                self.viewStatsButton.isAccessibilityElement = true
+                if viewCount == 0 {
+                    self.viewStatsButton.accessibilityLabel = viewPart
+                } else {
+                    self.viewStatsButton.accessibilityLabel = component.strings.Story_Footer_ViewCount(Int32(viewCount)).replacingOccurrences(of: "|", with: "")
+                }
+                var accessibilityValue: [String] = []
+                if reactionCount != 0 && !component.isChannel {
+                    accessibilityValue.append("\(component.strings.Story_ViewList_TitleReactions): \(reactionCount)")
+                }
+                self.viewStatsButton.accessibilityValue = accessibilityValue.isEmpty ? nil : accessibilityValue.joined(separator: ", ")
+                self.viewStatsButton.accessibilityTraits = displayViewLists ? .button : .staticText
+            }
             self.viewsIconView.isHidden = isPending
             self.viewStatsCountText.isHidden = isPending
             self.viewStatsLabelText.view?.isHidden = isPending
@@ -1021,7 +1045,8 @@ public final class StoryFooterPanelComponent: Component {
                         } else {
                             component.deleteAction()
                         }
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: component.storyItem.isPending ? component.strings.Common_Cancel : component.strings.Common_Delete)
                 ).minSize(CGSize(width: 44.0, height: baseHeight))),
                 environment: {},
                 containerSize: CGSize(width: 44.0, height: baseHeight)

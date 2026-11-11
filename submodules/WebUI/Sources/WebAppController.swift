@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 @preconcurrency import WebKit
 import Display
@@ -255,6 +254,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var iconDisposable: Disposable?
         fileprivate var icon: UIImage?
         
+        private var botVerificationIconDisposable: Disposable?
+        /// The bot's third-party verification icon, shown left of its name in the header and the fullscreen controls.
+        private var botVerificationIconFileId: Int64?
+        
         private var lastExpansionTimestamp: Double?
         
         private var didTransitionIn = false
@@ -412,7 +415,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             if let strongSelf = self {
                                 let imageSize: CGSize
                                 if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                    let minSize = min(layout.size.width, layout.size.height)
+                                    let (stripLeft, stripRight) = strongSelf.pageStripInsets(layout: layout)
+                                    let minSize = min(layout.size.width - stripLeft - stripRight, layout.size.height)
                                     imageSize = CGSize(width: minSize, height: minSize * 2.0)
                                 } else {
                                     imageSize = CGSize(width: 78.0, height: 78.0)
@@ -461,10 +465,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 self.icon = icon
             })
+            
+            self.botVerificationIconDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let verificationIconFileId = peer?.verificationIconFileId else {
+                    return
+                }
+                self.botVerificationIconFileId = verificationIconFileId
+                self.controller?.titleView?.title.verificationIconFileId = verificationIconFileId
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                }
+            })
         }
         
         deinit {
             self.iconDisposable?.dispose()
+            self.botVerificationIconDisposable?.dispose()
             self.placeholderDisposable.dispose()
             self.keepAliveDisposable?.dispose()
             self.paymentDisposable?.dispose()
@@ -600,7 +617,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
                                 }
-                                self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
+                                self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified, verificationIconFileId: self.botVerificationIconFileId)
                                 self.controller?.sameOrigin = result.flags.contains(.sameOrigin)
                                 self.load(url: parsedUrl)
                             })
@@ -904,6 +921,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        /// iPhone Duo: in the sheet the page keeps to the band beside a side strip, where the navigation bar's
+        /// back/close and more buttons stand (most pages ignore the safe area we report); the background spans
+        /// the strip. Full screen fills the screen beside the strip. Zero without a strip.
+        private func pageStripInsets(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+            if self.controller?.isFullscreen ?? false {
+                return (0.0, 0.0)
+            }
+            return (
+                layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0,
+                layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+            )
+        }
+        
         private var updateWebViewWhenStable = false
                 
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -947,6 +977,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strings: self.presentationData.strings,
                             title: controller.botName,
                             isVerified: controller.botVerified,
+                            verificationIconFileId: self.botVerificationIconFileId,
                             insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset),
                             statusBarStyle: self.fullScreenStatusBarStyle,
                             hasBack: self.hasBackButton,
@@ -1039,6 +1070,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
+            let (stripLeft, stripRight) = self.pageStripInsets(layout: layout)
+            
             if let webView = self.webView {
                 let inputHeight = self.validLayout?.0.inputHeight ?? 0.0
                 
@@ -1053,7 +1086,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let topInset: CGFloat = controller.isFullscreen ? 0.0 : navigationBarHeight
                 
-                let webViewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
+                let webViewFrame = CGRect(origin: CGPoint(x: stripLeft, y: topInset), size: CGSize(width: layout.size.width - stripLeft - stripRight, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
                 if !webView.frame.width.isZero && webView.frame != webViewFrame {
                     self.updateWebViewWhenStable = true
                 }
@@ -1112,8 +1145,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     customInsets.bottom = layout.intrinsicInsets.bottom
                 }
-                customInsets.left = layout.safeInsets.left
-                customInsets.right = layout.safeInsets.right
+                customInsets.left = layout.safeInsets.left - stripLeft
+                customInsets.right = layout.safeInsets.right - stripRight
                 webView.customInsets = customInsets
                 
                 if let controller = self.controller {
@@ -1149,7 +1182,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     placeholderY = floorToScreenPixels((height - placeholderSize.height) / 2.0)
                 }
-                let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
+                let placeholderFrame =  CGRect(origin: CGPoint(x: stripLeft + floorToScreenPixels((layout.size.width - stripLeft - stripRight - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
             }
@@ -1842,7 +1875,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.webView?.sendEvent(name: "device_storage_failed", data: data.string)
                             return
                         }
-                        let _ = self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue).start(error: { [weak self] error in
+                        let _ = (self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue)
+                        |> deliverOnMainQueue).start(error: { [weak self] error in
                             var errorValue = "UNKNOWN_ERROR"
                             if case .quotaExceeded = error {
                                 errorValue = "QUOTA_EXCEEDED"
@@ -2416,13 +2450,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 initialUsername: createBot.suggestedUsername,
                                 initialTitle: createBot.suggestedName,
                                 openAutomatically: false,
+                                viaDeeplink: false,
                                 completion: { [weak self] resultId in
                                     guard let self, let controller = self.controller else {
                                         return
                                     }
                                     if let resultId {
-                                        let _ = self.context.engine.peers.sendBotRequestedPeer(peerId: controller.botId, requestId: requestId, buttonId: buttonId, requestedPeerIds: [resultId]
-                                        ).startStandalone(error: { [weak self] _ in
+                                        let _ = (self.context.engine.peers.sendBotRequestedPeer(peerId: controller.botId, requestId: requestId, buttonId: buttonId, requestedPeerIds: [resultId])
+                                        |> deliverOnMainQueue).startStandalone(error: { [weak self] _ in
                                             guard let self else {
                                                 return
                                             }
@@ -4226,7 +4261,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         configuration.rect = CGRect(origin: .zero, size: webView.frame.size)
 
         let imageView = UIImageView()
-        imageView.frame = CGRect(origin: .zero, size: webView.frame.size)
+        imageView.frame = CGRect(origin: CGPoint(x: webView.frame.minX, y: 0.0), size: webView.frame.size)
         webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
             imageView.image = image
         })
@@ -4300,6 +4335,7 @@ public func standaloneWebAppController(
     let controller = AttachmentController(
         context: context,
         updatedPresentationData: updatedPresentationData,
+        style: .glass,
         chatLocation: .peer(id: params.peerId),
         buttons: [.standalone],
         initialButton: .standalone,

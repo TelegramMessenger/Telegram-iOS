@@ -347,6 +347,13 @@ public final class AccountViewTracker {
     
     let chatHistoryPreloadManager: ChatHistoryPreloadManager
     
+    let recentDiscussionMessageFetches = RecentDiscussionMessageFetches()
+    
+    /// Reply targets and stories a history fill is fetching; layout draws them as skeletons.
+    public let pendingMessageReferences = PendingMessageReferences()
+    /// widget-sandbox v0.2: the shared states of message widgets watched on screen (`messages.getWidgetPublicData`).
+    let widgetPublicDataPolling: WidgetPublicDataPolling
+    
     private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
     public var orderedPreloadMedia: Signal<[ChatHistoryPreloadMediaItem], NoError> {
@@ -376,6 +383,7 @@ public final class AccountViewTracker {
         self.accountPeerId = account.peerId
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
+        self.widgetPublicDataPolling = WidgetPublicDataPolling(queue: self.queue, postbox: account.postbox, network: account.network)
         
         self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged |> map { Array($0) })
         
@@ -880,6 +888,11 @@ public final class AccountViewTracker {
                                         return .complete()
                                     }
                                     return account.postbox.transaction { transaction -> Void in
+                                        // The users and chats carry the top paid reactors: a sender who reached the
+                                        // leaderboard after the message was stored is known only from here.
+                                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: apiUpdatesGroups(updates), users: updates.users)
+                                        updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
+                                        
                                         let updateList: [Api.Update]
                                         switch updates {
                                         case let .updates(updatesData):

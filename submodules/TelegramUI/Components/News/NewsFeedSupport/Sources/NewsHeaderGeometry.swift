@@ -10,8 +10,12 @@ public enum NewsHeaderMetrics {
     /// `FeedTabs.width`.
     public static let islandMinWidth: CGFloat = 228.0
     public static let islandToMoreButtonSpacing: CGFloat = 10.0
-    /// The mockup's 6 pt header bottom padding plus its search row's 8 pt top padding.
-    public static let searchFieldGap: CGFloat = 14.0
+    /// From the top row to the search field: where `ChatListNavigationBar` puts its field (the node 2 pt up from
+    /// the row's bottom, the field 8 pt into the node), so Chats, Contacts and News line up.
+    public static let searchFieldGap: CGFloat = 6.0
+    /// How far the folding search node lifts, as `ChatListNavigationBar` lifts its own: half the node's height
+    /// beyond the field's ((60 − 44) / 2).
+    public static let searchFoldLift: CGFloat = 8.0
     public static let headerBottomPadding: CGFloat = 6.0
     /// The header gradient runs 22 pt past the header's bottom.
     public static let edgeEffectExtension: CGFloat = 22.0
@@ -29,12 +33,8 @@ public struct NewsHeaderGeometry: Equatable {
     public let island: CGRect
     /// The search node's frame when the list is at its top.
     public let searchNodeAtRest: CGRect
-    /// From the top row's bottom edge to the search field's bottom edge: how far the block scrolls away.
+    /// From the top row's bottom edge to the search field's bottom edge: how far the block folds away.
     public let blockHeight: CGFloat
-    /// How far the search node travels with the list: until it is entirely above the screen.
-    public var searchTravelLimit: CGFloat {
-        return self.searchNodeAtRest.maxY
-    }
     /// The edge effect runs from the screen top down this far.
     public let edgeEffectHeight: CGFloat
     /// The lists' top content inset: the first row starts at the search field's bottom edge.
@@ -52,7 +52,8 @@ public struct NewsHeaderGeometry: Equatable {
 
 /// - `islandFittingWidth`: the tabs' natural width. The island is at least 228 wide, centred, and never comes
 ///   within 10 pt of the "…" button (`moreButtonMinX`).
-/// - `searchFieldFrameInNode`: where the search node lays out its field, in the node's coordinates.
+/// - `searchFieldFrameInNode`: where the search node lays out its field when whole (expansion 1), in the node's
+///   coordinates. A folding node lays its field lower (`newsHeaderWholeSearchField`): never pass a folded node's frame.
 public func newsHeaderGeometry(width: CGFloat, statusBarHeight: CGFloat, islandFittingWidth: CGFloat, moreButtonMinX: CGFloat, searchNodeHeight: CGFloat, searchFieldFrameInNode: CGRect) -> NewsHeaderGeometry {
     let metrics = NewsHeaderMetrics.self
     let topRow = CGRect(x: 0.0, y: statusBarHeight + metrics.topRowOffset, width: width, height: metrics.topRowHeight)
@@ -75,10 +76,35 @@ public func newsHeaderGeometry(width: CGFloat, statusBarHeight: CGFloat, islandF
     )
 }
 
-/// How far the search node has moved up: 1:1 with the list until it is off the screen (the mockup's search is a
-/// list row and scrolls away, so no edge of it may linger under the top row), and down with an overscroll.
-public func newsHeaderSearchTravel(listOffset: CGFloat, geometry: NewsHeaderGeometry) -> CGFloat {
-    return min(listOffset, geometry.searchTravelLimit)
+/// The search field's frame to build the header on: the one measured now while the field is whole (`expansion` 1),
+/// else the last whole measurement (`whole`). The node lays its field's 44 pt frame lower as it folds (y 8 → 52; the
+/// visible capsule shrinks from its top), so a frame read while folded would put the resting search up to 44 pt too
+/// high, behind the top row, over an empty band above the first post. With no whole measurement yet, the current one.
+public func newsHeaderWholeSearchField(measured: CGRect, expansion: CGFloat, whole: CGRect?) -> CGRect {
+    if expansion > 0.9999 {
+        return measured
+    }
+    return whole ?? measured
+}
+
+/// The search field's expansion as the list scrolls, as the chat list folds its field: whole at rest, gone once the
+/// block is under the top row, in between in proportion; an overscroll keeps it whole.
+public func newsHeaderSearchExpansion(listOffset: CGFloat, blockHeight: CGFloat) -> CGFloat {
+    guard blockHeight > 0.0 else {
+        return 1.0
+    }
+    return 1.0 - max(0.0, min(listOffset, blockHeight)) / blockHeight
+}
+
+/// How far the search node has moved up: 1:1 with the block's fold (the node keeps its field's bottom at its own
+/// bottom while the field shrinks, so the field's bottom edge rises with the content it sat on), plus the chat
+/// list's `searchFoldLift` by the time the field is folded; down with an overscroll, 1:1.
+public func newsHeaderSearchLift(listOffset: CGFloat, blockHeight: CGFloat) -> CGFloat {
+    if listOffset < 0.0 {
+        return listOffset
+    }
+    let fold = 1.0 - newsHeaderSearchExpansion(listOffset: listOffset, blockHeight: blockHeight)
+    return newsHeaderBlockOffset(listOffset: listOffset, blockHeight: blockHeight) + NewsHeaderMetrics.searchFoldLift * fold
 }
 
 /// How far the search block has folded: 1:1 with the list until it is under the top row, and down with an

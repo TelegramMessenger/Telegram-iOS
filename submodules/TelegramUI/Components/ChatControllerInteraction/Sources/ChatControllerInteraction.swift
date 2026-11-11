@@ -150,18 +150,27 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public struct OpenUrl {
         public var url: String
         public var concealed: Bool
+        /// Ask "Open link?" whatever the URL: `parseUrl` clears `concealed` for Telegram's own hosts and `tel:`.
+        public var forceConcealed: Bool
         public var external: Bool?
         public var message: EngineRawMessage?
         public var allowInlineWebpageResolution: Bool
         public var progress: Promise<Bool>?
-        
-        public init(url: String, concealed: Bool, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
+        /// The confirmation shows the whole URL (SDK v1 §5.2, a message widget's link).
+        public var fullUrl: Bool
+        /// Told the confirmation when it appears and nil when it goes (a message widget's one-dialog guard).
+        public var alertDisplayUpdated: ((ViewController?) -> Void)?
+
+        public init(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, fullUrl: Bool = false, alertDisplayUpdated: ((ViewController?) -> Void)? = nil) {
             self.url = url
             self.concealed = concealed
+            self.forceConcealed = forceConcealed
             self.external = external
             self.message = message
             self.allowInlineWebpageResolution = allowInlineWebpageResolution
             self.progress = progress
+            self.fullUrl = fullUrl
+            self.alertDisplayUpdated = alertDisplayUpdated
         }
     }
     
@@ -382,11 +391,13 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
             
             if let isOpeningMediaSignal = self.isOpeningMediaSignal {
                 self.isOpeningMediaValue = true
-                self.isOpeningMediaDisposable = (isOpeningMediaSignal |> filter { !$0 } |> take(1) |> timeout(1.0, queue: .mainQueue(), alternate: .single(false)) |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                // A gallery reports `false` once it is on screen; that waits for its first item (up to 2 s), so the
+                // longer timeout only matters should it never report.
+                self.isOpeningMediaDisposable = (chatIsOpeningMedia(blockInteraction: isOpeningMediaSignal, unannouncedTimeout: 1.0, announcedTimeout: 4.0, queue: .mainQueue()) |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                     guard let self else {
                         return
                     }
-                    self.isOpeningMediaValue = false
+                    self.isOpeningMediaValue = value
                 })
             }
         }

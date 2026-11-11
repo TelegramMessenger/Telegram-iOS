@@ -22,6 +22,11 @@ final class ButtonModelTests: XCTestCase {
         XCTAssertEqual(try roundTrip(button), button)
     }
 
+    func testUserProfileActionRoundTrips() throws {
+        let button = ButtonRef(label: [TextRun(text: "Profile")], action: .userProfile(peerId: 0x0000_0001_2345_6789))
+        XCTAssertEqual(try roundTrip(button), button)
+    }
+
     func testButtonRowBlockRoundTripsThroughBlock() throws {
         let row = ButtonRowBlock(
             id: BlockID.generate(),
@@ -117,6 +122,18 @@ final class ButtonModelTests: XCTestCase {
             return XCTFail("expected a button row")
         }
         XCTAssertEqual(converted.buttons[0].action, .copyText("hello"))
+    }
+
+    /// `.userProfile` names its user directly, so it also still works pasted elsewhere and is NOT converted.
+    func testPastedUserProfileActionIsPreserved() {
+        let row = ButtonRowBlock(id: BlockID.generate(),
+                                 buttons: [ButtonRef(label: [TextRun(text: "Me")], action: .userProfile(peerId: 42))],
+                                 alignment: .justify)
+        guard case let .buttonRow(converted) = Document(blocks: [.buttonRow(row)])
+            .convertingUnsupportedButtonActions().blocks.first else {
+            return XCTFail("expected a button row")
+        }
+        XCTAssertEqual(converted.buttons[0].action, .userProfile(peerId: 42))
     }
 
     /// The conversion recurses containers — a row nested in a details body is reached too.

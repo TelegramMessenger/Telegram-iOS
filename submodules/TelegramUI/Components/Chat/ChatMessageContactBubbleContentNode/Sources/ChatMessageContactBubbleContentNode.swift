@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -36,7 +35,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let addButtonNode: ChatMessageAttachedContentButtonNode
     private let messageButtonNode: ChatMessageAttachedContentButtonNode
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
@@ -44,7 +43,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.addButtonNode = ChatMessageAttachedContentButtonNode()
         self.messageButtonNode = ChatMessageAttachedContentButtonNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -231,7 +230,14 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0
                 
-                let maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - 7.0 - sideInsets)
+                // Without bubbles the name and number stand in the block's own padding, past its accent line and the avatar.
+                let bubblelessTextInsets: (leading: CGFloat, trailing: CGFloat)? = item.bubbleStyle == .bubbleless ? chatMessageBubblelessContactTextInsets(lineWidth: 3.0, avatarWidth: avatarSize.width) : nil
+                let maxTextWidth: CGFloat
+                if let bubblelessTextInsets {
+                    maxTextWidth = max(1.0, constrainedSize.width - bubblelessTextInsets.leading - bubblelessTextInsets.trailing)
+                } else {
+                    maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - 7.0 - sideInsets)
+                }
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -271,7 +277,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
-                            statusType = .BubbleIncoming
+                            statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .BubbleIncoming
                         } else {
                             if item.message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
@@ -352,8 +358,12 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     maxContentWidth = max(maxContentWidth, statusSuggestedWidthAndContinue.0)
                 }
-                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + titleLayout.size.width + 7.0)
-                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + textLayout.size.width + 7.0)
+                if let bubblelessTextInsets {
+                    maxContentWidth = max(maxContentWidth, bubblelessTextInsets.leading + max(titleLayout.size.width, textLayout.size.width) + bubblelessTextInsets.trailing)
+                } else {
+                    maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + titleLayout.size.width + 7.0)
+                    maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + textLayout.size.width + 7.0)
+                }
                 maxContentWidth = max(maxContentWidth, maxButtonWidth * CGFloat(buttonCount))
                 maxContentWidth = max(maxContentWidth, 220.0)
                 
@@ -384,9 +394,19 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     if let statusSizeAndApply = statusSizeAndApply {
                         layoutSize.height += statusSizeAndApply.0.height - 4.0
                     }
-                    let messageButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth, y: layoutSize.height - 24.0 - messageButtonSize.height), size: messageButtonSize)
-                    let addButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth + (canMessage ? buttonWidth : 0.0), y: layoutSize.height - 24.0 - addButtonSize.height), size: addButtonSize)
-                    let avatarFrame = baseAvatarFrame.offsetBy(dx: 9.0, dy: 14.0)
+                    var messageButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth, y: layoutSize.height - 24.0 - messageButtonSize.height), size: messageButtonSize)
+                    var addButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth + (canMessage ? buttonWidth : 0.0), y: layoutSize.height - 24.0 - addButtonSize.height), size: addButtonSize)
+                    var avatarFrame = baseAvatarFrame.offsetBy(dx: 9.0, dy: 14.0)
+                    
+                    var bubblelessLayout: ContactBubblelessLayout?
+                    if item.bubbleStyle == .bubbleless {
+                        let layout = contactBubblelessLayout(position: position, lineWidth: lineWidth, avatarSize: avatarSize, textHeight: textLayout.size.height, boundingWidth: boundingWidth)
+                        bubblelessLayout = layout
+                        avatarFrame = layout.avatar
+                        messageButtonFrame.origin.y = layout.separator.minY + floorToScreenPixels((layout.buttonsHeight - messageButtonFrame.height) * 0.5)
+                        addButtonFrame.origin.y = layout.separator.minY + floorToScreenPixels((layout.buttonsHeight - addButtonFrame.height) * 0.5)
+                        layoutSize.height = layout.background.maxY + chatMessageBubblelessBlockGap * 0.5
+                    }
                     
                     var customLetters: [String] = []
                     if let selectedContact = selectedContact, selectedContact.peerId == nil {
@@ -416,8 +436,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = messageButtonApply(animation)
                             let _ = addButtonApply(animation)
                             
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 1.0), size: titleLayout.size)
-                            strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
+                            strongSelf.titleNode.frame = CGRect(origin: bubblelessLayout?.titleOrigin ?? CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 1.0), size: titleLayout.size)
+                            strongSelf.textNode.frame = CGRect(origin: bubblelessLayout?.textOrigin ?? CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
                             
                             strongSelf.addButtonNode.frame = addButtonFrame
                             strongSelf.addButtonNode.isHidden = !canAdd && canMessage
@@ -425,7 +445,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.messageButtonNode.isHidden = !canMessage
                             
                             let backgroundInsets = layoutConstants.text.bubbleInsets
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
+                            let backgroundFrame = bubblelessLayout?.background ?? CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: backgroundFrame.maxY + 3.0), size: statusSizeAndApply.0)
@@ -505,8 +525,10 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.view.insertSubview(backgroundView, at: 0)
                                 backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: pattern, patternTopRightPosition: patternTopRightPosition, animation: .None)
                             }
+                            // Without bubbles the block sits on the page, where it is rounder.
+                            backgroundView.clipCornerRadius = bubblelessLayout != nil ? chatMessageBubblelessInlineBlockCornerRadius : nil
                             
-                            let separatorFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + 9.0, y: backgroundFrame.maxY - 36.0), size: CGSize(width: backgroundFrame.width - 18.0, height: UIScreenPixel))
+                            let separatorFrame = bubblelessLayout?.separator ?? CGRect(origin: CGPoint(x: backgroundFrame.minX + 9.0, y: backgroundFrame.maxY - 36.0), size: CGSize(width: backgroundFrame.width - 18.0, height: UIScreenPixel))
                             
                             let actionButtonSeparator: SimpleLayer
                             if let current = strongSelf.actionButtonSeparator {
@@ -610,4 +632,39 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return super.hitTest(point, with: event)
     }
+}
+
+private struct ContactBubblelessLayout {
+    var background: CGRect
+    var avatar: CGRect
+    var titleOrigin: CGPoint
+    var textOrigin: CGPoint
+    var separator: CGRect
+    var buttonsHeight: CGFloat
+}
+
+/// Without bubbles a contact block sits on the page and is laid out on its own rather than in a bubble's insets: the same
+/// room around the avatar, the name and number in a column beside it (centred on the avatar when shorter), a separator,
+/// and the button row. No time goes under it.
+private func contactBubblelessLayout(position: ChatMessageBubbleContentPosition, lineWidth: CGFloat, avatarSize: CGSize, textHeight: CGFloat, boundingWidth: CGFloat) -> ContactBubblelessLayout {
+    let padding = chatMessageBubblelessContactPadding
+    let titleTextSpacing: CGFloat = 19.0
+    let buttonsHeight: CGFloat = 36.0
+    var blockY = chatMessageBubblelessBlockGap * 0.5
+    if case let .linear(top, _) = position, case .Neighbour(_, .header, _) = top {
+        blockY = chatMessageBubblelessHeaderContactSpacing
+    }
+    let avatar = CGRect(origin: CGPoint(x: lineWidth + padding, y: blockY + padding), size: avatarSize)
+    let columnHeight = titleTextSpacing + textHeight
+    let columnY = columnHeight < avatarSize.height ? floorToScreenPixels(avatar.midY - columnHeight * 0.5) : avatar.minY
+    let textX = avatar.maxX + padding
+    let separatorY = max(avatar.maxY, columnY + columnHeight) + padding
+    return ContactBubblelessLayout(
+        background: CGRect(x: 0.0, y: blockY, width: boundingWidth, height: separatorY + buttonsHeight - blockY),
+        avatar: avatar,
+        titleOrigin: CGPoint(x: textX, y: columnY),
+        textOrigin: CGPoint(x: textX, y: columnY + titleTextSpacing),
+        separator: CGRect(x: lineWidth + padding, y: separatorY, width: boundingWidth - lineWidth - padding * 2.0, height: UIScreenPixel),
+        buttonsHeight: buttonsHeight
+    )
 }

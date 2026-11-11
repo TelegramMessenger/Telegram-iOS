@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -11,6 +10,7 @@ import AnimatedCountLabelNode
 import AnimatedAvatarSetNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import StaticGlassBackground
 
 public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let separatorNode: ASDisplayNode
@@ -24,7 +24,17 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     private let unreadIconNode: ASImageNode
     private var statusNode: RadialStatusNode?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    // Bubble mode off: the row is a capsule captured from glass, like a bot's button, its content in the text colour:
+    // plain UIKit views in the capsule's content view.
+    private var glassView: StaticGlassBackgroundView?
+    private var glassControl: UIControl?
+    private var glassAvatarsView: AnimatedAvatarSetView?
+    private var glassIconView: UIImageView?
+    private var glassTextLabel: UILabel?
+    private var glassUnreadView: UIImageView?
+    private var glassArrowView: UIImageView?
+    
+    required public init() {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isUserInteractionEnabled = false
         
@@ -52,7 +62,7 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
         
         self.buttonNode = HighlightTrackingButtonNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.buttonNode.addSubnode(self.separatorNode)
         self.buttonNode.addSubnode(self.countNode)
@@ -85,6 +95,27 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func glassControlPressed() {
+        self.buttonPressed()
+    }
+    
+    // The capsule dims under the finger as the row does with bubbles.
+    @objc private func glassControlHighlighted() {
+        guard let glassView = self.glassView else {
+            return
+        }
+        glassView.layer.removeAnimation(forKey: "opacity")
+        glassView.alpha = 0.4
+    }
+    
+    @objc private func glassControlUnhighlighted() {
+        guard let glassView = self.glassView, glassView.alpha < 1.0 else {
+            return
+        }
+        glassView.alpha = 1.0
+        glassView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
     }
     
     @objc private func buttonPressed() {
@@ -244,16 +275,54 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
                 let arrowImage = PresentationResourcesChat.chatMessageCommentsArrowIcon(item.presentationData.theme.theme, incoming: incoming)
                 let unreadIconImage = PresentationResourcesChat.chatMessageCommentsUnreadDotIcon(item.presentationData.theme.theme, incoming: incoming)
                 
+                // Bubble mode off: a glass capsule 6pt under the content, as wide as the content, its text in the text
+                // colour (the short form when the long one does not fit).
+                let isGlass = item.bubbleStyle.isBubbleless
+                var glassLayout: ChatMessageBubblelessCommentsCapsuleLayout?
+                var glassAttributedText: NSAttributedString?
+                var glassTextSize = CGSize()
+                var glassIconImage: UIImage?
+                var glassArrowImage: UIImage?
+                if isGlass {
+                    // The glyphs take the content colour as templates, with no tinted copies drawn for every post.
+                    glassIconImage = iconImage?.withRenderingMode(.alwaysTemplate)
+                    glassArrowImage = arrowImage?.withRenderingMode(.alwaysTemplate)
+                    let unreadWidth: CGFloat = hasUnseenReplies ? 4.0 + (unreadIconImage?.size.width ?? 0.0) : 0.0
+                    let layout = chatMessageBubblelessCommentsCapsuleLayout(avatarCount: replyPeers.count, iconWidth: glassIconImage?.size.width ?? 0.0, arrowWidth: glassArrowImage?.size.width ?? 0.0, unreadWidth: unreadWidth, constrainedWidth: constrainedSize.width)
+                    var text = NSAttributedString(string: accessibilityLabel, font: textFont, textColor: messageTheme.primaryTextColor)
+                    var textSize = text.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], context: nil).size
+                    if textSize.width > layout.textMaxWidth, rawAlternativeSegments.count == 1, case let .text(_, shortText) = rawAlternativeSegments[0] {
+                        text = NSAttributedString(string: shortText.string, font: textFont, textColor: messageTheme.primaryTextColor)
+                        textSize = text.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], context: nil).size
+                    }
+                    glassTextSize = CGSize(width: min(layout.textMaxWidth, ceil(textSize.width)), height: ceil(textSize.height))
+                    glassAttributedText = text
+                    glassLayout = layout
+                    suggestedBoundingWidth = layout.leading + glassTextSize.width + unreadWidth + layout.trailing
+                }
+                
                 return (suggestedBoundingWidth, { [weak self] boundingWidth in
                     var boundingSize: CGSize
                     
                     boundingSize = textFrameWithoutInsets.size
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                     boundingSize.height = 40.0 + topOffset
+                    if isGlass {
+                        boundingSize = CGSize(width: boundingWidth, height: chatMessageBubblelessGlassCapsuleSpacing + chatMessageBubblelessGlassCapsuleHeight)
+                    }
                     
                     return (boundingSize, { [weak self] animation, synchronousLoad, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
+                            
+                            if isGlass, let glassLayout, let glassAttributedText {
+                                let capsuleFrame = CGRect(x: 0.0, y: chatMessageBubblelessGlassCapsuleSpacing, width: boundingWidth, height: chatMessageBubblelessGlassCapsuleHeight)
+                                strongSelf.applyGlass(item: item, capsuleFrame: capsuleFrame, contentColor: messageTheme.primaryTextColor, attributedText: glassAttributedText, textSize: glassTextSize, leading: glassLayout.leading, iconImage: glassIconImage, arrowImage: glassArrowImage, unreadIconImage: unreadIconImage, hasUnseenReplies: hasUnseenReplies, replyPeers: replyPeers, accessibilityLabel: accessibilityLabel, animation: animation, synchronousLoad: synchronousLoad)
+                                return
+                            }
+                            if strongSelf.glassView != nil {
+                                strongSelf.removeGlass()
+                            }
                             
                             let transition: ContainedViewLayoutTransition
                             if animation.isAnimated {
@@ -392,6 +461,168 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
         }
     }
     
+    /// Bubble mode off: the row as a capsule captured from glass, like a bot's button, its content in the text colour;
+    /// the button node that draws it with bubbles stays hidden.
+    private func applyGlass(item: ChatMessageBubbleContentItem, capsuleFrame: CGRect, contentColor: UIColor, attributedText: NSAttributedString, textSize: CGSize, leading: CGFloat, iconImage: UIImage?, arrowImage: UIImage?, unreadIconImage: UIImage?, hasUnseenReplies: Bool, replyPeers: [EnginePeer], accessibilityLabel: String, animation: ListViewItemUpdateAnimation, synchronousLoad: Bool) {
+        let height = capsuleFrame.height
+        let isEnabled = item.message.id.namespace == Namespaces.Message.Cloud
+        let contentAlpha: CGFloat = isEnabled ? 1.0 : 0.5
+        self.buttonNode.isHidden = true
+        
+        let glassView: StaticGlassBackgroundView
+        let glassControl: UIControl
+        // A capsule made in this pass appears in place rather than growing from nothing.
+        var glassAnimation = animation
+        if let currentGlassView = self.glassView, let currentControl = self.glassControl {
+            glassView = currentGlassView
+            glassControl = currentControl
+            animation.animator.updateFrame(layer: glassView.layer, frame: capsuleFrame, completion: nil)
+        } else {
+            glassAnimation = .None
+            glassView = StaticGlassBackgroundView()
+            glassView.frame = capsuleFrame
+            self.glassView = glassView
+            self.view.insertSubview(glassView, at: 0)
+            
+            glassControl = UIControl()
+            glassControl.addTarget(self, action: #selector(self.glassControlPressed), for: .touchUpInside)
+            glassControl.addTarget(self, action: #selector(self.glassControlHighlighted), for: [.touchDown, .touchDragEnter])
+            glassControl.addTarget(self, action: #selector(self.glassControlUnhighlighted), for: [.touchUpInside, .touchUpOutside, .touchDragExit, .touchCancel])
+            // VoiceOver keeps the row's button ("Leave a comment", "N comments").
+            glassControl.isAccessibilityElement = true
+            glassControl.accessibilityTraits = .button
+            self.glassControl = glassControl
+            glassView.contentView.addSubview(glassControl)
+        }
+        glassView.update(size: capsuleFrame.size, cornerRadius: height * 0.5, isDark: item.presentationData.theme.theme.overallDarkAppearance, tint: .panel, updateFrame: { view, frame in
+            glassAnimation.animator.updateFrame(layer: view.layer, frame: frame, completion: nil)
+        })
+        glassControl.isEnabled = isEnabled
+        glassControl.frame = CGRect(origin: CGPoint(), size: capsuleFrame.size)
+        glassControl.accessibilityLabel = accessibilityLabel
+        
+        func makeImageView() -> UIImageView {
+            let imageView = UIImageView()
+            imageView.isUserInteractionEnabled = false
+            glassView.contentView.insertSubview(imageView, belowSubview: glassControl)
+            return imageView
+        }
+        
+        if !replyPeers.isEmpty {
+            let avatarsView: AnimatedAvatarSetView
+            if let current = self.glassAvatarsView {
+                avatarsView = current
+            } else {
+                avatarsView = AnimatedAvatarSetView()
+                avatarsView.isUserInteractionEnabled = false
+                self.glassAvatarsView = avatarsView
+                glassView.contentView.insertSubview(avatarsView, belowSubview: glassControl)
+            }
+            let avatarContent = self.avatarsContext.update(peers: replyPeers, animated: animation.isAnimated)
+            let avatarsSize = avatarsView.update(context: item.context, content: avatarContent, itemSize: CGSize(width: 30.0, height: 30.0), animation: animation, synchronousLoad: synchronousLoad)
+            avatarsView.frame = CGRect(origin: CGPoint(x: 6.0, y: floorToScreenPixels((height - avatarsSize.height) * 0.5)), size: avatarsSize)
+            avatarsView.alpha = contentAlpha
+        } else if let avatarsView = self.glassAvatarsView {
+            self.glassAvatarsView = nil
+            avatarsView.removeFromSuperview()
+        }
+        
+        if replyPeers.isEmpty, let iconImage {
+            let iconView = self.glassIconView ?? makeImageView()
+            self.glassIconView = iconView
+            iconView.image = iconImage
+            iconView.tintColor = contentColor
+            iconView.frame = CGRect(origin: CGPoint(x: 12.0, y: floorToScreenPixels((height - iconImage.size.height) * 0.5)), size: iconImage.size)
+            iconView.alpha = contentAlpha
+        } else if let iconView = self.glassIconView {
+            self.glassIconView = nil
+            iconView.removeFromSuperview()
+        }
+        
+        let textLabel: UILabel
+        if let current = self.glassTextLabel {
+            textLabel = current
+        } else {
+            textLabel = UILabel()
+            textLabel.isUserInteractionEnabled = false
+            textLabel.lineBreakMode = .byTruncatingTail
+            // The control is the VoiceOver element, with the same words.
+            textLabel.isAccessibilityElement = false
+            self.glassTextLabel = textLabel
+            glassView.contentView.insertSubview(textLabel, belowSubview: glassControl)
+        }
+        // The label draws on the main thread: only when its text changes.
+        if textLabel.attributedText != attributedText {
+            textLabel.attributedText = attributedText
+        }
+        let textFrame = CGRect(origin: CGPoint(x: leading, y: floorToScreenPixels((height - textSize.height) * 0.5)), size: textSize)
+        textLabel.frame = textFrame
+        textLabel.alpha = contentAlpha
+        
+        if hasUnseenReplies, let unreadIconImage {
+            let unreadView = self.glassUnreadView ?? makeImageView()
+            self.glassUnreadView = unreadView
+            unreadView.image = unreadIconImage
+            unreadView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 4.0, y: floorToScreenPixels(textFrame.midY - unreadIconImage.size.height * 0.5)), size: unreadIconImage.size)
+            unreadView.alpha = contentAlpha
+        } else if let unreadView = self.glassUnreadView {
+            self.glassUnreadView = nil
+            unreadView.removeFromSuperview()
+        }
+        
+        let hasActivity = item.controllerInteraction.currentMessageWithLoadingReplyThread == item.message.id
+        var arrowFrame = CGRect()
+        if let arrowImage {
+            let arrowView = self.glassArrowView ?? makeImageView()
+            self.glassArrowView = arrowView
+            arrowView.image = arrowImage
+            arrowView.tintColor = contentColor
+            arrowFrame = CGRect(origin: CGPoint(x: capsuleFrame.width - 14.0 - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) * 0.5)), size: arrowImage.size)
+            arrowView.frame = arrowFrame
+            arrowView.alpha = hasActivity ? 0.0 : contentAlpha
+        }
+        
+        // The spinner of a thread being opened takes the chevron's place.
+        if hasActivity {
+            let statusNode: RadialStatusNode
+            if let current = self.statusNode {
+                statusNode = current
+            } else {
+                statusNode = RadialStatusNode(backgroundNodeColor: .clear)
+                self.statusNode = statusNode
+            }
+            if statusNode.supernode !== self {
+                self.addSubnode(statusNode)
+            }
+            statusNode.frame = CGRect(origin: CGPoint(x: capsuleFrame.minX + arrowFrame.midX - 10.0, y: capsuleFrame.minY + floorToScreenPixels((height - 20.0) * 0.5)), size: CGSize(width: 20.0, height: 20.0))
+            statusNode.transitionToState(.progress(color: contentColor, lineWidth: 1.5, value: nil, cancelEnabled: false, animateRotation: true), animated: false, synchronous: false, completion: {})
+        } else if let statusNode = self.statusNode {
+            self.statusNode = nil
+            statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.3, removeOnCompletion: false, completion: { [weak statusNode] _ in
+                statusNode?.removeFromSupernode()
+            })
+            self.glassArrowView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.3)
+        }
+    }
+    
+    private func removeGlass() {
+        guard let glassView = self.glassView else {
+            return
+        }
+        self.glassView = nil
+        self.glassControl = nil
+        self.glassAvatarsView = nil
+        self.glassIconView = nil
+        self.glassTextLabel = nil
+        self.glassUnreadView = nil
+        self.glassArrowView = nil
+        glassView.removeFromSuperview()
+        self.buttonNode.isHidden = false
+        if let statusNode = self.statusNode, statusNode.supernode !== self.buttonNode {
+            self.buttonNode.addSubnode(statusNode)
+        }
+    }
+    
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
@@ -409,6 +640,12 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if let glassView = self.glassView {
+            if glassView.frame.contains(point) {
+                return ChatMessageBubbleContentTapAction(content: .ignore)
+            }
+            return ChatMessageBubbleContentTapAction(content: .none)
+        }
         if self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
@@ -416,6 +653,12 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let glassView = self.glassView, let glassControl = self.glassControl {
+            if glassControl.isEnabled && glassView.frame.contains(point) {
+                return glassControl
+            }
+            return nil
+        }
         if self.buttonNode.isUserInteractionEnabled && self.buttonNode.frame.contains(point) {
             return self.buttonNode.view
         }

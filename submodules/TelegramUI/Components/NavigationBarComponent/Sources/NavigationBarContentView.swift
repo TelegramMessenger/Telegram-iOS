@@ -20,12 +20,15 @@ final class NavigationBarContentView: UIView {
     /// Width (at least 44 pt), tint and number of buttons of each pill shown, outermost first.
     private(set) var rightPillWidths: [CGFloat] = []
     private(set) var rightPillTints: [NavigationBarComponent.Button.Tint] = []
+    private(set) var rightPillCornerRadii: [CGFloat?] = []
     private(set) var rightPillButtonCounts: [Int] = []
     private(set) var backButtonView: NavigationBarBackButtonView?
     /// Morph only: whether the last update held the back button steady (`updateMorphTransition`).
     /// iPhone Duo: this content's part of the side column; the bar view hosts them.
     let columnBackContainer: UIView
     let columnButtonsContainer: UIView
+    /// The radius of the side column's last button's own glass (a forum's square avatar), when it is the column's last cell.
+    private(set) var columnLastButtonGlassCornerRadius: CGFloat?
     /// iPhone Duo: this content's confirming button (the Done checkmark) in the column's own circle; the bar view
     /// hosts it.
     let columnTrailingContainer: UIView
@@ -35,6 +38,7 @@ final class NavigationBarContentView: UIView {
     private var overflowButtonView: ComponentView<NavigationButtonEnvironment>?
     private var overflowItems: [NavigationBarComponent.OverflowItem] = []
     private var openOverflow: ((UIView, [NavigationBarComponent.OverflowItem]) -> Void)?
+    private var currentStrings: NavigationBarStrings?
 
     let titleOffsetContainer: UIView
     let titleScaleContainer: UIView
@@ -226,8 +230,14 @@ final class NavigationBarContentView: UIView {
                 buttonTransition = .immediate
                 container.addSubview(buttonComponentView)
             }
-            if let accessibilityLabel = button.overflow?.title {
+            if let accessibilityLabel = button.overflow?.title ?? button.accessibilityLabel ?? navigationButtonTextLabel(button.content) ?? self.currentStrings.flatMap({ navigationButtonIconLabel(button.content, strings: $0) }) {
                 buttonComponentView.accessibilityLabel = accessibilityLabel
+            }
+            if case let .node(nodeValue) = button.content, button.accessibilityValue == nil {
+                // A custom node button (a toggle drawn by the screen) carries its own state.
+                buttonComponentView.accessibilityValue = nodeValue.accessibilityValue
+            } else {
+                buttonComponentView.accessibilityValue = button.accessibilityValue
             }
             buttonTransition.setFrame(view: buttonComponentView, frame: frame(buttonSize))
             if animateButtonIn {
@@ -243,6 +253,7 @@ final class NavigationBarContentView: UIView {
     func update(theme: NavigationBarTheme, strings: NavigationBarStrings, content: NavigationBarComponent.Content, leftInset: CGFloat, rightInset: CGFloat, size: CGSize, columnLength: CGFloat?, openOverflow: ((UIView, [NavigationBarComponent.OverflowItem]) -> Void)?, transition: ComponentTransition, itemsTransition: ComponentTransition? = nil) {
         let itemsTransition = itemsTransition ?? transition
         let alphaTransition: ComponentTransition = itemsTransition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+        self.currentStrings = strings
 
         transition.setPosition(view: self.titleOffsetContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
         transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: self.titleOffsetContainer.bounds.origin, size: size))
@@ -335,8 +346,13 @@ final class NavigationBarContentView: UIView {
         }
         self.rightPillWidths = rightPillWidths
         self.rightPillTints = placement.rowRightSections.map(navigationBarCapsuleTint)
+        self.rightPillCornerRadii = placement.rowRightSections.map(navigationBarCapsuleCornerRadius)
         self.rightPillButtonCounts = placement.rowRightSections.map(\.count)
 
+        self.columnLastButtonGlassCornerRadius = nil
+        if let columnLayout, columnLayout.visibleItems.count == columnLayout.cellFrames.count, let lastItemIndex = columnLayout.visibleItems.last {
+            self.columnLastButtonGlassCornerRadius = placement.columnItems[lastItemIndex].glassCornerRadius
+        }
         if let columnLayout {
             for (cellIndex, itemIndex) in columnLayout.visibleItems.enumerated() {
                 let item = placement.columnItems[itemIndex]
@@ -539,4 +555,45 @@ func navigationButtonContainerWidth(content: NavigationBarComponent.Button.Conte
     default:
         return 100.0
     }
+}
+
+/// The label of a button that draws a known icon in place of text: the `___done` checkmark and the `___close` X.
+func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content, strings: NavigationBarStrings) -> String? {
+    var label: String?
+    switch content {
+    case let .text(title, _):
+        if title == "___done" {
+            label = strings.done
+        } else if title == "___close" {
+            label = strings.close
+        }
+    case let .icon(imageName):
+        if imageName == "Navigation/Done" {
+            label = strings.done
+        } else if imageName == "Navigation/Close" {
+            label = strings.close
+        } else if imageName == "Navigation/Back" {
+            label = strings.back
+        }
+    case .more:
+        label = strings.more
+    case let .node(nodeValue):
+        // A custom node button is named by the screen that supplies the node.
+        label = nodeValue.accessibilityLabel
+    default:
+        break
+    }
+    if let label, !label.isEmpty {
+        return label
+    }
+    return nil
+}
+
+/// A text button's VoiceOver label when the screen gives none (`OverflowInfo.title`): the text it shows. The
+/// `___`-prefixed sentinel titles draw icons and are not labels.
+func navigationButtonTextLabel(_ content: NavigationBarComponent.Button.Content) -> String? {
+    if case let .text(title, _) = content, !title.isEmpty, !title.hasPrefix("___") {
+        return title
+    }
+    return nil
 }

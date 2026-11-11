@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -579,8 +578,7 @@ private final class AdsInfoSheetComponent: CombinedComponent {
                                     ),
                                     color: theme.chat.inputPanel.panelControlColor,
                                     size: CGSize(width: 34.0, height: 34.0),
-                                    playOnce: moreButtonPlayOnce,
-                                    lottieSettings: context.component.context.lottieRenderingSettings
+                                    playOnce: moreButtonPlayOnce
                                 )
                             )
                         ),
@@ -982,7 +980,7 @@ public final class AdsInfoScreen: ViewControllerComponentContainer {
             source: .reference(
                 AdsInfoContextReferenceContentSource(
                     controller: self,
-                    sourceView: referenceView,
+                    sourceView: (referenceView as? GlassBarButtonComponent.View)?.menuSourceView ?? referenceView,
                     insets: .zero,
                     contentInsets: .zero
                 )

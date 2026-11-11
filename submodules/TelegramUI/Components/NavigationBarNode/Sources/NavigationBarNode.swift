@@ -15,6 +15,14 @@ public var navigationBarOverflowMenuPresenter: ((_ sourceView: UIView, _ items: 
 /// The navigation bar every `ViewController` gets: `NavigationBarComponent` driven by the screen's
 /// `UINavigationItem`, in a glass container under an edge effect, with the screen's content nodes, title view and
 /// iPhone Duo side column.
+/// The bar's `contentView`: its buttons, title, side column and extra content all take a tap that drifts up to
+/// `navigationBarTapMovement` before the screen's swipe back does. A transition that lifts the view carries it along.
+private final class NavigationBarNodeContentView: UIView, InteractiveTransitionGestureRecognizerTapTarget {
+    var interactiveTransitionMinimumMovement: CGFloat {
+        return navigationBarTapMovement
+    }
+}
+
 public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBarComponentTransitionSource {
     private struct Layout {
         var size: CGSize
@@ -61,6 +69,8 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
     private let clippingNode: SparseNode
     public let additionalContentNode: SparseNode
+    /// Whether VoiceOver reads `additionalContentNode` (off by default).
+    public var exposesAdditionalContentToAccessibility: Bool = false
     public let customOverBackgroundContentView: UIView
     let edgeEffectViewImpl: EdgeEffectView
     private var backdropAlpha: CGFloat = 1.0
@@ -136,7 +146,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         self.edgeEffectViewImpl.isUserInteractionEnabled = false
         self.glassContainer = GlassBackgroundContainerView()
 
-        self.contentView = UIView()
+        self.contentView = NavigationBarNodeContentView()
         self.backdropHost = UIView()
         self.backdropHost.isUserInteractionEnabled = false
         self.rowHost = SparseContainerView()
@@ -500,6 +510,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
         self.updateSideColumn(rowView: rowView, region: sideColumn, transition: rowTransition)
         self.layoutTitleView(layout: layout, rowView: rowView, contentVerticalOrigin: contentVerticalOrigin, transition: transition)
+        // A title pill moved under the transition's glass: the glass follows it rather than snap at the hand-over. It
+        // re-reads this bar now, which is safe: the row, its content and the title view are laid out by here.
+        self.glassHold.titlePillLaidOut(self.transitionTitlePill)
 
         if sideColumnExtentChanged && !isContainerLayout {
             self.sideColumnExtentUpdated?(transition)
@@ -924,7 +937,11 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     }
 
     public func holdGlass(_ held: Bool, interrupted: (() -> Void)?) -> Bool {
-        self.glassHold.hold(held, interrupted: interrupted, content: self.currentContent, rowFrame: self.currentRowFrame)
+        return self.holdGlass(held, interrupted: interrupted, titlePillMoved: nil)
+    }
+
+    public func holdGlass(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)?) -> Bool {
+        self.glassHold.hold(held, interrupted: interrupted, titlePillMoved: titlePillMoved, content: self.currentContent, rowFrame: self.currentRowFrame, titlePill: self.transitionTitlePill)
         self.applyGlassVisibility()
         return true
     }
@@ -1022,16 +1039,37 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         return result
     }
 
+    private static func collectAccessibilityElements(in view: UIView, to elements: inout [UIView]) {
+        for subview in view.subviews {
+            if subview.isHidden || subview.alpha < 0.01 || subview.accessibilityElementsHidden {
+                continue
+            }
+            if subview.isAccessibilityElement || subview is UISegmentedControl || subview.accessibilityElements != nil {
+                elements.append(subview)
+            } else {
+                NavigationBarNode.collectAccessibilityElements(in: subview, to: &elements)
+            }
+        }
+    }
+    
     override public var accessibilityElements: [Any]? {
         get {
             var elements: [Any] = []
-            if let rowView = self.rowView, !self.glassContainer.alpha.isZero {
+            // Not while the screen hides its bar (`setDisplayNavigationBar(false)`, e.g. an active search): the row is
+            // faded out and moved above the screen, only the search field in the content node stays.
+            if let rowView = self.rowView, !self.glassContainer.alpha.isZero, !self.isRowHiddenByController {
                 elements.append(contentsOf: rowView.leadingAccessibilityElements)
                 if let titleView = self.titleView, titleView.superview != nil {
                     titleView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(titleView.bounds, in: titleView)
                     elements.append(titleView)
                 } else if let titleElement = rowView.titleAccessibilityElement {
                     elements.append(titleElement)
+                }
+                // A title a screen draws itself and adds straight to the bar's view (ForumSettingsScreen, the
+                // Business settings, …): the bar's own subviews are containers, so a direct subview that is a text element
+                // is such a title. It is read where the bar's title is; those screens mark it as a heading.
+                for subview in self.view.subviews where subview.isAccessibilityElement && subview.accessibilityTraits.contains(.staticText) && !subview.isHidden && subview.alpha >= 0.01 && !subview.accessibilityElementsHidden {
+                    elements.append(subview)
                 }
                 elements.append(contentsOf: rowView.trailingAccessibilityElements)
             }
@@ -1041,6 +1079,26 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
             if let secondaryContentNode = self.secondaryContentNode {
                 addAccessibilityChildren(of: secondaryContentNode, container: self, to: &elements)
             }
+            // Content a screen places under the bar (a picker's search/token field), for screens that opt in; the chat's
+            // title panels live here too and keep their earlier (unlisted) behaviour until the chat's own pass.
+            if self.exposesAdditionalContentToAccessibility, !self.additionalContentNode.alpha.isZero, !self.additionalContentNode.isHidden {
+                addAccessibilityChildren(of: self.additionalContentNode, container: self, to: &elements)
+            }
+            // A screen's header drawn over the bar's background (a large title, a chart, a segmented control). The
+            // container is a zero-size sparse view, so its elements are listed here.
+            var overBackgroundElements: [UIView] = []
+            if !self.customOverBackgroundContentView.isHidden, self.customOverBackgroundContentView.alpha > 0.01 {
+                NavigationBarNode.collectAccessibilityElements(in: self.customOverBackgroundContentView, to: &overBackgroundElements)
+            }
+            overBackgroundElements.sort { lhs, rhs in
+                let lhsFrame = lhs.convert(lhs.bounds, to: nil)
+                let rhsFrame = rhs.convert(rhs.bounds, to: nil)
+                if abs(lhsFrame.minY - rhsFrame.minY) > 1.0 {
+                    return lhsFrame.minY < rhsFrame.minY
+                }
+                return lhsFrame.minX < rhsFrame.minX
+            }
+            elements.append(contentsOf: overBackgroundElements)
             return elements
         } set(value) {
         }

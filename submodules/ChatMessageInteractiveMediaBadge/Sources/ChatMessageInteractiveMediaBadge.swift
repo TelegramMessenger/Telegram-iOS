@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TextFormat
 import RadialStatusNode
 import AppBundle
+import StaticGlassBackground
 
 private let font = Font.with(size: 11.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 private let boldFont = Font.with(size: 11.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
@@ -51,6 +52,16 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private var iconName: String?
     
     private let backgroundNode: ASImageNode
+    // Bubble mode off: the badge stands on the dark glass over media (an image of it) instead of its tinted plate.
+    private var glassView: StaticGlassBackgroundView?
+    public var isGlass: Bool = false {
+        didSet {
+            if self.isGlass != oldValue {
+                self.backgroundNodeColor = nil
+                self.updateGlass(transition: .immediate)
+            }
+        }
+    }
     public let durationNode: ASTextNode
     public private(set) var sizeNode: ASTextNode?
     private var measureNode: ASTextNode
@@ -73,6 +84,31 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    private func updateGlass(transition: ContainedViewLayoutTransition) {
+        if self.isGlass {
+            let glassView: StaticGlassBackgroundView
+            var glassTransition = transition
+            if let current = self.glassView {
+                glassView = current
+            } else {
+                glassTransition = .immediate
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.glassView = glassView
+                self.view.insertSubview(glassView, at: 0)
+            }
+            self.backgroundNode.image = nil
+            let frame = self.backgroundNode.frame
+            glassTransition.updateFrame(view: glassView, frame: frame)
+            glassView.update(size: frame.size, cornerRadius: min(9.0, frame.height * 0.5), isDark: true, tint: .media, updateFrame: { view, frame in
+                glassTransition.updateFrame(view: view, frame: frame)
+            })
+        } else if let glassView = self.glassView {
+            self.glassView = nil
+            glassView.removeFromSuperview()
+        }
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -113,7 +149,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         
                         if self.backgroundNodeColor != backgroundColor {
                             self.backgroundNodeColor = backgroundColor
-                            self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
+                            self.backgroundNode.image = self.isGlass ? nil : generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
                         }
                         var textFont = font
                         if iconName != nil {
@@ -158,7 +194,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                     case let .mediaDownload(backgroundColor, foregroundColor, duration, size, muted, active):
                         if self.backgroundNodeColor != backgroundColor {
                             self.backgroundNodeColor = backgroundColor
-                            self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
+                            self.backgroundNode.image = self.isGlass ? nil : generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
                         }
                         
                         if previousActive == nil {
@@ -259,8 +295,10 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
             let previousSize = self.backgroundNode.frame.size
             if previousSize.height == 0 || (previousSize.height == currentContentSize.height && currentContentSize.height == 38.0) {
                 self.backgroundNode.frame = CGRect(x: originX, y: 0.0, width: currentContentSize.width, height: currentContentSize.height)
+                self.updateGlass(transition: .immediate)
             } else {
                 transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: currentContentSize.width, height: currentContentSize.height))
+                self.updateGlass(transition: transition)
             }
             
             contentSize = currentContentSize

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -36,6 +35,10 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let labelNode: TextNode
     private var backgroundNode: WallpaperBubbleBackgroundNode?
+    /// Without bubbles: the outline a gift without a backdrop of its own stands in, instead of a filled card.
+    private var bubblelessOutlineNode: ASDisplayNode?
+    /// Whether the card's fill and the service line's plate are hidden because there are no bubbles.
+    private var hidesPlatesWithoutBubbles = false
     private let backgroundMaskNode: ASImageNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -143,7 +146,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var cachedTonImage: (UIImage, UIColor)?
     private var cachedGiftMessageBackgroundImage: (UIColor, CGSize, UIImage)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
@@ -203,7 +206,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
 
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
@@ -235,7 +238,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.moreTextNode.isUserInteractionEnabled = false
         self.moreTextNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.labelNode)
         
@@ -566,6 +569,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 var title = item.presentationData.strings.Notification_PremiumGift_Title
                 var text = ""
                 var subtitleColor = primaryTextColor
+                // Without bubbles the gift sits on the plain page: its title takes the text colour and the rest the
+                // secondary one, as a message's do, instead of white on a tinted plate.
+                let isBubbleless = item.bubbleStyle == .bubblelessService
+                if isBubbleless {
+                    primaryTextColor = item.presentationData.theme.theme.list.itemPrimaryTextColor
+                    subtitleColor = item.presentationData.theme.theme.list.itemSecondaryTextColor
+                }
                 var entities: [MessageTextEntity] = []
                 var giftMessageText: String?
                 var giftMessageEntities: [MessageTextEntity]?
@@ -1138,7 +1148,11 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                     symbolValueLayoutAndApply = nil
                 }
                 
-                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                // Without bubbles a gift without a backdrop of its own gets an accent button, titled in the colour the
+                // theme pairs with its accent.
+                let isBubblelessOutlinedGift = isBubbleless && uniqueBackgroundColor == nil
+                let bubblelessButtonColors = item.presentationData.theme.theme.list.itemCheckColors
+                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: isBubblelessOutlinedGift ? bubblelessButtonColors.foregroundColor : primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (ribbonTextLayout, ribbonTextApply) = makeRibbonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: ribbonTitle, font: Font.semibold(11.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -1324,7 +1338,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.labelNode.isHidden = !hasServiceMessage
                             
-                            strongSelf.buttonNode.backgroundColor = overlayColor
+                            strongSelf.buttonNode.backgroundColor = isBubblelessOutlinedGift ? bubblelessButtonColors.fillColor : overlayColor
                             
                             strongSelf.animationNode.updateLayout(size: iconSize)
                             strongSelf.placeholderNode.frame = animationFrame
@@ -1642,7 +1656,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                                     }
                                     
-                                    buttonIconNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
+                                    buttonIconNode = DefaultAnimatedStickerNodeImpl()
                                     buttonIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: buttonIcon), width: 60, height: 60, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                                     strongSelf.buttonContentNode.addSubnode(buttonIconNode)
                                     strongSelf.buttonIconNode = buttonIconNode
@@ -1707,6 +1721,33 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 strongSelf.mediaBackgroundContent = backgroundContent
                                 strongSelf.insertSubnode(backgroundContent, at: 0)
+                            }
+                            
+                            if isBubbleless {
+                                strongSelf.hidesPlatesWithoutBubbles = true
+                                strongSelf.mediaBackgroundContent?.isHidden = isBubblelessOutlinedGift
+                            } else if strongSelf.hidesPlatesWithoutBubbles {
+                                strongSelf.hidesPlatesWithoutBubbles = false
+                                strongSelf.mediaBackgroundContent?.isHidden = false
+                                strongSelf.backgroundNode?.isHidden = false
+                            }
+                            if isBubblelessOutlinedGift {
+                                let outlineNode: ASDisplayNode
+                                if let current = strongSelf.bubblelessOutlineNode {
+                                    outlineNode = current
+                                } else {
+                                    outlineNode = ASDisplayNode()
+                                    outlineNode.isLayerBacked = true
+                                    outlineNode.cornerRadius = chatMessageBubblelessGiftOutlineRadius
+                                    outlineNode.borderWidth = 1.0
+                                    strongSelf.bubblelessOutlineNode = outlineNode
+                                    strongSelf.insertSubnode(outlineNode, at: 0)
+                                }
+                                outlineNode.borderColor = item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.stroke.cgColor
+                                animation.animator.updateFrame(layer: outlineNode.layer, frame: mediaBackgroundFrame, completion: nil)
+                            } else if let outlineNode = strongSelf.bubblelessOutlineNode {
+                                strongSelf.bubblelessOutlineNode = nil
+                                outlineNode.removeFromSupernode()
                             }
                             
                             if let backgroundContent = strongSelf.mediaBackgroundContent {
@@ -1816,6 +1857,11 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
 
                                 if let backgroundNode = strongSelf.backgroundNode {
+                                    if isBubbleless {
+                                        // Without bubbles the line above the gift is gray text on the page, as service
+                                        // messages are, without a plate.
+                                        backgroundNode.isHidden = true
+                                    }
                                     animation.animator.updateFrame(layer: backgroundNode.layer, frame: CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size), completion: nil)
                                 }
                                 strongSelf.backgroundMaskNode.image = image

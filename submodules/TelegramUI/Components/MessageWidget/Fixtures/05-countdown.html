@@ -1,0 +1,43 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--tile:light-dark(#f1f2f4,#2c2c2e)}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0 0 10px;font-size:16px}
+.tiles{display:flex;gap:8px}
+.tile{flex:1;padding:10px 0 8px;border-radius:12px;background:var(--tile);text-align:center}
+.tile b{display:block;font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+.track{height:6px;border-radius:3px;background:var(--tile);margin:14px 0 6px;overflow:hidden}
+.prog{height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,#7b61ff,#ff5e8a,#ffb03a)}
+.cap{font-size:13px;color:var(--mut)}
+</style>
+<h3 id="title">Countdown</h3>
+<div class="tiles">
+  <div class="tile"><b id="d">0</b><span>days</span></div>
+  <div class="tile"><b id="h">00</b><span>hours</span></div>
+  <div class="tile"><b id="m">00</b><span>min</span></div>
+  <div class="tile"><b id="s">00</b><span>sec</span></div>
+</div>
+<div class="track"><div class="prog" id="prog"></div></div>
+<div class="cap" id="cap"></div>
+<script>
+const now0 = new Date();
+const target = new Date(now0.getFullYear() + 1, 0, 1);
+const yearStart = new Date(now0.getFullYear(), 0, 1);
+const pad = (v) => String(v).padStart(2, '0');
+const $ = (id) => document.getElementById(id);
+$('title').textContent = 'Until New Year ' + target.getFullYear();
+function tick() {
+  const now = Date.now();
+  const left = Math.max(0, Math.floor((target - now) / 1000));
+  $('d').textContent = Math.floor(left / 86400);
+  $('h').textContent = pad(Math.floor(left / 3600) % 24);
+  $('m').textContent = pad(Math.floor(left / 60) % 60);
+  $('s').textContent = pad(left % 60);
+  const done = (now - yearStart) / (target - yearStart) * 100;
+  $('prog').style.width = done.toFixed(2) + '%';
+  $('cap').textContent = done.toFixed(1) + '% of ' + yearStart.getFullYear() + ' is behind us';
+}
+tick();
+setInterval(tick, 1000);
+</script>

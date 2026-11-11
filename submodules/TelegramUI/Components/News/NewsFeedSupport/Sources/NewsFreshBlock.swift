@@ -93,10 +93,93 @@ public enum NewsFreshBlock {
         return createdAt - segment.revealTime <= lensWindow + 1e-9
     }
 
-    /// The glow's mask centre drifts between these (FeedRow.swift:270-271).
+    /// The glow's mask centre drifts between these, from the top-left of the block's rows of `size` (Feed3
+    /// FeedRow.swift `glowSlice`).
     public static func glowCenters(size: CGSize) -> (start: CGPoint, end: CGPoint) {
         return (CGPoint(x: 8.0, y: min(size.height * 0.62, 120.0)), CGPoint(x: min(size.width * 0.46, 190.0), y: 2.0))
     }
+
+    /// Below this far from the block's top the glow is clear: the mask's centre is never lower than 120 pt, and its
+    /// radius is 150 (Feed3 `FreshBlock.reach`).
+    public static let glowReach: CGFloat = 270.0
+    /// The room the glow is drawn with above its rows and below its reach (Feed3 `FreshBlock.pad`).
+    public static let glowPad: CGFloat = 16.0
+}
+
+/// A new-posts block whose glow the list draws over all of its rows (Feed3 FeedRow.swift `FreshBlock`); the rows draw
+/// its fill.
+public struct NewsFreshGlowBlock: Equatable {
+    /// The block's first row, among the rows it was found in.
+    public var firstRow: Int
+    /// The block's loaded rows, top to bottom.
+    public var rowsFrame: CGRect
+    /// Its last row is loaded: the card's bottom is drawn. Otherwise the card's sides run on past `rowsFrame`.
+    public var isClosed: Bool
+    public var revealTime: Double
+
+    public init(firstRow: Int, rowsFrame: CGRect, isClosed: Bool, revealTime: Double) {
+        self.firstRow = firstRow
+        self.rowsFrame = rowsFrame
+        self.isClosed = isClosed
+        self.revealTime = revealTime
+    }
+
+    /// Where the glow is drawn: the rows down to `glowReach`, with `glowPad` above and below.
+    public var layout: NewsFreshGlowLayout {
+        let B = NewsFreshBlock.self
+        let frame = CGRect(x: self.rowsFrame.minX, y: self.rowsFrame.minY - B.glowPad, width: self.rowsFrame.width, height: min(self.rowsFrame.height, B.glowReach) + 2.0 * B.glowPad)
+        let rows = self.rowsFrame.offsetBy(dx: -frame.minX, dy: -frame.minY)
+        let (start, end) = B.glowCenters(size: rows.size)
+        return NewsFreshGlowLayout(
+            frame: frame,
+            card: B.sliceRect(bounds: rows, isFirst: true, isLast: self.isClosed),
+            driftStart: CGPoint(x: rows.minX + start.x, y: rows.minY + start.y),
+            driftEnd: CGPoint(x: rows.minX + end.x, y: rows.minY + end.y)
+        )
+    }
+}
+
+public struct NewsFreshGlowLayout: Equatable {
+    /// In the coordinates of the rows' frames.
+    public var frame: CGRect
+    /// The card, and the two ends of the drift of the glow's mask centre, in `frame`'s own coordinates.
+    public var card: CGRect
+    public var driftStart: CGPoint
+    public var driftEnd: CGPoint
+}
+
+/// The blocks among loaded rows, given in index order with their segments. A block whose first row is not loaded has
+/// no glow: it starts at the list's top, and its glow, within `glowReach` of that row's top, is off screen with it.
+public func newsFreshGlowBlocks(rows: [(frame: CGRect, segment: NewsFreshSegment?)]) -> [NewsFreshGlowBlock] {
+    var result: [NewsFreshGlowBlock] = []
+    var current: NewsFreshGlowBlock?
+    for (index, row) in rows.enumerated() {
+        guard let segment = row.segment else {
+            if let block = current {
+                result.append(block)
+                current = nil
+            }
+            continue
+        }
+        if segment.isFirst {
+            if let block = current {
+                result.append(block)
+            }
+            current = NewsFreshGlowBlock(firstRow: index, rowsFrame: row.frame, isClosed: false, revealTime: segment.revealTime)
+        } else if var block = current {
+            block.rowsFrame = block.rowsFrame.union(row.frame)
+            current = block
+        }
+        if segment.isLast, var block = current {
+            block.isClosed = true
+            result.append(block)
+            current = nil
+        }
+    }
+    if let current {
+        result.append(current)
+    }
+    return result
 }
 
 /// Each revealed row's segment: consecutive revealed rows make one block.

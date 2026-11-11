@@ -15,7 +15,6 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
-import LottieSettings
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -814,6 +813,8 @@ public enum PeerInfoControllerMode {
     case storyAlbum(id: Int64)
     case giftCollection(id: Int64)
     case media(kind: PeerInfoMediaKind, messageIndex: EngineMessage.Index)
+    /// Saved Messages' profile where the chat side list shows its chats (the list's header, the chat's header): no Chats tab.
+    case chatSideList
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -1014,6 +1015,49 @@ public class MediaEditorTransitionOutExternalState {
         self.isForcedTarget = isForcedTarget
         self.isPeerArchived = isPeerArchived
         self.transitionOut = transitionOut
+    }
+}
+
+public struct ChatCameraParams {
+    public let allowPhoto: Bool
+    public let allowVideo: Bool
+    public let isSingleShot: Bool
+    public let maxCount: Int
+    public let hasAudio: Bool
+    public let saveCapturedMedia: Bool
+    public let recognizedQRCode: (String) -> Bool
+    public let prefersFrontCamera: Bool
+    public let mirrorsFrontResult: Bool
+    public let documentFrame: ChatCameraDocumentFrame?
+    public let locksPortrait: Bool
+    public let fixesCameraPosition: Bool
+
+    public init(
+        allowPhoto: Bool,
+        allowVideo: Bool,
+        isSingleShot: Bool,
+        maxCount: Int = 100,
+        hasAudio: Bool,
+        saveCapturedMedia: Bool,
+        recognizedQRCode: @escaping (String) -> Bool,
+        prefersFrontCamera: Bool = false,
+        mirrorsFrontResult: Bool = true,
+        documentFrame: ChatCameraDocumentFrame? = nil,
+        locksPortrait: Bool = false,
+        fixesCameraPosition: Bool = false
+    ) {
+        self.allowPhoto = allowPhoto
+        self.allowVideo = allowVideo
+        self.isSingleShot = isSingleShot
+        self.maxCount = maxCount
+        self.hasAudio = hasAudio
+        self.saveCapturedMedia = saveCapturedMedia
+        self.recognizedQRCode = recognizedQRCode
+        self.prefersFrontCamera = prefersFrontCamera
+        self.mirrorsFrontResult = mirrorsFrontResult
+        self.documentFrame = documentFrame
+        self.locksPortrait = locksPortrait
+        self.fixesCameraPosition = fixesCameraPosition
     }
 }
 
@@ -1418,6 +1462,25 @@ public enum WalletWordsScreenMode: Equatable {
     case backupDisable(updateSecretPhrase: Bool)
 }
 
+/// What a feed row's message bubble does on a tap in its content.
+public final class ChatMessageFeedItemActions {
+    public let openUrl: (String) -> Void
+    /// A tap on media the bubble shows (a link preview's photo, a file): true when handled.
+    public let openMessage: (EngineMessage) -> Bool
+    public let openPeer: (EnginePeer) -> Void
+    public let openInstantPage: (EngineMessage) -> Void
+    /// A tap on a reply header: the message it replies to.
+    public let navigateToMessage: (EngineMessage.Id) -> Void
+
+    public init(openUrl: @escaping (String) -> Void, openMessage: @escaping (EngineMessage) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void, navigateToMessage: @escaping (EngineMessage.Id) -> Void) {
+        self.openUrl = openUrl
+        self.openMessage = openMessage
+        self.openPeer = openPeer
+        self.openInstantPage = openInstantPage
+        self.navigateToMessage = navigateToMessage
+    }
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1488,6 +1551,10 @@ public protocol SharedAccountContext: AnyObject {
     ) -> ChatHistoryListNode
     func subscribeChatListData(context: AccountContext, location: ChatListControllerLocation) -> Signal<EngineChatList, NoError>
     func makeChatMessagePreviewItem(context: AccountContext, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((EngineMessage) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?, isGiftMessageComposerPreview: Bool, activateGiftMessageInput: (() -> Void)?) -> ListViewItem
+    /// A message bubble's content for a feed row (the News tab's expanded post): the bubble's text, link preview and
+    /// other content, drawn without the bubble's background and author line. The host draws the channel line and the
+    /// photos and videos (the item never shows them).
+    func makeChatMessageFeedItem(context: AccountContext, messages: [EngineMessage], presentationData: PresentationData, accountPeer: EnginePeer?, actions: ChatMessageFeedItemActions) -> ListViewItem
     func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: EnginePeer, message: EngineMessage, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makePeerSharedMediaController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController?
@@ -1546,7 +1613,6 @@ public protocol SharedAccountContext: AnyObject {
     func openAddContact(context: AccountContext, peer: EnginePeer?, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
-    func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
     func displaySetPhoto(
         parentController: ViewController,
         context: AccountContext,
@@ -1563,6 +1629,17 @@ public protocol SharedAccountContext: AnyObject {
         completion: @escaping (UIImage?) -> Void,
         completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
     )
+    func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        canDelete: Bool,
+        performDelete: @escaping () -> Void,
+        options: SetPhotoOptions,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    )
+    func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController?
     func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: EnginePeer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable)
     func makeInstantPageController(context: AccountContext, message: EngineMessage, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController?
     func makeInstantPageController(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation) -> ViewController
@@ -1582,7 +1659,12 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], actionTitle: String?, isEditing: Bool, expandIfNeeded: Bool, parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, actionPerformed: (([StickerPackScreenActionResult]) -> Void)?) -> ViewController
     func makeCameraScreen(context: AccountContext, mode: CameraScreenMode, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, completion: @escaping (Any, @escaping () -> Void) -> Void, transitionedOut: (() -> Void)?) -> ViewController
+    func makeChatCameraScreen(context: AccountContext, parameters: ChatCameraScreenParameters, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, transitionedOut: (() -> Void)?) -> ViewController
     func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController
+    func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController
+    func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) -> Void
+    func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController?
+    func makeWallpaperMediaEditor(context: AccountContext, asset: PHAsset, screenImage: UIImage, cropRect: CGRect, previousState: Any?, referenceView: UIView, apply: @escaping (UIImage?, Any?) -> Void, fullSizeApply: @escaping (UIImage?) -> Void, beginTransitionOut: @escaping (Bool) -> Void, finishTransitionOut: @escaping () -> Void) -> ViewController
     func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, remainingCount: Int32, completion: @escaping ([MediaEditorScreenResult], MediaEditorTransitionOutExternalState, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController
     func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     func makeStickerEditorScreen(context: AccountContext, source: Any?, mode: StickerEditorMode, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
@@ -1625,7 +1707,9 @@ public protocol SharedAccountContext: AnyObject {
     func makeWalletInfoScreen(context: AccountContext, mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
     func makeWalletInfoScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), mode: WalletInfoScreenMode, completion: (() -> Void)?) -> ViewController
     func makeWalletConnectScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectRequest, cancelled: @escaping () -> Void, connect: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
-    func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
+    /// The TON Connect window. `requester`: a Telegram peer that asks instead of a dApp (a message widget's bot), its
+    /// avatar in the header; `ignoresTouchesFor`: seconds after it loads that it takes no touch (0 for a dApp).
+    func makeWalletTransferScreen(context: AccountContext, walletContext: WalletContext, request: WalletContext.TonConnectOperationRequest, requester: EnginePeer?, ignoresTouchesFor: Double, cancelled: @escaping () -> Void, confirm: @escaping (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
     func makeWalletTransactionScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), walletContext: WalletContext, transaction: WalletContext.Transaction, fromChat: Bool, decryptCommentOnOpen: Bool) -> ViewController
@@ -1715,6 +1799,7 @@ public protocol SharedAccountContext: AnyObject {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) async -> ViewController?
     func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController
@@ -1776,6 +1861,21 @@ public enum ChatSendMessageActionSheetControllerSendMode {
 
 public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisplayNode {
     func makeCustomContents() -> UIView?
+    /// The tint of a send button drawn as glass (bubble mode off), so the send menu's copy of it is the same glass; nil
+    /// for a flat one.
+    var sendButtonGlassTintColor: UIColor? { get }
+    /// Where that glass is, in the node's own coordinates, so the copy keeps its size and place.
+    var sendButtonGlassFrame: CGRect? { get }
+}
+
+public extension ChatSendMessageActionSheetControllerSourceSendButtonNode {
+    var sendButtonGlassTintColor: UIColor? {
+        return nil
+    }
+    
+    var sendButtonGlassFrame: CGRect? {
+        return nil
+    }
 }
 
 public protocol ChatSendMessageActionSheetController: ViewController {
@@ -1822,11 +1922,6 @@ public protocol AccountContext: AnyObject {
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
-
-    /// Which Lottie rasterizer this account's renders should use. Resolved from
-    /// app configuration and the debug switch; see the implementation for the
-    /// precedence rule.
-    var lottieRenderingSettings: LottieRenderingSettings { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     

@@ -1471,6 +1471,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         self.updateWindowScrollToTopProxyViews(layout: layout)
+        self.updateModalAccessibility()
 
         self.isUpdatingContainers = false
         
@@ -1493,6 +1494,31 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 externalCompletion()
             }
+        }
+    }
+    
+    /// VoiceOver reads only the topmost presented modal: what it covers (the root stack, lower modals) is hidden, as
+    /// UIKit does for a modal presentation. Overlay containers above the modals are not affected.
+    private func updateModalAccessibility() {
+        let topModalContainer = self.modalContainers.last(where: { $0.supernode != nil })
+        for modalContainer in self.modalContainers {
+            let isHidden = topModalContainer != nil && modalContainer !== topModalContainer
+            if modalContainer.accessibilityElementsHidden != isHidden {
+                modalContainer.accessibilityElementsHidden = isHidden
+            }
+        }
+        let isRootHidden = topModalContainer != nil
+        let rootNode: ASDisplayNode?
+        switch self.rootContainer {
+        case let .flat(flatContainer):
+            rootNode = flatContainer
+        case let .split(splitContainer):
+            rootNode = splitContainer
+        case .none:
+            rootNode = nil
+        }
+        if let rootNode, rootNode.accessibilityElementsHidden != isRootHidden {
+            rootNode.accessibilityElementsHidden = isRootHidden
         }
     }
     
@@ -1594,6 +1620,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private var verticalExpansionPopContainer: NavigationContainer?
+
+    /// The bar part of a push or pop ends at once, running or only its glass still animating above the bar it ended on:
+    /// for a screen about to move a bar away, which the transition's glass would not follow.
+    public func endNavigationBarTransitionNow() {
+        if let rootContainer = self.rootContainer, case let .flat(container) = rootContainer {
+            container.endNavigationBarTransitionNow()
+        }
+    }
 
     public func beginVerticalExpansionPop(from controller: ViewController, anchor: CGPoint) -> Bool {
         guard let rootContainer = self.rootContainer, case let .flat(container) = rootContainer, container.controllers.last === controller else {

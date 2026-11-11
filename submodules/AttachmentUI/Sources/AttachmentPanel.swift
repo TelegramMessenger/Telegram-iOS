@@ -342,8 +342,7 @@ private final class AttachButtonComponent: CombinedComponent {
                         ),
                         tintColor: tintColor,
                         isAnimating: component.isAnimating,
-                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale)
                     ),
                     availableSize: iconSize,
                     transition: context.transition
@@ -362,8 +361,7 @@ private final class AttachButtonComponent: CombinedComponent {
                         ),
                         tintColor: tintColor,
                         isAnimating: component.isAnimating,
-                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale)
                     ),
                     availableSize: iconSize,
                     transition: context.transition
@@ -605,7 +603,9 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
     private var state: AttachmentMainButtonState
     private var panelStyle: AttachmentPanel.Style?
     private var size: CGSize?
+    private var isDark: Bool = false
 
+    private var glassBackgroundView: GlassBackgroundView?
     private let backgroundAnimationNode: ASImageNode
     private var iconNode: ASImageNode?
     private var iconLayer: InlineStickerItemLayer?
@@ -761,7 +761,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
                 self.updateShimmerParameters()
 
                 if let size = self.size, let context = self.context, let style = self.panelStyle {
-                    self.updateLayout(size: size, context: context, style: style, state: state, transition: .immediate)
+                    self.updateLayout(size: size, context: context, style: style, isDark: self.isDark, state: state, transition: .immediate)
                 }
             }
         } else if self.shimmerView != nil {
@@ -831,12 +831,13 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         }
     }
 
-    func updateLayout(size: CGSize, context: AccountContext, style: AttachmentPanel.Style, state: AttachmentMainButtonState, animateBackground: Bool = false, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, context: AccountContext, style: AttachmentPanel.Style, isDark: Bool, state: AttachmentMainButtonState, animateBackground: Bool = false, transition: ContainedViewLayoutTransition) {
         let previousState = self.state
         self.context = context
         self.state = state
         self.panelStyle = style
         self.size = size
+        self.isDark = isDark
 
         switch style {
         case .glass:
@@ -844,6 +845,30 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         case .legacy:
             self.cornerRadius = 12.0
         }
+
+        var hasGlassBackground = false
+        if case .glass = style, case let .color(backgroundColor) = state.background, backgroundColor.alpha.isZero {
+            hasGlassBackground = true
+        }
+        if hasGlassBackground {
+            let glassBackgroundView: GlassBackgroundView
+            var glassTransition = ComponentTransition(transition)
+            if let current = self.glassBackgroundView {
+                glassBackgroundView = current
+            } else {
+                glassTransition = .immediate
+                glassBackgroundView = GlassBackgroundView()
+                glassBackgroundView.isUserInteractionEnabled = false
+                self.glassBackgroundView = glassBackgroundView
+                self.view.insertSubview(glassBackgroundView, at: 0)
+            }
+            glassBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: isDark, tintColor: .init(kind: .panel), transition: glassTransition)
+            glassTransition.setFrame(view: glassBackgroundView, frame: CGRect(origin: .zero, size: size))
+        } else if let glassBackgroundView = self.glassBackgroundView {
+            self.glassBackgroundView = nil
+            glassBackgroundView.removeFromSuperview()
+        }
+        self.clipsToBounds = !hasGlassBackground
 
         self.isUserInteractionEnabled = state.isVisible
 
@@ -2968,7 +2993,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
 
             if let mainButtonFrame {
                 if !self.dismissed {
-                    self.mainButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, state: self.mainButtonState, animateBackground: self.mainButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
+                    self.mainButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, isDark: self.presentationData.theme.overallDarkAppearance, state: self.mainButtonState, animateBackground: self.mainButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
                 }
                 if self.mainButtonNode.frame.width.isZero {
                     self.mainButtonNode.frame = mainButtonFrame
@@ -2981,7 +3006,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             }
             if let secondaryButtonFrame {
                 if !self.dismissed {
-                    self.secondaryButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, state: self.secondaryButtonState, animateBackground: self.secondaryButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
+                    self.secondaryButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, isDark: self.presentationData.theme.overallDarkAppearance, state: self.secondaryButtonState, animateBackground: self.secondaryButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
                 }
                 if self.secondaryButtonNode.frame.width.isZero {
                     self.secondaryButtonNode.frame = secondaryButtonFrame

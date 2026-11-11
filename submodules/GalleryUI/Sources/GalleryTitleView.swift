@@ -161,6 +161,12 @@ public final class GalleryTitleView: UIView, NavigationBarTitleView {
         }
 
         self.backgroundContainer.isHidden = (authorNameText?.isEmpty ?? true) && (dateText?.isEmpty ?? true)
+        
+        // VoiceOver: the title is one heading, "author, date", as shown.
+        let accessibilityTitle = [authorNameText, dateText].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+        self.isAccessibilityElement = !accessibilityTitle.isEmpty
+        self.accessibilityLabel = accessibilityTitle.isEmpty ? nil : accessibilityTitle
+        self.accessibilityTraits = .header
 
         self.titleString = content?.title
 

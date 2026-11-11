@@ -1,0 +1,34 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>Build kicked off ⏳ — follow along in <b>Deploy Bot</b> <span style="color: #8e8e93">(sidebar)</span>
+</body></html>
+
+== layout
+html 0 0 360 36.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 36.4
+    b 0 0 0 0
+    span 0 0 0 0
+
+== paint
+root 360x36.4 items=11
+  text bounds=(-8,-7,56,32) pos=(0,1,40,16) color=#000000ff text="Build" font=f1 glyphs=5 advance=40
+  text bounds=(40,-7,64,32) pos=(48,1,48,16) color=#000000ff text="kicked" font=f1 glyphs=6 advance=48
+  text bounds=(96,-7,40,32) pos=(104,1,24,16) color=#000000ff text="off" font=f1 glyphs=3 advance=24
+  text bounds=(128,-7,40,32) pos=(136,1,24,16) color=#000000ff text="⏳" font=f1 glyphs=3 advance=24
+  text bounds=(160,-7,40,32) pos=(168,1,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(192,-7,64,32) pos=(200,1,48,16) color=#000000ff text="follow" font=f1 glyphs=6 advance=48
+  text bounds=(248,-7,56,32) pos=(256,1,40,16) color=#000000ff text="along" font=f1 glyphs=5 advance=40
+  text bounds=(296,-7,32,32) pos=(304,1,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(-8,11,64,32) pos=(0,19,48,16) color=#000000ff text="Deploy" font=f2 glyphs=6 advance=48
+  text bounds=(48,11,40,32) pos=(56,19,24,16) color=#000000ff text="Bot" font=f2 glyphs=3 advance=24
+  text bounds=(80,11,88,32) pos=(88,19,72,16) color=#8e8e93ff text="(sidebar)" font=f1 glyphs=9 advance=72
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

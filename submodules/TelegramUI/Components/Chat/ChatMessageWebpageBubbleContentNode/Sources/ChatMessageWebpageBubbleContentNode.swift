@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -33,10 +32,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.contentNode = ChatMessageAttachedContentNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] mode in
@@ -193,6 +192,13 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func bubblelessLiftParts() -> [ChatMessageBubblelessLiftPart] {
+        if let inlineBlockFrame = self.contentNode.inlineBlockFrame {
+            return [.block(inlineBlockFrame.offsetBy(dx: self.contentNode.frame.minX, dy: self.contentNode.frame.minY))]
+        }
+        return super.bubblelessLiftParts()
     }
     
     /// A suspicious sender's link preview opens nothing, as their links do not

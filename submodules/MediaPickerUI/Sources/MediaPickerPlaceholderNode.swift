@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -12,6 +11,7 @@ import PresentationDataUtils
 final class MediaPickerPlaceholderNode: ASDisplayNode {
     enum Content {
         case intro(story: Bool)
+        case qrCodeIntro
         case bannedSendMedia(text: String, canBoost: Bool)
     }
     
@@ -31,13 +31,13 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
     var settingsPressed: () -> Void = {}
     var cameraPressed: () -> Void = {}
     
-    init(content: Content, lottieSettings: LottieRenderingSettings) {
+    init(content: Content) {
         self.content = content
         
         let name: String
         let playbackMode: AnimatedStickerPlaybackMode
         switch content {
-            case .intro:
+            case .intro, .qrCodeIntro:
                 name = "Photos"
                 playbackMode = .loop
             case .bannedSendMedia:
@@ -45,7 +45,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
                 playbackMode = .once
         }
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 320, height: 320, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
@@ -84,7 +84,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             self.buttonNode.pressed = { [weak self] in
                 self?.boostPressed()
             }
-        case .intro:
+        case .intro, .qrCodeIntro:
             self.addSubnode(self.titleNode)
             self.addSubnode(self.buttonNode)
             
@@ -148,7 +148,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             self.cameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/OpenCamera"), color: theme.list.itemAccentColor)
         }
         switch self.content {
-        case .intro:
+        case .intro, .qrCodeIntro:
             self.buttonNode.title = strings.Attachment_OpenSettings
         case .bannedSendMedia:
             self.buttonNode.title = strings.Attachment_BoostToUnlock
@@ -163,6 +163,9 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             case let .intro(story):
                 title = strings.Attachment_MediaAccessTitle
                 text = story ? strings.Attachment_MediaAccessStoryText : strings.Attachment_MediaAccessText
+            case .qrCodeIntro:
+                title = strings.Attachment_MediaAccessTitle
+                text = strings.AccessDenied_QrCode
             case let .bannedSendMedia(banDescription, _):
                 title = ""
                 text = banDescription

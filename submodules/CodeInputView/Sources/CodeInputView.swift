@@ -111,6 +111,22 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    /// The real input is a near-invisible 1pt field; for VoiceOver it stands where the code boxes are drawn.
+    private final class CodeTextField: UITextField {
+        weak var accessibilityHostView: UIView?
+        
+        override var accessibilityFrame: CGRect {
+            get {
+                if let hostView = self.accessibilityHostView {
+                    return UIAccessibility.convertToScreenCoordinates(hostView.bounds, in: hostView)
+                }
+                return super.accessibilityFrame
+            } set(value) {
+                super.accessibilityFrame = value
+            }
+        }
+    }
+    
     private let prefixLabel: ImmediateTextNode
     public let textField: UITextField
     
@@ -137,7 +153,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     
     override public init() {
         self.prefixLabel = ImmediateTextNode()
-        self.textField = UITextField()
+        self.textField = CodeTextField()
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.textField.keyboardType = .asciiCapableNumberPad
@@ -156,6 +172,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         self.textField.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
         self.textField.alpha = 0.01
         self.view.addSubview(self.textField)
+        (self.textField as? CodeTextField)?.accessibilityHostView = self.view
 
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         self.textField.delegate = self
@@ -164,6 +181,22 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     
     required public init?(coder: NSCoder) {
         preconditionFailure()
+    }
+    
+    /// VoiceOver: the known leading digits (`prefix`, missed-call codes) when shown, then the code as one text field
+    /// (its label set by the host through `textField.accessibilityLabel`) over the drawn boxes. Listed explicitly: the
+    /// collector would skip the field for its 0.01 alpha.
+    override public var accessibilityElements: [Any]? {
+        get {
+            if !self.prefix.isEmpty {
+                self.prefixLabel.isAccessibilityElement = true
+                self.prefixLabel.accessibilityLabel = self.prefix
+                self.prefixLabel.accessibilityTraits = .staticText
+                return [self.prefixLabel.view, self.textField]
+            }
+            return [self.textField]
+        } set(value) {
+        }
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {

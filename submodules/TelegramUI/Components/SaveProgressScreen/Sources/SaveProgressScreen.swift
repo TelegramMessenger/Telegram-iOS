@@ -138,7 +138,7 @@ private final class ProgressComponent: Component {
                 cancelButtonView.frame = cancelButtonFrame
             }
             
-            return CGSize(width: width, height: 104.0)
+            return CGSize(width: width, height: progressPosition.y + self.progressLayer.bounds.height / 2.0 + inset)
         }
     }
     
@@ -155,18 +155,24 @@ private final class BannerComponent: Component {
     typealias EnvironmentType = Empty
     
     let iconName: String
+    let iconColors: [String: UIColor]
     let text: String
     
     init(
         iconName: String,
+        iconColors: [String: UIColor],
         text: String
     ) {
         self.iconName = iconName
+        self.iconColors = iconColors
         self.text = text
     }
     
     static func ==(lhs: BannerComponent, rhs: BannerComponent) -> Bool {
         if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.iconColors != rhs.iconColors {
             return false
         }
         if lhs.text != rhs.text {
@@ -191,7 +197,7 @@ private final class BannerComponent: Component {
             let iconSize = self.icon.update(
                 transition: transition,
                 component: AnyComponent(
-                    LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: component.iconName, mode: .animating(loop: false)), colors: [:], size: CGSize(width: 32.0, height: 32.0))
+                    LottieAnimationComponent(animation: LottieAnimationComponent.AnimationItem(name: component.iconName, mode: .animating(loop: false)), colors: component.iconColors, size: CGSize(width: 32.0, height: 32.0))
                 ),
                 environment: {},
                 containerSize: CGSize(width: 32.0, height: 32.0)
@@ -249,8 +255,13 @@ public final class SaveProgressScreenComponent: Component {
             case completion
         }
         
+        public enum CompletionIcon: Equatable {
+            case saved
+            case succeeded
+        }
+        
         case progress(String, Float)
-        case completion(String)
+        case completion(String, icon: CompletionIcon = .saved)
         
         var type: ContentType {
             switch self {
@@ -337,8 +348,14 @@ public final class SaveProgressScreenComponent: Component {
             case let .progress(title, progress):
                 content = AnyComponent(ProgressComponent(title: title, value: progress, cancel: component.cancel))
                 cornerRadius = 18.0
-            case let .completion(text):
-                content = AnyComponent(BannerComponent(iconName: "anim_savemedia", text: text))
+            case let .completion(text, icon):
+                switch icon {
+                case .saved:
+                    content = AnyComponent(BannerComponent(iconName: "anim_savemedia", iconColors: [:], text: text))
+                case .succeeded:
+                    let checkColor = UIColor(rgb: 0x2c2c2c)
+                    content = AnyComponent(BannerComponent(iconName: "anim_success", iconColors: ["info1.info1.stroke": checkColor, "info2.info2.Fill": checkColor], text: text))
+                }
                 cornerRadius = 9.0
             }
             

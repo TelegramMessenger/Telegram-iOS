@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -29,6 +28,7 @@ import ComponentFlow
 import ComponentDisplayAdapters
 import EdgeEffect
 import UndoUI
+import GlassBackgroundComponent
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -70,6 +70,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private var segmentedControlSelectedIndex: Int = 0
 
     private var textInputPanelNode: AttachmentTextInputPanelNode?
+    private var textInputBackgroundView: GlassBackgroundView?
+    private var textInputEdgeEffectView: EdgeEffectView?
     private var forwardAccessoryPanelNode: ForwardAccessoryPanelNode?
 
     var contactListNode: ContactListNode?
@@ -190,7 +192,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.emptyTextNode.isHidden = true
         self.emptyTextNode.lineSpacing = 0.25
 
-        self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.emptyAnimationNode.isHidden = true
         self.emptyAnimationSize = CGSize(width: 120.0, height: 120.0)
@@ -492,7 +494,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
                     var isDice = false
                     for media in message.media {
-                        if media is TelegramMediaDice {
+                        if media is TelegramMediaDice || media is TelegramMediaWidget {
+                            // A widget, as a dice, is never forwarded without its sender (widget-sandbox v0.2).
                             isDice = true
                         } else if (media as? TelegramMediaFile)?.isMusic != true {
                             if !message.text.isEmpty {
@@ -986,12 +989,22 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             } else {
                 let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState, animationCache: nil, animationRenderer: nil)
                 forwardAccessoryPanelNode.interfaceInteraction = self.interfaceInteraction
+                if self.bottomEdgeEffectView == nil {
+                    let textInputEdgeEffectView = EdgeEffectView()
+                    self.view.addSubview(textInputEdgeEffectView)
+                    self.textInputEdgeEffectView = textInputEdgeEffectView
+                }
                 self.addSubnode(forwardAccessoryPanelNode)
                 self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
+
+                let textInputBackgroundView = GlassBackgroundView()
+                self.view.insertSubview(textInputBackgroundView, belowSubview: forwardAccessoryPanelNode.view)
+                self.textInputBackgroundView = textInputBackgroundView
 
                 let textInputPanelNode = AttachmentTextInputPanelNode(
                     context: self.context,
                     presentationInterfaceState: self.presentationInterfaceState,
+                    glass: true,
                     customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable,
                     presentController: { [weak self] c in
                         self?.present(c, nil)
@@ -1104,9 +1117,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         var toolbarHeight: CGFloat = cleanInsets.bottom
         var textPanelHeight: CGFloat?
         var accessoryHeight: CGFloat = 0.0
+        let textInputBackgroundSideInset: CGFloat = 16.0
+        let textInputBackgroundWidth = max(0.0, layout.size.width - inputPanelSideInsets.left - inputPanelSideInsets.right - textInputBackgroundSideInset * 2.0)
 
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
-            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - inputPanelSideInsets.left - inputPanelSideInsets.right, height: layout.size.height))
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: textInputBackgroundWidth, height: layout.size.height))
             accessoryHeight = size.height
         }
 
@@ -1115,8 +1130,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
+            let hasBottomInput = textInputPanelNode.additionalInputHeight > 0.0 || (layout.inputHeight ?? 0.0) > 0.0
+            textInputPanelNode.inputPanelBottomSpacing = hasBottomInput ? 8.0 : 28.0
             var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
-            let effectiveBottomInset = textInputPanelNode.additionalInputHeight > 0.0 ? 0.0 : (self.searchDisplayController == nil ? insets.bottom : cleanInsets.bottom)
+            let fieldBackgroundHeight = max(0.0, panelHeight - textInputPanelNode.inputPanelBottomSpacing - textInputPanelNode.additionalInputHeight)
+            let effectiveBottomInset = textInputPanelNode.additionalInputHeight > 0.0 || !hasBottomInput ? 0.0 : (self.searchDisplayController == nil ? insets.bottom : cleanInsets.bottom)
             panelHeight += effectiveBottomInset
             textPanelHeight = panelHeight
 
@@ -1127,16 +1145,25 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 textInputPanelNode.frame = initialPanelFrame
             }
             transition.updateFrame(node: textInputPanelNode, frame: panelFrame)
+
+            if let textInputBackgroundView = self.textInputBackgroundView {
+                let backgroundSize = CGSize(width: textInputBackgroundWidth, height: fieldBackgroundHeight + accessoryHeight)
+                let backgroundFrame = CGRect(origin: CGPoint(x: inputPanelSideInsets.left + textInputBackgroundSideInset, y: panelFrame.minY - accessoryHeight), size: backgroundSize)
+                var backgroundTransition = ComponentTransition(transition)
+                if textInputBackgroundView.bounds.width.isZero {
+                    backgroundTransition = .immediate
+                    textInputBackgroundView.frame = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: layout.size.height), size: backgroundSize)
+                }
+                textInputBackgroundView.update(size: backgroundSize, cornerRadius: min(20.0, backgroundSize.height * 0.5), isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: backgroundTransition)
+                transition.updateFrame(view: textInputBackgroundView, frame: backgroundFrame)
+            }
         }
 
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
-            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - inputPanelSideInsets.left - inputPanelSideInsets.right, height: layout.size.height))
-            // Beside iPhone Duo's side strip (the side insets differ) the panel sits in the input panels' band, so it
-            // starts at that band's left inset and needs no inset of its own; elsewhere it keeps its layout.
-            let forwardPanelInBand = layout.safeInsets.left != layout.safeInsets.right
-            forwardAccessoryPanelNode.updateState(size: size, inset: forwardPanelInBand ? 0.0 : layout.safeInsets.left, interfaceState: self.presentationInterfaceState)
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: textInputBackgroundWidth, height: layout.size.height))
+            forwardAccessoryPanelNode.updateState(size: size, inset: 0.0, interfaceState: self.presentationInterfaceState)
             forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
-            let panelFrame = CGRect(x: forwardPanelInBand ? inputPanelSideInsets.left : 0.0, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width, height: size.height)
+            let panelFrame = CGRect(x: inputPanelSideInsets.left + textInputBackgroundSideInset, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width, height: size.height)
 
             accessoryHeight = size.height
             if forwardAccessoryPanelNode.frame.width.isZero {
@@ -1145,6 +1172,16 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 forwardAccessoryPanelNode.frame = initialPanelFrame
             }
             transition.updateFrame(node: forwardAccessoryPanelNode, frame: panelFrame)
+        }
+
+        if let textInputEdgeEffectView = self.textInputEdgeEffectView, let textPanelHeight {
+            let edgeEffectHeight = textPanelHeight + accessoryHeight
+            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight - 10.0), size: CGSize(width: layout.size.width, height: edgeEffectHeight + 10.0))
+            transition.updateFrame(view: textInputEdgeEffectView, frame: edgeEffectFrame)
+            textInputEdgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, blur: true, alpha: 0.3, rect: edgeEffectFrame, edge: .bottom, edgeSize: min(30.0, edgeEffectFrame.height), transition: ComponentTransition(transition))
+            if self.countPanelNode == nil && self.segmentedControl == nil {
+                toolbarHeight = edgeEffectHeight
+            }
         }
 
         if let countPanelNode = self.countPanelNode {

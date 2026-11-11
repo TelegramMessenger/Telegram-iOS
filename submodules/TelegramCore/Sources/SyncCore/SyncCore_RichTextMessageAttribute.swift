@@ -6,12 +6,32 @@ public class RichTextMessageAttribute: MessageAttribute, Equatable {
     public let instantPage: InstantPage
     public var fullInstantPage: InstantPage?
     
+    /// The users the page refers to by id (mention names, "User Profile" buttons), so that a rendered
+    /// message's `peers` carries them: sending lists them in `inputRichMessage.users`.
     public var associatedPeerIds: [PeerId] {
-        return []
+        guard let fullInstantPage = self.fullInstantPage else {
+            return self.instantPage.referencedUserIds
+        }
+        var result = self.instantPage.referencedUserIds
+        var seen = Set(result)
+        for peerId in fullInstantPage.referencedUserIds where seen.insert(peerId).inserted {
+            result.append(peerId)
+        }
+        return result
     }
     
+    /// The page's custom emoji files, so that a rendered message's `associatedMedia` carries the stored
+    /// ones (`extractEmojiFileIds` fetches them when the message arrives): a preview draws an emoji whose
+    /// file is known and keeps the alt text of one that is not.
     public var associatedMediaIds: [MediaId] {
-        return []
+        var fileIds = self.instantPage.customEmojiFileIds
+        if let fullInstantPage = self.fullInstantPage {
+            var seen = Set(fileIds)
+            for fileId in fullInstantPage.customEmojiFileIds where seen.insert(fileId).inserted {
+                fileIds.append(fileId)
+            }
+        }
+        return fileIds.map { MediaId(namespace: Namespaces.Media.CloudFile, id: $0) }
     }
     
     public init(instantPage: InstantPage, fullInstantPage: InstantPage?) {
@@ -60,10 +80,14 @@ extension RichTextMessageAttribute {
         }
     }
 
-    func apiInputRichMessage() -> Api.InputRichMessage {
+    /// `users`: `apiInputRichMessageUsers(self.instantPage, …)`, the users the page refers to by id.
+    func apiInputRichMessage(users: [Api.InputUser]) -> Api.InputRichMessage {
         var flags: Int32 = 0
         if self.instantPage.rtl {
             flags |= (1 << 0)
+        }
+        if !users.isEmpty {
+            flags |= (1 << 4)
         }
         
         return Api.InputRichMessage.inputRichMessage(Api.InputRichMessage.Cons_inputRichMessage(
@@ -71,7 +95,7 @@ extension RichTextMessageAttribute {
             blocks: self.instantPage.blocks.compactMap { $0.apiInputBlock() },
             photos: nil,
             documents: nil,
-            users: nil
+            users: users.isEmpty ? nil : users
         ))
     }
 }

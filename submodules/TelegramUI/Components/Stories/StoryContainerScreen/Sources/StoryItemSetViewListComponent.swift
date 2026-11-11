@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -18,7 +17,8 @@ import Markdown
 import ButtonComponent
 import NavigationSearchComponent
 import TabSelectorComponent
-import OptionButtonComponent
+import GlassBarButtonComponent
+import BundleIconComponent
 import ContextUI
 import BalancedTextComponent
 import LottieComponent
@@ -709,6 +709,7 @@ public final class StoryItemSetViewListComponent: Component {
                             foreground: .white,
                             button: component.theme.rootController.navigationBar.accentTextColor
                         ),
+                        style: .glass(isDark: true),
                         cancel: component.strings.Common_Cancel,
                         placeholder: component.strings.Common_Search,
                         isSearchActive: component.isSearchActive,
@@ -1101,8 +1102,7 @@ public final class StoryItemSetViewListComponent: Component {
                         content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
                         color: nil,
                         startingPosition: .begin,
-                        size: CGSize(width: 140.0, height: 140.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 140.0, height: 140.0)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 140.0, height: 140.0)
@@ -1222,6 +1222,8 @@ public final class StoryItemSetViewListComponent: Component {
                 
                 if let emptyIconView = emptyIcon.view as? LottieComponent.View {
                     if emptyIconView.superview == nil {
+                        // The empty state's sticker is decoration; its text says it.
+                        emptyIconView.accessibilityElementsHidden = true
                         self.insertSubview(emptyIconView, belowSubview: self.scrollView)
                         
                         /*var completionRecurse: (() -> Void)?
@@ -1317,6 +1319,21 @@ public final class StoryItemSetViewListComponent: Component {
         
         public var currentViewList: EngineStoryViewListContext? {
             return self.currentContentView?.viewList
+        }
+        
+        /// VoiceOver order: the sheet's header (title or tabs, sort, search) before the list, which lies under it in
+        /// the view tree.
+        public override var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = [self.navigationContainerView]
+                for view in self.subviews where view !== self.navigationContainerView {
+                    if !view.isHidden && view.alpha >= 0.01 && !view.accessibilityElementsHidden {
+                        elements.append(view)
+                    }
+                }
+                return elements
+            } set(value) {
+            }
         }
         
         override init(frame: CGRect) {
@@ -1606,6 +1623,7 @@ public final class StoryItemSetViewListComponent: Component {
                         selection: UIColor(rgb: 0xffffff, alpha: 0.09)
                     ),
                     theme: component.theme,
+                    style: .glass,
                     items: [
                         TabSelectorComponent.Item(
                             id: AnyHashable(ListMode.everyone.rawValue),
@@ -1662,35 +1680,50 @@ public final class StoryItemSetViewListComponent: Component {
             )
             
             let orderSelectorIconName: String
+            // VoiceOver: the sort button reads the order it stands for, in the words of its menu.
+            let orderSelectorAccessibilityLabel: String
             switch self.sortMode {
             case .repostsFirst:
                 orderSelectorIconName = "Stories/Context Menu/Repost"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortReposts
             case .reactionsFirst:
                 orderSelectorIconName = "Chat/Context Menu/Reactions"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortReactions
             case .recentFirst:
                 orderSelectorIconName = "Chat/Context Menu/Time"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortRecent
             }
             let orderSelectorSize = self.orderSelector.update(
                 transition: transition,
-                component: AnyComponent(OptionButtonComponent(
-                    colors: OptionButtonComponent.Colors(
-                        background: UIColor(rgb: 0xffffff, alpha: 0.09),
-                        foreground: .white
-                    ),
-                    icon: orderSelectorIconName,
-                    action: { [weak self] in
+                component: AnyComponent(GlassBarButtonComponent(
+                    size: CGSize(width: 64.0, height: 40.0),
+                    backgroundColor: nil,
+                    isDark: true,
+                    state: .glass,
+                    component: AnyComponentWithIdentity(id: orderSelectorIconName, component: AnyComponent(HStack([
+                        AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(
+                            name: orderSelectorIconName,
+                            tintColor: .white
+                        ))),
+                        AnyComponentWithIdentity(id: "arrow", component: AnyComponent(BundleIconComponent(
+                            name: "Stories/SelectorArrowDown",
+                            tintColor: .white
+                        )))
+                    ], spacing: 2.0))),
+                    action: { [weak self] _ in
                         guard let self else {
                             return
                         }
                         
                         self.openSortModeMenu()
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: orderSelectorAccessibilityLabel)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             
-            let navigationSearchSize = CGSize(width: availableSize.width - component.safeInsets.left - component.safeInsets.right, height: 52.0)
+            let navigationSearchSize = CGSize(width: availableSize.width - component.safeInsets.left - component.safeInsets.right, height: 56.0)
             
             var displayModeSelector = false
             var displaySearchBar = false
@@ -1749,6 +1782,7 @@ public final class StoryItemSetViewListComponent: Component {
                     self.navigationContainerView.addSubview(titleView)
                 }
                 titleView.isHidden = displayModeSelector
+                titleView.accessibilityTraits = .header
                 
                 let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSize.height) * 0.5) + (component.isSearchActive ? (-56.0) : 0.0)), size: titleSize)
                 

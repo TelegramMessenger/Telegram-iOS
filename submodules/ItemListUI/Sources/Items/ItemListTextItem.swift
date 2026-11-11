@@ -223,7 +223,15 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.chevronImage = chevronImage
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityLabel = attributedText.string
+                    // Footers with links: activating follows the link (as a tap does), several links are custom actions.
+                    let linkAction = item.linkAction
+                    strongSelf.activateArea.applyAccessibilityText(attributedText, linkAttribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), open: linkAction.flatMap { linkAction in
+                        return { value in
+                            if let url = value as? String {
+                                linkAction(.tap(url))
+                            }
+                        }
+                    })
                     
                     var textArguments: TextNodeWithEntities.Arguments?
                     if case let .custom(context, _) = item.text {

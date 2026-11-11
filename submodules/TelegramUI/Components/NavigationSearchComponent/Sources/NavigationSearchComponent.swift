@@ -4,6 +4,8 @@ import Display
 import ComponentFlow
 import AppBundle
 import BundleIconComponent
+import GlassBackgroundComponent
+import GlassBarButtonComponent
 
 public final class NavigationSearchComponent: Component {
     public struct Colors: Equatable {
@@ -25,7 +27,13 @@ public final class NavigationSearchComponent: Component {
         }
     }
 
+    public enum Style: Equatable {
+        case legacy
+        case glass(isDark: Bool)
+    }
+    
     public let colors: Colors
+    public let style: Style
     public let cancel: String
     public let placeholder: String
     public let isSearchActive: Bool
@@ -36,6 +44,7 @@ public final class NavigationSearchComponent: Component {
     
     public init(
         colors: Colors,
+        style: Style = .legacy,
         cancel: String,
         placeholder: String,
         isSearchActive: Bool,
@@ -45,6 +54,7 @@ public final class NavigationSearchComponent: Component {
         updateQuery: @escaping (String) -> Void
     ) {
         self.colors = colors
+        self.style = style
         self.cancel = cancel
         self.placeholder = placeholder
         self.isSearchActive = isSearchActive
@@ -56,6 +66,9 @@ public final class NavigationSearchComponent: Component {
     
     public static func ==(lhs: NavigationSearchComponent, rhs: NavigationSearchComponent) -> Bool {
         if lhs.colors != rhs.colors {
+            return false
+        }
+        if lhs.style != rhs.style {
             return false
         }
         if lhs.cancel != rhs.cancel {
@@ -78,6 +91,7 @@ public final class NavigationSearchComponent: Component {
         private weak var state: EmptyComponentState?
         
         private let backgroundView: UIView
+        private var glassBackgroundView: GlassBackgroundView?
         private let searchIconView: UIImageView
         private let placeholderText = ComponentView<Empty>()
         
@@ -173,11 +187,18 @@ public final class NavigationSearchComponent: Component {
             self.component = component
             self.state = state
             
-            let baseHeight: CGFloat = 52.0
+            var isGlass = false
+            var isDark = false
+            if case let .glass(isDarkValue) = component.style {
+                isGlass = true
+                isDark = isDarkValue
+            }
+            
+            let baseHeight: CGFloat = isGlass ? 56.0 : 52.0
             let size = CGSize(width: availableSize.width, height: baseHeight)
             
             let sideInset: CGFloat = 16.0
-            let fieldHeight: CGFloat = 36.0
+            let fieldHeight: CGFloat = isGlass ? 44.0 : 36.0
             let fieldSideInset: CGFloat = 8.0
             let searchIconSpacing: CGFloat = 4.0
             let buttonSpacing: CGFloat = 8.0
@@ -197,9 +218,26 @@ public final class NavigationSearchComponent: Component {
                     self.button = button
                 }
                 
-                let buttonSize = button.update(
-                    transition: buttonTransition,
-                    component: AnyComponent(Button(
+                let buttonComponent: AnyComponent<Empty>
+                if isGlass {
+                    buttonComponent = AnyComponent(GlassBarButtonComponent(
+                        size: CGSize(width: fieldHeight, height: fieldHeight),
+                        backgroundColor: nil,
+                        isDark: isDark,
+                        state: .glass,
+                        component: AnyComponentWithIdentity(id: "close", component: AnyComponent(BundleIconComponent(
+                            name: "Navigation/Close",
+                            tintColor: component.colors.foreground
+                        ))),
+                        action: { [weak self] _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.deactivateSearch()
+                        }
+                    ))
+                } else {
+                    buttonComponent = AnyComponent(Button(
                         content: AnyComponent(Text(text: component.cancel, font: Font.regular(17.0), color: component.colors.button)),
                         action: { [weak self] in
                             guard let self, let component = self.component else {
@@ -207,7 +245,11 @@ public final class NavigationSearchComponent: Component {
                             }
                             component.deactivateSearch()
                         }
-                    ).minSize(CGSize(width: 8.0, height: baseHeight))),
+                    ).minSize(CGSize(width: 8.0, height: baseHeight)))
+                }
+                let buttonSize = button.update(
+                    transition: buttonTransition,
+                    component: buttonComponent,
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
                 )
@@ -239,10 +281,36 @@ public final class NavigationSearchComponent: Component {
             
             let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - fieldHeight) * 0.5)), size: CGSize(width: availableSize.width - sideInset - rightInset, height: fieldHeight * (1.0 - component.collapseFraction)))
             
-            transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
-            transition.setCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(10.0, backgroundFrame.height * 0.5))
-            if previousComponent?.colors.background != component.colors.background {
-                self.backgroundView.backgroundColor = component.colors.background
+            if isGlass {
+                self.backgroundView.isHidden = true
+                
+                var glassBackgroundTransition = transition
+                let glassBackgroundView: GlassBackgroundView
+                if let current = self.glassBackgroundView {
+                    glassBackgroundView = current
+                } else {
+                    glassBackgroundTransition = glassBackgroundTransition.withAnimation(.none)
+                    glassBackgroundView = GlassBackgroundView()
+                    self.glassBackgroundView = glassBackgroundView
+                    self.insertSubview(glassBackgroundView, at: 0)
+                    glassBackgroundView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.backgroundTapGesture(_:))))
+                }
+                let backgroundAlpha: CGFloat = 1.0 - max(0.0, min(1.0, (component.collapseFraction - 0.5) / 0.5))
+                glassBackgroundTransition.setFrame(view: glassBackgroundView, frame: backgroundFrame)
+                glassBackgroundTransition.setAlpha(view: glassBackgroundView, alpha: backgroundAlpha)
+                glassBackgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, isDark: isDark, tintColor: .init(kind: .panel), isInteractive: true, transition: glassBackgroundTransition)
+            } else {
+                self.backgroundView.isHidden = false
+                if let glassBackgroundView = self.glassBackgroundView {
+                    self.glassBackgroundView = nil
+                    glassBackgroundView.removeFromSuperview()
+                }
+                
+                transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+                transition.setCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(10.0, backgroundFrame.height * 0.5))
+                if previousComponent?.colors.background != component.colors.background {
+                    self.backgroundView.backgroundColor = component.colors.background
+                }
             }
             if previousComponent?.colors.inactiveForeground != component.colors.inactiveForeground {
                 self.searchIconView.tintColor = component.colors.inactiveForeground

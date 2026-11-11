@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AppBundle
 import Display
@@ -601,6 +600,16 @@ private final class WalletPeerSelectionScreenComponent: Component {
             )
         }
 
+        /// VoiceOver: the bar (title, Close, the address field, Scan QR Code) before the content under it (it is drawn
+        /// over the list, which starts at the top of the screen).
+        override var accessibilityElements: [Any]? {
+            get {
+                let visible = self.subviews.filter { !$0.isHidden && $0.alpha >= 0.01 && !$0.accessibilityElementsHidden }
+                return visible.filter { $0 === self.navigationGlassContainer } + visible.filter { $0 !== self.navigationGlassContainer }
+            } set(value) {
+            }
+        }
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
 
@@ -1933,8 +1942,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: displaysEmptyRecentPeers ? "Loupe" : "ChatListNoResults"),
-                        startingPosition: .begin,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        startingPosition: .begin
                     )),
                     environment: {},
                     containerSize: CGSize(width: animationHeight, height: animationHeight)

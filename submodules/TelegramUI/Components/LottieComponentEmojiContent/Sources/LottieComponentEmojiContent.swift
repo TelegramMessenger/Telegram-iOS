@@ -64,7 +64,7 @@ public extension LottieComponent {
                 guard let data else {
                     return
                 }
-                f(.animation(data: data, cacheKey: nil))
+                f(.animation(data: data))
             })
         }
     }

@@ -211,7 +211,7 @@ A V2 `.table` block's item frame is **full-width / flush** with the bubble inter
 - **`InstantPageV2TableItem.contentInset` (= page `horizontalInset`) is the linchpin.** `layoutTable` (`InstantPageV2Layout.swift`) sizes columns against `contentBoundingWidth = boundingWidth − horizontalInset·2` (so a fitting table aligns with body text on both sides) and stores `contentInset` on the item; the item `frame.width` is the flush `boundingWidth`, and `contentSize.width` stays the **bare grid width** (`totalWidth`, no inset).
 - **The renderer (`InstantPageV2TableView`) realizes the inset as a view shift, not baked coordinates.** In `init` AND `update` it shifts the grid `contentView` to `x: contentInset`, sets `scrollView.contentSize.width = contentSize.width + contentInset * 2.0` (**margin on both sides**, mirroring V1's `InstantPageScrollableNode`), and `scrollView.clipsToBounds = true`. Cells, inner border lines, and the title stay x=0-relative inside `contentView`, so the single shift carries them all; the rounded outer border is `contentView.layer`'s own border (see below), which wraps the shifted layer automatically.
 - **Scrollable tables clip to the full width with no inset on the clip.** The inset lives inside the scroll content as a symmetric margin on both sides (`contentInset * 2.0`): a fitting table (`grid + 2·inset ≤ boundingWidth`) doesn't scroll and shows both-side inset; an overflowing table rests with its left border at the inset and scrolls until its right border reaches a matching trailing inset (it does **not** jam flush against the screen edge — matches V1). The scroll-indicator threshold and `contentSize.width` use the same `+ contentInset * 2.0`, so "does it scroll" is exactly `grid > boundingWidth − 2·inset`.
-- **Overflowing tables compress instead of scrolling wide (V2 second pass).** When the sum of columns' minimum (maximally-wrapped) widths exceeds the content width, `layoutTable` (`InstantPageV2Layout.swift`) runs `compressTableColumnsToFit(...)`: it scales columns proportionally to their **natural (`maxColumnWidths`)** widths down to a per-column floor (`v2TableMinCompressedColumnWidth = 60.0`, of which 26pt is cell padding), clamping any column that would drop below the floor and redistributing the remaining shrink (water-filling). A column narrower than its widest word wraps that word (taller cell). Two outcomes: **(a) fits** (`Σ min(floor, naturalWidth) ≤ contentBoundingWidth`) → the widths sum to exactly `contentBoundingWidth`, no scroll; **(b) doesn't fit** (floors still overflow) → columns stay at the fully-compressed floored width and the table **still scrolls, but at that narrow floored width** (`totalWidth = Σ floored + borderWidth`), NOT the full natural widths — i.e. the compressed shape is always preferred over the wide one, minimizing the scroll extent. Natural widths are used only for a degenerate zero-column table. The floor is an absolute value, not derived from glyph widths, so a single very long token can still overflow its cell horizontally (accepted trade-off; no word-overflow guard).
+- **Overflowing tables compress down to whole words, then scroll (V2 second pass).** The allocation is `v2TableColumnWidths(...)` (`InstantPageV2Layout.swift`, the testable seam; `InstantPageV2TableColumnWidthTests` pins it). When the sum of columns' minimum (maximally-wrapped at spaces by `layoutTextItem(minimizeWidth: true)`, + cell padding) widths exceeds the content width, `compressTableColumnsToFit(...)` scales columns proportionally to their **natural (`maxColumnWidths`)** widths down to a **per-column floor**, clamping any column that would drop below it and redistributing the remaining shrink (water-filling). The floor is the column's **widest unbreakable segment** + padding — `v2WidestUnbreakableSegmentWidth`, the widest run between two UAX #14 line-break opportunities (`CFStringTokenizer`, `kCFStringTokenizerUnitLineBreak`), trailing whitespace excluded — at least `tableMinCompressedColumnWidth` (60pt) and at most `v2TableMaxColumnFloorFraction` (½) of `contentBoundingWidth − borderWidth` (floored, so two capped columns still fit), rounded up to a whole point. Segments, not space-split words, because CJK breaks between characters and Thai between dictionary words: a space-split "word" there is the whole sentence, which made Chinese tables scroll instead of wrap. Scaled widths round *down* and the drift goes to the last scalable column, so no column lands a fraction below its floor; the natural widths the solver scales are held at ≥ the minimum and unbreakable widths (colspan growth can leave those above the natural width). Two outcomes: **(a) fits** (`Σ min(floor, natural) ≤ contentBoundingWidth − borderWidth`) → the widths fill it exactly, no scroll; **(b) doesn't fit** → columns stay at their floors and the table **scrolls at that width** (`totalWidth = Σ floored + borderWidth`), NOT the full natural widths. Only a token wider than the cap (a URL) wraps mid-word, and the cap keeps it from widening its column past half the bubble. Before issue #20 the floor was a flat 60pt for every column, which broke short words ("Devi/ce", "Pre/miu/m") in five-column tables. Tables whose minimum widths fit (case A) are untouched. Natural widths are used only for a degenerate zero-column table. V1 Instant View (`InstantPageTableItem`) never compresses: overflowing tables take natural widths and scroll.
 - **Manual cell-coordinate helpers MUST add `contentInset`.** Because the shift is a real `contentView` frame change, UIKit `hitTest` and `self.convert(_:to:)` paths (`propagateVisibilityRect`, the row-reveal mask) handle it automatically — but the *manual* coordinate helpers `findTextItem` / `collectSelectableTextItems` (the live tap / URL / text-selection path) compute cell/title positions arithmetically and must add `table.contentInset` to the x-offset, or in-cell hit-testing is off by the inset. (These helpers still do **not** account for the table's live horizontal `scrollView.contentOffset` — a pre-existing limitation, so in-cell hit-testing is only correct at scroll offset 0.) The dead-but-symmetric `lastTextLineFrame(in:)` table branch has the same omission but has no callers.
 - **The 10pt rounded outer border is `contentView.layer`'s own border, NOT sublayers.** `v2TableCornerRadius = 10.0` (`InstantPageV2Layout.swift`). The renderer sets `contentView.layer.cornerRadius`/`borderColor`/`borderWidth = bordered ? v2TableBorderWidth : 0.0` in BOTH `init` and `update` (the four straight outer-edge rect layers were removed; `lineLayers` now holds only inner grid lines). **Border-only — deliberately no `masksToBounds`:** `cornerRadius` rounds the layer's border without clipping contents (filled corner cells round their own fills separately — see next bullet), and there is **zero interaction with the streaming reveal mask** (`contentView.layer.mask`, set only during AI streaming) — the border reveals row-by-row with the rows and is part of the masked layer. The rounded card belongs to the grid (scrolls with it). For a non-empty-title table (never produced by markdown/AI), the border wraps title+grid since `contentView` includes the title region — an accepted, approved nuance.
 - **Filled corner cells round their own fills to match the border.** A header/striped cell's background is a stripe `CALayer`; `tableStripeCornerMask(cellFrame:gridWidth:gridHeight:effectiveBorderWidth:)` detects which grid corners the cell's (grid-local) frame touches — `firstCol/firstRow` via `frame.min{X,Y} <= effectiveBorderWidth/2 + 0.5`, `lastCol/lastRow` via `frame.max{X,Y} >= grid{Width,Height} - …` (gridWidth = `item.contentSize.width`, gridHeight = `item.contentSize.height - gridOffsetY`) — and rounds only those corners: `stripe.cornerRadius = max(0, v2TableCornerRadius - effectiveBorderWidth)` (the `-borderWidth` leaves an even border ring; borderless → full radius) + `stripe.maskedCorners`, in BOTH `init` and `update`. A `CALayer`'s `backgroundColor` honors `cornerRadius`+`maskedCorners` with no `masksToBounds`. A full-width (colspan) header rounds both top corners; a one-row filled table rounds all four; bottom corners round only when the last row is filled. The empty-mask branch resets `cornerRadius = 0` **and** `maskedCorners = []` so reused stripes (persist across streaming chunks) don't keep stale rounding. Detection is grid-local, so it's independent of the `contentInset` shift / horizontal scroll.
@@ -220,7 +220,7 @@ A V2 `.table` block's item frame is **full-width / flush** with the bubble inter
 
 A `.preformatted` block renders as a **plain, square, `codeBlockBackgroundColor` rectangle spanning its container's interior edge to edge**, with its monospace text — and a **bold, lowercased language line above it** — at exactly the x a paragraph occupies at that nesting level. So the band's interior side padding IS the paragraph inset; it is not a code-block constant. No accent bar, no tint, no corner radius: a code block reads as a highlighted table row, not as a quote variant (it was one, from the 2026-07-06 reskin until 2026-08-18).
 
-The message hosts pass `codeBlockBackgroundColor` the same value they give `tableHeaderColor`. The field is **revived, not new** — V2 stopped reading it in the July reskin while V1 full-page Instant View still does, so the presets in `InstantPageTheme.swift` are untouched and V1 is unaffected.
+The message hosts pass `codeBlockBackgroundColor` the same value they give `tableHeaderColor`, except in an outgoing bubble of a dark theme: there the accent is white, so `tableHeaderColor` is a white wash, and the code takes black 10%, the fill a plain message's code block has on that bubble (`ChatMessageTextBubbleContentNode`'s `codeBlockFillColor`; the long-press Send preview does the same). The field is **revived, not new** — V2 stopped reading it in the July reskin while V1 full-page Instant View still does, so the presets in `InstantPageTheme.swift` are untouched and V1 is unaffected.
 
 ### Non-obvious invariants
 
@@ -330,8 +330,10 @@ Specs: [`2026-06-02-instantpage-v2-audio-design.md`](docs/superpowers/specs/2026
 - **`InstantPageMediaPlaylistId` had to become `public`.** It is exposed through `InstantPageMediaPlaylist`'s `public init`, which BrowserUI constructs cross-module; an internal type in a public initializer is a hard Swift compile error (independent of `-warnings-as-errors`). This surfaced only at full-build time — the per-module reasoning didn't catch it.
 - **The big control's play/pause comes from OUR playlist, the small overlay's download/progress from the resource status — two separate signals.** The file node (`ChatMessageInteractiveFileNode`) for music keys its play/pause off the **peer-messages** playback model (`messageFileMediaPlaybackStatus` → `peerMessagesMediaPlaylistAndItemId`), which our attribute-embedded audio is NOT part of — so `InstantPageV2AudioContentNode` drives the big `statusNode` `.play`↔`.pause` from **our** `filteredPlaylistState` (keyed by the message-scoped `playlistId` + `InstantPageMediaPlaylistItemId(index:)`) and the small `streamingStatusNode` from `messageMediaFileStatus`. This split (rather than reusing the file node) is why the redesign is a replicated layout, not a hosted `ChatMessageInteractiveFileNode`.
 - **Fetch MUST go through the fetch manager, not `freeMediaFileInteractiveFetched`.** `messageMediaFileStatus`'s progress (`.Fetching`) is derived from the fetch manager's `hasEntry` flag; `freeMediaFileInteractiveFetched` bypasses the manager (`hasEntry` stays false), so the overlay would stick on the static download icon and never show the animated ring. The control fetches via `messageMediaFileInteractiveFetched(fetchManager:messageId:messageReference:file:…)`.
-- **Tap is a `UITapGestureRecognizer`, never an ASControl** (same invariant as the V1 `InstantPageAudioNode` play button): ASControl `.touchUpInside` is cancelled by the chat `ListView`'s gesture system. The plain `tapView` covers the whole control → `controlTapped` (fetch-when-remote / `togglePlayPause`-when-playing / `play`-else).
+- **The download badge is the file node's, geometry and colours included.** `streamingStatusNode` is a Ø20 disc 2pt past the control's bottom-right (`streamingBadgeFrame`), filled with the control's own background and glyph colours (`controlColors`, shared with the big control), and while it shows, the control carries a `setCutout` ring of `1 + UIScreenPixel` around it (`streamingBadgeCutout`), exactly like `ChatMessageInteractiveFileNode`'s `streamingCacheStatusFrame` + cutout. States: `.download` when remote/paused, a thin `.progress` ring while fetching, none when local or while playing (buffering while playing counts as playing, `isPlaying(_:)`); the node is made on demand and fades out (0.2s) when there is nothing to show. A tap on a shown badge cancels a running download (its ✕) or starts one (its arrow), as the file node's `cacheProgressPressed` does; the rest of the row keeps `controlTapped`'s routing (`tapAction(fetchStatus:isPlaying:onBadge:)`). A badge with a `.clear` background and the control colour as glyph (the earlier shape) draws a bare arrow over the album art and is invisible on a same-coloured control in light themes. `InstantPageV2AudioStreamingBadgeTests` pins the states, geometry and colours.
+- **Tap is a `UITapGestureRecognizer`, never an ASControl** (same invariant as the V1 `InstantPageAudioNode` play button): ASControl `.touchUpInside` is cancelled by the chat `ListView`'s gesture system. The plain `tapView` covers the whole control → `controlTapped` (fetch-when-remote / `togglePlayPause`-when-playing / `play`-else; a tap on a shown download badge → fetch / cancel instead).
 - **`InstantPageV2AudioContentNode.updatePresentationData` must refresh EVERYTHING theme/incoming-dependent.** `TextNode` (unlike `ASTextNode`) has no stored `attributedText` — the strings live in `titleAttributedString`/`descriptionAttributedString` and are fed to `TextNode.asyncLayout`. On an in-place theme/direction change `updatePresentationData` rebuilds those strings AND `statusNode.backgroundNodeColor` + `foregroundNodeColor` + `overlayForegroundNodeColor` + `scrubbingNode.updateColors(…)`; missing any leaves a stale-colored control. Font size is `presentationData.chatFontSize.baseDisplaySize` (plain `PresentationData` has no `.fontSize`).
+- **The row's palette follows the bubble's direction, `InstantPageV2RenderContext.isIncoming`, never `message?.isIncoming`.** The chat bubble sets it from `effectivelyIncoming` (and refreshes it before each update, like `captureProtected`); the audio and document rows read it. The raw `.Incoming` flag disagrees with the bubble for a Saved Messages forward of one of the user's own outgoing messages (stored `.Incoming`, drawn outgoing) and for a post in the user's own channel (the reverse), and drew the title and control in the other side's palette: an accent title on an accent outgoing bubble in dark themes.
 - **Audio is NOT a gallery item.** `InstantPageV2MediaAudioView` does not register in the root media registry (no `didMoveToWindow`/`registerInRootRegistry`) and returns `nil` from `instantPageTransitionNode` / no-ops `instantPageUpdateHiddenMedia` — explicit per-class witnesses, not the protocol-extension default. Its media IS enrolled in `collectMedias`/`allMedias()` so `handleOpenAudioTap` can gather the page's sibling voice/music files for the playlist (matching V1's `mediasFromItems`). The `WrapperRef` weak box breaks the wrapper → node → closure → wrapper retain cycle (the `play` closure captures only the box + value locals, never `self`).
 - **Full-width item frame, file-node internal layout.** The `.audio` arm lays the item at `x = 0, width = boundingWidth, height = 44` (the file node's music `normHeight`), NOT inset by `horizontalInset`. The control's internal geometry is copied from the file node's non-thumbnail music branch (Ø44 control at x = 3, `controlAreaWidth = 55`, title at x = 55). Music-only: any voice file renders music-style (no waveform/transcription). No edge-bleed.
 - **Audio files fetch via a message reference (the former recipient-fetch risk is resolved).** `InstantPageMediaPlaylistItem.fileReference(_:)` builds `.message(message: messageReference, media: file)` when the playlist carries a **resolvable-id** `MessageReference` (rich bubbles), else the legacy `.webPage(...)` (V1 full-page IV, whose webpage is real). The fetch-reference fallback uses the same `message?.id != nil` test as the playlist-key fallback, so a `.none`-content reference degrades to the webpage path consistently. Because the rich-message file lives in `RichTextMessageAttribute.instantPage.media` (not `message.media`), `FetchedMediaResource.swift`'s `.message` revalidation arm was taught to search the attribute's instant page too — so a **stale** file reference can re-fetch the message and recover (a synthetic-`(0,0)`-webpage reference never could, because that webpage doesn't exist server-side). This also fixes a latent pre-existing bug: instant-page **image** references in rich messages couldn't revalidate either.
@@ -381,6 +383,7 @@ web Instant View articles and by editor-authored slideshow albums. Design + plan
 - **Slideshow IS a container** (it's swipeable), so it gets its own laid-out item + view, unlike collage. Adding the `.slideshow` case to `InstantPageV2LaidOutItem` forces a `.slideshow` arm in every no-`default` switch over it: `frame`, `offsetBy`, `stableId`, `reuse`, `makeItemView`, and the reveal-cost `computeEntries` (plus `collectMedias`, which has a `default` but needs the arm to enumerate slideshow medias for the gallery).
 - **Slideshow pages are created eagerly, deviating from V1's lazy central±1 paging.** In a chat bubble a slideshow is a handful of images, so eager creation avoids V1's index bookkeeping and makes the gallery transition source available for **every** page (even off-screen). Height = the tallest image `fitted(boundingWidth × 1200)`; only `.image` inner blocks render (matches V1 — videos become empty pages).
 - **The slideshow registers under EVERY contained media index, and re-registers on an in-window rebuild.** Its stableId is positional (`.positional(.slideshow, position)`, not `.media(index)` like the static media views), so it can be reused for a *different* slideshow at the same block position; `rebuildPages()` re-runs `registerMedias()` (guarded by `window != nil`) so the new indices land in the registry. The gallery hooks iterate the live page nodes and match by `InstantPageMedia` identity, so registering one view under N indices is idempotent.
+- **The slideshow follows the gallery's current item.** The gallery reports each item it swipes to as its hidden media, and the slideshow scrolls (unanimated) to that item's page; asked for a transition node, it scrolls there too before answering. So the viewer closes, or is swiped away, onto the item's own slot, and the carousel and its dots stay on it, as a chat album does. Answering nil for a scrolled-away page instead left the carousel on the tapped page and the close a plain fade.
 - **The 4 static media views answer the gallery hooks with explicit per-class witnesses, NOT a shared protocol-extension override** — an extension-only implementation is statically dispatched and would silently bind to the nil default when invoked through the `InstantPageItemView`-typed registry wrapper.
 
 ## InstantPage V2 media spoiler (revealable dust)
@@ -869,7 +872,7 @@ model layer from the V2 rendering built on top of it.
 | `submodules/TelegramCore/Sources/SyncCore/SyncCore_InstantPage.swift` | `case buttonRow` (tag **31**), `case document` (tag **32**), codecs, and the `allMedia(mediaDict:)` arm. |
 | `submodules/TextFormat/Tests/` | `InstantPageButtonModelTests`, `RichTextButtonTests`, `InstantPageBlockNewCasesTests` — 24 tests over both codecs. |
 | `submodules/InstantPageUI/Sources/InstantPageInlineButton.swift` | `InstantPageInlineButtonAttachment` (the measured payload) + `instantPageInlineButtonAttachment(button:labelString:maxWidth:)`, the **single** construction path for both inline and row pills, incl. the ellipsis truncation + `instantPageButtonColors(_:theme:isInline:isDisabled:)` + the padding and font-size constants. |
-| `submodules/InstantPageUI/Sources/InstantPageV2ButtonViews.swift` | `InstantPageV2ButtonPillView` (one pill: `backgroundColor` fill + press state + label recolour + the `TextLoadingEffectView` shimmer and its `Promise<Bool>` subscription), `InstantPageV2ButtonPillContentView` (draws the label + type icon, at whichever placement its `isInline` selects), `InstantPageV2InlineButtonView`, `InstantPageV2ButtonRowView`. |
+| `submodules/InstantPageUI/Sources/InstantPageV2ButtonViews.swift` | `InstantPageV2ButtonPillView` (one pill: `backgroundColor` fill + press state (`instantPageButtonHighlightedFill`: a plain pill takes the host's `panelHighlightedBackgroundColor`, a coloured one a shade of its own fill) + label recolour + the `TextLoadingEffectView` shimmer and its `Promise<Bool>` subscription), `InstantPageV2ButtonPillContentView` (draws the label + type icon, at whichever placement its `isInline` selects), `InstantPageV2InlineButtonView`, `InstantPageV2ButtonRowView`. |
 | `submodules/TelegramUI/Components/RichTextButtonIcons/` | The action → icon mapping, its sizes/insets, and the `richTextEditorButtonIcon` bridge the editor hosts register. A leaf module because both the renderer and the editor need it — see "The type icon". |
 | `submodules/InstantPageUI/Sources/InstantPageV2DocumentContentNode.swift` | `InstantPageV2DocumentContentNode` (file row) + `InstantPageV2DocumentView` (item view). |
 | `submodules/InstantPageUI/Sources/InstantPageTextStyleStack.swift` | `.semibold` / `.medium` baseline weights (button labels are semibold regardless of the surrounding paragraph) + the `InstantPageInlineButtonAttribute` key. |
@@ -926,11 +929,49 @@ be a cycle.
   only in the editor — the renderer decides the same question from the name and would keep reserving.
   The closure also lets the row packer ask the question per padding attempt without rasterising.
 - **The editor's icon must be resolved through `ButtonActionCodec`, not from `ButtonAction` directly.**
-  `RichTextEditorCore` can name only `url` / `copyText` / `disabled`; every other action travels as an
-  opaque `.unsupported(kind:payload:)`. `richTextEditorButtonIcon` decodes it back so a
-  `.openUserProfile` button draws the profile icon in the composer, and — the case that actually bites
+  `RichTextEditorCore` can name only `url` / `copyText` / `userProfile` / `disabled`; every other action
+  travels as an opaque `.unsupported(kind:payload:)`. `richTextEditorButtonIcon` decodes it back so a
+  `.openWebView` button draws the web-app icon in the composer, and — the case that actually bites
   — so an iconless `.callback` reserves nothing on either side. `richTextButtonHasBadge` remains as the
   coarse fallback for an editor with no provider registered, and is wrong for exactly that case.
+
+### Authoring (the button sheet)
+
+`ButtonEditorScreen` (`RichTextAttachmentScreen`) is the one property sheet for both pill kinds. Its ACTION
+section authors three actions, the ones `RichTextEditorCore` names: **URL**, **Copy Text** (`.copyText`,
+`inlineButtonTypeCopy`) and **User Profile** (`.userProfile(peerId:)` ⇄ `.openUserProfile`,
+`inlineButtonTypeUserProfile`). A sent message's tap goes through `performMessageButtonAction`: copy with
+the usual toast, open the user's profile.
+
+- **The user travels as `inputRichMessage.users`.** The button itself is `inlineButtonTypeUserProfile(user_id)`, a
+  bare id, as is a `textMentionName`, so every send lists the users the page refers to again as `InputUser`s
+  (`InstantPage.referencedUserIds`, `apiInputRichMessageUsers`): the pending send and its media upload, edits, drafts,
+  standalone and ephemeral sends. A user the sender's database cannot resolve is left out and is sent by id only. The
+  AI compose requests send no `users`; their page comes back to the composer and the later send lists them.
+  `RichTextMessageAttribute.associatedPeerIds` is the same list, so a rendered message's `peers` carries them. A tap
+  still resolves the user from the LOCAL database only (`ChatMessageItemView.performMessageButtonAction`), so it relies
+  on the server delivering the users with the message; not yet checked from a recipient's account.
+- **Users only.** The schema has no chat or channel profile type; a chat is linked with a URL button and
+  its t.me link. The picker is `makePeerSelectionController` filtered to private chats, with global search
+  for an @username.
+- **The sheet stays window-presented; the picker joins it at window level** in `UserPickerHostController`,
+  a host with its own navigation controller (the `ShareScreenHostController` shape), since anything pushed
+  onto the chat's navigation sits under a window-level sheet. Pushing the SHEET instead breaks the editor
+  under it: popping a modal that still holds the first responder sets `NavigationController`'s
+  `ignoreInputHeight`, which only clears once the keyboard is seen hidden, and the editor takes the keyboard
+  back before that, so its toolbar is laid out under the keyboard.
+- **A payload field must not be focused when an update removes it** (switching type, picking a user): a
+  `ListTextFieldItemComponent` removed while focused resigns inside the update and its end-editing callback
+  re-enters it (a `ComponentView` assertion). The sheet ends editing in the tap handlers first.
+- **A preserved `.unsupported` action gets no ACTION section**, since the sheet keeps it verbatim. A
+  `.disabled` one does, so an author can give it an action again.
+- **A build older than `.userProfile` cannot decode it**: `ButtonAction.init(from:)` throws on the unknown
+  kind and the lenient `Document` decode drops the block holding it. Only a `Document` written by a newer
+  build (a clipboard fragment, an `.rtdoc`) reaches an older one; drafts and edited messages go through
+  `ChatInputContent`, whose button action is the Postbox-coded `ReplyMarkupButtonAction`.
+- **`.userProfile` survives a paste** (`convertingUnsupportedButtonActions` leaves it alone, as it does
+  `.copyText`): its payload is a self-contained user id, valid in any message (subject to the recipient
+  caveat above).
 
 ### Non-obvious invariants
 
@@ -1229,10 +1270,15 @@ be a cycle.
   bubble, and the menu / inline-bot panels — keep the panel as their only indicator. Threading a
   promise into a new caller therefore silently *removes* its panel; that is the intent, but only if
   that caller actually renders the promise.
-- **A button inside `<details>` or a table cell is inert, and so never shimmers.** The nested
-  `InstantPageV2View`s built in `InstantPageRenderer.swift` never get `buttonTapped` propagated —
-  only `rootMediaRegistryHost` is pushed down, by `propagateRegistryHost`. Pre-existing; unrelated to
-  the loading effect, but it is why a nested button does nothing at all.
+- **A button inside `<details>` or a table cell reaches the host through `hostCallback`** (fixed
+  2026-10-22, issue #3: a URL pill in a table cell did nothing on tap). A table cell and a details body
+  are `InstantPageV2View`s of their own, built by their container and replaced as it lays out, while
+  the host sets `buttonTapped`, `documentTapped` and `unsupportedActionTapped` on the root page view
+  only. So the item views' closures look the callback up when they fire, on the nearest enclosing page
+  view that has it, instead of reading their own page view's (nil) property; pushing the closures down
+  at layout would miss a details body created on expand. `checkboxTapped` is still not reached from a
+  nested view (its interactivity is decided at layout from the property). Pinned by
+  `InstantPageV2NestedTapCallbackTests`.
 
 ## Unsupported blocks (InstantPageBlock.unsupported)
 
@@ -1310,10 +1356,10 @@ message in the app.
   The view positions its button there and layout-only hosts test against it; `in size:` rather than
   the layout's own `size` because a host may stretch the pill wider and the button is pinned to the
   trailing edge.
-- **A pill nested in a `<details>` body or a table cell still has an inert button.** Tap arbitration
-  finds it, but nested `InstantPageV2View`s only get `detailsTapped` forwarded — `unsupportedActionTapped`
-  (like `checkboxTapped`, `buttonTapped` and `documentTapped`) is not propagated into sub-layout
-  views, so the closure is nil there. Pre-existing, and not specific to the pill.
+- **A pill nested in a `<details>` body or a table cell reaches `unsupportedActionTapped` too.** Tap
+  arbitration finds it, and since 2026-10-22 its closure looks the callback up on the nearest enclosing
+  page view that has it (`hostCallback`, see "Inline buttons & document blocks"), as nested buttons and
+  documents do.
 - **Reveal cost is `.nonText`.** The pill pops in atomically with its position in the stream, like a
   button row.
 
@@ -1574,7 +1620,22 @@ Dates use supplied presentation settings; nil-format dates retain their literal 
 Unresolved custom emoji keeps its identity in preview metadata and displays alt
 text (or `�` if empty). Only a resolved file receives the native custom-emoji
 attribute: entity text nodes otherwise replace alt text by a blank attachment.
+A rich message's emoji files are resolvable like an ordinary message's (issue #29:
+the chat list showed every one as its alt emoji): `extractEmojiFileIds` takes the
+page's `customEmojiFileIds`, so a received message's unknown emoji files are fetched
+and stored with it, and `RichTextMessageAttribute.associatedMediaIds` lists them, so
+the stored files reach the preview through the message's associated media.
 The modern composer accessory uses the existing entity-aware text component.
+
+A rich message's notification body is the server's plain text of the page. On iOS
+18+ the Notification Service extension turns its custom emoji into image glyphs as
+it does an ordinary message's entities, finding each in the body by its alt text,
+whole characters only (`notificationRichTextCustomEmoji`). The body can leave blocks
+out or be truncated, and the page can hold the same emoji as plain text, so the page's
+occurrences of an alt text are counted in full (`InstantPage.customEmojiTextRuns`,
+plain runs included): when all are one custom emoji, every body occurrence is it (no
+more than the page has); otherwise the body must hold exactly the page's occurrences,
+mapped in order. Anything else stays plain rather than land on the wrong emoji.
 
 `styleInstantPagePreview` applies a consumer's fonts/colors without deleting semantic
 attributes. Formula/table runs use U+FFFC plus icon and fallback metadata, never

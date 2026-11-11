@@ -60,9 +60,8 @@ struct NetworkTelemetryOverrides {
 
 var networkTelemetryOverrides = NetworkTelemetryOverrides()
 
-/// Records the networks of the app's accounts while the server enables it, and always in Debug builds.
-/// Extensions and supplementary networks never record.
 func networkTelemetryShouldRecord(supplementary: Bool, isAppExtension: Bool, configuration: NetworkTelemetryConfiguration) -> Bool {
+    guard AppLogEventCollection.allowsLegacyEvents else { return false }
     if let recording = networkTelemetryOverrides.recording {
         return recording
     }

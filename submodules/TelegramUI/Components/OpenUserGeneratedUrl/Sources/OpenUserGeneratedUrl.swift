@@ -27,7 +27,8 @@ public func openUserGeneratedUrl(
     openResolved: @escaping (ResolvedUrl) -> Void,
     progress: Promise<Bool>? = nil,
     alertDisplayUpdated: ((ViewController?) -> Void)? = nil,
-    concealedAlertOption: OpenUserGeneratedUrlConcealedAlertOption? = nil
+    concealedAlertOption: OpenUserGeneratedUrlConcealedAlertOption? = nil,
+    fullUrl: Bool = false
 ) -> Disposable {
     var concealed = concealed
 
@@ -131,6 +132,7 @@ public func openUserGeneratedUrl(
             presentationData: presentationData,
             updatedPresentationData: updatedPresentationDataSignal,
             displayUrl: displayUrl,
+            fullUrl: fullUrl,
             webpage: webpage,
             check: concealedAlertOption.flatMap { option in checkState.map { (title: option.title, state: $0) } },
             open: {
@@ -154,20 +156,21 @@ public func openUserGeneratedUrl(
     }
 }
 
-/// The "Open this link?" prompt. `displayUrl` is shortened, stripped of right-to-left overrides and has its host
-/// punycoded before it is shown.
+/// The "Open this link?" prompt. `displayUrl` is shortened (unless `fullUrl`: SDK v1 §5.2 has a message widget's link
+/// shown whole), stripped of right-to-left overrides and has its host punycoded before it is shown.
 public func openLinkConfirmationController(
     context: AccountContext,
     presentationData: PresentationData,
     updatedPresentationData: Signal<PresentationData, NoError>,
     displayUrl: String,
+    fullUrl: Bool = false,
     webpage: TelegramMediaWebpage? = nil,
     check: (title: String, state: AlertCheckComponent.ExternalState)? = nil,
     open: @escaping () -> Void
 ) -> AlertScreen {
     var rawDisplayUrl: String = displayUrl
     let maxLength = 180
-    if rawDisplayUrl.count > maxLength {
+    if !fullUrl && rawDisplayUrl.count > maxLength {
         rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
     }
 

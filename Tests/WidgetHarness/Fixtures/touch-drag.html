@@ -1,0 +1,33 @@
+<!-- Gestures (sdk-v1 §5.5): #free claims nothing, so a drag on it is the chat's (the list scrolls, a horizontal one
+     swipes to reply or back); #claim is touch-action: none, so the widget takes the touch's drags both ways; #pany is
+     touch-action: pan-y, so it takes horizontal drags and leaves vertical ones to the list. A hold is the widget's on
+     #claim only (its contextmenu); on #free and #pany it is the bubble's menu, which ends the widget's touch with a
+     pointercancel. The leading 20px of the widget claim nothing (the policy's edge strip). The first pointermove the
+     widget gets makes it 10px taller (the readout's size shows the widget got it). Each pointercancel and contextmenu is
+     logged into <html data-log> (the readout's `log` line) as <type>:<element>. -->
+<style>
+  body { margin: 0; }
+  #free, #claim, #pany { height: 100px; }
+  #free { background: #8cf; }
+  #claim { background: #fc8; touch-action: none; }
+  #pany { background: #8e8; touch-action: pan-y; }
+</style>
+<div id="free">free</div>
+<div id="claim">claim</div>
+<div id="pany">pan-y</div>
+<script>
+  const log = [];
+  for (const type of ['pointercancel', 'contextmenu']) {
+    document.addEventListener(type, e => {
+      log.push(type + ':' + e.target.id);
+      document.documentElement.setAttribute('data-log', log.join(' '));
+    });
+  }
+  let moved = false;
+  document.addEventListener('pointermove', () => {
+    if (!moved) {
+      moved = true;
+      document.body.style.paddingBottom = '10px';
+    }
+  });
+</script>

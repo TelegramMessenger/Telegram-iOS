@@ -1,0 +1,181 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Hotels in Lisbon</title>
+<style></style>
+</head><body><div class="an"><b>Anchor: top</b> (setResizeAnchor('top'), the default said explicitly). Tap Show more: results open below and the bubble grows downward, its top stays.</div>
+<h1>🏨 Hotels in Lisbon</h1>
+<p class="sub">12–14 Nov · 2 guests · 7 found, cheapest first</p>
+<div id="list"><div class="r"><div class="ph">🌿</div><div class="tx"><div class="nm">Casa do Jardim</div><div class="ds">Príncipe Real · 8.9 · 0.4 km</div></div><div class="pr">€74<small>per night</small></div></div><div class="r"><div class="ph">🚋</div><div class="tx"><div class="nm">Tram 28 Rooms</div><div class="ds">Graça · 8.4 · 1.2 km</div></div><div class="pr">€81<small>per night</small></div></div><div class="r"><div class="ph">🌊</div><div class="tx"><div class="nm">Ribeira Flats</div><div class="ds">Cais do Sodré · 8.7 · 0.9 km</div></div><div class="pr">€96<small>per night</small></div></div><div class="r" hidden=""><div class="ph">🏰</div><div class="tx"><div class="nm">Hotel Baixa Real</div><div class="ds">Baixa · 9.1 · 0.2 km</div></div><div class="pr">€112<small>per night</small></div></div><div class="r" hidden=""><div class="ph">🎨</div><div class="tx"><div class="nm">Lx Design Hostel</div><div class="ds">Alcântara · 8.2 · 3.1 km</div></div><div class="pr">€119<small>per night</small></div></div><div class="r" hidden=""><div class="ph">🌞</div><div class="tx"><div class="nm">Miradouro Suites</div><div class="ds">Alfama · 9.3 · 1.0 km</div></div><div class="pr">€138<small>per night</small></div></div><div class="r" hidden=""><div class="ph">🍷</div><div class="tx"><div class="nm">Bairro Alto Loft</div><div class="ds">Bairro Alto · 8.8 · 0.6 km</div></div><div class="pr">€145<small>per night</small></div></div></div>
+<button class="more" id="more">Show 2 more</button>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 385.05
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 12 336 363.05
+    div 22 18 316 67.2
+      b 22 18 0 0
+    h1 12 101.2 336 21.25
+    p 12 124.45 336 35.1
+    div 12 165.55 336 170.7
+      div 12 171.55 336 51.3
+        div 12 180.2 34 34
+        div 56 171.55 210 51.3
+          div 56 171.55 210 18.9
+          div 56 190.45 210 32.4
+        div 276 180.325 72 33.75
+          small 276 199.225 72 14.85
+      div 12 233.85 336 35.1
+        div 12 234.4 34 34
+        div 56 233.85 210 35.1
+          div 56 233.85 210 18.9
+          div 56 252.75 210 16.2
+        div 276 234.525 72 33.75
+          small 276 253.425 72 14.85
+      div 12 279.95 336 51.3
+        div 12 288.6 34 34
+        div 56 279.95 210 51.3
+          div 56 279.95 210 18.9
+          div 56 298.85 210 32.4
+        div 276 288.725 72 33.75
+          small 276 307.625 72 14.85
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          small 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          small 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          small 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          div 0 0 0 0
+        div 0 0 0 0
+          small 0 0 0 0
+    button 26 350.25 308 16.8
+
+== paint
+root 360x385.05 items=93
+  solid-fill bounds=(12,12,336,79) layer=(border=(12,12,336,79),radius=(8,8,8,8,8,8,8,8),clip=(12,12,336,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(12,166,336,62) borders=(left=(0,0,#000000ff),top=(1,4,#e7e7e7ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,166,336,62) root=0
+  solid-fill bounds=(12,180,34,34) layer=(border=(12,180,34,34),radius=(8,8,8,8,8,8,8,8),clip=(12,180,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(12,228,336,46) borders=(left=(0,0,#000000ff),top=(1,4,#e7e7e7ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,228,336,46) root=0
+  solid-fill bounds=(12,234,34,34) layer=(border=(12,234,34,34),radius=(8,8,8,8,8,8,8,8),clip=(12,234,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  borders bounds=(12,274,336,62) borders=(left=(0,0,#000000ff),top=(1,4,#e7e7e7ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,274,336,62) root=0
+  solid-fill bounds=(12,289,34,34) layer=(border=(12,289,34,34),radius=(8,8,8,8,8,8,8,8),clip=(12,289,34,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  solid-fill bounds=(12,342,336,33) layer=(border=(12,342,336,33),radius=(8,8,8,8,8,8,8,8),clip=(12,342,336,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(14,10,72,32) pos=(22,18,56,16) color=#000000ff text="Anchor:" font=f1 glyphs=7 advance=56
+  text bounds=(78,10,40,32) pos=(86,18,24,16) color=#000000ff text="top" font=f1 glyphs=3 advance=24
+  text bounds=(110,10,208,32) pos=(118,18,192,16) color=#707579ff text="(setResizeAnchor('top')," font=f2 glyphs=24 advance=192
+  text bounds=(14,27,40,32) pos=(22,35,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(46,27,72,32) pos=(54,35,56,16) color=#707579ff text="default" font=f2 glyphs=7 advance=56
+  text bounds=(110,27,48,32) pos=(118,35,32,16) color=#707579ff text="said" font=f2 glyphs=4 advance=32
+  text bounds=(150,27,112,32) pos=(158,35,96,16) color=#707579ff text="explicitly)." font=f2 glyphs=12 advance=96
+  text bounds=(254,27,40,32) pos=(262,35,24,16) color=#707579ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(286,27,48,32) pos=(294,35,32,16) color=#707579ff text="Show" font=f2 glyphs=4 advance=32
+  text bounds=(14,44,56,32) pos=(22,52,40,16) color=#707579ff text="more:" font=f2 glyphs=5 advance=40
+  text bounds=(62,44,72,32) pos=(70,52,56,16) color=#707579ff text="results" font=f2 glyphs=7 advance=56
+  text bounds=(126,44,48,32) pos=(134,52,32,16) color=#707579ff text="open" font=f2 glyphs=4 advance=32
+  text bounds=(166,44,56,32) pos=(174,52,40,16) color=#707579ff text="below" font=f2 glyphs=5 advance=40
+  text bounds=(214,44,40,32) pos=(222,52,24,16) color=#707579ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(246,44,40,32) pos=(254,52,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(278,44,64,32) pos=(286,52,48,16) color=#707579ff text="bubble" font=f2 glyphs=6 advance=48
+  text bounds=(14,60,56,32) pos=(22,68,40,16) color=#707579ff text="grows" font=f2 glyphs=5 advance=40
+  text bounds=(62,60,88,32) pos=(70,68,72,16) color=#707579ff text="downward," font=f2 glyphs=9 advance=72
+  text bounds=(142,60,40,32) pos=(150,68,24,16) color=#707579ff text="its" font=f2 glyphs=3 advance=24
+  text bounds=(174,60,40,32) pos=(182,68,24,16) color=#707579ff text="top" font=f2 glyphs=3 advance=24
+  text bounds=(206,60,64,32) pos=(214,68,48,16) color=#707579ff text="stays." font=f2 glyphs=6 advance=48
+  text bounds=(4,95,48,32) pos=(12,103,32,16) color=#000000ff text="🏨" font=f3 glyphs=4 advance=32
+  text bounds=(44,95,64,32) pos=(52,103,48,16) color=#000000ff text="Hotels" font=f3 glyphs=6 advance=48
+  text bounds=(100,95,32,32) pos=(108,103,16,16) color=#000000ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(124,95,64,32) pos=(132,103,48,16) color=#000000ff text="Lisbon" font=f3 glyphs=6 advance=48
+  text bounds=(4,116,72,32) pos=(12,124,56,16) color=#707579ff text="12–14" font=f4 glyphs=7 advance=56
+  text bounds=(68,116,40,32) pos=(76,124,24,16) color=#707579ff text="Nov" font=f4 glyphs=3 advance=24
+  text bounds=(100,116,32,32) pos=(108,124,16,16) color=#707579ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(124,116,24,32) pos=(132,124,8,16) color=#707579ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(140,116,64,32) pos=(148,124,48,16) color=#707579ff text="guests" font=f4 glyphs=6 advance=48
+  text bounds=(196,116,32,32) pos=(204,124,16,16) color=#707579ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(220,116,24,32) pos=(228,124,8,16) color=#707579ff text="7" font=f4 glyphs=1 advance=8
+  text bounds=(236,116,64,32) pos=(244,124,48,16) color=#707579ff text="found," font=f4 glyphs=6 advance=48
+  text bounds=(4,134,80,32) pos=(12,142,64,16) color=#707579ff text="cheapest" font=f4 glyphs=8 advance=64
+  text bounds=(76,134,56,32) pos=(84,142,40,16) color=#707579ff text="first" font=f4 glyphs=5 advance=40
+  text bounds=(5,181,48,32) pos=(13,189,32,16) color=#000000ff text="🌿" font=f5 glyphs=4 advance=32
+  set-clip bounds=(56,171.55,210,18.9) pos=(56,171.55,210,18.9) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(48,165,48,32) pos=(56,173,32,16) color=#000000ff text="Casa" font=f6 glyphs=4 advance=32
+  text bounds=(88,165,32,32) pos=(96,173,16,16) color=#000000ff text="do" font=f6 glyphs=2 advance=16
+  text bounds=(112,165,64,32) pos=(120,173,48,16) color=#000000ff text="Jardim" font=f6 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(48,182,88,32) pos=(56,190,72,16) color=#707579ff text="Príncipe" font=f2 glyphs=9 advance=72
+  text bounds=(128,182,48,32) pos=(136,190,32,16) color=#707579ff text="Real" font=f2 glyphs=4 advance=32
+  text bounds=(168,182,32,32) pos=(176,190,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(192,182,40,32) pos=(200,190,24,16) color=#707579ff text="8.9" font=f2 glyphs=3 advance=24
+  text bounds=(224,182,32,32) pos=(232,190,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(48,199,40,32) pos=(56,207,24,16) color=#707579ff text="0.4" font=f2 glyphs=3 advance=24
+  text bounds=(80,199,32,32) pos=(88,207,16,16) color=#707579ff text="km" font=f2 glyphs=2 advance=16
+  text bounds=(300,173,56,32) pos=(308,181,40,16) color=#000000ff text="€74" font=f6 glyphs=5 advance=40
+  text bounds=(268,191,40,32) pos=(276,199,24,16) color=#707579ff text="per" font=f7 glyphs=3 advance=24
+  text bounds=(300,191,56,32) pos=(308,199,40,16) color=#707579ff text="night" font=f7 glyphs=5 advance=40
+  text bounds=(5,235,48,32) pos=(13,243,32,16) color=#000000ff text="🚋" font=f5 glyphs=4 advance=32
+  set-clip bounds=(56,233.85,210,18.9) pos=(56,233.85,210,18.9) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(48,227,48,32) pos=(56,235,32,16) color=#000000ff text="Tram" font=f6 glyphs=4 advance=32
+  text bounds=(88,227,32,32) pos=(96,235,16,16) color=#000000ff text="28" font=f6 glyphs=2 advance=16
+  text bounds=(112,227,56,32) pos=(120,235,40,16) color=#000000ff text="Rooms" font=f6 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(48,245,64,32) pos=(56,253,48,16) color=#707579ff text="Graça" font=f2 glyphs=6 advance=48
+  text bounds=(104,245,32,32) pos=(112,253,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(128,245,40,32) pos=(136,253,24,16) color=#707579ff text="8.4" font=f2 glyphs=3 advance=24
+  text bounds=(160,245,32,32) pos=(168,253,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(184,245,40,32) pos=(192,253,24,16) color=#707579ff text="1.2" font=f2 glyphs=3 advance=24
+  text bounds=(216,245,32,32) pos=(224,253,16,16) color=#707579ff text="km" font=f2 glyphs=2 advance=16
+  text bounds=(300,228,56,32) pos=(308,236,40,16) color=#000000ff text="€81" font=f6 glyphs=5 advance=40
+  text bounds=(268,245,40,32) pos=(276,253,24,16) color=#707579ff text="per" font=f7 glyphs=3 advance=24
+  text bounds=(300,245,56,32) pos=(308,253,40,16) color=#707579ff text="night" font=f7 glyphs=5 advance=40
+  text bounds=(5,289,48,32) pos=(13,297,32,16) color=#000000ff text="🌊" font=f5 glyphs=4 advance=32
+  set-clip bounds=(56,279.95,210,18.9) pos=(56,279.95,210,18.9) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(48,273,72,32) pos=(56,281,56,16) color=#000000ff text="Ribeira" font=f6 glyphs=7 advance=56
+  text bounds=(112,273,56,32) pos=(120,281,40,16) color=#000000ff text="Flats" font=f6 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  text bounds=(48,291,48,32) pos=(56,299,32,16) color=#707579ff text="Cais" font=f2 glyphs=4 advance=32
+  text bounds=(88,291,32,32) pos=(96,299,16,16) color=#707579ff text="do" font=f2 glyphs=2 advance=16
+  text bounds=(112,291,64,32) pos=(120,299,48,16) color=#707579ff text="Sodré" font=f2 glyphs=6 advance=48
+  text bounds=(168,291,32,32) pos=(176,299,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(192,291,40,32) pos=(200,299,24,16) color=#707579ff text="8.7" font=f2 glyphs=3 advance=24
+  text bounds=(224,291,32,32) pos=(232,299,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(48,307,40,32) pos=(56,315,24,16) color=#707579ff text="0.9" font=f2 glyphs=3 advance=24
+  text bounds=(80,307,32,32) pos=(88,315,16,16) color=#707579ff text="km" font=f2 glyphs=2 advance=16
+  text bounds=(300,282,56,32) pos=(308,290,40,16) color=#000000ff text="€96" font=f6 glyphs=5 advance=40
+  text bounds=(268,300,40,32) pos=(276,308,24,16) color=#707579ff text="per" font=f7 glyphs=3 advance=24
+  text bounds=(300,300,56,32) pos=(308,308,40,16) color=#707579ff text="night" font=f7 glyphs=5 advance=40
+  text bounds=(128,342,48,32) pos=(136,350,32,16) color=#000000ff text="Show" font=f8 glyphs=4 advance=32
+  text bounds=(168,342,24,32) pos=(176,350,8,16) color=#000000ff text="2" font=f8 glyphs=1 advance=8
+  text bounds=(184,342,48,32) pos=(192,350,32,16) color=#000000ff text="more" font=f8 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=18,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

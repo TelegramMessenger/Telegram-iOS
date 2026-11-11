@@ -4,7 +4,7 @@ import RichTextEditorCore
 
 /// **The editor's own undo stack — snapshots of the document, not UIKit's text operations.**
 ///
-/// See the RichTextEditor `CLAUDE.md`, "The editor owns its undo stack".
+/// See the RichTextEngineEditor `CLAUDE.md`, "The editor owns its undo stack".
 ///
 /// UIKit decides undo granularity from WHICH ENTRY POINT delivered the text: a hardware key press
 /// arrives as `insertText:` and is registered as operation type 2, which coalesces, while the

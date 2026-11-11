@@ -158,4 +158,63 @@ final class TabBarItemsLayoutTests: XCTestCase {
     func test_itemIndex_noItems_nil() {
         XCTAssertNil(tabBarItemIndex(at: CGPoint(x: 10.0, y: 10.0), axis: .vertical, itemFrames: []))
     }
+
+    func test_itemIndex_insideOverlappingItems_nearestMidpoint() {
+        // 89.67…99 is inside both the first (4…99) and the second (89.67…184.67) system item.
+        let frames = self.systemLayout([44.666666666666664, 28.0, 28.666666666666668, 41.333333333333336], 360.0).itemFrames
+        XCTAssertEqual(tabBarItemIndex(at: CGPoint(x: 92.0, y: 30.0), axis: .horizontal, itemFrames: frames), 0)
+        XCTAssertEqual(tabBarItemIndex(at: CGPoint(x: 97.0, y: 30.0), axis: .horizontal, itemFrames: frames), 1)
+    }
+
+    // The system layout: UIKit's iOS 27 frames, read from a UITabBarController in the iOS 27 simulator at scale 3,
+    // for the content widths `-[_UITabButton sizeThatFits:]` reported there.
+
+    private func systemLayout(_ widths: [CGFloat], _ availableLength: CGFloat) -> TabBarItemsLayout {
+        return tabBarSystemItemsLayout(fittedItemWidths: widths, availableLength: availableLength, hasAccessory: false, scale: 3.0)
+    }
+
+    private func assertFrames(_ layout: TabBarItemsLayout, size: CGSize, xAndWidths: [(CGFloat, CGFloat)], file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(layout.size, size, file: file, line: line)
+        XCTAssertEqual(layout.itemFrames.count, xAndWidths.count, file: file, line: line)
+        for (frame, expected) in zip(layout.itemFrames, xAndWidths) {
+            XCTAssertEqual(frame.minX, expected.0, accuracy: 0.001, file: file, line: line)
+            XCTAssertEqual(frame.width, expected.1, accuracy: 0.001, file: file, line: line)
+            XCTAssertEqual(frame.minY, 4.0, file: file, line: line)
+            XCTAssertEqual(frame.height, 54.0, file: file, line: line)
+        }
+    }
+
+    func test_system_fourItems_402Wide_equalAndOverlapping() {
+        // Contacts, Calls, Chats, Settings on a 402pt screen: the bar is 402 - 2 * 21 = 360.
+        self.assertFrames(self.systemLayout([44.666666666666664, 28.0, 28.666666666666668, 41.333333333333336], 360.0), size: CGSize(width: 360.0, height: 62.0), xAndWidths: [(4.0, 95.0), (89.6667, 95.0), (175.3333, 95.0), (261.0, 95.0)])
+    }
+
+    func test_system_fourItems_320Wide_proportional() {
+        self.assertFrames(self.systemLayout([44.666666666666664, 28.0, 28.666666666666668, 41.333333333333336], 278.0), size: CGSize(width: 278.0, height: 62.0), xAndWidths: [(4.0, 84.7866), (68.7866, 81.7378), (130.5244, 81.7378), (192.2622, 81.7378)])
+    }
+
+    func test_system_fourShortItems_widerItems() {
+        self.assertFrames(self.systemLayout([28.0, 28.0, 28.0, 28.0], 360.0), size: CGSize(width: 360.0, height: 62.0), xAndWidths: [(4.0, 98.0), (88.6667, 98.0), (173.3333, 98.0), (258.0, 98.0)])
+    }
+
+    func test_system_fourItems_longTitle_proportional() {
+        self.assertFrames(self.systemLayout([93.66666666666667, 28.0, 28.666666666666668, 41.333333333333336], 360.0), size: CGSize(width: 360.0, height: 62.0), xAndWidths: [(4.0, 155.9054), (131.9054, 93.3649), (197.2702, 93.3649), (262.6351, 93.3649)])
+    }
+
+    func test_system_fiveItems() {
+        self.assertFrames(self.systemLayout([44.666666666666664, 28.0, 28.666666666666668, 41.333333333333336, 35.0], 360.0), size: CGSize(width: 360.0, height: 62.0), xAndWidths: [(4.0, 78.6667), (72.3333, 78.6667), (140.6667, 78.6667), (209.0, 78.6667), (277.3333, 78.6667)])
+    }
+
+    func test_system_twoAndThreeItems_hugTheirItems() {
+        self.assertFrames(self.systemLayout([28.0, 41.333333333333336], 360.0), size: CGSize(width: 188.0, height: 62.0), xAndWidths: [(4.0, 94.0), (90.0, 94.0)])
+        self.assertFrames(self.systemLayout([44.666666666666664, 28.666666666666668, 41.333333333333336], 360.0), size: CGSize(width: 274.0, height: 62.0), xAndWidths: [(4.0, 94.0), (90.0, 94.0), (176.0, 94.0)])
+    }
+
+    func test_system_threeItemsWithAccessory_fillTheLength() {
+        // An accessory makes three items lay out like four or more: the bar takes the whole length.
+        let layout = tabBarSystemItemsLayout(fittedItemWidths: [44.666666666666664, 28.666666666666668, 41.333333333333336], availableLength: 290.0, hasAccessory: true, scale: 3.0)
+        XCTAssertEqual(layout.size, CGSize(width: 290.0, height: 62.0))
+        XCTAssertEqual(layout.itemFrames.first?.minX ?? 0.0, 4.0, accuracy: 0.001)
+        XCTAssertEqual(layout.itemFrames.last?.maxX ?? 0.0, 286.0, accuracy: 0.001)
+    }
 }

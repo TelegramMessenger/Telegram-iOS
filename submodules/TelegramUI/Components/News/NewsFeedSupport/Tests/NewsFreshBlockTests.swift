@@ -46,6 +46,51 @@ final class NewsFreshBlockTests: XCTestCase {
         XCTAssertEqual(end.y, 2.0, accuracy: 1e-9)
     }
 
+    func testGlowBlockSpansItsRows() {
+        let segments = newsFreshSegments(isFresh: [false, true, true, true, false], revealTime: 5.0)
+        let heights: [CGFloat] = [100.0, 98.0, 120.0, 98.0, 100.0]
+        var rows: [(frame: CGRect, segment: NewsFreshSegment?)] = []
+        var y: CGFloat = 40.0
+        for (height, segment) in zip(heights, segments) {
+            rows.append((CGRect(x: 0.0, y: y, width: 402.0, height: height), segment))
+            y += height
+        }
+        XCTAssertEqual(newsFreshGlowBlocks(rows: rows), [NewsFreshGlowBlock(firstRow: 1, rowsFrame: CGRect(x: 0.0, y: 140.0, width: 402.0, height: 316.0), isClosed: true, revealTime: 5.0)])
+    }
+
+    func testGlowBlocksOfTheLoadedRows() {
+        let frame = { (i: Int) in CGRect(x: 0.0, y: CGFloat(i) * 100.0, width: 402.0, height: 100.0) }
+        // The block runs on past the loaded rows: its bottom is open.
+        let open = newsFreshSegments(isFresh: [true, true, true], revealTime: 1.0)
+        XCTAssertEqual(newsFreshGlowBlocks(rows: [(frame(0), open[0]), (frame(1), open[1])]), [NewsFreshGlowBlock(firstRow: 0, rowsFrame: CGRect(x: 0.0, y: 0.0, width: 402.0, height: 200.0), isClosed: false, revealTime: 1.0)])
+        // Its first row is not loaded: no glow.
+        XCTAssertEqual(newsFreshGlowBlocks(rows: [(frame(1), open[1]), (frame(2), open[2]), (frame(3), nil)]), [])
+        // A row between two runs splits them into two blocks, each with its own glow.
+        let split = newsFreshSegments(isFresh: [true, false, true, true], revealTime: 1.0)
+        XCTAssertEqual(newsFreshGlowBlocks(rows: (0 ..< 4).map { (frame($0), split[$0]) }), [
+            NewsFreshGlowBlock(firstRow: 0, rowsFrame: frame(0), isClosed: true, revealTime: 1.0),
+            NewsFreshGlowBlock(firstRow: 2, rowsFrame: CGRect(x: 0.0, y: 200.0, width: 402.0, height: 200.0), isClosed: true, revealTime: 1.0)
+        ])
+    }
+
+    func testGlowLayoutStopsWhereTheMaskIsClear() {
+        // A tall block: the glow is drawn down to its reach, the card runs on past it, and the spot starts 120 pt down.
+        let tall = NewsFreshGlowBlock(firstRow: 0, rowsFrame: CGRect(x: 0.0, y: 50.0, width: 402.0, height: 400.0), isClosed: true, revealTime: 1.0).layout
+        XCTAssertEqual(tall.frame, CGRect(x: 0.0, y: 34.0, width: 402.0, height: 302.0))
+        XCTAssertEqual(tall.card, CGRect(x: 8.0, y: 19.0, width: 386.0, height: 394.0))
+        XCTAssertEqual(tall.driftStart, CGPoint(x: 8.0, y: 136.0))
+        XCTAssertEqual(tall.driftEnd.x, 184.92, accuracy: 1e-9)
+        XCTAssertEqual(tall.driftEnd.y, 18.0, accuracy: 1e-9)
+        // A one-row block: drawn whole, its card closed at the bottom.
+        let short = NewsFreshGlowBlock(firstRow: 0, rowsFrame: CGRect(x: 0.0, y: 50.0, width: 402.0, height: 100.0), isClosed: true, revealTime: 1.0).layout
+        XCTAssertEqual(short.frame, CGRect(x: 0.0, y: 34.0, width: 402.0, height: 132.0))
+        XCTAssertEqual(short.card, CGRect(x: 8.0, y: 19.0, width: 386.0, height: 94.0))
+        XCTAssertEqual(short.driftStart.y, 16.0 + 62.0, accuracy: 1e-9)
+        // An open block's card runs past its loaded rows.
+        let open = NewsFreshGlowBlock(firstRow: 0, rowsFrame: CGRect(x: 0.0, y: 50.0, width: 402.0, height: 100.0), isClosed: false, revealTime: 1.0).layout
+        XCTAssertEqual(open.card, CGRect(x: 8.0, y: 19.0, width: 386.0, height: 137.0))
+    }
+
     func testRunsOfFreshRows() {
         let segments = newsFreshSegments(isFresh: [true, true, false, true], revealTime: 5.0)
         XCTAssertEqual(segments[0], NewsFreshSegment(index: 0, isFirst: true, isLast: false, revealTime: 5.0))

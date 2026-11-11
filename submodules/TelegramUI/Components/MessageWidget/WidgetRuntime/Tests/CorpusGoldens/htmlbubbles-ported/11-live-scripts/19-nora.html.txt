@@ -1,0 +1,48 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body>Try your own: <i>Insert Snippet ▸ Script Counter</i> in the composer, edit it, and send. A <code>&lt;script&gt;</code> in any message makes it live.
+</body></html>
+
+== layout
+html 0 0 360 54.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 54.6
+    i 0 0 0 0
+    code 0 0 0 0
+
+== paint
+root 360x54.6 items=24
+  text bounds=(-8,-7,40,32) pos=(0,1,24,16) color=#000000ff text="Try" font=f1 glyphs=3 advance=24
+  text bounds=(24,-7,48,32) pos=(32,1,32,16) color=#000000ff text="your" font=f1 glyphs=4 advance=32
+  text bounds=(64,-7,48,32) pos=(72,1,32,16) color=#000000ff text="own:" font=f1 glyphs=4 advance=32
+  text bounds=(104,-7,64,32) pos=(112,1,48,16) color=#000000ff text="Insert" font=f2 glyphs=6 advance=48
+  text bounds=(160,-7,72,32) pos=(168,1,56,16) color=#000000ff text="Snippet" font=f2 glyphs=7 advance=56
+  text bounds=(224,-7,40,32) pos=(232,1,24,16) color=#000000ff text="▸" font=f2 glyphs=3 advance=24
+  text bounds=(256,-7,64,32) pos=(264,1,48,16) color=#000000ff text="Script" font=f2 glyphs=6 advance=48
+  text bounds=(-8,11,72,32) pos=(0,19,56,16) color=#000000ff text="Counter" font=f2 glyphs=7 advance=56
+  text bounds=(56,11,32,32) pos=(64,19,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(80,11,40,32) pos=(88,19,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(112,11,88,32) pos=(120,19,72,16) color=#000000ff text="composer," font=f1 glyphs=9 advance=72
+  text bounds=(192,11,48,32) pos=(200,19,32,16) color=#000000ff text="edit" font=f1 glyphs=4 advance=32
+  text bounds=(232,11,40,32) pos=(240,19,24,16) color=#000000ff text="it," font=f1 glyphs=3 advance=24
+  text bounds=(264,11,40,32) pos=(272,19,24,16) color=#000000ff text="and" font=f1 glyphs=3 advance=24
+  text bounds=(296,11,56,32) pos=(304,19,40,16) color=#000000ff text="send." font=f1 glyphs=5 advance=40
+  text bounds=(344,11,24,32) pos=(352,19,8,16) color=#000000ff text="A" font=f1 glyphs=1 advance=8
+  solid-fill bounds=(0,36,72,18) layer=(border=(0,36,72,18),radius=(4,4,4,4,4,4,4,4),clip=(0,36,72,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(-4,29,80,32) pos=(4,37,64,16) color=#000000ff text="<script>" font=f3 glyphs=8 advance=64
+  text bounds=(72,29,32,32) pos=(80,37,16,16) color=#000000ff text="in" font=f1 glyphs=2 advance=16
+  text bounds=(96,29,40,32) pos=(104,37,24,16) color=#000000ff text="any" font=f1 glyphs=3 advance=24
+  text bounds=(128,29,72,32) pos=(136,37,56,16) color=#000000ff text="message" font=f1 glyphs=7 advance=56
+  text bounds=(192,29,56,32) pos=(200,37,40,16) color=#000000ff text="makes" font=f1 glyphs=5 advance=40
+  text bounds=(240,29,32,32) pos=(248,37,16,16) color=#000000ff text="it" font=f1 glyphs=2 advance=16
+  text bounds=(264,29,56,32) pos=(272,37,40,16) color=#000000ff text="live." font=f1 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

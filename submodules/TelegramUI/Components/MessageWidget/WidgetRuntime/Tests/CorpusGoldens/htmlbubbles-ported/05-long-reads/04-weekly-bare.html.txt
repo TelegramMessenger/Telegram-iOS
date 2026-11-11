@@ -1,0 +1,308 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card faq" id="faq">
+  <div class="pad" style="padding-bottom: 8px">
+    <div class="row between"><span style="font-size: 17px; font-weight: 800">Frequently asked questions</span><span class="tiny muted" id="rated"></span></div>
+    <div class="tiny muted">Showing <span id="shown">8</span> of 8 · one answer open at a time</div>
+    <div class="chips" id="chips">
+      <span class="ch on" data-cat="0">All 8</span><span class="ch" data-cat="1">Scripts 4</span><span class="ch" data-cat="2">Rendering 3</span><span class="ch" data-cat="3">Authoring 1</span>
+    </div>
+  </div>
+  <div id="list">
+    <div class="q" data-id="0" data-cat="Scripts"><span class="grow qt" style="left: 0.0px;">Can a message run JavaScript?</span><span class="tag">Scripts</span><span class="sign">+</span></div>
+    <div class="a" data-id="0" hidden="">Yes, in a sandbox. litehtml itself never runs scripts; a message's <code>&lt;script&gt;</code> runs in its own JavaScriptCore context with no network and no DOM. All it can do is return HTML from <code>render()</code> and react to clicks in <code>onAction</code>.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">41</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">2</span></span></div></div>
+
+    <div class="q" data-id="1" data-cat="Scripts"><span class="grow qt" style="left: 0.0px;">How does this accordion work?</span><span class="tag">Scripts</span><span class="sign">+</span></div>
+    <div class="a" data-id="1" hidden="">Every question has <code>data-action="open"</code>. A click calls <code>onAction('open', id)</code>; the script keeps a single <code>openId</code>, so opening one answer closes the other, calls <code>transition('slide-down')</code>, and <code>render()</code> returns the new HTML for this same bubble.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">28</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">1</span></span></div></div>
+
+    <div class="q" data-id="2" data-cat="Rendering"><span class="grow qt" style="left: 0.0px;">Do styles from one message leak into another?</span><span class="tag">Rendering</span><span class="sign">+</span></div>
+    <div class="a" data-id="2" hidden="">Never. Each bubble is a separate litehtml document with its own stylesheet list, so a <code>&lt;style&gt;p { color: red }&lt;/style&gt;</code> only affects its own bubble.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">19</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">0</span></span></div></div>
+
+    <div class="q" data-id="3" data-cat="Rendering"><span class="grow qt" style="left: 0.0px;">How long can a message be?</span><span class="tag">Rendering</span><span class="sign">+</span></div>
+    <div class="a" data-id="3" hidden="">There is no hard limit. The article above carries around 20&nbsp;KB of HTML; the leaderboard in “Analytics” has fifty table rows. Layout cost grows roughly linearly with the number of words and boxes, and a script may return up to 256&nbsp;KB per render.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">12</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">3</span></span></div></div>
+
+    <div class="q" data-id="4" data-cat="Authoring"><span class="grow qt" style="left: 0.0px;">Can I write my own messages like these?</span><span class="tag">Authoring</span><span class="sign">+</span></div>
+    <div class="a" data-id="4" hidden="">Yes — paste HTML into the composer, with <code>&lt;style&gt;</code> and <code>&lt;script&gt;</code> if you like, or edit the <code>.chat</code> files in <code>Resources/chats</code>. Anything you send shows fullsize; wrap it in <code>&lt;div class="widget"&gt;</code> to show it inside a bubble.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">33</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">1</span></span></div></div>
+
+    <div class="q" data-id="5" data-cat="Scripts"><span class="grow qt" style="left: 0.0px;">What stops a script from freezing the app?</span><span class="tag">Scripts</span><span class="sign">+</span></div>
+    <div class="a" data-id="5" hidden="">Every call into a script is capped at 50&nbsp;ms, and a message gets at most 200&nbsp;ms of CPU per second. Break either rule and the script is stopped; the card keeps its last HTML and offers a Restart link.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">25</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">0</span></span></div></div>
+
+    <div class="q" data-id="6" data-cat="Rendering"><span class="grow qt" style="left: 0.0px;">Which CSS can't litehtml draw?</span><span class="tag">Rendering</span><span class="sign">+</span></div>
+    <div class="a" data-id="6" hidden="">No transitions, transforms, <code>opacity</code>, <code>box-shadow</code> or grid. Scripts animate with what is left — <code>rgba()</code> colours, margins, sizes and absolute positions — re-rendering up to 60 times a second.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">17</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">2</span></span></div></div>
+
+    <div class="q" data-id="7" data-cat="Scripts"><span class="grow qt" style="left: 0.0px;">Do animations run while I scroll away?</span><span class="tag">Scripts</span><span class="sign">+</span></div>
+    <div class="a" data-id="7" hidden="">No. Timers and frames pause while a bubble is off screen and catch up when it comes back, so a long chat full of live cards costs nothing.
+      <div class="help"><span class="muted grow msg">Was this helpful?</span><span class="v" data-vote="up"><span class="e">👍</span> <span class="n">14</span></span><span class="v" data-vote="down"><span class="e">👎</span> <span class="n">1</span></span></div></div>
+  </div>
+  <div class="empty muted" id="empty" hidden="">Nothing here yet.</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 536.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 536.5
+    div 1 1 360 534.5
+      div 15 13 332 109.9
+        div 15 13 332 22.1
+          span 15 13 208 22.1
+          span 347 24.05 0 0
+        div 15 35.1 332 28.6
+          span 15 35.1 0 0
+        div 15 71.7 332 51.2
+          span 26 74.7 40 15.6
+          span 94 74.7 72 15.6
+          span 194 74.7 88 15.6
+          span 26 100.3 88 15.6
+      div 1 130.9 360 404.6
+        div 15 141.9 332 18.2
+          span 15 141.9 250 18.2
+          span 265 144.5 56 13
+          span 329 141.9 18 18.2
+        div 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 181.1 332 18.2
+          span 15 181.1 250 18.2
+          span 265 183.7 56 13
+          span 329 181.1 18 18.2
+        div 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 220.3 332 36.4
+          span 15 220.3 237.176 36.4
+          span 252.176 232 72 13
+          span 332.176 229.4 14.8235 18.2
+        div 0 0 0 0
+          code 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 277.7 332 18.2
+          span 15 277.7 234 18.2
+          span 249 280.3 72 13
+          span 329 277.7 18 18.2
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 316.9 332 36.4
+          span 15 316.9 238.255 36.4
+          span 253.255 328.6 72 13
+          span 333.255 326 13.7455 18.2
+        div 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 374.3 332 36.4
+          span 15 374.3 252.637 36.4
+          span 267.637 386 56 13
+          span 331.637 383.4 15.3631 18.2
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 431.7 332 36.4
+          span 15 431.7 234.419 36.4
+          span 249.419 443.4 72 13
+          span 329.419 440.8 17.5814 18.2
+        div 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          code 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+        div 15 489.1 332 36.4
+          span 15 489.1 253.019 36.4
+          span 268.019 500.8 56 13
+          span 332.019 498.2 14.9814 18.2
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+      div 0 0 0 0
+
+== paint
+root 362x536.5 items=105
+  solid-fill bounds=(0,0,362,537) layer=(border=(0,0,362,537),radius=(14,14,14,14,14,14,14,14),clip=(0,0,362,537),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,362,537) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,362,537) root=0
+  solid-fill bounds=(15,72,62,21) layer=(border=(15,72,62,21),radius=(10.8,10.8,10.8,10.8,10.8,10.8,10.8,10.8),clip=(15,72,62,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff6b35ff
+  borders bounds=(15,72,62,21) borders=(left=(1,4,#ff6b35ff),top=(1,4,#ff6b35ff),right=(1,4,#ff6b35ff),bottom=(1,4,#ff6b35ff),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(15,72,62,21) root=0
+  borders bounds=(83,72,94,21) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(83,72,94,21) root=0
+  borders bounds=(183,72,110,21) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(10.5,10.5,10.5,10.5,10.5,10.5,10.5,10.5)) pos=(183,72,110,21) root=0
+  borders bounds=(15,97,110,22) borders=(left=(1,4,#7f7f7f4d),top=(1,4,#7f7f7f4d),right=(1,4,#7f7f7f4d),bottom=(1,4,#7f7f7f4d),radius=(11,11,11,11,11,11,11,11)) pos=(15,97,110,22) root=0
+  borders bounds=(1,131,360,39) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,131,360,39) root=0
+  borders bounds=(1,170,360,39) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,170,360,39) root=0
+  borders bounds=(1,209,360,58) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,209,360,58) root=0
+  borders bounds=(1,267,360,39) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,267,360,39) root=0
+  borders bounds=(1,306,360,57) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,306,360,57) root=0
+  borders bounds=(1,363,360,58) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,363,360,58) root=0
+  borders bounds=(1,421,360,57) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,421,360,57) root=0
+  borders bounds=(1,478,360,58) borders=(left=(0,4,#ff6b35ff),top=(1,4,#7f7f7f38),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(1,478,360,58) root=0
+  text bounds=(7,8,96,32) pos=(15,16,80,16) color=#000000ff text="Frequently" font=f1 glyphs=10 advance=80
+  text bounds=(95,8,56,32) pos=(103,16,40,16) color=#000000ff text="asked" font=f1 glyphs=5 advance=40
+  text bounds=(143,8,88,32) pos=(151,16,72,16) color=#000000ff text="questions" font=f1 glyphs=9 advance=72
+  text bounds=(7,27,72,32) pos=(15,35,56,16) color=#6e6e73ff text="Showing" font=f2 glyphs=7 advance=56
+  text bounds=(71,27,24,32) pos=(79,35,8,16) color=#6e6e73ff text="8" font=f2 glyphs=1 advance=8
+  text bounds=(87,27,32,32) pos=(95,35,16,16) color=#6e6e73ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(111,27,24,32) pos=(119,35,8,16) color=#6e6e73ff text="8" font=f2 glyphs=1 advance=8
+  text bounds=(127,27,32,32) pos=(135,35,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(151,27,40,32) pos=(159,35,24,16) color=#6e6e73ff text="one" font=f2 glyphs=3 advance=24
+  text bounds=(183,27,64,32) pos=(191,35,48,16) color=#6e6e73ff text="answer" font=f2 glyphs=6 advance=48
+  text bounds=(239,27,48,32) pos=(247,35,32,16) color=#6e6e73ff text="open" font=f2 glyphs=4 advance=32
+  text bounds=(279,27,32,32) pos=(287,35,16,16) color=#6e6e73ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(303,27,24,32) pos=(311,35,8,16) color=#6e6e73ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(7,41,48,32) pos=(15,49,32,16) color=#6e6e73ff text="time" font=f2 glyphs=4 advance=32
+  text bounds=(18,67,40,32) pos=(26,75,24,16) color=#ffffffff text="All" font=f3 glyphs=3 advance=24
+  text bounds=(50,67,24,32) pos=(58,75,8,16) color=#ffffffff text="8" font=f3 glyphs=1 advance=8
+  text bounds=(86,67,72,32) pos=(94,75,56,16) color=#000000ff text="Scripts" font=f3 glyphs=7 advance=56
+  text bounds=(150,67,24,32) pos=(158,75,8,16) color=#000000ff text="4" font=f3 glyphs=1 advance=8
+  text bounds=(186,67,88,32) pos=(194,75,72,16) color=#000000ff text="Rendering" font=f3 glyphs=9 advance=72
+  text bounds=(266,67,24,32) pos=(274,75,8,16) color=#000000ff text="3" font=f3 glyphs=1 advance=8
+  text bounds=(18,92,88,32) pos=(26,100,72,16) color=#000000ff text="Authoring" font=f3 glyphs=9 advance=72
+  text bounds=(98,92,24,32) pos=(106,100,8,16) color=#000000ff text="1" font=f3 glyphs=1 advance=8
+  text bounds=(257,136,72,32) pos=(265,144,56,16) color=#8e8e93ff text="SCRIPTS" font=f4 glyphs=7 advance=56
+  text bounds=(326,135,24,32) pos=(334,143,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(257,175,72,32) pos=(265,183,56,16) color=#8e8e93ff text="SCRIPTS" font=f4 glyphs=7 advance=56
+  text bounds=(326,174,24,32) pos=(334,182,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(244.176,223,88,32) pos=(252.176,231,72,16) color=#8e8e93ff text="RENDERING" font=f4 glyphs=9 advance=72
+  text bounds=(327.588,222,24,32) pos=(335.588,230,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(241,271,88,32) pos=(249,279,72,16) color=#8e8e93ff text="RENDERING" font=f4 glyphs=9 advance=72
+  text bounds=(326,271,24,32) pos=(334,279,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(245.255,320,88,32) pos=(253.255,328,72,16) color=#8e8e93ff text="AUTHORING" font=f4 glyphs=9 advance=72
+  text bounds=(328.127,319,24,32) pos=(336.127,327,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(259.637,377,72,32) pos=(267.637,385,56,16) color=#8e8e93ff text="SCRIPTS" font=f4 glyphs=7 advance=56
+  text bounds=(327.318,376,24,32) pos=(335.318,384,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(241.419,434,88,32) pos=(249.419,442,72,16) color=#8e8e93ff text="RENDERING" font=f4 glyphs=9 advance=72
+  text bounds=(326.209,434,24,32) pos=(334.209,442,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(260.019,492,72,32) pos=(268.019,500,56,16) color=#8e8e93ff text="SCRIPTS" font=f4 glyphs=7 advance=56
+  text bounds=(327.509,491,24,32) pos=(335.509,499,8,16) color=#ff6b35ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(7,135,40,32) pos=(15,143,24,16) color=#000000ff text="Can" font=f6 glyphs=3 advance=24
+  text bounds=(39,135,24,32) pos=(47,143,8,16) color=#000000ff text="a" font=f6 glyphs=1 advance=8
+  text bounds=(55,135,72,32) pos=(63,143,56,16) color=#000000ff text="message" font=f6 glyphs=7 advance=56
+  text bounds=(119,135,40,32) pos=(127,143,24,16) color=#000000ff text="run" font=f6 glyphs=3 advance=24
+  text bounds=(151,135,104,32) pos=(159,143,88,16) color=#000000ff text="JavaScript?" font=f6 glyphs=11 advance=88
+  text bounds=(7,174,40,32) pos=(15,182,24,16) color=#000000ff text="How" font=f6 glyphs=3 advance=24
+  text bounds=(39,174,48,32) pos=(47,182,32,16) color=#000000ff text="does" font=f6 glyphs=4 advance=32
+  text bounds=(79,174,48,32) pos=(87,182,32,16) color=#000000ff text="this" font=f6 glyphs=4 advance=32
+  text bounds=(119,174,88,32) pos=(127,182,72,16) color=#000000ff text="accordion" font=f6 glyphs=9 advance=72
+  text bounds=(199,174,56,32) pos=(207,182,40,16) color=#000000ff text="work?" font=f6 glyphs=5 advance=40
+  text bounds=(7,213,32,32) pos=(15,221,16,16) color=#000000ff text="Do" font=f6 glyphs=2 advance=16
+  text bounds=(31,213,64,32) pos=(39,221,48,16) color=#000000ff text="styles" font=f6 glyphs=6 advance=48
+  text bounds=(87,213,48,32) pos=(95,221,32,16) color=#000000ff text="from" font=f6 glyphs=4 advance=32
+  text bounds=(127,213,40,32) pos=(135,221,24,16) color=#000000ff text="one" font=f6 glyphs=3 advance=24
+  text bounds=(159,213,72,32) pos=(167,221,56,16) color=#000000ff text="message" font=f6 glyphs=7 advance=56
+  text bounds=(7,231,48,32) pos=(15,239,32,16) color=#000000ff text="leak" font=f6 glyphs=4 advance=32
+  text bounds=(47,231,48,32) pos=(55,239,32,16) color=#000000ff text="into" font=f6 glyphs=4 advance=32
+  text bounds=(87,231,80,32) pos=(95,239,64,16) color=#000000ff text="another?" font=f6 glyphs=8 advance=64
+  text bounds=(7,271,40,32) pos=(15,279,24,16) color=#000000ff text="How" font=f6 glyphs=3 advance=24
+  text bounds=(39,271,48,32) pos=(47,279,32,16) color=#000000ff text="long" font=f6 glyphs=4 advance=32
+  text bounds=(79,271,40,32) pos=(87,279,24,16) color=#000000ff text="can" font=f6 glyphs=3 advance=24
+  text bounds=(111,271,24,32) pos=(119,279,8,16) color=#000000ff text="a" font=f6 glyphs=1 advance=8
+  text bounds=(127,271,72,32) pos=(135,279,56,16) color=#000000ff text="message" font=f6 glyphs=7 advance=56
+  text bounds=(191,271,40,32) pos=(199,279,24,16) color=#000000ff text="be?" font=f6 glyphs=3 advance=24
+  text bounds=(7,310,40,32) pos=(15,318,24,16) color=#000000ff text="Can" font=f6 glyphs=3 advance=24
+  text bounds=(39,310,24,32) pos=(47,318,8,16) color=#000000ff text="I" font=f6 glyphs=1 advance=8
+  text bounds=(55,310,56,32) pos=(63,318,40,16) color=#000000ff text="write" font=f6 glyphs=5 advance=40
+  text bounds=(103,310,32,32) pos=(111,318,16,16) color=#000000ff text="my" font=f6 glyphs=2 advance=16
+  text bounds=(127,310,40,32) pos=(135,318,24,16) color=#000000ff text="own" font=f6 glyphs=3 advance=24
+  text bounds=(159,310,80,32) pos=(167,318,64,16) color=#000000ff text="messages" font=f6 glyphs=8 advance=64
+  text bounds=(7,328,48,32) pos=(15,336,32,16) color=#000000ff text="like" font=f6 glyphs=4 advance=32
+  text bounds=(47,328,64,32) pos=(55,336,48,16) color=#000000ff text="these?" font=f6 glyphs=6 advance=48
+  text bounds=(7,367,48,32) pos=(15,375,32,16) color=#000000ff text="What" font=f6 glyphs=4 advance=32
+  text bounds=(47,367,56,32) pos=(55,375,40,16) color=#000000ff text="stops" font=f6 glyphs=5 advance=40
+  text bounds=(95,367,24,32) pos=(103,375,8,16) color=#000000ff text="a" font=f6 glyphs=1 advance=8
+  text bounds=(111,367,64,32) pos=(119,375,48,16) color=#000000ff text="script" font=f6 glyphs=6 advance=48
+  text bounds=(167,367,48,32) pos=(175,375,32,16) color=#000000ff text="from" font=f6 glyphs=4 advance=32
+  text bounds=(7,386,80,32) pos=(15,394,64,16) color=#000000ff text="freezing" font=f6 glyphs=8 advance=64
+  text bounds=(79,386,40,32) pos=(87,394,24,16) color=#000000ff text="the" font=f6 glyphs=3 advance=24
+  text bounds=(111,386,48,32) pos=(119,394,32,16) color=#000000ff text="app?" font=f6 glyphs=4 advance=32
+  text bounds=(7,425,56,32) pos=(15,433,40,16) color=#000000ff text="Which" font=f6 glyphs=5 advance=40
+  text bounds=(55,425,40,32) pos=(63,433,24,16) color=#000000ff text="CSS" font=f6 glyphs=3 advance=24
+  text bounds=(87,425,56,32) pos=(95,433,40,16) color=#000000ff text="can't" font=f6 glyphs=5 advance=40
+  text bounds=(135,425,80,32) pos=(143,433,64,16) color=#000000ff text="litehtml" font=f6 glyphs=8 advance=64
+  text bounds=(7,443,56,32) pos=(15,451,40,16) color=#000000ff text="draw?" font=f6 glyphs=5 advance=40
+  text bounds=(7,482,32,32) pos=(15,490,16,16) color=#000000ff text="Do" font=f6 glyphs=2 advance=16
+  text bounds=(31,482,96,32) pos=(39,490,80,16) color=#000000ff text="animations" font=f6 glyphs=10 advance=80
+  text bounds=(119,482,40,32) pos=(127,490,24,16) color=#000000ff text="run" font=f6 glyphs=3 advance=24
+  text bounds=(151,482,56,32) pos=(159,490,40,16) color=#000000ff text="while" font=f6 glyphs=5 advance=40
+  text bounds=(199,482,24,32) pos=(207,490,8,16) color=#000000ff text="I" font=f6 glyphs=1 advance=8
+  text bounds=(7,500,64,32) pos=(15,508,48,16) color=#000000ff text="scroll" font=f6 glyphs=6 advance=48
+  text bounds=(63,500,56,32) pos=(71,508,40,16) color=#000000ff text="away?" font=f6 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

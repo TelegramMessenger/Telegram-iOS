@@ -32,6 +32,12 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
     }
     
     func setAttributedText(_ text: NSAttributedString, animation: PasscodeEntryTitleAnimation = .none, completion: @escaping () -> Void = {}) {
+        // VoiceOver reads the prompt (or the attempts notice) as the label shows it.
+        let hasText = !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        self.isAccessibilityElement = hasText
+        self.accessibilityElementsHidden = !hasText
+        self.accessibilityLabel = text.string
+        self.accessibilityTraits = .staticText
         switch animation {
             case .none:
                 self.textNode.attributedText = text

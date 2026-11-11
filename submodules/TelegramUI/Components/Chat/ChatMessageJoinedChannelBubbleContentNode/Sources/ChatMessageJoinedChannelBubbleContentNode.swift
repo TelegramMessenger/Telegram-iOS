@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -76,7 +75,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
     
     private var isExpanded: Bool?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
@@ -96,7 +95,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
         self.closeIconNode.displaysAsynchronously = false
         self.closeIconNode.isUserInteractionEnabled = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.labelNode)
         

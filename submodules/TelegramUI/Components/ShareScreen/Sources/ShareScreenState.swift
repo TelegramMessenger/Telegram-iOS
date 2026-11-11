@@ -77,7 +77,22 @@ final class ShareScreenState {
         if case let .channel(channel) = peer, channel.isMonoForum, let id = channel.linkedMonoforumId {
             return self.displayPeers[id] ?? peer
         }
+        if case let .secretChat(secretChat) = peer {
+            return self.displayPeers[secretChat.regularPeerId] ?? peer
+        }
         return peer
+    }
+
+    private func presenceIds(_ peers: [EnginePeer]) -> [EnginePeer.Id: EnginePeer.Id] {
+        var result: [EnginePeer.Id: EnginePeer.Id] = [:]
+        for peer in peers {
+            if case let .secretChat(secretChat) = peer {
+                result[peer.id] = secretChat.regularPeerId
+            } else {
+                result[peer.id] = peer.id
+            }
+        }
+        return result
     }
 
     func messagingRequirement(for peer: EnginePeer) -> ShareScreenMessagingRequirement {
@@ -93,6 +108,7 @@ final class ShareScreenState {
         let newIds = ids.subtracting(self.requirementPeerIds)
         self.requirementPeerIds = ids
         let linkedIds = Set(peers.compactMap { peer -> EnginePeer.Id? in
+            if case let .secretChat(secretChat) = peer { return secretChat.regularPeerId }
             guard case let .channel(channel) = peer, channel.isMonoForum else { return nil }
             return channel.linkedMonoforumId
         })
@@ -183,19 +199,20 @@ final class ShareScreenState {
             self.updateMessagingRequirements()
             self.scheduleChange()
             let ids = peers.map(\.id)
+            let presenceIds = self.presenceIds(peers)
             detailsDisposable.set((self.context.engine.data.subscribe(
-                EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
+                EngineDataMap(Set(presenceIds.values).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
                 EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
             ) |> deliverOnMainQueue).start(next: { [weak self] presences, counts in
-                self?.applyDetails(ids: ids, presences: presences, counts: counts)
+                self?.applyDetails(ids: ids, presenceIds: presenceIds, presences: presences, counts: counts)
             }))
         }))
     }
 
-    private func applyDetails(ids: [EnginePeer.Id], presences: [EnginePeer.Id: EnginePeer.Presence?], counts: [EnginePeer.Id: Int?]) {
+    private func applyDetails(ids: [EnginePeer.Id], presenceIds: [EnginePeer.Id: EnginePeer.Id], presences: [EnginePeer.Id: EnginePeer.Presence?], counts: [EnginePeer.Id: Int?]) {
         var updated = false
         for id in ids {
-            let presence = presences[id] ?? nil
+            let presence = presences[presenceIds[id] ?? id] ?? nil
             if self.presences[id] != presence {
                 self.presences[id] = presence
                 updated = true
@@ -591,12 +608,13 @@ final class ShareScreenState {
                 firstLoadCompleted()
             }
             let ids = self.peers.map(\.id)
+            let presenceIds = self.presenceIds(self.peers)
             self.detailsDisposable.set((context.engine.data.subscribe(
-                EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
+                EngineDataMap(Set(presenceIds.values).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
                 EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
             ) |> deliverOnMainQueue).start(next: { [weak self] presences, counts in
                 guard let self, self.generation == generation else { return }
-                self.applyDetails(ids: ids, presences: presences, counts: counts)
+                self.applyDetails(ids: ids, presenceIds: presenceIds, presences: presences, counts: counts)
             }))
         }))
     }

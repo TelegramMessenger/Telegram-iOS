@@ -29,6 +29,7 @@ import ChatControllerInteraction
 import WallpaperBackgroundNode
 import TelegramStringFormatting
 import InvisibleInkDustNode
+import StaticGlassBackground
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -62,6 +63,8 @@ public enum ChatMessageInteractiveInstantVideoNodeStatusType {
 }
 
 public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
+    /// Whether the time is hidden because the round video has no bubble, so that it comes back with bubbles.
+    private var hidesDateWithoutBubbles = false
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -106,6 +109,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
 
     private var durationBackgroundNode: NavigationBackgroundNode?
+    // Bubble mode off: the duration stands on the dark media glass, an image inside `durationBackgroundNode` (which then
+    // draws nothing itself) so that it follows its frame, its fades and its moves.
+    private var isBubblelessDurationGlass = false
+    private var durationGlassView: StaticGlassBackgroundView?
     private var durationNode: ChatInstantVideoMessageDurationNode?
     public let dateAndStatusNode: ChatMessageDateAndStatusNode
     
@@ -200,6 +207,27 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func updateDurationGlass(size: CGSize) {
+        if self.isBubblelessDurationGlass, let durationBackgroundNode = self.durationBackgroundNode, size.width > 1.0 {
+            let glassView: StaticGlassBackgroundView
+            if let current = self.durationGlassView {
+                glassView = current
+            } else {
+                glassView = StaticGlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.durationGlassView = glassView
+            }
+            if glassView.superview !== durationBackgroundNode.view {
+                durationBackgroundNode.view.insertSubview(glassView, at: 0)
+            }
+            glassView.frame = CGRect(origin: CGPoint(), size: size)
+            glassView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tint: .media)
+        } else if let glassView = self.durationGlassView {
+            self.durationGlassView = nil
+            glassView.removeFromSuperview()
+        }
     }
     
     deinit {
@@ -354,6 +382,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
                 var replyInnerSubject: EngineMessageReplyInnerSubject?
                 var replyStory: EngineStoryId?
+                var replyIsLoading = false
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute {
                         if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
@@ -381,6 +410,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                         } else {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId].flatMap(EngineMessage.init)
+                            if replyMessage == nil {
+                                replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                            }
                         }
                         replyQuote = replyAttribute.quote.flatMap { ($0, replyAttribute.isQuote) }
                         replyInnerSubject = replyAttribute.innerSubject
@@ -388,10 +420,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         replyForward = attribute
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyStory = attribute.storyId
+                        if item.message.associatedStories[attribute.storyId] == nil {
+                            replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                        }
                     }
                 }
                 
-                if replyMessage != nil || replyForward != nil || replyStory != nil {
+                if replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyMessage?.id.id {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
@@ -405,6 +440,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             innerSubject: replyInnerSubject,
                             story: replyStory,
                             isSummarized: false,
+                            isLoading: replyIsLoading,
                             parentMessage: item.message,
                             constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                             animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -698,20 +734,27 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                                                           
                     var durationBlurColor: (UIColor, Bool)?
+                    // The transcribe button keeps the fill when the duration stands on glass instead.
+                    var transcribeButtonBlurColor: (UIColor, Bool)?
                     let durationTextColor: UIColor
+                    let isBubblelessDurationGlass = !item.presentationData.chatBubbleCorners.bubbleMode && statusDisplayType == .free
                     switch statusDisplayType {
                         case .free:
                             let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                             durationTextColor = serviceColor.primaryText
-                            durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
+                            transcribeButtonBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
+                            durationBlurColor = isBubblelessDurationGlass ? (.clear, false) : transcribeButtonBlurColor
                         case .bubble:
                             durationBlurColor = nil
+                            transcribeButtonBlurColor = nil
                             if incoming {
                                 durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                             } else {
                                 durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
                             }
                     }
+                    
+                    let durationNodeTextColor = chatMessageBubblelessRoundVideoDurationTextColor(onGlass: isBubblelessDurationGlass, serviceTextColor: durationTextColor, mediaTextColor: theme.theme.chat.message.mediaDateAndStatusTextColor)
                     
                     var previousVideoNode: UniversalVideoNode?
                     var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
@@ -734,9 +777,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             let durationNode: ChatInstantVideoMessageDurationNode
                             if let current = strongSelf.durationNode {
                                 durationNode = current
-                                current.updateTheme(textColor: durationTextColor)
+                                current.updateTheme(textColor: durationNodeTextColor)
                             } else {
-                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationTextColor)
+                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationNodeTextColor)
                                 strongSelf.durationNode = durationNode
                                 strongSelf.addSubnode(durationNode)
                                 durationNode.sizeUpdated = { [weak strongSelf] size in
@@ -746,6 +789,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     if let durationBackgroundNode = strongSelf.durationBackgroundNode, let durationNode = strongSelf.durationNode {
                                         durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
                                         durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                                        strongSelf.updateDurationGlass(size: size)
                                     }
                                 }
                             }
@@ -843,7 +887,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                     
-                    if displayTranscribe, let durationBlurColor = durationBlurColor {
+                    if displayTranscribe, let transcribeButtonBlurColor {
                         var added = false
                         let audioTranscriptionButton: ComponentHostView<Empty>
                         if let current = strongSelf.audioTranscriptionButton {
@@ -857,7 +901,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                             transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                             component: AnyComponent(AudioTranscriptionButtonComponent(
-                                theme: .freeform(durationBlurColor, durationTextColor),
+                                theme: .freeform(transcribeButtonBlurColor, durationTextColor),
                                 transcriptionState: effectiveAudioTranscriptionState,
                                 pressed: {
                                     guard let strongSelf = self else {
@@ -908,8 +952,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         
                         durationNode.isSeen = !notConsumed || item.presentationData.isPreview
                         let size = durationNode.size
+                        strongSelf.isBubblelessDurationGlass = isBubblelessDurationGlass
                         if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
                             durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                            strongSelf.updateDurationGlass(size: size)
 
                             if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
                                 durationFrame.origin.x = audioTranscriptionButton.frame.minX - 7.0
@@ -948,6 +994,14 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if case .customChatContents = item.associatedData.subject {
                         strongSelf.dateAndStatusNode.isHidden = true
+                    } else if item.bubbleStyle.hidesIncomingStatus {
+                        // Without bubbles the time of an incoming round video is in its author header.
+                        strongSelf.hidesDateWithoutBubbles = true
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    } else if strongSelf.hidesDateWithoutBubbles {
+                        // Back in bubbles, the time this hid comes back (the node is updated in place).
+                        strongSelf.hidesDateWithoutBubbles = false
+                        strongSelf.dateAndStatusNode.isHidden = false
                     }
                     
                     if let videoNode = strongSelf.videoNode {
@@ -1149,24 +1203,32 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         backgroundContent.frame = forwardBackgroundFrame
                     }
                     
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                    if let viaBotNode = strongSelf.viaBotNode {
-                        transition.updateAlpha(node: viaBotNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyBackgroundContent = strongSelf.replyBackgroundContent {
-                        transition.updateAlpha(node: replyBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardBackgroundContent = strongSelf.forwardBackgroundContent {
-                        transition.updateAlpha(node: forwardBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        transition.updateAlpha(node: forwardInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyInfoNode = strongSelf.replyInfoNode {
-                        transition.updateAlpha(node: replyInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
+                    strongSelf.updateHeaderAccessoriesAlpha(scaleProgress.isZero ? 1.0 : 0.0)
                 }
             })
+        }
+    }
+    
+    // The via-bot, reply and forward headers hide while the video is enlarged, which is the layout's
+    // own state (`scaleProgress`, from the chat's currently playing message), paused or not. Reading the
+    // separately delivered playback status here instead raced the layout: a layout applied when playback
+    // stopped, while the status still read "playing", left the headers hidden for good.
+    private func updateHeaderAccessoriesAlpha(_ alpha: CGFloat) {
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        if let viaBotNode = self.viaBotNode {
+            transition.updateAlpha(node: viaBotNode, alpha: alpha)
+        }
+        if let replyBackgroundContent = self.replyBackgroundContent {
+            transition.updateAlpha(node: replyBackgroundContent, alpha: alpha)
+        }
+        if let forwardBackgroundContent = self.forwardBackgroundContent {
+            transition.updateAlpha(node: forwardBackgroundContent, alpha: alpha)
+        }
+        if let forwardInfoNode = self.forwardInfoNode {
+            transition.updateAlpha(node: forwardInfoNode, alpha: alpha)
+        }
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: alpha)
         }
     }
     

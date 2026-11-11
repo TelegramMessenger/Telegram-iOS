@@ -77,7 +77,6 @@ API_AVAILABLE(ios(10))
     NSData * _Nullable _bundleData;
     int32_t _apiId;
     NSString * _Nonnull _apiHash;
-    NSString * _Nullable _appCenterId;
     NSMutableDictionary * _Nonnull _dataDict;
 }
 
@@ -134,7 +133,6 @@ API_AVAILABLE(ios(10))
     if (self != nil) {
         _apiId = APP_CONFIG_API_ID;
         _apiHash = @(APP_CONFIG_API_HASH);
-        _appCenterId = @(APP_CONFIG_APP_CENTER_ID);
         
         _dataDict = [[NSMutableDictionary alloc] init];
         
@@ -173,10 +171,6 @@ API_AVAILABLE(ios(10))
 
 - (NSString * _Nonnull)apiHash {
     return _apiHash;
-}
-
-- (NSString * _Nullable)appCenterId {
-    return _appCenterId;
 }
 
 - (bool)isInternalBuild {

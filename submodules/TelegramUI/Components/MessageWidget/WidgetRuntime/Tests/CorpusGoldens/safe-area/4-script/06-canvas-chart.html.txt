@@ -1,0 +1,47 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Cycling this week</title>
+<style></style>
+</head><body><div class="an"><b>Drawn on a canvas</b> from contentSafeAreaInset: labels above the band, the total beside your time, nothing under it.</div>
+<canvas id="c" style="height: 192px;" width="360" height="192"></canvas>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 287.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 10 360 277.2
+    div 22 16 316 67.2
+      b 22 16 0 0
+    canvas 0 95.2 360 192
+
+== paint
+root 360x287.2 items=20
+  solid-fill bounds=(12,10,336,79) layer=(border=(12,10,336,79),radius=(8,8,8,8,8,8,8,8),clip=(12,10,336,79),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  image bounds=(0,95,360,192) layer=(border=(0,95,360,192),radius=(0,0,0,0,0,0,0,0),clip=(0,95,360,192),origin=(0,95,360,192),attachment=0,repeat=3,root=0) size=(360,192)
+  text bounds=(14,8,56,32) pos=(22,16,40,16) color=#000000ff text="Drawn" font=f1 glyphs=5 advance=40
+  text bounds=(62,8,32,32) pos=(70,16,16,16) color=#000000ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(86,8,24,32) pos=(94,16,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(102,8,64,32) pos=(110,16,48,16) color=#000000ff text="canvas" font=f1 glyphs=6 advance=48
+  text bounds=(158,8,48,32) pos=(166,16,32,16) color=#707579ff text="from" font=f2 glyphs=4 advance=32
+  text bounds=(14,25,184,32) pos=(22,33,168,16) color=#707579ff text="contentSafeAreaInset:" font=f2 glyphs=21 advance=168
+  text bounds=(190,25,64,32) pos=(198,33,48,16) color=#707579ff text="labels" font=f2 glyphs=6 advance=48
+  text bounds=(246,25,56,32) pos=(254,33,40,16) color=#707579ff text="above" font=f2 glyphs=5 advance=40
+  text bounds=(294,25,40,32) pos=(302,33,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(14,42,56,32) pos=(22,50,40,16) color=#707579ff text="band," font=f2 glyphs=5 advance=40
+  text bounds=(62,42,40,32) pos=(70,50,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(94,42,56,32) pos=(102,50,40,16) color=#707579ff text="total" font=f2 glyphs=5 advance=40
+  text bounds=(142,42,64,32) pos=(150,50,48,16) color=#707579ff text="beside" font=f2 glyphs=6 advance=48
+  text bounds=(198,42,48,32) pos=(206,50,32,16) color=#707579ff text="your" font=f2 glyphs=4 advance=32
+  text bounds=(238,42,56,32) pos=(246,50,40,16) color=#707579ff text="time," font=f2 glyphs=5 advance=40
+  text bounds=(14,58,72,32) pos=(22,66,56,16) color=#707579ff text="nothing" font=f2 glyphs=7 advance=56
+  text bounds=(78,58,56,32) pos=(86,66,40,16) color=#707579ff text="under" font=f2 glyphs=5 advance=40
+  text bounds=(126,58,40,32) pos=(134,66,24,16) color=#707579ff text="it." font=f2 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

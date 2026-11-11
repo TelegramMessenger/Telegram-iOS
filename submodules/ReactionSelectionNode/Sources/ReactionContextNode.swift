@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -27,6 +26,7 @@ import GZip
 import BalancedTextComponent
 import Markdown
 import PremiumStarComponent
+import ReactionContextGeometry
 
 public final class ReactionItem {
     public struct Reaction: Equatable {
@@ -146,8 +146,22 @@ private final class ExpandItemView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateTheme(theme: PresentationTheme) {
-        self.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.mixedWith(theme.contextMenu.backgroundColor.withMultipliedAlpha(0.4), alpha: 0.5)
+    private var arrowColor: UIColor = .white
+    
+    /// `isGlass`: on a light glass bar there is no vibrant tint to darken the button, so it takes the menu's colors.
+    func updateTheme(theme: PresentationTheme, isGlass: Bool = false) {
+        let arrowColor: UIColor
+        if isGlass && !theme.overallDarkAppearance {
+            self.backgroundColor = theme.contextMenu.primaryColor.withMultipliedAlpha(0.06)
+            arrowColor = theme.contextMenu.primaryColor.withMultipliedAlpha(0.5)
+        } else {
+            self.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.mixedWith(theme.contextMenu.backgroundColor.withMultipliedAlpha(0.4), alpha: 0.5)
+            arrowColor = .white
+        }
+        if !self.arrowColor.isEqual(arrowColor) {
+            self.arrowColor = arrowColor
+            self.arrowView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReactionExpandArrow"), color: arrowColor)
+        }
     }
     
     func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -243,6 +257,27 @@ private final class TitleLabelView: UIView {
         }
         
         return 6.0 + contentSize.height
+    }
+}
+
+/// The name VoiceOver reads for a reaction in the picker: the emoji itself, or the paid (star) and Premium items by
+/// name. A custom emoji's alt emoji is looked up by `ReactionNode` when VoiceOver asks, not here (it decodes the file).
+func reactionContextItemAccessibilityLabel(_ item: ReactionContextItem, strings: PresentationStrings) -> String? {
+    switch item {
+    case let .staticEmoji(emoji):
+        return emoji
+    case let .reaction(reactionItem, _):
+        switch reactionItem.reaction.rawValue {
+        case let .builtin(value):
+            return value
+        case .custom:
+            // Read from the file only when VoiceOver asks (ReactionNode.accessibilityLabel).
+            return nil
+        case .stars:
+            return strings.Stars_Intro_Transaction_Reaction_Title
+        }
+    case .premium:
+        return strings.VoiceOver_Reactions_Premium
     }
 }
 
@@ -389,6 +424,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
     
     public var displayTail: Bool = true
     public var forceTailToRight: Bool = false
+    /// The bar starts where the anchor does instead of hanging off its corner, taking the room from there to as close to
+    /// the opposite screen edge as the anchor is to its own; the reactions get smaller to keep their count if that is too
+    /// narrow. Set by a context menu whose content lines its menu up with its left edge (the bubble-free chat mode).
+    public var alignsToAnchorLeadingEdge: Bool = false
+    private let isGlassStyle: Bool
     public var forceDark: Bool = false
     public var hideBackground: Bool = false
     
@@ -490,12 +530,13 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
+    /// The picker is glass: light or dark with the theme, or tinted (dark screens). Its tail, where it hangs from content,
+    /// is glass too unless `glassHasTail` is off (stories and video chats show none).
     public enum Style {
-        case legacy
         case glass(isTinted: Bool)
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, style: Style = .legacy, items: [ReactionContextItem], selectedItems: Set<AnyHashable>, title: String? = nil, reactionsLocked: Bool, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, style: Style = .glass(isTinted: false), glassHasTail: Bool = true, items: [ReactionContextItem], selectedItems: Set<AnyHashable>, title: String? = nil, reactionsLocked: Bool, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -511,10 +552,12 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         (self.animationRenderer as? DCTMultiAnimationRendererImpl)?.useYuvA = context.sharedContext.immediateExperimentalUISettings.compressedEmojiCache
         
         self.backgroundMaskNode = ASDisplayNode()
-        var backgroundGlassParams: ReactionContextBackgroundNode.GlassParams?
-        if case let .glass(isTinted) = style {
-            backgroundGlassParams = ReactionContextBackgroundNode.GlassParams(isDark: presentationData.theme.overallDarkAppearance, isTinted: isTinted)
+        let backgroundGlassParams: ReactionContextBackgroundNode.GlassParams
+        switch style {
+        case let .glass(isTinted):
+            backgroundGlassParams = ReactionContextBackgroundNode.GlassParams(isDark: presentationData.theme.overallDarkAppearance, isTinted: isTinted, hasTail: glassHasTail)
         }
+        self.isGlassStyle = true
         self.backgroundNode = ReactionContextBackgroundNode(glass: backgroundGlassParams, largeCircleSize: largeCircleSize, smallCircleSize: smallCircleSize, maskNode: self.backgroundMaskNode)
         self.leftBackgroundMaskNode = ASDisplayNode()
         self.leftBackgroundMaskNode.backgroundColor = .black
@@ -586,6 +629,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         if getEmojiContent != nil && !self.reactionsLocked {
             let expandItemView = ExpandItemView()
+            expandItemView.isAccessibilityElement = true
+            expandItemView.accessibilityLabel = presentationData.strings.VoiceOver_Reactions_ShowAll
+            expandItemView.accessibilityTraits = .button
+            expandItemView.tintView.accessibilityElementsHidden = true
             self.expandItemView = expandItemView
             
             self.contentContainer.view.addSubview(expandItemView)
@@ -876,6 +923,9 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         if self.forceTailToRight {
             rect = CGRect(origin: CGPoint(x: anchorRect.minX - backgroundOffset.x - 4.0, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = false
+        } else if self.alignsToAnchorLeadingEdge {
+            rect = CGRect(origin: CGPoint(x: anchorRect.minX, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
+            isLeftAligned = true
         } else if anchorRect.minX < containerSize.width - anchorRect.maxX {
             rect = CGRect(origin: CGPoint(x: anchorRect.maxX - contentSize.width + backgroundOffset.x, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = true
@@ -883,17 +933,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             rect = CGRect(origin: CGPoint(x: anchorRect.minX - backgroundOffset.x - 4.0, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = false
         }
-        rect.origin.x = max(sideInset, rect.origin.x)
         rect.origin.y = max(insets.top + sideInset, rect.origin.y)
-        rect.origin.x = min(containerSize.width - contentSize.width - rightSideInset, rect.origin.x)
-        
-        let rightEdge = containerSize.width - rightSideInset
-        if rect.maxX > rightEdge {
-            rect.origin.x = containerSize.width - rightSideInset - rect.width
-        }
-        if rect.minX < sideInset {
-            rect.origin.x = sideInset
-        }
+        // Master's clamp between the side insets; a bar lined up with the anchor may come as close to the screen edges as
+        // the anchor itself, keeping the right side's own extra inset (iPhone Duo's strip).
+        let barInsets = reactionContextBarInsets(sideInset: sideInset, rightSideInset: rightSideInset, anchorMinX: anchorRect.minX, alignsToAnchorLeadingEdge: self.alignsToAnchorLeadingEdge, forceTailToRight: self.forceTailToRight)
+        rect.origin.x = reactionContextClampedBarX(x: rect.origin.x, width: contentSize.width, containerWidth: containerSize.width, leftInset: barInsets.left, rightInset: barInsets.right)
         
         if centerAligned {
             rect.origin.x = insets.left + floor((containerSize.width - insets.left - insets.right - rect.width) / 2.0)
@@ -902,6 +946,9 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         let cloudSourcePoint: CGFloat
         if self.forceTailToRight {
             cloudSourcePoint = min(rect.maxX - 46.0 / 2.0, anchorRect.maxX - 4.0)
+        } else if isLeftAligned && self.alignsToAnchorLeadingEdge, let tailBesideAnchor = reactionContextTailBesideAnchor(anchorRect: anchorRect, barMaxX: rect.maxX, largeCircleSize: largeCircleSize) {
+            // A bar lined up with a card drops its tail beside the card, past its trailing edge, when it reaches that far.
+            cloudSourcePoint = tailBesideAnchor
         } else if isLeftAligned {
             cloudSourcePoint = min(rect.maxX - 46.0 / 2.0, anchorRect.maxX - 4.0)
         } else {
@@ -1091,6 +1138,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                         itemNode = PremiumReactionsNode(theme: self.presentationData.theme)
                         maskNode = itemNode.maskNode
                     }
+                    // VoiceOver: each reaction is a button named by its emoji (a custom one by its alt emoji). Activation is
+                    // the tap at its centre, so it goes through `tapGesture` exactly as a tap does.
+                    itemNode.isAccessibilityElement = true
+                    itemNode.accessibilityLabel = reactionContextItemAccessibilityLabel(self.items[i], strings: self.presentationData.strings)
                     self.visibleItemNodes[i] = itemNode
                     
                     self.scrollNode.addSubnode(itemNode)
@@ -1101,6 +1152,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }
                 maskTransition = itemTransition
+                
+                itemNode.accessibilityTraits = isSelected ? [.button, .selected] : .button
                 
                 if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
                     if isSelected {
@@ -1271,7 +1324,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
     
     private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool, isCoveredByInput: Bool, isAnimatingOut: Bool, forceUpdate: Bool = false, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
         if let expandItemView = self.expandItemView {
-            expandItemView.updateTheme(theme: self.presentationData.theme)
+            expandItemView.updateTheme(theme: self.presentationData.theme, isGlass: self.isGlassStyle)
         }
         
         self.validLayout = (size, insets, anchorRect, isCoveredByInput, centerAligned)
@@ -1286,6 +1339,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         var itemCount: Int
         var visibleContentWidth: CGFloat
         var completeContentWidth: CGFloat
+        let visibleItemCount: CGFloat
         
         if !self.reactionsLocked && self.getEmojiContent != nil {
             let totalItemSlotCount = self.items.count + 1
@@ -1304,6 +1358,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             let minVisibleItemCount: CGFloat = CGFloat(itemCount)
+            visibleItemCount = minVisibleItemCount
             completeContentWidth = CGFloat(itemCount) * itemSize + (CGFloat(itemCount) - 1.0) * itemSpacing + sideInset * 2.0
             visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
             if visibleContentWidth > size.width - sideInset * 2.0 {
@@ -1314,11 +1369,19 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             completeContentWidth = floor(CGFloat(itemCount) * itemSize + (CGFloat(itemCount) - 1.0) * itemSpacing + sideInset * 2.0)
             
             let minVisibleItemCount = min(CGFloat(self.items.count), 6.5)
+            visibleItemCount = minVisibleItemCount
             
             visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
             if visibleContentWidth > size.width - sideInset * 2.0 {
                 visibleContentWidth = size.width - sideInset * 2.0
             }
+        }
+        
+        // A bar lined up with a card keeps its reactions' count in the room it has there, making them smaller instead.
+        if self.alignsToAnchorLeadingEdge, let shrunkItemSize = reactionContextShrunkItemSize(visibleContentWidth: visibleContentWidth, availableWidth: reactionContextAvailableWidth(containerWidth: size.width, anchorMinX: anchorRect.minX, sideInset: sideInset, rightInset: insets.right), visibleItemCount: visibleItemCount, itemSpacing: itemSpacing, sideInset: sideInset) {
+            itemSize = shrunkItemSize
+            completeContentWidth = CGFloat(itemCount) * itemSize + (CGFloat(itemCount) - 1.0) * itemSpacing + sideInset * 2.0
+            visibleContentWidth = floor(visibleItemCount * itemSize + (visibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
         }
         
         if let title = self.title, let titleLabelView = self.titleLabelView {
@@ -1765,7 +1828,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 })
             },
-            clearGroup: { [weak self] groupId in
+            clearGroup: { [weak self] groupId, _, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2735,6 +2798,19 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
         
+        // Set before the expanding layout below, which creates the animation that reports its start (a node expanded
+        // earlier has already reported it).
+        let iconHandoff = ReactionFlyInIconHandoff()
+        if itemNode.didBeginExpandedAnimation {
+            iconHandoff.expandedAnimationBegan()
+        }
+        itemNode.expandedAnimationDidBegin = { [weak targetView] in
+            iconHandoff.expandedAnimationBegan()
+            if iconHandoff.hidesTargetIcon, let targetView = targetView as? ReactionIconView {
+                targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+            }
+        }
+        
         self.addSubnode(itemNode)
         itemNode.position = expandedFrame.center
         transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
@@ -2763,7 +2839,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode = additionalAnimationNodeValue
             if self.didTriggerExpandedReaction {
                 if incomingMessage {
@@ -2899,7 +2975,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                         targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
                         itemNode.isHidden = true
                     } else {
-                        targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                        iconHandoff.land()
+                        targetView.updateIsAnimationHidden(isAnimationHidden: iconHandoff.hidesTargetIcon, transition: .immediate)
                         targetView.addSubnode(itemNode)
                         itemNode.frame = selfTargetBounds
                     }
@@ -2942,6 +3019,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, maxDuration * UIView.animationDurationFactor()), execute: { [self] in
+                iconHandoff.finish()
                 if self.didTriggerExpandedReaction {
                     self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                         if let strongSelf = self, strongSelf.didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
@@ -3477,9 +3555,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         if let additionalAnimationResource {
             let additionalAnimationNodeValue: AnimatedStickerNode
             if self.useDirectRendering {
-                additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
+                additionalAnimationNodeValue = DirectAnimatedStickerNode()
             } else {
-                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             }
             additionalAnimationNode = additionalAnimationNodeValue
             
@@ -3508,9 +3586,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             if let effectURL {
                 let additionalAnimationNodeValue: AnimatedStickerNode
                 if self.useDirectRendering {
-                    additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
+                    additionalAnimationNodeValue = DirectAnimatedStickerNode()
                 } else {
-                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
                 }
                 additionalAnimationNode = additionalAnimationNodeValue
                 
@@ -3916,7 +3994,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode = additionalAnimationNodeValue
             if didTriggerExpandedReaction {
                 if incomingMessage {

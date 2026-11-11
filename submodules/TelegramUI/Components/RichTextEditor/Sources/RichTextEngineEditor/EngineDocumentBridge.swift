@@ -965,7 +965,7 @@ public struct EngineDocumentBridge {
     /// remainder moves the baseline without moving baseline-to-baseline.
     ///
     /// `.off` is today's behaviour and the rollback. See
-    /// the RichTextEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
+    /// the RichTextEngineEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
     internal enum V2BaselinePlacement: Hashable {
         /// Today: the box IS the pitch; the first baseline sits `pitch - |descender|` from the top.
         case off

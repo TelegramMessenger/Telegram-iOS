@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ContextUI
-import LottieSettings
 import ManagedAnimationNode
 import TelegramPresentationData
 import PeerInfoPaneNode
@@ -19,8 +18,8 @@ private final class MoreIconNode: ManagedAnimationNode {
     private let duration: Double = 0.21
     private var iconState: MoreIconNodeState = .more
     
-    init(lottieSettings: LottieRenderingSettings) {
-        super.init(size: CGSize(width: 30.0, height: 30.0), lottieSettings: lottieSettings)
+    init() {
+        super.init(size: CGSize(width: 30.0, height: 30.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
     }
@@ -124,7 +123,7 @@ private final class MoreIconNode: ManagedAnimationNode {
 /// The profile's more / search / sort button: one node whose icon animates between the three, hosted by the bar as a
 /// node item. A `HighlightableButtonNode` keeps its own touches in the bar, so a tap and the context-menu gesture both
 /// reach the profile with the source a context menu is extracted from.
-final class PeerInfoNavigationIconButton: HighlightableButtonNode {
+final class PeerInfoNavigationIconButton: HighlightableButtonNode, NavigationButtonLiveAccessibilityLabel {
     let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
     private let animationNode: MoreIconNode
@@ -136,7 +135,7 @@ final class PeerInfoNavigationIconButton: HighlightableButtonNode {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         self.contextSourceNode = ContextReferenceContentNode()
-        self.animationNode = MoreIconNode(lottieSettings: .noAccountFallback)
+        self.animationNode = MoreIconNode()
         self.animationNode.customColor = .white
 
         super.init(pointerStyle: .insetRectangle(0.0, 0.0))

@@ -89,7 +89,6 @@ submodules/TelegramUI/Sources/InChatPrefetchManager.swift
 submodules/TelegramUI/Sources/StoreDownloadedMedia.swift
 submodules/TelegramUI/Sources/TransformOutgoingMessageMedia.swift
 submodules/TelegramUniversalVideoContent/Sources/HLSVideoContent.swift
-submodules/TelegramUniversalVideoContent/Sources/HLSVideoJSNativeContentNode.swift
 submodules/TelegramUniversalVideoContent/Sources/NativeVideoContent.swift
 submodules/TelegramUniversalVideoContent/Sources/PlatformVideoContent.swift
 submodules/TelegramUniversalVideoContent/Sources/SystemVideoContent.swift

@@ -1,0 +1,108 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad rx" id="w">
+  <div class="row between"><b>Live reactions</b><span id="tabs"><span class="tab on" data-action="tab" data-value="live">Live</span><span class="tab" data-action="tab" data-value="stats">Stats</span></span></div>
+  <div id="live">
+    <div class="stage" id="stage"><span class="live badge red">● LIVE · <span id="watch">1.2</span>k watching<span id="hype"></span></span><div class="combo" id="combo" hidden=""></div><div class="fl" style="left: 186px; font-size: 24px; --w: 26.2; animation: wob-3 2215ms linear forwards;"><span style="animation-duration: 2215ms">🔥</span></div><div class="fl" style="left: 16px; font-size: 24px; --w: 26.4; animation: wob-2 2053ms linear forwards;"><span style="animation-duration: 2053ms">❤️</span></div></div>
+    <div class="btns" id="btns"><span class="r" data-action="react" data-value="0"><span class="em">❤️</span> <span class="n">129</span></span><span class="r" data-action="react" data-value="1"><span class="em">😂</span> <span class="n">41</span></span><span class="r" data-action="react" data-value="2"><span class="em">🔥</span> <span class="n">78</span></span><span class="r" data-action="react" data-value="3"><span class="em">👏</span> <span class="n">63</span></span><span class="r hype" data-action="hype">📣 Hype</span></div>
+  </div>
+  <div id="stats" hidden="">
+    <div style="margin-top: 8px" id="rows"></div>
+    <div class="sum muted"><span id="sum-l"></span><span id="sum-r"></span></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 275.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 275.4
+    div 15 13 330 249.4
+      div 15 13 330 19.6
+        b 15 13.7 112 18.2
+        span 227 13 118 19.6
+          span 240 15 32 15.6
+          span 295 15 40 15.6
+      div 15 40.6 330 221.8
+        div 15 40.6 330 170
+          span 33 51.6 200 14.3
+            span 33 51.6 0 0
+            span 33 51.6 0 0
+          div 0 0 0 0
+          div 201 190.6 32 24
+            span 201 190.6 32 24
+          div 31 190.6 48 24
+            span 31 190.6 48 24
+        div 15 218.6 330 43.8
+          span 15 223.6 60 33.8
+            span 21 223.6 48 16.9
+            span 15 223.6 0 0
+          span 80 223.6 60 33.8
+            span 82 223.6 32 16.9
+            span 80 223.6 0 0
+          span 145 223.6 60 33.8
+            span 147 223.6 32 16.9
+            span 145 223.6 0 0
+          span 210 223.6 60 33.8
+            span 212 223.6 32 16.9
+            span 210 223.6 0 0
+          span 275 223.6 70 33.8
+      div 0 0 0 0
+        div 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+
+== paint
+root 360x275.4 items=34
+  solid-fill bounds=(0,0,360,275) layer=(border=(0,0,360,275),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,275),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,275) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,275) root=0
+  solid-fill bounds=(15,219,60,43) layer=(border=(15,219,60,43),radius=(16,16,16,16,16,16,16,16),clip=(15,219,60,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(80,219,60,43) layer=(border=(80,219,60,43),radius=(16,16,16,16,16,16,16,16),clip=(80,219,60,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(145,219,60,43) layer=(border=(145,219,60,43),radius=(16,16,16,16,16,16,16,16),clip=(145,219,60,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(210,219,60,43) layer=(border=(210,219,60,43),radius=(16,16,16,16,16,16,16,16),clip=(210,219,60,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(275,219,70,43) layer=(border=(275,219,70,43),radius=(16,16,16,16,16,16,16,16),clip=(275,219,70,43),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d5524
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="Live" font=f1 glyphs=4 advance=32
+  text bounds=(47,7,88,32) pos=(55,15,72,16) color=#000000ff text="reactions" font=f1 glyphs=9 advance=72
+  solid-fill bounds=(230,13,52,20) layer=(border=(230,13,52,20),radius=(7,7,7,7,7,7,7,7),clip=(230,13,52,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d5524
+  text bounds=(232,7,48,32) pos=(240,15,32,16) color=#ff2d55ff text="Live" font=f2 glyphs=4 advance=32
+  text bounds=(287,7,56,32) pos=(295,15,40,16) color=#000000ff text="Stats" font=f2 glyphs=5 advance=40
+  text bounds=(13,216,64,32) pos=(21,224,48,16) color=#000000ff text="❤️" font=f3 glyphs=6 advance=48
+  text bounds=(25,233,40,32) pos=(33,241,24,16) color=#000000ff text="129" font=f3 glyphs=3 advance=24
+  text bounds=(74,216,48,32) pos=(82,224,32,16) color=#000000ff text="😂" font=f3 glyphs=4 advance=32
+  text bounds=(114,216,32,32) pos=(122,224,16,16) color=#000000ff text="41" font=f3 glyphs=2 advance=16
+  text bounds=(139,216,48,32) pos=(147,224,32,16) color=#000000ff text="🔥" font=f3 glyphs=4 advance=32
+  text bounds=(179,216,32,32) pos=(187,224,16,16) color=#000000ff text="78" font=f3 glyphs=2 advance=16
+  text bounds=(204,216,48,32) pos=(212,224,32,16) color=#000000ff text="👏" font=f3 glyphs=4 advance=32
+  text bounds=(244,216,32,32) pos=(252,224,16,16) color=#000000ff text="63" font=f3 glyphs=2 advance=16
+  text bounds=(286,216,48,32) pos=(294,224,32,16) color=#ff2d55ff text="📣" font=f3 glyphs=4 advance=32
+  text bounds=(286,233,48,32) pos=(294,241,32,16) color=#ff2d55ff text="Hype" font=f3 glyphs=4 advance=32
+  linear-gradient bounds=(15,41,330,170) layer=(border=(15,41,330,170),radius=(12,12,12,12,12,12,12,12),clip=(15,41,330,170),origin=(15,41,330,170),attachment=0,repeat=0,root=0) points=((0,#7f7f7f0a,-),(1,#7f7f7f24,-)) space=0 hue=0 start=(15,41) end=(15,211)
+  set-clip bounds=(15,40.6,330,170) pos=(15,40.6,330,170) radius=(12,12,12,12,12,12,12,12)
+  solid-fill bounds=(25,51,216,16) layer=(border=(25,51,216,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(25,51,216,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  text bounds=(25,44,40,32) pos=(33,52,24,16) color=#ff3b30ff text="●" font=f4 glyphs=3 advance=24
+  text bounds=(57,44,48,32) pos=(65,52,32,16) color=#ff3b30ff text="LIVE" font=f4 glyphs=4 advance=32
+  text bounds=(97,44,32,32) pos=(105,52,16,16) color=#ff3b30ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(121,44,40,32) pos=(129,52,24,16) color=#ff3b30ff text="1.2" font=f4 glyphs=3 advance=24
+  text bounds=(145,44,24,32) pos=(153,52,8,16) color=#ff3b30ff text="k" font=f4 glyphs=1 advance=8
+  text bounds=(161,44,80,32) pos=(169,52,64,16) color=#ff3b30ff text="watching" font=f4 glyphs=8 advance=64
+  group opacity=1 matrix=(1,0,0,1,-4.74483,0) backface=0 bounds=(201,190.6,32,24) exact=0
+    group opacity=1 matrix=(1,0,0,1,0,-32.9195) backface=0 bounds=(201,190.6,32,24) exact=0
+      text bounds=(193,187,48,32) pos=(201,195,32,16) color=#000000ff text="🔥" font=f5 glyphs=4 advance=32
+  group opacity=1 matrix=(1,0,0,1,0.860641,0) backface=0 bounds=(31,190.6,48,24) exact=0
+    group opacity=1 matrix=(0.9958,0,0,0.9958,0.230999,-10.565) backface=0 bounds=(31,190.6,48,24) exact=0
+      text bounds=(23,187,64,32) pos=(31,195,48,16) color=#000000ff text="❤️" font=f5 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=24,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

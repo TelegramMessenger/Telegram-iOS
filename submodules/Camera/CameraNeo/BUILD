@@ -55,11 +55,11 @@ swift_library(
     deps = [
         "//submodules/AppBundle",
         "//submodules/Camera",
+        "//submodules/Display:Display",
         "//submodules/GZip",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Utils/DeviceModel",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
     ],
     visibility = [
         "//visibility:public",

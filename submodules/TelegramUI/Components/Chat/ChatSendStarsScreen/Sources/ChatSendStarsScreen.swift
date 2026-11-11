@@ -2544,16 +2544,11 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             
             let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 54.0, sideInset: 32.0)
-            // iPhone Duo: beside a side strip the button and the footnote below it keep to the sheet, which is centered
-            // clear of the strip in landscape; across the full width they ran under the strip and the corner block at
-            // its end. Where the sheet spans the strip (folded portrait) or the side insets are equal they keep the
-            // full width.
-            let bottomPanelBand: (minX: CGFloat, width: CGFloat)
-            if environment.safeInsets.left != environment.safeInsets.right && fillingSize <= availableSize.width - environment.safeInsets.left - environment.safeInsets.right {
-                bottomPanelBand = (floor((availableSize.width - fillingSize) * 0.5), fillingSize)
-            } else {
-                bottomPanelBand = (0.0, availableSize.width)
-            }
+            // The button and the footnote below it keep to the sheet. Across the full width they spread over the whole
+            // screen wherever the sheet is narrower than it (iPad, landscape) and, on iPhone Duo, ran under the side
+            // strip and the corner block at its end. Where the sheet fills the screen (portrait, Duo folded portrait)
+            // this is the full width.
+            let bottomPanelBand: (minX: CGFloat, width: CGFloat) = (floor((availableSize.width - fillingSize) * 0.5), fillingSize)
             
             let actionButtonSize = actionButton.update(
                 transition: transition,
@@ -2986,11 +2981,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         let allPeerIds = topPeers.compactMap(\.peerId)
         
-        var topPeers = topPeers.sorted(by: { $0.count > $1.count })
-        if topPeers.count > 3 {
-            topPeers = Array(topPeers.prefix(3))
-        }
-        
         let channelsForPublicReaction: Signal<[EnginePeer], NoError>
         switch reactSubject {
         case .message:
@@ -3058,30 +3048,14 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     channelsForPublicReaction: channelsForPublicReaction,
                     reactSubject: reactSubject,
                     currentSentAmount: currentSentAmount,
-                    topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
-                        guard let topPeerId = topPeer.peerId else {
-                            let randomIndex = nextRandomIndex
-                            nextRandomIndex += 1
-                            return ChatSendStarsScreen.TopPeer(
-                                randomIndex: randomIndex,
-                                peer: nil,
-                                isMy: topPeer.isMy,
-                                count: Int(topPeer.count)
-                            )
-                        }
-                        guard let topPeerValue = topPeerMap[topPeerId] else {
-                            return nil
-                        }
-                        guard let topPeerValue else {
-                            return nil
-                        }
+                    topPeers: chatSendStarsShownTopPeers(topPeers, peer: { topPeerMap[$0] ?? nil }, limit: 3).map { topPeer -> ChatSendStarsScreen.TopPeer in
                         let randomIndex = nextRandomIndex
                         nextRandomIndex += 1
                         return ChatSendStarsScreen.TopPeer(
                             randomIndex: randomIndex,
-                            peer: topPeer.isAnonymous ? nil : topPeerValue,
+                            peer: topPeer.peer,
                             isMy: topPeer.isMy,
-                            count: Int(topPeer.count)
+                            count: topPeer.count
                         )
                     },
                     myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in

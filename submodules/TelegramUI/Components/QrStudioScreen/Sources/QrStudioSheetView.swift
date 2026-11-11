@@ -78,7 +78,9 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
 
     private let capsuleGlass = GlassBackgroundView()
     private let iconsContainer = UIView()
-    private var iconViews: [QrStudioLook.Kind: UIImageView] = [:]
+    private var iconViews: [QrStudioLook.Kind: QrStudioSheetTabIconView] = [:]
+    /// VoiceOver: the name of each tab's icon in the capsule (each icon is a button that opens its tab).
+    var tabAccessibilityLabels: [QrStudioLook.Kind: String] = [:]
     private var kinds: [QrStudioLook.Kind] = []
 
     private let clipView = QrStudioSheetClipView()
@@ -304,7 +306,15 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             }
             self.iconViews.removeAll()
             for kind in kinds {
-                let iconView = UIImageView(image: UIImage(bundleImageName: QrStudioSheetView.iconName(kind))?.withRenderingMode(.alwaysTemplate))
+                let iconView = QrStudioSheetTabIconView(image: UIImage(bundleImageName: QrStudioSheetView.iconName(kind))?.withRenderingMode(.alwaysTemplate))
+                iconView.accessibilityTraits = .button
+                iconView.activate = { [weak self] in
+                    guard let self, let requestOpenTab = self.requestOpenTab else {
+                        return false
+                    }
+                    requestOpenTab(kind)
+                    return true
+                }
                 self.iconsContainer.addSubview(iconView)
                 self.iconViews[kind] = iconView
             }
@@ -321,6 +331,9 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         var iconX = QrStudioSheetView.iconInset
         for kind in kinds {
             if let iconView = self.iconViews[kind] {
+                iconView.accessibilityLabel = self.tabAccessibilityLabels[kind]
+                iconView.isAccessibilityElement = iconView.accessibilityLabel != nil
+                iconView.accessibilityTraits = self.isOpen && self.currentTab == kind ? [.button, .selected] : .button
                 if iconView.tintColor != glyphColor {
                     iconView.tintColor = glyphColor
                 }
@@ -458,6 +471,52 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.motion.open(animated: true)
         self.updateAttachedContent()
         self.runMotion()
+        self.updateTabAccessibilitySelection()
+    }
+    
+    private var tabAccessibilityElements: [QrStudioLook.Kind: QrStudioGridAccessibilityElement] = [:]
+    
+    /// VoiceOver while the sheet is open: the capsule's tab icons are hidden, so a tab row (one button per page, the
+    /// shown page `.selected`, activation opens that page as a tap on its icon does) is read above the page. Closed:
+    /// the capsule's own icons.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard self.isOpen, !self.kinds.isEmpty else {
+                return nil
+            }
+            var elements: [Any] = []
+            let top = self.clipView.frame.minY
+            let width = self.bounds.width / CGFloat(self.kinds.count)
+            for (index, kind) in self.kinds.enumerated() {
+                guard let label = self.tabAccessibilityLabels[kind] else {
+                    continue
+                }
+                let element: QrStudioGridAccessibilityElement
+                if let current = self.tabAccessibilityElements[kind] {
+                    element = current
+                } else {
+                    element = QrStudioGridAccessibilityElement(accessibilityContainer: self)
+                    element.activate = { [weak self] in
+                        self?.requestOpenTab?(kind)
+                    }
+                    self.tabAccessibilityElements[kind] = element
+                }
+                element.accessibilityLabel = label
+                element.accessibilityTraits = self.currentTab == kind ? [.button, .selected] : .button
+                element.accessibilityFrameInContainerSpace = CGRect(x: CGFloat(index) * width, y: top, width: width, height: 44.0)
+                elements.append(element)
+            }
+            elements.append(self.clipView)
+            return elements
+        } set(value) {
+        }
+    }
+    
+    /// The tab whose page the open sheet shows is `.selected` for VoiceOver; none while the sheet is closed.
+    private func updateTabAccessibilitySelection() {
+        for (kind, iconView) in self.iconViews {
+            iconView.accessibilityTraits = self.isOpen && self.currentTab == kind ? [.button, .selected] : .button
+        }
     }
 
     func close() {
@@ -469,6 +528,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.motion.setSearch(false)
         self.motion.close(velocity: 0.0, travel: 1.0)
         self.runMotion()
+        self.updateTabAccessibilitySelection()
     }
 
     func attachScrollView(_ scrollView: UIScrollView) {
@@ -755,5 +815,13 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.addKeyframes(self.contentContainer.layer, "opacity", layouts.map { NSNumber(value: Float($0.contentAlpha)) }, duration: duration)
         self.addKeyframes(self.tintMaskContentView.layer, "transform", layouts.map { NSValue(caTransform3D: CATransform3DMakeScale($0.zoom, $0.zoom, 1.0)) }, duration: duration)
         self.addKeyframes(self.tintMaskContentView.layer, "opacity", layouts.map { NSNumber(value: Float($0.contentAlpha)) }, duration: duration)
+    }
+}
+
+final class QrStudioSheetTabIconView: UIImageView {
+    var activate: (() -> Bool)?
+    
+    override func accessibilityActivate() -> Bool {
+        return self.activate?() ?? false
     }
 }

@@ -1,44 +1,4 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
-load(
-    "@build_bazel_rules_apple//apple:resources.bzl",
-    "apple_resource_bundle",
-    "apple_resource_group",
-)
-load("//build-system/bazel-utils:plist_fragment.bzl",
-    "plist_fragment",
-)
-
-filegroup(
-    name = "HlsBundleContents",
-    srcs = glob([
-        "HlsBundle/**",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
-plist_fragment(
-    name = "HlsBundleInfoPlist",
-    extension = "plist",
-    template =
-    """
-    <key>CFBundleIdentifier</key>
-    <string>org.telegram.TelegramUniversalVideoContent</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleName</key>
-    <string>TelegramUniversalVideoContent</string>
-    """
-)
-
-apple_resource_bundle(
-    name = "HlsBundle",
-    infoplists = [
-        ":HlsBundleInfoPlist",
-    ],
-    resources = [
-        ":HlsBundleContents",
-    ],
-)
 
 swift_library(
     name = "TelegramUniversalVideoContent",
@@ -48,9 +8,6 @@ swift_library(
     ]),
     copts = [
         "-warnings-as-errors",
-    ],
-    data = [
-        ":HlsBundle",
     ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -66,8 +23,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Utils/RangeSet:RangeSet",
-        "//submodules/TelegramVoip",
-        "//submodules/ManagedFile",
+        "//submodules/HLSPlayback:HLSPlayback",
     ],
     visibility = [
         "//visibility:public",

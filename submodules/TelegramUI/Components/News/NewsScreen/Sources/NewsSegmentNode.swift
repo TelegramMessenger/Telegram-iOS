@@ -6,7 +6,6 @@ import ComponentFlow
 import AccountContext
 import TelegramPresentationData
 import GlassBackgroundComponent
-import LottieSettings
 import HorizontalTabsComponent
 import NewsFeedSupport
 
@@ -138,8 +137,8 @@ final class NewsSegmentNode: ASDisplayNode {
     }
 
     /// The refresh drop for `pose`, below the island (spec §2).
-    func updateRefreshDrop(pose: NewsRefreshDropPose, theme: PresentationTheme, lottieSettings: LottieRenderingSettings) {
-        self.refreshDrop.update(pose: pose, islandSize: self.bounds.size, theme: theme, lottieSettings: lottieSettings)
+    func updateRefreshDrop(pose: NewsRefreshDropPose, theme: PresentationTheme) {
+        self.refreshDrop.update(pose: pose, islandSize: self.bounds.size, theme: theme)
     }
 
     /// Mid-swipe, without laying the tabs out again.

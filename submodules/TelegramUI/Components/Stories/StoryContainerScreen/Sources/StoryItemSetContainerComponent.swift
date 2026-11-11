@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -114,8 +113,9 @@ public final class StoryItemSetContainerComponent: Component {
     /// The story is a card with space around it, as on an iPad, rather than filling the screen. The host sets it on a
     /// regular width (the default) and on iPhone Duo's unfolded screen, whose width class is regular only in landscape.
     public let isCardLayout: Bool
-    /// The input row's least width, centred on the card when the card is narrower (iPhone Duo's unfolded landscape
-    /// card is narrower than any phone); 0 keeps it the card's width.
+    /// The least width of the input row and of the footer row (a channel's or one's own story: views, share, reposts,
+    /// likes), centred on the card when the card is narrower (iPhone Duo's unfolded landscape card is narrower than any
+    /// phone); 0 keeps them the card's width.
     public let minimumInputPanelWidth: CGFloat
     public let isEmbeddedInCamera: Bool
     public let isProgressPaused: Bool
@@ -361,6 +361,8 @@ public final class StoryItemSetContainerComponent: Component {
         var isBuffering: Bool = false
         var customSubtitle: String?
         var requestedNext: Bool = false
+        /// Under VoiceOver the story stays at its end instead of moving on; its timer is paused there.
+        var isHeldAtEndForAccessibility: Bool = false
         var footerPanel: ComponentView<Empty>?
         
         init() {
@@ -543,6 +545,88 @@ public final class StoryItemSetContainerComponent: Component {
         private var isAnimatingOut: Bool = false
         
         private var scheduledStoryUnpinnedUndoOverlay: ViewController?
+        
+        var storyPagerAccessibilityElement: StoryPagerAccessibilityElement?
+        
+        /// VoiceOver order and contents: `storyAccessibilityElements()` (StoryItemSetContainerAccessibility.swift).
+        public override var accessibilityElements: [Any]? {
+            get {
+                return self.storyAccessibilityElements()
+            } set(value) {
+            }
+        }
+        
+        /// VoiceOver's escape (two-finger scrub) closes what a tap outside closes, in the order `tapGesture` checks
+        /// them: the reaction picker, the active input, the viewers sheet, an expanded caption; otherwise the viewer, as
+        /// the Close button does.
+        public override func accessibilityPerformEscape() -> Bool {
+            guard self.component != nil else {
+                return false
+            }
+            if self.displayLikeReactions {
+                self.displayLikeReactions = false
+                self.sendMessageContext.currentInputMode = .text
+                self.willDismissReactionContextNode = self.reactionContextNode
+                if hasFirstResponder(self) {
+                    self.endEditing(true)
+                }
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                self.updateIsProgressPaused()
+            } else if self.hasActiveDeactivateableInput() {
+                Queue.mainQueue().justDispatch {
+                    self.deactivateInput()
+                }
+            } else if let captionItem = self.captionItem, (captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText), let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
+                if captionItem.externalState.isSelectingText {
+                    captionItemView.cancelTextSelection()
+                } else {
+                    captionItemView.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
+                }
+            } else {
+                // With the viewers sheet up this collapses it; otherwise it closes the viewer.
+                self.closePressed()
+            }
+            return true
+        }
+        
+        /// Whether the story element's swipe up/down may move between stories now. It may where a sighted tap or the
+        /// viewers-sheet carousel swipe would navigate, and not while the tap would first close something (the reaction
+        /// picker, the keyboard or input panel, an expanded caption) or while the viewers sheet is fully expanded:
+        /// escape closes those first. Evaluated when VoiceOver asks.
+        func storyAccessibilityCanNavigate() -> Bool {
+            if self.displayLikeReactions || self.hasActiveDeactivateableInput() || self.viewListDisplayState == .full {
+                return false
+            }
+            if let captionItem = self.captionItem, captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText {
+                return false
+            }
+            return true
+        }
+        
+        /// The story element's swipe up (`next`) or down. With the viewers sheet at half height it moves within this
+        /// author's stories as the sheet's sideways carousel swipe does (`viewListPanGesture`); otherwise it makes the final
+        /// call of the right/left tap zones (`tapGesture`), so past either end it moves to the next or previous author, or
+        /// closes the viewer after the last.
+        func storyAccessibilityNavigate(next: Bool) -> Bool {
+            guard let component = self.component, self.storyAccessibilityCanNavigate() else {
+                return false
+            }
+            if self.viewListDisplayState == .half {
+                guard let currentIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) else {
+                    return false
+                }
+                let targetIndex = next ? currentIndex + 1 : currentIndex - 1
+                guard targetIndex >= 0 && targetIndex < component.slice.allItems.count else {
+                    return false
+                }
+                let targetItem = component.slice.allItems[targetIndex]
+                self.animateNextNavigationId = targetItem.id
+                component.navigate(.id(targetItem.id))
+                return true
+            }
+            component.navigate(next ? .next : .previous)
+            return true
+        }
         
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
@@ -900,6 +984,10 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
                 itemView.rewind()
+            }
+            if visibleItem.isHeldAtEndForAccessibility {
+                visibleItem.isHeldAtEndForAccessibility = false
+                self.updateIsProgressPaused()
             }
         }
         
@@ -1369,6 +1457,11 @@ public final class StoryItemSetContainerComponent: Component {
             if let inputView = self.inputPanel.view, let inputViewHitTest = inputView.hitTest(self.convert(point, to: inputView), with: event) {
                 return inputViewHitTest
             }
+            // The footer row can be wider than the card (`minimumInputPanelWidth`), as the input row can: its controls outside
+            // the card take touches too (the views button on the left, as on a phone); its empty space stays the backdrop's.
+            if !self.bounds.contains(point), let component = self.component, let footerPanelView = self.visibleItems[component.slice.item.id]?.footerPanel?.view, let footerPanelHitTest = footerPanelView.hitTest(self.convert(point, to: footerPanelView), with: event), footerPanelHitTest !== footerPanelView {
+                return footerPanelHitTest
+            }
             
             guard let result else {
                 return nil
@@ -1456,6 +1549,9 @@ public final class StoryItemSetContainerComponent: Component {
                 return .pause
             }
             if component.pinchState != nil {
+                return .pause
+            }
+            if let visibleItem = self.visibleItems[component.slice.item.id], visibleItem.isHeldAtEndForAccessibility {
                 return .pause
             }
             if self.verticalPanState != nil {
@@ -1636,10 +1732,22 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
+                                // Under VoiceOver a story does not move on by itself when its time is up: reading the
+                                // header, caption and reply row takes longer than a story lasts. It is held (paused) at its
+                                // end; the story element's swipe up moves on (StoryItemSetContainerAccessibility.swift).
+                                // DEBUG builds launched with `--force-voiceover-layout` behave the same for sighted use.
+                                // If VoiceOver is turned off while a story is held, a tap moves on.
                                 if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
-                                    visibleItem.requestedNext = true
-                                    
-                                    component.navigate(.next)
+                                    if isVoiceOverRunningForLayout {
+                                        if !visibleItem.isHeldAtEndForAccessibility {
+                                            visibleItem.isHeldAtEndForAccessibility = true
+                                            self.updateIsProgressPaused()
+                                        }
+                                    } else {
+                                        visibleItem.requestedNext = true
+                                        
+                                        component.navigate(.next)
+                                    }
                                 }
                             }
                         },
@@ -1960,7 +2068,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 )),
                                 environment: {},
-                                containerSize: CGSize(width: itemLayout.containerSize.width, height: 200.0)
+                                containerSize: CGSize(width: max(itemLayout.containerSize.width, component.minimumInputPanelWidth), height: 200.0)
                             )
                             if let footerPanelView = footerPanel.view {
                                 if footerPanelView.superview == nil {
@@ -2735,6 +2843,8 @@ public final class StoryItemSetContainerComponent: Component {
             if self.component?.slice.item.id != component.slice.item.id {
                 isFirstItem = self.component == nil
                 itemChanged = self.component != nil
+                // A story shown again starts its time again, so it is not held at its end any more.
+                self.visibleItems[component.slice.item.id]?.isHeldAtEndForAccessibility = false
                 self.initializedOffset = false
                 
                 resetInputContents = .text(NSAttributedString())
@@ -4069,6 +4179,8 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
                 transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.isEditingStory || component.isEmbeddedInCamera) ? 0.0 : 1.0)
+                self.closeButton.accessibilityLabel = component.strings.Common_Close
+                self.closeButton.accessibilityTraits = .button
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
                 headerRightOffset -= 51.0
             }
@@ -4086,8 +4198,7 @@ public final class StoryItemSetContainerComponent: Component {
                             ),
                             color: .white,
                             startingPosition: .end,
-                            size: CGSize(width: 30.0, height: 30.0),
-                            lottieSettings: component.context.lottieRenderingSettings
+                            size: CGSize(width: 30.0, height: 30.0)
                         )),
                         effectAlignment: .center,
                         minSize: CGSize(width: 33.0, height: 64.0),
@@ -4102,7 +4213,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 animationView.playOnce()
                             }
                             self.performMoreAction(sourceView: moreButtonView, gesture: nil)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Common_More)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 33.0, height: 64.0)
@@ -4145,8 +4257,7 @@ public final class StoryItemSetContainerComponent: Component {
                         ),
                         color: .white,
                         startingPosition: .end,
-                        size: CGSize(width: 30.0, height: 30.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 30.0, height: 30.0)
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: 33.0, height: 64.0),
@@ -4170,7 +4281,11 @@ public final class StoryItemSetContainerComponent: Component {
                         } else {
                             component.toggleAmbientMode()
                         }
-                    }
+                    },
+                    accessibility: isVideo ? {
+                        let toggle = ComponentAccessibility.toggleDefaults(isOn: !soundButtonState)
+                        return ComponentAccessibility(label: component.strings.VoiceOver_Stories_Sound, value: toggle.value, traits: toggle.traits)
+                    }() : ComponentAccessibility(isHidden: true)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 64.0)
@@ -4286,7 +4401,19 @@ public final class StoryItemSetContainerComponent: Component {
                             self.sendMessageContext.tooltipScreen = tooltipScreen
                             self.updateIsProgressPaused()
                             component.controller()?.present(tooltipScreen, in: .current)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Story_Context_Privacy, value: {
+                            switch storyPrivacyIcon {
+                            case .everyone:
+                                return component.strings.Story_Privacy_CategoryEveryone
+                            case .contacts:
+                                return component.strings.Story_Privacy_CategoryContacts
+                            case .closeFriends:
+                                return component.strings.Story_Privacy_CategoryCloseFriends
+                            case .selectedContacts:
+                                return component.strings.Story_Privacy_CategorySelectedContacts
+                            }
+                        }())
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -4331,7 +4458,8 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             
                             self.beginPictureInPicture()
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Gallery_VoiceOver_PictureInPicture)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -4483,7 +4611,10 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.navigateToPeer(peer: component.slice.effectivePeer, chat: false)
                             }
                         },
-                        isEnabled: !component.isEmbeddedInCamera
+                        isEnabled: !component.isEmbeddedInCamera,
+                        // The avatar opens what the author's name beside it opens, unless the story is a repost or
+                        // posted by someone else, when the name opens the original author: only then is it read.
+                        accessibility: (component.slice.item.storyItem.forwardInfo == nil && component.slice.item.storyItem.author == nil) ? ComponentAccessibility(isHidden: true) : ComponentAccessibility(label: component.slice.effectivePeer.compactDisplayTitle)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)
@@ -4828,6 +4959,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animationCache: component.context.animationCache,
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         style: .glass(isTinted: false),
+                        glassHasTail: false,
                         items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: reactionAdditionalTitle,

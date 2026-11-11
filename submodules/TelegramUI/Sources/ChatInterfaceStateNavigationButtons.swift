@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -76,7 +77,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
     return nil
 }
 
-func rightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+func rightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?, sideListKind: ChatSideListKind?) -> ChatNavigationButton? {
     if case .standard(.previewing) = presentationInterfaceState.mode {
         return nil
     }
@@ -97,6 +98,16 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
             let buttonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: target, action: selector)
             buttonItem.accessibilityLabel = strings.Common_Cancel
             return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: buttonItem)
+        }
+    }
+    
+    if sideListKind != nil {
+        if let currentButton, currentButton.action == .toggleSideList {
+            return currentButton
+        } else {
+            let buttonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SideListIcon"), color: presentationInterfaceState.theme.rootController.navigationBar.primaryTextColor), style: .plain, target: target, action: selector)
+            buttonItem.accessibilityLabel = strings.Chat_SideList_Open
+            return ChatNavigationButton(action: .toggleSideList, buttonItem: buttonItem)
         }
     }
     
@@ -274,8 +285,22 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     return chatInfoNavigationButton
 }
 
-func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?, sideListKind: ChatSideListKind?) -> ChatNavigationButton? {
     if presentationInterfaceState.interfaceState.selectionState != nil {
+        return nil
+    }
+    if let sideListKind {
+        // Saved Messages keeps its search beside the sidebar button.
+        if case .savedMessages = sideListKind {
+            let isTags = presentationInterfaceState.hasSearchTags
+            if case .search(isTags) = currentButton?.action {
+                return currentButton
+            } else {
+                let buttonItem = UIBarButtonItem(image: isTags ? PresentationResourcesRootController.navigationSearchTagIcon(presentationInterfaceState.theme) : PresentationResourcesRootController.navigationSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                buttonItem.accessibilityLabel = strings.Conversation_Search
+                return ChatNavigationButton(action: .search(hasTags: isTags), buttonItem: buttonItem)
+            }
+        }
         return nil
     }
     if case .standard(.default) = presentationInterfaceState.mode {

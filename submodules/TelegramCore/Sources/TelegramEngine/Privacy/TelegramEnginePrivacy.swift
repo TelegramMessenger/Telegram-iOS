@@ -69,7 +69,7 @@ public extension TelegramEngine {
             return _internal_updateSelectiveAccountPrivacySettings(account: self.account, type: type, settings: settings)
         }
         
-        public func updateCloseFriends(peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+        public func updateCloseFriends(peerIds: [EnginePeer.Id]) -> Signal<Never, UpdateCloseFriendsError> {
             return _internal_updateCloseFriends(account: self.account, peerIds: peerIds)
         }
         

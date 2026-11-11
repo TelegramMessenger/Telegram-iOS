@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -96,7 +95,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.theme = theme
         self.mode = mode
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroMail"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         
         self.titleNode = ASTextNode()
@@ -222,20 +221,18 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.titleNode.attributedText = NSAttributedString(string: self.mode == .setup ? self.strings.LoginEmail_Title : self.strings.Login_EnterNewEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
-        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let inset: CGFloat = 24.0
         let maximumWidth: CGFloat = min(430.0, bandWidth)
         
-        // The bottom button and the divider above it span iPhone Duo's side strip; they keep clear only of a corner
-        // block at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        // iPhone Duo: the bottom button and the divider above it keep to the content's axis (authorizationBottomBand):
+        // unfolded they span the side strip, clear only of a corner block at the bottom; folded they keep to the
+        // content band.
+        let (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
         let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
@@ -257,11 +254,18 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
             items.insert(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)), at: 0)
             self.animationNode.updateLayout(size: animationSize)
             self.proceedNode.isHidden = false
-            self.animationNode.isHidden = false
-            self.animationNode.visibility = true
+            if !authorizationLayoutItemsFit(height: layout.size.height - insets.top - insets.bottom - 120.0, items: items) {
+                items.removeFirst()
+                insets.top = navigationBarHeight
+            }
         } else {
             insets.top = navigationBarHeight
             self.proceedNode.isHidden = true
+        }
+        if items.first?.node === self.animationNode {
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+        } else {
             self.animationNode.isHidden = true
         }
         

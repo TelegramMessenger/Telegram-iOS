@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -45,6 +44,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
     ],
     visibility = [
         "//visibility:public",

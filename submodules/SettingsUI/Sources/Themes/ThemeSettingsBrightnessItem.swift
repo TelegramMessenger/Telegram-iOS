@@ -5,18 +5,21 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
-import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
 import AppBundle
+import ComponentFlow
+import SliderComponent
 
 class ThemeSettingsBrightnessItem: ListViewItem, ItemListItem {
+    let systemStyle: ItemListSystemStyle
     let theme: PresentationTheme
     let value: Int32
     let sectionId: ItemListSectionId
     let updated: (Int32) -> Void
     
-    init(theme: PresentationTheme, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
+    init(systemStyle: ItemListSystemStyle = .legacy, theme: PresentationTheme, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
+        self.systemStyle = systemStyle
         self.theme = theme
         self.value = value
         self.sectionId = sectionId
@@ -63,7 +66,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var sliderView: TGPhotoEditorSliderView?
+    private let slider = ComponentView<Empty>()
     private let leftIconNode: ASImageNode
     private let rightIconNode: ASImageNode
     
@@ -96,31 +99,6 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
         self.addSubnode(self.rightIconNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        let sliderView = TGPhotoEditorSliderView()
-        sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
-        sliderView.minimumValue = 0.0
-        sliderView.startValue = 0.0
-        sliderView.maximumValue = 100.0
-        sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        if let item = self.item, let params = self.layoutParams {
-            sliderView.value = CGFloat(item.value)
-            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
-            sliderView.trackColor = item.theme.list.itemAccentColor
-            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
-            
-            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
-        }
-        self.view.addSubview(sliderView)
-        sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
-        self.sliderView = sliderView
-    }
-    
     func asyncLayout() -> (_ item: ThemeSettingsBrightnessItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
@@ -128,10 +106,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
             var updatedLeftIcon: UIImage?
             var updatedRightIcon: UIImage?
             
-            var themeUpdated = false
             if currentItem?.theme !== item.theme {
-                themeUpdated = true
-                
                 updatedLeftIcon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/SettingsBrightnessMinIcon"), color: item.theme.list.itemPrimaryTextColor)
                 updatedRightIcon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/SettingsBrightnessMaxIcon"), color: item.theme.list.itemPrimaryTextColor)
             }
@@ -139,6 +114,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
+            let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
             
             contentSize = CGSize(width: params.width, height: 60.0)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -192,12 +168,12 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     
                     if let updatedLeftIcon = updatedLeftIcon {
                         strongSelf.leftIconNode.image = updatedLeftIcon
@@ -212,15 +188,31 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
                         strongSelf.rightIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 14.0 - image.size.width, y: 21.0), size: CGSize(width: image.size.width, height: image.size.height))
                     }
                     
-                    if let sliderView = strongSelf.sliderView {
-                        if themeUpdated {
-                            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.itemSecondaryTextColor
-                            sliderView.trackColor = item.theme.list.itemAccentColor.withAlphaComponent(0.45)
-                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
+                    let sliderSize = strongSelf.slider.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            SliderComponent(
+                                content: .continuous(.init(
+                                    value: CGFloat(item.value),
+                                    minValue: nil,
+                                    range: 0.0 ... 100.0,
+                                    valueUpdated: { [weak self] value in
+                                        self?.item?.updated(Int32(value))
+                                    }
+                                )),
+                                useNative: true,
+                                trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
+                                trackForegroundColor: item.theme.list.itemAccentColor
+                            )
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0)
+                    )
+                    if let sliderView = strongSelf.slider.view {
+                        if sliderView.superview == nil {
+                            strongSelf.view.addSubview(sliderView)
                         }
-                        
-                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
+                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: sliderSize)
                     }
                 }
             })
@@ -234,12 +226,4 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
-    
-    @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
-            return
-        }
-        self.item?.updated(Int32(sliderView.value))
-    }
 }
-

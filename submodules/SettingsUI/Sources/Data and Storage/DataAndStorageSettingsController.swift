@@ -349,11 +349,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
         let arguments = arguments as! DataAndStorageControllerArguments
         switch self {
             case let .storageUsage(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.storageUsage, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.storageUsage, title: text, label: value, sectionId: self.section, style: .blocks, minimumLabelSpacing: 6.0, action: {
                     arguments.openStorageUsage()
                 })
             case let .networkUsage(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.dataUsage, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.dataUsage, title: text, label: value, sectionId: self.section, style: .blocks, minimumLabelSpacing: 6.0, action: {
                     arguments.openNetworkUsage()
                 })
             case let .automaticDownloadHeader(_, text):
@@ -606,8 +606,8 @@ private func autosaveLabelAndValue(presentationData: PresentationData, settings:
 private func dataAndStorageControllerEntries(context: AccountContext, state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?], mediaSettings: MediaDisplaySettings, showSensitiveContentSetting: Bool) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
-    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, compact: true, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, compact: true, formatting: DataSizeStringFormatting(presentationData: presentationData))))
     
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle.uppercased()))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
@@ -836,26 +836,25 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         pushControllerImpl?(autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType))
     }, resetAutomaticDownload: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
-            ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                
-                let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                    var settings = settings
-                    let defaultSettings = MediaAutoDownloadSettings.defaultSettings
-                    settings.cellular = defaultSettings.cellular
-                    settings.wifi = defaultSettings.wifi
-                    return settings
-                }).start()
-            })
-            ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-                ])])
-        presentControllerImpl?(actionSheet, nil)
+        let alertController = textAlertController(
+            context: context,
+            title: nil,
+            text: presentationData.strings.AutoDownloadSettings_ResetHelp,
+            actions: [
+                TextAlertAction(type: .defaultDestructiveAction, title: presentationData.strings.AutoDownloadSettings_Reset, action: {
+                    let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+                        var settings = settings
+                        let defaultSettings = MediaAutoDownloadSettings.defaultSettings
+                        settings.cellular = defaultSettings.cellular
+                        settings.wifi = defaultSettings.wifi
+                        return settings
+                    }).start()
+                }),
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+            ],
+            actionLayout: .vertical
+        )
+        presentControllerImpl?(alertController, nil)
     }, toggleVoiceUseLessData: { value in
         let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             var current = current

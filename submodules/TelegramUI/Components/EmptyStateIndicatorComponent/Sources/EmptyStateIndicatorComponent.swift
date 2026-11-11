@@ -111,8 +111,7 @@ public final class EmptyStateIndicatorComponent: Component {
                     component: AnyComponent(AnimatedStickerComponent(
                         account: component.context.account,
                         animation: AnimatedStickerComponent.Animation(source: .bundle(name: animationName), loop: true),
-                        size: CGSize(width: 120.0, height: 120.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 120.0, height: 120.0)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 120.0, height: 120.0)
@@ -156,6 +155,7 @@ public final class EmptyStateIndicatorComponent: Component {
                     transition: transition,
                     component: AnyComponent(ButtonComponent(
                         background: ButtonComponent.Background(
+                            style: .glass,
                             color: component.theme.list.itemCheckColors.fillColor,
                             foreground: component.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
@@ -173,7 +173,7 @@ public final class EmptyStateIndicatorComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 260.0, height: 50.0)
+                    containerSize: CGSize(width: 260.0, height: 52.0)
                 )
             } else {
                 if let button = self.button {

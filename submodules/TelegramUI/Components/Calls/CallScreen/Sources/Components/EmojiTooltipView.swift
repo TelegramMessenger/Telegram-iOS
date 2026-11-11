@@ -18,6 +18,9 @@ private func addRoundedRectPath(context: CGContext, rect: CGRect, radius: CGFloa
     context.restoreGState()
 }
 
+/// The call screen's tooltip tail, 20×8 points, pointing up; `NoticeView` draws it flipped.
+let callTooltipTailSvgPath: StaticString = "M9.0981,1.1979 C9.547,0.6431 10.453,0.6431 10.9019,1.1979 C12.4041,3.0542 15.6848,6.5616 20,8 H-0.0002 C4.3151,6.5616 7.5959,3.0542 9.0981,1.1978 Z "
+
 final class EmojiTooltipView: OverlayMaskContainerView {
     private struct Params: Equatable {
         var constrainedWidth: CGFloat
@@ -127,7 +130,7 @@ final class EmojiTooltipView: OverlayMaskContainerView {
             context.fillPath()
             
             context.translateBy(x: size.width * 0.5 - 10.0, y: 0.0)
-            let _ = try? drawSvgPath(context, path: "M9.0981,1.1979 C9.547,0.6431 10.453,0.6431 10.9019,1.1979 C12.4041,3.0542 15.6848,6.5616 20,8 H-0.0002 C4.3151,6.5616 7.5959,3.0542 9.0981,1.1978 Z ")
+            let _ = try? drawSvgPath(context, path: callTooltipTailSvgPath)
         })
         self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
         

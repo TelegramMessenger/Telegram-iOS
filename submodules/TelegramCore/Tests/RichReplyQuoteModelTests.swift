@@ -74,4 +74,15 @@ final class RichReplyQuoteModelTests: XCTestCase {
         XCTAssertEqual(decoded.quote, quote)
         XCTAssertNil(decoded.quote?.richText)
     }
+
+    // Beta builds of 2026-10-16..18 stored the fragments under "r": such a quote keeps its text and is not sent
+    // as an empty `quote_rich`.
+    func testBetaStoredFragmentsDecodeAsAFlatQuote() throws {
+        let fragmentsEncoder = PostboxEncoder()
+        fragmentsEncoder.encodeObjectArray([RichText.bold(.plain("quote"))], forKey: "r")
+        let json: [String: Any] = ["t": "quote", "e": [Any](), "r": fragmentsEncoder.makeData().base64EncodedString()]
+        let quote = try JSONDecoder().decode(EngineMessageReplyQuote.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(quote.text, "quote")
+        XCTAssertNil(quote.richText)
+    }
 }

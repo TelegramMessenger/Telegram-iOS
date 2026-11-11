@@ -213,7 +213,7 @@ public final class PasscodeSetupController: ViewController {
                     self.controllerNode.updateMode(self.mode)
                 }
                 completion(.default)
-            }))
+            }, accessibilityIsSelected: type == selectedType))
         }
         let controller = makeContextController(
             presentationData: self.presentationData,

@@ -1,0 +1,41 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div id="time">09:00:01</div><div id="date">{"kind":"dateMethod","method":"toLocaleDateString","locale":"en-US","opts":{"weekday":"long","month":"long","day":"numeric"},"value":1767225601000}</div><div id="ticks">2 ticks</div><button id="pause">Pause</button>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 240.25
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 212.25
+    div 14 14 332 40
+    div 14 60 332 101.25
+    div 14 169.25 332 16.2
+    button 160 202.45 40 16.8
+
+== paint
+root 360x240.25 items=12
+  solid-fill bounds=(0,0,360,240) layer=(border=(0,0,360,240),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,240),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#111111ff
+  text bounds=(140,18,80,32) pos=(148,26,64,16) color=#ffffffff text="09:00:01" font=f1 glyphs=8 advance=64
+  text bounds=(8,54,344,32) pos=(16,62,328,16) color=#9ca3afff text="{\"kind\":\"dateMethod\",\"method\":\"toLocaleDa" font=f2 glyphs=41 advance=328
+  text bounds=(80,74,200,32) pos=(88,82,184,16) color=#9ca3afff text="teString\",\"locale\":\"en-" font=f2 glyphs=23 advance=184
+  text bounds=(8,95,344,32) pos=(16,103,328,16) color=#9ca3afff text="US\",\"opts\":{\"weekday\":\"long\",\"month\":\"lon" font=f2 glyphs=41 advance=328
+  text bounds=(8,115,344,32) pos=(16,123,328,16) color=#9ca3afff text="g\",\"day\":\"numeric\"},\"value\":1767225601000" font=f2 glyphs=41 advance=328
+  text bounds=(168,135,24,32) pos=(176,143,8,16) color=#9ca3afff text="}" font=f2 glyphs=1 advance=8
+  text bounds=(144,161,24,32) pos=(152,169,8,16) color=#6b7280ff text="2" font=f3 glyphs=1 advance=8
+  text bounds=(160,161,56,32) pos=(168,169,40,16) color=#6b7280ff text="ticks" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(147,195,66,31) layer=(border=(147,195,66,31),radius=(8,8,8,8,8,8,8,8),clip=(147,195,66,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#222222ff
+  borders bounds=(147,195,66,31) borders=(left=(1,4,#444444ff),top=(1,4,#444444ff),right=(1,4,#444444ff),bottom=(1,4,#444444ff),radius=(8,8,8,8,8,8,8,8)) pos=(147,195,66,31) root=0
+  text bounds=(152,194,56,32) pos=(160,202,40,16) color=#ffffffff text="Pause" font=f4 glyphs=5 advance=40
+
+== fonts
+f1 (family="ui-monospace,monospace",size=40,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=2,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

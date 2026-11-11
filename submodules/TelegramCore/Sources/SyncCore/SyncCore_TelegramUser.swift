@@ -47,6 +47,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let canManageBots = BotUserInfoFlags(rawValue: (1 << 10))
     public static let isGuestChat = BotUserInfoFlags(rawValue: (1 << 11))
     public static let isGuardBot = BotUserInfoFlags(rawValue: (1 << 12))
+    public static let displayForumAsSidebar = BotUserInfoFlags(rawValue: (1 << 13))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {

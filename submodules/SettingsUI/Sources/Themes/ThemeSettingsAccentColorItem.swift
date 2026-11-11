@@ -72,14 +72,15 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
         }
     }
     
-    func item(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
+    func item(strings: PresentationStrings, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
         switch self {
-            case let .color(_, currentTheme, themeReference, accentColor, selected):
-                return ThemeSettingsAccentColorIconItem(themeReference: themeReference, theme: currentTheme, color: accentColor.flatMap { .accentColor($0) }, selected: selected, action: action, contextAction: contextAction)
-            case let .theme(_, currentTheme, baseThemeReference, theme, selected):
-                return ThemeSettingsAccentColorIconItem(themeReference: baseThemeReference, theme: currentTheme, color: .theme(theme), selected: selected, action: action, contextAction: contextAction)
+            case let .color(index, currentTheme, themeReference, accentColor, selected):
+                // VoiceOver: swatches have no names, so they are numbered, as the other colour pickers' are.
+                return ThemeSettingsAccentColorIconItem(themeReference: themeReference, theme: currentTheme, color: accentColor.flatMap { .accentColor($0) }, selected: selected, accessibilityLabel: strings.VoiceOver_Common_ColorNumber("\(index + 1)").string, moreActionTitle: strings.Common_More, action: action, contextAction: contextAction)
+            case let .theme(index, currentTheme, baseThemeReference, theme, selected):
+                return ThemeSettingsAccentColorIconItem(themeReference: baseThemeReference, theme: currentTheme, color: .theme(theme), selected: selected, accessibilityLabel: strings.VoiceOver_Common_ColorNumber("\(index + 1)").string, moreActionTitle: strings.Common_More, action: action, contextAction: contextAction)
             case .picker:
-                return ThemeSettingsAccentColorPickerItem(action: openColorPicker)
+                return ThemeSettingsAccentColorPickerItem(accessibilityLabel: strings.Theme_Context_ChangeColors, action: openColorPicker)
         }
     }
 }
@@ -165,14 +166,18 @@ private class ThemeSettingsAccentColorIconItem: ListViewItem {
     let theme: PresentationTheme
     let color: ThemeSettingsColorOption?
     let selected: Bool
+    let accessibilityLabel: String
+    let moreActionTitle: String
     let action: (ThemeSettingsColorOption?, Bool) -> Void
     let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(themeReference: PresentationThemeReference, theme: PresentationTheme, color: ThemeSettingsColorOption?, selected: Bool, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(themeReference: PresentationThemeReference, theme: PresentationTheme, color: ThemeSettingsColorOption?, selected: Bool, accessibilityLabel: String, moreActionTitle: String, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.themeReference = themeReference
         self.theme = theme
         self.color = color
         self.selected = selected
+        self.accessibilityLabel = accessibilityLabel
+        self.moreActionTitle = moreActionTitle
         self.action = action
         self.contextAction = contextAction
     }
@@ -325,6 +330,15 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
         self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
     }
     
+    /// VoiceOver: activating a swatch selects it (or, when it is the current one, opens its editor), as a tap does.
+    override func accessibilityActivate() -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        item.action(item.color, item.selected)
+        return true
+    }
+    
     func setSelected(_ selected: Bool, animated: Bool = false) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
         if selected {
@@ -360,6 +374,22 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = item.accessibilityLabel
+                    strongSelf.accessibilityTraits = item.selected ? [.button, .selected] : .button
+                    // The swatch's long-press menu as a "More" action (the menu is opened without a gesture).
+                    if item.contextAction == nil {
+                        strongSelf.view.accessibilityCustomActions = nil
+                    } else if currentItem?.contextAction == nil || strongSelf.view.accessibilityCustomActions == nil {
+                        strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.moreActionTitle, actionHandler: { [weak strongSelf] _ in
+                            guard let strongSelf, let item = strongSelf.item, let contextAction = item.contextAction else {
+                                return false
+                            }
+                            contextAction(item.color, item.selected, strongSelf.containerNode, nil)
+                            return true
+                        })]
+                    }
                     
                     if updatedAccentColor {
                         var fillColor = item.color?.accentColor
@@ -457,9 +487,11 @@ private class ThemeSettingsAccentColorPickerItem: ListViewItem {
         return AnyEquatable.noNeighborInfluence
     }
 
+    let accessibilityLabel: String
     let action: (Bool) -> Void
     
-    public init(action: @escaping (Bool) -> Void) {
+    public init(accessibilityLabel: String, action: @escaping (Bool) -> Void) {
+        self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
     
@@ -550,6 +582,15 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
         self.addSubnode(self.imageNode)
     }
     
+    /// VoiceOver: opens the colour editor, as a tap does.
+    override func accessibilityActivate() -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        item.action(true)
+        return true
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -562,6 +603,10 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = item.accessibilityLabel
+                    strongSelf.accessibilityTraits = .button
                     
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 11.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                 }
@@ -613,6 +658,7 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let generalThemeReference: PresentationThemeReference
     let themeReference: PresentationThemeReference
     let colors: [ThemeSettingsAccentColor]
@@ -622,8 +668,9 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     let openColorPicker: (Bool) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, generalThemeReference: PresentationThemeReference, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: ThemeSettingsColorOption?, updated: @escaping (ThemeSettingsColorOption?) -> Void, contextAction: ((Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, generalThemeReference: PresentationThemeReference, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: ThemeSettingsColorOption?, updated: @escaping (ThemeSettingsColorOption?) -> Void, contextAction: ((Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
+        self.strings = strings
         self.generalThemeReference = generalThemeReference
         self.themeReference = themeReference
         self.colors = colors
@@ -682,12 +729,12 @@ private struct ThemeSettingsAccentColorItemNodeTransition {
     let updatePosition: Bool
 }
 
-private func preparedTransition(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], updatePosition: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
+private func preparedTransition(strings: PresentationStrings, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], updatePosition: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(action: action, contextAction: contextAction, openColorPicker: openColorPicker), directionHint: .Down) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(action: action, contextAction: contextAction, openColorPicker: openColorPicker), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(strings: strings, action: action, contextAction: contextAction, openColorPicker: openColorPicker), directionHint: .Down) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(strings: strings, action: action, contextAction: contextAction, openColorPicker: openColorPicker), directionHint: nil) }
     
     return ThemeSettingsAccentColorItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, updatePosition: updatePosition)
 }
@@ -951,7 +998,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                         
                     let previousEntries = strongSelf.entries ?? []
                     let updatePosition = currentItem != nil && (previousEntries.count != entries.count || (currentItem?.generalThemeReference.index != item.generalThemeReference.index))
-                    let transition = preparedTransition(action: action, contextAction: contextAction, openColorPicker: openColorPicker, from: previousEntries, to: entries, updatePosition: updatePosition)
+                    let transition = preparedTransition(strings: item.strings, action: action, contextAction: contextAction, openColorPicker: openColorPicker, from: previousEntries, to: entries, updatePosition: updatePosition)
                     strongSelf.enqueueTransition(transition)
                     
                     strongSelf.entries = entries

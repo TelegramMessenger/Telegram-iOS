@@ -5,9 +5,10 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
-import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
+import ComponentFlow
+import SliderComponent
 
 private let autodownloadSizeValues: [(CGFloat, Int64)] = [
     (0.000, 512 * 1024),
@@ -59,8 +60,11 @@ final class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let updated: (Int64) -> Void
     let tag: ItemListItemTag?
+    /// VoiceOver name of the slider (the section title above it); its value is `text`.
+    let accessibilityLabel: String?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, systemStyle: ItemListSystemStyle = .legacy, decimalSeparator: String, text: String, value: Int64, range: Range<Int64>?, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, systemStyle: ItemListSystemStyle = .legacy, decimalSeparator: String, text: String, value: Int64, range: Range<Int64>?, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, tag: ItemListItemTag? = nil, accessibilityLabel: String? = nil) {
+        self.accessibilityLabel = accessibilityLabel
         self.theme = theme
         self.strings = strings
         self.systemStyle = systemStyle
@@ -116,7 +120,7 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode, ItemListIte
     private let minTextNode: TextNode
     private let maxTextNode: TextNode
     private let textNode: TextNode
-    private var sliderView: TGPhotoEditorSliderView?
+    private let slider = ComponentView<Empty>()
     
     private var item: AutodownloadSizeLimitItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -156,47 +160,12 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode, ItemListIte
         self.addSubnode(self.maxTextNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        let sliderView = TGPhotoEditorSliderView()
-        sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 2.0
-        sliderView.lineSize = 4.0
-        sliderView.dotSize = 5.0
-        sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 1.0
-        sliderView.startValue = 0.0
-        sliderView.displayEdges = true
-        sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        if let item = self.item, let params = self.layoutParams {
-            sliderView.value = sliderValue(for: item.value)
-            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
-            sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
-            sliderView.trackColor = item.theme.list.itemAccentColor
-            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
-            
-            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
-            sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -sliderView.frame.minX)
-        }
-        self.view.addSubview(sliderView)
-        sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
-        self.sliderView = sliderView
-    }
-    
     func asyncLayout() -> (_ item: AutodownloadSizeLimitItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeMinTextLayout = TextNode.asyncLayout(self.minTextNode)
         let makeMaxTextLayout = TextNode.asyncLayout(self.maxTextNode)
         
         return { [weak self] item, params, neighbors in
-            var themeUpdated = false
-            if currentItem?.theme !== item.theme {
-                themeUpdated = true
-            }
-            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -280,16 +249,32 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode, ItemListIte
                     let _ = maxTextApply()
                     strongSelf.maxTextNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 16.0 - maxTextLayout.size.width, y: 16.0), size: maxTextLayout.size)
                     
-                    if let sliderView = strongSelf.sliderView {
-                        if themeUpdated {
-                            sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
-                            sliderView.trackColor = item.theme.list.itemAccentColor
-                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
+                    let sliderSize = strongSelf.slider.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            SliderComponent(
+                                content: .continuous(.init(
+                                    value: sliderValue(for: item.value),
+                                    minValue: nil,
+                                    valueUpdated: { [weak self] value in
+                                        self?.item?.updated(sizeValue(for: value))
+                                    }
+                                )),
+                                useNative: true,
+                                trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
+                                trackForegroundColor: item.theme.list.itemAccentColor,
+                                accessibilityLabel: item.accessibilityLabel ?? item.text,
+                                accessibilityValue: item.accessibilityLabel == nil ? nil : item.text
+                            )
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0)
+                    )
+                    if let sliderView = strongSelf.slider.view {
+                        if sliderView.superview == nil {
+                            strongSelf.view.addSubview(sliderView)
                         }
-                        
-                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
-                        sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -(params.rightInset + 15.0))
+                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: sliderSize)
                     }
                 }
             })
@@ -302,13 +287,5 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode, ItemListIte
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-    }
-    
-    @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
-            return
-        }
-        let value = sizeValue(for: sliderView.value)
-        self.item?.updated(value)
     }
 }

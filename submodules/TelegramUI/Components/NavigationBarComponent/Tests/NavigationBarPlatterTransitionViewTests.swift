@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ComponentFlow
+import GlassBackgroundComponent
 @testable import NavigationBarComponent
 
 /// A 44pt button content that needs no bundle resources.
@@ -118,6 +119,22 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
             return
         }
         XCTAssertLessThan(abs(leftover.frame.midX - inner.frame.midX), abs(leftover.frame.midX - outer.frame.midX))
+    }
+
+    // A leftover pill collapsing into a pill of another tint (a profile's coloured bar into a plain one, Settings ▸ Money)
+    // merges into its partner's glass, where its own opacity does not hide it: it takes the partner's tint, the old one
+    // fading out above it, instead of staying a patch of the old colour inside the partner until it rests.
+    func test_leftoverPill_collapsingIntoAPillOfAnotherTint_takesItsTint() {
+        let view = self.makeView(bottom: self.side(right: [self.text("edit"), self.button("search", tint: .accent)]), top: self.side(right: [self.text("x")]))
+        view.beginTransition(isInteractive: false, toTop: true)
+        guard let leftover = view.platterStateForTesting(.trailing(1)), let partner = view.platterStateForTesting(.trailing(0)) else {
+            XCTFail("missing platters")
+            return
+        }
+        XCTAssertEqual(leftover.tint, partner.tint)
+        XCTAssertNotNil(leftover.fadingTintAlpha)
+        self.time.advance(by: 0.6)
+        XCTAssertEqual(view.platterStateForTesting(.trailing(1))?.fadingTintAlpha ?? 0.0, 0.0, accuracy: 0.01)
     }
 
     // The pulse as curves: SwiftUI's formula on a rising curve and two falling ones that start after their delays, at

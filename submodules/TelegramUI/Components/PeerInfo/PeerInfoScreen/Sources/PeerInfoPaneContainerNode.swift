@@ -516,8 +516,17 @@ private final class PeerInfoPendingPane {
                 openAddStory()
             }
         case .media:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected, initialFocusMessageIndex: switchToMediaTarget?.kind == .photoVideo ? switchToMediaTarget?.messageIndex : nil)
+            let visualPaneNode: PeerInfoVisualMediaPane
+            if context.usesSharedMediaGridV2 {
+                visualPaneNode = PeerInfoMediaGridPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected, initialFocusMessageIndex: switchToMediaTarget?.kind == .photoVideo ? switchToMediaTarget?.messageIndex : nil)
+            } else {
+                visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected, initialFocusMessageIndex: switchToMediaTarget?.kind == .photoVideo ? switchToMediaTarget?.messageIndex : nil)
+            }
             paneNode = visualPaneNode
+            // VoiceOver: the legacy grid scrolls the profile to the focused tile; the MediaGrid pane has no such hook.
+            (visualPaneNode as? PeerInfoVisualMediaPaneNode)?.ensureRectVisible = { sourceView, rect in
+                ensureRectVisible(sourceView, rect)
+            }
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
             }
@@ -527,14 +536,23 @@ private final class PeerInfoPendingPane {
         case .files:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .files, captureProtected: captureProtected, initialFocusMessageIndex: switchToMediaTarget?.kind == .photoVideo ? switchToMediaTarget?.messageIndex : nil)
             paneNode = visualPaneNode
+            visualPaneNode.ensureRectVisible = { sourceView, rect in
+                ensureRectVisible(sourceView, rect)
+            }
         case .links:
             paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: .webPage)
         case .voice:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .voiceAndVideoMessages, captureProtected: captureProtected, initialFocusMessageIndex: nil)
             paneNode = visualPaneNode
+            visualPaneNode.ensureRectVisible = { sourceView, rect in
+                ensureRectVisible(sourceView, rect)
+            }
         case .music:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .music, captureProtected: captureProtected, initialFocusMessageIndex: nil)
             paneNode = visualPaneNode
+            visualPaneNode.ensureRectVisible = { sourceView, rect in
+                ensureRectVisible(sourceView, rect)
+            }
         case .gifs:
             let visualPaneNode = PeerInfoGifPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: chatLocationPeerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .gifs)
             paneNode = visualPaneNode
@@ -1190,6 +1208,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         }
         
         for (key, pane) in self.currentPanes {
+            // A pager: only the current pane is read; its neighbours are laid out off screen beside it.
+            pane.node.accessibilityElementsHidden = key != self.currentPaneKey
             if let index = availablePanes.firstIndex(of: key), let updatedCurrentIndex = updatedCurrentIndex {
                 var paneWasAdded = false
                 if pane.node.supernode == nil {
@@ -1333,6 +1353,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         content = .title(HorizontalTabsComponent.Tab.Title(text: presentationData.strings.PeerInfo_PanePolls, entities: [], enableAnimations: false))
                     }
                     
+                    var tabAccessibilityLabel: String?
+                    if case .gifts = paneKey {
+                        // The tab shows the title and the first gifts' stickers; it is read by its title.
+                        tabAccessibilityLabel = presentationData.strings.PeerInfo_PaneGifts
+                    }
+                    
                     return HorizontalTabsComponent.Tab(
                         id: AnyHashable(paneKey),
                         content: content,
@@ -1375,10 +1401,14 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                             }
                             self.openTabContextMenu(key: paneKey, sourceView: sourceView, gesture: gesture)
                         } : nil,
-                        deleteAction: nil
+                        deleteAction: nil,
+                        accessibilityLabel: tabAccessibilityLabel,
+                        contextAccessibilityLabel: presentationData.strings.Common_More
                     )
                 },
-                selectedTab: self.currentPaneKey.flatMap { HorizontalTabsComponent.Tab.Id($0) },
+                // A lone tab has no pill: the bar fits its tabs, so the pill would fill the whole capsule and leave
+                // only its border, reading as a bare chip. Its title sits on the glass capsule instead.
+                selectedTab: availablePanes.count > 1 ? self.currentPaneKey.flatMap { HorizontalTabsComponent.Tab.Id($0) } : nil,
                 isEditing: false,
                 layout: .fit,
                 liftWhileSwitching: deviceMetrics.type != .tablet
@@ -1409,6 +1439,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         }
                 
         for (_, pane) in self.pendingPanes {
+            pane.pane.node.accessibilityElementsHidden = true
             let paneTransition: ContainedViewLayoutTransition = .immediate
             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
             pane.pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: true, transition: paneTransition)

@@ -6,7 +6,7 @@ private func suggestedUserPresenceStringRefreshTimeout(_ presence: EnginePeer.Pr
     switch presence.status {
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
-            return Double(statusTimestamp - timestamp)
+            return max(1.0, Double(statusTimestamp - timestamp))
         } else {
             if let isOnline = isOnline, isOnline {
                 return 1.0

@@ -1,0 +1,444 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pd" id="root" style="--c: #2d6a4f; --d: #204c39; --l: #4f826b; --z: #143024;">
+  <div class="hero">
+    <div class="track" id="track" style="transform: translateX(0%);">
+      <div class="slide" style="left: 0%"><div class="studio">
+        <svg class="jk" width="176" height="176" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="191" rx="62" ry="6" fill="#000000" fill-opacity="0.13"></ellipse>
+          <path class="d" d="M66 50 C50 54 40 62 36 76 L22 146 C21 152 25 156 31 156 L41 156 C45 156 48 153 49 149 L60 100 Z"></path>
+          <path class="d" d="M134 50 C150 54 160 62 164 76 L178 146 C179 152 175 156 169 156 L159 156 C155 156 152 153 151 149 L140 100 Z"></path>
+          <rect class="z" x="22" y="146" width="27" height="10" rx="4"></rect><rect class="z" x="151" y="146" width="27" height="10" rx="4"></rect>
+          <path class="c" d="M66 48 C80 42 120 42 134 48 L146 92 L148 174 C148 180 144 184 138 184 L62 184 C56 184 52 180 52 174 L54 92 Z"></path>
+          <path class="l" d="M66 48 C80 42 100 42 100 42 L100 184 L62 184 C56 184 52 180 52 174 L54 92 Z"></path>
+          <path class="d" d="M68 54 C66 30 80 14 100 14 C120 14 134 30 132 54 C120 60 80 60 68 54 Z"></path>
+          <path class="z" d="M80 52 C80 36 88 26 100 26 C112 26 120 36 120 52 C110 56 90 56 80 52 Z"></path>
+          <path class="zs" d="M100 57 L100 184" stroke-width="3" fill="none"></path>
+          <rect x="97" y="62" width="6" height="13" rx="2" fill="#d1d1d6"></rect>
+          <path class="zs" d="M112 84 L132 80 M64 134 L84 141 M136 134 L116 141" stroke-width="3" stroke-linecap="round" fill="none"></path>
+          <path d="M92 57 L90 76 M108 57 L110 76" stroke="#f2f2f7" stroke-width="2" stroke-linecap="round" fill="none"></path>
+          <circle cx="90" cy="77" r="2.5" fill="#f2f2f7"></circle><circle cx="110" cy="77" r="2.5" fill="#f2f2f7"></circle>
+          <circle cx="75" cy="82" r="4" fill="#ffffff" fill-opacity="0.75"></circle>
+        </svg></div></div>
+      <div class="slide" id="slide1" style="left: 100%"><div class="ph forest" id="ph"></div></div>
+      <div class="slide" style="left: 200%"><div class="studio pk">
+        <svg width="150" height="150" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="186" rx="52" ry="6" fill="#000000" fill-opacity="0.13"></ellipse>
+          <path class="c" d="M60 72 C60 62 68 58 78 58 L122 58 C132 58 140 62 140 72 L146 166 C146 174 140 180 132 180 L68 180 C60 180 54 174 54 166 Z"></path>
+          <path class="l" d="M60 72 C60 62 68 58 78 58 L100 58 L100 180 L68 180 C60 180 54 174 54 166 Z"></path>
+          <rect class="d" x="58" y="58" width="84" height="14" rx="7"></rect>
+          <path class="zs" d="M84 60 C84 40 116 40 116 60" stroke-width="3" fill="none"></path>
+          <rect x="94" y="36" width="12" height="14" rx="4" fill="#d1d1d6"></rect>
+          <path d="M66 120 L134 120" class="ds" stroke-width="2" stroke-dasharray="5 4" fill="none"></path>
+          <circle cx="100" cy="146" r="9" fill="#ffffff" fill-opacity="0.75"></circle>
+        </svg>
+        <div class="pkt"><div class="big">310 g</div>Stuffs into its own<br>chest pocket</div></div></div>
+    </div>
+    <span class="badge ret">FREE RETURNS</span>
+    <span class="bagb" data-action="bag" id="bagb">🛍 <span id="bagn"></span></span>
+    <span class="nav l" data-action="slide" data-value="prev">‹</span><span class="nav r" data-action="slide" data-value="next">›</span>
+    <span class="cap" id="cap">Studio</span><span class="dots" id="dots"><span class="dot on" data-action="slide" data-value="0"></span><span class="dot" data-action="slide" data-value="1"></span><span class="dot" data-action="slide" data-value="2"></span></span>
+  </div>
+  <div class="pad">
+    <div class="row"><b class="grow" style="font-size: 18px">Trailhead Rain Jacket</b><b class="pr" id="price">€129</b></div>
+    <div class="row small muted" style="margin-top: 2px"><span class="grow"><span class="t-orange">★★★★★</span> 4.9 · 218 reviews</span><span id="qnote">Free returns · 60 days</span></div>
+    <div class="caps lbl">Colour: <span class="fg" id="colname">Forest</span></div>
+    <div class="opts" id="swatches"><span class="sw sel" data-action="col" data-value="0"><span style="background-color: #2d6a4f"></span></span><span class="sw" data-action="col" data-value="1"><span style="background-color: #2a5298"></span></span><span class="sw" data-action="col" data-value="2"><span style="background-color: #e07b39"></span></span></div>
+    <div class="row lbl"><span class="caps grow">Size: <span class="fg" id="sizename">M</span></span><span class="tiny muted">Runs large · between sizes, size down</span></div>
+    <div class="opts" id="sizes"><span class="size" data-action="size" data-value="0"><span>S</span><span class="lo" hidden=""></span></span><span class="size sel" data-action="size" data-value="1"><span>M</span><span class="lo"></span></span><span class="size" data-action="size" data-value="2"><span>L</span><span class="lo" hidden=""></span></span><span class="size" data-action="size" data-value="3"><span>XL</span><span class="lo" hidden=""></span></span><span class="size out" data-action="size" data-value="4"><span>XXL</span><span class="lo" hidden=""></span></span></div>
+    <div class="small stock" id="stock"><span class="t-orange">●</span> Only <b>2</b> left in Forest · M</div>
+    <div class="row buy">
+      <div class="qty"><button id="qminus" data-action="qty" data-value="-1" class="dim">−</button><span class="qn" id="qn">1</span><button id="qplus" data-action="qty" data-value="1">+</button></div>
+      <button class="primary grow addb" id="buy" data-action="add">Add to bag · €129</button>
+    </div>
+    <div class="toast" id="toast" hidden="">
+      <div class="row"><span id="toastico"><svg width="18" height="18" viewBox="0 0 24 24" fill="#34c759"><circle cx="12" cy="12" r="10"></circle><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <div class="grow"><b>Added to bag</b><div class="tiny muted" id="toasttxt"></div></div>
+        <button data-action="undo">Undo</button><button data-action="bag" id="toastbag" style="margin-left: 6px">View bag</button></div>
+      <div class="tbar"><div id="tbar"></div></div>
+    </div>
+    <div class="bagp" id="bagp" hidden="">
+      <div class="row between"><b>🛍 Your bag</b><span class="small muted" id="bagcount">0 items</span></div>
+      <div id="baglines"><div class="small muted" style="padding: 8px 0">Your bag is empty</div></div>
+      <div class="small" style="margin-top: 8px" id="need">Add <b>€150</b> more for free express shipping</div>
+      <div class="bar" style="margin: 5px 0 8px 0"><div id="shipbar" style="width: 0%; background-color: #ff9500"></div></div>
+      <div class="row"><span class="grow">Subtotal <b id="subv">€0.00</b></span><button class="primary" data-action="checkout" id="checkout" hidden="">Checkout</button></div>
+    </div>
+    <div class="bagp center" id="placed" hidden="">
+      <div style="font-size: 30px">🎉</div><b>Order placed</b>
+      <div class="small muted" id="placedtxt"></div>
+      <button class="primary" data-action="done" style="margin-top: 8px">Done</button>
+    </div>
+    <div class="feats" id="feats"><div class="fr"><div style="animation-delay: 430ms"><svg width="13" height="13" viewBox="0 0 24 24" fill="#007aff"><path d="M12 2.5C12 2.5 5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5Z"></path></svg>20,000 mm waterproof, taped seams</div></div><div class="fr"><div style="animation-delay: 540ms"><svg width="13" height="13" viewBox="0 0 24 24" fill="#8e8e93"><path d="M3 8h9a2.5 2.5 0 1 0-2.5-2.5M3 12h14a2.5 2.5 0 1 1-2.5 2.5M3 16h8a2 2 0 1 1-2 2" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round"></path></svg>Breathable 3-layer shell</div></div><div class="fr"><div style="animation-delay: 650ms"><svg width="13" height="13" viewBox="0 0 24 24" fill="#34c759"><path d="M20.5 3.5C9 3.5 4 10 4 20c10 0 16.5-5 16.5-16.5Z"></path><path d="M4 20c3-6 7-9.5 11-12" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.4"></path></svg>100% recycled face fabric</div></div><div class="fr"><div style="animation-delay: 760ms"><svg width="13" height="13" viewBox="0 0 24 24" fill="#af52de"><path d="M9 2.5h6l1.2 5H7.8Z"></path><path d="M5 8.5h14l2.2 11.3a1 1 0 0 1-1 1.2H3.8a1 1 0 0 1-1-1.2Z"></path></svg>Packs into its own pocket · 310 g</div></div></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 602.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 602.7
+    div 1 1 358 600.7
+      div 1 1 358 210
+        div 1 1 358 210
+          div 1 1 358 210
+            div 1 1 358 210
+              svg 92 21 176 176
+                ellipse 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                rect 0 0 0 0
+                rect 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                rect 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                circle 0 0 0 0
+                circle 0 0 0 0
+                circle 0 0 0 0
+          div 359 1 358 210
+            div 359 1 358 210
+          div 717 1 358 210
+            div 717 1 358 210
+              svg 738 31 150 150
+                ellipse 0 0 0 0
+                path 0 0 0 0
+                path 0 0 0 0
+                rect 0 0 0 0
+                path 0 0 0 0
+                rect 0 0 0 0
+                path 0 0 0 0
+                circle 0 0 0 0
+              div 902 69.6 152 72.8
+                div 902 69.6 152 39
+                br 1054 108.6 0 0
+        span 21 14 96 14.3
+        span 304 10 32 28
+          span 304 10 0 0
+        span 11 90 32 32
+        span 317 90 32 32
+        span 22 183.7 48 14.3
+        span 299 189 48 7
+          span 304 189 19 7
+          span 328 189 7 7
+          span 340 189 7 7
+      div 15 223 330 366.7
+        div 15 223 330 24
+          b 15 223.3 282 23.4
+          b 297 223 48 24
+        div 15 249 330 31.2
+          span 15 249 196.842 31.2
+            span 15 249 0 0
+          span 211.842 249 133.158 31.2
+        div 15 292.2 330 14.3
+          span 15 292.2 0 0
+        div 15 311.5 330 34
+          span 17 313.5 30 30
+            span 20 316.5 24 24
+          span 59 313.5 30 30
+            span 62 316.5 24 24
+          span 101 313.5 30 30
+            span 104 316.5 24 24
+        div 15 357.5 330 28.6
+          span 15 357.5 51.3333 28.6
+            span 15 357.5 0 0
+          span 66.3333 357.5 278.667 28.6
+        div 15 391.1 330 32
+          span 16 398.1 48 18
+            span 36 398.1 8 18
+            span 0 0 0 0
+          span 72 398.1 48 18
+            span 92 398.1 8 18
+            span 109 397.1 6 6
+          span 128 398.1 48 18
+            span 148 398.1 8 18
+            span 0 0 0 0
+          span 184 398.1 48 18
+            span 200 398.1 16 18
+            span 0 0 0 0
+          span 240 398.1 48 18
+            span 252 398.1 24 18
+            span 0 0 0 0
+        div 15 430.1 330 15.6
+          span 15 430.1 0 0
+          b 15 430.1 0 0
+        div 15 457.7 330 36
+          div 15 457.7 94 36
+            button 15 465.7 34 20
+            span 49 465.7 26 20
+            button 75 465.7 34 20
+          button 119 465.7 226 20
+        div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+              svg 0 0 0 0
+                circle 0 0 0 0
+                path 0 0 0 0
+            div 0 0 0 0
+              b 0 0 0 0
+              div 0 0 0 0
+            button 0 0 0 0
+            button 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+              b 0 0 0 0
+            button 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+          b 0 0 0 0
+          div 0 0 0 0
+          button 0 0 0 0
+        div 15 505.7 330 84
+          div 15 505.7 330 21
+            div 15 505.7 330 16.9
+              svg 15 508.2 13 13
+                path 0 0 0 0
+          div 15 526.7 330 21
+            div 15 526.7 330 16.9
+              svg 15 529.2 13 13
+                path 0 0 0 0
+          div 15 547.7 330 21
+            div 15 547.7 330 16.9
+              svg 15 550.2 13 13
+                path 0 0 0 0
+                path 0 0 0 0
+          div 15 568.7 330 21
+            div 15 568.7 330 16.9
+              svg 15 571.2 13 13
+                path 0 0 0 0
+                path 0 0 0 0
+
+== paint
+root 360x602.7 items=177
+  solid-fill bounds=(0,0,360,603) layer=(border=(0,0,360,603),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,603),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,603) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,603) root=0
+  solid-fill bounds=(15,458,94,36) layer=(border=(15,458,94,36),radius=(10,10,10,10,10,10,10,10),clip=(15,458,94,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(119,458,226,36) layer=(border=(119,458,226,36),radius=(8,8,8,8,8,8,8,8),clip=(119,458,226,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(7,218,88,32) pos=(15,226,72,16) color=#000000ff text="Trailhead" font=f1 glyphs=9 advance=72
+  text bounds=(87,218,48,32) pos=(95,226,32,16) color=#000000ff text="Rain" font=f1 glyphs=4 advance=32
+  text bounds=(127,218,64,32) pos=(135,226,48,16) color=#000000ff text="Jacket" font=f1 glyphs=6 advance=48
+  text bounds=(289,219,64,32) pos=(297,227,48,16) color=#000000ff text="€129" font=f1 glyphs=6 advance=48
+  text bounds=(7,241,136,32) pos=(15,249,120,16) color=#ff9500ff text="★★★★★" font=f2 glyphs=15 advance=120
+  text bounds=(135,241,40,32) pos=(143,249,24,16) color=#6e6e73ff text="4.9" font=f2 glyphs=3 advance=24
+  text bounds=(167,241,32,32) pos=(175,249,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(7,257,40,32) pos=(15,265,24,16) color=#6e6e73ff text="218" font=f2 glyphs=3 advance=24
+  text bounds=(39,257,72,32) pos=(47,265,56,16) color=#6e6e73ff text="reviews" font=f2 glyphs=7 advance=56
+  text bounds=(203.842,241,48,32) pos=(211.842,249,32,16) color=#6e6e73ff text="Free" font=f2 glyphs=4 advance=32
+  text bounds=(243.842,241,72,32) pos=(251.842,249,56,16) color=#6e6e73ff text="returns" font=f2 glyphs=7 advance=56
+  text bounds=(307.842,241,32,32) pos=(315.842,249,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(203.842,257,32,32) pos=(211.842,265,16,16) color=#6e6e73ff text="60" font=f2 glyphs=2 advance=16
+  text bounds=(227.842,257,48,32) pos=(235.842,265,32,16) color=#6e6e73ff text="days" font=f2 glyphs=4 advance=32
+  text bounds=(7,284,72,32) pos=(15,292,56,16) color=#6e6e73ff text="COLOUR:" font=f3 glyphs=7 advance=56
+  text bounds=(71,284,64,32) pos=(79,292,48,16) color=#000000ff text="FOREST" font=f3 glyphs=6 advance=48
+  borders bounds=(15,312,34,34) borders=(left=(2,4,#2d6a4fff),top=(2,4,#2d6a4fff),right=(2,4,#2d6a4fff),bottom=(2,4,#2d6a4fff),radius=(17,17,17,17,17,17,17,17)) pos=(15,312,34,34) root=0
+  solid-fill bounds=(20,317,24,24) layer=(border=(20,317,24,24),radius=(12,12,12,12,12,12,12,12),clip=(20,317,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2d6a4fff
+  borders bounds=(57,312,34,34) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(17,17,17,17,17,17,17,17)) pos=(57,312,34,34) root=0
+  solid-fill bounds=(62,317,24,24) layer=(border=(62,317,24,24),radius=(12,12,12,12,12,12,12,12),clip=(62,317,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2a5298ff
+  borders bounds=(99,312,34,34) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(17,17,17,17,17,17,17,17)) pos=(99,312,34,34) root=0
+  solid-fill bounds=(104,317,24,24) layer=(border=(104,317,24,24),radius=(12,12,12,12,12,12,12,12),clip=(104,317,24,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e07b39ff
+  text bounds=(7,350,56,32) pos=(15,358,40,16) color=#6e6e73ff text="SIZE:" font=f3 glyphs=5 advance=40
+  text bounds=(7,364,24,32) pos=(15,372,8,16) color=#000000ff text="M" font=f3 glyphs=1 advance=8
+  text bounds=(58.3333,350,48,32) pos=(66.3333,358,32,16) color=#6e6e73ff text="Runs" font=f4 glyphs=4 advance=32
+  text bounds=(98.3333,350,56,32) pos=(106.333,358,40,16) color=#6e6e73ff text="large" font=f4 glyphs=5 advance=40
+  text bounds=(146.333,350,32,32) pos=(154.333,358,16,16) color=#6e6e73ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(170.333,350,72,32) pos=(178.333,358,56,16) color=#6e6e73ff text="between" font=f4 glyphs=7 advance=56
+  text bounds=(234.333,350,64,32) pos=(242.333,358,48,16) color=#6e6e73ff text="sizes," font=f4 glyphs=6 advance=48
+  text bounds=(290.333,350,48,32) pos=(298.333,358,32,16) color=#6e6e73ff text="size" font=f4 glyphs=4 advance=32
+  text bounds=(58.3333,364,48,32) pos=(66.3333,372,32,16) color=#6e6e73ff text="down" font=f4 glyphs=4 advance=32
+  text bounds=(7,422,40,32) pos=(15,430,24,16) color=#ff9500ff text="●" font=f2 glyphs=3 advance=24
+  text bounds=(39,422,48,32) pos=(47,430,32,16) color=#000000ff text="Only" font=f2 glyphs=4 advance=32
+  text bounds=(79,422,24,32) pos=(87,430,8,16) color=#000000ff text="2" font=f5 glyphs=1 advance=8
+  text bounds=(95,422,48,32) pos=(103,430,32,16) color=#000000ff text="left" font=f2 glyphs=4 advance=32
+  text bounds=(135,422,32,32) pos=(143,430,16,16) color=#000000ff text="in" font=f2 glyphs=2 advance=16
+  text bounds=(159,422,64,32) pos=(167,430,48,16) color=#000000ff text="Forest" font=f2 glyphs=6 advance=48
+  text bounds=(215,422,32,32) pos=(223,430,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(239,422,24,32) pos=(247,430,8,16) color=#000000ff text="M" font=f2 glyphs=1 advance=8
+  text bounds=(12,460,40,32) pos=(20,468,24,16) color=#8e8e9399 text="−" font=f6 glyphs=3 advance=24
+  text bounds=(50,460,24,32) pos=(58,468,8,16) color=#000000ff text="1" font=f7 glyphs=1 advance=8
+  text bounds=(80,460,24,32) pos=(88,468,8,16) color=#000000ff text="+" font=f6 glyphs=1 advance=8
+  text bounds=(144,460,40,32) pos=(152,468,24,16) color=#ffffffff text="Add" font=f8 glyphs=3 advance=24
+  text bounds=(176,460,32,32) pos=(184,468,16,16) color=#ffffffff text="to" font=f8 glyphs=2 advance=16
+  text bounds=(200,460,40,32) pos=(208,468,24,16) color=#ffffffff text="bag" font=f8 glyphs=3 advance=24
+  text bounds=(232,460,32,32) pos=(240,468,16,16) color=#ffffffff text="·" font=f8 glyphs=2 advance=16
+  text bounds=(256,460,64,32) pos=(264,468,48,16) color=#ffffffff text="€129" font=f8 glyphs=6 advance=48
+  set-clip bounds=(1,1,358,210) pos=(1,1,358,210) radius=(13,13,13,13,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(1,1,1074,210) exact=0
+    set-clip bounds=(1,1,358,210) pos=(1,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    solid-fill bounds=(1,1,358,210) layer=(border=(1,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(1,1,358,210),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2d6a4fff
+    linear-gradient bounds=(1,1,358,210) layer=(border=(1,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(1,1,358,210),origin=(1,1,358,210),attachment=0,repeat=0,root=0) points=((0,#ffffffe6,-),(1,#ffffff9e,-)) space=0 hue=0 start=(141.759,-36.7163) end=(218.241,248.716)
+    set-clip bounds=(1,1,358,210) pos=(1,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    group opacity=1 matrix=(1,0,0,1,0,0.0112) backface=0 bounds=(92,21,176,176) exact=0
+      set-clip bounds=(92,21,176,176) pos=(92,21,176,176) radius=(0,0,0,0,0,0,0,0)
+      isolated box=(92,21,176,176)
+        group opacity=1 matrix=(0.88,0,0,0.88,92,21) backface=0 bounds=(0,0,200,200) exact=0
+          path bounds=(37,184,126,14) ops=(0,3,3,3,3,4) points=(162,191,162,194.314,134.242,197,100,197,65.7583,197,38,194.314,38,191,38,187.686,65.7583,185,100,185,134.242,185,162,187.686,162,191) fill=1 fill-color=#00000021 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(20.8469,49,46.1531,108) ops=(0,3,1,3,1,3,1,4) points=(66,50,50,54,40,62,36,76,22,146,21,152,25,156,31,156,41,156,45,156,48,153,49,149,60,100) fill=1 fill-color=#204c39ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(133,49,46.1531,108) ops=(0,3,1,3,1,3,1,4) points=(134,50,150,54,160,62,164,76,178,146,179,152,175,156,169,156,159,156,155,156,152,153,151,149,140,100) fill=1 fill-color=#204c39ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(21,145,29,12) ops=(0,1,3,1,3,1,3,1,3,4) points=(26,146,45,146,47.2091,146,49,147.791,49,150,49,152,49,154.209,47.2091,156,45,156,26,156,23.7909,156,22,154.209,22,152,22,150,22,147.791,23.7909,146,26,146) fill=1 fill-color=#143024ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(150,145,29,12) ops=(0,1,3,1,3,1,3,1,3,4) points=(155,146,174,146,176.209,146,178,147.791,178,150,178,152,178,154.209,176.209,156,174,156,155,156,152.791,156,151,154.209,151,152,151,150,151,147.791,152.791,146,155,146) fill=1 fill-color=#143024ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(51,42.5,98,142.5) ops=(0,3,1,1,3,1,3,1,4) points=(66,48,80,42,120,42,134,48,146,92,148,174,148,180,144,184,138,184,62,184,56,184,52,180,52,174,54,92) fill=1 fill-color=#2d6a4fff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(51,41,50,144) ops=(0,3,1,1,3,1,4) points=(66,48,80,42,100,42,100,42,100,184,62,184,56,184,52,180,52,174,54,92) fill=1 fill-color=#4f826bff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(66.81,13,66.38,46.5) ops=(0,3,3,3,4) points=(68,54,66,30,80,14,100,14,120,14,134,30,132,54,120,60,80,60,68,54) fill=1 fill-color=#204c39ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(79,25,42,31) ops=(0,3,3,3,4) points=(80,52,80,36,88,26,100,26,112,26,120,36,120,52,110,56,90,56,80,52) fill=1 fill-color=#143024ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(93,50,14,141) ops=(0,1) points=(100,57,100,184) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#143024ff stroke-width=3 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(96,61,8,15) ops=(0,1,3,1,3,1,3,1,3,4) points=(99,62,101,62,102.105,62,103,62.8954,103,64,103,73,103,74.1046,102.105,75,101,75,99,75,97.8954,75,97,74.1046,97,73,97,64,97,62.8954,97.8954,62,99,62) fill=1 fill-color=#d1d1d6ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(57,73,86,75) ops=(0,1,0,1,0,1) points=(112,84,132,80,64,134,84,141,136,134,116,141) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#143024ff stroke-width=3 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(85,52,30,29) ops=(0,1,0,1) points=(92,57,90,76,108,57,110,76) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#f2f2f7ff stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(86.5,73.5,7,7) ops=(0,3,3,3,3,4) points=(92.5,77,92.5,78.3807,91.3807,79.5,90,79.5,88.6193,79.5,87.5,78.3807,87.5,77,87.5,75.6193,88.6193,74.5,90,74.5,91.3807,74.5,92.5,75.6193,92.5,77) fill=1 fill-color=#f2f2f7ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(106.5,73.5,7,7) ops=(0,3,3,3,3,4) points=(112.5,77,112.5,78.3807,111.381,79.5,110,79.5,108.619,79.5,107.5,78.3807,107.5,77,107.5,75.6193,108.619,74.5,110,74.5,111.381,74.5,112.5,75.6193,112.5,77) fill=1 fill-color=#f2f2f7ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+          path bounds=(70,77,10,10) ops=(0,3,3,3,3,4) points=(79,82,79,84.2091,77.2091,86,75,86,72.7909,86,71,84.2091,71,82,71,79.7909,72.7909,78,75,78,77.2091,78,79,79.7909,79,82) fill=1 fill-color=#ffffffbf evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      del-clip bounds=(0,0,0,0)
+    del-clip bounds=(0,0,0,0)
+    del-clip bounds=(0,0,0,0)
+    set-clip bounds=(359,1,358,210) pos=(359,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    linear-gradient bounds=(359,1,358,210) layer=(border=(359,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(359,1,358,210),origin=(359,1,358,210),attachment=0,repeat=0,root=0) points=((0,#1b4332ff,-),(0.45,#2d6a4fff,-),(1,#52b788ff,-)) space=0 hue=0 start=(483.315,-44.2468) end=(592.685,256.247)
+    radial-gradient bounds=(359,1,358,210) layer=(border=(359,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(359,1,358,210),origin=(359,1,358,210),attachment=0,repeat=0,root=0) points=((0,#ffffff47,-),(0.55,#ffffff00,-),(0.55,#00000000,-),(1,#00000000,-)) space=0 hue=0 position=(466.4,43) radius=(354.402,237.588)
+    del-clip bounds=(0,0,0,0)
+    set-clip bounds=(717,1,358,210) pos=(717,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    solid-fill bounds=(717,1,358,210) layer=(border=(717,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(717,1,358,210),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2d6a4fff
+    linear-gradient bounds=(717,1,358,210) layer=(border=(717,1,358,210),radius=(0,0,0,0,0,0,0,0),clip=(717,1,358,210),origin=(717,1,358,210),attachment=0,repeat=0,root=0) points=((0,#f5f5f7ff,-),(1,#ffffffbf,-)) space=0 hue=0 start=(857.759,-36.7163) end=(934.241,248.716)
+    set-clip bounds=(717,1,358,210) pos=(717,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    set-clip bounds=(738,31,150,150) pos=(738,31,150,150) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(738,31,150,150)
+      group opacity=1 matrix=(0.75,0,0,0.75,738,31) backface=0 bounds=(0,0,200,200) exact=0
+        path bounds=(47,179,106,14) ops=(0,3,3,3,3,4) points=(152,186,152,189.314,128.719,192,100,192,71.2812,192,48,189.314,48,186,48,182.686,71.2812,180,100,180,128.719,180,152,182.686,152,186) fill=1 fill-color=#00000021 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(53,57,94,124) ops=(0,3,1,3,1,3,1,3,4) points=(60,72,60,62,68,58,78,58,122,58,132,58,140,62,140,72,146,166,146,174,140,180,132,180,68,180,60,180,54,174,54,166) fill=1 fill-color=#2d6a4fff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(53,57,48,124) ops=(0,3,1,1,1,3,4) points=(60,72,60,62,68,58,78,58,100,58,100,180,68,180,60,180,54,174,54,166) fill=1 fill-color=#4f826bff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(57,57,86,16) ops=(0,1,3,1,3,1,3,1,3,4) points=(65,58,135,58,138.866,58,142,61.134,142,65,142,65,142,68.866,138.866,72,135,72,65,72,61.134,72,58,68.866,58,65,58,65,58,61.134,61.134,58,65,58) fill=1 fill-color=#204c39ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(77,38,46,29) ops=(0,3) points=(84,60,84,40,116,40,116,60) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#143024ff stroke-width=3 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(93,35,14,16) ops=(0,1,3,1,3,1,3,1,3,4) points=(98,36,102,36,104.209,36,106,37.7909,106,40,106,46,106,48.2091,104.209,50,102,50,98,50,95.7909,50,94,48.2091,94,46,94,40,94,37.7909,95.7909,36,98,36) fill=1 fill-color=#d1d1d6ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(61,115,78,10) ops=(0,1) points=(66,120,134,120) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#204c39ff stroke-width=2 cap=0 join=0 miter=4 dashes=(5,4) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(90,136,20,20) ops=(0,3,3,3,3,4) points=(109,146,109,150.971,104.971,155,100,155,95.0294,155,91,150.971,91,146,91,141.029,95.0294,137,100,137,104.971,137,109,141.029,109,146) fill=1 fill-color=#ffffffbf evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+    del-clip bounds=(0,0,0,0)
+    del-clip bounds=(0,0,0,0)
+    set-clip bounds=(717,1,358,210) pos=(717,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    set-clip bounds=(717,1,358,210) pos=(717,1,358,210) radius=(0,0,0,0,0,0,0,0)
+    text bounds=(894,73,40,32) pos=(902,81,24,16) color=#1c1c1eff text="310" font=f9 glyphs=3 advance=24
+    text bounds=(926,73,24,32) pos=(934,81,8,16) color=#1c1c1eff text="g" font=f9 glyphs=1 advance=8
+    text bounds=(894,101,64,32) pos=(902,109,48,16) color=#3a3a3cff text="Stuffs" font=f10 glyphs=6 advance=48
+    text bounds=(950,101,48,32) pos=(958,109,32,16) color=#3a3a3cff text="into" font=f10 glyphs=4 advance=32
+    text bounds=(990,101,40,32) pos=(998,109,24,16) color=#3a3a3cff text="its" font=f10 glyphs=3 advance=24
+    text bounds=(1022,101,40,32) pos=(1030,109,24,16) color=#3a3a3cff text="own" font=f10 glyphs=3 advance=24
+    text bounds=(894,118,56,32) pos=(902,126,40,16) color=#3a3a3cff text="chest" font=f10 glyphs=5 advance=40
+    text bounds=(942,118,64,32) pos=(950,126,48,16) color=#3a3a3cff text="pocket" font=f10 glyphs=6 advance=48
+    del-clip bounds=(0,0,0,0)
+    del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(13,13,112,16) layer=(border=(13,13,112,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(13,13,112,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2d6a4fff
+  text bounds=(13,6,48,32) pos=(21,14,32,16) color=#ffffffff text="FREE" font=f3 glyphs=4 advance=32
+  text bounds=(53,6,72,32) pos=(61,14,56,16) color=#ffffffff text="RETURNS" font=f3 glyphs=7 advance=56
+  solid-fill bounds=(293,10,54,28) layer=(border=(293,10,54,28),radius=(14,14,14,14,14,14,14,14),clip=(293,10,54,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffd1
+  text bounds=(296,8,48,32) pos=(304,16,32,16) color=#1c1c1eff text="🛍" font=f11 glyphs=4 advance=32
+  solid-fill bounds=(11,90,32,32) layer=(border=(11,90,32,32),radius=(16,16,16,16,16,16,16,16),clip=(11,90,32,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00000038
+  text bounds=(7,89,40,32) pos=(15,97,24,16) color=#ffffffff text="‹" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(317,90,32,32) layer=(border=(317,90,32,32),radius=(16,16,16,16,16,16,16,16),clip=(317,90,32,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00000038
+  text bounds=(313,89,40,32) pos=(321,97,24,16) color=#ffffffff text="›" font=f12 glyphs=3 advance=24
+  solid-fill bounds=(13,182,66,18) layer=(border=(13,182,66,18),radius=(9,9,9,9,9,9,9,9),clip=(13,182,66,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00000061
+  text bounds=(14,176,64,32) pos=(22,184,48,16) color=#ffffffff text="Studio" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(304,189,19,7) layer=(border=(304,189,19,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(304,189,19,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff99
+  solid-fill bounds=(328,189,7,7) layer=(border=(328,189,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(328,189,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff99
+  solid-fill bounds=(340,189,7,7) layer=(border=(340,189,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(340,189,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff99
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,391,50,32) borders=(left=(1,4,#7f7f7f59),top=(1,4,#7f7f7f59),right=(1,4,#7f7f7f59),bottom=(1,4,#7f7f7f59),radius=(9,9,9,9,9,9,9,9)) pos=(15,391,50,32) root=0
+  text bounds=(28,391,24,32) pos=(36,399,8,16) color=#000000ff text="S" font=f13 glyphs=1 advance=8
+  solid-fill bounds=(71,391,50,32) layer=(border=(71,391,50,32),radius=(9,9,9,9,9,9,9,9),clip=(71,391,50,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1c1c1eff
+  borders bounds=(71,391,50,32) borders=(left=(1,4,#1c1c1eff),top=(1,4,#1c1c1eff),right=(1,4,#1c1c1eff),bottom=(1,4,#1c1c1eff),radius=(9,9,9,9,9,9,9,9)) pos=(71,391,50,32) root=0
+  text bounds=(84,391,24,32) pos=(92,399,8,16) color=#ffffffff text="M" font=f13 glyphs=1 advance=8
+  solid-fill bounds=(109,397,6,6) layer=(border=(109,397,6,6),radius=(3,3,3,3,3,3,3,3),clip=(109,397,6,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  borders bounds=(127,391,50,32) borders=(left=(1,4,#7f7f7f59),top=(1,4,#7f7f7f59),right=(1,4,#7f7f7f59),bottom=(1,4,#7f7f7f59),radius=(9,9,9,9,9,9,9,9)) pos=(127,391,50,32) root=0
+  text bounds=(140,391,24,32) pos=(148,399,8,16) color=#000000ff text="L" font=f13 glyphs=1 advance=8
+  borders bounds=(183,391,50,32) borders=(left=(1,4,#7f7f7f59),top=(1,4,#7f7f7f59),right=(1,4,#7f7f7f59),bottom=(1,4,#7f7f7f59),radius=(9,9,9,9,9,9,9,9)) pos=(183,391,50,32) root=0
+  text bounds=(192,391,32,32) pos=(200,399,16,16) color=#000000ff text="XL" font=f13 glyphs=2 advance=16
+  borders bounds=(239,391,50,32) borders=(left=(1,3,#7f7f7f59),top=(1,3,#7f7f7f59),right=(1,3,#7f7f7f59),bottom=(1,3,#7f7f7f59),radius=(9,9,9,9,9,9,9,9)) pos=(239,391,50,32) root=0
+  text bounds=(244,391,40,32) pos=(252,399,24,16) color=#8e8e93cc text="XXL" font=f13 glyphs=3 advance=24
+  set-clip bounds=(15,505.7,330,21) pos=(15,505.7,330,21) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,505.7,330,16.9) exact=0
+    set-clip bounds=(15,508.2,13,13) pos=(15,508.2,13,13) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(15,508.2,13,13)
+      group opacity=1 matrix=(0.541667,0,0,0.541667,15,508.2) backface=0 bounds=(0,0,24,24) exact=0
+        path bounds=(4.5,1.5,15,20.5) ops=(0,3,3,3,3,4) points=(12,2.5,12,2.5,5.5,10,5.5,14.5,5.5,18.0899,8.41015,21,12,21,15.5899,21,18.5,18.0899,18.5,14.5,18.5,10,12,2.5,12,2.5) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+    text bounds=(26,498,64,32) pos=(34,506,48,16) color=#000000ff text="20,000" font=f10 glyphs=6 advance=48
+    text bounds=(82,498,32,32) pos=(90,506,16,16) color=#000000ff text="mm" font=f10 glyphs=2 advance=16
+    text bounds=(106,498,104,32) pos=(114,506,88,16) color=#000000ff text="waterproof," font=f10 glyphs=11 advance=88
+    text bounds=(202,498,56,32) pos=(210,506,40,16) color=#000000ff text="taped" font=f10 glyphs=5 advance=40
+    text bounds=(250,498,56,32) pos=(258,506,40,16) color=#000000ff text="seams" font=f10 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,526.7,330,21) pos=(15,526.7,330,21) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(15,526.7,330,16.9) exact=0
+    set-clip bounds=(15,529.2,13,13) pos=(15,529.2,13,13) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(15,529.2,13,13)
+      group opacity=1 matrix=(0.541667,0,0,0.541667,15,529.2) backface=0 bounds=(0,0,24,24) exact=0
+        path bounds=(-2,-2,26.5,27) ops=(0,1,3,3,3,0,1,3,3,3,0,1,3,3,3) points=(3,8,12,8,13.3807,8,14.5,6.88071,14.5,5.5,14.5,4.11929,13.3807,3,12,3,10.6193,3,9.5,4.11929,9.5,5.5,3,12,17,12,18.3807,12,19.5,13.1193,19.5,14.5,19.5,15.8807,18.3807,17,17,17,15.6193,17,14.5,15.8807,14.5,14.5,3,16,11,16,12.1046,16,13,16.8954,13,18,13,19.1046,12.1046,20,11,20,9.89543,20,9,19.1046,9,18) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e93ff stroke-width=2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+    text bounds=(26,519,96,32) pos=(34,527,80,16) color=#000000ff text="Breathable" font=f10 glyphs=10 advance=80
+    text bounds=(114,519,72,32) pos=(122,527,56,16) color=#000000ff text="3-layer" font=f10 glyphs=7 advance=56
+    text bounds=(178,519,56,32) pos=(186,527,40,16) color=#000000ff text="shell" font=f10 glyphs=5 advance=40
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,547.7,330,21) pos=(15,547.7,330,21) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,0.000595093,0) backface=0 bounds=(15,547.7,330,16.9) exact=0
+    set-clip bounds=(15,550.2,13,13) pos=(15,550.2,13,13) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(15,550.2,13,13)
+      group opacity=1 matrix=(0.541667,0,0,0.541667,15,550.2) backface=0 bounds=(0,0,24,24) exact=0
+        path bounds=(3,2.5,18.5,18.5) ops=(0,3,3,4) points=(20.5,3.5,9,3.5,4,10,4,20,14,20,20.5,15,20.5,3.5) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(0.2,4.2,18.6,19.6) ops=(0,3) points=(4,20,7,14,11,10.5,15,8) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffff99 stroke-width=1.4 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+    text bounds=(26,540,48,32) pos=(34,548,32,16) color=#000000ff text="100%" font=f10 glyphs=4 advance=32
+    text bounds=(66,540,80,32) pos=(74,548,64,16) color=#000000ff text="recycled" font=f10 glyphs=8 advance=64
+    text bounds=(138,540,48,32) pos=(146,548,32,16) color=#000000ff text="face" font=f10 glyphs=4 advance=32
+    text bounds=(178,540,64,32) pos=(186,548,48,16) color=#000000ff text="fabric" font=f10 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,568.7,330,21) pos=(15,568.7,330,21) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,20.399,0) backface=0 bounds=(15,568.7,330,16.9) exact=0
+    set-clip bounds=(15,571.2,13,13) pos=(15,571.2,13,13) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(15,571.2,13,13)
+      group opacity=1 matrix=(0.541667,0,0,0.541667,15,571.2) backface=0 bounds=(0,0,24,24) exact=0
+        path bounds=(6.8,1.5,10.4,7) ops=(0,1,1,1,4) points=(9,2.5,15,2.5,16.2,7.5,7.8,7.5) fill=1 fill-color=#af52deff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(1.77974,7.5,20.4405,14.5002) ops=(0,1,1,3,3,1,3,3,4) points=(5,8.5,19,8.5,21.2,19.8,21.2608,20.0977,21.183,20.4069,20.9885,20.6404,20.7939,20.8738,20.5038,21.0062,20.2,21,3.8,21,3.49619,21.0062,3.20607,20.8738,3.01153,20.6404,2.817,20.4069,2.73916,20.0977,2.8,19.8) fill=1 fill-color=#af52deff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+    text bounds=(26,561,56,32) pos=(34,569,40,16) color=#000000ff text="Packs" font=f10 glyphs=5 advance=40
+    text bounds=(74,561,48,32) pos=(82,569,32,16) color=#000000ff text="into" font=f10 glyphs=4 advance=32
+    text bounds=(114,561,40,32) pos=(122,569,24,16) color=#000000ff text="its" font=f10 glyphs=3 advance=24
+    text bounds=(146,561,40,32) pos=(154,569,24,16) color=#000000ff text="own" font=f10 glyphs=3 advance=24
+    text bounds=(178,561,64,32) pos=(186,569,48,16) color=#000000ff text="pocket" font=f10 glyphs=6 advance=48
+    text bounds=(234,561,32,32) pos=(242,569,16,16) color=#000000ff text="·" font=f10 glyphs=2 advance=16
+    text bounds=(258,561,40,32) pos=(266,569,24,16) color=#000000ff text="310" font=f10 glyphs=3 advance=24
+    text bounds=(290,561,24,32) pos=(298,569,8,16) color=#000000ff text="g" font=f10 glyphs=1 advance=8
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=15,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=30,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f11 (family="system-ui,sans-serif",size=13,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f12 (family="system-ui,sans-serif",size=22,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f13 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

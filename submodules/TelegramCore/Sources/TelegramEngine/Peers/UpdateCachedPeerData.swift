@@ -610,7 +610,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         switch inputCall {
                                         case let .inputGroupCall(inputGroupCallData):
                                             let (id, accessHash) = (inputGroupCallData.id, inputGroupCallData.accessHash)
-                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
+                                            updatedActiveCall = CachedChannelData.ActiveCall(fullPeerCallId: id, accessHash: accessHash, previous: previous.activeCall)
                                         case .inputGroupCallSlug, .inputGroupCallInviteMessage:
                                             break
                                         }
@@ -890,7 +890,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     switch inputCall {
                                                     case let .inputGroupCall(inputGroupCallData):
                                                         let (id, accessHash) = (inputGroupCallData.id, inputGroupCallData.accessHash)
-                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
+                                                        updatedActiveCall = CachedChannelData.ActiveCall(fullPeerCallId: id, accessHash: accessHash, previous: previous.activeCall)
                                                     case .inputGroupCallSlug, .inputGroupCallInviteMessage:
                                                         break
                                                     }

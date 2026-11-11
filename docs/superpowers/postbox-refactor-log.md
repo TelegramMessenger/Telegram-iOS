@@ -82,6 +82,72 @@ Any hit in a public-surface position (field type, init param type, enum payload 
 
 ---
 
+## Engine typealias cheat sheet (existing aliases)
+
+```
+PeerId              → EnginePeer.Id
+MessageId           → EngineMessage.Id
+MessageIndex        → EngineMessage.Index
+MessageTags         → EngineMessage.Tags
+MessageAttribute    → EngineMessage.Attribute
+MessageFlags        → EngineMessage.Flags
+MessageForwardInfo  → EngineMessage.ForwardInfo
+MediaId             → EngineMedia.Id
+PreferencesEntry    → EnginePreferencesEntry
+TempBox             → EngineTempBox
+PinnedItemId        → EngineChatList.PinnedItem.Id
+MemoryBuffer        → EngineMemoryBuffer           (added 2026-04)
+PostboxDecoder      → EnginePostboxDecoder         (added 2026-04)
+PostboxEncoder      → EnginePostboxEncoder         (added 2026-04)
+AdaptedPostboxDecoder → EngineAdaptedPostboxDecoder (added 2026-04)
+ItemCollectionId    → EngineItemCollectionId       (added 2026-04-20)
+FetchResourceSourceType → EngineFetchResourceSourceType (added 2026-04-20)
+FetchResourceError  → EngineFetchResourceError     (added 2026-04-20)
+StoryId             → EngineStoryId                (added 2026-05-02)
+ChatListIndex       → EngineChatListIndex          (added 2026-05-03)
+TempBoxFile         → EngineTempBoxFile            (added 2026-05-03)
+ItemCollectionItemIndex → EngineItemCollectionItemIndex (added 2026-05-03)
+ItemCollectionViewEntryIndex → EngineItemCollectionViewEntryIndex (added 2026-05-03)
+ValueBoxEncryptionParameters → EngineValueBoxEncryptionParameters (added 2026-05-03)
+MessageAndThreadId  → EngineMessageAndThreadId      (added 2026-05-03)
+PeerStoryStats      → EnginePeerStoryStats          (added 2026-05-03)
+MessageHistoryAnchorIndex → EngineMessageHistoryAnchorIndex (added 2026-05-03)
+ChatListTotalUnreadStateCategory → EngineChatListTotalUnreadStateCategory (added 2026-05-03)
+ChatListTotalUnreadStateStats → EngineChatListTotalUnreadStateStats (added 2026-05-03)
+PeerSummaryCounterTags → EnginePeerSummaryCounterTags (added 2026-05-03)
+ChatListTotalUnreadState → EngineChatListTotalUnreadState (added 2026-05-04)
+ItemCacheEntryId    → EngineItemCacheEntryId        (added 2026-05-04)
+HashFunctions       → EngineHashFunctions           (added 2026-05-04 wave 251)
+CachedMediaResourceRepresentationResult → EngineCachedMediaResourceRepresentationResult (added 2026-05-04 wave 265)
+MediaResourceDataFetchResult → EngineMediaResourceDataFetchResult (added 2026-05-04 wave 266)
+MediaResourceDataFetchError → EngineMediaResourceDataFetchError (added 2026-05-04 wave 266)
+MediaResourceStatus → EngineMediaResourceStatus     (added 2026-05-04 wave 272)
+```
+
+The list above is not exhaustive: `grep -rh 'public typealias Engine' submodules/TelegramCore/Sources` lists every alias. Prefer non-`EngineRaw*` ones.
+
+**Free-function thin forwarders in TelegramCore** (rule 3 allows):
+- `engineFileSize(_ path:, useTotalFileAllocatedSize: Bool = false)` — forwards to Postbox's `fileSize(...)` (added 2026-05-04 wave 268)
+
+**TelegramEngineUnauthorized.resources facade**: `UnauthorizedResources.storeResourceData(id: EngineMediaResource.Id, data:, synchronous:)` — bridges to `account.postbox.mediaBox.storeResourceData` (added 2026-05-04 wave 271)
+
+For the `MediaResource` Postbox protocol, prefer the TelegramCore subtype `TelegramMediaResource` when the consumer's usage allows (note: `EngineMediaResource` is a wrapper **class**, not a typealias, so it is not interchangeable with the protocol).
+
+## MediaResource → EngineMediaResource consumer migration
+
+`EngineMediaResource` is a `final class` in `TelegramCore` wrapping a `MediaResource` value. Unlike the typealiases above it is **not** interchangeable with the protocol, but it does provide wrap/unwrap helpers:
+
+- `EngineMediaResource(rawResource)` — wrap a raw `MediaResource`.
+- `engineResource._asResource()` — unwrap to the raw `MediaResource`.
+- `EngineMediaResource.ResourceData(rawResourceData)` — wrap `MediaResourceData`.
+- `EngineMediaResource.Id(rawMediaResourceId)` — wrap `MediaResourceId`.
+
+**Pattern for facade functions:** when a `TelegramEngine.<Area>` method leaks raw `MediaResource` in its public signature, **change the facade signature in place** to `EngineMediaResource` (and change any closure parameter types the same way). Bridge inside the facade body by calling the existing `_internal_*` function with `engineResource._asResource()` / wrapping raw inputs from inner closures with `EngineMediaResource(rawResource)`. Update all call sites in the same commit. The `_internal_*` function stays on raw `MediaResource` — it is the Postbox-facing layer.
+
+Do **not** add opt-in `EngineMediaResource` overloads alongside raw-`MediaResource` overloads. Duplicate signatures fragment the public API and leave the leak in place forever.
+
+For consumer modules, prefer `EngineMediaResource` as the type in properties, locals, generic arguments and function parameters when the usage is a pure type reference. Do **not** try to use `EngineMediaResource` where a class must conform to `TelegramMediaResource` (Postbox protocol) or override `isEqual(to: MediaResource)` — those remain `import Postbox`.
+
 ## Engine wrapper inventory (2026-10-12)
 
 The sanctioned mid-refactor representations of Postbox types, preferred over `EngineRaw*` aliases. Regenerate with `grep -rn 'func _as[A-Z]' submodules/TelegramCore/Sources`.

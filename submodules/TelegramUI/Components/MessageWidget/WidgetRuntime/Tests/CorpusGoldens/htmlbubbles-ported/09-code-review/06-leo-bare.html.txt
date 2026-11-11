@@ -1,0 +1,283 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><svg class="defs" aria-hidden="true">
+  <symbol id="folder" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h4l1.5 1.5H14a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"></path></symbol>
+  <symbol id="doc" viewBox="0 0 16 16"><path d="M3.5 1.5h6L13 5v9.5H3.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path><path d="M9.5 1.5V5H13M6 8.5h4.5M6 11h4.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></symbol>
+  <symbol id="richtext" viewBox="0 0 16 16"><path d="M3.5 1.5h6L13 5v9.5H3.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path><path d="M9.5 1.5V5H13" fill="none" stroke="currentColor" stroke-width="1.2"></path><rect x="5.5" y="7" width="3" height="3" rx=".5"></rect><path d="M10 7.5h1M10 9.5h1M5.5 12h5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></symbol>
+  <symbol id="bubble" viewBox="0 0 16 16"><path d="M8 2C4.1 2 1 4.5 1 7.6c0 1.7.9 3.2 2.4 4.2L2.5 14.5l3.3-1.6c.7.2 1.4.3 2.2.3 3.9 0 7-2.5 7-5.6S11.9 2 8 2z"></path></symbol>
+  <symbol id="hammer" viewBox="0 0 16 16"><path d="M9.2 1.2l4.6 4.6-1.4 1.4-.7-.7-1.1 1.1.7.7-7.4 7.4-2.1-2.1 7.4-7.4.7.7 1.1-1.1-.7-.7z"></path></symbol>
+</svg>
+<div class="card ft">
+  <div class="caps" style="padding: 2px 6px 6px 6px">Changed files · git status</div>
+  <div class="fr" style="padding-left: 6px"><svg width="13" height="13" fill="#007aff"><use href="#folder"></use></svg><span class="grow">litechat</span></div>
+  <div class="fr" style="padding-left: 24px"><svg width="13" height="13" fill="#007aff"><use href="#folder"></use></svg><span class="grow">src</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow">LHContainer.mm</span><span class="badge orange">M</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow">LHContainer.h</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow">LHDocument.mm</span><span class="badge orange">M</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow">ChatStyles.mm</span><span class="badge green">A</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow">HTMLBubbleView.mm</span><span class="badge green">A</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#doc"></use></svg><span class="grow" style="text-decoration: line-through; color: #8e8e93">AttributedBubble.m</span><span class="badge red">D</span></div>
+  <div class="fr" style="padding-left: 24px"><svg width="13" height="13" fill="#007aff"><use href="#folder"></use></svg><span class="grow">resources</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" fill="#007aff"><use href="#folder"></use></svg><span class="grow">chats</span></div>
+  <div class="fr" style="padding-left: 60px"><svg width="13" height="13" fill="#34c759"><use href="#bubble"></use></svg><span class="grow">01-design-crew.chat</span></div>
+  <div class="fr" style="padding-left: 60px"><svg width="13" height="13" fill="#34c759"><use href="#bubble"></use></svg><span class="grow">09-code-review.chat</span><span class="badge green">A</span></div>
+  <div class="fr" style="padding-left: 42px"><svg width="13" height="13" fill="#007aff"><use href="#folder"></use></svg><span class="grow">snippets</span></div>
+  <div class="fr" style="padding-left: 24px"><svg width="13" height="13" fill="#8e8e93"><use href="#folder"></use></svg><span class="grow">vendor/litehtml</span></div>
+  <div class="fr" style="padding-left: 24px"><svg width="13" height="13" fill="#8e8e93"><use href="#hammer"></use></svg><span class="grow">CMakeLists.txt</span><span class="badge orange">M</span></div>
+  <div class="fr" style="padding-left: 24px"><svg width="13" height="13" color="#8e8e93" fill="#8e8e93"><use href="#richtext"></use></svg><span class="grow">README.md</span><span class="badge orange">M</span></div>
+</div>
+</body></html>
+
+== layout
+html 0 0 360 391.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 391.5
+    svg 0 0 0 0
+      symbol 0 0 0 0
+        path 0 0 0 0
+      symbol 0 0 0 0
+        path 0 0 0 0
+        path 0 0 0 0
+      symbol 0 0 0 0
+        path 0 0 0 0
+        path 0 0 0 0
+        rect 0 0 0 0
+        path 0 0 0 0
+      symbol 0 0 0 0
+        path 0 0 0 0
+      symbol 0 0 0 0
+        path 0 0 0 0
+    div 7 9 340 373.5
+      div 13 11 328 14.3
+      div 13 34.3 328 15.6
+        svg 13 35.6 13 13
+          use 0 0 0 0
+        span 32 34.3 309 15.6
+      div 31 55.9 310 15.6
+        svg 31 57.2 13 13
+          use 0 0 0 0
+        span 50 55.9 291 15.6
+      div 49 77.5 292 16.3
+        svg 49 79.15 13 13
+          use 0 0 0 0
+        span 68 77.85 249 15.6
+        span 325 78.5 8 14.3
+      div 49 99.8 292 15.6
+        svg 49 101.1 13 13
+          use 0 0 0 0
+        span 68 99.8 273 15.6
+      div 49 121.4 292 16.3
+        svg 49 123.05 13 13
+          use 0 0 0 0
+        span 68 121.75 249 15.6
+        span 325 122.4 8 14.3
+      div 49 143.7 292 16.3
+        svg 49 145.35 13 13
+          use 0 0 0 0
+        span 68 144.05 249 15.6
+        span 325 144.7 8 14.3
+      div 49 166 292 16.3
+        svg 49 167.65 13 13
+          use 0 0 0 0
+        span 68 166.35 249 15.6
+        span 325 167 8 14.3
+      div 49 188.3 292 16.3
+        svg 49 189.95 13 13
+          use 0 0 0 0
+        span 68 188.65 249 15.6
+        span 325 189.3 8 14.3
+      div 31 210.6 310 15.6
+        svg 31 211.9 13 13
+          use 0 0 0 0
+        span 50 210.6 291 15.6
+      div 49 232.2 292 15.6
+        svg 49 233.5 13 13
+          use 0 0 0 0
+        span 68 232.2 273 15.6
+      div 67 253.8 274 15.6
+        svg 67 255.1 13 13
+          use 0 0 0 0
+        span 86 253.8 255 15.6
+      div 67 275.4 274 16.3
+        svg 67 277.05 13 13
+          use 0 0 0 0
+        span 86 275.75 231 15.6
+        span 325 276.4 8 14.3
+      div 49 297.7 292 15.6
+        svg 49 299 13 13
+          use 0 0 0 0
+        span 68 297.7 273 15.6
+      div 31 319.3 310 15.6
+        svg 31 320.6 13 13
+          use 0 0 0 0
+        span 50 319.3 291 15.6
+      div 31 340.9 310 16.3
+        svg 31 342.55 13 13
+          use 0 0 0 0
+        span 50 341.25 267 15.6
+        span 325 341.9 8 14.3
+      div 31 363.2 310 16.3
+        svg 31 364.85 13 13
+          use 0 0 0 0
+        span 50 363.55 267 15.6
+        span 325 364.2 8 14.3
+
+== paint
+root 360x391.5 items=98
+  solid-fill bounds=(0,0,354,392) layer=(border=(0,0,354,392),radius=(14,14,14,14,14,14,14,14),clip=(0,0,354,392),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,354,392) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,354,392) root=0
+  set-clip bounds=(13,35.6,13,13) pos=(13,35.6,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(13,35.6,13,13)
+    group opacity=1 matrix=(1,0,0,1,13,35.6) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(31,57.2,13,13) pos=(31,57.2,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(31,57.2,13,13)
+    group opacity=1 matrix=(1,0,0,1,31,57.2) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(49,79.15,13,13) pos=(49,79.15,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,79.15,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,79.15) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,78,24,16) layer=(border=(317,78,24,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,78,24,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  set-clip bounds=(49,101.1,13,13) pos=(49,101.1,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,101.1,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,101.1) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(49,123.05,13,13) pos=(49,123.05,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,123.05,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,123.05) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,121,24,17) layer=(border=(317,121,24,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,121,24,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  set-clip bounds=(49,145.35,13,13) pos=(49,145.35,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,145.35,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,145.35) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,144,24,16) layer=(border=(317,144,24,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,144,24,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(49,167.65,13,13) pos=(49,167.65,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,167.65,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,167.65) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,166,24,16) layer=(border=(317,166,24,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,166,24,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(49,189.95,13,13) pos=(49,189.95,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,189.95,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,189.95) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.6,-1.9,13.8,16.3) ops=(0,1,1,0,1,0,1) points=(9.5,1.5,9.5,5,13,5,6,8.5,10.5,8.5,6,11,10.5,11) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,188,24,17) layer=(border=(317,188,24,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,188,24,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  set-clip bounds=(31,211.9,13,13) pos=(31,211.9,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(31,211.9,13,13)
+    group opacity=1 matrix=(1,0,0,1,31,211.9) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(49,233.5,13,13) pos=(49,233.5,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,233.5,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,233.5) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(67,255.1,13,13) pos=(67,255.1,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(67,255.1,13,13)
+    group opacity=1 matrix=(1,0,0,1,67,255.1) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,1,16,14.5) ops=(0,3,3,1,1,3,3,3,4) points=(8,2,4.1,2,1,4.5,1,7.6,1,9.3,1.9,10.8,3.4,11.8,2.5,14.5,5.8,12.9,6.5,13.1,7.2,13.2,8,13.2,11.9,13.2,15,10.7,15,7.6,15,4.5,11.9,2,8,2) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(67,277.05,13,13) pos=(67,277.05,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(67,277.05,13,13)
+    group opacity=1 matrix=(1,0,0,1,67,277.05) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,1,16,14.5) ops=(0,3,3,1,1,3,3,3,4) points=(8,2,4.1,2,1,4.5,1,7.6,1,9.3,1.9,10.8,3.4,11.8,2.5,14.5,5.8,12.9,6.5,13.1,7.2,13.2,8,13.2,11.9,13.2,15,10.7,15,7.6,15,4.5,11.9,2,8,2) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,275,24,17) layer=(border=(317,275,24,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,275,24,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(49,299,13,13) pos=(49,299,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(49,299,13,13)
+    group opacity=1 matrix=(1,0,0,1,49,299) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(31,320.6,13,13) pos=(31,320.6,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(31,320.6,13,13)
+    group opacity=1 matrix=(1,0,0,1,31,320.6) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0,2,16,12) ops=(0,3,1,1,1,3,1,3,1,3,4) points=(1,4,1,3.44772,1.44772,3,2,3,6,3,7.5,4.5,14,4.5,14.5523,4.5,15,4.94772,15,5.5,15,12,15,12.5523,14.5523,13,14,13,2,13,1.44772,13,1,12.5523,1,12) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(31,342.55,13,13) pos=(31,342.55,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(31,342.55,13,13)
+    group opacity=1 matrix=(1,0,0,1,31,342.55) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(0.799999,0.2,14,16.5) ops=(0,1,1,1,1,1,1,1,1,1,1,1,4) points=(9.2,1.2,13.8,5.8,12.4,7.2,11.7,6.5,10.6,7.6,11.3,8.3,3.9,15.7,1.8,13.6,9.2,6.2,9.9,6.9,11,5.8,10.3,5.1) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,341,24,16) layer=(border=(317,341,24,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,341,24,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  set-clip bounds=(31,364.85,13,13) pos=(31,364.85,13,13) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(31,364.85,13,13)
+    group opacity=1 matrix=(1,0,0,1,31,364.85) backface=0 bounds=(0,0,13,13) exact=0
+      group opacity=1 matrix=(0.8125,0,0,0.8125,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-0.0999999,-2.1,16.7,20.2) ops=(0,1,1,1,1,4) points=(3.5,1.5,9.5,1.5,13,5,13,14.5,3.5,14.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.3 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(6.1,-1.9,10.3,10.3) ops=(0,1,1) points=(9.5,1.5,9.5,5,13,5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(4.5,6,5,5) ops=(0,1,3,1,3,1,3,1,3,4) points=(6,7,8,7,8.27614,7,8.5,7.22386,8.5,7.5,8.5,9.5,8.5,9.77614,8.27614,10,8,10,6,10,5.72386,10,5.5,9.77614,5.5,9.5,5.5,7.5,5.5,7.22386,5.72386,7,6,7) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(2.1,4.1,12.3,11.3) ops=(0,1,0,1,0,1) points=(10,7.5,11,7.5,10,9.5,11,9.5,5.5,12,11,12) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=1 stroke-color=#000000ff stroke-width=1.2 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(317,363,24,17) layer=(border=(317,363,24,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(317,363,24,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  text bounds=(5,3,72,32) pos=(13,11,56,16) color=#6e6e73ff text="CHANGED" font=f1 glyphs=7 advance=56
+  text bounds=(69,3,56,32) pos=(77,11,40,16) color=#6e6e73ff text="FILES" font=f1 glyphs=5 advance=40
+  text bounds=(117,3,32,32) pos=(125,11,16,16) color=#6e6e73ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(141,3,40,32) pos=(149,11,24,16) color=#6e6e73ff text="GIT" font=f1 glyphs=3 advance=24
+  text bounds=(173,3,64,32) pos=(181,11,48,16) color=#6e6e73ff text="STATUS" font=f1 glyphs=6 advance=48
+  text bounds=(24,26,80,32) pos=(32,34,64,16) color=#000000ff text="litechat" font=f2 glyphs=8 advance=64
+  text bounds=(42,48,40,32) pos=(50,56,24,16) color=#000000ff text="src" font=f2 glyphs=3 advance=24
+  text bounds=(60,70,128,32) pos=(68,78,112,16) color=#000000ff text="LHContainer.mm" font=f2 glyphs=14 advance=112
+  text bounds=(317,71,24,32) pos=(325,79,8,16) color=#ff9500ff text="M" font=f3 glyphs=1 advance=8
+  text bounds=(60,92,120,32) pos=(68,100,104,16) color=#000000ff text="LHContainer.h" font=f2 glyphs=13 advance=104
+  text bounds=(60,114,120,32) pos=(68,122,104,16) color=#000000ff text="LHDocument.mm" font=f2 glyphs=13 advance=104
+  text bounds=(317,114,24,32) pos=(325,122,8,16) color=#ff9500ff text="M" font=f3 glyphs=1 advance=8
+  text bounds=(60,136,120,32) pos=(68,144,104,16) color=#000000ff text="ChatStyles.mm" font=f2 glyphs=13 advance=104
+  text bounds=(317,137,24,32) pos=(325,145,8,16) color=#34c759ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(60,158,152,32) pos=(68,166,136,16) color=#000000ff text="HTMLBubbleView.mm" font=f2 glyphs=17 advance=136
+  text bounds=(317,159,24,32) pos=(325,167,8,16) color=#34c759ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(60,181,160,32) pos=(68,189,144,16) color=#8e8e93ff text="AttributedBubble.m" font=f4 glyphs=18 advance=144
+  text bounds=(317,181,24,32) pos=(325,189,8,16) color=#ff3b30ff text="D" font=f3 glyphs=1 advance=8
+  text bounds=(42,203,88,32) pos=(50,211,72,16) color=#000000ff text="resources" font=f2 glyphs=9 advance=72
+  text bounds=(60,224,56,32) pos=(68,232,40,16) color=#000000ff text="chats" font=f2 glyphs=5 advance=40
+  text bounds=(78,246,96,32) pos=(86,254,80,16) color=#000000ff text="01-design-" font=f2 glyphs=10 advance=80
+  text bounds=(158,246,88,32) pos=(166,254,72,16) color=#000000ff text="crew.chat" font=f2 glyphs=9 advance=72
+  text bounds=(78,268,80,32) pos=(86,276,64,16) color=#000000ff text="09-code-" font=f2 glyphs=8 advance=64
+  text bounds=(142,268,104,32) pos=(150,276,88,16) color=#000000ff text="review.chat" font=f2 glyphs=11 advance=88
+  text bounds=(317,268,24,32) pos=(325,276,8,16) color=#34c759ff text="A" font=f3 glyphs=1 advance=8
+  text bounds=(60,290,80,32) pos=(68,298,64,16) color=#000000ff text="snippets" font=f2 glyphs=8 advance=64
+  text bounds=(42,311,136,32) pos=(50,319,120,16) color=#000000ff text="vendor/litehtml" font=f2 glyphs=15 advance=120
+  text bounds=(42,333,128,32) pos=(50,341,112,16) color=#000000ff text="CMakeLists.txt" font=f2 glyphs=14 advance=112
+  text bounds=(317,334,24,32) pos=(325,342,8,16) color=#ff9500ff text="M" font=f3 glyphs=1 advance=8
+  text bounds=(42,356,88,32) pos=(50,364,72,16) color=#000000ff text="README.md" font=f2 glyphs=9 advance=72
+  text bounds=(317,356,24,32) pos=(325,364,8,16) color=#ff9500ff text="M" font=f3 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(4,predef0,0,#8e8e93ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

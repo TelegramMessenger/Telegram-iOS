@@ -60,7 +60,9 @@ final class StarsOverviewItemComponent: Component {
         
         override init(frame: CGRect) {
             super.init(frame: frame)
-                        
+            
+            // The currency glyph: the item reads as one element (title, amount).
+            self.icon.accessibilityElementsHidden = true
             self.addSubview(self.icon)
         }
         
@@ -145,6 +147,12 @@ final class StarsOverviewItemComponent: Component {
                 let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: 32.0), size: titleSize)
                 titleView.frame = titleFrame
             }
+            
+            // VoiceOver: one element, the title with the amount (and its dollar estimate) as the value.
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = component.title
+            self.accessibilityValue = "\(valueString), ~\(usdValueString)"
+            self.accessibilityTraits = .staticText
             
             return CGSize(width: availableSize.width, height: 59.0)
         }

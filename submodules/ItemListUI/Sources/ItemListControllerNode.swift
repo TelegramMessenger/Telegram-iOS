@@ -676,6 +676,16 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// The layout a footer panel gets: its side safe insets are those of its band, from its previous top (the
     /// bottom 1pt before its first layout) to the bottom, so it runs into a side strip where no corner block
     /// reaches it (iPhone Duo). Without corner blocks this is `layout`.
+    /// A footer node lays its contents out in this node's coordinates. It used to have no frame (zero size), and UIKit's
+    /// accessibility traversal of this view (a plain view, not the ASDK collector) skips a zero-size subview, so the
+    /// footer's button was never read. It gets the band it draws in as its frame, with bounds that keep the coordinates
+    /// its contents use, so nothing moves and its `point(inside:)` sees the same points.
+    private static func updateFooterBand(_ footerItemNode: ItemListControllerFooterItemNode, size: CGSize, footerHeight: CGFloat) {
+        let band = CGRect(x: 0.0, y: max(0.0, size.height - footerHeight), width: size.width, height: max(1.0, footerHeight))
+        footerItemNode.bounds = CGRect(origin: CGPoint(x: 0.0, y: band.minY), size: band.size)
+        footerItemNode.position = CGPoint(x: band.midX, y: band.midY)
+    }
+    
     private func footerLayout(_ layout: ContainerViewLayout) -> ContainerViewLayout {
         let bandMinY = layout.size.height - max(1.0, self.lastFooterHeight)
         let band = sideColumnBandInsets(layout: layout, bandMinY: bandMinY, bandMaxY: layout.size.height, column: self.sideColumnExtent)
@@ -896,6 +906,7 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         if let footerItemNode = self.footerItemNode {
             footerHeight = footerItemNode.updateLayout(layout: self.footerLayout(layout), transition: transition)
             self.lastFooterHeight = footerHeight
+            ItemListControllerNode.updateFooterBand(footerItemNode, size: layout.size, footerHeight: footerHeight)
             insets.bottom = max(footerHeight, insets.bottom)
         }
         
@@ -1127,6 +1138,7 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         if let validLayout = self.validLayout {
                             footerHeight = updatedNode.updateLayout(layout: self.footerLayout(validLayout.0), transition: .immediate)
                             self.lastFooterHeight = footerHeight
+                            ItemListControllerNode.updateFooterBand(updatedNode, size: validLayout.0.size, footerHeight: footerHeight)
                         } else {
                             footerHeight = 100.0
                         }
@@ -1157,6 +1169,8 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     } else {
                         footerHeight = 100.0
                     }
+                    // Withdrawn: VoiceOver neither reads nor activates it while it slides out.
+                    footerItemNode.accessibilityElementsHidden = true
                     footerItemNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: footerHeight), duration: 0.25, removeOnCompletion: false, additive: true, completion: { [weak footerItemNode] _ in
                         footerItemNode?.removeFromSupernode()
                     })

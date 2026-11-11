@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ComponentFlow
@@ -9,6 +10,7 @@ import EntityKeyboard
 import AccountContext
 import HierarchyTrackingLayer
 import TelegramCore
+import TextSelectionNode
 
 private final class CaretIndicatorView: UIImageView {
     private let hierarchyTrackingLayer: HierarchyTrackingLayer
@@ -50,34 +52,146 @@ private final class CaretIndicatorView: UIImageView {
     }
 }
 
+/// What `TextSelectionNode` selects in the reaction field: one character per reaction, laid out on the field's grid,
+/// so the field selects, extends and deletes reactions the way a text view does with characters.
+private final class EmojiListTextSelectionAdapter: ASDisplayNode, TextNodeProtocol {
+    struct Layout: Equatable {
+        var itemFrames: [CGRect]
+        var itemsPerRow: Int
+        var itemSpacing: CGFloat
+    }
+    
+    private(set) var layout = Layout(itemFrames: [], itemsPerRow: 1, itemSpacing: 0.0)
+    private var text = NSAttributedString()
+    
+    override init() {
+        super.init()
+        
+        self.isUserInteractionEnabled = false
+    }
+    
+    func update(layout: Layout) {
+        self.layout = layout
+        self.text = NSAttributedString(string: String(repeating: "\u{FFFC}", count: layout.itemFrames.count))
+    }
+    
+    var currentText: NSAttributedString? {
+        return self.text
+    }
+    
+    // The cell of an item: its frame extended by half the spacing, so the cells of a row and of adjacent rows meet.
+    private func cellFrame(at index: Int) -> CGRect {
+        return self.layout.itemFrames[index].insetBy(dx: -floor(self.layout.itemSpacing * 0.5), dy: -floor(self.layout.itemSpacing * 0.5))
+    }
+    
+    // Without `orNearest`, the item under the point; with it, the item boundary nearest to the point (where a knob
+    // lands), on the nearest row.
+    func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
+        let itemFrames = self.layout.itemFrames
+        if itemFrames.isEmpty {
+            return nil
+        }
+        if !orNearest {
+            for i in 0 ..< itemFrames.count {
+                if self.cellFrame(at: i).contains(point) {
+                    return (i, [:])
+                }
+            }
+            return nil
+        }
+        
+        let itemsPerRow = max(1, self.layout.itemsPerRow)
+        let rowCount = (itemFrames.count + itemsPerRow - 1) / itemsPerRow
+        var row = 0
+        var rowDistance = CGFloat.greatestFiniteMagnitude
+        for i in 0 ..< rowCount {
+            let distance = abs(self.cellFrame(at: i * itemsPerRow).midY - point.y)
+            if distance < rowDistance {
+                rowDistance = distance
+                row = i
+            }
+        }
+        let rowStart = row * itemsPerRow
+        let rowEnd = min(itemFrames.count, rowStart + itemsPerRow)
+        var index = rowEnd
+        for i in rowStart ..< rowEnd {
+            if point.x < itemFrames[i].midX {
+                index = i
+                break
+            }
+        }
+        return (index, [:])
+    }
+    
+    func textRangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)? {
+        let itemFrames = self.layout.itemFrames
+        let lowerBound = max(0, range.location)
+        let upperBound = min(itemFrames.count, range.location + range.length)
+        if lowerBound >= upperBound {
+            return nil
+        }
+        
+        let itemsPerRow = max(1, self.layout.itemsPerRow)
+        var rects: [CGRect] = []
+        var index = lowerBound
+        while index < upperBound {
+            let rowEnd = min(upperBound, (index / itemsPerRow + 1) * itemsPerRow)
+            rects.append(self.cellFrame(at: index).union(self.cellFrame(at: rowEnd - 1)))
+            index = rowEnd
+        }
+        
+        let first = rects[0]
+        let last = rects[rects.count - 1]
+        return (rects, TextRangeRectEdge(x: first.minX, y: first.minY, height: first.height), TextRangeRectEdge(x: last.maxX, y: last.minY, height: last.height))
+    }
+}
+
 final class EmojiListInputComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let placeholder: String
     let reactionItems: [EmojiComponentReactionItem]
     let isInputActive: Bool
     let caretPosition: Int
+    let selectedRange: NSRange?
     let activateInput: () -> Void
     let setCaretPosition: (Int) -> Void
+    let updateSelectedRange: (NSRange?) -> Void
+    let deleteRange: (NSRange) -> Void
+    let present: (ViewController, Any?) -> Void
+    let rootView: () -> UIView?
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         placeholder: String,
         reactionItems: [EmojiComponentReactionItem],
         isInputActive: Bool,
         caretPosition: Int,
+        selectedRange: NSRange?,
         activateInput: @escaping () -> Void,
-        setCaretPosition: @escaping (Int) -> Void
+        setCaretPosition: @escaping (Int) -> Void,
+        updateSelectedRange: @escaping (NSRange?) -> Void,
+        deleteRange: @escaping (NSRange) -> Void,
+        present: @escaping (ViewController, Any?) -> Void,
+        rootView: @escaping () -> UIView?
     ) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.placeholder = placeholder
         self.reactionItems = reactionItems
         self.isInputActive = isInputActive
         self.caretPosition = caretPosition
+        self.selectedRange = selectedRange
         self.activateInput = activateInput
         self.setCaretPosition = setCaretPosition
+        self.updateSelectedRange = updateSelectedRange
+        self.deleteRange = deleteRange
+        self.present = present
+        self.rootView = rootView
     }
     
     static func ==(lhs: EmojiListInputComponent, rhs: EmojiListInputComponent) -> Bool {
@@ -85,6 +199,9 @@ final class EmojiListInputComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -99,16 +216,26 @@ final class EmojiListInputComponent: Component {
         if lhs.caretPosition != rhs.caretPosition {
             return false
         }
+        if lhs.selectedRange != rhs.selectedRange {
+            return false
+        }
         return true
     }
     
-    final class View: UIView {
+    final class View: UIView, UIGestureRecognizerDelegate {
         private var component: EmojiListInputComponent?
         private weak var state: EmptyComponentState?
         
         private var itemLayers: [Int64: EmojiKeyboardItemLayer] = [:]
         private let trailingPlaceholder = ComponentView<Empty>()
         private let caretIndicator: CaretIndicatorView
+        
+        private let textSelectionAdapter: EmojiListTextSelectionAdapter
+        private var textSelectionNode: TextSelectionNode?
+        private var textSelectionTheme: PresentationTheme?
+        // Set when the current touch began or changed the selection (a long press, a knob drag): its touch-up is
+        // not a tap.
+        private var selectionChangedDuringTouch: Bool = false
         
         override init(frame: CGRect) {
             self.caretIndicator = CaretIndicatorView(frame: CGRect())
@@ -119,13 +246,105 @@ final class EmojiListInputComponent: Component {
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: 1, topCapHeight: 2).withRenderingMode(.alwaysTemplate)
             
+            self.textSelectionAdapter = EmojiListTextSelectionAdapter()
+            
             super.init(frame: frame)
             
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            self.addSubview(self.textSelectionAdapter.view)
+            
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            tapRecognizer.delegate = self
+            self.addGestureRecognizer(tapRecognizer)
         }
         
         required init(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            self.selectionChangedDuringTouch = false
+            return true
+        }
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            return !self.selectionChangedDuringTouch
+        }
+        
+        // A tap both places the caret and ends the selection (the selection recognizer's own tap); a touch that
+        // drags a knob is the selection's alone.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if otherGestureRecognizer is TextSelectionGestureRecognizer {
+                switch otherGestureRecognizer.state {
+                case .began, .changed:
+                    return false
+                default:
+                    return true
+                }
+            }
+            return false
+        }
+        
+        // The knobs reach past the field's top and bottom edges.
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let textSelectionNode = self.textSelectionNode, !self.bounds.contains(point), let result = textSelectionNode.view.hitTest(self.convert(point, to: textSelectionNode.view), with: event) {
+                return result
+            }
+            return super.hitTest(point, with: event)
+        }
+        
+        private func updateTextSelection(component: EmojiListInputComponent) {
+            if self.textSelectionTheme !== component.theme, let textSelectionNode = self.textSelectionNode {
+                textSelectionNode.cancelSelection()
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.view.removeFromSuperview()
+                textSelectionNode.view.removeFromSuperview()
+            }
+            
+            let textSelectionNode: TextSelectionNode
+            if let current = self.textSelectionNode {
+                textSelectionNode = current
+            } else {
+                textSelectionNode = TextSelectionNode(
+                    theme: TextSelectionTheme(selection: component.theme.list.itemAccentColor.withMultipliedAlpha(0.2), knob: component.theme.list.itemAccentColor, isDark: component.theme.overallDarkAppearance),
+                    strings: component.strings,
+                    textNodeOrView: .node(self.textSelectionAdapter),
+                    updateIsActive: { _ in },
+                    present: { [weak self] c, a in
+                        self?.component?.present(c, a)
+                    },
+                    rootView: { [weak self] in
+                        return self?.component?.rootView()
+                    },
+                    performAction: { _, _ in }
+                )
+                textSelectionNode.enableCopy = false
+                textSelectionNode.enableLookup = false
+                textSelectionNode.enableTranslate = false
+                textSelectionNode.enableShare = false
+                textSelectionNode.canBeginSelection = { [weak self] point in
+                    guard let self, let textSelectionNode = self.textSelectionNode else {
+                        return false
+                    }
+                    return self.textSelectionAdapter.attributesAtPoint(textSelectionNode.view.convert(point, to: self.textSelectionAdapter.view), orNearest: false) != nil
+                }
+                textSelectionNode.updateRange = { [weak self] range in
+                    guard let self else {
+                        return
+                    }
+                    if range != nil {
+                        self.selectionChangedDuringTouch = true
+                    }
+                    self.component?.updateSelectedRange(range)
+                }
+                textSelectionNode.performDelete = { [weak self] range in
+                    self?.component?.deleteRange(range)
+                }
+                self.textSelectionNode = textSelectionNode
+                self.textSelectionTheme = component.theme
+                
+                self.insertSubview(textSelectionNode.highlightAreaNode.view, at: 0)
+                self.addSubview(textSelectionNode.view)
+            }
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -155,6 +374,58 @@ final class EmojiListInputComponent: Component {
                     component.activateInput()
                 }
             }
+        }
+        
+        // VoiceOver: the field is one element. It reads the reactions it shows (each as its emoji) and, empty, its
+        // placeholder; activation opens the emoji input with the caret at the end, as a tap past the last item does.
+        // The reactions are layers and were not read at all; the placeholder text was read on its own.
+        override var isAccessibilityElement: Bool {
+            get {
+                return self.component != nil
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                return self.component?.placeholder
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityValue: String? {
+            get {
+                guard let component = self.component else {
+                    return nil
+                }
+                let emojis: [String] = component.reactionItems.compactMap { item -> String? in
+                    if case let .builtin(value) = item.reaction {
+                        return value
+                    }
+                    if let alt = item.file.customEmojiAlt, !alt.isEmpty {
+                        return alt
+                    }
+                    return nil
+                }
+                return emojis.isEmpty ? nil : emojis.joined(separator: " ")
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return .button
+            } set(value) {
+            }
+        }
+        
+        override func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.setCaretPosition(component.reactionItems.count)
+            component.activateInput()
+            return true
         }
         
         func caretRect() -> CGRect? {
@@ -226,10 +497,11 @@ final class EmojiListInputComponent: Component {
             }
             
             self.caretIndicator.tintColor = component.theme.list.itemAccentColor
-            self.caretIndicator.isHidden = !component.isInputActive
+            self.caretIndicator.isHidden = !component.isInputActive || component.selectedRange.flatMap({ $0.length != 0 }) == true
             
             var caretFrame = CGRect(origin: CGPoint(x: trailingPlaceholderFrame.minX, y: trailingPlaceholderFrame.minY + floorToScreenPixels((trailingPlaceholderFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
             
+            var itemFrames: [CGRect] = []
             var validIds: [Int64] = []
             for i in 0 ..< component.reactionItems.count {
                 let item = component.reactionItems[i]
@@ -237,6 +509,7 @@ final class EmojiListInputComponent: Component {
                 validIds.append(itemKey)
                 
                 let itemFrame = CGRect(origin: CGPoint(x: sideInset + CGFloat(i % itemsPerRow) * (itemSize + itemSpacing), y: verticalInset + CGFloat(i / itemsPerRow) * (itemSize + itemSpacing)), size: CGSize(width: itemSize, height: itemSize))
+                itemFrames.append(itemFrame)
                 
                 var itemTransition = transition
                 var animateIn = false
@@ -272,7 +545,11 @@ final class EmojiListInputComponent: Component {
                         }
                     )
                     self.itemLayers[itemKey] = itemLayer
-                    self.layer.addSublayer(itemLayer)
+                    if let textSelectionNode = self.textSelectionNode {
+                        self.layer.insertSublayer(itemLayer, below: textSelectionNode.view.layer)
+                    } else {
+                        self.layer.addSublayer(itemLayer)
+                    }
                 }
                 itemLayer.isVisibleForAnimations = true
                 
@@ -316,6 +593,26 @@ final class EmojiListInputComponent: Component {
                 self.itemLayers.removeValue(forKey: key)
             }
             
+            let size = CGSize(width: availableSize.width, height: contentHeight)
+            
+            self.updateTextSelection(component: component)
+            if let textSelectionNode = self.textSelectionNode {
+                let selectionLayout = EmojiListTextSelectionAdapter.Layout(itemFrames: itemFrames, itemsPerRow: itemsPerRow, itemSpacing: itemSpacing)
+                let layoutUpdated = self.textSelectionAdapter.layout != selectionLayout || self.textSelectionAdapter.frame.size != size
+                self.textSelectionAdapter.update(layout: selectionLayout)
+                self.textSelectionAdapter.frame = CGRect(origin: CGPoint(), size: size)
+                textSelectionNode.frame = CGRect(origin: CGPoint(), size: size)
+                textSelectionNode.highlightAreaNode.frame = CGRect(origin: CGPoint(), size: size)
+                
+                if component.selectedRange == nil {
+                    if textSelectionNode.getSelection() != nil {
+                        textSelectionNode.cancelSelection()
+                    }
+                } else if layoutUpdated {
+                    textSelectionNode.updateLayout()
+                }
+            }
+            
             if !transition.animation.isImmediate && abs(caretFrame.midY - self.caretIndicator.center.y) > 2.0 {
                 if let caretSnapshot = self.caretIndicator.snapshotView(afterScreenUpdates: false) {
                     caretSnapshot.frame = self.caretIndicator.frame
@@ -332,7 +629,7 @@ final class EmojiListInputComponent: Component {
                 transition.setFrame(view: self.caretIndicator, frame: caretFrame)
             }
             
-            return CGSize(width: availableSize.width, height: contentHeight)
+            return size
         }
     }
     

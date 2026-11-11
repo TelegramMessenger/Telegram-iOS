@@ -245,14 +245,26 @@ public final class HorizontalTabsComponent: Component {
         public let action: () -> Void
         public let contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)?
         public let deleteAction: (() -> Void)?
+        /// What VoiceOver says for the tab: the title's text unless given (`.custom` content has no text), and the
+        /// badge's title unless given (the badge shows "267", VoiceOver can say "267 unread messages").
+        public let accessibilityLabel: String?
+        public let accessibilityValue: String?
+        /// The name of the VoiceOver custom action that does what the delete badge (`deleteAction`) does.
+        public let deleteAccessibilityLabel: String?
+        /// The name of the VoiceOver custom action that opens the long-press menu (`contextAction`).
+        public let contextAccessibilityLabel: String?
         
-        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil) {
+        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil, accessibilityLabel: String? = nil, accessibilityValue: String? = nil, deleteAccessibilityLabel: String? = nil, contextAccessibilityLabel: String? = nil) {
             self.id = id
             self.content = content
             self.badge = badge
             self.action = action
             self.contextAction = contextAction
             self.deleteAction = deleteAction
+            self.accessibilityLabel = accessibilityLabel
+            self.accessibilityValue = accessibilityValue
+            self.deleteAccessibilityLabel = deleteAccessibilityLabel
+            self.contextAccessibilityLabel = contextAccessibilityLabel
         }
         
         public static func ==(lhs: Tab, rhs: Tab) -> Bool {
@@ -269,6 +281,12 @@ public final class HorizontalTabsComponent: Component {
                 return false
             }
             if (lhs.deleteAction == nil) != (rhs.deleteAction == nil) {
+                return false
+            }
+            if lhs.accessibilityLabel != rhs.accessibilityLabel || lhs.accessibilityValue != rhs.accessibilityValue {
+                return false
+            }
+            if lhs.deleteAccessibilityLabel != rhs.deleteAccessibilityLabel || lhs.contextAccessibilityLabel != rhs.contextAccessibilityLabel {
                 return false
             }
             return true
@@ -341,14 +359,18 @@ public final class HorizontalTabsComponent: Component {
     private struct LayoutData {
         var size: CGSize
         var selectedItemFrame: CGRect
+        /// No tab is selected (`selectedTab` is nil or not among the tabs): the pill is hidden, and `selectedItemFrame`
+        /// is where it last was.
+        var isSelectionHidden: Bool
         
         var lensSize: CGSize {
             return CGSize(width: self.size.width - lensInset * 2.0, height: self.size.height - lensInset * 2.0)
         }
         
-        init(size: CGSize, selectedItemFrame: CGRect) {
+        init(size: CGSize, selectedItemFrame: CGRect, isSelectionHidden: Bool) {
             self.size = size
             self.selectedItemFrame = selectedItemFrame
+            self.isSelectionHidden = isSelectionHidden
         }
     }
     
@@ -359,6 +381,24 @@ public final class HorizontalTabsComponent: Component {
         let selectedView = ComponentView<Empty>()
         
         init() {
+        }
+    }
+    
+    /// One tab as VoiceOver sees it. Activating it is a tap on the tab.
+    private final class TabAccessibilityElement: UIAccessibilityElement {
+        var activate: (() -> Void)?
+        /// Scrolls the strip so the tab is on screen: the strip scrolls sideways and lists every tab, also those
+        /// scrolled out of view, so swiping reaches them.
+        var didBecomeFocused: (() -> Void)?
+        
+        override func accessibilityActivate() -> Bool {
+            self.activate?()
+            return self.activate != nil
+        }
+        
+        override func accessibilityElementDidBecomeFocused() {
+            super.accessibilityElementDidBecomeFocused()
+            self.didBecomeFocused?()
         }
     }
     
@@ -385,6 +425,7 @@ public final class HorizontalTabsComponent: Component {
         public private(set) var reorderedItemIds: [AnyHashable]?
         
         private var layoutData: LayoutData?
+        private var accessibilityTabElements: [Tab.Id: TabAccessibilityElement] = [:]
         
         private var component: HorizontalTabsComponent?
         private weak var state: EmptyComponentState?
@@ -417,6 +458,11 @@ public final class HorizontalTabsComponent: Component {
                 }
                 return self.scrollView.contentOffset.x > .ulpOfOne
             }
+            
+            // The tabs are drawn twice (regular and under the lens), so the views are no elements: the strip lists one
+            // element per tab itself.
+            self.isAccessibilityElement = false
+            self.accessibilityTraits = .tabBar
             
             self.addSubview(self.lensView)
             
@@ -637,15 +683,88 @@ public final class HorizontalTabsComponent: Component {
                 return
             }
             if case .ended = recognizer.state, let id = self.tabId(at: recognizer.location(in: self)), let tab = component.tabs.first(where: { $0.id == id }) {
-                self.didTapOnAnItem = true
-                self.didTapOnAnItemTimer?.invalidate()
-                self.didTapOnAnItemTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { [weak self] _ in
-                    guard let self else {
-                        return
+                self.select(tab: tab)
+            }
+        }
+        
+        private func select(tab: Tab) {
+            self.didTapOnAnItem = true
+            self.didTapOnAnItemTimer?.invalidate()
+            self.didTapOnAnItemTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.didTapOnAnItem = false
+            })
+            tab.action()
+        }
+        
+        override public var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return []
+                }
+                var elements: [Any] = []
+                var validIds: [Tab.Id] = []
+                for tab in component.tabs {
+                    guard let itemView = self.itemViews[tab.id], let regularView = itemView.regularView.view, regularView.superview != nil else {
+                        continue
                     }
-                    self.didTapOnAnItem = false
-                })
-                tab.action()
+                    validIds.append(tab.id)
+                    let element: TabAccessibilityElement
+                    if let current = self.accessibilityTabElements[tab.id] {
+                        element = current
+                    } else {
+                        element = TabAccessibilityElement(accessibilityContainer: self)
+                        self.accessibilityTabElements[tab.id] = element
+                    }
+                    let label: String?
+                    if let accessibilityLabel = tab.accessibilityLabel {
+                        label = accessibilityLabel
+                    } else if case let .title(title) = tab.content {
+                        label = title.text
+                    } else {
+                        label = nil
+                    }
+                    element.accessibilityLabel = label
+                    element.accessibilityValue = tab.accessibilityValue ?? tab.badge?.title
+                    element.accessibilityTraits = tab.id == component.selectedTab ? [.button, .selected] : [.button]
+                    element.accessibilityFrameInContainerSpace = regularView.convert(regularView.bounds, to: self)
+                    element.activate = { [weak self] in
+                        self?.select(tab: tab)
+                    }
+                    element.didBecomeFocused = { [weak self, weak regularView] in
+                        guard let self, let regularView, regularView.isDescendant(of: self.scrollView) else {
+                            return
+                        }
+                        self.scrollView.scrollRectToVisible(regularView.convert(regularView.bounds, to: self.scrollView).insetBy(dx: -16.0, dy: 0.0), animated: true)
+                    }
+                    var customActions: [UIAccessibilityCustomAction] = []
+                    if let deleteAction = tab.deleteAction, let deleteAccessibilityLabel = tab.deleteAccessibilityLabel {
+                        customActions.append(UIAccessibilityCustomAction(name: deleteAccessibilityLabel, actionHandler: { _ in
+                            deleteAction()
+                            return true
+                        }))
+                    }
+                    if let contextAction = tab.contextAction, let contextAccessibilityLabel = tab.contextAccessibilityLabel, let itemComponentView = regularView as? ItemComponent.View {
+                        // The long-press menu, opened without a gesture as other menus are from VoiceOver.
+                        customActions.append(UIAccessibilityCustomAction(name: contextAccessibilityLabel, actionHandler: { [weak itemComponentView] _ in
+                            guard let itemComponentView else {
+                                return false
+                            }
+                            contextAction(itemComponentView.extractedContainerView, nil)
+                            return true
+                        }))
+                    }
+                    element.accessibilityCustomActions = customActions.isEmpty ? nil : customActions
+                    elements.append(element)
+                }
+                for id in Array(self.accessibilityTabElements.keys) where !validIds.contains(id) {
+                    self.accessibilityTabElements.removeValue(forKey: id)
+                }
+                return elements
+            }
+            set {
             }
         }
         
@@ -685,7 +804,7 @@ public final class HorizontalTabsComponent: Component {
                 return
             }
             var isLifted = self.temporaryLiftTimer != nil
-            if !component.liftWhileSwitching {
+            if !component.liftWhileSwitching || layoutData.isSelectionHidden {
                 isLifted = false
             }
             if #available(iOS 26.0, *) {
@@ -693,7 +812,7 @@ public final class HorizontalTabsComponent: Component {
                 isLifted = false
             }
             let lensSize = layoutData.lensSize
-            self.lensView.update(size: lensSize, selectionOrigin: CGPoint(x:  -self.scrollView.contentOffset.x + layoutData.selectedItemFrame.minX, y: 0.0), selectionSize: CGSize(width: layoutData.selectedItemFrame.width, height: lensSize.height), inset: 0.0, liftedInset: 6.0, isDark: component.theme.overallDarkAppearance, isLifted: isLifted, transition: transition)
+            self.lensView.update(size: lensSize, selectionOrigin: CGPoint(x:  -self.scrollView.contentOffset.x + layoutData.selectedItemFrame.minX, y: 0.0), selectionSize: CGSize(width: layoutData.selectedItemFrame.width, height: lensSize.height), inset: 0.0, liftedInset: 6.0, isDark: component.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: layoutData.isSelectionHidden, transition: transition)
             
             transition.setPosition(view: self.selectedScrollView, position: CGRect(origin: CGPoint(), size: lensSize).center)
             transition.setBounds(view: self.selectedScrollView, bounds: CGRect(origin: CGPoint(x: self.scrollView.contentOffset.x, y: 0.0), size: lensSize))
@@ -957,9 +1076,12 @@ public final class HorizontalTabsComponent: Component {
             
             let size = CGSize(width: sizeWidth, height: sizeHeight)
             
+            // Without a selected tab the pill fades out where it was, rather than shrinking into the leading edge: a
+            // zero-sized lens still draws a sliver of its resting background there.
             let layoutData = LayoutData(
                 size: size,
-                selectedItemFrame: selectedItemFrame ?? CGRect()
+                selectedItemFrame: selectedItemFrame ?? self.layoutData?.selectedItemFrame ?? CGRect(),
+                isSelectionHidden: selectedItemFrame == nil
             )
             self.layoutData = layoutData
             let lensSize = layoutData.lensSize

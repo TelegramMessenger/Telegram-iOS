@@ -91,6 +91,10 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     private var timer: Foundation.Timer?
     public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
+    /// How far, in points, a touch may move and still be a tap or a long tap. The 2pt default keeps a tap in a scrolling
+    /// list (a message bubble) from holding on to what becomes a scroll; a control outside one (the chat title) can allow
+    /// a finger's natural drift, as UIKit's own gestures do, or a tap that moves 3pt is lost.
+    public var maximumTapMovement: CGFloat = 2.0
     public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
     public var longTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
     public var secondaryTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
@@ -134,9 +138,35 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.state = .cancelled
     }
     
+    /// Failed (from outside: a message widget took the touches, or the chat's lock holds this finger), it shows and
+    /// fires nothing more: its highlight ends and its timer stops at once, not when UIKit resets it after every touch
+    /// has ended. Keyed on the value set, so a long tap it cancelled itself is untouched.
+    override public var state: UIGestureRecognizer.State {
+        willSet {
+            if newValue == .failed {
+                self.timer?.invalidate()
+                self.timer = nil
+                if self.highlightPoint != nil {
+                    self.highlightPoint = nil
+                    self.highlight?(nil)
+                }
+            }
+        }
+    }
+    
+    /// Whether a long tap whose timer fires while the recognizer is in `state` is reported: not once it has failed
+    /// (failing it also stops the timer). A long tap it cancelled itself (a finger drifting past 2 pt) is reported as it
+    /// always was.
+    public static func reportsLongTap(in state: UIGestureRecognizer.State) -> Bool {
+        return state != .failed
+    }
+
     fileprivate func longTapEvent() {
         self.timer?.invalidate()
         self.timer = nil
+        if !TapLongTapOrDoubleTapGestureRecognizer.reportsLongTap(in: self.state) {
+            return
+        }
         if let (location, _) = self.touchLocationAndTimestamp {
             self.lastRecognizedGestureAndLocation = (.longTap, location)
             if let longTap = self.longTap {
@@ -264,7 +294,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         if let touch = touches.first, let (touchLocation, _) = self.touchLocationAndTimestamp {
             let location = touch.location(in: self.view)
             let distance = CGPoint(x: location.x - touchLocation.x, y: location.y - touchLocation.y)
-            if distance.x * distance.x + distance.y * distance.y > 4.0 {
+            if distance.x * distance.x + distance.y * distance.y > self.maximumTapMovement * self.maximumTapMovement {
                 self.state = .cancelled
             }
         }

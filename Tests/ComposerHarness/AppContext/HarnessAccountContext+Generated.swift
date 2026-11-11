@@ -4,7 +4,7 @@
 //   python3 Tests/ComposerHarness/Tools/generate_harness_stubs.py \
 //     --source submodules/AccountContext/Sources/AccountContext.swift \
 //     --protocol AccountContext --conformer HarnessAccountContext \
-//     --exclude sharedContext,account,engine,currentLimitsConfiguration,currentAppConfiguration,animationCache,animationRenderer,lottieRenderingSettings,peerNameColors,animatedEmojiStickersValue,currentContentSettings,isPremium,userLimits,getAppConfigValue \
+//     --exclude sharedContext,account,engine,currentLimitsConfiguration,currentAppConfiguration,animationCache,animationRenderer,peerNameColors,animatedEmojiStickersValue,currentContentSettings,isPremium,userLimits,getAppConfigValue,fetchManager \
 //     > Tests/ComposerHarness/AppContext/HarnessAccountContext+Generated.swift
 //
 // Every member here TRAPS and names itself. A stub returning a plausible constant is
@@ -26,7 +26,6 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
-import LottieSettings
 import Postbox
 import AccountContext
 
@@ -36,9 +35,6 @@ extension HarnessAccountContext {
     }
     public var liveLocationManager : LiveLocationManager? {
         fatalError("harness: AccountContext.liveLocationManager is not provided")
-    }
-    public var fetchManager : FetchManager {
-        fatalError("harness: AccountContext.fetchManager is not provided")
     }
     public var prefetchManager : PrefetchManager? {
         fatalError("harness: AccountContext.prefetchManager is not provided")

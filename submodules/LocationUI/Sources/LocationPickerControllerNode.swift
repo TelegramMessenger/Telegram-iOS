@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -377,6 +376,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
+    private var pinnedActionsBottomInset: CGFloat?
+    private var pinnedActionsHeight: CGFloat?
         
     var beganInteractiveDragging: () -> Void = {}
     var locationAccessDeniedUpdated: (Bool) -> Void = { _ in }
@@ -525,7 +526,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         )
         
         let venuesLocation: Signal<CLLocation?, NoError>
-        if let initialLocation = controller.initialLocation {
+        if !locationPickerVenuesEnabled {
+            venuesLocation = .single(nil)
+        } else if let initialLocation = controller.initialLocation {
             venuesLocation = .single(CLLocation(coordinate: initialLocation, altitude: 0.0, horizontalAccuracy: 1.0, verticalAccuracy: 1.0, timestamp: Date()))
         } else {
             venuesLocation = throttledUserLocation(userLocation)
@@ -709,8 +712,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     entries.append(.liveLocation(presentationData.theme, presentationData.strings.Map_ShareLiveLocation, presentationData.strings.Map_ShareLiveLocationHelp, userLocation?.coordinate))
                 }
                 
-                entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
-                
+                if locationPickerVenuesEnabled {
+                    entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
+                }
+
                 let displayedVenues: [(TelegramMediaMap, String)]?
                 let queryId: Int64?
                 if foundVenues != nil || state.searchingVenuesAround {
@@ -736,7 +741,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     if let attribution = attribution {
                         entries.append(.attribution(presentationData.theme, attribution))
                     }
-                } else {
+                } else if locationPickerVenuesEnabled {
                     for _ in 0 ..< 8 {
                         entries.append(.venue(presentationData.theme, nil, nil, nil, index))
                         index += 1
@@ -757,7 +762,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 let previousUserLocation = previousUserLocation.swap(userLocation)
                 switch state.selectedLocation {
                     case .none:
-                        if let initialLocation = strongSelf.controller?.initialLocation {
+                        if strongSelf.headerNode.mapNode.isInteractiveGestureActive {
+                        } else if let initialLocation = strongSelf.controller?.initialLocation {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: initialLocation, animated: false)
                         } else if let userLocation = userLocation {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: userLocation.coordinate, isUserLocation: true, animated: previousUserLocation != nil)
@@ -783,7 +789,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             strongSelf.headerNode.mapNode.switchToPicking(animated: false)
                         }
                     
-                        if address != nil {
+                        if locationPickerVenuesEnabled, address != nil {
                             if foundVenues == nil && !state.searchingVenuesAround {
                                 displayingPlacesButton = true
                             } else if let previousLocation = foundVenuesLocation {
@@ -1131,6 +1137,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_NoPlacesNearby, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.itemSecondaryTextColor)
                 
                 strongSelf.layoutEmptyResultsPlaceholder(transition: .immediate)
+
+                if !locationPickerVenuesEnabled, strongSelf.measuredActionsHeight() != strongSelf.pinnedActionsHeight {
+                    strongSelf.requestLayout(transition: .immediate)
+                }
             }
         })
     }
@@ -1217,6 +1227,16 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         return result
     }
     
+    private func measuredActionsHeight() -> CGFloat {
+        var height: CGFloat = 0.0
+        self.listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? LocationActionListItemNode {
+                height += itemNode.frame.height
+            }
+        }
+        return height
+    }
+
     func requestLayout(transition: ContainedViewLayoutTransition) {
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
@@ -1244,6 +1264,24 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         }
     
         let topInset: CGFloat = glass ? 300.0 : 240.0
+        var pinnedActionsTop = topInset
+        if !locationPickerVenuesEnabled {
+            if self.searchContainerNode == nil && !isPickingLocation {
+                self.pinnedActionsBottomInset = layout.intrinsicInsets.bottom
+            }
+            let measuredActionsHeight = self.measuredActionsHeight()
+            if measuredActionsHeight > 0.0 {
+                self.pinnedActionsHeight = measuredActionsHeight
+            }
+            let estimatedActionsHeight: CGFloat
+            if case .share(_, _, true) = self.mode {
+                estimatedActionsHeight = 114.0
+            } else {
+                estimatedActionsHeight = 57.0
+            }
+            let bottomInset = self.pinnedActionsBottomInset ?? layout.intrinsicInsets.bottom
+            pinnedActionsTop = max(navigationHeight, layout.size.height - layout.additionalInsets.bottom - bottomInset - (self.pinnedActionsHeight ?? estimatedActionsHeight))
+        }
         let overlap: CGFloat = glass ? 0.0 : 6.0
         let headerHeight: CGFloat
         if isPickingLocation, let actionHeight = actionHeight {
@@ -1253,6 +1291,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             } else {
                 headerHeight = layout.size.height - actionHeight - layout.intrinsicInsets.bottom + overlap - 2.0
             }
+        } else if !locationPickerVenuesEnabled {
+            self.listOffset = pinnedActionsTop
+            headerHeight = pinnedActionsTop + overlap
         } else if let listOffset = self.listOffset {
             headerHeight = max(0.0, listOffset + overlap)
         } else {
@@ -1273,10 +1314,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         let insets = UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-        self.listNode.scrollEnabled = !isPickingLocation
+        self.listNode.scrollEnabled = !isPickingLocation && locationPickerVenuesEnabled
         
         var listFrame: CGRect = CGRect(origin: CGPoint(), size: layout.size)
-        if isPickingLocation {
+        if isPickingLocation || !locationPickerVenuesEnabled {
             listFrame.origin.y = headerHeight - topInset - overlap
         }
         transition.updateFrame(node: self.listNode, frame: listFrame)
@@ -1322,7 +1363,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 }
                 self.placeholderBackgroundNode = backgroundNode
                 
-                placeholderNode = LocationPlaceholderNode(content: .intro, lottieSettings: self.context.lottieRenderingSettings)
+                placeholderNode = LocationPlaceholderNode(content: .intro)
                 placeholderNode.settingsPressed = { [weak self] in
                     self?.context.sharedContext.applicationBindings.openSettings()
                 }
@@ -1580,7 +1621,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             if self.bottomEdgeEffectView.superview == nil {
                 self.view.addSubview(self.bottomEdgeEffectView)
             }
-            
+            transition.updateAlpha(layer: self.bottomEdgeEffectView.layer, alpha: self.source == .story && !isPickingLocation ? 0.0 : 1.0)
+
             if isPickingLocation {
                 let sendButton: ComponentView<Empty>
                 if let current = self.sendButton {
@@ -1646,7 +1688,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         
                         sendButtonView.alpha = 0.0
                         sendButtonView.transform = .identity
-                        
+                        sendButtonView.frame = sendButtonFrame
+
                         transition.animateTransformScale(view: sendButtonView, from: 0.01)
                         transition.updateAlpha(layer: sendButtonView.layer, alpha: 1.0)
                     }

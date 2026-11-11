@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/Display:Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
@@ -34,6 +33,11 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TextFormat",
         "//submodules/ListSectionHeaderNode",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/ActivityIndicator",
+        "//submodules/AppBundle",
     ],
     visibility = [
         "//visibility:public",

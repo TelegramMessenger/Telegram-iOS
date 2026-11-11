@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AccountContext
@@ -46,7 +45,7 @@ public final class WalletRemoteLottieContent: LottieComponent.Content {
     let file: WalletNftFile
 
     override public var frameRange: Range<Double> { return 0.0 ..< 1.0 }
-    // RLottie writes sRGB values directly; tagging them as Display P3 changes
+    // The Lottie renderer writes sRGB values directly; tagging them as Display P3 changes
     // their appearance without converting the pixels and oversaturates gifts.
     override public var renderingColorSpace: CGColorSpace? { CGColorSpace(name: CGColorSpace.sRGB) }
 
@@ -86,7 +85,7 @@ public final class WalletRemoteLottieContent: LottieComponent.Content {
                 fetchDisposable.dispose()
             }
         }.start(next: { data in
-            f(.animation(data: data, cacheKey: resource.id.stringRepresentation))
+            f(.animation(data: data))
         })
     }
 }
@@ -273,8 +272,7 @@ public final class WalletCollectibleHeaderComponent: Component {
                         content: lottieContent,
                         startingPosition: .begin,
                         size: mediaSize,
-                        loop: false,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: false
                     )),
                     environment: {},
                     containerSize: mediaSize

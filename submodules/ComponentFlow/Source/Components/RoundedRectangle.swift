@@ -53,6 +53,16 @@ public final class RoundedRectangle: Component {
     public final class View: UIImageView {
         var component: RoundedRectangle?
         
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            // A drawn shape (a background, a badge plate): never read by VoiceOver.
+            self.accessibilityElementsHidden = true
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
         func update(component: RoundedRectangle, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let size = component.size ?? availableSize
             if self.component != component {
@@ -118,7 +128,7 @@ public final class RoundedRectangle: Component {
     }
     
     public func makeView() -> View {
-        return View()
+        return View(frame: CGRect())
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -170,6 +180,8 @@ public final class FilledRoundedRectangleComponent: Component {
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            // A drawn shape: never read by VoiceOver.
+            self.accessibilityElementsHidden = true
         }
         
         required init?(coder: NSCoder) {

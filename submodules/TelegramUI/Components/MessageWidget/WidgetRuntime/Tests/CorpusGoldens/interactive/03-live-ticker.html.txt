@@ -1,0 +1,51 @@
+stop -
+drive idle
+diagnostic request-blocked request refused (disabled): the server allows no requests for this message (no can_query: a widget sent without allow_queries, or a forwarded copy of one sent without fwd_allow_queries)
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><meta name="tw-bot" content="ticker">
+<style></style></head>
+<body>
+<div class="row"><span id="price">—</span><span id="delta"></span><span id="time"></span></div>
+<div id="spark"></div>
+<div class="bar"><span id="note">Tap Refresh for the latest price</span><button id="refresh">Refresh</button><button id="like">♥ <span id="likes">0</span></button></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 148.835
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 132.835
+    div 12 8 336 33.6
+      span 12 8 24 33.6
+      span 44 28 0 0
+      span 348.333 28 0 0
+    div 12 49.6 336 48
+    div 12 105.6 336 35.235
+      span 12 105.6 168 35.235
+      button 202 114.818 56 16.8
+      button 294 114.818 40 16.8
+        span 294 114.818 0 0
+
+== paint
+root 360x148.835 items=12
+  solid-fill bounds=(188,107,84,33) layer=(border=(188,107,84,33),radius=(8,8,8,8,8,8,8,8),clip=(188,107,84,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  solid-fill bounds=(280,107,68,33) layer=(border=(280,107,68,33),radius=(8,8,8,8,8,8,8,8),clip=(280,107,68,33),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(4,8,40,32) pos=(12,16,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(4,98,40,32) pos=(12,106,24,16) color=#707579ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(36,98,72,32) pos=(44,106,56,16) color=#707579ff text="Refresh" font=f2 glyphs=7 advance=56
+  text bounds=(100,98,40,32) pos=(108,106,24,16) color=#707579ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(132,98,40,32) pos=(140,106,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(4,115,64,32) pos=(12,123,48,16) color=#707579ff text="latest" font=f2 glyphs=6 advance=48
+  text bounds=(60,115,56,32) pos=(68,123,40,16) color=#707579ff text="price" font=f2 glyphs=5 advance=40
+  text bounds=(194,107,72,32) pos=(202,115,56,16) color=#000000ff text="Refresh" font=f3 glyphs=7 advance=56
+  text bounds=(286,107,40,32) pos=(294,115,24,16) color=#000000ff text="♥" font=f3 glyphs=3 advance=24
+  text bounds=(318,107,24,32) pos=(326,115,8,16) color=#000000ff text="0" font=f3 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=28,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13.05,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

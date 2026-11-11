@@ -61,6 +61,62 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
     }
 }
 
+/// Who a message is signed by where its time is shown: a post's signature or author, a business bot's title. Without
+/// bubbles the message's context menu shows it instead (spec 5.9).
+public func messageTimestampStatusAuthorTitle(context: AccountContext, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String? {
+    var authorTitle: String?
+    if let author = message.author, case .user = author {
+        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, message.author?.id != channel.id, info.flags.contains(.messagesShouldHaveProfiles) {
+            } else {
+                authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+            }
+        } else if let forwardInfo = message.forwardInfo, forwardInfo.sourceMessageId?.peerId.namespace == Namespaces.Peer.CloudChannel {
+            authorTitle = forwardInfo.authorSignature
+        }
+    } else {
+        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, message.author?.id != channel.id, info.flags.contains(.messagesShouldHaveProfiles) {
+            } else {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                        authorTitle = attribute.signature
+                        break
+                    }
+                }
+            }
+        }
+        
+        if message.id.peerId != context.account.peerId {
+            for attribute in message.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    if let forwardInfo = message.forwardInfo {
+                        if forwardInfo.author?.id == attribute.messageId.peerId {
+                            if authorTitle == nil {
+                                authorTitle = forwardInfo.authorSignature
+                            }
+                        }
+                    }
+                    break
+                }
+            }
+        }
+    }
+    
+    if authorTitle == nil {
+        for attribute in message.attributes {
+            if let attribute = attribute as? InlineBusinessBotMessageAttribute {
+                if let title = attribute.title {
+                    authorTitle = title
+                } else if let peerId = attribute.peerId, let peer = message.peers[peerId] {
+                    authorTitle = peer.debugDisplayTitle
+                }
+            }
+        }
+    }
+    return authorTitle
+}
+
 public func stringForMessageTimestampStatus(
     context: AccountContext,
     message: EngineMessage,
@@ -182,56 +238,7 @@ public func stringForMessageTimestampStatus(
         dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string
     }
     
-    var authorTitle: String?
-    if let author = message.author, case .user = author {
-        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, message.author?.id != channel.id, info.flags.contains(.messagesShouldHaveProfiles) {
-            } else {
-                authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
-            }
-        } else if let forwardInfo = message.forwardInfo, forwardInfo.sourceMessageId?.peerId.namespace == Namespaces.Peer.CloudChannel {
-            authorTitle = forwardInfo.authorSignature
-        }
-    } else {
-        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, message.author?.id != channel.id, info.flags.contains(.messagesShouldHaveProfiles) {
-            } else {
-                for attribute in message.attributes {
-                    if let attribute = attribute as? AuthorSignatureMessageAttribute {
-                        authorTitle = attribute.signature
-                        break
-                    }
-                }
-            }
-        }
-        
-        if message.id.peerId != context.account.peerId {
-            for attribute in message.attributes {
-                if let attribute = attribute as? SourceReferenceMessageAttribute {
-                    if let forwardInfo = message.forwardInfo {
-                        if forwardInfo.author?.id == attribute.messageId.peerId {
-                            if authorTitle == nil {
-                                authorTitle = forwardInfo.authorSignature
-                            }
-                        }
-                    }
-                    break
-                }
-            }
-        }
-    }
-    
-    if authorTitle == nil {
-        for attribute in message.attributes {
-            if let attribute = attribute as? InlineBusinessBotMessageAttribute {
-                if let title = attribute.title {
-                    authorTitle = title
-                } else if let peerId = attribute.peerId, let peer = message.peers[peerId] {
-                    authorTitle = peer.debugDisplayTitle
-                }
-            }
-        }
-    }
+    var authorTitle = messageTimestampStatusAuthorTitle(context: context, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder)
     if (Namespaces.Message.allEphemeral.contains(message.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(message.id.namespace)), let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
         authorTitle = nil
     }

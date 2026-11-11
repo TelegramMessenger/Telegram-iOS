@@ -87,7 +87,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
             self.selectionStateDisposable?.dispose()
         }
         
-        func morePressed(source: ContextReferenceContentNode) {
+        func morePressed(source: UIView) {
             guard let component = self.component, let controller = self.environment?.controller(), let pane = self.paneNode else {
                 return
             }
@@ -201,7 +201,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 }
             }
 
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceView: source)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
             contextController.passthroughTouchEvent = { [weak self] sourceView, point in
                 guard let self else {
                     return .ignore
@@ -378,6 +378,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                         label: nil,
                         isEnabled: buttonIsEnabled,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset + selectionPanelSideInsets.left, bottom: environment.safeInsets.bottom, right: sideInset + selectionPanelSideInsets.right),
+                        backgroundColor: environment.theme.list.plainBackgroundColor,
                         action: { [weak self] in
                             guard let self, let component = self.component, let environment = self.environment else {
                                 return
@@ -739,7 +740,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
         guard let moreBarButton = self.moreBarButton else {
             return
         }
-        componentView.morePressed(source: moreBarButton.referenceNode)
+        componentView.morePressed(source: self.navigationBar?.navigationButtonContextContainer(sourceView: moreBarButton.referenceNode.view) ?? moreBarButton.referenceNode.view)
     }
     
     @objc private func donePressed() {
@@ -759,14 +760,14 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
 
 private final class PeerInfoContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
     
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

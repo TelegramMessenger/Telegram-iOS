@@ -68,6 +68,28 @@ final class QrStudioGlassButtonView: UIView {
 
         self.touchView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
     }
+    
+    override var isAccessibilityElement: Bool {
+        get {
+            return self.accessibilityLabel != nil
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            return .button
+        } set(value) {
+        }
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        guard let action = self.action else {
+            return false
+        }
+        action(self.glass)
+        return true
+    }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -95,7 +117,9 @@ final class QrStudioGlassButtonView: UIView {
         return max(height, textWidth + QrStudioGlassButtonView.titleInset * 2.0)
     }
 
-    func update(size: CGSize, isDark: Bool, glassTint: GlassBackgroundView.TintColor, icon: String? = nil, title: String? = nil, transition: ComponentTransition) {
+    /// `accessibilityLabel` names an icon-only button; a button with a title is read by its title.
+    func update(size: CGSize, isDark: Bool, glassTint: GlassBackgroundView.TintColor, icon: String? = nil, title: String? = nil, accessibilityLabel: String? = nil, transition: ComponentTransition) {
+        self.accessibilityLabel = accessibilityLabel ?? title
         if self.icon != icon || self.title != title || self.isDark != isDark {
             if self.isDark != nil && self.isDark != isDark && !transition.animation.isImmediate {
                 qrStudioCrossfadeGlass(self.glass)

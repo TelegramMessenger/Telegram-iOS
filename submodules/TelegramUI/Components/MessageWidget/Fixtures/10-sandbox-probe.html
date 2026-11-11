@@ -1,0 +1,63 @@
+<!doctype html>
+<!-- Test widget, not content: every row must end "blocked" / "no load", and "Hang" must stop the widget. -->
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8);--bg2:light-dark(#f1f2f4,#2c2c2e);--acc:#3390ec}
+body{margin:0;padding:12px;font:14px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0 0 2px;font-size:16px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns button{flex:1;min-width:30%;border:0;border-radius:9px;padding:8px 6px;background:var(--bg2);color:var(--acc);font:inherit;font-weight:600}
+#log{margin:10px 0 0;padding:0;list-style:none;font-family:ui-monospace,monospace;font-size:12px}
+#log li{padding:3px 0;border-bottom:1px solid var(--bg2)}
+.ok{color:#31b545}.bad{color:#e5484d}
+#ext{width:1px;height:1px}
+</style>
+<h3>Sandbox probe</h3>
+<div class="sub">A test widget: it tries to reach example.com and to freeze.</div>
+<div class="btns">
+  <button id="net">Try network</button>
+  <button id="link">Open link</button>
+  <button id="hang">Hang</button>
+</div>
+<ul id="log"></ul>
+<div id="ext"></div>
+<script>
+const log = document.getElementById('log');
+function row(name, text, good) {
+  const li = document.createElement('li');
+  li.innerHTML = '<span></span> <b></b>';
+  li.firstChild.textContent = name + ':';
+  li.lastChild.textContent = text;
+  li.lastChild.className = good ? 'ok' : 'bad';
+  log.appendChild(li);
+}
+const URL_ = 'https://example.com/widget-probe?t=';
+document.getElementById('net').onclick = () => {
+  log.textContent = '';
+  const t = Date.now();
+  try {
+    fetch(URL_ + t).then(() => row('fetch', 'REACHED', false), (e) => row('fetch', 'blocked (' + e.name + ')', true));
+  } catch (e) { row('fetch', 'blocked (' + e.name + ')', true); }
+  try { const x = new XMLHttpRequest(); x.open('GET', URL_ + t); x.send(); row('xhr', 'sent?', false); }
+  catch (e) { row('xhr', 'blocked (' + e.name + ')', true); }
+  try { new WebSocket('wss://example.com/'); row('websocket', 'opened?', false); }
+  catch (e) { row('websocket', 'blocked (' + e.name + ')', true); }
+  try { new RTCPeerConnection({ iceServers: [{ urls: 'stun:example.com:3478' }] }); row('webrtc', 'created?', false); }
+  catch (e) { row('webrtc', 'blocked (' + e.name + ')', true); }
+  const img = new Image();
+  let loaded = false;
+  img.onload = () => { loaded = true; row('img', 'LOADED', false); };
+  img.src = URL_ + t + '&img';
+  document.body.appendChild(img);
+  document.getElementById('ext').style.backgroundImage = 'url(' + URL_ + t + '&css)';
+  setTimeout(() => { if (!loaded) row('img + css url()', 'no load after 2 s', true); }, 2000);
+};
+document.getElementById('link').onclick = () => {
+  if (typeof TelegramWidget !== 'undefined') TelegramWidget.openLink('https://telegram.org');
+  row('openLink', 'asked the app (expect a confirmation)', true);
+};
+document.getElementById('hang').onclick = () => {
+  row('hang', 'spinning… the app should stop this widget', true);
+  for (;;) {}
+};
+</script>

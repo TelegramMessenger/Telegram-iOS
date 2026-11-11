@@ -171,6 +171,42 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
         let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
         transition.updateFrame(node: self.modeButtonNode, frame: CGRect(origin: CGPoint(x: bottomBandMinX, y: layout.size.height - insets.bottom - 53.0), size: CGSize(width: bottomBandWidth, height: 44.0)))
+        
+        self.updateAccessibility()
+    }
+    
+    // Every change of the prompt, the mismatch notice or the options button ends in a layout pass, so the
+    // accessibility labels follow the texts on screen from here.
+    private func updateAccessibility() {
+        let title = self.titleNode.attributedText?.string
+        // An alphanumeric passcode is typed into a visible field, which the prompt labels; a digit passcode shows only
+        // dots (the field is invisible), so the prompt is read as text before the keypad.
+        var isAlphanumeric = false
+        switch self.mode {
+        case let .entry(challenge):
+            switch challenge.passcodeKind {
+            case .digits4, .digits6:
+                isAlphanumeric = false
+            default:
+                isAlphanumeric = true
+            }
+        case let .setup(_, type):
+            isAlphanumeric = type == .alphanumeric
+        }
+        self.titleNode.isAccessibilityElement = !isAlphanumeric && !(title ?? "").isEmpty
+        self.titleNode.accessibilityLabel = title
+        self.titleNode.accessibilityTraits = [.staticText]
+        self.inputFieldNode.fieldAccessibilityLabel = title
+        let subtitle = self.subtitleNode.attributedText?.string ?? ""
+        self.subtitleNode.isAccessibilityElement = !self.subtitleNode.isHidden && !subtitle.isEmpty
+        self.subtitleNode.accessibilityLabel = subtitle.isEmpty ? nil : subtitle
+        self.subtitleNode.accessibilityTraits = self.subtitleNode.isAccessibilityElement ? [.staticText] : []
+        self.subtitleNode.accessibilityElementsHidden = !self.subtitleNode.isAccessibilityElement
+        self.modeButtonNode.isAccessibilityElement = !self.modeButtonNode.isHidden
+        if !self.modeButtonNode.isHidden {
+            self.modeButtonNode.accessibilityLabel = self.presentationData.strings.PasscodeSettings_PasscodeOptions
+            self.modeButtonNode.accessibilityTraits = [.button]
+        }
     }
     
     override func didLoad() {

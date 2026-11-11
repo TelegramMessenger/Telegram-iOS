@@ -30,7 +30,7 @@ public enum SecondaryRegionKind {
 /// A container that holds BLOCKS and so can enclose an engine block (nesting design §3.1). Two cases
 /// as of R7-details. The regroup below opens and closes any ancestor kind, so adding a THIRD is a new
 /// case here and nothing else IN THIS FILE — and emphatically not "nothing else" everywhere: the
-/// package `CLAUDE.md`'s "R7 details" section enumerates the ~10 sites a third case touches, because
+/// `CLAUDE.md` beside this file, "R7 details", enumerates the sites a third case touches, because
 /// this comment claimed otherwise for two rungs running and was wrong both times.
 public enum EngineAncestor: Equatable {
     case blockQuote(QuoteShape)

@@ -82,6 +82,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+        // The bar wraps the dots in its own button, which VoiceOver names from the item.
+        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_More
         
         self.moreButtonNode.action = { [weak self] _, gesture in
             if let strongSelf = self {
@@ -137,7 +139,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         })))
         
         
-        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(AuthorizationContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        let sourceView = self.navigationBar?.navigationButtonContextContainer(sourceView: node.view) ?? node.view
+        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(AuthorizationContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.present(contextController, in: .window(.root))
     }
     
@@ -282,14 +285,14 @@ final class AuthorizationSequenceSignUpController: ViewController {
 
 private final class AuthorizationContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
     
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

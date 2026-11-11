@@ -31,6 +31,9 @@ typedef NS_ENUM(NSUInteger, FFMpegAVCodecContextReceiveResult)
 // reconstruction until the next IDR, on top of the visible blocking. Only appropriate
 // for small, short-looping thumbnails. Must be called before `open`.
 - (void)setSkipLoopFilterToAll;
+// Sets `skip_frame` to `AVDISCARD_NONREF` (or back to the default): packets of frames no other frame references are
+// not decoded at all. Takes effect for the packets sent after it.
+- (void)setSkipNonReferenceFrames:(bool)skip;
 - (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame;
 - (void)flushBuffers;
 

@@ -4,7 +4,6 @@ import Display
 import ComponentFlow
 import TelegramPresentationData
 import GlassBackgroundComponent
-import LottieSettings
 import NewsFeedSupport
 import NewsFeedComponents
 
@@ -24,10 +23,10 @@ final class NewsRefreshDrop {
         self.glassView.contentView.layer.addSublayer(self.stickerLayer)
     }
 
-    func update(pose: NewsRefreshDropPose, islandSize: CGSize, theme: PresentationTheme, lottieSettings: LottieRenderingSettings) {
+    func update(pose: NewsRefreshDropPose, islandSize: CGSize, theme: PresentationTheme) {
         if self.frames == nil, !self.isLoadingFrames {
             self.isLoadingFrames = true
-            NewsStickerFrames.load(settings: lottieSettings, completion: { [weak self] frames in
+            NewsStickerFrames.load(completion: { [weak self] frames in
                 self?.frames = frames
             })
         }

@@ -63,9 +63,15 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
     public var richText: [RichText]?
     
     public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?, richText: [RichText]? = nil) {
-        self.text = text
+        if text.isEmpty, let richText {
+            let flat = richReplyQuoteTextAndEntities(richText)
+            self.text = flat.text
+            self.entities = entities.isEmpty ? flat.entities : entities
+        } else {
+            self.text = text
+            self.entities = entities
+        }
         self.offset = offset
-        self.entities = entities
         self.media = media
         self.richText = richText
     }
@@ -84,9 +90,19 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         }
         
         if let richTextData = try container.decodeIfPresent(Data.self, forKey: .richText) {
-            self.richText = PostboxDecoder(buffer: MemoryBuffer(data: richTextData)).decodeObjectArrayWithDecoderForKey("f") as [RichText]
+            let richText = PostboxDecoder(buffer: MemoryBuffer(data: richTextData)).decodeObjectArrayWithDecoderForKey("f") as [RichText]
+            // Beta builds of 2026-10-16..18 stored the fragments under "r", which reads here as an empty array. An empty
+            // quote_rich would be sent in place of the quote's text, so such a quote is a flat one.
+            self.richText = richText.isEmpty ? nil : richText
         } else {
             self.richText = nil
+        }
+        if self.text.isEmpty, let richText = self.richText {
+            let flat = richReplyQuoteTextAndEntities(richText)
+            self.text = flat.text
+            if self.entities.isEmpty {
+                self.entities = flat.entities
+            }
         }
     }
     
@@ -247,6 +263,21 @@ private extension EnqueueMessage {
             return []
         }
     }
+}
+
+/// A forward's local echo of `media` (widget-sandbox v0.2, design §4 call 10): a widget as the copy the server will make
+/// (`TelegramMediaWidget.forwardedCopy`), anything else as it is.
+func forwardedMediaForLocalEcho(_ media: Media) -> Media {
+    if let widget = media as? TelegramMediaWidget {
+        return widget.forwardedCopy()
+    }
+    return media
+}
+
+/// Whether a forward keeps its sender's header even under "hide sender names" (widget-sandbox v0.2, tgw-format.md: a
+/// widget is never forwarded without its author; the server keeps the header): a message with a widget.
+func forwardKeepsSenderHeader(media: [Media]) -> Bool {
+    return media.contains(where: { $0 is TelegramMediaWidget })
 }
 
 func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
@@ -1312,6 +1343,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                         }
                         
+                        if sourceMessage.media.contains(where: { $0 is TelegramMediaWidget }) {
+                            hideSendersNames = false
+                        }
                         var hidesCaption = false
                         if hideCaptions {
                             for media in sourceMessage.media {
@@ -1376,7 +1410,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                             }
                             
-                            if hideSendersNames {
+                            if hideSendersNames && !forwardKeepsSenderHeader(media: sourceMessage.media) {
                                 
                             } else if sourceMessage.id.namespace == Namespaces.Message.EphemeralLocal {
                                 forwardInfo = StoreMessageForwardInfo(authorId: ephemeralParams?.authorId ?? author.id, sourceId: nil, sourceMessageId: nil, date: sourceMessage.timestamp, authorSignature: nil, psaType: nil, flags: [])
@@ -1475,7 +1509,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         let localGroupingKey = forwardGroupingKey(grouping: grouping, sourceGroupingKey: sourceMessage.groupingKey, generatedKeys: &localGroupingKeyBySourceKey)
                         
                         var augmentedMediaList = sourceMessage.media.map { media -> Media in
-                            return augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media))
+                            return forwardedMediaForLocalEcho(augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media)))
                         }
                         
                         if peerId.namespace == Namespaces.Peer.SecretChat {

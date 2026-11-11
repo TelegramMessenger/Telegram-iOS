@@ -7,7 +7,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import DCTAnimationCacheImpl
 import DCTMultiAnimationRendererImpl
-import LottieSettings
+import FetchManagerImpl
 
 /// The live members are the ones `ChatTextInputPanelNode` actually reads. Everything else lives in
 /// `HarnessAccountContext+Generated.swift` and traps.
@@ -19,6 +19,7 @@ public final class HarnessAccountContext: AccountContext {
     private let animationCacheValue: AnimationCache
     private let animationRendererValue: MultiAnimationRenderer
     private let contentSettingsValue: Atomic<ContentSettings>
+    private let fetchManagerValue: FetchManager
 
     public init(account: HarnessAccount, settings: HarnessSettings) {
         self.harnessAccount = account
@@ -40,9 +41,16 @@ public final class HarnessAccountContext: AccountContext {
             })
         self.animationRendererValue = DCTMultiAnimationRendererImpl()
         self.contentSettingsValue = Atomic(value: ContentSettings.default)
+        // Read by every photo message's status (`chatMessagePhotoStatus`); the harness's photos are local resources, so
+        // nothing is ever fetched from the network (networking is off anyway). No downloaded-media store.
+        self.fetchManagerValue = FetchManagerImpl(postbox: account.account.postbox, storeManager: nil)
         // This context owns a DCTAnimationCacheImpl built over the account's media box, so it is
         // subject to the same rule the account is; see HarnessProcessRetainer.
         HarnessProcessRetainer.retain(self)
+    }
+
+    public var fetchManager: FetchManager {
+        return self.fetchManagerValue
     }
 
     public var animationCache: AnimationCache {
@@ -56,11 +64,6 @@ public final class HarnessAccountContext: AccountContext {
     // The remaining members the panel reads. Each is a REAL default that the app itself falls back
     // to before its configuration arrives from the server — not an invented value. Anything with
     // no genuine default stays in the generated file and traps.
-
-    /// Read at `ChatTextInputPanelNode.swift:2049`-adjacent rendering paths.
-    public var lottieRenderingSettings: LottieRenderingSettings {
-        return LottieRenderingSettings(backend: .tlottie)
-    }
 
     /// The app builds this from server colour options; with none fetched it is the empty set,
     /// which is exactly what an offline harness has.

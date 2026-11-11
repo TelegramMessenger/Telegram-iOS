@@ -195,7 +195,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             let (valueLayout, valueApply) = makeValueTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: Font.regular(17.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 13.0
-            let buttonHeight: CGFloat = 50.0
+            let buttonHeight: CGFloat = 52.0
             let buttonSpacing: CGFloat = 12.0
             
             var height: CGFloat = verticalInset * 2.0 + balanceLayout.size.height
@@ -221,8 +221,6 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         
             contentSize = CGSize(width: params.width, height: height)
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     let themeUpdated = strongSelf.item?.presentationData.theme !== item.presentationData.theme
@@ -231,8 +229,10 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     let _ = balanceApply()
                     let _ = valueApply()
                     
-                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityTraits = []
+                    // VoiceOver: the amount (and its dollar estimate) as one text; the buttons below stay separate.
+                    strongSelf.activateArea.accessibilityLabel = amountString.string
+                    strongSelf.activateArea.accessibilityValue = value.isEmpty ? nil : value
+                    strongSelf.activateArea.accessibilityTraits = .staticText
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -315,6 +315,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
                                       
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: strongSelf.valueTextNode.frame.maxY))
                     strongSelf.buttonLayout = (isStars: isStars, origin: strongSelf.valueTextNode.frame.maxY + buttonSpacing + 3.0, width: params.width, leftInset: leftInset, rightInset: rightInset)
                     strongSelf.updateButton()
                 }
@@ -376,6 +377,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                 transition: .immediate,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: item.presentationData.theme.list.itemCheckColors.fillColor,
                         foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -392,7 +394,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                containerSize: CGSize(width: withdrawWidth, height: 52.0)
             )
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
@@ -407,6 +409,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     transition: .immediate,
                     component: AnyComponent(ButtonComponent(
                         background: ButtonComponent.Background(
+                            style: .glass,
                             color: item.presentationData.theme.list.itemCheckColors.fillColor,
                             foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -423,7 +426,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                    containerSize: CGSize(width: withdrawWidth, height: 52.0)
                 )
                 if let buttonView = self.buyButton.view {
                     if buttonView.superview == nil {

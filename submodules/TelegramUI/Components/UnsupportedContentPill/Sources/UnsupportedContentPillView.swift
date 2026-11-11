@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import AppBundle
 import TelegramPresentationData
 import WallpaperBackgroundNode
+import StaticGlassBackground
 
 /// The unsupported-content pill: a rounded card carrying a badge, a title/subtitle column and a
 /// trailing action button, over either a live wallpaper patch or a static fill.
@@ -23,6 +24,9 @@ public final class UnsupportedContentPillView: UIView {
     private var buttonTitleNode: TextNode?
 
     private let buttonNode: HighlightTrackingButton
+    // The outlined style: the badge and the button are glass (images of it).
+    private var badgeGlassView: StaticGlassBackgroundView?
+    private var buttonGlassView: StaticGlassBackgroundView?
 
     private var buttonFrame: CGRect = CGRect()
 
@@ -133,14 +137,21 @@ public final class UnsupportedContentPillView: UIView {
         let backgroundFrame = CGRect(origin: CGPoint(), size: size)
         let cornerRadius = min(size.height * 0.5, pillMaximumCornerRadius)
 
+        // The outlined style has no plate, so it keeps no wallpaper child either.
+        var accentColors: (accent: UIColor, foreground: UIColor)?
+        if case let .outlined(_, accent, accentForeground) = colors.style {
+            accentColors = (accent, accentForeground)
+        }
+        let plateWallpaperBackgroundNode = accentColors == nil ? wallpaperBackgroundNode : nil
+
         // Rebuild the wallpaper child when the host's background node identity changes; a portal
         // view mirrors ITS source, so a stale one would mirror a dead wallpaper.
-        if wallpaperBackgroundNode !== self.currentWallpaperBackgroundNode {
+        if plateWallpaperBackgroundNode !== self.currentWallpaperBackgroundNode {
             self.wallpaperBackgroundContent?.removeFromSupernode()
             self.wallpaperBackgroundContent = nil
-            self.currentWallpaperBackgroundNode = wallpaperBackgroundNode
+            self.currentWallpaperBackgroundNode = plateWallpaperBackgroundNode
         }
-        if self.wallpaperBackgroundContent == nil, let backgroundContent = wallpaperBackgroundNode?.makeBubbleBackground(for: .free) {
+        if self.wallpaperBackgroundContent == nil, let backgroundContent = plateWallpaperBackgroundNode?.makeBubbleBackground(for: .free) {
             self.wallpaperBackgroundContent = backgroundContent
             self.insertSubview(backgroundContent.view, at: 0)
         }
@@ -150,6 +161,8 @@ public final class UnsupportedContentPillView: UIView {
             backgroundContent.clipsToBounds = true
             backgroundContent.cornerRadius = cornerRadius
             animation.animator.updateFrame(layer: backgroundContent.layer, frame: backgroundFrame, completion: nil)
+        } else if accentColors != nil {
+            self.backgroundColorView.isHidden = true
         } else {
             self.backgroundColorView.isHidden = false
             self.backgroundColorView.backgroundColor = colors.fill
@@ -160,17 +173,36 @@ public final class UnsupportedContentPillView: UIView {
         // The badge reads as a recess and the button as a raised surface, so they
         // move in opposite directions from the background rather than sharing a fill.
         let badgeFrame = CGRect(
-            origin: CGPoint(x: pillContentInsets.left, y: floorToScreenPixels((size.height - pillBadgeDiameter) / 2.0)),
+            origin: CGPoint(x: layout.contentInsets.left, y: floorToScreenPixels((size.height - pillBadgeDiameter) / 2.0)),
             size: CGSize(width: pillBadgeDiameter, height: pillBadgeDiameter)
         )
         animation.animator.updateFrame(layer: self.badgeBackgroundView.layer, frame: badgeFrame, completion: nil)
-        self.badgeBackgroundView.tintColor = UIColor(rgb: 0x000000)
-        self.badgeBackgroundView.alpha = colors.isDark ? pillBadgeBackgroundAlpha.dark : pillBadgeBackgroundAlpha.light
+        if let accentColors {
+            self.badgeBackgroundView.isHidden = true
+            let badgeGlassView: StaticGlassBackgroundView
+            if let current = self.badgeGlassView {
+                badgeGlassView = current
+                animation.animator.updateFrame(layer: badgeGlassView.layer, frame: badgeFrame, completion: nil)
+            } else {
+                badgeGlassView = StaticGlassBackgroundView()
+                badgeGlassView.isUserInteractionEnabled = false
+                self.badgeGlassView = badgeGlassView
+                self.insertSubview(badgeGlassView, belowSubview: self.badgeIconView)
+                badgeGlassView.frame = badgeFrame
+            }
+            badgeGlassView.update(size: badgeFrame.size, cornerRadius: badgeFrame.height * 0.5, isDark: colors.isDark, tint: .color(accentColors.accent))
+        } else {
+            self.badgeBackgroundView.isHidden = false
+            self.badgeGlassView?.removeFromSuperview()
+            self.badgeGlassView = nil
+            self.badgeBackgroundView.tintColor = UIColor(rgb: 0x000000)
+            self.badgeBackgroundView.alpha = colors.isDark ? pillBadgeBackgroundAlpha.dark : pillBadgeBackgroundAlpha.light
+        }
 
         // Same frame as the background: the plane's position inside the bubble is
         // baked into the asset, so any inset here would push it off centre.
         animation.animator.updateFrame(layer: self.badgeIconView.layer, frame: badgeFrame, completion: nil)
-        self.badgeIconView.tintColor = colors.primaryText
+        self.badgeIconView.tintColor = accentColors?.foreground ?? colors.primaryText
 
         let textColumnX = badgeFrame.maxX + pillBadgeTextSpacing
         let textColumnY = floorToScreenPixels((size.height - layout.textColumnSize.height) / 2.0)
@@ -186,7 +218,26 @@ public final class UnsupportedContentPillView: UIView {
         animation.animator.updateFrame(layer: self.buttonNode.layer, frame: buttonFrame, completion: nil)
 
         self.buttonNode.layer.cornerRadius = layout.buttonSize.height * 0.5
-        self.buttonNode.backgroundColor = UIColor(rgb: colors.isDark ? 0xffffff : 0x000000, alpha: 0.12)
+        if accentColors != nil {
+            // Light glass under a black label, in a dark theme too.
+            self.buttonNode.backgroundColor = .clear
+            let buttonGlassView: StaticGlassBackgroundView
+            if let current = self.buttonGlassView {
+                buttonGlassView = current
+                animation.animator.updateFrame(layer: buttonGlassView.layer, frame: buttonFrame, completion: nil)
+            } else {
+                buttonGlassView = StaticGlassBackgroundView()
+                buttonGlassView.isUserInteractionEnabled = false
+                self.buttonGlassView = buttonGlassView
+                self.insertSubview(buttonGlassView, belowSubview: self.buttonNode)
+                buttonGlassView.frame = buttonFrame
+            }
+            buttonGlassView.update(size: buttonFrame.size, cornerRadius: buttonFrame.height * 0.5, isDark: false, tint: .color(UIColor(white: 1.0, alpha: 0.8)))
+        } else {
+            self.buttonGlassView?.removeFromSuperview()
+            self.buttonGlassView = nil
+            self.buttonNode.backgroundColor = UIColor(rgb: colors.isDark ? 0xffffff : 0x000000, alpha: 0.12)
+        }
         self.buttonNode.accessibilityLabel = strings.action
 
         // From the measured layout, NOT from the node's own bounds — an applied TextNode has zero

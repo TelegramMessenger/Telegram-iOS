@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1150,6 +1149,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     strongSelf.contextSourceNode.contentRect = extractedRect
                     strongSelf.containerNode.isGestureEnabled = item.displayFileInfo
+                    strongSelf.applyListMessageAccessibility(label: listMessageAccessibilityText([titleText?.string, item.isGlobalSearchResult ? globalAuthorTitle : nil]), value: listMessageAccessibilityText([descriptionText?.string, item.isGlobalSearchResult ? dateText : nil]), item: item, contextSourceNode: strongSelf.contextSourceNode, isContextMenuEnabled: item.displayFileInfo)
                     
                     strongSelf.currentIsRestricted = isRestricted || item.message == nil
                     strongSelf.currentMedia = selectedMedia
@@ -1886,7 +1886,7 @@ private enum DownloadIconNodeState: Equatable {
 }
 
 private func generateDownloadIcon(color: UIColor) -> UIImage? {
-    let animation = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0), lottieSettings: .noAccountFallback)
+    let animation = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0))
     animation.customColor = color
     animation.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
     return animation.image
@@ -1925,7 +1925,7 @@ private final class DownloadIconNode: ASImageNode {
         }
 
         if self.animationNode == nil {
-            let animationNode = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0), lottieSettings: .noAccountFallback)
+            let animationNode = ManagedAnimationNode(size: CGSize(width: 18.0, height: 18.0))
             self.animationNode = animationNode
             animationNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 18.0, height: 18.0))
             animationNode.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))

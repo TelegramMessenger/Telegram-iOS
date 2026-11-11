@@ -88,6 +88,7 @@ public enum PostboxViewKey: Hashable {
     case notice(key: NoticeEntryKey)
     case messageGroup(id: MessageId)
     case isContact(id: PeerId)
+    case associatedPeerIds(peerIds: Set<PeerId>)
     case chatListIndex(id: PeerId)
     case peerTimeoutAttributes
     case messageHistoryThreadIndex(id: PeerId, summaryComponents: ChatListEntrySummaryComponents)
@@ -165,8 +166,9 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(count)
         case let .localMessageTag(tag):
             hasher.combine(tag)
-        case .messages:
+        case let .messages(ids):
             hasher.combine(10)
+            hasher.combine(ids)
         case .additionalChatListItems:
             hasher.combine(11)
         case let .cachedItem(id):
@@ -198,6 +200,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(id)
         case let .isContact(id):
             hasher.combine(id)
+        case let .associatedPeerIds(peerIds):
+            hasher.combine(peerIds)
         case let .chatListIndex(id):
             hasher.combine(id)
         case .peerTimeoutAttributes:
@@ -468,6 +472,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .associatedPeerIds(peerIds):
+            if case .associatedPeerIds(peerIds) = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .chatListIndex(id):
             if case .chatListIndex(id) = rhs {
                 return true
@@ -646,6 +656,8 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableMessageGroupView(postbox: postbox, id: id)
     case let .isContact(id):
         return MutableIsContactView(postbox: postbox, id: id)
+    case let .associatedPeerIds(peerIds):
+        return MutableAssociatedPeerIdsView(postbox: postbox, peerIds: peerIds)
     case let .chatListIndex(id):
         return MutableChatListIndexView(postbox: postbox, id: id)
     case .peerTimeoutAttributes:

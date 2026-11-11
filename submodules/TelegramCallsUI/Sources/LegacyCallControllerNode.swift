@@ -55,7 +55,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     
     var toggleMute: (() -> Void)?
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)?
-    var beginAudioOuputSelection: ((Bool) -> Void)?
+    var beginAudioOuputSelection: ((Bool, UIView?) -> Void)?
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var setIsVideoPaused: ((Bool) -> Void)?
@@ -140,7 +140,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         }
         
         self.buttonsNode.speaker = { [weak self] in
-            self?.beginAudioOuputSelection?(false)
+            self?.beginAudioOuputSelection?(false, nil)
         }
         
         self.buttonsNode.end = { [weak self] in

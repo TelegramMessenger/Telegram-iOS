@@ -32,6 +32,7 @@ private final class ThemeSettingsControllerArguments {
     let openNameColorSettings: () -> Void
     let selectAccentColor: (PresentationThemeAccentColor?) -> Void
     let openAccentColorPicker: (PresentationThemeReference, Bool) -> Void
+    let toggleBubbleMode: (Bool) -> Void
     let toggleNightTheme: (Bool) -> Void
     let openAutoNightTheme: () -> Void
     let openTextSize: () -> Void
@@ -53,6 +54,7 @@ private final class ThemeSettingsControllerArguments {
         openNameColorSettings: @escaping () -> Void,
         selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void,
         openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void,
+        toggleBubbleMode: @escaping (Bool) -> Void,
         toggleNightTheme: @escaping (Bool) -> Void,
         openAutoNightTheme: @escaping () -> Void,
         openTextSize: @escaping () -> Void,
@@ -73,6 +75,7 @@ private final class ThemeSettingsControllerArguments {
         self.openNameColorSettings = openNameColorSettings
         self.selectAccentColor = selectAccentColor
         self.openAccentColorPicker = openAccentColorPicker
+        self.toggleBubbleMode = toggleBubbleMode
         self.toggleNightTheme = toggleNightTheme
         self.openAutoNightTheme = openAutoNightTheme
         self.openTextSize = openTextSize
@@ -123,10 +126,11 @@ public enum ThemeSettingsEntryTag: ItemListItemTag {
 private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case themeListHeader(PresentationTheme, String)
     case chatPreview(PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationChatBubbleCorners, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
-    case themes(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, Bool, [String: [StickerPackItem]], [Int64: PresentationThemeAccentColor], [Int64: TelegramWallpaper])
+    case themes(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, Bool, Bool, [String: [StickerPackItem]], [Int64: PresentationThemeAccentColor], [Int64: TelegramWallpaper])
     case chatTheme(PresentationTheme, String)
     case wallpaper(PresentationTheme, String)
     case nameColor(PresentationTheme, String, String, PeerNameColors.Colors?, PeerNameColors.Colors?)
+    case bubbleMode(PresentationTheme, String, Bool)
     case autoNight(PresentationTheme, String, Bool, Bool)
     case autoNightTheme(PresentationTheme, String, String)
     case textSize(PresentationTheme, String, String)
@@ -144,7 +148,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
         switch self {
         case .themeListHeader, .chatPreview, .themes, .chatTheme, .wallpaper, .nameColor:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
-            case .autoNight, .autoNightTheme:
+            case .bubbleMode, .autoNight, .autoNightTheme:
                 return ThemeSettingsControllerSection.nightMode.rawValue
             case .textSize, .bubbleSettings:
                 return ThemeSettingsControllerSection.message.rawValue
@@ -171,30 +175,32 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             return 4
         case .nameColor:
             return 5
-        case .autoNight:
+        case .bubbleMode:
             return 6
-        case .autoNightTheme:
+        case .autoNight:
             return 7
-        case .textSize:
+        case .autoNightTheme:
             return 8
-        case .bubbleSettings:
+        case .textSize:
             return 9
-        case .powerSaving:
+        case .bubbleSettings:
             return 10
-        case .stickersAndEmoji:
+        case .powerSaving:
             return 11
-        case .iconHeader:
+        case .stickersAndEmoji:
             return 12
-        case .iconItem:
+        case .iconHeader:
             return 13
-        case .otherHeader:
+        case .iconItem:
             return 14
-        case .sendWithCmdEnter:
+        case .otherHeader:
             return 15
-        case .showNextMediaOnTap:
+        case .sendWithCmdEnter:
             return 16
-        case .showNextMediaOnTapInfo:
+        case .showNextMediaOnTap:
             return 17
+        case .showNextMediaOnTapInfo:
+            return 18
         }
     }
     
@@ -206,8 +212,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themes(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsNightMode, lhsAnimatedEmojiStickers, lhsThemeAccentColors, lhsThemeSpecificChatWallpapers):
-                if case let .themes(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsNightMode, rhsAnimatedEmojiStickers, rhsThemeAccentColors, rhsThemeSpecificChatWallpapers) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsNightMode == rhsNightMode, lhsAnimatedEmojiStickers == rhsAnimatedEmojiStickers, lhsThemeAccentColors == rhsThemeAccentColors, lhsThemeSpecificChatWallpapers == rhsThemeSpecificChatWallpapers {
+            case let .themes(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsNightMode, lhsBubbleMode, lhsAnimatedEmojiStickers, lhsThemeAccentColors, lhsThemeSpecificChatWallpapers):
+                if case let .themes(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsNightMode, rhsBubbleMode, rhsAnimatedEmojiStickers, rhsThemeAccentColors, rhsThemeSpecificChatWallpapers) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsNightMode == rhsNightMode, lhsBubbleMode == rhsBubbleMode, lhsAnimatedEmojiStickers == rhsAnimatedEmojiStickers, lhsThemeAccentColors == rhsThemeAccentColors, lhsThemeSpecificChatWallpapers == rhsThemeSpecificChatWallpapers {
                     return true
                 } else {
                     return false
@@ -226,6 +232,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .nameColor(lhsTheme, lhsText, lhsName, lhsNameColor, lhsProfileColor):
                 if case let .nameColor(rhsTheme, rhsText, rhsName, rhsNameColor, rhsProfileColor) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsName == rhsName, lhsNameColor == rhsNameColor, lhsProfileColor == rhsProfileColor {
+                    return true
+                } else {
+                    return false
+                }
+            case let .bubbleMode(lhsTheme, lhsText, lhsValue):
+                if case let .bubbleMode(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -320,8 +332,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case let .chatPreview(theme, wallpaper, fontSize, chatBubbleCorners, strings, dateTimeFormat, nameDisplayOrder, items):
                 return ThemeSettingsChatPreviewItem(context: arguments.context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
-            case let .themes(theme, strings, chatThemes, currentTheme, nightMode, animatedEmojiStickers, themeSpecificAccentColors, themeSpecificChatWallpapers):
-                return ThemeCarouselThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: chatThemes, hasNoTheme: false, animatedEmojiStickers: animatedEmojiStickers, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, nightMode: nightMode, currentTheme: currentTheme, updatedTheme: { theme in
+            case let .themes(theme, strings, chatThemes, currentTheme, nightMode, bubbleMode, animatedEmojiStickers, themeSpecificAccentColors, themeSpecificChatWallpapers):
+                return ThemeCarouselThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: chatThemes, hasNoTheme: false, animatedEmojiStickers: animatedEmojiStickers, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, nightMode: nightMode, bubbleless: !bubbleMode, currentTheme: currentTheme, updatedTheme: { theme in
                     if let theme {
                         arguments.selectTheme(theme)
                     }
@@ -349,6 +361,10 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             
                 return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: text, label: "", labelStyle: .image(image: colorImage, size: colorImage.size), sectionId: self.section, style: .blocks, action: {
                     arguments.openNameColorSettings()
+                })
+            case let .bubbleMode(_, title, value):
+                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleBubbleMode(value)
                 })
             case let .autoNight(_, title, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
@@ -411,7 +427,8 @@ private func themeSettingsControllerEntries(
     chatThemes: [PresentationThemeReference],
     animatedEmojiStickers: [String: [StickerPackItem]],
     accountPeer: EnginePeer?,
-    nameColors: PeerNameColors
+    nameColors: PeerNameColors,
+    showsBubbleModeSwitch: Bool
 ) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -435,9 +452,13 @@ private func themeSettingsControllerEntries(
     
     entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (authorName, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText, nameColor: nameColor, backgroundEmojiId: accountPeer?.backgroundEmojiId), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText, nameColor: .preset(.blue), backgroundEmojiId: nil)]))
     
-    entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force || presentationData.autoNightModeTriggered, animatedEmojiStickers, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificChatWallpapers))
-    entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
-    entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
+    let bubbleMode = presentationThemeSettings.chatBubbleSettings.bubbleMode
+    entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force || presentationData.autoNightModeTriggered, bubbleMode, animatedEmojiStickers, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificChatWallpapers))
+    // Without bubbles chats have no wallpaper, so the chat theme and background pickers have nothing to set.
+    if bubbleMode {
+        entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
+        entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
+    }
     
     let colors: PeerNameColors.Colors
     switch nameColor {
@@ -449,6 +470,9 @@ private func themeSettingsControllerEntries(
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
     entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
     
+    if showsBubbleModeSwitch {
+        entries.append(.bubbleMode(presentationData.theme, strings.Appearance_BubbleMode, bubbleMode))
+    }
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
     switch presentationThemeSettings.automaticThemeSwitchSetting.trigger {
@@ -581,6 +605,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         selectAccentColorImpl?(accentColor)
     }, openAccentColorPicker: { themeReference, create in
         openAccentColorPickerImpl?(themeReference, create)
+    }, toggleBubbleMode: { value in
+        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            var current = current
+            current.chatBubbleSettings.bubbleMode = value
+            return current
+        }).start()
     }, toggleNightTheme: { value in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             var current = current
@@ -1091,6 +1121,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         })
     })
 
+    let previousBubbleMode = Atomic<Bool?>(value: nil)
+    
     let signal = combineLatest(
         queue: .mainQueue(),
         context.sharedContext.presentationData,
@@ -1115,8 +1147,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
         
+        let bubbleMode = settings.chatBubbleSettings.bubbleMode
+        
         let themeReference: PresentationThemeReference
-        if presentationData.autoNightModeTriggered {
+        if !bubbleMode {
+            themeReference = bubblelessCarouselSelection(settings: settings, autoNightModeTriggered: presentationData.autoNightModeTriggered)
+        } else if presentationData.autoNightModeTriggered {
             if let _ = settings.theme.emoticon {
                 themeReference = settings.theme
             } else {
@@ -1147,10 +1183,17 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         availableThemes.append(contentsOf: cloudThemes)
         
         var chatThemes = cloudThemes.filter { $0.emoticon != nil }
-        chatThemes.insert(.builtin(.dayClassic), at: 0)
+        if !bubbleMode {
+            chatThemes = bubblelessCarouselThemes(chatThemes: chatThemes)
+        } else {
+            chatThemes.insert(.builtin(.dayClassic), at: 0)
+        }
+        // The hidden rows slide only on the update where the mode flipped.
+        let bubbleModeChanged = previousBubbleMode.swap(bubbleMode).flatMap { $0 != bubbleMode } ?? false
+        let showsBubbleModeSwitch = showsBubbleFreeModeSetting(isBubbleFreeModeAvailable: isBubbleFreeModeAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }), isInUse: !bubbleMode)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, showsBubbleModeSwitch: showsBubbleModeSwitch), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: bubbleModeChanged)
         
         return (controllerState, (listState, arguments))
     }
@@ -1261,9 +1304,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let currentTheme = context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference) in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
             if autoNightModeTriggered {
-                return settings.automaticThemeSwitchSetting.theme
+                return settings.currentModeAutomaticThemeSwitchSetting.theme
             } else {
-                return settings.theme
+                return settings.currentModeTheme
             }
         }
         
@@ -1290,6 +1333,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             }
 
             let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                if !current.chatBubbleSettings.bubbleMode {
+                    var updated = current
+                    updated.currentModeTheme = updatedTheme
+                    updated.currentModeAutomaticThemeSwitchSetting.theme = bubblelessAutomaticTheme(afterSelecting: updatedTheme, current: updated.currentModeAutomaticThemeSwitchSetting.theme)
+                    return updated
+                }
                 var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                 if case let .cloud(info) = updatedTheme, info.theme.settings?.contains(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) ?? false {
                     updatedAutomaticThemeSwitchSetting.theme = updatedTheme
@@ -1338,9 +1387,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         |> deliverOnMainQueue).start(next: { presetWallpaper in
             let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                var currentTheme = current.theme
+                var currentTheme = current.currentModeTheme
                 if autoNightModeTriggered {
-                    currentTheme = current.automaticThemeSwitchSetting.theme
+                    currentTheme = current.currentModeAutomaticThemeSwitchSetting.theme
                 }
                 
                 let generalThemeReference: PresentationThemeReference
@@ -1351,8 +1400,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 }
                 
                 currentTheme = generalThemeReference
-                var updatedTheme = current.theme
-                var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                var updatedTheme = current.currentModeTheme
+                var updatedAutomaticThemeSwitchSetting = current.currentModeAutomaticThemeSwitchSetting
                 
                 if autoNightModeTriggered {
                     updatedAutomaticThemeSwitchSetting.theme = generalThemeReference
@@ -1364,7 +1413,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     return current
                 }
                 
-                let themePreferredBaseTheme = current.themePreferredBaseTheme
                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                 var themeSpecificAccentColors = current.themeSpecificAccentColors
                 themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
@@ -1380,7 +1428,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     }
                 }
                 
-                return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                var updated = current
+                updated.currentModeTheme = updatedTheme
+                updated.currentModeAutomaticThemeSwitchSetting = updatedAutomaticThemeSwitchSetting
+                updated.themeSpecificAccentColors = themeSpecificAccentColors
+                updated.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+                return updated
             }).start()
             
             presentCrossfadeControllerImpl?(true)

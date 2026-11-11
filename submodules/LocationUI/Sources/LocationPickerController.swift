@@ -50,6 +50,8 @@ class LocationPickerInteraction {
     }
 }
 
+let locationPickerVenuesEnabled = false
+
 public final class LocationPickerController: ViewController, AttachmentContainable {
     public enum Source: Equatable {
         public enum PollMode: Equatable {

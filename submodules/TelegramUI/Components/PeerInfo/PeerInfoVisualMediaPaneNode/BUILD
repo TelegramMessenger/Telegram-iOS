@@ -1,4 +1,4 @@
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_test")
 
 swift_library(
     name = "PeerInfoVisualMediaPaneNode",
@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
@@ -61,8 +60,21 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/PeerInfo/CollectionTabItemComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/TelegramUI/Components/DustEffect",
+        "//submodules/TelegramUI/Components/MediaGrid",
     ],
     visibility = [
         "//visibility:public",
+    ],
+)
+
+swift_test(
+    name = "MediaGridPaneDecisionsTests",
+    srcs = [
+        "Sources/MediaGridPaneDecisions.swift",
+        "Tests/MediaGridPaneDecisionsTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
     ],
 )

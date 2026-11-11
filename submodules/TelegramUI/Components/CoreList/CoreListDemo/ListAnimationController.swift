@@ -64,20 +64,22 @@ final class ListAnimationController {
     /// mid-flight would need `rebind`'s explicit-phase treatment, which nothing needs.
     private var viewportMirrorLayers: [WeakLayer] = []
 
-    /// Per-PASS snapshot of each bound layer's additive position contribution, taken at pass ENTRY.
-    ///
-    /// `presented - layer.position.y` is the additive contribution only while the layer's model value
-    /// is still the base the render tree was committed against. A pass overwrites it in `render()`
-    /// (`CoreVirtualListView.swift:2870`) long before any transition installs (`:2022`), which is why
-    /// the provider cannot sample this itself — doing so counts the pass's own displacement twice, and
-    /// shipped once as a chat whose every row snapped a whole growth backwards before animating.
-    /// Hoisting the sample to before those writes is the one ordering that makes the form correct, and
-    /// it is the order `CoreListTransition.setPositionY` already uses.
-    ///
-    /// Empty outside a pass, and empty for any layer with no presentation layer — a windowless test
-    /// fixture, or a layer that has never reached a commit — so those fall back to the analytic value
-    /// and every exact assertion in the suite is unchanged.
+    /// Per-PASS snapshot of each animating row's rendered position contribution, taken at pass ENTRY
+    /// (`capturePresentedPositionOffsets`) as `presentation − committedPositionBases[owner]`. Empty
+    /// outside a pass, for every owner not recorded, and for a layer with no presentation layer (a
+    /// windowless test fixture, a layer that has never reached a commit); those resume from the
+    /// analytic value.
     private var passPresentedPositionOffsets: [ListAnimationOwner: CGFloat] = [:]
+    /// The position base each row with a running `.positionY` track had in the last Core Animation
+    /// commit, recorded by the transaction's first write to any row base (`beginModelWrites`).
+    /// `presentation()` shows the last commit, so only this base turns it into the track's rendered
+    /// contribution. The model value is that base only until something writes it, and a pass or
+    /// rebalance earlier in the same transaction does: a window that grows or shrinks at its top
+    /// re-bases every surviving row in `render()`. News ran its widening pass and its morph pass in one
+    /// turn, and every row that moved started its track as far above itself as the window had grown.
+    /// Rows without a running track are not recorded: their contribution is 0, which the analytic
+    /// fallback answers.
+    private var committedPositionBases: [ListAnimationOwner: CGFloat] = [:]
     private var knownOwners: Set<ListAnimationOwner> = []
     private var pendingCompletions: [UInt64: PendingCompletion] = [:]
     private var nextCompletionSerial: UInt64 = 0
@@ -140,9 +142,11 @@ final class ListAnimationController {
             // uses, and it is what `PresentedPositionResumeBaseTests` was written to make safe.
             //
             // And only for owners whose base a pass owns — the snapshot is empty for the rest, so they
-            // fall back to the analytic value here. Pass entry proves that THIS pass has not moved the
-            // base; it proves nothing about a writer that runs between passes, and `renderAttachments`
-            // is exactly such a writer. See `ListAnimationOwner.hasPassWrittenPositionBase`.
+            // fall back to the analytic value here. The snapshot differences against the base recorded
+            // at the transaction's first row-base write (`beginModelWrites`), so an earlier pass or
+            // rebalance in the same transaction that re-based a row is not read as motion.
+            // `renderAttachments` also writes on scroll frames that are neither, which is why
+            // attachments stay out. See `ListAnimationOwner.hasPassWrittenPositionBase`.
             //
             // **Why it became necessary.** A property resumed from the model and one resumed from the
             // screen disagree about where "now" is by the commit delay δ, and the user-visible seam
@@ -181,22 +185,38 @@ final class ListAnimationController {
         }
     }
 
-    /// Samples every bound layer's rendered position offset. MUST be called before the pass writes any
-    /// settled geometry; `CoreVirtualListView.applyChanges` calls it at entry and clears it in the same
-    /// `defer` that clears the rest of the per-pass state.
+    /// Records the committed position bases. `CoreVirtualListView` calls it before every pass and every
+    /// window-changing rebalance writes a row base, with `isCommitted` false when an earlier one in the
+    /// same transaction already recorded them and nothing has been committed since.
+    func beginModelWrites(isCommitted: Bool) {
+        guard isCommitted else {
+            return
+        }
+        committedPositionBases.removeAll(keepingCapacity: true)
+        let time = now()
+        // Only owners whose base a PASS owns: an attachment's base is also rewritten by every
+        // `renderAttachments()`, on user-scroll frames that record nothing. See
+        // `ListAnimationOwner.hasPassWrittenPositionBase` for the rest.
+        for (owner, binding) in bindings where owner.hasPassWrittenPositionBase {
+            guard let track = model.track(for: owner, property: .positionY),
+                  !track.isComplete(at: time),
+                  let layer = binding.value
+            else { continue }
+            committedPositionBases[owner] = layer.position.y
+        }
+    }
+
+    /// Samples each recorded row's rendered position contribution against the base it was committed
+    /// at. Called at pass entry, after `beginModelWrites` and before anything the pass writes or
+    /// installs; `CoreVirtualListView.applyChanges` clears it in the same `defer` that clears the rest
+    /// of the per-pass state.
     func capturePresentedPositionOffsets() {
         passPresentedPositionOffsets.removeAll(keepingCapacity: true)
-        for (owner, binding) in bindings {
-            // Only owners whose base a PASS owns. `presented − model` is the track's contribution only
-            // while the model still holds the base the render tree was committed against, and pass
-            // entry guarantees that for a row and for nothing else — an attachment's base is rewritten
-            // by every `renderAttachments()`, an overlay child's by every coordinate rebase. See
-            // `ListAnimationOwner.hasPassWrittenPositionBase`.
-            guard owner.hasPassWrittenPositionBase,
-                  let layer = binding.value,
+        for (owner, base) in committedPositionBases {
+            guard let layer = bindings[owner]?.value,
                   let presentation = layer.presentation()
             else { continue }
-            passPresentedPositionOffsets[owner] = presentation.position.y - layer.position.y
+            passPresentedPositionOffsets[owner] = presentation.position.y - base
         }
     }
 
@@ -661,6 +681,7 @@ final class ListAnimationController {
                 layer: CALayer,
                 at time: TimeInterval? = nil) {
         guard let binding = bindings[owner], binding.value === layer else { return }
+        committedPositionBases.removeValue(forKey: owner)
         captureResolvedOrigins(for: owner, on: layer)
         removeModelAnimations(from: layer)
         bindings.removeValue(forKey: owner)
@@ -906,6 +927,7 @@ final class ListAnimationController {
         // registration must too.
         removeViewportMirrorAnimations()
         bindings.removeAll()
+        committedPositionBases.removeAll()
         knownOwners.removeAll()
         pendingCompletions.removeAll()
         resolvedOrigins.removeAll()
@@ -923,6 +945,16 @@ final class ListAnimationController {
                        binding: WeakLayer,
                        removesOwner: Bool,
                        cleanup: (() -> Void)?) {
+        if property == .positionY {
+            switch mutation {
+            case .immediate, .started:
+                // What this transaction installed is what the commit starts from, not what is
+                // rendered now.
+                committedPositionBases.removeValue(forKey: owner)
+            case .unchanged:
+                break
+            }
+        }
         switch mutation {
         case .unchanged:
             return
@@ -1075,6 +1107,7 @@ final class ListAnimationController {
             return current
         }
 
+        committedPositionBases.removeValue(forKey: owner)
         if bindings[owner] != nil {
             invalidateBinding(for: owner, removeAnimations: true)
         }
@@ -1105,6 +1138,7 @@ final class ListAnimationController {
 
     private func invalidateBinding(for owner: ListAnimationOwner,
                                    removeAnimations: Bool) {
+        committedPositionBases.removeValue(forKey: owner)
         guard let binding = bindings.removeValue(forKey: owner) else { return }
         if removeAnimations, let layer = binding.value {
             // `bind` routes an owner moving to a fresh layer through here, so this is the other
@@ -1119,6 +1153,7 @@ final class ListAnimationController {
                                        layer: CALayer,
                                        at time: TimeInterval) {
         guard let binding = bindings[owner], binding.value === layer else { return }
+        committedPositionBases.removeValue(forKey: owner)
         captureResolvedOrigins(for: owner, on: layer)
         removeModelAnimations(from: layer)
         bindings.removeValue(forKey: owner)

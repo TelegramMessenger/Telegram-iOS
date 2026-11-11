@@ -249,6 +249,9 @@ final class InstantPageV2MediaImageView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
@@ -417,6 +420,9 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
@@ -771,7 +777,7 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
         let itemMedia = item.media
 
         let presentationData = renderContext.context.sharedContext.currentPresentationData.with { $0 }
-        let incoming = renderContext.message?.isIncoming == true
+        let incoming = renderContext.isIncoming
         let audioFile: TelegramMediaFile
         if case let .file(f) = item.media.media { audioFile = f } else { audioFile = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/mpeg", size: nil, attributes: [], alternativeRepresentations: []) }
         self.audioNode = InstantPageV2AudioContentNode(context: renderContext.context, message: renderContext.message, file: audioFile, incoming: incoming, presentationData: presentationData)
@@ -795,6 +801,10 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
             // messageMediaFileStatus signal — which keys progress off the fetch manager's
             // `hasEntry` — surfaces .Fetching, letting the overlay show the animated ring.
             let _ = messageMediaFileInteractiveFetched(fetchManager: fetchContext.fetchManager, messageId: messageId, messageReference: message, file: file, userInitiated: true, priority: .userInitiated).startStandalone()
+        }
+        self.audioNode.cancelFetch = {
+            guard case let .file(file) = fetchMedia.media, let messageId = fetchMessage?.id else { return }
+            messageMediaFileCancelInteractiveFetch(context: fetchContext, messageId: messageId, file: file)
         }
 
         let mediaForPlayback = item.media
@@ -824,7 +834,7 @@ final class InstantPageV2MediaAudioView: UIView, InstantPageItemView {
     func update(item: InstantPageV2MediaAudioItem, theme: InstantPageTheme, renderContext: InstantPageV2RenderContext) {
         self.item = item
         let presentationData = renderContext.context.sharedContext.currentPresentationData.with { $0 }
-        let incoming = renderContext.message?.isIncoming == true
+        let incoming = renderContext.isIncoming
         self.audioNode.updatePresentationData(presentationData, incoming: incoming)
         self.audioNode.updateLayout(width: self.bounds.width)
     }

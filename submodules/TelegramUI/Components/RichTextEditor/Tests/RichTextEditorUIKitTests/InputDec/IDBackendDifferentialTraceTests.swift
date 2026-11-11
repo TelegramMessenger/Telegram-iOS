@@ -44,7 +44,7 @@ extension IDBackendDifferentialTraceTests {
 
     /// Task D3: steps a caret `steps` positions in `direction` from `offset`, via the REAL
     /// `position(from:in:direction:)` witness — the same primitive a hardware arrow key drives
-    /// (see the package `CLAUDE.md`'s "Left/right arrow navigation" invariant). Deliberately NOT a
+    /// (see `Sources/RichTextEditorUIKit/CLAUDE.md`'s "Left/right arrow navigation" invariant). Deliberately NOT a
     /// force-unwrap chain: a `nil` mid-walk (navigation cannot progress further) leaves the caret at
     /// its last resolved position rather than crashing the whole differential run — a stall here
     /// would be as costly as the pasteboard dialog the command group avoids, and unlike that risk

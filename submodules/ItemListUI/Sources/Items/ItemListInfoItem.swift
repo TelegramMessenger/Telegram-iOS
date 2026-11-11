@@ -336,9 +336,10 @@ public class InfoItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.accessibilityLabel = "\(item.title)\n\(attributedText.string)"
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityLabel = strongSelf.accessibilityLabel
+                    // The text element reads the item; the node is only its container (a container label was read as
+                    // a second copy of the same text). An empty title adds no blank line.
+                    strongSelf.activateArea.accessibilityLabel = [item.title, attributedText.string].filter { !$0.isEmpty }.joined(separator: "\n")
                 
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

@@ -1,0 +1,43 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8">
+<style></style>
+</head><body>
+<h3 style="margin:0 0 6px;font-size:15px">Expenses by category</h3>
+<div class="wrap" id="wrap"><canvas id="c" width="340" height="240" style="width: 340px; height: 240px;"></canvas></div>
+<p id="readout">Tap a category or a legend entry</p>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 306.95
+  head 0 0 0 0
+    style 0 0 0 0
+  body 10 10 340 286.95
+    h3 10 10 340 18.75
+    div 10 34.75 340 240
+      canvas 10 34.75 340 240
+    p 10 280.75 340 16.2
+
+== paint
+root 360x306.95 items=12
+  solid-fill bounds=(0,0,360,307) layer=(border=(0,0,360,307),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,307),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  text bounds=(2,3,80,32) pos=(10,11,64,16) color=#000000ff text="Expenses" font=f1 glyphs=8 advance=64
+  text bounds=(74,3,32,32) pos=(82,11,16,16) color=#000000ff text="by" font=f1 glyphs=2 advance=16
+  text bounds=(98,3,80,32) pos=(106,11,64,16) color=#000000ff text="category" font=f1 glyphs=8 advance=64
+  text bounds=(2,273,40,32) pos=(10,281,24,16) color=#666666ff text="Tap" font=f2 glyphs=3 advance=24
+  text bounds=(34,273,24,32) pos=(42,281,8,16) color=#666666ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(50,273,80,32) pos=(58,281,64,16) color=#666666ff text="category" font=f2 glyphs=8 advance=64
+  text bounds=(122,273,32,32) pos=(130,281,16,16) color=#666666ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(146,273,24,32) pos=(154,281,8,16) color=#666666ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(162,273,64,32) pos=(170,281,48,16) color=#666666ff text="legend" font=f2 glyphs=6 advance=48
+  text bounds=(218,273,56,32) pos=(226,281,40,16) color=#666666ff text="entry" font=f2 glyphs=5 advance=40
+  image bounds=(10,35,340,240) layer=(border=(10,35,340,240),radius=(0,0,0,0,0,0,0,0),clip=(10,35,340,240),origin=(10,35,340,240),attachment=0,repeat=3,root=0) size=(340,240)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

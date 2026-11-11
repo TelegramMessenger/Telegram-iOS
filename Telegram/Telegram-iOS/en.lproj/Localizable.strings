@@ -2532,6 +2532,8 @@ Unused sets are archived when you add more.";
 "Call.StatusIncoming" = "Telegram Audio...";
 "Call.IncomingVoiceCall" = "Incoming Voice Call";
 "Call.IncomingVideoCall" = "Incoming Video Call";
+"Call.UnlockToSeeVideoNotification" = "Unlock your phone to see and share video";
+"Call.UnlockToSeeVideoNotificationPad" = "Unlock your iPad to see and share video";
 "Call.StatusRequesting" = "Contacting...";
 "Call.StatusWaiting" = "Waiting...";
 "Call.StatusRinging" = "Ringing...";
@@ -2595,6 +2597,7 @@ Unused sets are archived when you add more.";
 "NetworkUsageSettings.CallDataSection" = "CALLS";
 
 "Call.PrivacyErrorMessage" = "Sorry, %@ doesn't accept calls.";
+"Call.PrivacyErrorMessageMultiple" = "Sorry, %@ don't accept calls.";
 
 "Notification.CallBack" = "Call Back";
 
@@ -3261,6 +3264,7 @@ Unused sets are archived when you add more.";
 "AuthSessions.LoggedIn" = "Websites";
 "AuthSessions.LogOutApplications" = "Disconnect All Websites";
 "AuthSessions.LogOutApplicationsHelp" = "You can log in on websites that support signing in with Telegram.";
+"AuthSessions.LogOutApplicationsText" = "Are you sure you want to disconnect all websites where you logged in with Telegram?";
 "AuthSessions.LoggedInWithTelegram" = "CONNECTED WEBSITES";
 "AuthSessions.LogOut" = "Disconnect";
 "AuthSessions.Message" = "You allowed this bot to message you when you logged in on %@.";
@@ -4740,6 +4744,8 @@ Sorry for the inconvenience.";
 "Conversation.SendMessage.ScheduleMessage" = "Schedule Message";
 
 "Appearance.ThemeCarouselTintedNight" = "Tinted Night";
+"Appearance.ThemeCarouselNeutral" = "Neutral";
+"Appearance.ThemeCarouselNeutralNight" = "Neutral Night";
 "Appearance.ThemeCarouselNewNight" = "Night";
 
 "Channel.AdminLog.MessageRankName" = "changed custom title for %1$@:\n%2$@";
@@ -5124,6 +5130,8 @@ Sorry for the inconvenience.";
 "Appearance.TextSize.Title" = "Text Size";
 "Appearance.TextSize.UseSystem" = "User System Text Size";
 "Appearance.TextSize.Apply" = "Set";
+"Appearance.TextSize.FontDefault" = "Default";
+"Appearance.TextSize.FontSerif" = "New York";
 
 "Shortcut.SwitchAccount" = "Switch Account";
 
@@ -5971,6 +5979,16 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.SwitchHint" = "Double Tap To Toggle";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
+"VoiceOver.Common.SectionIndex" = "Section Index";
+"VoiceOver.QrCodeScan.Flashlight" = "Flashlight";
+"VoiceOver.Common.ColorNumber" = "Color %@";
+"VoiceOver.Common.NoColor" = "No Color";
+"VoiceOver.Common.Page" = "Page";
+"VoiceOver.Common.Expand" = "Expand";
+"VoiceOver.Common.Collapse" = "Collapse";
+"VoiceOver.Common.Add" = "Add";
+
+"VoiceOver.TabBar.AttentionRequired" = "Attention required";
 
 "VoiceOver.Chat.MessagesSelected_0" = "%@ messages selected";
 "VoiceOver.Chat.MessagesSelected_1" = "%@ message selected";
@@ -6225,6 +6243,11 @@ Sorry for the inconvenience.";
 "VoiceOver.ChatList.MessageFrom" = "From: %@";
 "VoiceOver.ChatList.MessageRead" = "Read";
 "VoiceOver.ChatList.MessageEmpty" = "Empty";
+"VoiceOver.ChatList.Pinned" = "Pinned";
+"VoiceOver.ChatList.Muted" = "Muted";
+"VoiceOver.ChatList.UnreadMentions" = "Unread mentions";
+"VoiceOver.ChatList.UnreadReactions" = "Unread reactions";
+"VoiceOver.ChatList.ShowStoriesHint" = "Double tap to show stories";
 
 "VoiceOver.Chat.Profile" = "Profile";
 "VoiceOver.Chat.GroupInfo" = "Group Info";
@@ -7118,6 +7141,7 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
 
 "Appearance.NightTheme" = "Night Mode";
+"Appearance.BubbleMode" = "Bubble Mode";
 
 "Map.ETADays_0" = "%@ days";
 "Map.ETADays_1" = "%@ day";
@@ -8998,6 +9022,15 @@ Sorry for the inconvenience.";
 "Gallery.VoiceOver.Edit" = "Edit";
 "Gallery.VoiceOver.Stickers" = "Stickers";
 "Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+"VoiceOver.Gallery.VideoSettings" = "Video Settings";
+"VoiceOver.Gallery.TextRecognition" = "Recognize Text";
+"VoiceOver.Gallery.SeekBackward" = "Back 15 Seconds";
+"VoiceOver.Gallery.SeekForward" = "Forward 15 Seconds";
+"VoiceOver.Gallery.PlaybackPosition" = "Playback position";
+"VoiceOver.Browser.Forward" = "Forward";
+"VoiceOver.Browser.PreviousResult" = "Previous Result";
+"VoiceOver.Browser.NextResult" = "Next Result";
+"VoiceOver.EmojiPicker.None" = "None";
 
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 
@@ -14197,6 +14230,7 @@ Sorry for the inconvenience.";
 "NewCall.VideoOption" = "Call with video enabled";
 "NewCall.ActionCallSingle" = "Call %@";
 "NewCall.ActionCallMultiple" = "Call";
+"NewCall.ParticipantLimitAlert" = "A call can have up to %@ participants.";
 
 "Chat.ToastCallLinkExpired.Text" = "This link is no longer active";
 
@@ -14415,6 +14449,7 @@ Sorry for the inconvenience.";
 "PeerInfo.Topics.DisplayAsInfo" = "Choose how topics appear for all members.";
 "PeerInfo.Topics.Tabs" = "Tabs";
 "PeerInfo.Topics.List" = "List";
+"PeerInfo.Topics.Sidebar" = "Sidebar";
 
 "PeerInfo.OptionTopics.Enabled" = "Enabled";
 "PeerInfo.OptionTopics.Disabled" = "Disabled";
@@ -16674,9 +16709,14 @@ Error: %8$@";
 "RichText.ButtonStyleDanger" = "Danger";
 "RichText.ButtonStyleSuccess" = "Success";
 "RichText.ButtonStyleLink" = "Link";
-"RichText.ButtonActionCopy" = "Copies text";
 "RichText.ButtonActionDisabled" = "Disabled";
 "RichText.ButtonActionNotEditable" = "This button's action can't be edited";
+"RichText.ButtonSectionAction" = "ACTION";
+"RichText.ButtonActionTypeURL" = "URL";
+"RichText.ButtonActionTypeCopy" = "Copy Text";
+"RichText.ButtonActionTypeUserProfile" = "User Profile";
+"RichText.ButtonCopyTextPlaceholder" = "Text to Copy";
+"RichText.ButtonChooseUser" = "Choose User";
 "RichText.MenuInlineButton" = "Button";
 "RichText.MenuButtonRow" = "Button Row";
 "RichText.MenuButtonInline" = "Inline";
@@ -16895,6 +16935,7 @@ Error: %8$@";
 "Wallet.Transfer.ErrorTitle" = "Transfer Failed";
 "Wallet.Transfer.ErrorText" = "The transfer could not be prepared or sent. Check the address, balance and network connection, then try again.";
 "Wallet.Transfer.CollectibleTopUpText" = "You need at least 0.1 Grams in your wallet to transfer an NFT. Top up your balance and try again.";
+"Wallet.Transfer.TopUpText" = "There are not enough Grams in your wallet for this payment and its network fee. Top up your balance and try again.";
 "Wallet.TonAddressCopied" = "TON address copied to clipboard";
 "Wallet.OptionalMessage" = "Optional message";
 "Wallet.Transfer.KeyChangedTitle" = "Wallet Key Changed";
@@ -17137,6 +17178,9 @@ Error: %8$@";
 "News.Segment.Added" = "Added";
 "News.MarkAllAsRead" = "Mark All as Read";
 "News.ReloadFeed" = "Reload Feed";
+"News.Display.Compact" = "Compact";
+"News.Display.Expanded" = "Expanded";
+"News.ShowMore" = "Show more";
 "Channel.AddToNews" = "Add to News";
 "Channel.AddedToNews" = "Added to News";
 "Channel.AddToChats" = "Add to Chats";
@@ -17158,6 +17202,8 @@ Error: %8$@";
 "News.Refresh" = "Refresh";
 "News.Swipe.Interesting" = "Interesting";
 "News.Swipe.NotInterested" = "Not Interested";
+"News.Swipe.Expand" = "Expand";
+"News.Swipe.Collapse" = "Collapse";
 "News.Feedback.Hidden" = "Post hidden. Tell us more?";
 "News.Feedback.HideChannel" = "Don't show posts from %@";
 "News.Feedback.FewerLikeThis" = "Don't show posts like this";
@@ -17243,3 +17289,56 @@ Error: %8$@";
 "Gift.Delete.Title" = "Delete Gift";
 "Gift.Delete.Text" = "Do you want to delete this gift?\n\nIt will disappear from your profile and can't be restored.";
 "Gift.Delete.Success" = "Gift Deleted";
+
+"MediaEditor.AddGeneratedImage" = "Image";
+
+"Message.WidgetStopped" = "Widget stopped";
+"Message.Widget" = "Widget";
+"Message.WidgetNetworkMarkerInfo" = "Taps on this widget can send data to the bot.";
+
+"Agent.AddKey" = "Add Your AI API key";
+"Agent.AddKeyInfo" = "This chatbot works only if you have an active subscription for an AI service.";
+"Agent.AddAnotherProvider" = "Add Another Provider";
+"Agent.ProvidersInfo" = "Tap and hold to delete.";
+"Agent.Connect.Title" = "Connect API Key";
+"Agent.Connect.ProviderHeader" = "Provider";
+"Agent.Connect.ProviderInfo" = "Select the AI provider you have an account with.";
+"Agent.Key.Title" = "API Key";
+"Agent.Key.Header" = "API Key";
+"Agent.Key.Invalid" = "Invalid API Key";
+"Agent.Key.Placeholder" = "Paste your %@ API key";
+"Agent.Key.Info" = "Get your API key or API token in your [AI provider's settings]().";
+"Agent.Key.Connect" = "Connect %@";
+"Agent.Key.Connecting" = "Connecting...";
+"Agent.Key.ProviderUnavailable" = "%@ didn't respond. Please try again later.";
+"Agent.Connected.Title" = "%@ connected!";
+"Agent.Connected.Text" = "You can now use %@.";
+"Agent.Connected.Start" = "Start";
+"Agent.InputPlaceholder" = "Ask Agent anything";
+"Agent.Effort" = "Effort";
+
+"Chat.SideList.Open" = "Show Chat List";
+"Chat.SideList.Close" = "Hide Chat List";
+"Chat.SideList.NewTopic" = "New Topic";
+"Chat.SideList.DirectMessages" = "Direct messages";
+"Chat.SideList.AllMessages" = "All Messages";
+
+"VoiceOver.Stories.Unseen" = "New stories";
+"VoiceOver.Stories.Position" = "Story %1$@ of %2$@";
+"VoiceOver.Stories.NextPeer" = "Next: %@";
+"VoiceOver.Stories.PreviousPeer" = "Previous: %@";
+"VoiceOver.Stories.Sound" = "Sound";
+"VoiceOver.Stories.Like" = "Like";
+"VoiceOver.Stories.Repost" = "Repost";
+"VoiceOver.Common.Verified" = "Verified";
+"VoiceOver.Camera.Collage" = "Collage";
+"VoiceOver.Camera.Flash" = "Flash";
+"VoiceOver.Camera.SwitchCamera" = "Switch Camera";
+"VoiceOver.Camera.DualCamera" = "Dual Camera";
+"VoiceOver.Camera.RecordVideo" = "Record Video";
+"VoiceOver.MessageInput.Timer" = "Timer";
+"VoiceOver.MediaEditor.Adjustments" = "Adjustments";
+"VoiceOver.MediaEditor.Rotate" = "Rotate";
+"VoiceOver.Reactions.ShowAll" = "Show All Reactions";
+"VoiceOver.Reactions.Premium" = "Premium Reactions";
+"VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";

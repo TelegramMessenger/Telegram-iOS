@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -80,12 +79,12 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
     private let animationFetchDisposable = MetaDisposable()
     private var currentAnimationSourceId: String?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.prizeTitleNode = TextNode()
@@ -113,7 +112,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         self.buttonNode = ChatMessageAttachedContentButtonNode()
         self.channelButtons = PeerButtonsStackNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.prizeTitleNode)
         self.addSubnode(self.prizeTextNode)
@@ -543,7 +542,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
-                            statusType = .BubbleIncoming
+                            statusType = item.bubbleStyle.hidesIncomingStatus ? nil : .BubbleIncoming
                         } else {
                             if item.message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)

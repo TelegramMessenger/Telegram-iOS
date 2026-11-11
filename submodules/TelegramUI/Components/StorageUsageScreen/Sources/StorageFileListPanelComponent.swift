@@ -137,7 +137,7 @@ private final class FileListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EngineMessage.Id) -> Void
-    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
+    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     
     init(
         context: AccountContext,
@@ -151,7 +151,7 @@ private final class FileListItemComponent: Component {
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EngineMessage.Id) -> Void,
-        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
+        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -315,8 +315,33 @@ private final class FileListItemComponent: Component {
             component.action(component.messageId)
         }
         
+        private var moreAccessibilityAction: UIAccessibilityCustomAction?
+        
         func update(component: FileListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
+            
+            // VoiceOver: the row is one button (title; subtitle and size as the value; selected while picked in edit
+            // mode); its long-press menu is the "More" custom action.
+            self.containerButton.isAccessibilityElement = true
+            self.containerButton.accessibilityLabel = component.title
+            self.containerButton.accessibilityValue = [component.subtitle, component.label].filter { !$0.isEmpty }.joined(separator: ", ")
+            if case .editing(true) = component.selectionState {
+                self.containerButton.accessibilityTraits = [.button, .selected]
+            } else {
+                self.containerButton.accessibilityTraits = .button
+            }
+            if self.moreAccessibilityAction == nil {
+                // Created once per row view (the strings are read here, not on every update).
+                let title = component.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_More
+                self.moreAccessibilityAction = UIAccessibilityCustomAction(name: title, actionHandler: { [weak self] _ in
+                    guard let self, self.isGestureEnabled, let component = self.component else {
+                        return false
+                    }
+                    component.contextAction(component.messageId, self.extractedContainerView, nil)
+                    return true
+                })
+            }
+            self.containerButton.accessibilityCustomActions = self.moreAccessibilityAction.flatMap { [$0] }
             
             var hasSelectionUpdated = false
             if let previousComponent = self.component {
@@ -669,14 +694,14 @@ final class StorageFileListPanelComponent: Component {
     let items: Items?
     let selectionState: StorageUsageScreenComponent.SelectionState?
     let action: (EngineMessage.Id) -> Void
-    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
+    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
 
     init(
         context: AccountContext,
         items: Items?,
         selectionState: StorageUsageScreenComponent.SelectionState?,
         action: @escaping (EngineMessage.Id) -> Void,
-        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
+        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.items = items
@@ -770,8 +795,10 @@ final class StorageFileListPanelComponent: Component {
         override init(frame: CGRect) {
             self.scrollView = ScrollViewImpl()
             self.listBackgroundView = UIImageView()
+            self.listBackgroundView.accessibilityElementsHidden = true // decoration
             self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
             self.listMaskView = UIImageView()
+            self.listMaskView.accessibilityElementsHidden = true // decoration
             self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(UIColor.white.cgColor)

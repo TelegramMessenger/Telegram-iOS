@@ -1,16 +1,11 @@
 import Foundation
 import CoreGraphics
-import LottieSettings
-import RLottieBinding
 import TLottieBinding
 
 /// Telegram's accept/reject policy for a Lottie animation.
 ///
-/// These limits are the app's, not a renderer's. They live here rather than in
-/// either backend because if the two enforced them differently, flipping the
-/// killswitch would change *which stickers render at all*, not merely how they
-/// are rasterized. The values are the ones RLottieInstance's initializer
-/// enforced before this refactor.
+/// These limits are the app's, not the renderer's, so they live here rather than
+/// in the binding. The values are the ones the app has always enforced.
 private enum LottieInstanceLimits {
     static let maximumDimension: CGFloat = 1536.0
     static let maximumFrameRate: Int32 = 360
@@ -31,10 +26,7 @@ private enum LottieInstanceLimits {
     }
 }
 
-/// `cacheKey` is rlottie's internal parsed-model cache key. tlottie has no such
-/// cache and ignores it.
-///
-/// `colorReplacements` is `[AnyHashable: Any]?` — the type the backends' ObjC
+/// `colorReplacements` is `[AnyHashable: Any]?` — the type the binding's ObjC
 /// `NSDictionary *` parameter imports as — rather than `NSDictionary?`, so that
 /// the live call sites keep compiling unchanged. Swift bridges a `Dictionary` to
 /// `NSDictionary` implicitly only at an ObjC boundary, not at a Swift one, so an
@@ -45,27 +37,13 @@ private enum LottieInstanceLimits {
 public func makeLottieInstance(
     data: Data,
     fitzModifier: LottieFitzModifier,
-    colorReplacements: [AnyHashable: Any]?,
-    cacheKey: String,
-    settings: LottieRenderingSettings
+    colorReplacements: [AnyHashable: Any]?
 ) -> LottieInstance? {
-    let instance: LottieInstance?
-    switch settings.backend {
-    case .rlottie:
-        instance = RLottieInstance(
-            data: data,
-            fitzModifier: fitzModifier.rlottieValue,
-            colorReplacements: colorReplacements,
-            cacheKey: cacheKey
-        )
-    case .tlottie:
-        instance = TLottieAnimation(
-            data: data,
-            fitzModifier: fitzModifier.tlottieValue,
-            colorReplacements: colorReplacements
-        )
-    }
-    guard let instance, LottieInstanceLimits.permits(instance) else {
+    guard let instance = TLottieAnimation(
+        data: data,
+        fitzModifier: fitzModifier.tlottieValue,
+        colorReplacements: colorReplacements
+    ), LottieInstanceLimits.permits(instance) else {
         return nil
     }
     return instance

@@ -866,15 +866,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         removeWebSessionImpl(sessionId)
     }, terminateAllWebSessions: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.AuthSessions_LogOutApplications, color: .destructive, action: {
-                    dismissAction()
-                    
+        let controller = AlertScreen(
+            context: context,
+            configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+            text: presentationData.strings.AuthSessions_LogOutApplicationsText,
+            actions: [
+                .init(title: presentationData.strings.AuthSessions_LogOutApplications, type: .defaultDestructive, action: {
                     updateState {
                         return $0.withUpdatedTerminatingOtherSessions(true)
                     }
@@ -887,11 +884,11 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
                         }
                         mode.set(.sessions)
                     }))
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }),
+                .init(title: presentationData.strings.Common_Cancel)
+            ]
+        )
+        presentControllerImpl?(controller, nil)
     }, addDevice: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         DeviceAccess.authorizeAccess(to: .camera(.qrCode), presentationData: presentationData, present: { c, a in
@@ -928,7 +925,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }, action: { _, f in
                 f(.default)
                 ttlAction(value)
-            }))
+            }, accessibilityIsSelected: currentAuthorizationTTLDays == value))
         }
         guard let sourceNode = findAutoTerminateReferenceNode?() else {
             return

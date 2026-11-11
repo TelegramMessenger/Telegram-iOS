@@ -186,6 +186,7 @@ checked. **Height and inset findings start `provisional` by rule** — the harne
 | 2026-10-12 | Legacy (review of the fix wave): the first fix for the row above wrapped EVERY chat-side sync in an undo step on the legacy node (`performUndoableInputChange`), so syncs that changed nothing left undo steps that did nothing. **Fixed:** the legacy override is gone (back to the protocol default); only the format shortcuts take a step. Neuter-checked: reinstating the override fails the test. | 1 | `Tests/HarnessLegacyPhantomUndoStepTests.swift` | provisional |
 | 2026-10-12 | Legacy (code review of the InputDec squash): the legacy text view's `attributedText` setter wrote in place when the new value had the "same characters", decided with Swift `String ==` (canonical equivalence), so a set in the other Unicode normalization form walked the storage with the wrong length: `NSRangeException` for a longer value, stale code units for a shorter one. **Fixed:** compared as code units (`NSString isEqual:`). | 1 | `Tests/HarnessLegacyNormalizationSetTests.swift` (red before the fix; the longer case trapped) | provisional |
 | 2026-10-12 | Legacy (code review of the InputDec squash): a custom emoji inserted from the emoji keyboard after inline code inherited the code (`chatTextInputStateInsertingText`), so the message went out with overlapping `Code` and `CustomEmoji`. **Fixed:** inline code is not inherited onto a custom-emoji range; plain text still continues it. The review's sibling prediction for a CODE BLOCK did not hold (the state's `ChatInputContent` holds a code block as plain runs, so the emoji arrives as its alt text) and is pinned instead. | 1 | `Tests/HarnessEmojiInsertAfterInlineCodeTests.swift` (inline case red before the fix; code-block case a pin) | provisional |
+| 2026-10-28 | Panel: with "@bot " typed and the bot's inline results open, the bot's placeholder ("Search...", `contextPlaceholderNode`) ran on under the emoji button: it was laid out to the panel's width less the field's insets and the accessory buttons, not the search layout's clear button. **Fixed:** laid out after the field's buttons, ending at `nextButtonTopRight` as the field's own placeholder does; checked on the "iPhone 18 Pro" simulator with the test servers' Widget Bot ("Sea…" ends before the emoji button). | 1 | `Tests/HarnessInlinePlaceholderTests.swift` | confirmed |
 
 ## Harness fixes (not product defects)
 
@@ -295,7 +296,7 @@ run, and never count a timing-sensitive defect through `axe` alone.
   - `-[_UIConcretePasteboard string]` → `_coerceItemToClass`: the paste prompt, meaning foreign clipboard content arrived mid-run.
 
   Replays of the same seeds ran in seconds. **Driving note:** reboot that simulator BETWEEN Bazel runs when they start (`xcrun simctl shutdown <udid> && xcrun simctl boot <udid>`; the runner reuses it and its pre-action reinstalls the harness), never during one. The fuzz now re-writes its own pasteboard content before any paste when `UIPasteboard.general.changeCount` moved since its last write (reading `changeCount` reads no content), so the prompt cannot recur from the fuzz.
-- **A failed test run stalls in `simctl diagnose`.** After any failing test, xcodebuild runs `simctl diagnose … --timeout=600` on the test simulator (despite `-collect-test-diagnostics=never`), and the run sits there for up to 10 min after the tests end. Killing that process (it only collects logs) returns the run at once. The scratch runner that drove this wave did so automatically.
+- **A failed test run stalls in `simctl diagnose`.** After any failing test, xcodebuild runs `simctl diagnose … --timeout=600` on the test simulator (despite `-collect-test-diagnostics=never`), and the run sits there for up to 10 min after the tests end. Killing that process (it only collects logs) returns the run at once. The scratch runner that drove this wave did so automatically. **Cause found and fixed 2026-10-20:** xcodebuild ignores the `=` spelling xctestrunner passed; `MODULE.bazel` now patches it to two arguments (root `CLAUDE.md`, "Running tests").
 - **`FUZZ SLOW`.** Every op or undo/redo step over 1 s is printed. That is how seed 51's nested-quote keystroke cost was found (`HarnessNestedQuoteKeystrokeScalingTests`).
 - **Harness gaps.**
   - A table arranged WITHOUT column specs (`ChatInputTable(rows:)`, as a draft persisted before `columns` existed would decode: `decodeIfPresent … ?? []`) trips `assertionFailure("table … has a role but no grid — it will not be drawn")` in `syncTableChrome` and draws nothing. Drafts are out of scope, so this is not filed; real producers (paste, InstantPage conversion) always supply columns.
@@ -332,7 +333,7 @@ run, and never count a timing-sensitive defect through `axe` alone.
 - **Harness gaps.**
   - No `ChatController`, so the chat's key shortcuts (⌘B & co., ⌘K, ⇧⌘N) are absent; `HarnessChatFormatShortcutTests` repeats the shortcut's closure. A `KeyShortcutResponder` stand-in on the root would let Tier 2 press them.
   - XCUITest `typeKey(.return)` changed nothing observable on either backend in the harness (no newline, no send), and ⌘↑ / ⌘↓ did nothing on either; ←/→ with ⌘/⌥/⇧, ⌘A, ⌘Z, ⇧⌘Z and Tab arrive fine.
-  - A failing hosted run still sits in `simctl diagnose` for the rest of the 10 minutes; the p11 wrapper killed `diagnose.*<BAZEL_TEST udid>` in a loop during each foreground run.
+  - A failing hosted run still sits in `simctl diagnose` for the rest of the 10 minutes; the p11 wrapper killed `diagnose.*<BAZEL_TEST udid>` in a loop during each foreground run. (Fixed 2026-10-20 at the cause: xctestrunner's `=` spelling, patched in `MODULE.bazel`.)
 
 
 2026-09-24, p11 fixes (the six engine defects):
@@ -1066,3 +1067,16 @@ and so required regenerating `HarnessSharedAccountContext+Generated.swift`.
   268/0; `ChatRichTextEditorComposerTests` 30/0; debug and release simulator app builds green.
   SwiftPM UIKit (`iostest.sh`, K1, iOS 27): 38 failing cases, 37 of them identical on an exported pre-change tree; the
   38th was a stale selector table in `IDClientBridgeSelectorConformanceTests`, fixed.
+
+2026-10-28, an inline bot's placeholder under the field's buttons: with "@bot " typed and the bot's inline results open,
+the panel's `contextPlaceholderNode` ("@bot" in a clear colour, then the bot's placeholder, "Search...") was laid out to
+the panel's width less the field's insets and the accessory buttons only, not the search layout's clear button, so the
+placeholder ran on under the emoji button (seen on the "iPhone 18 Pro" simulator with the test servers' Widget Bot). It
+is laid out after the field's buttons now and ends at `nextButtonTopRight`, where the field's own placeholder ends.
+`HarnessInlinePlaceholderTests` (Tier 1): red before (the line's maxX 290 against the emoji button's 258), green after;
+it puts the panel state back, since the next layout pass reads it from the interface state.
+
+- **Full `ComposerHarnessTests`** (with `--test_timeout=3600`: the default 300 s ends it in the fuzz), with the test's
+  first version (before it put the panel state back): 866 run, failures only in the 6 legacy-by-design tests
+  (`HarnessLegacyAutocorrectFormattingTests` 3, `HarnessLegacyCrossBlockEditUndoTests` 3), which fail alone too. The
+  final version passes with `HarnessInputDelegateContractTests`, the next class, in one process.

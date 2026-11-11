@@ -204,6 +204,22 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         })
     }
     
+    /// VoiceOver: the bottom panel ("Send Gift") sits at the pane's bottom edge, below the screen until the profile
+    /// scrolls the pane up; it is read only while it is on screen.
+    override public var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let panelContentContainer = self.panelContentContainer, let window = self.view.window, !panelContentContainer.convert(panelContentContainer.bounds, to: window).intersects(window.bounds) {
+                elements.removeAll(where: { ($0 as AnyObject) === panelContentContainer })
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+    
     deinit {
         self.collectionsDisposable?.dispose()
     }
@@ -636,7 +652,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 return
                             }
                             self.openCollectionContextMenu(id: collection.id, sourceNode: sourceNode, gesture: gesture)
-                        } : nil
+                        } : nil,
+                        contextAccessibilityLabel: params.presentationData.strings.Common_More
                     ))
                 }
                         

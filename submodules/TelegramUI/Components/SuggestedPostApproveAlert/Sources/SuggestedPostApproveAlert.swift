@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Markdown
@@ -361,6 +360,8 @@ private final class SuggestedPostAlertImpl: AlertController {
             let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
             let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
             let playOnce = ActionSlot<Void>()
+            // Narrower on a regular-width layout, centred.
+            let toastBand = Display.toastFrame(CGRect(x: layout.safeInsets.left + 12.0, y: 0.0, width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 12.0 * 2.0, height: 0.0), metrics: layout.metrics)
             let toastSize = toast.update(
                 transition: ComponentTransition(transition),
                 component: AnyComponent(ToastContentComponent(
@@ -368,8 +369,7 @@ private final class SuggestedPostAlertImpl: AlertController {
                         content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                         startingPosition: .begin,
                         size: CGSize(width: 32.0, height: 32.0),
-                        playOnce: playOnce,
-                        lottieSettings: .noAccountFallback
+                        playOnce: playOnce
                     )),
                     content: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
@@ -381,9 +381,9 @@ private final class SuggestedPostAlertImpl: AlertController {
                     iconSpacing: 12.0
                 )),
                 environment: {},
-                containerSize: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 12.0 * 2.0, height: 1000.0)
+                containerSize: CGSize(width: toastBand.width, height: 1000.0)
             )
-            let toastFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 12.0, y: layout.insets(options: .statusBar).top + 4.0), size: toastSize)
+            let toastFrame = CGRect(origin: CGPoint(x: toastBand.minX, y: layout.insets(options: .statusBar).top + 4.0), size: toastSize)
             if let toastView = toast.view {
                 if toastView.superview == nil {
                     self.view.addSubview(toastView)

@@ -17,16 +17,13 @@ extension VideoChatScreenComponent.View {
         }
         
         if groupCall.isConference {
-            var disablePeerIds: [EnginePeer.Id] = []
-            disablePeerIds.append(groupCall.accountContext.account.peerId)
-            if let members = self.members {
-                for participant in members.participants {
-                    if let participantPeer = participant.peer, !disablePeerIds.contains(participantPeer.id) {
-                        disablePeerIds.append(participantPeer.id)
-                    }
-                }
-            }
-            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, disablePeerIds: disablePeerIds, shareLink: { [weak self] in
+            let selection = ConferenceAddParticipantSelection(
+                accountPeerId: groupCall.accountContext.account.peerId,
+                participantPeerIds: self.members?.participants.compactMap { $0.peer?.id } ?? [],
+                totalParticipantCount: self.members?.totalCount ?? 0,
+                invitedPeerIds: self.invitedPeers.map(\.peer.id)
+            )
+            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, selection: selection, shareLink: { [weak self] in
                 guard let self else {
                     return
                 }

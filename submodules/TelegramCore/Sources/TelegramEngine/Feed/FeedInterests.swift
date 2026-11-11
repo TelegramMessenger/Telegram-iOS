@@ -25,7 +25,7 @@ func _internal_refreshFeedInterestCategories(account: Account) -> Signal<Never, 
         |> ignoreValues
     }
 #else
-    // The feed API is parked (layer 232): nothing to refresh.
+    // The feed API is parked (layer 233 has none): nothing to refresh.
     return .complete()
 #endif
 }
@@ -89,7 +89,7 @@ func _internal_setFeedInterestCategories(account: Account, ids: [Int32]) -> Sign
         }
     }
 #else
-    // The feed API is parked (layer 232): the selection is not changed.
+    // The feed API is parked (layer 233 has none): the selection is not changed.
     return .complete()
 #endif
 }

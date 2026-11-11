@@ -1,4 +1,3 @@
-#if TELEGRAM_API_LAYER_233
 import XCTest
 import Postbox
 import TelegramApi
@@ -7,7 +6,6 @@ import TelegramApi
 final class FeedApiConversionTests: XCTestCase {
     private let channel = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(77))
 
-    // The feed API is parked (layer 232): conversions of removed types are tested only when it is compiled in.
 #if TELEGRAM_NEWS_FEED_API
     func testPositionRoundTripsThroughApi() {
         let position = EngineFeedPosition(date: 1_700_000_000, peerId: self.channel, id: 42)
@@ -94,4 +92,3 @@ final class FeedApiConversionTests: XCTestCase {
     }
 #endif
 }
-#endif

@@ -2,7 +2,8 @@ import Foundation
 import CoreGraphics
 import TelegramCore
 
-/// The answer picked in the "Post hidden" panel (spec §1). None reaches the server: there is no API yet.
+/// The answer picked in the "Post hidden" panel (spec §1). It only hides locally: the dislike went out with Not
+/// Interested, and no API takes a channel choice.
 public enum NewsPostFeedbackChoice: Equatable {
     /// For You: "Don't show posts from ‹channel›".
     case hideChannel
