@@ -37,8 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
+      - name: Initialize recursive submodules
+        run: |
+          git config --global url."https://github.com/TelegramMessenger/tgcalls.git".insteadOf "https://github.com/Kostenkov-2021/tgcalls.git"
+          git submodule update --init --recursive
       - name: Select repository Xcode version
         run: |
           XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')

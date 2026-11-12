@@ -443,6 +443,12 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)
+        self.assertIn("submodules: false", contents)
+        self.assertIn(
+            'url."https://github.com/TelegramMessenger/tgcalls.git".insteadOf "https://github.com/Kostenkov-2021/tgcalls.git"',
+            contents,
+        )
+        self.assertIn("git submodule update --init --recursive", contents)
         self.assertNotIn("if: github.event_name == 'workflow_dispatch'", contents)
 
     def test_release_process_artifacts_are_present(self) -> None:
