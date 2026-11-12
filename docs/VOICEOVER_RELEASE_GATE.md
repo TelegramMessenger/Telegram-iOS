@@ -12,7 +12,7 @@ python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
 
 These tests prevent known renderer, stable-focus, and modal contracts from being removed. They do not prove runtime accessibility.
 
-The source-contract job runs automatically for pushes to `VoiceOver-fixes` and for pull requests that touch accessibility implementation or gate files.
+The source-contract and simulator jobs run automatically for pushes to `VoiceOver-fixes` or `master` and for pull requests that touch accessibility implementation or gate files. The simulator job also remains available through manual dispatch.
 
 ## 2. Simulator tree audit
 
@@ -22,7 +22,7 @@ The default suite launches with `--ui-test` and therefore uses a clean signed-ou
 
 Use the same opt-in mode with the main Settings tab visible to verify meaningful Voice Control names, unique row targets, a 250-element Settings tree budget, and clock/memory traversal metrics. Run it again in a writable chat for the typing scenario: ten type/query/delete samples enforce conservative average and maximum budgets of 3 and 6 seconds and retain the raw samples as an XCTest attachment. Because UI automation time is included, accept tighter device-specific budgets only after collecting a stable `.xcresult` baseline.
 
-The repository command used by the manually dispatched GitHub gate is:
+The repository command used by the GitHub gate is:
 
 ```sh
 python3 build-system/Make/Make.py \
@@ -63,4 +63,4 @@ A release is blocked when a P0 chat flow fails, focus moves to an unrelated elem
 
 ## Evidence
 
-Attach the source-contract log, XCTest result bundle, tree-size attachment, performance comparison, VoiceOver transcript or recording, and discovered regressions to the release tracking issue. The manually dispatched GitHub workflow retains its `.xcresult` artifact for 30 days. Regressions must link to an atomic fix commit or a documented release-blocking decision.
+Attach the source-contract log, XCTest result bundle, tree-size attachment, performance comparison, VoiceOver transcript or recording, and discovered regressions to the release tracking issue. The GitHub workflow retains its `.xcresult` artifact for 30 days. Regressions must link to an atomic fix commit or a documented release-blocking decision.

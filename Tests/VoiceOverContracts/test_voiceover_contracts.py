@@ -435,10 +435,15 @@ class ReleaseGateContractTests(unittest.TestCase):
 
     def test_workflow_runs_both_automated_gate_layers(self) -> None:
         contents = source(".github/workflows/voiceover-gate.yml")
-        self.assertIn('branches:\n      - "VoiceOver-fixes"', contents)
+        self.assertIn('branches:\n      - "VoiceOver-fixes"\n      - "master"', contents)
+        self.assertIn('"Telegram/**/*.swift"', contents)
+        self.assertIn('"Telegram/Share/**"', contents)
+        self.assertIn('"submodules/**/*.strings"', contents)
+        self.assertIn("pull_request:", contents)
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)
+        self.assertNotIn("if: github.event_name == 'workflow_dispatch'", contents)
 
     def test_release_process_artifacts_are_present(self) -> None:
         for artifact in (

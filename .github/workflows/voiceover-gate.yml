@@ -4,15 +4,22 @@ on:
   push:
     branches:
       - "VoiceOver-fixes"
+      - "master"
     paths:
       - "submodules/**/*.swift"
-      - "Telegram/Tests/Sources/AccessibilityUITests.swift"
+      - "submodules/**/*.strings"
+      - "Telegram/**/*.swift"
+      - "Telegram/**/*.strings"
+      - "Telegram/Share/**"
       - "Tests/VoiceOverContracts/**"
       - ".github/workflows/voiceover-gate.yml"
   pull_request:
     paths:
       - "submodules/**/*.swift"
-      - "Telegram/Tests/Sources/AccessibilityUITests.swift"
+      - "submodules/**/*.strings"
+      - "Telegram/**/*.swift"
+      - "Telegram/**/*.strings"
+      - "Telegram/Share/**"
       - "Tests/VoiceOverContracts/**"
       - ".github/workflows/voiceover-gate.yml"
   workflow_dispatch:
@@ -26,7 +33,6 @@ jobs:
         run: python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
 
   simulator-tree-audit:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
