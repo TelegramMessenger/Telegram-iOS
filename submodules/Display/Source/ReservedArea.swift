@@ -43,6 +43,10 @@ private func matchesSize(_ lhs: CGSize, _ rhs: CGSize) -> Bool {
     return abs(lhs.width - rhs.width) <= 1.0 && abs(lhs.height - rhs.height) <= 1.0
 }
 
+private func isIPhoneDuoCoverScreen(_ window: CGSize) -> Bool {
+    return matchesSize(window, CGSize(width: 466.0, height: 678.0)) || matchesSize(window, CGSize(width: 457.0, height: 678.0))
+}
+
 /// iPhone Duo (iPhone19,4): the block the system status corner reserves, per posture, as the simulator settled on it.
 ///
 /// The table names the posture: which corner holds the block. Its sizes are what a layout gets only while the system's
@@ -56,7 +60,7 @@ func iPhoneDuoReservedCorners(windowSize: CGSize, orientation: UIInterfaceOrient
     // launch can report portrait for a landscape window), so it is not trusted against the size.
     let window = portraitSize(windowSize)
     let isLandscape = windowSize.width > windowSize.height
-    if matchesSize(window, CGSize(width: 466.0, height: 678.0)) {
+    if isIPhoneDuoCoverScreen(window) {
         if !isLandscape {
             if orientation == .portraitUpsideDown {
                 return .none
@@ -269,7 +273,7 @@ func iPhoneDuoSafeInsets(windowSize: CGSize, orientation: UIInterfaceOrientation
     // the two landscapes apart.
     let window = portraitSize(windowSize)
     let isLandscape = windowSize.width > windowSize.height
-    if matchesSize(window, CGSize(width: 466.0, height: 678.0)) {
+    if isIPhoneDuoCoverScreen(window) {
         if !isLandscape {
             if orientation == .portraitUpsideDown {
                 return nil
@@ -303,7 +307,7 @@ func iPhoneDuoSafeInsets(windowSize: CGSize, orientation: UIInterfaceOrientation
 func iPhoneDuoScreenCornerRadii(windowSize: CGSize, safeInsets: UIEdgeInsets) -> CornerRadii? {
     let window = portraitSize(windowSize)
     let isLandscape = windowSize.width > windowSize.height
-    if matchesSize(window, CGSize(width: 466.0, height: 678.0)) {
+    if isIPhoneDuoCoverScreen(window) {
         let hinge: CGFloat = 8.0
         let outer: CGFloat = 59.0
         if !isLandscape {

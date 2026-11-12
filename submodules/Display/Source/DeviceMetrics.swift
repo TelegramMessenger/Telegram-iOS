@@ -126,7 +126,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         if let modelIdentifier = modelIdentifier {
             for device in DeviceMetrics.profiles(for: modelIdentifier) {
                 let deviceScale: CGFloat = device == .iPhoneXr ? 2.0 : 3.0
-                if scale == deviceScale && (device.profileScreenSize == screenSize || device.profileScreenSize == additionalSize) {
+                if scale == deviceScale && (device.profileScreenSize == screenSize || device.profileScreenSize == additionalSize || (device == .iPhoneDuo && screenSize == CGSize(width: 457.0, height: 678.0))) {
                     self = device
                     return
                 }
