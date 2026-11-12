@@ -1179,10 +1179,11 @@ public final class AccountViewTracker {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
                 let messageTimestamp = self.refreshSecretChatMediaMessageIdsAndTimestamps[messageId]
-                if messageTimestamp == nil {
-                    self.refreshSecretChatMediaMessageIdsAndTimestamps[messageId] = timestamp
-                    addedMessageIds.append(messageId)
+                if let messageTimestamp = messageTimestamp, messageTimestamp >= timestamp - 60 {
+                    continue
                 }
+                self.refreshSecretChatMediaMessageIdsAndTimestamps[messageId] = timestamp
+                addedMessageIds.append(messageId)
             }
             if !addedMessageIds.isEmpty {
                 for (_, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
@@ -1208,26 +1209,16 @@ public final class AccountViewTracker {
                                 return .complete()
                             }
                             
-                            var stickerPacks = Set<StickerPackReference>()
-                            for file in files {
-                                for attribute in file.attributes {
-                                    if case let .Sticker(_, packReferenceValue, _) = attribute, let packReference = packReferenceValue {
-                                        if case .id = packReference {
-                                            stickerPacks.insert(packReference)
-                                        }
-                                    }
-                                }
-                            }
+                            let stickerPacks = secretChatAnimatedStickerPackReferences(files)
+                            let requestedFileIds = Set(files.map(\.fileId))
                             
                             var requests: [Signal<Api.messages.StickerSet?, NoError>] = []
                             for reference in stickerPacks {
-                                if case let .id(id, accessHash) = reference {
-                                    requests.append(account.network.request(Api.functions.messages.getStickerSet(stickerset: .inputStickerSetID(.init(id: id, accessHash: accessHash)), hash: 0))
-                                    |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
-                                        return .single(nil)
-                                    })
-                                }
+                                requests.append(account.network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet, hash: 0))
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
+                                    return .single(nil)
+                                })
                             }
                             if requests.isEmpty {
                                 return .complete()
@@ -1241,9 +1232,9 @@ public final class AccountViewTracker {
                                         case let .stickerSet(stickerSetData)?:
                                             let documents = stickerSetData.documents
                                             for document in documents {
-                                                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
+                                                if let parsedFile = telegramMediaFileFromApiDocument(document, altDocuments: []), let file = validatedSecretChatAnimatedSticker(parsedFile, requestedFileIds: requestedFileIds) {
                                                     if transaction.getMedia(file.fileId) != nil {
-                                                        let _ = transaction.updateMedia(file.fileId, update: file)
+                                                        updateMessageMedia(transaction: transaction, id: file.fileId, media: file)
                                                     }
                                                 }
                                             }
