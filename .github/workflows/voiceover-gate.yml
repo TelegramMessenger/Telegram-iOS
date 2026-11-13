@@ -76,7 +76,7 @@ jobs:
           find bazel-testlogs -name "*.xcresult" -exec cp -R {} voiceover-test-results/ \; || true
       - name: Upload VoiceOver performance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: voiceover-xcresult
           path: voiceover-test-results
