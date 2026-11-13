@@ -326,6 +326,10 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
             updated = TelegramUser.merge(lhs: previous, rhs: updatedUser)
         }
         
+        if let updatedUser = updated as? TelegramUser, isSupportAccountPhone(updatedUser.phone), updatedUser.id == (transaction.getState() as? AuthorizedAccountState)?.peerId {
+            updated = supportUserWithPremiumFromStatus(transaction: transaction, user: updatedUser)
+        }
+        
         if let updatedChannel = updated as? TelegramChannel {
             var wasMember = false
             var wasHidden: Bool?
