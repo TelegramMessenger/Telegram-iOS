@@ -1200,6 +1200,9 @@ public extension TelegramEngine {
                         overrideChatTimestamp = mediaDraftState.timestamp
                     }
                 }
+                if supportKeepsDraftLocal(transaction: transaction, accountPeerId: self.account.peerId, threadId: threadId) {
+                    overrideChatTimestamp = nil
+                }
 
                 let storedState = StoredPeerChatInterfaceState(
                     overrideChatTimestamp: overrideChatTimestamp,

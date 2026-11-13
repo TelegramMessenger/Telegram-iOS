@@ -88,6 +88,9 @@ func _internal_synchronizeableChatInputState(accountPeerId: PeerId, peerId: Peer
 // hole-fill never clobbers a newer local edit. Only non-empty `.draftMessage` drafts are passed in, so a
 // fetch never clears a draft (clearing stays with the real-time updateDraftMessage path).
 func _internal_applyFetchedChatInputStates(transaction: Transaction, accountPeerId: PeerId, inputStates: [(PeerId, Api.DraftMessage)]) {
+    if supportKeepsDraftLocal(transaction: transaction, accountPeerId: accountPeerId, threadId: nil) {
+        return
+    }
     for (peerId, apiDraft) in inputStates {
         guard let parsed = _internal_synchronizeableChatInputState(accountPeerId: accountPeerId, peerId: peerId, apiDraft: apiDraft) else {
             continue
