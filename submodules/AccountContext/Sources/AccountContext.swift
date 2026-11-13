@@ -1970,11 +1970,34 @@ public extension AccountContext {
     var isRichTextUnlocked: Bool {
         return self.isPremium || self.supportContext != nil
     }
+    
     // Whether stars show on peers. A support account sees them even where Premium can't be bought; its own star is decided by showsPremiumStar.
     var premiumBadgesShown: Bool {
         return supportPremiumBadgesShown(isSupport: self.supportContext != nil, isPremiumDisabled: PremiumConfiguration.with(appConfiguration: self.currentAppConfiguration.with { $0 }).isPremiumDisabled)
     }
     
+    // Auto-download for this account. A support account's own switch overrides the shared settings, which stay as stored.
+    var accountAutomaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> {
+        return accountAutomaticMediaDownloadSettingsSignal(sharedContext: self.sharedContext, supportContext: self.supportContext)
+    }
+    
+    var currentAccountAutomaticMediaDownloadSettings: MediaAutoDownloadSettings {
+        let settings = self.sharedContext.currentAutomaticMediaDownloadSettings
+        if let supportContext = self.supportContext, !supportContext.currentAutomaticMediaDownload {
+            return settings.withAutomaticDownloadDisabled()
+        }
+        return settings
+    }
+}
+
+public func accountAutomaticMediaDownloadSettingsSignal(sharedContext: SharedAccountContext, supportContext: SupportContext?) -> Signal<MediaAutoDownloadSettings, NoError> {
+    guard let supportContext else {
+        return sharedContext.automaticMediaDownloadSettings
+    }
+    return combineLatest(sharedContext.automaticMediaDownloadSettings, supportContext.automaticMediaDownload)
+    |> map { settings, isEnabled -> MediaAutoDownloadSettings in
+        return isEnabled ? settings : settings.withAutomaticDownloadDisabled()
+    }
 }
 
 public struct AntiSpamBotConfiguration {

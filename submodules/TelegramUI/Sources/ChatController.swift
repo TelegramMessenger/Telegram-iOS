@@ -760,7 +760,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
         }
         self.presentationData = presentationData
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        self.automaticMediaDownloadSettings = context.currentAccountAutomaticMediaDownloadSettings
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
@@ -7076,7 +7076,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        self.automaticMediaDownloadSettingsDisposable = (context.sharedContext.automaticMediaDownloadSettings
+        self.automaticMediaDownloadSettingsDisposable = (context.accountAutomaticMediaDownloadSettings
         |> deliverOnMainQueue).startStrict(next: { [weak self] downloadSettings in
             if let strongSelf = self, strongSelf.automaticMediaDownloadSettings != downloadSettings {
                 strongSelf.automaticMediaDownloadSettings = downloadSettings

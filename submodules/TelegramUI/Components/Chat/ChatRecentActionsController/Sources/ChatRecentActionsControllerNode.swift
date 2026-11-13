@@ -282,7 +282,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.presentController = presentController
         self.getNavigationController = getNavigationController
         
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        self.automaticMediaDownloadSettings = context.currentAccountAutomaticMediaDownloadSettings
         
         self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true)
         self.backgroundNode.isUserInteractionEnabled = false

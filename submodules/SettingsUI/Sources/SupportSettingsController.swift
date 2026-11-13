@@ -86,6 +86,8 @@ private final class SupportSettingsControllerArguments {
 
 public enum SupportSettingsEntryTag: ItemListItemTag, Equatable {
     case sendSilently
+    case automaticMediaDownload
+    case inAppNotifications
     case period
     case loadMore
 
@@ -104,6 +106,7 @@ private enum SupportSettingsSection: Int32 {
     case swipe
     case order
     case received
+    case quiet
     case tags
     case beside
     case period
@@ -125,6 +128,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case fixChatsOrderInfo
         case hideChatsWithoutIncoming
         case hideChatsWithoutIncomingInfo
+        case automaticMediaDownload
+        case inAppNotifications
+        case quietInfo
         case trailingTags
         case collapseMiddleTags
         case trailingTagsInfo
@@ -157,6 +163,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case fixChatsOrderInfo(String)
     case hideChatsWithoutIncoming(String, Bool)
     case hideChatsWithoutIncomingInfo(String)
+    case automaticMediaDownload(String, Bool)
+    case inAppNotifications(String, Bool)
+    case quietInfo(String)
     case trailingTags(String, Bool)
     case collapseMiddleTags(String, Bool)
     case trailingTagsInfo(String)
@@ -189,6 +198,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.order.rawValue
         case .hideChatsWithoutIncoming, .hideChatsWithoutIncomingInfo:
             return SupportSettingsSection.received.rawValue
+        case .automaticMediaDownload, .inAppNotifications, .quietInfo:
+            return SupportSettingsSection.quiet.rawValue
         case .trailingTags, .collapseMiddleTags, .trailingTagsInfo:
             return SupportSettingsSection.tags.rawValue
         case .besideHeader, .beside, .besideInfo:
@@ -228,6 +239,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .hideChatsWithoutIncoming
         case .hideChatsWithoutIncomingInfo:
             return .hideChatsWithoutIncomingInfo
+        case .automaticMediaDownload:
+            return .automaticMediaDownload
+        case .inAppNotifications:
+            return .inAppNotifications
+        case .quietInfo:
+            return .quietInfo
         case .trailingTags:
             return .trailingTags
         case .collapseMiddleTags:
@@ -293,6 +310,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 11
         case .hideChatsWithoutIncomingInfo:
             return 12
+        case .automaticMediaDownload:
+            return 13
+        case .inAppNotifications:
+            return 15
+        case .quietInfo:
+            return 16
         case .trailingTags:
             return 17
         case .collapseMiddleTags:
@@ -391,6 +414,22 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .automaticMediaDownload(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.automaticMediaDownload = value
+                    return settings
+                }
+            }, tag: SupportSettingsEntryTag.automaticMediaDownload)
+        case let .inAppNotifications(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.inAppNotifications = value
+                    return settings
+                }
+            }, tag: SupportSettingsEntryTag.inAppNotifications)
         case let .trailingTags(title, value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateSettings { settings in
@@ -425,7 +464,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .hideChatsWithoutIncomingInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .hideChatsWithoutIncomingInfo(text), let .quietInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -508,6 +547,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.hideChatsWithoutIncoming(strings.Support_HideOutgoingOnly_Title, settings.hideChatsWithoutIncomingMessages))
     entries.append(.hideChatsWithoutIncomingInfo(strings.Support_HideOutgoingOnly_Info))
+    entries.append(.automaticMediaDownload(strings.Support_Quiet_AutoDownload, settings.automaticMediaDownload))
+    entries.append(.inAppNotifications(strings.Support_Quiet_InAppNotifications, settings.inAppNotifications))
+    entries.append(.quietInfo(strings.Support_Quiet_Info))
 
     entries.append(.trailingTags(strings.Support_Tags_Show, settings.trailingTags))
     if settings.trailingTags {

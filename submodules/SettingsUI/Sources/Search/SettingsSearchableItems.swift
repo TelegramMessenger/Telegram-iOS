@@ -1991,37 +1991,43 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
             present: { context, _, present in
                 present(.push, reactionNotificationSettingsController(context: context, focusOnItemTag: .sound))
             }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-sounds",
-            title: strings.Notifications_InAppNotificationsSounds,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsSound),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppSounds)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-vibrate",
-            title: strings.Notifications_InAppNotificationsVibrate,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsVibrate),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppVibrate)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "notifications/in-app-preview",
-            title: strings.Notifications_InAppNotificationsPreview,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsPreview),
-            icon: icon,
-            breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
-            present: { context, _, present in
-                presentNotificationSettings(context, present, .inAppPreviews)
-            }
-        ),
+        )
+    ]
+    if context.supportContext == nil {
+        items.append(contentsOf: [
+            SettingsSearchableItem(
+                id: "notifications/in-app-sounds",
+                title: strings.Notifications_InAppNotificationsSounds,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsSound),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppSounds)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "notifications/in-app-vibrate",
+                title: strings.Notifications_InAppNotificationsVibrate,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsVibrate),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppVibrate)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "notifications/in-app-preview",
+                title: strings.Notifications_InAppNotificationsPreview,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_InAppNotificationsPreview),
+                icon: icon,
+                breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized],
+                present: { context, _, present in
+                    presentNotificationSettings(context, present, .inAppPreviews)
+                }
+            )
+        ])
+    }
+    items.append(contentsOf: [
         SettingsSearchableItem(
             id: "notifications/lock-screen-names",
             title: strings.Notifications_DisplayNamesOnLockScreen,
@@ -2052,7 +2058,7 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
                 presentNotificationSettings(context, present, .unreadCountCategory)
             }
         )
-    ]
+    ])
     if context.supportContext == nil {
         items.append(contentsOf: [
             SettingsSearchableItem(
@@ -3267,7 +3273,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType, focusOnItemTag: itemTag))
     }
     
-    return [
+    var items: [SettingsSearchableItem] = [
         SettingsSearchableItem(
             id: "data",
             title: strings.Settings_ChatSettings,
@@ -3359,145 +3365,151 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             present: { context, _, present in
                 presentDataUsage(context, present, .reset)
             }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile",
-            title: strings.ChatSettings_AutoDownloadUsingCellular,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, nil)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/enable",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .master)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/usage",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .usage)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/photos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .photos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/stories",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .stories)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/videos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .videos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/mobile/files",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .cellular, .files)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi",
-            title: strings.ChatSettings_AutoDownloadUsingWiFi,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingWifi),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, nil)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/enable",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .master)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/usage",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .usage)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/photos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .photos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/stories",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .stories)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/videos",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .videos)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/wifi/files",
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
-            isVisible: false,
-            present: { context, _, present in
-                presentAutodownloadMediaSettings(context, present, .wifi, .files)
-            }
-        ),
-        SettingsSearchableItem(
-            id: "data/auto-download/reset",
-            title: strings.ChatSettings_AutoDownloadReset,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset),
-            icon: icon,
-            breadcrumbs: [strings.Settings_ChatSettings],
-            present: { context, _, present in
-                presentDataSettings(context, present, .automaticDownloadReset)
-            }
-        ),
+        )
+    ]
+    if context.supportContext == nil {
+        items.append(contentsOf: [
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile",
+                title: strings.ChatSettings_AutoDownloadUsingCellular,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, nil)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/enable",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .master)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/usage",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .usage)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/photos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .photos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/stories",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .stories)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/videos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .videos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/mobile/files",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .cellular, .files)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi",
+                title: strings.ChatSettings_AutoDownloadUsingWiFi,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingWifi),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized],
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, nil)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/enable",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .master)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/usage",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .usage)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/photos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .photos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/stories",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .stories)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/videos",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .videos)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/wifi/files",
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle.capitalized, strings.ChatSettings_AutoDownloadUsingCellular],
+                isVisible: false,
+                present: { context, _, present in
+                    presentAutodownloadMediaSettings(context, present, .wifi, .files)
+                }
+            ),
+            SettingsSearchableItem(
+                id: "data/auto-download/reset",
+                title: strings.ChatSettings_AutoDownloadReset,
+                alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset),
+                icon: icon,
+                breadcrumbs: [strings.Settings_ChatSettings],
+                present: { context, _, present in
+                    presentDataSettings(context, present, .automaticDownloadReset)
+                }
+            )
+        ])
+    }
+    items.append(contentsOf: [
         SettingsSearchableItem(
             id: "data/save-to-photos/chats",
             title: strings.Notifications_PrivateChats,
@@ -3697,7 +3709,8 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
                 present(.push, intentsSettingsController(context: context, focusOnItemTag: .reset))
             }
         )
-    ]
+    ])
+    return items
 }
 
 private func proxySearchableItems(context: AccountContext, servers: [ProxyServerSettings]) -> [SettingsSearchableItem] {
@@ -4320,6 +4333,8 @@ private func supportSearchableItems(context: AccountContext) -> [SettingsSearcha
         item("support/silent", strings.Support_Settings_SendSilently, synonyms(strings.Support_Settings_SendSilentlySynonyms), [title], .sendSilently),
         item("support/chats-period", strings.Support_ChatLoading_SearchPeriod, synonyms(strings.Support_ChatLoading_SearchPeriodSynonyms), [title], .period),
         item("support/load-more", strings.Support_ChatLoading_SearchLoadMore, synonyms(strings.Support_ChatLoading_SearchLoadMoreSynonyms), [title], .loadMore),
+        item("support/auto-download", strings.Support_Quiet_AutoDownload, synonyms(strings.Support_Quiet_AutoDownloadSynonyms), [title], .automaticMediaDownload),
+        item("support/in-app-notifications", strings.Support_Quiet_InAppNotifications, synonyms(strings.Support_Quiet_InAppNotificationsSynonyms), [title], .inAppNotifications)
     ]
 }
 

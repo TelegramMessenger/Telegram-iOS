@@ -17367,6 +17367,12 @@ Error: %8$@";
 "Support.HideOutgoingOnly.Title" = "Hide outgoing-only chats";
 "Support.HideOutgoingOnly.Info" = "The chat list leaves out one-to-one chats where the user has never written to you, such as those that only have messages from support. A pinned chat stays, and every chat can still be found in search.";
 
+"Support.Quiet.AutoDownload" = "Auto-download media";
+"Support.Quiet.AutoDownloadSynonyms" = "auto\ndownload\nmedia";
+"Support.Quiet.InAppNotifications" = "In-app notifications";
+"Support.Quiet.InAppNotificationsSynonyms" = "notifications\nbanner\nsound\nvibrate";
+"Support.Quiet.Info" = "These apply to this account only. With auto-download off, media loads when you tap it. With profile photos hidden, everyone shows their initials and no photos are downloaded. With notifications off, new messages play no sound and show no banner while the app is open.";
+
 "Support.Tags.Show" = "Show tags under messages";
 "Support.Tags.Collapse" = "Collapse tags";
 "Support.Tags.Info" = "Hashtags at the end of an incoming message show as tags under it. With collapsing on, middle messages keep them in one row you can expand, while the first message, the first new message and the last message show them all.";

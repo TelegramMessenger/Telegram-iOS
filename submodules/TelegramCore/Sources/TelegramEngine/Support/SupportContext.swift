@@ -35,6 +35,9 @@ public final class SupportContext {
     private let chatListLoadTillPromise = ValuePromise<Int32>(ignoreRepeated: true)
     private var settingsDisposable: Disposable?
     private var quietSettingsDisposable: Disposable?
+    private let automaticMediaDownloadValue = Atomic<Bool>(value: false)
+    private let automaticMediaDownloadPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let inAppNotificationsValue = Atomic<Bool>(value: false)
     private let chatListBesideValue = Atomic<SupportChatListBeside>(value: .off)
     private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
@@ -127,6 +130,18 @@ public final class SupportContext {
         return self.chatListLoadTillPromise.get()
     }
     
+    public var automaticMediaDownload: Signal<Bool, NoError> {
+        return self.automaticMediaDownloadPromise.get()
+    }
+    
+    public var currentAutomaticMediaDownload: Bool {
+        return self.automaticMediaDownloadValue.with { $0 }
+    }
+    
+    public var currentInAppNotifications: Bool {
+        return self.inAppNotificationsValue.with { $0 }
+    }
+    
     public var chatListBeside: Signal<SupportChatListBeside, NoError> {
         return self.chatListBesidePromise.get()
     }
@@ -193,12 +208,15 @@ public final class SupportContext {
             guard let self else {
                 return
             }
+            let _ = self.automaticMediaDownloadValue.swap(settings.automaticMediaDownload)
+            let _ = self.inAppNotificationsValue.swap(settings.inAppNotifications)
             let _ = self.chatListBesideValue.swap(settings.chatListBeside)
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.trailingTagsValue.swap(settings.trailingTags)
             let _ = self.collapseMiddleTagsValue.swap(settings.collapseMiddleTags)
             let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
             self.chatListBesidePromise.set(settings.chatListBeside)
+            self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
             self.hidesChatsWithoutIncomingMessagesPromise.set(settings.hideChatsWithoutIncomingMessages)
         })
     }
