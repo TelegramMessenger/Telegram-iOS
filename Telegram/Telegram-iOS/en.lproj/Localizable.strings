@@ -1809,6 +1809,12 @@
 
 "Watch.Message.ForwardedFrom" = "Forwarded from";
 
+"Watch.Notification.EarlierMessages_0" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_1" = "%@ earlier message";
+"Watch.Notification.EarlierMessages_2" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_3_10" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_any" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_many" = "%@ earlier messages";
 "Watch.Notification.Joined" = "Joined Telegram";
 
 "Watch.MessageView.Title" = "Message";

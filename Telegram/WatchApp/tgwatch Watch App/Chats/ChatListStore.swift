@@ -129,6 +129,12 @@ final class ChatListStore {
         reproject()
     }
 
+    /// The avatar of any chat TDLib has sent, in the current folder's rows or not (a notification's
+    /// chat, `MessageNotificationController`). Nil for a chat not loaded yet.
+    func avatar(forChatId id: Int64) -> AvatarVisual? {
+        chatCache[id].map { avatarVisual(for: $0, fileLocals: files, selfUserId: selfUserId) }
+    }
+
     func requestFileDownload(fileId: Int, priority: Int = 1) {
         trackedFileIds.insert(fileId)
         logger.info("requestFileDownload fileId=\(fileId, privacy: .public) priority=\(priority, privacy: .public)")

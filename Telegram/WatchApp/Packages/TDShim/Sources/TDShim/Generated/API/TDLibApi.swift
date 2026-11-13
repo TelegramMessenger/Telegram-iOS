@@ -461,6 +461,69 @@ public class TDLibApi {
         return try await self.run(query: query)
     }
 
+    /// Returns information about a message. Returns a 404 error if the message doesn't exist
+    /// - Parameter chatId: Identifier of the chat the message belongs to
+    /// - Parameter messageId: Identifier of the message to get
+    /// - Returns: Information about a message. Returns a 404 error if the message doesn't exist
+    public final func getMessage(
+        chatId: Int64?,
+        messageId: Int64?,
+        completion: @escaping (Result<Message, Swift.Error>) -> Void
+    ) throws {
+        let query = GetMessage(
+            chatId: chatId,
+            messageId: messageId
+        )
+        self.run(query: query, completion: completion)
+    }
+
+    /// Returns information about a message. Returns a 404 error if the message doesn't exist
+    /// - Parameter chatId: Identifier of the chat the message belongs to
+    /// - Parameter messageId: Identifier of the message to get
+    /// - Returns: Information about a message. Returns a 404 error if the message doesn't exist
+    @available(iOS 13.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
+    public final func getMessage(
+        chatId: Int64?,
+        messageId: Int64?
+    ) async throws -> Message {
+        let query = GetMessage(
+            chatId: chatId,
+            messageId: messageId
+        )
+        return try await self.run(query: query)
+    }
+
+    /// Informs TDLib that the message content has been opened (e.g., the user has opened a photo, video, document, location or venue, or has listened to an audio file or voice note message). An updateMessageContentOpened update will be generated if something has changed
+    /// - Parameter chatId: Chat identifier of the message
+    /// - Parameter messageId: Identifier of the message with the opened content
+    public final func openMessageContent(
+        chatId: Int64?,
+        messageId: Int64?,
+        completion: @escaping (Result<Ok, Swift.Error>) -> Void
+    ) throws {
+        let query = OpenMessageContent(
+            chatId: chatId,
+            messageId: messageId
+        )
+        self.run(query: query, completion: completion)
+    }
+
+    /// Informs TDLib that the message content has been opened (e.g., the user has opened a photo, video, document, location or venue, or has listened to an audio file or voice note message). An updateMessageContentOpened update will be generated if something has changed
+    /// - Parameter chatId: Chat identifier of the message
+    /// - Parameter messageId: Identifier of the message with the opened content
+    @available(iOS 13.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
+    @discardableResult
+    public final func openMessageContent(
+        chatId: Int64?,
+        messageId: Int64?
+    ) async throws -> Ok {
+        let query = OpenMessageContent(
+            chatId: chatId,
+            messageId: messageId
+        )
+        return try await self.run(query: query)
+    }
+
     /// Informs TDLib that messages are being viewed by the user. Sponsored messages must be marked as viewed only when the entire text of the message is shown on the screen (excluding the button). Many useful activities depend on whether the messages are currently being viewed or not (e.g., marking messages as read, incrementing a view counter, updating a view counter, removing deleted messages in supergroups and channels)
     /// - Parameter chatId: Chat identifier
     /// - Parameter forceRead: Pass true to mark as read the specified messages even if the chat is closed

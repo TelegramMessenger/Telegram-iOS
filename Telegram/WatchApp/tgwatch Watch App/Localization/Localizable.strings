@@ -139,6 +139,12 @@
 "Watch.Conversation.Reply" = "Reply";
 "Watch.Message.Poll" = "Poll";
 "Watch.Message.Unsupported" = "Unsupported Message";
+"Watch.Notification.EarlierMessages_0" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_1" = "%@ earlier message";
+"Watch.Notification.EarlierMessages_2" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_3_10" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_any" = "%@ earlier messages";
+"Watch.Notification.EarlierMessages_many" = "%@ earlier messages";
 "Watch.Notification.Joined" = "Joined Telegram";
 "Watch.Stickers.StickerPacks" = "Sticker Sets";
 "Weekday.Today" = "Today";
@@ -321,3 +327,13 @@
 "Watch.Voice.MicrophoneFailed" = "Couldn't start microphone";
 "Watch.Voice.SaveFailed" = "Couldn't save recording";
 "Watch.Voice.TapToRecord" = "Tap to record";
+
+/* Reply presets offered by notification Reply (ReplyPresets.swift); existing iOS keys. */
+"Watch.Suggestion.OK" = "OK";
+"Watch.Suggestion.Thanks" = "Thanks!";
+"Watch.Suggestion.WhatsUp" = "What's up?";
+"Watch.Suggestion.TalkLater" = "Talk later?";
+"Watch.Suggestion.CantTalk" = "Can't talk now...";
+"Watch.Suggestion.HoldOn" = "Hold on a sec...";
+"Watch.Suggestion.BRB" = "BRB";
+"Watch.Suggestion.OnMyWay" = "I'm on my way.";
