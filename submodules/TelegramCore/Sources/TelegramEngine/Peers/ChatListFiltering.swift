@@ -870,7 +870,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
     }
 }
 
-private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Api.InputPeer]) -> Signal<Never, NoError> {
+func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Api.InputPeer]) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> [Api.InputDialogPeer] in
         return peers.map { peer -> Api.InputDialogPeer in
             if case let .inputPeerChannel(inputPeerChannelData) = peer {
