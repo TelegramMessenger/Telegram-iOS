@@ -443,6 +443,9 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)
+        self.assertIn("runs-on: xcode-27", contents)
+        self.assertIn('/Applications/Xcode_"${XCODE_VERSION}"*.app', contents)
+        self.assertIn("Available Xcode applications:", contents)
         self.assertIn("submodules: false", contents)
         self.assertIn(
             'url."https://github.com/TelegramMessenger/tgcalls.git".insteadOf "https://github.com/Kostenkov-2021/tgcalls.git"',

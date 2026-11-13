@@ -33,7 +33,7 @@ jobs:
         run: python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
 
   simulator-tree-audit:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +46,20 @@ jobs:
       - name: Select repository Xcode version
         run: |
           XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
-          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          XCODE_PATH=""
+          for candidate in /Applications/Xcode_"${XCODE_VERSION}"*.app; do
+            if [ -d "$candidate/Contents/Developer" ]; then
+              XCODE_PATH="$candidate/Contents/Developer"
+              break
+            fi
+          done
+          if [ -z "$XCODE_PATH" ]; then
+            echo "Xcode ${XCODE_VERSION} is not installed on this runner. Available Xcode applications:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
       - name: Run iOS accessibility tree audit
         run: |
           python3 build-system/Make/Make.py \
