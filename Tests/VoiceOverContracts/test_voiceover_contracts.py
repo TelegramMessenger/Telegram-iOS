@@ -343,6 +343,7 @@ class GiftsContractTests(unittest.TestCase):
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, selector)
+        self.assertEqual(selector.count("override func accessibilityActivate() -> Bool"), 1)
 
         collection_tab = source(
             "submodules/TelegramUI/Components/PeerInfo/CollectionTabItemComponent/Sources/CollectionTabItemComponent.swift"

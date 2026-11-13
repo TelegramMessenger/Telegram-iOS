@@ -400,14 +400,6 @@ public final class TabSelectorComponent: Component {
             }
         }
 
-        override func accessibilityActivate() -> Bool {
-            guard self.isUserInteractionEnabled else {
-                return false
-            }
-            self.action()
-            return true
-        }
-
         private func firstAccessibilityLabel(in view: UIView) -> String? {
             if let label = view.accessibilityLabel, !label.isEmpty {
                 return label
