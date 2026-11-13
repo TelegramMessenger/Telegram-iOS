@@ -442,7 +442,7 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("pull_request:", contents)
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--xcodeManagedCodesigning", contents)
-        self.assertIn("--disableProvisioningProfiles", contents)
+        self.assertNotIn("--disableProvisioningProfiles", contents)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)
         self.assertIn("runs-on: xcode-27", contents)

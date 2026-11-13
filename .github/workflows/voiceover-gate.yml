@@ -67,7 +67,6 @@ jobs:
             test \
             --configurationPath=build-system/appstore-configuration.json \
             --xcodeManagedCodesigning \
-            --disableProvisioningProfiles \
             --target=Telegram:iOSAppUITestSuite
       - name: Collect XCTest result bundles
         if: always()
