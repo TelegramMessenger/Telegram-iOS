@@ -5194,7 +5194,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let composeContent = effectivePresentationInterfaceState.interfaceState.composeInputState.content
             let isNewMessage = effectivePresentationInterfaceState.interfaceState.editMessage == nil
             let requiresPremiumRichContent = isNewMessage
-                && !self.context.isPremium
+                && !self.context.isRichTextUnlocked
                 && !composeContent.isEmpty
                 && !composeContent.isEntityExpressible(options: [])
             let peerSpecificEmojiPack = (self.controller?.contentData?.state.peerView?.cachedData as? CachedChannelData)?.emojiPack

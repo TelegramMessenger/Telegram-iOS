@@ -1962,6 +1962,13 @@ public protocol AccountContext: AnyObject {
     func getAppConfigValue(_ key: String) -> Any?
 }
 
+public extension AccountContext {
+    // Support accounts may send rich text without Premium.
+    var isRichTextUnlocked: Bool {
+        return self.isPremium || self.supportContext != nil
+    }
+}
+
 public struct AntiSpamBotConfiguration {
     public static var defaultValue: AntiSpamBotConfiguration {
         return AntiSpamBotConfiguration(antiSpamBotId: nil, minimumGroupParticipants: 100)
