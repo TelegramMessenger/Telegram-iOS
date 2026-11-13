@@ -19,6 +19,32 @@ func supportSearchSectionComesFirst(_ lhs: ChatListSearchEntry.MessageSection, _
     return rhsIsPublicPost
 }
 
+private let supportRecentHashtagNarrowedLimit = 5
+
+func supportSearchedHashtag(_ text: String) -> String? {
+    let hashtag = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard hashtag.count > 1, hashtag.hasPrefix("#"), !hashtag.contains(where: { $0.isWhitespace }) else {
+        return nil
+    }
+    return hashtag
+}
+
+func supportRecentHashtags(_ hashtags: [String], matching query: String) -> [String] {
+    let prefix = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard prefix.hasPrefix("#"), !prefix.contains(where: { $0.isWhitespace }) else {
+        return []
+    }
+    let candidates = hashtags.filter { $0.hasPrefix("#") }
+    if prefix == "#" {
+        return candidates
+    }
+    let matches = candidates.filter { hashtag in
+        let value = hashtag.lowercased()
+        return value.hasPrefix(prefix) && value != prefix
+    }
+    return Array(matches.prefix(supportRecentHashtagNarrowedLimit))
+}
+
 func supportOneRowPerChat<Row>(_ rows: [Row], peerId: (Row) -> EnginePeer.Id, isRemoved: (Row) -> Bool, shownPeerIds: inout Set<EnginePeer.Id>) -> [Row] {
     var result: [Row] = []
     for row in rows where !isRemoved(row) {

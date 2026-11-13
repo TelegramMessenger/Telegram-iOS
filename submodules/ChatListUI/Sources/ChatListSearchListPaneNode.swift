@@ -426,6 +426,7 @@ public enum ChatListSearchEntryStableId: Hashable {
     case messagePlaceholder(Int32)
     case emptyMessagesFooter
     case addContact
+    case supportRecentHashtag(String)
 }
 
 public enum ChatListSearchSectionExpandType {
@@ -491,9 +492,12 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
     case messagePlaceholder(Int32, ChatListPresentationData, TelegramSearchPeersScope)
     case emptyMessagesFooter(ChatListPresentationData, TelegramSearchPeersScope, String?)
     case addContact(String, PresentationTheme, PresentationStrings)
+    case supportRecentHashtag(String, Int, PresentationTheme, PresentationStrings)
 
     public var stableId: ChatListSearchEntryStableId {
         switch self {
+        case let .supportRecentHashtag(hashtag, _, _, _):
+            return .supportRecentHashtag(hashtag)
         case let .topic(_, threadInfo, _, _, _, _):
             return .threadId(threadInfo.id)
         case let .recentlySearchedPeer(peer, _, _, _, _, _, _, _, _, _):
@@ -517,6 +521,12 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
 
     public static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
+        case let .supportRecentHashtag(lhsHashtag, lhsIndex, lhsTheme, lhsStrings):
+            if case let .supportRecentHashtag(rhsHashtag, rhsIndex, rhsTheme, rhsStrings) = rhs, lhsHashtag == rhsHashtag, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                return true
+            } else {
+                return false
+            }
         case let .topic(lhsPeer, lhsThreadInfo, lhsIndex, lhsTheme, lhsStrings, lhsExpandType):
             if case let .topic(rhsPeer, rhsThreadInfo, rhsIndex, rhsTheme, rhsStrings, rhsExpandType) = rhs, lhsPeer == rhsPeer, lhsThreadInfo == rhsThreadInfo, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpandType == rhsExpandType {
                 return true
@@ -657,14 +667,24 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
 
     public static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
+        case let .supportRecentHashtag(_, lhsIndex, _, _):
+            if case let .supportRecentHashtag(_, rhsIndex, _, _) = rhs {
+                return lhsIndex < rhsIndex
+            } else {
+                return true
+            }
         case let .topic(_, _, lhsIndex, _, _, _):
-            if case let .topic(_, _, rhsIndex, _, _, _) = rhs {
+            if case .supportRecentHashtag = rhs {
+                return false
+            } else if case let .topic(_, _, rhsIndex, _, _, _) = rhs {
                 return lhsIndex <= rhsIndex
             } else {
                 return true
             }
         case let .recentlySearchedPeer(_, _, _, lhsIndex, _, _, _, _, _, _):
-            if case .topic = rhs {
+            if case .supportRecentHashtag = rhs {
+                return false
+            } else if case .topic = rhs {
                 return false
             } else if case let .recentlySearchedPeer(_, _, _, rhsIndex, _, _, _, _, _, _) = rhs {
                 return lhsIndex <= rhsIndex
@@ -673,7 +693,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             }
         case let .localPeer(_, _, _, lhsIndex, _, _, _, _, _, _, _, _):
             switch rhs {
-            case .topic, .recentlySearchedPeer:
+            case .supportRecentHashtag, .topic, .recentlySearchedPeer:
                 return false
             case let .localPeer(_, _, _, rhsIndex, _, _, _, _, _, _, _, _):
                 return lhsIndex <= rhsIndex
@@ -682,7 +702,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             }
         case let .adPeer(_, lhsIndex, _, _, _, _, _, _):
             switch rhs {
-            case .topic, .recentlySearchedPeer, .localPeer:
+            case .supportRecentHashtag, .topic, .recentlySearchedPeer, .localPeer:
                 return false
             case let .adPeer(_, rhsIndex, _, _, _, _, _, _):
                 return lhsIndex <= rhsIndex
@@ -691,7 +711,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             }
         case let .globalPeer(_, _, lhsIndex, _, _, _, _, _, _, _, _):
             switch rhs {
-            case .topic, .recentlySearchedPeer, .localPeer, .adPeer:
+            case .supportRecentHashtag, .topic, .recentlySearchedPeer, .localPeer, .adPeer:
                 return false
             case let .globalPeer(_, _, rhsIndex, _, _, _, _, _, _, _, _):
                 return lhsIndex <= rhsIndex
@@ -758,9 +778,16 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void,
         openPublicPosts: @escaping () -> Void,
         openMessagesFilter: @escaping (ASDisplayNode) -> Void,
-        switchMessagesFilter: @escaping (TelegramSearchPeersScope) -> Void
+        switchMessagesFilter: @escaping (TelegramSearchPeersScope) -> Void,
+        supportSearchHashtag: @escaping (String) -> Void
     ) -> ListViewItem {
         switch self {
+            case let .supportRecentHashtag(hashtag, _, theme, strings):
+                return HashtagSearchRecentQueryItem(account: context.account, theme: theme, strings: strings, query: hashtag, clear: false, tapped: { hashtag in
+                    supportSearchHashtag(hashtag)
+                }, deleted: { hashtag in
+                    let _ = removeRecentHashtagSearchQuery(engine: context.engine, string: hashtag).startStandalone()
+                })
             case let .topic(peer, threadInfo, _, theme, strings, expandType):
                 let actionTitle: String?
                 switch expandType {
@@ -1435,13 +1462,14 @@ public func chatListSearchContainerPreparedTransition(
     openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void,
     openPublicPosts: @escaping () -> Void,
     openMessagesFilter: @escaping (ASDisplayNode) -> Void,
-    switchMessagesFilter: @escaping (TelegramSearchPeersScope) -> Void
+    switchMessagesFilter: @escaping (TelegramSearchPeersScope) -> Void,
+    supportSearchHashtag: @escaping (String) -> Void = { _ in }
 ) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
 
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter, supportSearchHashtag: supportSearchHashtag), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter, supportSearchHashtag: supportSearchHashtag), directionHint: nil) }
 
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, isLoading: isLoading, query: searchQuery, approvedGlobalPostQueryState: approvedGlobalPostQueryState, globalSearchStateValue: globalSearchStateValue, animated: animated)
 }
@@ -3116,6 +3144,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             }
 
+            let supportRecentHashtagRows: Signal<[String], NoError>
+            if supportSearchApplies, let query {
+                supportRecentHashtagRows = hashtagSearchRecentQueries(engine: context.engine)
+                |> map { hashtags -> [String] in
+                    return supportRecentHashtags(hashtags, matching: query)
+                }
+                |> distinctUntilChanged
+            } else {
+                supportRecentHashtagRows = .single([])
+            }
+
             return combineLatest(
                 accountPeer,
                 foundLocalPeers,
@@ -3128,12 +3167,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 resolvedMessage,
                 fixedRecentlySearchedPeers,
                 foundThreads,
-                adsHiddenPromise.get()
+                adsHiddenPromise.get(),
+                supportRecentHashtagRows
             )
-            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, foundPublicMessages, presentationData, searchState, selectionState, resolvedMessage, recentPeers, allAndFoundThreads, adsHidden -> ([ChatListSearchEntry], Bool, String?)? in
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, foundPublicMessages, presentationData, searchState, selectionState, resolvedMessage, recentPeers, allAndFoundThreads, adsHidden, supportRecentHashtagRows -> ([ChatListSearchEntry], Bool, String?)? in
                 let isSearching = foundRemotePeers.3 || foundRemoteMessages.1 || foundPublicMessages.1
                 var entries: [ChatListSearchEntry] = []
                 var index = 0
+
+                for (i, hashtag) in supportRecentHashtagRows.enumerated() {
+                    entries.append(.supportRecentHashtag(hashtag, i, presentationData.theme, presentationData.strings))
+                }
 
                 for thread in allAndFoundThreads {
                     if let peer = thread.renderedPeer.peer, let threadData = thread.threadData, case let .forum(_, _, id, _, _) = thread.index {
@@ -4225,6 +4269,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         return
                     }
                     strongSelf.searchScopePromise.set(.everywhere)
+                }, supportSearchHashtag: { hashtag in
+                    self?.interaction.supportSearchHashtag(hashtag)
                 })
                 strongSelf.currentEntries = newEntries
                 if strongSelf.key == .downloads {
