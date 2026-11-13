@@ -926,7 +926,7 @@ func openResolvedUrlImpl(
                         })]), nil)
                     }
                 })
-            } else {
+            } else if context.supportContext == nil {
                 if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                     rootController.popToRoot(animated: true)
                     rootController.openContacts()
@@ -988,6 +988,9 @@ func openResolvedUrlImpl(
                     completed: {}
                 )
             case .group:
+                guard context.supportContext == nil else {
+                    return
+                }
                 let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .groupCreation(isCall: false), onlyWriteable: true))
                 navigationController?.pushViewController(controller)
                 let _ = (controller.result
@@ -1006,6 +1009,9 @@ func openResolvedUrlImpl(
                     navigationController?.pushViewController(createGroup)
                 })
         case .channel:
+            guard context.supportContext == nil else {
+                return
+            }
             let controller = createChannelController(context: context)
             navigationController?.pushViewController(controller)
         default:
@@ -1179,7 +1185,7 @@ func openResolvedUrlImpl(
                 }
             }
         case let .sendGrams(transfer, tonConnectUrl):
-            guard WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable else {
+            guard context.supportContext == nil, WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable else {
                 present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Wallet_Unavailable, timeout: nil, customUndoText: nil), action: { _ in return false }), nil)
                 return
             }

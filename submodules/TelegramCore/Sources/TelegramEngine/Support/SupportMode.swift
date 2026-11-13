@@ -77,3 +77,12 @@ func supportChatListLoadState(holeTimestamps: [Int32], loadTill: Int32) -> Suppo
 func supportChatListLoadTillAfterLoadMore(current: Int32, holeTimestamp: Int32, period: Int32) -> Int32 {
     return max(min(current, holeTimestamp - period), 0)
 }
+
+func supportShowsServerSuggestion(_ suggestion: ServerProvidedSuggestion) -> Bool {
+    switch suggestion {
+    case .validatePassword, .setupPassword, .setupLoginEmail, .setupLoginEmailBlocking:
+        return true
+    case .validatePhoneNumber, .autoarchivePopular, .newcomerTicks, .upgradePremium, .annualPremium, .restorePremium, .xmasPremiumGift, .setupBirthday, .todayBirthdays, .gracePremium, .starsSubscriptionLowBalance, .setupPhoto, .setupPasskey, .walletFirstIncomingTransfer, .link:
+        return false
+    }
+}

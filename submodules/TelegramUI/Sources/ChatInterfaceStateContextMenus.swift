@@ -1230,6 +1230,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable,
+           context.supportContext == nil,
            let peerAddress = message.media.lazy.compactMap({ media -> String? in
                if let action = media as? TelegramMediaAction, case let .gramTransfer(_, peerAddress, _, _, _) = action.action {
                    return peerAddress

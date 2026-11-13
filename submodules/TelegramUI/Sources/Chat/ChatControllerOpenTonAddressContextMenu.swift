@@ -60,7 +60,7 @@ extension ChatControllerImpl {
             }
 
             var items: [ContextMenuItem] = []
-            if WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable {
+            if WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable, self.context.supportContext == nil {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Wallet_SendMoney, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ton"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, dismiss in
