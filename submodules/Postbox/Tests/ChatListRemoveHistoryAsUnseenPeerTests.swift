@@ -174,4 +174,17 @@ final class ChatListRemoveHistoryAsUnseenPeerTests: XCTestCase {
         }
         XCTAssertEqual(holes, IndexSet())
     }
+
+    func testHistoryInitializedFlagIsReadWithoutSettingUpTheHistory() {
+        self.seedThreeChats()
+        let untouched = MessageHistoryTableFixture.peerId(903)
+        XCTAssertEqual(self.fixture.transaction { $0.isMessageHistoryInitialized(peerId: untouched) }, false)
+        XCTAssertEqual(self.fixture.transaction { $0.isMessageHistoryInitialized(peerId: untouched) }, false)
+        let _ = self.fixture.transaction { $0.getHoles(peerId: self.removedChat, namespace: self.namespace) }
+        XCTAssertEqual(self.fixture.transaction { $0.isMessageHistoryInitialized(peerId: self.removedChat) }, true)
+        self.fixture.transaction { transaction in
+            transaction.removeHistoryAsUnseenPeer(self.removedChat, namespace: self.namespace)
+        }
+        XCTAssertEqual(self.fixture.transaction { $0.isMessageHistoryInitialized(peerId: self.removedChat) }, false)
+    }
 }
