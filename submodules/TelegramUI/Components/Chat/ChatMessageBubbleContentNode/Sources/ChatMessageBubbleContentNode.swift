@@ -370,3 +370,8 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
         return nil
     }
 }
+
+public protocol ChatMessageBubbleTrailingSelectionContent: AnyObject {
+    var trailingSelectionText: String { get }
+    var trailingSelectionTargets: [(range: NSRange, frame: CGRect)] { get }
+}

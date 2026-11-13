@@ -79,6 +79,7 @@ import ChatMessageDisableCopyProtectionBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
 import ChatMessageFactCheckBubbleContentNode
+import ChatMessageTrailingTagsBubbleContentNode
 import ChatMessageTransferBubbleContentNode
 import ChatMessageUnlockMediaNode
 import ChatMessageStarsMediaInfoNode
@@ -460,6 +461,18 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         } else {
             result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
+        }
+    }
+    
+    if item.context.supportContext?.currentTrailingTags == true, !item.associatedData.isSuspiciousPeer, item.controllerInteraction.searchTextHighightState == nil, let textIndex = result.lastIndex(where: { $0.1 == ChatMessageTextBubbleContentNode.self }) {
+        let textEntry = result[textIndex]
+        if textEntry.0.effectivelyIncoming(item.context.account.peerId), let footer = trailingHashtagFooter(text: textEntry.0.text, entities: textEntry.0.textEntitiesAttribute?.entities ?? [], isCaption: !textEntry.0.media.isEmpty) {
+            let tagsEntry: (Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes) = (textEntry.0, ChatMessageTrailingTagsBubbleContentNode.self, textEntry.2, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default))
+            if footer.textEnd == 0 {
+                result[textIndex] = tagsEntry
+            } else {
+                result.insert(tagsEntry, at: textIndex + 1)
+            }
         }
     }
     
@@ -7291,8 +7304,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             break
                         case .openPollResults:
                             break
-                        case .copy:
-                            break
+                        case let .copy(text):
+                            if contentNode is ChatMessageTrailingTagsBubbleContentNode {
+                                return .action(InternalBubbleTapAction.Action({}, actionWithLongTapRecognizer: { _ in
+                                    item.controllerInteraction.copyText(text)
+                                }, contextMenuOnLongPress: false))
+                            }
                         case .largeEmoji:
                             break
                         case .customEmoji:

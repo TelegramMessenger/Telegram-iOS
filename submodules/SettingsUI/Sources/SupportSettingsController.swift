@@ -104,6 +104,7 @@ private enum SupportSettingsSection: Int32 {
     case swipe
     case order
     case received
+    case tags
     case beside
     case period
     case loading
@@ -124,6 +125,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case fixChatsOrderInfo
         case hideChatsWithoutIncoming
         case hideChatsWithoutIncomingInfo
+        case trailingTags
+        case collapseMiddleTags
+        case trailingTagsInfo
         case besideHeader
         case beside(Int32)
         case besideInfo
@@ -153,6 +157,9 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case fixChatsOrderInfo(String)
     case hideChatsWithoutIncoming(String, Bool)
     case hideChatsWithoutIncomingInfo(String)
+    case trailingTags(String, Bool)
+    case collapseMiddleTags(String, Bool)
+    case trailingTagsInfo(String)
     case besideHeader(String)
     case beside(index: Int32, value: SupportChatListBeside, title: String, isSelected: Bool)
     case besideInfo(String)
@@ -182,6 +189,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.order.rawValue
         case .hideChatsWithoutIncoming, .hideChatsWithoutIncomingInfo:
             return SupportSettingsSection.received.rawValue
+        case .trailingTags, .collapseMiddleTags, .trailingTagsInfo:
+            return SupportSettingsSection.tags.rawValue
         case .besideHeader, .beside, .besideInfo:
             return SupportSettingsSection.beside.rawValue
         case .periodHeader, .period, .periodInfo:
@@ -219,6 +228,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .hideChatsWithoutIncoming
         case .hideChatsWithoutIncomingInfo:
             return .hideChatsWithoutIncomingInfo
+        case .trailingTags:
+            return .trailingTags
+        case .collapseMiddleTags:
+            return .collapseMiddleTags
+        case .trailingTagsInfo:
+            return .trailingTagsInfo
         case .besideHeader:
             return .besideHeader
         case let .beside(_, value, _, _):
@@ -278,6 +293,12 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 11
         case .hideChatsWithoutIncomingInfo:
             return 12
+        case .trailingTags:
+            return 17
+        case .collapseMiddleTags:
+            return 18
+        case .trailingTagsInfo:
+            return 19
         case .besideHeader:
             return 20
         case let .beside(index, _, _, _):
@@ -370,6 +391,22 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .trailingTags(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.trailingTags = value
+                    return settings
+                }
+            })
+        case let .collapseMiddleTags(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.collapseMiddleTags = value
+                    return settings
+                }
+            })
         case let .besideHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .beside(_, value, title, isSelected):
@@ -388,7 +425,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .hideChatsWithoutIncomingInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .hideChatsWithoutIncomingInfo(text), let .trailingTagsInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -471,6 +508,12 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.hideChatsWithoutIncoming(strings.Support_HideOutgoingOnly_Title, settings.hideChatsWithoutIncomingMessages))
     entries.append(.hideChatsWithoutIncomingInfo(strings.Support_HideOutgoingOnly_Info))
+
+    entries.append(.trailingTags(strings.Support_Tags_Show, settings.trailingTags))
+    if settings.trailingTags {
+        entries.append(.collapseMiddleTags(strings.Support_Tags_Collapse, settings.collapseMiddleTags))
+    }
+    entries.append(.trailingTagsInfo(settings.trailingTags ? strings.Support_Tags_Info : strings.Support_Tags_InfoOff))
 
     entries.append(.besideHeader(strings.Support_ChatListBeside_Header))
     for (index, option) in supportChatListBesideOptions(strings: strings).enumerated() {

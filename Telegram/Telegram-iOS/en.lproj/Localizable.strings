@@ -17367,6 +17367,15 @@ Error: %8$@";
 "Support.HideOutgoingOnly.Title" = "Hide outgoing-only chats";
 "Support.HideOutgoingOnly.Info" = "The chat list leaves out one-to-one chats where the user has never written to you, such as those that only have messages from support. A pinned chat stays, and every chat can still be found in search.";
 
+"Support.Tags.Show" = "Show tags under messages";
+"Support.Tags.Collapse" = "Collapse tags";
+"Support.Tags.Info" = "Hashtags at the end of an incoming message show as tags under it. With collapsing on, middle messages keep them in one row you can expand, while the first message, the first new message and the last message show them all.";
+"Support.Tags.InfoOff" = "Hashtags at the end of an incoming message stay in the message text.";
+"Support.Tags.Copy" = "Copy Tags";
+"Support.Tags.VoiceOverShowMore_1" = "Show %@ more tag";
+"Support.Tags.VoiceOverShowMore_any" = "Show %@ more tags";
+"Support.Tags.VoiceOverShowFewer" = "Show fewer tags";
+
 "Support.ChatListBeside.Header" = "CHAT LIST BESIDE CHATS";
 "Support.ChatListBeside.Off" = "Off";
 "Support.ChatListBeside.Landscape" = "In landscape only";
