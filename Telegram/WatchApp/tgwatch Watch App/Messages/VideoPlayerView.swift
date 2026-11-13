@@ -106,6 +106,7 @@ struct VideoPlayerView: View {
                         .shadow(radius: 2)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L("Watch.VoiceOver.Replay"))
             }
         }
     }

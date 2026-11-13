@@ -191,6 +191,7 @@ struct ChatListView: View {
                     Image(systemName: "xmark")
                         .font(.caption2)
                 }
+                .accessibilityLabel(L("Common.Close"))
                 .buttonStyle(.bordered)
             }
         }

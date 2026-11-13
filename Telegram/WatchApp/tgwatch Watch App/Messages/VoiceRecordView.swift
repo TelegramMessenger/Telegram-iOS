@@ -74,6 +74,7 @@ struct VoiceRecordView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Text(formatDuration(Int(elapsed))).font(.caption).monospacedDigit()
+                    .accessibilityLabel(spokenDuration(Int(elapsed)))
             }
         case .review(let draft):
             ToolbarItem(placement: .cancellationAction) {
@@ -104,6 +105,9 @@ struct VoiceRecordView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L("Watch.VoiceOver.StartRecording"))
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("recordStart")
     }
 
@@ -114,6 +118,7 @@ struct VoiceRecordView: View {
                 transportRing { RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: 18, height: 18) }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L("VoiceOver.Recording.StopAndPreview"))
             .accessibilityIdentifier("recordStop")
         }
         .onChange(of: elapsed) { _, _ in
@@ -136,6 +141,8 @@ struct VoiceRecordView: View {
                 transportRing { reviewGlyph(playback.glyph(for: note.voiceFileId)) }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(reviewAccessibilityLabel(playback.glyph(for: note.voiceFileId)))
+            .accessibilityValue(spokenDuration(draft.duration))
             .accessibilityIdentifier("recordReviewPlay")
         }
     }
@@ -147,6 +154,15 @@ struct VoiceRecordView: View {
         case .pause:   Image(systemName: "pause.fill").font(.system(size: 18)).foregroundStyle(.white)
         case .spinner: ProgressView().controlSize(.small)
         case .error:   Image(systemName: "exclamationmark.circle.fill").font(.system(size: 18)).foregroundStyle(.red)
+        }
+    }
+
+    private func reviewAccessibilityLabel(_ glyph: VoiceGlyph) -> String {
+        switch glyph {
+        case .play:    return L("VoiceOver.Media.PlaybackPlay")
+        case .pause:   return L("VoiceOver.Media.PlaybackPause")
+        case .spinner: return L("Watch.Common.Loading")
+        case .error:   return L("Watch.VoiceOver.PlaybackFailed")
         }
     }
 

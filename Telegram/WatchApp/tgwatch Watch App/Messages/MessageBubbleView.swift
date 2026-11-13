@@ -7,6 +7,9 @@ struct MessageBubbleView: View {
     let onVideoNoteTap: (VideoNoteVisual) -> Void
     let onPollTap: (Int64, PollVisual) -> Void
 
+    /// Nil only in previews; voice and music bubbles always have it.
+    @Environment(ChatHistoryStore.self) private var store: ChatHistoryStore?
+
     private var style: BubbleStyle { .resolve(isOutgoing: bubble.isOutgoing) }
 
     var body: some View {
@@ -97,9 +100,47 @@ struct MessageBubbleView: View {
                 }
             }
             .overlay(alignment: .bottomLeading) { statusIndicator }
+            // One VoiceOver element per message, with the same action a tap has.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibility.label)
+            .accessibilityValue(accessibility.value)
+            .accessibilityHint(accessibility.hint)
+            .modifier(BubbleAccessibilityAction(isEnabled: accessibility.isButton, action: activate))
             if !bubble.isOutgoing { Spacer(minLength: 16) }
         }
         .accessibilityIdentifier("bubble.\(bubble.messageId)")
+    }
+
+    private var accessibility: BubbleAccessibility {
+        var playback = BubblePlaybackState.idle
+        if let store {
+            if let voice = bubble.voiceNote {
+                playback = BubblePlaybackState(store.voicePlayback.glyph(for: voice.voiceFileId))
+            } else if let audio = bubble.audio {
+                playback = BubblePlaybackState(store.audioPlayback.glyph(for: audio.audioFileId))
+            }
+        }
+        return bubbleAccessibility(bubble, isGroupChat: store?.isGroupChat ?? false, playback: playback)
+    }
+
+    /// What a tap on the bubble does, for VoiceOver's double tap (the bubble's children,
+    /// which carry the tap gestures, are hidden from it).
+    private func activate() {
+        if let photo = bubble.photo {
+            if photo.localPath != nil { onPhotoTap(photo) }
+        } else if let video = bubble.video {
+            onVideoTap(video)
+        } else if let note = bubble.videoNote {
+            onVideoNoteTap(note)
+        } else if let voice = bubble.voiceNote {
+            store?.togglePlayback(voice, messageId: bubble.messageId)
+        } else if let audio = bubble.audio {
+            store?.toggleAudioPlayback(audio)
+        } else if let location = bubble.location {
+            location.openInMaps()
+        } else if let poll = bubble.poll, poll.canVote {
+            onPollTap(bubble.messageId, poll)
+        }
     }
 
     private func jumboEmojiSize(for count: Int) -> CGFloat {
@@ -151,6 +192,23 @@ struct MessageBubbleView: View {
                 .font(.system(size: 8))
                 .foregroundStyle(.red)
                 .offset(x: -13)
+        }
+    }
+}
+
+/// The bubble's double-tap action and button trait, only for bubbles where a tap does
+/// something: an `accessibilityAction` alone makes VoiceOver announce any element as a button.
+private struct BubbleAccessibilityAction: ViewModifier {
+    let isEnabled: Bool
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { action() }
+        } else {
+            content
         }
     }
 }

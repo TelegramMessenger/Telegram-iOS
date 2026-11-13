@@ -41,6 +41,17 @@ struct AccountsListView: View {
                     }
                 }
                 .onLongPressGesture(minimumDuration: 0.5) { showAddSheet = true }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L("Settings.AddAccount"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction {
+                    Task {
+                        await manager.addAccount(useTestDc: false)
+                        dismiss()
+                    }
+                }
+                // The long press, which VoiceOver users can't easily find.
+                .accessibilityAction(named: L("Watch.Accounts.ChooseServer")) { showAddSheet = true }
                 .accessibilityIdentifier("addAccountButton")
             }
         }
@@ -132,6 +143,20 @@ struct AccountsListView: View {
             }
         }
         .onLongPressGesture(minimumDuration: 0.5) {
+            pendingRemoval = row.id
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(row.label)
+        .accessibilityValue(row.showsTestPill ? "TEST" : "")
+        .accessibilityAddTraits(row.isActive ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction {
+            guard row.id != manager.activeAccountId else { return }
+            Task {
+                await manager.switchTo(accountId: row.id)
+                dismiss()
+            }
+        }
+        .accessibilityAction(named: L("Settings.RemoveConfirmation")) {
             pendingRemoval = row.id
         }
     }

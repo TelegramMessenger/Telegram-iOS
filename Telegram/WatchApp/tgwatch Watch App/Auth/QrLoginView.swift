@@ -70,6 +70,9 @@ struct QrLoginContent: View {
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+        // One element reading the path as a sequence, without the arrow glyphs.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([L("Watch.Login.StepSettings"), L("Settings.Devices"), L("Settings.AddDevice")].joined(separator: ", "))
     }
 
     @ViewBuilder
@@ -80,6 +83,8 @@ struct QrLoginContent: View {
                     .resizable()
                     .interpolation(.none)
                     .scaledToFit()
+                    .accessibilityLabel(L("Watch.VoiceOver.QrCode"))
+                    .accessibilityAddTraits(.isImage)
                     .accessibilityIdentifier("qrImage")
                     .id(link)
             } else {

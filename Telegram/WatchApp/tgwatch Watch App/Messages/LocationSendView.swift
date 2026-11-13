@@ -81,6 +81,7 @@ struct LocationSendView: View {
     private var denied: some View {
         VStack(spacing: 8) {
             Image(systemName: "location.slash").font(.system(size: 32)).foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Text(L("Watch.Location.AccessDenied"))
                 .font(.caption).multilineTextAlignment(.center)
         }
@@ -141,6 +142,9 @@ private struct LocationPreviewMap: View {
             Image(systemName: "mappin.circle.fill")
                 .font(.system(size: 24)).foregroundStyle(.red).shadow(radius: 2)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L("Watch.VoiceOver.CurrentLocationMap"))
+        .accessibilityAddTraits(.isImage)
         .task(id: cacheKey) {
             snapshot = await MapSnapshotRenderer.image(
                 latitude: latitude, longitude: longitude,

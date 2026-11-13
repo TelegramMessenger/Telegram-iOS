@@ -27,6 +27,13 @@ final class ChatHistoryStore {
 
     private let chatId: Int64
     private let chatType: ChatType
+    /// Basic groups, supergroups and channels: more than one recipient.
+    var isGroupChat: Bool {
+        switch chatType {
+        case .chatTypeBasicGroup, .chatTypeSupergroup: return true
+        default: return false
+        }
+    }
     private let chatTailIdAtOpen: Int64?
     private let loader: ChatHistoryLoader
     private let selfUserId: Int64?

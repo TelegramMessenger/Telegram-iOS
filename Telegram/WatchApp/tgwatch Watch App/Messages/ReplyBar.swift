@@ -23,6 +23,7 @@ struct ReplyBar: View {
             }
             .buttonStyle(.plain)
             .padding(.leading, 11)
+            .accessibilityLabel(L("Watch.Attach.Title"))
             .accessibilityIdentifier("replyBarAttach")
 
             // TextFieldLink renders an arbitrary label and, when tapped,

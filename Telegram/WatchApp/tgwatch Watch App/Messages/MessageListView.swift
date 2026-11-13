@@ -166,6 +166,7 @@ struct MessageListView: View {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 10))
                             }
+                            .accessibilityLabel(L("Common.Close"))
                             .buttonStyle(.plain)
                         }
                         .padding(6)
@@ -180,6 +181,7 @@ struct MessageListView: View {
                             Button { store.dismissPaginationError() } label: {
                                 Image(systemName: "xmark").font(.system(size: 10))
                             }
+                            .accessibilityLabel(L("Common.Close"))
                             .buttonStyle(.plain)
                         }
                         .padding(6)

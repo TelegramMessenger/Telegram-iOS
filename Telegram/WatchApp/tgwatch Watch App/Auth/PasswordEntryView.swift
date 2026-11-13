@@ -65,6 +65,7 @@ struct PasswordEntryView: View {
                         Image(systemName: "chevron.backward")
                     }
                     .disabled(submitting)
+                    .accessibilityLabel(L("Common.Back"))
                     .accessibilityIdentifier("passwordBackToQr")
                 }
             }

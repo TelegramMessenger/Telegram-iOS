@@ -7,11 +7,15 @@ import Foundation
 /// - yesterday → "Yesterday"
 /// - 2–6 days ago → short weekday ("Mon")
 /// - 7+ days ago → locale short date ("5/12/26")
+///
+/// `spoken` is for VoiceOver: full weekday ("Monday") and long date ("May 12, 2026"),
+/// which read better than the abbreviations.
 func chatListTimestamp(
     _ unixSeconds: Int,
     now: Date,
     calendar: Calendar = .current,
-    locale: Locale = AppStrings.shared.locale
+    locale: Locale = AppStrings.shared.locale,
+    spoken: Bool = false
 ) -> String {
     let date = Date(timeIntervalSince1970: TimeInterval(unixSeconds))
     let startOfDate = calendar.startOfDay(for: date)
@@ -24,9 +28,9 @@ func chatListTimestamp(
     case 1:
         return L("Weekday.Yesterday")
     case 2...6:
-        return formatted(date, calendar: calendar, locale: locale) { $0.setLocalizedDateFormatFromTemplate("EEE") }
+        return formatted(date, calendar: calendar, locale: locale) { $0.setLocalizedDateFormatFromTemplate(spoken ? "EEEE" : "EEE") }
     default:
-        return formatted(date, calendar: calendar, locale: locale) { $0.dateStyle = .short; $0.timeStyle = .none }
+        return formatted(date, calendar: calendar, locale: locale) { $0.dateStyle = spoken ? .long : .short; $0.timeStyle = .none }
     }
 }
 

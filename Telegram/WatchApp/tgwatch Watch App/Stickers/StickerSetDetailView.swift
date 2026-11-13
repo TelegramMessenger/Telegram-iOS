@@ -15,9 +15,11 @@ struct StickerSetRow: View {
             HStack(spacing: 10) {
                 if let cover = set.cover {
                     StickerCellView(sticker: cover, edge: 32)
+                        .accessibilityHidden(true)
                 } else {
                     RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.15))
                         .frame(width: 32, height: 32)
+                        .accessibilityHidden(true)
                 }
                 Text(set.title).font(.body).lineLimit(1)
                 Spacer(minLength: 0)

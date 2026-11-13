@@ -21,11 +21,7 @@ struct PollBubbleView: View {
         return poll.isAnonymous ? L("MessagePoll.LabelAnonymous") : L("Watch.Message.Poll")
     }
 
-    private var canVote: Bool {
-        guard !poll.isClosed else { return false }
-        if poll.isQuiz { return !poll.hasVoted }
-        return !poll.hasVoted || poll.allowsRevoting
-    }
+    private var canVote: Bool { poll.canVote }
 
     private var voterCountLabel: String {
         poll.totalVoterCount == 0

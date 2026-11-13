@@ -46,6 +46,8 @@ struct StickerCellView: View {
         .frame(width: edge, height: edge)
         .contentShape(Rectangle())
         .modifier(TapIfPresent(onTap: onTap.map { cb in { cb(sticker) } }))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L("Watch.ChatList.StickerWithEmoji", sticker.emoji).trimmingCharacters(in: .whitespaces))
         .onScrollVisibilityChange(threshold: 0.01) { visible in
             guard let id = renderFileId else { return }
             if visible { store.requestFileDownload(fileId: id, priority: 2) }
@@ -84,7 +86,10 @@ private struct TapIfPresent: ViewModifier {
     let onTap: (() -> Void)?
     func body(content: Content) -> some View {
         if let onTap {
-            content.onTapGesture { onTap() }
+            content
+                .onTapGesture { onTap() }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { onTap() }
         } else {
             content
         }

@@ -28,6 +28,7 @@
 		25F6B3EFED8EDDD9983CB0F7 /* PollVoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0F4F15CB43635717B31B92 /* PollVoteView.swift */; };
 		29E743911803CFFFC75A1636 /* AppStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 531407091B1C6871FEB3EBC1 /* AppStrings.swift */; };
 		2A0FDF9EF2B8BE9F4C46FD4C /* RLottieKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5083D73573D84E386C2E3B4C /* RLottieKit */; };
+		2E198FC0DBA89D6A57058D37 /* BubbleAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34737521DC61B9AB8ECCFE60 /* BubbleAccessibility.swift */; };
 		2E2B46A1FFFDC24F47FF33D4 /* ChatOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3696C9BA38845E621A1B67 /* ChatOpener.swift */; };
 		3679D6EA591522207E69F8A5 /* ChatListTimestamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CCDFBD19F9CAA87E938BADC /* ChatListTimestamp.swift */; };
 		39A386FFBD00EEE14B2B33D5 /* MessageFormatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = E09479749C40E78AD852AF8B /* MessageFormatters.swift */; };
@@ -147,6 +148,7 @@
 		2C34577A65DD579BCCD1888C /* FolderPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderPill.swift; sourceTree = "<group>"; };
 		2E7405292B1E44847A760AC5 /* VoicePlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicePlaybackController.swift; sourceTree = "<group>"; };
 		3448938C1F69F0D9DE679238 /* ChatPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPreview.swift; sourceTree = "<group>"; };
+		34737521DC61B9AB8ECCFE60 /* BubbleAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BubbleAccessibility.swift; sourceTree = "<group>"; };
 		35B32555B3686A7A4884B215 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		36FCB0CB6A9A867B1E8BD673 /* OpusKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = OpusKit; path = Packages/OpusKit; sourceTree = SOURCE_ROOT; };
 		377FDFE2ED14BCD51D22429F /* AccountBootstrapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountBootstrapView.swift; sourceTree = "<group>"; };
@@ -382,6 +384,7 @@
 				3DAB96C768DF82BCF185BAE2 /* AudioPlaybackController.swift */,
 				CBAFC996C8EF743C7C598389 /* AudioVisual.swift */,
 				0F9127473C7DAD18736234B3 /* AVRecordingBackend.swift */,
+				34737521DC61B9AB8ECCFE60 /* BubbleAccessibility.swift */,
 				674916153E803CA73D43BE6C /* BubbleMetrics.swift */,
 				DD18F48DC98A3857B32BBC6F /* BubbleShape.swift */,
 				3EEAE6237003C5CDA788E928 /* BubbleStyle.swift */,
@@ -572,6 +575,7 @@
 				0BB25527B21E71352126154B /* AuthStateMapping.swift in Sources */,
 				5E9A6B94F1B917CB849B3EBC /* AvatarView.swift in Sources */,
 				03074928DC54019BE6106ECD /* AvatarVisual.swift in Sources */,
+				2E198FC0DBA89D6A57058D37 /* BubbleAccessibility.swift in Sources */,
 				4236CA9B5AA90ACEB17814DC /* BubbleMetrics.swift in Sources */,
 				CBA3FEDEEA413559F700B6E3 /* BubbleShape.swift in Sources */,
 				868426A2768FE7349CD4AAAD /* BubbleStyle.swift in Sources */,

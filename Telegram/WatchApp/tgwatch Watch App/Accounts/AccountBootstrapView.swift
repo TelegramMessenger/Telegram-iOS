@@ -40,6 +40,8 @@ struct AccountBootstrapContent: View {
                     .background(Color.gray.opacity(0.25), in: Capsule())
                     .contentShape(Capsule())
                     .onTapGesture { onRetry() }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { onRetry() }
                     .accessibilityIdentifier("accountBootstrapRetry")
             }
             .padding()

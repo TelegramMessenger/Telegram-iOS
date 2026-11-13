@@ -67,6 +67,9 @@ struct FolderPillBar: View {
                     // ensures the tap reaches the pill even when the outer gestures are
                     // competing. The Button action still fires for visual-feedback purposes.
                     .highPriorityGesture(TapGesture().onEnded { onSelect(pill) })
+                    .accessibilityLabel(pill.name)
+                    .accessibilityValue(pill.unreadCount > 0 ? LPlural("VoiceOver.Chat.UnreadMessages", pill.unreadCount) : "")
+                    .accessibilityAddTraits(pill.isActive ? .isSelected : [])
                     .accessibilityIdentifier("folderPill-\(pill.id)")
                 }
             }

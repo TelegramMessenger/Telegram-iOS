@@ -111,6 +111,7 @@ struct VideoNotePlayerView: View {
                             .foregroundStyle(.white)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L("Watch.VoiceOver.Replay"))
                 }
             }
         case .failed(let message):
