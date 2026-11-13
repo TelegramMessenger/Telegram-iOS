@@ -6,12 +6,12 @@ import TDShim
 /// Order of preference:
 /// 1. Draft (any `draftText`, even empty) -> "Draft: <text>".
 /// 2. Recognized service content -> formatted service line (omits actor for private/secret chats).
-/// 3. Last message text content -> "<senderPrefix><text>".
+/// 3. Last message text content -> "<sender>: <text>" (or just "<text>").
 /// 4. Last message recognized non-text content -> short type label ("Photo", "Voice message", ...).
 /// 5. Anything else -> "".
 func chatPreview(_ chat: CachedChat, userNames: [Int64: String], selfUserId: Int64?) -> String {
     if let draftText = chat.draftText {
-        return "Draft: \(draftText)"
+        return L("Watch.ChatList.Draft", draftText)
     }
     guard let last = chat.lastMessage else { return "" }
 
@@ -28,18 +28,21 @@ func chatPreview(_ chat: CachedChat, userNames: [Int64: String], selfUserId: Int
 
     switch last.content {
     case .messageText(let text):
-        return senderPrefix(for: last, in: chat, userNames: userNames) + text.text.text
-    case .messagePhoto:    return "Photo"
-    case .messageVoiceNote: return "Voice message"
-    case .messageAudio(let m): return m.audio.title.isEmpty ? "Music" : m.audio.title
-    case .messageSticker(let m): return m.sticker.emoji.isEmpty ? "Sticker" : "\(m.sticker.emoji) Sticker"
-    case .messageVideo:    return "Video"
-    case .messageVideoNote: return "Video message"
-    case .messageDocument: return "Document"
-    case .messageLocation: return "Location"
-    case .messageVenue(let m): return m.venue.title.isEmpty ? "Location" : m.venue.title
-    case .messageContact:  return "Contact"
-    case .messagePoll:     return "Poll"
+        if let author = senderName(for: last, in: chat, userNames: userNames) {
+            return L("Watch.ChatList.MessageWithAuthor", author, text.text.text)
+        }
+        return text.text.text
+    case .messagePhoto:    return L("Message.Photo")
+    case .messageVoiceNote: return L("Message.Audio")
+    case .messageAudio(let m): return m.audio.title.isEmpty ? L("Watch.Message.Music") : m.audio.title
+    case .messageSticker(let m): return m.sticker.emoji.isEmpty ? L("Message.Sticker") : L("Watch.ChatList.StickerWithEmoji", m.sticker.emoji)
+    case .messageVideo:    return L("Message.Video")
+    case .messageVideoNote: return L("Message.VideoMessage")
+    case .messageDocument: return L("Watch.Message.Document")
+    case .messageLocation: return L("Message.Location")
+    case .messageVenue(let m): return m.venue.title.isEmpty ? L("Message.Location") : m.venue.title
+    case .messageContact:  return L("Message.Contact")
+    case .messagePoll:     return L("Watch.Message.Poll")
     default:               return ""
     }
 }
@@ -57,17 +60,19 @@ private func shouldIncludeServiceActor(for chatType: ChatType) -> Bool {
     }
 }
 
-private func senderPrefix(for message: CachedMessage, in chat: CachedChat, userNames: [Int64: String]) -> String {
-    if message.isOutgoing { return "You: " }
+/// The author shown before a text preview ("You" or a group member's first name),
+/// or nil when the preview has no author prefix.
+private func senderName(for message: CachedMessage, in chat: CachedChat, userNames: [Int64: String]) -> String? {
+    if message.isOutgoing { return L("DialogList.You") }
     switch chat.type {
     case .chatTypeBasicGroup, .chatTypeSupergroup:
         if case .messageSenderUser(let u) = message.senderId,
            let firstName = userNames[u.userId],
            !firstName.isEmpty {
-            return "\(firstName): "
+            return firstName
         }
-        return ""
+        return nil
     default:
-        return ""
+        return nil
     }
 }

@@ -73,6 +73,9 @@ final class ChatListStore {
         self.selfUserId = selfUserId
         self.userNames = userNames ?? UserNamesStore()
         self.coalesceUpdates = coalesceUpdates
+        // Rows hold formatted strings; rebuild them when the language pack
+        // changes so server-side string updates show up live.
+        AppStrings.shared.observeChanges(self) { $0.reproject() }
         let mainList: ChatList = .chatListMain
         loadTasks[.main] = Task { [weak self] in
             await self?.loadOnePage(for: mainList)
@@ -124,6 +127,12 @@ final class ChatListStore {
         guard selfUserId != id else { return }
         selfUserId = id
         reproject()
+    }
+
+    /// The avatar of any chat TDLib has sent, in the current folder's rows or not (a notification's
+    /// chat, `MessageNotificationController`). Nil for a chat not loaded yet.
+    func avatar(forChatId id: Int64) -> AvatarVisual? {
+        chatCache[id].map { avatarVisual(for: $0, fileLocals: files, selfUserId: selfUserId) }
     }
 
     func requestFileDownload(fileId: Int, priority: Int = 1) {

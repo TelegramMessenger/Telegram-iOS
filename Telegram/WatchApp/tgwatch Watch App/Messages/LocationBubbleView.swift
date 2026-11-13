@@ -80,7 +80,7 @@ struct LocationBubbleView: View {
                     .padding(.horizontal, 8)
             }
             if location.isLive {
-                Text("Live Location")
+                Text(L("Message.LiveLocation"))
                     .font(.caption2).bold()
                     .padding(.horizontal, 8)
                 liveCaption.padding(.horizontal, 8)
@@ -148,12 +148,17 @@ struct LocationBubbleView: View {
         }
     }
 
-    private func openInMaps() {
+    private func openInMaps() { location.openInMaps() }
+}
+
+extension LocationVisual {
+    /// Hands the coordinate to the system Maps app.
+    func openInMaps() {
         let mapItem = MKMapItem(
-            location: CLLocation(latitude: location.latitude, longitude: location.longitude),
+            location: CLLocation(latitude: latitude, longitude: longitude),
             address: nil
         )
-        mapItem.name = location.title
+        mapItem.name = title
         mapItem.openInMaps(launchOptions: nil)
     }
 }

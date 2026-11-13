@@ -41,14 +41,14 @@ struct VoiceRecordView: View {
                 case .idle:                             idle
                 case .requestingPermission:             ProgressView()
                 case .recording(let elapsed, let lvl):  recording(elapsed: elapsed, level: lvl)
-                case .stopping:                         ProgressView("Finishing…")
+                case .stopping:                         ProgressView(L("Watch.Voice.Finishing"))
                 case .review(let draft):                review(draft)
                 case .failed(let reason):               failed(reason)
                 }
             }
             .padding()
         }
-        .navigationTitle(isRecordingOrReview ? "" : "Voice Message")
+        .navigationTitle(isRecordingOrReview ? "" : L("Message.Audio"))
         .navigationBarBackButtonHidden(isRecordingOrReview)
         .toolbar { toolbarContent }
         .onAppear { onPrepare() }
@@ -70,17 +70,18 @@ struct VoiceRecordView: View {
         switch recorder.state {
         case .recording(let elapsed, _):
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { recorder.discard(); dismiss() }
+                Button(L("Common.Cancel")) { recorder.discard(); dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Text(formatDuration(Int(elapsed))).font(.caption).monospacedDigit()
+                    .accessibilityLabel(spokenDuration(Int(elapsed)))
             }
         case .review(let draft):
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { playback.tearDown(); recorder.discard(); dismiss() }
+                Button(L("Common.Cancel")) { playback.tearDown(); recorder.discard(); dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                if isSending { ProgressView() } else { Button("Send") { send(draft) } }
+                if isSending { ProgressView() } else { Button(L("Watch.Compose.Send")) { send(draft) } }
             }
         default:
             ToolbarItem(placement: .cancellationAction) { EmptyView() }
@@ -100,10 +101,13 @@ struct VoiceRecordView: View {
         Button { levels = []; Task { await recorder.start() } } label: {
             VStack(spacing: 8) {
                 Image(systemName: "mic.circle.fill").font(.system(size: 48))
-                Text("Tap to record").font(.caption).foregroundStyle(.secondary)
+                Text(L("Watch.Voice.TapToRecord")).font(.caption).foregroundStyle(.secondary)
             }
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L("Watch.VoiceOver.StartRecording"))
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("recordStart")
     }
 
@@ -114,6 +118,7 @@ struct VoiceRecordView: View {
                 transportRing { RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: 18, height: 18) }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L("VoiceOver.Recording.StopAndPreview"))
             .accessibilityIdentifier("recordStop")
         }
         .onChange(of: elapsed) { _, _ in
@@ -136,6 +141,8 @@ struct VoiceRecordView: View {
                 transportRing { reviewGlyph(playback.glyph(for: note.voiceFileId)) }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(reviewAccessibilityLabel(playback.glyph(for: note.voiceFileId)))
+            .accessibilityValue(spokenDuration(draft.duration))
             .accessibilityIdentifier("recordReviewPlay")
         }
     }
@@ -150,11 +157,20 @@ struct VoiceRecordView: View {
         }
     }
 
+    private func reviewAccessibilityLabel(_ glyph: VoiceGlyph) -> String {
+        switch glyph {
+        case .play:    return L("VoiceOver.Media.PlaybackPlay")
+        case .pause:   return L("VoiceOver.Media.PlaybackPause")
+        case .spinner: return L("Watch.Common.Loading")
+        case .error:   return L("Watch.VoiceOver.PlaybackFailed")
+        }
+    }
+
     private func failed(_ reason: String) -> some View {
         VStack(spacing: 10) {
             Text(reason).font(.caption).foregroundStyle(.red).multilineTextAlignment(.center)
-            Button("Try again") { recorder.discard() }.buttonStyle(.bordered)
-            Button("Cancel") { dismiss() }.buttonStyle(.bordered).tint(.red)
+            Button(L("Watch.Common.TryAgain")) { recorder.discard() }.buttonStyle(.bordered)
+            Button(L("Common.Cancel")) { dismiss() }.buttonStyle(.bordered).tint(.red)
         }
     }
 
@@ -170,7 +186,7 @@ struct VoiceRecordView: View {
                 _ = recorder.consumeDraft()   // release file ownership only after success
                 onComplete()
             } else {
-                sendError = "Couldn't send. Try again."
+                sendError = L("Watch.Compose.SendFailed")
                 isSending = false
             }
         }

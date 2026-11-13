@@ -29,7 +29,7 @@ struct QrLoginContent: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Log in to Telegram by QR Code")
+            Text(L("Watch.Login.Title"))
                 .font(.headline)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -61,15 +61,18 @@ struct QrLoginContent: View {
 
     private var instructionSteps: some View {
         VStack(spacing: 4) {
-            Text("Settings on your Phone")
+            Text(L("Watch.Login.StepSettings"))
             Image(systemName: "chevron.down").font(.caption)
-            Text("Devices")
+            Text(L("Settings.Devices"))
             Image(systemName: "chevron.down").font(.caption)
-            Text("Scan QR")
+            Text(L("Settings.AddDevice"))
         }
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+        // One element reading the path as a sequence, without the arrow glyphs.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([L("Watch.Login.StepSettings"), L("Settings.Devices"), L("Settings.AddDevice")].joined(separator: ", "))
     }
 
     @ViewBuilder
@@ -80,10 +83,12 @@ struct QrLoginContent: View {
                     .resizable()
                     .interpolation(.none)
                     .scaledToFit()
+                    .accessibilityLabel(L("Watch.VoiceOver.QrCode"))
+                    .accessibilityAddTraits(.isImage)
                     .accessibilityIdentifier("qrImage")
                     .id(link)
             } else {
-                Text("Could not render QR code")
+                Text(L("Watch.Login.QrRenderError"))
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, minHeight: 120)

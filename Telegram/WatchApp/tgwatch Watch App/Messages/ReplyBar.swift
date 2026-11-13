@@ -23,6 +23,7 @@ struct ReplyBar: View {
             }
             .buttonStyle(.plain)
             .padding(.leading, 11)
+            .accessibilityLabel(L("Watch.Attach.Title"))
             .accessibilityIdentifier("replyBarAttach")
 
             // TextFieldLink renders an arbitrary label and, when tapped,
@@ -34,9 +35,9 @@ struct ReplyBar: View {
             // the input UI opens blank every time. Existing server-side drafts
             // are not visible or editable from the watch under this design —
             // accepted regression vs. the prior ComposeSheet flow.
-            TextFieldLink(prompt: Text("Reply…")) {
+            TextFieldLink(prompt: Text(L("Watch.Conversation.Reply"))) {
                 HStack(spacing: 0) {
-                    Text("Reply…")
+                    Text(L("Watch.Conversation.Reply"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

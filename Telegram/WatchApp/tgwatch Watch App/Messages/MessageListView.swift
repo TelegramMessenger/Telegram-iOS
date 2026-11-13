@@ -136,13 +136,13 @@ struct MessageListView: View {
             // content → iter=2 prepends 29 messages (content jumps) → final scroll
             // fires. Showing the spinner until `.loaded` collapses that into one
             // clean transition.
-            LoadingView(label: "Loading messages…")
+            LoadingView(label: L("Watch.Conversation.Loading"))
         case .failed(let message):
             VStack(spacing: 6) {
                 Text(message)
                     .font(.caption2)
                     .multilineTextAlignment(.center)
-                Button("Retry") {
+                Button(L("Watch.Common.Retry")) {
                     Task { await store.start() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -166,6 +166,7 @@ struct MessageListView: View {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 10))
                             }
+                            .accessibilityLabel(L("Common.Close"))
                             .buttonStyle(.plain)
                         }
                         .padding(6)
@@ -180,6 +181,7 @@ struct MessageListView: View {
                             Button { store.dismissPaginationError() } label: {
                                 Image(systemName: "xmark").font(.system(size: 10))
                             }
+                            .accessibilityLabel(L("Common.Close"))
                             .buttonStyle(.plain)
                         }
                         .padding(6)
@@ -392,7 +394,7 @@ struct MessageListView: View {
             // (it reverts to a stale first-layout offset — see the `.task` comment).
             .overlay {
                 if !didApplyInitialScroll {
-                    LoadingView(label: "Loading messages…")
+                    LoadingView(label: L("Watch.Conversation.Loading"))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black.ignoresSafeArea())
                 }

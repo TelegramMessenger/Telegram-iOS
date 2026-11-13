@@ -20,6 +20,8 @@ struct AvatarView: View {
         content
             .frame(width: size, height: size)
             .clipShape(Circle())
+            // Decorative: the chat row and the chat's title already name the chat.
+            .accessibilityHidden(true)
             .onScrollVisibilityChange(threshold: 0.01) { visible in
                 guard let fileId = avatar.photoFileId, avatar.photoLocalPath == nil else { return }
                 if visible {

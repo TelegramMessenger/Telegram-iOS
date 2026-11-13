@@ -18,7 +18,7 @@ func replyPreview(
 
     switch replyTo {
     case .messageReplyToStory:
-        return ReplyHeader(senderName: nil, snippet: "Story", minithumbnail: nil, isOutgoing: isOutgoing)
+        return ReplyHeader(senderName: nil, snippet: L("Chat.ReplyStory"), minithumbnail: nil, isOutgoing: isOutgoing)
 
     case .messageReplyToMessage(let r):
         let sender = resolveSenderName(replyTo: r, inChatId: inChatId, cache: cache, userNames: userNames)
@@ -34,7 +34,7 @@ func replyPreview(
             if let content = resolvedContent {
                 return replySnippet(content)
             }
-            return "Message"
+            return L("Watch.Message.Generic")
         }()
         let mini = minithumbnailData(from: resolvedContent)
         return ReplyHeader(
@@ -57,27 +57,27 @@ private func replySnippet(_ content: MessageContent) -> String {
     case .messageText(let t):
         return t.text.text
     case .messagePhoto(let m):
-        return m.caption.text.isEmpty ? "Photo" : m.caption.text
+        return m.caption.text.isEmpty ? L("Message.Photo") : m.caption.text
     case .messageVideo(let m):
-        return m.caption.text.isEmpty ? "Video" : m.caption.text
+        return m.caption.text.isEmpty ? L("Message.Video") : m.caption.text
     case .messageSticker(let m):
-        return m.sticker.emoji.isEmpty ? "Sticker" : "Sticker \(m.sticker.emoji)"
+        return m.sticker.emoji.isEmpty ? L("Message.Sticker") : L("Message.StickerText", m.sticker.emoji)
     case .messageVoiceNote:
-        return "Voice message"
+        return L("Message.Audio")
     case .messageAudio(let m):
-        return m.caption.text.isEmpty ? (m.audio.title.isEmpty ? "Music" : m.audio.title) : m.caption.text
+        return m.caption.text.isEmpty ? (m.audio.title.isEmpty ? L("Watch.Message.Music") : m.audio.title) : m.caption.text
     case .messageDocument:
-        return "Document"
+        return L("Watch.Message.Document")
     case .messageLocation:
-        return "Location"
+        return L("Message.Location")
     case .messageVenue(let m):
-        return m.venue.title.isEmpty ? "Location" : m.venue.title
+        return m.venue.title.isEmpty ? L("Message.Location") : m.venue.title
     case .messageContact:
-        return "Contact"
+        return L("Message.Contact")
     case .messagePoll:
-        return "Poll"
+        return L("Watch.Message.Poll")
     default:
-        return "Message"
+        return L("Watch.Message.Generic")
     }
 }
 

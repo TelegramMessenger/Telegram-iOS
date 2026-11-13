@@ -60,7 +60,31 @@ struct ChatRowView: View {
                     .foregroundStyle(.white)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
         .accessibilityIdentifier("chatRow.\(row.id)")
+    }
+
+    private var accessibilityLabel: String {
+        [row.title, row.preview].filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+
+    private var accessibilityValue: String {
+        var parts: [String] = []
+        if let date = row.lastMessageDate {
+            parts.append(chatListTimestamp(date, now: Date(), spoken: true))
+        }
+        if row.isUnreadOutgoing {
+            parts.append(L("Watch.VoiceOver.NotRead"))
+        }
+        if row.unreadCount > 0 {
+            parts.append(LPlural("VoiceOver.Chat.UnreadMessages", row.unreadCount))
+        }
+        if row.isMuted {
+            parts.append(L("VoiceOver.ChatList.Muted"))
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

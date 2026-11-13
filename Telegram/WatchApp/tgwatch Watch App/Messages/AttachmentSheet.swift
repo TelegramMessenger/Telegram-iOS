@@ -29,7 +29,7 @@ struct AttachmentSheet: View {
                             onComplete: { dismiss() }
                         )
                     } label: {
-                        Label("Sticker", systemImage: "face.smiling")
+                        Label(L("Attachment.Sticker"), systemImage: "face.smiling")
                     }
                     .accessibilityIdentifier("attachSticker")
                 }
@@ -41,21 +41,21 @@ struct AttachmentSheet: View {
                         onComplete: { dismiss() }
                     )
                 } label: {
-                    Label("Voice Message", systemImage: "mic.fill")
+                    Label(L("Message.Audio"), systemImage: "mic.fill")
                 }
                 .accessibilityIdentifier("attachVoice")
 
                 NavigationLink {
                     LocationSendView(onSend: onSendLocation, onComplete: { dismiss() })
                 } label: {
-                    Label("Location", systemImage: "mappin.and.ellipse")
+                    Label(L("Attachment.Location"), systemImage: "mappin.and.ellipse")
                 }
                 .accessibilityIdentifier("attachLocation")
             }
-            .navigationTitle("Attach")
+            .navigationTitle(L("Watch.Attach.Title"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L("Common.Cancel")) { dismiss() }
                 }
             }
         }

@@ -3,9 +3,9 @@ import SwiftUI
 struct ClosedView: View {
     var body: some View {
         VStack(spacing: 8) {
-            Text("Logged out")
+            Text(L("Watch.Auth.LoggedOut"))
                 .font(.headline)
-            Text("Relaunch the app to sign in again.")
+            Text(L("Watch.Auth.RelaunchToSignIn"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

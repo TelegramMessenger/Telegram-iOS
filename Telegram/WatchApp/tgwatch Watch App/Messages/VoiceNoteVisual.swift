@@ -16,6 +16,9 @@ struct VoiceNoteVisual: Identifiable, Equatable, Hashable {
     let caption: String
     /// Filesystem path of the voice file once downloaded; nil otherwise.
     let localPath: String?
+    /// `MessageVoiceNote.isListened`: for an incoming message, whether this account played it;
+    /// for an outgoing one, whether a recipient did. Unplayed ones show a dot, as on iOS.
+    var isListened: Bool = true
 }
 
 extension VoiceNoteVisual {

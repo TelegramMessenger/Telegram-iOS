@@ -41,7 +41,7 @@ struct PollVoteView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if poll.allowsMultipleAnswers && !revealed {
-                    Button("Vote") {
+                    Button(L("MessagePoll.SubmitVote")) {
                         guard !submitting else { return }
                         Task { _ = await cast(Array(selection).sorted()) }
                     }
@@ -49,7 +49,7 @@ struct PollVoteView: View {
                     .disabled(selection.isEmpty || submitting)
                 }
                 if revealed {
-                    Button("Done") { dismiss() }.buttonStyle(.bordered)
+                    Button(L("Common.Done")) { dismiss() }.buttonStyle(.bordered)
                 }
             }
             .padding()
@@ -62,13 +62,27 @@ struct PollVoteView: View {
             handleTap(option)
         } label: {
             HStack(spacing: 6) {
-                glyph(option)
+                glyph(option).accessibilityHidden(true)
                 Text(option.text).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
         }
         .buttonStyle(.bordered)
         .disabled(submitting || revealed)
+        .accessibilityValue(optionAccessibilityValue(option))
+        .accessibilityAddTraits(isMarked(option) ? .isSelected : [])
+    }
+
+    /// The glyph's meaning: chosen (checkbox ticked, or the quiz answer given) and, once a
+    /// quiz is revealed, which answer was correct.
+    private func isMarked(_ option: PollOptionVisual) -> Bool {
+        if revealed && poll.isQuiz { return option.isChosen }
+        return poll.allowsMultipleAnswers && selection.contains(option.position)
+    }
+
+    private func optionAccessibilityValue(_ option: PollOptionVisual) -> String {
+        guard revealed && poll.isQuiz, option.isCorrect == true else { return "" }
+        return L("Watch.VoiceOver.CorrectAnswer")
     }
 
     @ViewBuilder
