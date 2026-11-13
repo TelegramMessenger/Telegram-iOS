@@ -337,12 +337,12 @@ public final class ArchiveInfoContentComponent: Component {
                     textView.accessibilityElementsHidden = true
                     let textFrame = CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: textSize)
                     transition.setFrame(view: textView, frame: textFrame)
-                    item.title.view?.accessibilityFrameInContainerSpace = CGRect(
+                    item.title.view?.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(CGRect(
                         x: sideInset,
                         y: textFrame.minY - titleSize.height - 2.0,
                         width: availableSize.width - sideInset * 2.0,
                         height: titleSize.height + 2.0 + textSize.height
-                    )
+                    ), in: self.scrollView)
                 }
                 contentHeight += textSize.height
             }

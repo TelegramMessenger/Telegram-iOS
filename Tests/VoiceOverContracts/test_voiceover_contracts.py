@@ -413,6 +413,17 @@ class AccessibilityPreferencesContractTests(unittest.TestCase):
         self.assertIn("UIAccessibility.isReduceTransparencyEnabled", alert_node)
         self.assertIn("UIAccessibility.isReduceTransparencyEnabled", action_sheet_group)
 
+    def test_archive_info_combined_accessibility_frame_uses_screen_coordinates(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/Settings/ArchiveInfoScreen/Sources/ArchiveInfoContentComponent.swift"
+        )
+        self.assertIn(
+            "item.title.view?.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(",
+            contents,
+        )
+        self.assertIn("), in: self.scrollView)", contents)
+        self.assertNotIn("accessibilityFrameInContainerSpace", contents)
+
     def test_url_auth_alert_reflows_at_accessibility_sizes(self) -> None:
         contents = source("submodules/TelegramUI/Sources/ChatMessageActionUrlAuthController.swift")
         for contract in (
