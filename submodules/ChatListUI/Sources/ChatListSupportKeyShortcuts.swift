@@ -102,3 +102,95 @@ public func supportPresentTemplatesReloadResult(context: AccountContext, result:
     }
 }
 
+public func supportReloadTemplatesAction(context: AccountContext, present: @escaping (ViewController) -> Void) -> () -> Void {
+    guard let supportContext = context.supportContext, let manager = context.supportTemplates else {
+        return {}
+    }
+    let reload: () -> Void = {
+        guard supportContext.allowsHardwarePress(of: .reloadTemplates) else {
+            return
+        }
+        manager.reload(completion: { result in
+            Queue.mainQueue().async {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                supportPresentTemplatesReloadResult(context: context, result: result, successText: presentationData.strings.Support_Templates_Reloaded, elevatedLayout: true, present: present)
+            }
+        })
+    }
+    return reload
+}
+
+public func supportTemplatesReloadKeyShortcuts(context: AccountContext, strings: PresentationStrings, present: @escaping (ViewController) -> Void) -> [KeyShortcut] {
+    guard let supportContext = context.supportContext else {
+        return []
+    }
+    return supportKeyShortcuts(combos: supportContext.shortcutCombos(.reloadTemplates), title: supportShortcutTitle(.reloadTemplates, strings: strings), perform: supportReloadTemplatesAction(context: context, present: present))
+}
+
+public func supportShortcutTitle(_ action: SupportShortcutAction, strings: PresentationStrings) -> String {
+    switch action {
+    case .previousChat:
+        return strings.Support_Shortcuts_PreviousChat
+    case .nextChat:
+        return strings.Support_Shortcuts_NextChat
+    case .previousOpenedChat:
+        return strings.Support_Shortcuts_PreviousOpenedChat
+    case .nextOpenedChat:
+        return strings.Support_Shortcuts_NextOpenedChat
+    case .muteChat:
+        return strings.Support_Shortcuts_MuteChat
+    case .sendAndStay:
+        return strings.Support_Shortcuts_SendAndStay
+    case .closeChat:
+        return strings.Support_Shortcuts_CloseChat
+    case .reloadTemplates:
+        return strings.Support_Templates_Reload
+    case .showCurrentChat:
+        return strings.Support_Shortcuts_ShowCurrentChat
+    case .openAbuseBot:
+        return strings.Support_Shortcuts_OpenAbuseBot
+    }
+}
+
+public func supportKeyShortcuts(combos: [SupportKeyCombo], title: String?, wantsPriorityOverText: Bool = false, perform: @escaping () -> Void) -> [KeyShortcut] {
+    return combos.enumerated().map { index, combo in
+        return KeyShortcut(title: index == 0 ? (title ?? "") : "", input: supportKeyCommandInput(combo.key), modifiers: supportKeyCommandModifiers(combo.modifiers), wantsPriorityOverText: wantsPriorityOverText, action: perform)
+    }
+}
+
+private func supportKeyCommandInput(_ key: String) -> String {
+    switch key {
+    case SupportKeyCombo.escapeKey:
+        return UIKeyCommand.inputEscape
+    case SupportKeyCombo.upKey:
+        return UIKeyCommand.inputUpArrow
+    case SupportKeyCombo.downKey:
+        return UIKeyCommand.inputDownArrow
+    case "Left":
+        return UIKeyCommand.inputLeftArrow
+    case "Right":
+        return UIKeyCommand.inputRightArrow
+    default:
+        if key.hasPrefix("F"), Int(key.dropFirst()) != nil {
+            return "UIKeyInput\(key)"
+        }
+        return key
+    }
+}
+
+private func supportKeyCommandModifiers(_ modifiers: SupportKeyCombo.Modifiers) -> UIKeyModifierFlags {
+    var result: UIKeyModifierFlags = []
+    if modifiers.contains(.shift) {
+        result.insert(.shift)
+    }
+    if modifiers.contains(.control) {
+        result.insert(.control)
+    }
+    if modifiers.contains(.alternate) {
+        result.insert(.alternate)
+    }
+    if modifiers.contains(.command) {
+        result.insert(.command)
+    }
+    return result
+}

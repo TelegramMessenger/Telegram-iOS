@@ -35,6 +35,7 @@ public final class SupportContext {
     private let chatListLoadTillPromise = ValuePromise<Int32>(ignoreRepeated: true)
     private var settingsDisposable: Disposable?
     private var quietSettingsDisposable: Disposable?
+    private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
     private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
@@ -46,17 +47,53 @@ public final class SupportContext {
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
+    private let chatHistory = Atomic<SupportChatHistory>(value: SupportChatHistory())
+    private let hardwareKeyGate = Atomic<SupportHardwareKeyGate>(value: SupportHardwareKeyGate())
     
     func takeChatOrderLaunchResort() -> Bool {
         return !self.chatOrderLaunchResortTaken.swap(true)
     }
     
+    public func pushChatHistory(peerId: PeerId) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.push(peerId: peerId)
+            return current
+        }
+    }
+
+    public func chatHistoryTarget(steps: Int) -> PeerId? {
+        return self.chatHistory.with { $0.target(steps: steps) }
+    }
+
+    public func moveChatHistory(steps: Int) {
+        let _ = self.chatHistory.modify { current in
+            var current = current
+            current.move(steps: steps)
+            return current
+        }
+    }
+
+    public func allowsHardwarePress(of key: SupportHardwareKey) -> Bool {
+        var result = false
+        let _ = self.hardwareKeyGate.modify { current in
+            var current = current
+            result = current.allowsPress(of: key, at: CFAbsoluteTimeGetCurrent())
+            return current
+        }
+        return result
+    }
+
     public var supportName: Signal<String, NoError> {
         return self.supportNamePromise.get()
     }
     
     public var chatListLoadTill: Signal<Int32, NoError> {
         return self.chatListLoadTillPromise.get()
+    }
+    
+    public var currentShortcutOverrides: [SupportShortcutOverride] {
+        return self.shortcutOverridesValue.with { $0 }
     }
     
     public var currentHideKeyboardOnSwitch: Bool {
@@ -80,6 +117,10 @@ public final class SupportContext {
         return result
     }
     
+    public func shortcutCombos(_ action: SupportShortcutAction) -> [SupportKeyCombo] {
+        return supportShortcutCombos(action, overrides: self.shortcutOverridesValue.with { $0 })
+    }
+    
     init(settings: Signal<SupportSettings, NoError>) {
         self.settingsDisposable = (settings
         |> map { settings -> Int32 in
@@ -97,6 +138,7 @@ public final class SupportContext {
             guard let self else {
                 return
             }
+            let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
         })
     }

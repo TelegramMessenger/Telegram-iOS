@@ -7163,6 +7163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 if inForeground && isVisible, let peerId = self.supportOccupationPeerId {
+                    supportContext.pushChatHistory(peerId: peerId)
                     self.supportOpenChatDisposable.set(supportContext.openChat(peerId: peerId))
                     self.supportSwitchPreloadDisposable.set(self.supportSwitchPreload(peerId: peerId))
                 } else {

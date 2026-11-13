@@ -2165,7 +2165,15 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
         self.controllerNode.addRelativeContentOffset(offset, transition: transition)
     }
     
+    public var additionalKeyShortcuts: [KeyShortcut] = []
+    public var returnKeyAction: (() -> Void)?
+    private var keyboardMovedHighlight: Bool = false
+    
     public var keyShortcuts: [KeyShortcut] {
+        return self.baseKeyShortcuts + self.additionalKeyShortcuts
+    }
+    
+    private var baseKeyShortcuts: [KeyShortcut] {
         return [
             KeyShortcut(
                 input: UIKeyCommand.inputEscape,
@@ -2185,13 +2193,21 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
                 input: "\r",
                 modifiers: [],
                 action: { [weak self] in
-                    self?.controllerNode.performHighlightedAction()
+                    guard let self else {
+                        return
+                    }
+                    if let returnKeyAction = self.returnKeyAction, !self.keyboardMovedHighlight {
+                        returnKeyAction()
+                    } else {
+                        self.controllerNode.performHighlightedAction()
+                    }
                 }
             ),
             KeyShortcut(
                 input: UIKeyCommand.inputUpArrow,
                 modifiers: [],
                 action: { [weak self] in
+                    self?.keyboardMovedHighlight = true
                     self?.controllerNode.decreaseHighlightedIndex()
                 }
             ),
@@ -2199,6 +2215,7 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
                 input: UIKeyCommand.inputDownArrow,
                 modifiers: [],
                 action: { [weak self] in
+                    self?.keyboardMovedHighlight = true
                     self?.controllerNode.increaseHighlightedIndex()
                 }
             )

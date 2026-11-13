@@ -218,6 +218,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private(set) var tabContainerData: ([ChatListFilterTabEntry], Bool, Int32?)?
+    private var supportPreviewIsMoving: Bool = false
     var hasTabs: Bool {
         if let tabContainerData = self.tabContainerData {
             let isEmpty = tabContainerData.0.count <= 1 || tabContainerData.1
@@ -2046,6 +2047,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let contextController = makeContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.presentInGlobalOverlay(contextController)
+                        if location == nil {
+                            strongSelf.supportAddPreviewShortcuts(contextController: contextController, peerId: peer.peerId, peer: peer.peer)
+                        }
                         
                         dismissPreviewingImpl = { [weak self, weak contextController] animateIn in
                             if let self, let contextController {
@@ -3045,6 +3049,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private weak var storyCameraTooltip: TooltipScreen?
     
+    private var supportListIsOnScreen: Bool {
+        guard let tabController = self.parent as? TabBarController else {
+            return false
+        }
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            return true
+        }
+        return (self.navigationController as? NavigationController)?.topViewController === tabController
+    }
+
     fileprivate func openSupportAbuseBot() {
         let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
         self.present(controller, in: .window(.root))
@@ -3829,6 +3843,68 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             completion()
         }
         return true
+    }
+    
+    private func supportAddPreviewShortcuts(contextController: ContextController, peerId: EnginePeer.Id, peer: EnginePeer?) {
+        guard self.context.supportContext != nil, !self.previewing else {
+            return
+        }
+        contextController.returnKeyAction = { [weak self, weak contextController] in
+            guard let self, let contextController, let peer, self.context.supportContext?.allowsHardwarePress(of: .composerReturn) == true else {
+                return
+            }
+            contextController.additionalKeyShortcuts = []
+            contextController.returnKeyAction = nil
+            contextController.dismissWithoutContent()
+            self.chatListDisplayNode.mainContainerNode.peerSelected?(peer, nil, true, true, nil)
+        }
+        guard let supportContext = self.context.supportContext else {
+            return
+        }
+        contextController.additionalKeyShortcuts = supportKeyShortcuts(combos: supportContext.shortcutCombos(.previousChat), title: nil, wantsPriorityOverText: true, perform: { [weak self, weak contextController] in
+            if let self, let contextController {
+                self.supportMovePreview(contextController: contextController, peerId: peerId, downward: false)
+            }
+        }) + supportKeyShortcuts(combos: supportContext.shortcutCombos(.nextChat), title: nil, wantsPriorityOverText: true, perform: { [weak self, weak contextController] in
+            if let self, let contextController {
+                self.supportMovePreview(contextController: contextController, peerId: peerId, downward: true)
+            }
+        })
+    }
+    
+    private func supportMovePreview(contextController: ContextController, peerId: EnginePeer.Id, downward: Bool) {
+        if self.supportPreviewIsMoving {
+            return
+        }
+        self.supportPreviewIsMoving = true
+        let accountPeerId = self.context.account.peerId
+        let listNode = self.chatListDisplayNode.mainContainerNode.currentItemNode
+        let _ = (self.context.engine.messages.supportChatListNeighbour(peerId: peerId, chatListFilterId: listNode.chatListFilter?.id, downward: downward, getFilterPredicate: { data in
+            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+        })
+        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak contextController, weak listNode] peer in
+            guard let self else {
+                return
+            }
+            self.supportPreviewIsMoving = false
+            guard let contextController, let listNode, let peer else {
+                return
+            }
+            listNode.scrollToChatIfOutsideSafeZone(peerId: peer.id)
+            var rowNode: ChatListItemNode?
+            listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatListItemNode, case .peer(id: peer.id) = itemNode.item?.content.chatLocation {
+                    rowNode = itemNode
+                }
+            }
+            guard let rowNode else {
+                return
+            }
+            contextController.additionalKeyShortcuts = []
+            contextController.returnKeyAction = nil
+            contextController.dismissWithoutContent()
+            rowNode.supportActivatePreview()
+        })
     }
     
     public func resetForumStackIfOpen() {
@@ -4949,7 +5025,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let toggleSearch: () -> Void = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.displayNavigationBar {
+                if strongSelf.context.supportContext != nil, strongSelf.parent is TabBarController {
+                    if strongSelf.supportListIsOnScreen {
+                        if strongSelf.displayNavigationBar {
+                            strongSelf.tabBarActivateSearch()
+                        } else {
+                            strongSelf.tabBarDeactivateSearch()
+                        }
+                    }
+                } else if strongSelf.displayNavigationBar {
                     strongSelf.activateSearch()
                 } else {
                     strongSelf.deactivateSearch(animated: true)
@@ -5033,7 +5117,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })
         }
         
-        return inputShortcuts + folderShortcuts + chatShortcuts
+        var supportShortcuts: [KeyShortcut] = []
+        if let supportContext = self.context.supportContext {
+            supportShortcuts.append(contentsOf: supportTemplatesReloadKeyShortcuts(context: self.context, strings: strings, present: { [weak self] controller in
+                self?.present(controller, in: .window(.root))
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.previousChat), title: nil, perform: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.previous(unread: false))
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.nextChat), title: nil, perform: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.next(unread: false))
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.showCurrentChat), title: supportShortcutTitle(.showCurrentChat, strings: strings), perform: { [weak self] in
+                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()
+            }))
+            supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.openAbuseBot), title: supportShortcutTitle(.openAbuseBot, strings: strings), perform: { [weak self] in
+                guard let self, self.supportListIsOnScreen, self.context.supportContext?.allowsHardwarePress(of: .openAbuseBot) == true else {
+                    return
+                }
+                self.openSupportAbuseBot()
+            }))
+        }
+
+        return inputShortcuts + folderShortcuts + chatShortcuts + supportShortcuts
     }
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {

@@ -143,6 +143,10 @@ private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatL
         }
         return !peer.isForumOrMonoForum
     }
+    return supportChatListTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, isTarget: isTarget, getFilterPredicate: getFilterPredicate)
+}
+
+private func supportChatListTarget(transaction: Transaction, peerId: PeerId, chatListFilterId: Int32?, downward: Bool, isTarget: (PeerId) -> Bool, getFilterPredicate: (ChatListFilterData) -> ChatListFilterPredicate) -> PeerId? {
     let chatListIndex = transaction.getPeerChatListIndex(peerId)
 
     var predicate: ChatListFilterPredicate?
@@ -180,6 +184,22 @@ func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFil
     return account.postbox.transaction { transaction -> EnginePeer? in
         let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
         Logger.shared.log("SupportSwitch", "send in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)): \(String(describing: target?.toInt64()))")
+        return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
+    }
+}
+
+func supportChatListNeighbourIsTarget(targetPeerId: PeerId, currentPeerId: PeerId, peer: Peer?) -> Bool {
+    guard targetPeerId != currentPeerId, let peer else {
+        return false
+    }
+    return !peer.isForumOrMonoForum
+}
+
+func _internal_supportChatListNeighbour(account: Account, peerId: PeerId, chatListFilterId: Int32?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+    return account.postbox.transaction { transaction -> EnginePeer? in
+        let target = supportChatListTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, isTarget: { targetPeerId in
+            return supportChatListNeighbourIsTarget(targetPeerId: targetPeerId, currentPeerId: peerId, peer: transaction.getPeer(targetPeerId))
+        }, getFilterPredicate: getFilterPredicate)
         return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
     }
 }

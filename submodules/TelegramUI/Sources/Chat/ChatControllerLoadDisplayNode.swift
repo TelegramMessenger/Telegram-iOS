@@ -1014,6 +1014,9 @@ extension ChatControllerImpl {
             self.chatDisplayNode.textInputPanelNode?.supportDoneIsAvailable = { [weak self] in
                 return self?.supportOccupationPeerId != nil
             }
+            self.chatDisplayNode.textInputPanelNode?.supportHardwareReturnIsNewPress = { [weak self] in
+                return self?.context.supportContext?.allowsHardwarePress(of: .composerReturn) ?? false
+            }
             if let peerId = self.supportOccupationPeerId {
                 self.supportDoneUnreadDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
                 |> map { $0.isUnread }
