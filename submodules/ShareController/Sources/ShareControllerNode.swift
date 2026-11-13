@@ -591,12 +591,12 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                             }
                         }))
                     ])
-                    return ContextController.Items(content: .list(items), dismissed: { [weak self] in
+                    return ContextController.Items(content: .list(items), animationCache: nil, dismissed: { [weak self] in
                         guard let self, UIAccessibility.isVoiceOverRunning, !self.actionButtonNode.accessibilityElementsHidden, self.actionButtonNode.alpha > 0.0, self.actionButtonNode.view.window != nil else {
                             return
                         }
                         UIAccessibility.post(notification: .layoutChanged, argument: self.actionButtonNode.view)
-                    }, animationCache: nil)
+                    })
                 }
                 let contextController = makeContextController(presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: fromForeignApp ? -116.0 : 0.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true

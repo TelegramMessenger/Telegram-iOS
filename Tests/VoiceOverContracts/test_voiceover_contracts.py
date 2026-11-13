@@ -291,6 +291,10 @@ class SelectionAndShareContractTests(unittest.TestCase):
             "UIAccessibility.post(notification: .layoutChanged, argument: self.actionButtonNode.view)",
         ):
             self.assertIn(contract, node)
+        self.assertIn(
+            "ContextController.Items(content: .list(items), animationCache: nil, dismissed:",
+            node,
+        )
         controller = source("submodules/ShareController/Sources/ShareController.swift")
         self.assertIn("override public func accessibilityPerformEscape() -> Bool", controller)
 
@@ -483,6 +487,7 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("if self.disable_provisioning_profiles:\n            combined_arguments += ['--//Telegram:disableProvisioningProfiles']", make)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v7.0.2", contents)
+        self.assertIn("if-no-files-found: ignore", contents)
         self.assertIn("runs-on: xcode-27", contents)
         self.assertIn('/Applications/Xcode_"${XCODE_VERSION}"*.app', contents)
         self.assertIn("Available Xcode applications:", contents)

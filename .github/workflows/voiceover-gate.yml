@@ -80,5 +80,5 @@ jobs:
         with:
           name: voiceover-xcresult
           path: voiceover-test-results
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 30
