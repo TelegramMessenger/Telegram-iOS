@@ -7894,9 +7894,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if self.context.supportContext != nil, self.supportOccupationPeerId != nil, !self.didSupportFocusComposerOnOpen {
+        if let supportContext = self.context.supportContext, let supportOccupationPeerId = self.supportOccupationPeerId, !self.didSupportFocusComposerOnOpen {
             self.didSupportFocusComposerOnOpen = true
-            if self.scheduledActivateInput == nil {
+            if self.scheduledActivateInput == nil, !supportContext.takeComposerFocusSkip(peerId: supportOccupationPeerId), !self.supportHidesKeyboard {
                 self.scheduledActivateInput = .text
             }
         }

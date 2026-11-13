@@ -17354,6 +17354,9 @@ Error: %8$@";
 "Support.Switching.SendWithoutSwitching" = "Send without switching";
 "Support.Switching.NoUnreadChats" = "No more unread chats";
 
+"Support.HideKeyboard.Title" = "Hide keyboard on switching";
+"Support.HideKeyboard.Info" = "Moving to another chat after sending, with Done, with a swipe or with the keyboard shortcuts closes the keyboard, leaving more room to read. With a hardware keyboard, typing stays in the composer.";
+
 "Support.FixOrder.Title" = "Fix chats order";
 "Support.FixOrder.Info" = "Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list.";
 

@@ -11,6 +11,9 @@ public final class SupportContext {
     private let currentChatListLoad = Atomic<ChatListLoad?>(value: nil)
     private let chatListLoadTillPromise = ValuePromise<Int32>(ignoreRepeated: true)
     private var settingsDisposable: Disposable?
+    private var quietSettingsDisposable: Disposable?
+    private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
+    private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let openChats = Atomic<[(token: Int, peerId: PeerId)]>(value: [])
     private let nextOpenChatToken = Atomic<Int>(value: 0)
@@ -30,6 +33,27 @@ public final class SupportContext {
         return self.chatListLoadTillPromise.get()
     }
     
+    public var currentHideKeyboardOnSwitch: Bool {
+        return self.hideKeyboardOnSwitchValue.with { $0 }
+    }
+    
+    // A switch that keeps the keyboard closed: the chat it opens skips the composer focus a support chat takes on open.
+    public func skipComposerFocus(peerId: PeerId, now: Double = CFAbsoluteTimeGetCurrent()) {
+        let _ = self.composerFocusSkip.swap((peerId, now + 2.0))
+    }
+    
+    public func takeComposerFocusSkip(peerId: PeerId, now: Double = CFAbsoluteTimeGetCurrent()) -> Bool {
+        var result = false
+        let _ = self.composerFocusSkip.modify { current in
+            guard let current, current.peerId == peerId else {
+                return current
+            }
+            result = now < current.until
+            return nil
+        }
+        return result
+    }
+    
     init(settings: Signal<SupportSettings, NoError>) {
         self.settingsDisposable = (settings
         |> map { settings -> Int32 in
@@ -43,10 +67,17 @@ public final class SupportContext {
             let _ = self.currentChatListLoad.swap(ChatListLoad(period: period, till: till))
             self.chatListLoadTillPromise.set(till)
         })
+        self.quietSettingsDisposable = settings.start(next: { [weak self] settings in
+            guard let self else {
+                return
+            }
+            let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
+        })
     }
     
     deinit {
         self.settingsDisposable?.dispose()
+        self.quietSettingsDisposable?.dispose()
     }
     
     public func loadMoreChats(holeTimestamp: Int32) {

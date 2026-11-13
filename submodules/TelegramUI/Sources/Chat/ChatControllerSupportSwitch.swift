@@ -6,6 +6,7 @@ import ChatListUI
 import ChatAvatarNavigationNode
 import UndoUI
 import NavigationBarNode
+import GameController
 
 func supportMessagesShareContact(_ messages: [EnqueueMessage]) -> Bool {
     return messages.contains(where: { message in
@@ -38,11 +39,20 @@ extension ChatControllerImpl {
         })
     }
 
+    // A hardware keyboard keeps typing in the composer: there is no on-screen keyboard to make room for.
+    var supportHidesKeyboard: Bool {
+        return self.context.supportContext?.currentHideKeyboardOnSwitch == true && GCKeyboard.coalesced == nil
+    }
+
     func supportSwitch(to peer: EnginePeer) -> Bool {
         guard let navigationController = self.effectiveNavigationController, navigationController.viewControllers.last === self else {
             return false
         }
-        let keepsKeyboard = self.presentationInterfaceState.inputMode == .text
+        let hidesKeyboard = self.supportHidesKeyboard
+        let keepsKeyboard = self.presentationInterfaceState.inputMode == .text && !hidesKeyboard
+        if hidesKeyboard {
+            self.context.supportContext?.skipComposerFocus(peerId: peer.id)
+        }
         // The composer clears on the history view's update, which may not have come yet.
         if let layoutActionOnViewTransitionAction = self.layoutActionOnViewTransitionAction {
             self.layoutActionOnViewTransitionAction = nil
