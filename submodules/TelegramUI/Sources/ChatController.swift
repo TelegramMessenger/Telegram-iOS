@@ -516,6 +516,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var didAppear = false
     var enableAnimations = false
     var scheduledActivateInput: ChatControllerActivateInput?
+    var didSupportFocusComposerOnOpen = false
     
     var raiseToListen: RaiseToListenManager?
     var voicePlaylistDidEndTimestamp: Double = 0.0
@@ -7893,6 +7894,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        if self.context.supportContext != nil, self.supportOccupationPeerId != nil, !self.didSupportFocusComposerOnOpen {
+            self.didSupportFocusComposerOnOpen = true
+            if self.scheduledActivateInput == nil {
+                self.scheduledActivateInput = .text
+            }
+        }
+
         if let scheduledActivateInput = scheduledActivateInput, case .text = scheduledActivateInput {
             self.scheduledActivateInput = nil
             
