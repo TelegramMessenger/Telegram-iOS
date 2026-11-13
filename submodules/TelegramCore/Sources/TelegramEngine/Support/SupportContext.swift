@@ -17,6 +17,11 @@ public final class SupportContext {
     private let openChatPromise = ValuePromise<PeerId?>(nil, ignoreRepeated: true)
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
+    private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
+    
+    func takeChatOrderLaunchResort() -> Bool {
+        return !self.chatOrderLaunchResortTaken.swap(true)
+    }
     public var supportName: Signal<String, NoError> {
         return self.supportNamePromise.get()
     }

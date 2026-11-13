@@ -61,6 +61,7 @@ public enum SupportSettingsEntryTag: ItemListItemTag, Equatable {
 private enum SupportSettingsSection: Int32 {
     case switching
     case sending
+    case order
     case period
     case loading
 }
@@ -70,6 +71,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case switchHeader
         case switchBehavior(Int32)
         case sendSilently
+        case fixChatsOrder
+        case fixChatsOrderInfo
         case periodHeader
         case period(Int32)
         case periodInfo
@@ -80,6 +83,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case switchHeader(String)
     case switchBehavior(index: Int32, behavior: SupportSwitchBehavior, title: String, isSelected: Bool)
     case sendSilently(String, Bool)
+    case fixChatsOrder(String, Bool)
+    case fixChatsOrderInfo(String)
     case periodHeader(String)
     case period(index: Int32, period: Int32, title: String, isSelected: Bool)
     case periodInfo(String)
@@ -92,6 +97,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.switching.rawValue
         case .sendSilently:
             return SupportSettingsSection.sending.rawValue
+        case .fixChatsOrder, .fixChatsOrderInfo:
+            return SupportSettingsSection.order.rawValue
         case .periodHeader, .period, .periodInfo:
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
@@ -107,6 +114,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .switchBehavior(behavior.rawValue)
         case .sendSilently:
             return .sendSilently
+        case .fixChatsOrder:
+            return .fixChatsOrder
+        case .fixChatsOrderInfo:
+            return .fixChatsOrderInfo
         case .periodHeader:
             return .periodHeader
         case let .period(_, period, _, _):
@@ -128,6 +139,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 1 + index
         case .sendSilently:
             return 4
+        case .fixChatsOrder:
+            return 9
+        case .fixChatsOrderInfo:
+            return 10
         case .periodHeader:
             return 25
         case let .period(index, _, _, _):
@@ -166,6 +181,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             }, tag: SupportSettingsEntryTag.sendSilently)
+        case let .fixChatsOrder(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.fixChatsOrder = value
+                    return settings
+                }
+            })
         case let .periodHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section, tag: SupportSettingsEntryTag.period)
         case let .period(_, period, title, isSelected):
@@ -174,7 +197,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .periodInfo(text), let .loadMoreInfo(text):
+        case let .fixChatsOrderInfo(text), let .periodInfo(text), let .loadMoreInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .loadMore(title, holeTimestamp):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: holeTimestamp != nil ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -196,6 +219,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     }
 
     entries.append(.sendSilently(strings.Support_Settings_SendSilently, settings.sendAllSilently))
+
+    entries.append(.fixChatsOrder(strings.Support_FixOrder_Title, settings.fixChatsOrder))
+    entries.append(.fixChatsOrderInfo(strings.Support_FixOrder_Info))
 
     entries.append(.periodHeader(strings.Support_ChatLoading_Header))
     for (index, period) in supportChatLoadPeriods.enumerated() {
