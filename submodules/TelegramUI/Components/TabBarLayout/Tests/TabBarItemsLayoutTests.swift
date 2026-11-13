@@ -29,6 +29,42 @@ final class TabBarItemsLayoutTests: XCTestCase {
         ])
     }
 
+    func test_horizontalRegular_maxItemLength_stopsTheBarShort() {
+        let result = tabBarItemsLayout(axis: .horizontal, isCompact: false, unboundItemWidths: [60.0, 70.0], availableLength: 290.0, maxItemLength: 96.0)
+        XCTAssertEqual(result.size, CGSize(width: 200.0, height: 64.0))
+        XCTAssertEqual(result.itemFrames, [
+            CGRect(x: 4.0, y: 4.0, width: 96.0, height: 56.0),
+            CGRect(x: 100.0, y: 4.0, width: 96.0, height: 56.0)
+        ])
+    }
+
+    func test_horizontalRegular_maxItemLength_doesNothingWhenItemsAreShorter() {
+        let result = tabBarItemsLayout(axis: .horizontal, isCompact: false, unboundItemWidths: [60.0, 70.0, 80.0, 90.0], availableLength: 290.0, maxItemLength: 96.0)
+        let unlimited = tabBarItemsLayout(axis: .horizontal, isCompact: false, unboundItemWidths: [60.0, 70.0, 80.0, 90.0], availableLength: 290.0)
+        XCTAssertEqual(result, unlimited)
+    }
+
+    func test_horizontalRegular_inlineItems_hugTheirWidthsAtCompactThickness() {
+        let result = tabBarItemsLayout(axis: .horizontal, isCompact: false, unboundItemWidths: [90.5, 100.0], availableLength: 500.0, maxItemLength: 96.0, inlineItems: true)
+        XCTAssertEqual(result.size, CGSize(width: 199.0, height: 48.0))
+        XCTAssertEqual(result.itemFrames, [
+            CGRect(x: 4.0, y: 4.0, width: 91.0, height: 40.0),
+            CGRect(x: 95.0, y: 4.0, width: 100.0, height: 40.0)
+        ])
+    }
+
+    func test_inlineItems_doNothingOutsideHorizontalRegular() {
+        let widths: [CGFloat] = [60.0, 70.0]
+        XCTAssertEqual(
+            tabBarItemsLayout(axis: .horizontal, isCompact: true, unboundItemWidths: widths, availableLength: 500.0, inlineItems: true),
+            tabBarItemsLayout(axis: .horizontal, isCompact: true, unboundItemWidths: widths, availableLength: 500.0)
+        )
+        XCTAssertEqual(
+            tabBarItemsLayout(axis: .vertical, isCompact: false, unboundItemWidths: widths, availableLength: 500.0, inlineItems: true),
+            tabBarItemsLayout(axis: .vertical, isCompact: false, unboundItemWidths: widths, availableLength: 500.0)
+        )
+    }
+
     func test_horizontalRegular_noItems_insetsOnly() {
         let result = tabBarItemsLayout(axis: .horizontal, isCompact: false, unboundItemWidths: [], availableLength: 500.0)
         XCTAssertEqual(result.size, CGSize(width: 8.0, height: 64.0))

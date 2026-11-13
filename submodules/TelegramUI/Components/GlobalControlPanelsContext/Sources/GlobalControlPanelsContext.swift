@@ -385,7 +385,7 @@ public final class GlobalControlPanelsContext {
                         return lhs < rhs
                     }
                     
-                    if dismissedSuggestions.contains(ServerProvidedSuggestion.todayBirthdays.id) {
+                    if dismissedSuggestions.contains(ServerProvidedSuggestion.todayBirthdays.id) || context.supportContext != nil {
                         todayBirthdayPeerIds = []
                     }
                     

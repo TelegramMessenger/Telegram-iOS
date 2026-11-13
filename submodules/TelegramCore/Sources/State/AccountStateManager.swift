@@ -298,6 +298,9 @@ public final class AccountStateManager {
         fileprivate var walletTransferUpdatesPipe: ValuePipe<[WalletTransferUpdate]> {
             return self.eventHub.walletTransferUpdatesPipe
         }
+        fileprivate var supportReceivedDraftsPipe: ValuePipe<[SupportReceivedDraft]> {
+            return self.eventHub.supportReceivedDraftsPipe
+        }
         fileprivate var walletTonConnectUpdatesPipe: ValuePipe<[WalletTonConnectEvent]> {
             return self.eventHub.walletTonConnectUpdatesPipe
         }
@@ -655,7 +658,7 @@ public final class AccountStateManager {
                         }
                     }
 
-                    let _ = ptsTotalLimitBox.swap(currentPtsTotalLimit(transaction: transaction))
+                    let _ = ptsTotalLimitBox.swap(currentPtsTotalLimit(transaction: transaction, accountPeerId: accountPeerId))
 
                     var invalidatedChannels: [(peer: Peer, pts: Int32?)] = []
                     if let state = state, !disableParallelChannelReset {
@@ -737,7 +740,7 @@ public final class AccountStateManager {
                         // pts_total_limit (audit Q14): the value the app sends, read before each request. A gap larger than the
                         // limit answers differenceTooLong, which the extension leaves to the app (Q3).
                         let request = retryingDifferenceRequest(postbox.transaction { transaction -> Int32? in
-                            return currentPtsTotalLimit(transaction: transaction)
+                            return currentPtsTotalLimit(transaction: transaction, accountPeerId: accountPeerId)
                         }
                         |> castError(MTRpcError.self)
                         |> mapToSignal { ptsTotalLimit -> Signal<Api.updates.Difference, MTRpcError> in
@@ -1320,6 +1323,12 @@ public final class AccountStateManager {
     func walletTransferUpdates() -> Signal<[WalletTransferUpdate], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.walletTransferUpdatesPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    func supportReceivedDrafts() -> Signal<[SupportReceivedDraft], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.supportReceivedDraftsPipe.signal().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
 

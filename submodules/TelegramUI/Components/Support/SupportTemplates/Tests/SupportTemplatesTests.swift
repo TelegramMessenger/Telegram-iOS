@@ -1,0 +1,423 @@
+import XCTest
+@testable import SupportTemplates
+
+private func parse(_ text: String) -> SupportTemplatesFile {
+    return parseSupportTemplatesFile(text.data(using: .utf8)!)
+}
+
+final class SupportTemplatesParserTests: XCTestCase {
+    func testParsesBlocksWithUrlKeysAndMultilineValue() {
+        let file = parse("""
+        {URL}
+        https://example.com/tl_main.txt
+
+        {QUESTION}
+        How do I reset my password?
+        {KEYS}
+        reset
+          Pass Word
+        {VALUE}
+
+        Open Settings.
+
+        Tap Reset.\r
+
+        {QUESTION}
+        Second one
+        {VALUE}
+        Answer
+        """)
+        XCTAssertEqual(file.url, "https://example.com/tl_main.txt")
+        XCTAssertEqual(file.questions.count, 2)
+        let first = file.questions["howdoiresetmypassword"]
+        XCTAssertEqual(first?.question, "How do I reset my password?")
+        XCTAssertEqual(first?.originalKeys, ["reset", "Pass Word"])
+        XCTAssertEqual(first?.normalizedKeys, ["reset", "pass word"])
+        XCTAssertEqual(first?.value, "Open Settings.\n\nTap Reset.")
+        XCTAssertEqual(file.questions["secondone"]?.value, "Answer")
+    }
+
+    func testIgnoresLowercaseAndInlineTokensAndTextBeforeFirstToken() {
+        let file = parse("""
+        preamble line
+        {QUESTION}
+        Q
+        {VALUE}
+        {value}
+        text {VALUE}
+        """)
+        XCTAssertEqual(file.questions["q"]?.value, "{value}\ntext {VALUE}")
+    }
+
+    func testValueLinesKeepTrailingSpacesOnly() {
+        let file = parse("{QUESTION}\nQ\n{KEYS}\n h \n{VALUE}\n  Hola. \r\n\tsecond line  \n   \nthird \r\n{QUESTION}\nR\n{VALUE}\nend \n")
+        XCTAssertEqual(file.questions["q"]?.value, "Hola. \nsecond line  \n\nthird ")
+        XCTAssertEqual(file.questions["q"]?.originalKeys, ["h"])
+        XCTAssertEqual(file.questions["r"]?.value, "end ")
+    }
+
+    func testSecondValueIsLost() {
+        let file = parse("{QUESTION}\nQ\n{VALUE}\nfirst\n{VALUE}\nsecond\n")
+        XCTAssertEqual(file.questions.count, 1)
+        XCTAssertEqual(file.questions["q"]?.value, "first")
+    }
+
+    func testSecondKeysSectionIsIgnored() {
+        let file = parse("{QUESTION}\nQ\n{KEYS}\na\n{KEYS}\nb\n{VALUE}\nv")
+        XCTAssertEqual(file.questions["q"]?.originalKeys, ["a"])
+    }
+
+    func testSecondKeysSectionIsAcceptedAfterAnEmptyFirst() {
+        let file = parse("{QUESTION}\nQ\n{KEYS}\n\n{KEYS}\nb\n{VALUE}\nv")
+        XCTAssertEqual(file.questions["q"]?.originalKeys, ["b"])
+    }
+
+    func testBlockWithoutValueMergesIntoTheNext() {
+        let file = parse("{QUESTION}\nq1\n{KEYS}\nk\n{QUESTION}\nq2\n{VALUE}\nv")
+        XCTAssertEqual(file.questions.count, 1)
+        XCTAssertEqual(file.questions["q1"]?.originalKeys, ["k"])
+        XCTAssertEqual(file.questions["q1"]?.value, "v")
+    }
+
+    func testQuestionWithoutValueAtTheEndIsKept() {
+        let file = parse("{QUESTION}\nOnly a question")
+        XCTAssertEqual(file.questions["onlyaquestion"]?.value, "")
+    }
+
+    func testQuestionWithoutLettersOrDigitsIsDropped() {
+        let file = parse("{QUESTION}\n?!\n{VALUE}\nv")
+        XCTAssertTrue(file.questions.isEmpty)
+        XCTAssertTrue(file.isEmpty)
+    }
+
+    func testFirstDuplicateQuestionWins() {
+        let file = parse("{QUESTION}\nSame?\n{VALUE}\none\n{QUESTION}\nsame\n{VALUE}\ntwo")
+        XCTAssertEqual(file.questions["same"]?.value, "one")
+    }
+
+    func testUnknownTokenEndsTheValueAndIgnoresWhatFollows() {
+        let file = parse("{QUESTION}\nQ\n{VALUE}\nv\n{OTHER}\nignored\n{QUESTION}\nR\n{VALUE}\nw")
+        XCTAssertEqual(file.questions["q"]?.value, "v")
+        XCTAssertEqual(file.questions["r"]?.value, "w")
+    }
+
+    func testFirstUrlWinsForTheWholeFile() {
+        let file = parse("{URL}\n\nfirst\nsecond\n{URL}\nthird")
+        XCTAssertEqual(file.url, "first")
+    }
+
+    func testFileNames() {
+        XCTAssertTrue(isSupportTemplatesFileName("tl_main.txt"))
+        XCTAssertTrue(isSupportTemplatesFileName("TL_Main.TXT"))
+        XCTAssertFalse(isSupportTemplatesFileName("main.txt"))
+        XCTAssertFalse(isSupportTemplatesFileName("tl_main.txt.old"))
+    }
+}
+
+final class SupportTemplatesNormalizationTests: XCTestCase {
+    func testQuestionKeepsLowercaseLettersAndDigitsWithAccents() {
+        XCTAssertEqual(supportTemplatesNormalizedQuestion("Café: Ёлка 42?"), "caféёлка42")
+    }
+
+    func testKeyIsTrimmedLoweredAndLosesAccents() {
+        XCTAssertEqual(supportTemplatesNormalizedKey("  Café Crème "), "cafe creme")
+        XCTAssertEqual(supportTemplatesNormalizedKey("Ёлка"), "елка")
+        XCTAssertEqual(supportTemplatesNormalizedKey("Йод"), "йод")
+        XCTAssertEqual(supportTemplatesNormalizedKey("ＡＢＣ１"), "abc1")
+        XCTAssertEqual(supportTemplatesNormalizedKey("e\u{301}"), "e")
+    }
+
+    func testSearchWordsSplitOnTDesktopSeparators() {
+        XCTAssertEqual(supportTemplatesSearchWords("  Hello, world! a_b-c @x what? #tag "), ["hello", "world", "a", "b", "c", "x", "what?", "#tag"])
+    }
+}
+
+final class SupportTemplatesSearchTests: XCTestCase {
+    private func makeTemplates() -> SupportTemplates {
+        let main = parse("""
+        {QUESTION}
+        Payment failed
+        {KEYS}
+        payment
+        {VALUE}
+        Please try another card.
+
+        {QUESTION}
+        How to pay
+        {VALUE}
+        Use a payment card.
+
+        {QUESTION}
+        Delete account
+        {KEYS}
+        del
+        {VALUE}
+        Go to the deletion page.
+        """)
+        let extra = parse("""
+        {QUESTION}
+        How to pay
+        {VALUE}
+        Use a card.
+        """)
+        return SupportTemplates(files: ["tl_a.txt": main, "tl_b.txt": extra])
+    }
+
+    func testKeyOutranksQuestionAndPrefixMatchIsNotDoubled() {
+        let results = makeTemplates().query("pay")
+        XCTAssertEqual(results.map(\.question), ["Payment failed", "How to pay", "How to pay"])
+    }
+
+    func testExactKeyWordScoresDouble() {
+        let templates = makeTemplates()
+        XCTAssertEqual(templates.query("payment").first?.question, "Payment failed")
+    }
+
+    func testTiesSortByFileNameDescending() {
+        let results = makeTemplates().query("how")
+        XCTAssertEqual(results.count, 2)
+        XCTAssertEqual(results[0].value, "Use a card.")
+        XCTAssertEqual(results[1].value, "Use a payment card.")
+    }
+
+    func testEveryWordMustMatch() {
+        let templates = makeTemplates()
+        XCTAssertEqual(templates.query("pay card").map(\.question), ["Payment failed", "How to pay", "How to pay"])
+        XCTAssertTrue(templates.query("pay zebra").isEmpty)
+        XCTAssertTrue(templates.query("").isEmpty)
+        XCTAssertTrue(templates.query("!!!").isEmpty)
+    }
+
+    func testResultsAreLimitedToTen() {
+        var text = ""
+        for i in 0 ..< 15 {
+            text += "{QUESTION}\nTopic \(i)\n{VALUE}\nanswer\n"
+        }
+        let templates = SupportTemplates(files: ["tl_many.txt": parse(text)])
+        XCTAssertEqual(templates.query("topic").count, SupportTemplates.queryLimit)
+    }
+
+    func testMatchExact() {
+        let templates = makeTemplates()
+        XCTAssertEqual(templates.maxKeyLength, 7)
+        XCTAssertEqual(templates.matchExact(" DEL ")?.question.question, "Delete account")
+        XCTAssertNil(templates.matchExact("de"))
+        XCTAssertNil(templates.matchExact(""))
+        XCTAssertNil(templates.matchExact("payment!"))
+    }
+
+    func testMatchFromEndTakesTheLongestKey() {
+        let templates = SupportTemplates(files: ["tl_k.txt": parse("""
+        {QUESTION}
+        Short
+        {KEYS}
+        ay
+        {VALUE}
+        s
+        {QUESTION}
+        Long
+        {KEYS}
+        pay
+        {VALUE}
+        l
+        """)])
+        XCTAssertEqual(templates.matchFromEnd("please PAY")?.key, "pay")
+        XCTAssertEqual(templates.matchFromEnd("okay")?.key, "ay")
+        XCTAssertNil(templates.matchFromEnd("pay "))
+        XCTAssertNil(templates.matchFromEnd(""))
+    }
+}
+
+final class SupportTemplatesExpansionTests: XCTestCase {
+    private let templates = SupportTemplates(files: ["tl_k.txt": parse("""
+    {QUESTION}
+    Short
+    {KEYS}
+    ay
+    {VALUE}
+    short answer
+    {QUESTION}
+    Long
+    {KEYS}
+    pay
+    {VALUE}
+    long answer
+    """)])
+
+    func testCaretReplacesTheLongestKeyEndingThere() {
+        XCTAssertEqual(templates.expansion(text: "please PAY", selection: NSRange(location: 10, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 7, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "pay later", selection: NSRange(location: 3, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 0, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "okay", selection: NSRange(location: 4, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 2), value: "short answer"))
+    }
+
+    func testCaretOutsideAKeyMatchesNothing() {
+        XCTAssertNil(templates.expansion(text: "pay ", selection: NSRange(location: 4, length: 0)))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: 2, length: 0)))
+        XCTAssertNil(templates.expansion(text: "", selection: NSRange(location: 0, length: 0)))
+    }
+
+    func testSelectionReplacesItselfWhenItIsAKey() {
+        XCTAssertEqual(templates.expansion(text: "a pay b", selection: NSRange(location: 2, length: 3)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "a ay b", selection: NSRange(location: 1, length: 3)), SupportTemplatesExpansion(range: NSRange(location: 1, length: 3), value: "short answer"))
+        XCTAssertNil(templates.expansion(text: "a  pay  b", selection: NSRange(location: 2, length: 5)))
+        XCTAssertNil(templates.expansion(text: "a pa b", selection: NSRange(location: 2, length: 2)))
+    }
+
+    func testPositionsAreUtf16AndOutOfRangeIsNoMatch() {
+        XCTAssertEqual(templates.expansion(text: "😀pay", selection: NSRange(location: 5, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 3), value: "long answer"))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: 9, length: 0)))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: NSNotFound, length: 0)))
+    }
+
+    func testContactValue() {
+        XCTAssertTrue(supportTemplateValueIsContact("contact:+100 Sample Name\nHello"))
+        XCTAssertFalse(supportTemplateValueIsContact("Contact: the agent"))
+        XCTAssertFalse(supportTemplateValueIsContact("see contact:"))
+    }
+
+    private func contact(_ value: String) -> SupportTemplateContact? {
+        return SupportTemplateContact(value: value)
+    }
+
+    func testContactWithFirstNameOnlyAndNoComment() {
+        let result = contact("contact:+100 Sample")
+        XCTAssertEqual(result?.phone, "+100")
+        XCTAssertEqual(result?.firstName, "Sample")
+        XCTAssertEqual(result?.lastName, "")
+        XCTAssertEqual(result?.comment, "")
+    }
+
+    func testContactLastNameJoinsTheRestWithSingleSpaces() {
+        let result = contact("contact:+100  Sample   Name  Two ")
+        XCTAssertEqual(result?.phone, "+100")
+        XCTAssertEqual(result?.firstName, "Sample")
+        XCTAssertEqual(result?.lastName, "Name Two")
+    }
+
+    func testContactCommentIsEverythingAfterTheFirstLineUntrimmed() {
+        let result = contact("contact:+100 Sample Name\nFirst line\n\n Second ")
+        XCTAssertEqual(result?.lastName, "Name")
+        XCTAssertEqual(result?.comment, "First line\n\n Second ")
+    }
+
+    func testMalformedContactIsNil() {
+        XCTAssertNil(contact("contact:"))
+        XCTAssertNil(contact("contact:+100"))
+        XCTAssertNil(contact("contact:+100 \nSample Name"))
+        XCTAssertNil(contact("contact:\n+100 Sample"))
+        XCTAssertNil(contact("Contact:+100 Sample"))
+        XCTAssertNil(contact("plain answer"))
+    }
+
+    func testContactSplitsOnSpacesOnly() {
+        XCTAssertNil(contact("contact:+100\tSample"))
+    }
+
+    func testContactKeepsNonAsciiNamesAndComment() {
+        let result = contact("contact:+100 نمونه 😀\nسلام")
+        XCTAssertEqual(result?.firstName, "نمونه")
+        XCTAssertEqual(result?.lastName, "😀")
+        XCTAssertEqual(result?.comment, "سلام")
+    }
+
+    func testTextToSendInsertsAtTheCaretAndReplacesASelection() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "", selection: NSRange(location: 0, length: 0), replacing: nil), "answer")
+        XCTAssertEqual(result?.textToSend(composerText: "hi  there", selection: NSRange(location: 3, length: 0), replacing: nil), "hi answer there")
+        XCTAssertEqual(result?.textToSend(composerText: "hi bad", selection: NSRange(location: 3, length: 3), replacing: nil), "hi answer")
+    }
+
+    func testTextToSendReplacesAKeyAndUsesUtf16Positions() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "😀 pay", selection: NSRange(location: 6, length: 0), replacing: NSRange(location: 3, length: 3)), "😀 answer")
+    }
+
+    func testTextToSendWithoutACommentIsWhatTheComposerKeeps() {
+        let result = contact("contact:+100 Sample")
+        XCTAssertEqual(result?.textToSend(composerText: "pay", selection: NSRange(location: 3, length: 0), replacing: NSRange(location: 0, length: 3)), "")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: 4, length: 0), replacing: nil), "kept")
+    }
+
+    func testTextToSendIgnoresAnOutOfRangeSelection() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: NSNotFound, length: 0), replacing: nil), "kept")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: 9, length: 0), replacing: nil), "kept")
+    }
+}
+
+final class SupportHashtagStripTests: XCTestCase {
+    private struct Entity: Equatable {
+        var range: Range<Int>
+    }
+
+    private func strip(_ text: String, _ ranges: [Range<Int>] = []) -> (String, [Range<Int>]) {
+        let result = supportStrippingHashtag(text: text, entities: ranges.map(Entity.init), range: { $0.range }, updatedRange: { entity, range in
+            var entity = entity
+            entity.range = range
+            return entity
+        })
+        return (result.text, result.entities.map(\.range))
+    }
+
+    func testStripsTrailingTagGroup() {
+        XCTAssertEqual(strip("Hello\n#tsf_a #TSFb more_words").0, "Hello")
+        XCTAssertEqual(strip("Hello #tsf").0, "Hello ")
+        XCTAssertEqual(strip("Hello\n\n#tsf").0, "Hello\n")
+        XCTAssertEqual(strip("Hello\r\n#tsf").0, "Hello\r")
+        XCTAssertEqual(strip("abc#tsf").0, "abc")
+        XCTAssertEqual(strip("#tsf_x").0, "")
+    }
+
+    func testLeavesTextWithoutAStrippableTag() {
+        XCTAssertEqual(strip("Hello #tsf.").0, "Hello #tsf.")
+        XCTAssertEqual(strip("Hello #tsf привет").0, "Hello #tsf привет")
+        XCTAssertEqual(strip("Hello #ts").0, "Hello #ts")
+        XCTAssertEqual(strip("Hello #tsf\u{A0}x").0, "Hello #tsf\u{A0}x")
+    }
+
+    func testLaterTagStripsWhenAnEarlierOneIsBlocked() {
+        XCTAssertEqual(strip("a #tsf. b #tsf_c").0, "a #tsf. b ")
+    }
+
+    func testEntitiesShrinkToTheCut() {
+        let (text, ranges) = strip("hello wo\n#tsf", [0 ..< 13, 3 ..< 10, 6 ..< 8, 8 ..< 9, 10 ..< 13])
+        XCTAssertEqual(text, "hello wo")
+        XCTAssertEqual(ranges, [0 ..< 8, 3 ..< 8, 6 ..< 8])
+    }
+
+    func testWholeTextRemovedDropsEntities() {
+        let (text, ranges) = strip("#tsf", [0 ..< 4])
+        XCTAssertEqual(text, "")
+        XCTAssertEqual(ranges, [])
+    }
+
+    func testCountsUtf16Units() {
+        let (text, ranges) = strip("😀 hi\n#tsf", [0 ..< 8])
+        XCTAssertEqual(text, "😀 hi")
+        XCTAssertEqual(ranges, [0 ..< 5])
+    }
+
+    func testSlashQueryAtTheStartOfAWord() {
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "/hi", caret: 3), SupportTemplatesSlashQuery(range: NSRange(location: 0, length: 3), query: "hi"))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "Hello /", caret: 7), SupportTemplatesSlashQuery(range: NSRange(location: 6, length: 1), query: ""))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "a\n/x y", caret: 4), SupportTemplatesSlashQuery(range: NSRange(location: 2, length: 2), query: "x"))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "ok,/x", caret: 5)?.query, "x")
+    }
+
+    func testNoSlashQueryAfterASpaceOrInsideAWord() {
+        XCTAssertNil(supportTemplatesSlashQuery(text: "/hi there", caret: 9))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "/hi ", caret: 4))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "https://x", caret: 9))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "a/b", caret: 3))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "hello", caret: 5))
+    }
+
+    func testSlashMatchesKeysByPrefixShortestFirst() {
+        let templates = SupportTemplates(files: [
+            "tl_a.txt": parseSupportTemplatesFile(Data("{QUESTION}\nLong\n{KEYS}\nhello\n{VALUE}\n1\n{QUESTION}\nShort\n{KEYS}\nhel\n{VALUE}\n2\n{QUESTION}\nOther\n{KEYS}\nbye\n{VALUE}\n3\n{QUESTION}\nNone\n{VALUE}\n4".utf8))
+        ])
+        XCTAssertEqual(templates.slashMatches("HE").map(\.question), ["Short", "Long"])
+        XCTAssertEqual(templates.slashMatches("x").map(\.question), [])
+        XCTAssertEqual(templates.slashMatches("").count, 4)
+    }
+}

@@ -160,6 +160,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             return ChatTextInputPanelState(accessoryItems: [.botInput(isEnabled: true, inputMode: .keyboard)], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
+                if controller.supportTemplatesAreAvailable {
+                    accessoryItems.append(.supportTemplates)
+                }
                 accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                 
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
@@ -193,7 +196,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 } else {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                     var showPremiumGift = false
-                    if !premiumConfiguration.isPremiumDisabled && chatPresentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
+                    if !premiumConfiguration.isPremiumDisabled && chatPresentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All && context.supportContext == nil {
                         if chatPresentationInterfaceState.alwaysShowGiftButton {
                             showPremiumGift = true
                         } else if chatPresentationInterfaceState.hasBirthdayToday {
@@ -251,6 +254,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 
                 if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
                     accessoryItems.append(.commands)
+                }
+                
+                if controller.supportTemplatesAreAvailable {
+                    accessoryItems.append(.supportTemplates)
                 }
                 
                 if !canSendTextMessages {

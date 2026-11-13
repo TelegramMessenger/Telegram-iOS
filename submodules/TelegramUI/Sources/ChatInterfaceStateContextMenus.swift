@@ -1,4 +1,5 @@
 import Foundation
+import TextFormat
 import UIKit
 import TelegramCore
 import AsyncDisplayKit
@@ -1229,6 +1230,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable,
+           context.supportContext == nil,
            let peerAddress = message.media.lazy.compactMap({ media -> String? in
                if let action = media as? TelegramMediaAction, case let .gramTransfer(_, peerAddress, _, _, _) = action.action {
                    return peerAddress
@@ -1459,6 +1461,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             }
                             f(.default)
                         })))
+                        if context.supportContext?.currentTrailingTags == true, message.effectivelyIncoming(context.account.peerId), let range = trailingHashtagBlockRange(text: message.text, entities: message.textEntitiesAttribute?.entities ?? []) {
+                            let tags = (message.text as NSString).substring(with: NSRange(location: range.lowerBound, length: range.count))
+                            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Support_Tags_Copy, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                storeMessageTextInPasteboard(tags, entities: nil)
+                                Queue.mainQueue().after(0.2, {
+                                    controllerInteraction.displayUndo(.copy(text: chatPresentationInterfaceState.strings.Conversation_TextCopied))
+                                })
+                                f(.default)
+                            })))
+                        }
                     }
                 }
                 

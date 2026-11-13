@@ -746,6 +746,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
     var offerNextChannelToRead: Bool = false
     var nextChannelToReadDisplayName: Bool = false
+    var nextChannelToReadEmptyTitle: String?
     private var currentOverscrollExpandProgress: CGFloat = 0.0
     private var freezeOverscrollControl: Bool = false
     private var freezeOverscrollControlProgress: Bool = false
@@ -1080,6 +1081,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
+                if strongSelf.context.account.isSupportUser {
+                    return
+                }
                 if strongSelf.canReadHistoryValue {
                     context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
                 } else {
@@ -1089,7 +1093,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
         
         self.unseenReactionsProcessingManager.process = { [weak self] messageIds in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, !strongSelf.context.account.isSupportUser else {
                 return
             }
             if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
@@ -1865,6 +1869,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             translationState = .single(nil)
         }
         
+        var unreadEntryAfterIncomingIdSignal: Signal<Int32?, NoError> = .single(nil)
+        if context.account.isSupportUser, tag == nil, mode == .bubbles, case let .peer(peerId) = chatLocation {
+            switch subject {
+            case .none, .message:
+                unreadEntryAfterIncomingIdSignal = context.engine.messages.supportUnreadDividerBoundary(peerId: peerId)
+            default:
+                break
+            }
+        }
+        
         let promises = combineLatest(
             self.historyAppearsClearedPromise.get(),
             self.pendingUnpinnedAllMessagesPromise.get(),
@@ -1872,7 +1886,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             self.currentlyPlayingMessageIdPromise.get(),
             self.scrollToMessageIdPromise.get(),
             self.chatHasBotsPromise.get(),
-            self.allAdMessagesPromise.get()
+            self.allAdMessagesPromise.get(),
+            unreadEntryAfterIncomingIdSignal
         )
         
         let contentSettings = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ContentSettings())
@@ -1986,7 +2001,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             contentSettings |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_contentSettings")
         ) |> debug_measureTimeToFirstEvent(label: "chatHistoryNode_firstChatHistoryTransition")).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiAndGiftStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, accountCountry, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
             let (animatedEmojiStickers, premiumGiftStickers, tonGiftStickers) = animatedEmojiAndGiftStickers
-            let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
+            let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages, unreadEntryAfterIncomingId) = promises
             
             if measure_isFirstTime {
                 measure_isFirstTime = false
@@ -2268,6 +2283,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     subject: subject,
                     view: view,
                     includeUnreadEntry: mode == .bubbles,
+                    unreadEntryAfterIncomingId: unreadEntryAfterIncomingId,
                     includeEmptyEntry: mode == .bubbles && tag == nil,
                     includeChatInfoEntry: mode == .bubbles,
                     includeEmbeddedSavedChatInfo: includeEmbeddedSavedChatInfo,
@@ -2695,6 +2711,27 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
+    // A support account consumes nothing on view, so a jump button consumes what it lands on: the tap is the agent's act.
+    func supportMarkJumpedMentionSeen(messageId: MessageId) {
+        guard self.context.account.isSupportUser else {
+            return
+        }
+        let context = self.context
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+        |> deliverOnMainQueue).startStandalone(next: { message in
+            guard let message, !message.attributes.contains(where: { ($0 as? ConsumableContentMessageAttribute)?.consumed == false }) else {
+                return
+            }
+            context.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set([messageId]))
+        })
+    }
+    
+    func supportMarkJumpedReactionsAndVotesSeen(messageId: MessageId) {
+        if self.context.account.isSupportUser {
+            self.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set([messageId]))
+        }
+    }
+    
     private func attemptReadingReactions() {
         if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
@@ -2882,6 +2919,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                         )
                     },
                     isForumThread: self.chatLocation.threadId != nil,
+                    emptyTitle: self.nextChannelToReadEmptyTitle,
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
                     location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,
@@ -3531,7 +3569,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -5058,7 +5096,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 }
             } else if self.interactiveReadReactionsDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
-                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
                         let visibleMessageRange = self.visibleMessageRange
                         self.interactiveReadReactionsDisposable = context.engine.messages.installInteractiveReadReactionsAction(peerId: peerId, getVisibleRange: {
                             return visibleMessageRange.with { $0 }

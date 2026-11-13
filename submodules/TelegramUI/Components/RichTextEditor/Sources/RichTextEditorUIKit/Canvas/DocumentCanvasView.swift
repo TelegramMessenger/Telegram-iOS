@@ -225,6 +225,7 @@ class DocumentCanvasView: UIView {
     /// (e.g. sent the message) and the editor does nothing. The SOFTWARE keyboard's Return never triggers a
     /// keyCommand, so it always inserts a newline (there's a separate send button) — matching the legacy input.
     final var onHardwareReturn: ((UIKeyModifierFlags) -> Bool)?
+    final var onHardwareTab: (() -> Void)?
 
     /// Interior content margins — interactable padding around the document, ADDED to the built-in
     /// `pageMargin`. Unlike the host's scroll insets (covered by chrome/keyboard, content scrolls under),
@@ -751,6 +752,7 @@ class DocumentCanvasView: UIView {
         inputBackend.setCanonicalHead(newHead)
     }
 
+    final var formatKeysNeedSelection = false
     final var selFrom: Int { min(anchor, head) }
     final var selTo: Int { max(anchor, head) }
 
@@ -1408,7 +1410,7 @@ class DocumentCanvasView: UIView {
     }
 
     override final var keyCommands: [UIKeyCommand]? {
-        [UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(handleTabKey)),
+        var commands = [UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(handleTabKey)),
          UIKeyCommand(input: "\t", modifierFlags: .shift, action: #selector(handleShiftTabKey)),
          // HARDWARE Return (plain + ⌘) routes to the host's return handler (send-on-Enter / ⌘-Enter) before
          // the editor inserts a newline — mirrors the legacy ChatInputTextViewImpl's own \r keyCommands. As the
@@ -1425,14 +1427,17 @@ class DocumentCanvasView: UIView {
          // modifiers match the app-level shortcuts.
          UIKeyCommand(input: "B", modifierFlags: .command, action: #selector(keyToggleBold)),
          UIKeyCommand(input: "I", modifierFlags: .command, action: #selector(keyToggleItalic)),
-         UIKeyCommand(input: "U", modifierFlags: .command, action: #selector(keyToggleUnderline)),
-         UIKeyCommand(input: "X", modifierFlags: [.command, .shift], action: #selector(keyToggleStrikethrough)),
-         UIKeyCommand(input: "M", modifierFlags: [.command, .shift], action: #selector(keyToggleMonospace))]
+         UIKeyCommand(input: "U", modifierFlags: .command, action: #selector(keyToggleUnderline))]
+        if !formatKeysNeedSelection || selFrom != selTo {
+            commands.append(UIKeyCommand(input: "X", modifierFlags: [.command, .shift], action: #selector(keyToggleStrikethrough)))
+            commands.append(UIKeyCommand(input: "M", modifierFlags: [.command, .shift], action: #selector(keyToggleMonospace)))
+        }
+        return commands
     }
     @objc private final func handleTabKey() {
         // Inside a table cell → cell nav; otherwise a quote-aware Tab (body → author end, author → out).
         if isInsideTable(head) { moveToCell(forward: true); return }
-        handleQuoteTabForward()
+        if !handleQuoteTabForward() { onHardwareTab?() }
     }
     @objc private final func handleShiftTabKey() { moveToCell(forward: false) }
     @objc private final func handleReturnKey(_ command: UIKeyCommand) { performHardwareReturn(command.modifierFlags) }

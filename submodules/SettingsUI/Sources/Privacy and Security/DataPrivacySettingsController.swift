@@ -308,7 +308,7 @@ private struct DataPrivacyControllerState: Equatable {
     var deletingCloudDrafts: Bool = false
 }
 
-private func dataPrivacyControllerEntries(presentationData: PresentationData, state: DataPrivacyControllerState, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool, hasBotSettings: Bool) -> [DataPrivacyEntry] {
+private func dataPrivacyControllerEntries(presentationData: PresentationData, state: DataPrivacyControllerState, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool, hasBotSettings: Bool, showsDeleteCloudDrafts: Bool) -> [DataPrivacyEntry] {
     var entries: [DataPrivacyEntry] = []
     
     entries.append(.contactsHeader(presentationData.theme, presentationData.strings.Privacy_ContactsTitle))
@@ -319,8 +319,10 @@ private func dataPrivacyControllerEntries(presentationData: PresentationData, st
     entries.append(.frequentContacts(presentationData.theme, presentationData.strings.Privacy_TopPeers, frequentContacts))
     entries.append(.frequentContactsInfo(presentationData.theme, presentationData.strings.Privacy_TopPeersHelp))
     
-    entries.append(.chatsHeader(presentationData.theme, presentationData.strings.Privacy_ChatsTitle))
-    entries.append(.deleteCloudDrafts(presentationData.theme, presentationData.strings.Privacy_DeleteDrafts, !state.deletingCloudDrafts))
+    if showsDeleteCloudDrafts {
+        entries.append(.chatsHeader(presentationData.theme, presentationData.strings.Privacy_ChatsTitle))
+        entries.append(.deleteCloudDrafts(presentationData.theme, presentationData.strings.Privacy_DeleteDrafts, !state.deletingCloudDrafts))
+    }
     entries.append(.paymentHeader(presentationData.theme, presentationData.strings.Privacy_PaymentsTitle))
     entries.append(.clearPaymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfo, !state.clearingPaymentInfo))
     entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoHelp))
@@ -571,7 +573,7 @@ public func dataPrivacyController(context: AccountContext, focusOnItemTag: DataP
         
         let animateChanges = false
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataPrivacyControllerEntries(presentationData: presentationData, state: state, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers, hasBotSettings: hasBotSettings), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataPrivacyControllerEntries(presentationData: presentationData, state: state, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers, hasBotSettings: hasBotSettings, showsDeleteCloudDrafts: context.supportContext == nil), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

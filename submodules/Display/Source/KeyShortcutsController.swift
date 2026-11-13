@@ -12,12 +12,17 @@ public class KeyShortcutsController: UIResponder {
         return true
     }
     
+    public static var isSuspended: Bool = false
+    
     public init(enumerator: @escaping (@escaping (ContainableController) -> Bool) -> Void) {
         self.viewControllerEnumerator = enumerator
         super.init()
     }
     
     public override var keyCommands: [UIKeyCommand]? {
+        if KeyShortcutsController.isSuspended {
+            return []
+        }
         var convertedCommands: [UIKeyCommand] = []
         var shortcuts: [KeyShortcut] = []
         

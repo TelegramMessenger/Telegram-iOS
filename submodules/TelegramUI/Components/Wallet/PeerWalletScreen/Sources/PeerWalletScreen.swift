@@ -689,6 +689,7 @@ private final class PeerWalletOverlayComponent: Component {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
+                buttonView.isHidden = component.context.supportContext != nil
                 // A small centred control under band-centred content: it keeps the card's band and axis.
                 self.buttonFrame = CGRect(x: floor(centerX - buttonSize.width * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
                 transition.setFrame(view: buttonView, frame: self.buttonFrame)

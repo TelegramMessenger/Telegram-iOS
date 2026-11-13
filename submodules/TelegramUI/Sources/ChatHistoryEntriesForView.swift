@@ -68,6 +68,7 @@ func chatHistoryEntriesForView(
     subject: ChatControllerSubject?,
     view: MessageHistoryView,
     includeUnreadEntry: Bool,
+    unreadEntryAfterIncomingId: Int32?,
     includeEmptyEntry: Bool,
     includeChatInfoEntry: Bool,
     includeEmbeddedSavedChatInfo: Bool,
@@ -459,7 +460,27 @@ func chatHistoryEntriesForView(
         }
     }
         
-    if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
+    if let unreadEntryAfterIncomingId, includeUnreadEntry {
+        var previousIndex: MessageIndex?
+        for i in entries.indices {
+            let messages: [Message]
+            switch entries[i] {
+            case let .MessageEntry(message, _, _, _, _, _):
+                messages = [message]
+            case let .MessageGroupEntry(_, groupMessages, _):
+                messages = groupMessages.map { $0.0 }
+            default:
+                continue
+            }
+            if messages.contains(where: { $0.id.namespace == Namespaces.Message.Cloud && $0.flags.contains(.Incoming) && $0.id.id > unreadEntryAfterIncomingId }) {
+                if let previousIndex {
+                    entries.insert(.UnreadEntry(previousIndex, presentationData), at: i)
+                }
+                break
+            }
+            previousIndex = messages.map({ $0.index }).max() ?? previousIndex
+        }
+    } else if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
         var i = 0
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {
@@ -479,6 +500,53 @@ func chatHistoryEntriesForView(
         }
     }
     
+    if let supportContext = context.supportContext, supportContext.currentTrailingTags {
+        let hasTrailingTags: (Message) -> Bool = { message in
+            return message.effectivelyIncoming(context.account.peerId) && trailingHashtagFooter(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], isCaption: !message.media.isEmpty) != nil
+        }
+        var taggedPositions: [Int] = []
+        var unreadDividerPosition: Int?
+        for i in entries.indices {
+            switch entries[i] {
+            case let .MessageEntry(message, _, _, _, _, _):
+                if hasTrailingTags(message) {
+                    taggedPositions.append(i)
+                }
+            case let .MessageGroupEntry(_, messages, _):
+                if messages.contains(where: { hasTrailingTags($0.0) }) {
+                    taggedPositions.append(i)
+                }
+            case .UnreadEntry:
+                unreadDividerPosition = i
+            default:
+                break
+            }
+        }
+        let expandedPositions = trailingTagsExpandedPositions(
+            taggedPositions: taggedPositions,
+            unreadDividerPosition: unreadDividerPosition,
+            collapsesMiddle: supportContext.currentCollapseMiddleTags,
+            reachesStart: view.earlierId == nil && !view.holeEarlier,
+            reachesEnd: view.laterId == nil && !view.holeLater
+        )
+        for i in expandedPositions {
+            switch entries[i] {
+            case let .MessageEntry(message, presentationData, isRead, location, selection, attributes):
+                var attributes = attributes
+                attributes.expandsTrailingTags = true
+                entries[i] = .MessageEntry(message, presentationData, isRead, location, selection, attributes)
+            case let .MessageGroupEntry(groupStableId, messages, presentationData):
+                if let index = messages.lastIndex(where: { hasTrailingTags($0.0) }) {
+                    var messages = messages
+                    messages[index].3.expandsTrailingTags = true
+                    entries[i] = .MessageGroupEntry(groupStableId, messages, presentationData)
+                }
+            default:
+                break
+            }
+        }
+    }
+
     var addedThreadHead = false
     if case let .replyThread(replyThreadMessage) = location, !replyThreadMessage.isForumPost, view.earlierId == nil, !view.holeEarlier, !view.isLoading, !isMusicPlaylist {
         loop: for entry in view.additionalData {

@@ -40,7 +40,16 @@ extension ApplicationShortcutItem {
     }
 }
 
-func applicationShortcutItems(strings: PresentationStrings, otherAccountName: String?) -> [ApplicationShortcutItem] {
+func applicationShortcutItems(strings: PresentationStrings, otherAccountName: String?, isSupportAccount: Bool) -> [ApplicationShortcutItem] {
+    if isSupportAccount {
+        var items = [ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil)]
+        if let otherAccountName {
+            items.append(ApplicationShortcutItem(type: .account, title: strings.Shortcut_SwitchAccount, subtitle: otherAccountName))
+        } else {
+            items.append(ApplicationShortcutItem(type: .appIcon, title: strings.Shortcut_AppIcon, subtitle: nil))
+        }
+        return items
+    }
     if let otherAccountName = otherAccountName {
         return [
             ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),

@@ -28,6 +28,7 @@ func updatePremiumPromoConfigurationOnce(accountPeerId: PeerId, postbox: Postbox
             updatePremiumPromoConfiguration(transaction: transaction, { configuration -> PremiumPromoConfiguration in
                 return PremiumPromoConfiguration(apiPremiumPromo: result)
             })
+            supportRefreshPremiumFromStatus(transaction: transaction, accountPeerId: accountPeerId)
         }
     }
 }

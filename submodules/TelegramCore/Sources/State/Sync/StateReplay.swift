@@ -234,6 +234,8 @@ final class ReplayContext {
     var groupCallMessageUpdates: [GroupCallMessageUpdate] = []
     /// Event. Also read by `finalize`: an added story may queue its peer's stories for sync.
     var storyUpdates: [InternalStoryUpdate] = []
+    /// Event: drafts a support account keeps local, received from another session.
+    var supportReceivedDrafts: [SupportReceivedDraft] = []
     /// Persisted by `finalize`, in order, or as a sync of the namespaces it cannot apply.
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     /// Persisted by `finalize`: the recent stickers; each keeps its latest message.
@@ -389,11 +391,15 @@ final class ReplayContext {
     /// for a channel the account is not a member of is skipped (`readStateOperationTargetsNonMember`), judged by the peer
     /// stored when it comes up, so a join merged earlier in the same replay counts.
     func applyContentOperations(_ operations: [AccountStateMutationOperation]) {
+        let supportAccount = isSupportAccount(transaction: transaction, accountPeerId: accountPeerId)
         for operation in operations {
             walletTonConnectEventBatch.append(contentsOf: walletTonConnectEvents(operation: operation))
             // The server's read state for a channel the account is not a member of is not kept
             // (NonMemberChannelReadState.swift). A join earlier in this replay is already stored.
             if readStateOperationTargetsNonMember(operation, getPeer: { transaction.getPeer($0) }) {
+                continue
+            }
+            if supportAccount && readStateOperationTargetsDeletedUser(operation, getPeer: { transaction.getPeer($0) }) {
                 continue
             }
             switch operation {
@@ -641,6 +647,7 @@ final class ReplayContext {
             updatedGroupCallParticipants: updatedGroupCallParticipants,
             groupCallMessageUpdates: groupCallMessageUpdates,
             storyUpdates: storyUpdates,
+            supportReceivedDrafts: supportReceivedDrafts,
             delayNotificatonsUntil: delayNotificatonsUntil,
             updatedIncomingThreadReadStates: updatedIncomingThreadReadStates,
             updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates,

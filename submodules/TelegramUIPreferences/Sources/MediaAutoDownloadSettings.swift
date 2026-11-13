@@ -500,6 +500,15 @@ public struct InstantPageSourceLocation {
     }
 }
 
+public extension MediaAutoDownloadSettings {
+    func withAutomaticDownloadDisabled() -> MediaAutoDownloadSettings {
+        var settings = self
+        settings.cellular.enabled = false
+        settings.wifi.enabled = false
+        return settings
+    }
+}
+
 public func effectiveAutodownloadCategories(settings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) -> MediaAutoDownloadCategories {
     let connection = settings.connectionSettings(for: networkType)
     switch connection.preset {

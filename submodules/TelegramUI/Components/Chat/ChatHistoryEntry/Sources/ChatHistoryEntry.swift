@@ -25,6 +25,7 @@ public struct ChatMessageEntryAttributes: Equatable {
     /// of the album entry it becomes. The entry keeps that identity, so the album replaces it in place
     /// rather than as a new row (a row held where it was scrolled to would otherwise be lost).
     public var groupStableId: Int64?
+    public var expandsTrailingTags: Bool = false
     
     public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool, isGiftMessageComposerPreview: Bool = false) {
         self.rank = rank

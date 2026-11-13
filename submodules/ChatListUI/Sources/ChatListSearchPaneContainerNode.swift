@@ -209,6 +209,19 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
     
     var currentPanes: [ChatListSearchPaneKey: ChatListSearchPaneWrapper] = [:]
     private var pendingPanes: [ChatListSearchPaneKey: ChatListSearchPendingPane] = [:]
+
+    var supportPresentation = ChatListSearchSupportPresentation() {
+        didSet {
+            if self.supportPresentation != oldValue {
+                for pane in self.currentPanes.values {
+                    (pane.node as? ChatListSearchListPaneNode)?.supportPresentation = self.supportPresentation
+                }
+                for pane in self.pendingPanes.values {
+                    (pane.pane.node as? ChatListSearchListPaneNode)?.supportPresentation = self.supportPresentation
+                }
+            }
+        }
+    }
     
     private var transitionFraction: CGFloat = 0.0
             
@@ -511,6 +524,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     }
                 )
                 self.pendingPanes[key] = pane
+                (pane.pane.node as? ChatListSearchListPaneNode)?.supportPresentation = self.supportPresentation
                 pane.pane.node.frame = paneFrame
                 pane.pane.update(size: paneFrame.size, sideInsets: sideInsets, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .immediate)
                 leftScope = true

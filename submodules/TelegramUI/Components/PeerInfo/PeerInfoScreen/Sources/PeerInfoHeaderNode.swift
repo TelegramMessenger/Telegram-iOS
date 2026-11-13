@@ -243,6 +243,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var cancelUpload: (() -> Void)?
     var requestUpdateLayout: ((Bool) -> Void)?
     var animateOverlaysFadeIn: (() -> Void)?
+    private(set) var avatarCollapseFraction: CGFloat = 0.0
     var updateUnderHeaderContentsAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
@@ -704,7 +705,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
-        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
         var credibilityIcon: CredibilityIcon = .none
         var verifiedIcon: CredibilityIcon = .none
         var statusIcon: CredibilityIcon = .none
@@ -717,7 +717,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .scam
             } else if let emojiStatus = peer.emojiStatus {
                 statusIcon = .emojiStatus(emojiStatus)
-            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
+            } else if peer.showsPremiumStar && self.context.premiumBadgesShown && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
                 credibilityIcon = .premium
             } else {
                 credibilityIcon = .none
@@ -1267,7 +1267,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var panelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
         let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
         if let peer = peer {
-            isPremium = peer.isPremium
+            isPremium = peer.showsPremiumStar
             isVerified = peer.isVerified
             isFake = peer.isFake || peer.isScam
         }
@@ -1905,6 +1905,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarOffset: CGFloat
         //
         avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
+        self.avatarCollapseFraction = titleCollapseFraction
         avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         
         if subtitleIsButton {

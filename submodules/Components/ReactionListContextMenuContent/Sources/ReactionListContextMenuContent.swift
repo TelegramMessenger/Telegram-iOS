@@ -633,7 +633,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     self.accessibilityLabel = "\(item.peer.debugDisplayTitle) \(reactionStringValue)"
                 }
                 
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
                 var currentCredibilityIcon: EmojiStatusComponent.Content?
                 if item.peer.isScam {
                     currentCredibilityIcon = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
@@ -643,7 +642,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(white: 0.0, alpha: 0.1), themeColor: presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                 } else if item.peer.isVerified {
                     currentCredibilityIcon = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                } else if item.peer.showsPremiumStar && self.context.premiumBadgesShown {
                     currentCredibilityIcon = .premium(color: presentationData.theme.list.itemCheckColors.fillColor)
                 }
                 

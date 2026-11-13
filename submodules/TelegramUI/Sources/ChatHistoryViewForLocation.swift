@@ -108,10 +108,11 @@ func chatHistoryViewForLocation(
                     preFixedReadState = .peer([:])
                 }
             
+                let opensAtEnd = supportOpensChatAtEnd(isSupportUser: account.isSupportUser, hasTag: tag != nil, peerId: chatLocation.peerId, accountPeerId: account.peerId)
                 if requestAroundId {
                     signal = account.viewTracker.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, index: .upperBound, anchorIndex: .upperBound, count: count, trackHoles: trackHoles, ignoreRelatedChats: ignoreRelatedChats, fixedCombinedReadStates: preFixedReadState, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, useRootInterfaceStateForThread: useRootInterfaceStateForThread)
                 } else {
-                    signal = account.viewTracker.aroundMessageOfInterestHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread)
+                    signal = account.viewTracker.aroundMessageOfInterestHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, ignoreMessageIds: ignoreMessageIds, count: count, trackHoles: trackHoles, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread, anchoredAtUpperBound: opensAtEnd)
                 }
             
                 let isPossibleIntroLoaded: Signal<Bool, NoError>
@@ -159,7 +160,9 @@ func chatHistoryViewForLocation(
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
                         let canScrollToRead: Bool
-                        if case let .replyThread(message) = chatLocation, !message.isForumPost, !message.isMonoforumPost {
+                        if opensAtEnd {
+                            canScrollToRead = false
+                        } else if case let .replyThread(message) = chatLocation, !message.isForumPost, !message.isMonoforumPost {
                             if message.peerId == context.account.peerId {
                                 canScrollToRead = false
                             } else {
@@ -218,7 +221,7 @@ func chatHistoryViewForLocation(
                                     }
                                 }
                             }
-                        } else if effectiveIsAddedToChatList, tag == nil, let historyScrollState = (initialData?.storedInterfaceState).flatMap(_internal_decodeStoredChatInterfaceState).flatMap(ChatInterfaceState.parse)?.historyScrollState {
+                        } else if !opensAtEnd, effectiveIsAddedToChatList, tag == nil, let historyScrollState = (initialData?.storedInterfaceState).flatMap(_internal_decodeStoredChatInterfaceState).flatMap(ChatInterfaceState.parse)?.historyScrollState {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
                             if let _ = chatLocation.peerId, !effectiveIsAddedToChatList {

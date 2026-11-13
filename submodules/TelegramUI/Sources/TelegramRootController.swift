@@ -81,6 +81,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     /// The Contacts screen `openContacts()` pushed; `getContactsController()` returns it while it is open.
     private weak var contactsController: ContactsController?
+    private var supportAddContactController: ContactsController?
     public var callListController: CallListController?
     public var chatListController: ChatListController?
     public var accountSettingsController: PeerInfoScreen?
@@ -94,6 +95,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     private var applicationInFocusDisposable: Disposable?
     private var storyUploadEventsDisposable: Disposable?
+    private var supportChatListBesideDisposable: Disposable?
+    private var supportPendingBesideState: (hidesTabBarItems: Bool, hidesTabBar: Bool, showsListOnly: Bool, narrowListPeerId: EnginePeer.Id?)?
+    private var supportChatListWidth: CGFloat? = (UserDefaults.standard.object(forKey: TelegramRootController.supportChatListWidthKey) as? Double).map { CGFloat($0) }
+    private var supportChatListWidthLayout: ContainerViewLayout?
+    private static let supportChatListWidthKey = "supportChatListColumnWidth"
     
     override public var minimizedContainer: MinimizedContainer? {
         didSet {
@@ -141,6 +147,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 moveStorySource(engine: self.context.engine, peerId: self.context.account.peerId, from: Int64(stableId), to: Int64(id))
             })
         }
+        
+        if let supportContext = context.supportContext {
+            self.supportChatListBesideDisposable = (supportContext.chatListBeside
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                self?.requestLayout(transition: .immediate)
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -152,6 +165,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.presentationDataDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
         self.storyUploadEventsDisposable?.dispose()
+        self.supportChatListBesideDisposable?.dispose()
     }
     
     public func getContactsController() -> ViewController? {
@@ -200,8 +214,83 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         super.containerLayoutUpdated(layout, transition: transition)
     }
     
+    override public var animatesRootContainerChange: Bool {
+        return self.context.supportContext != nil
+    }
+    
+    override public func rootContainerMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
+        let narrowListPeerId = self.supportPendingBesideState != nil ? self.supportPendingBesideState?.narrowListPeerId : (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId
+        guard narrowListPeerId != nil else {
+            return nil
+        }
+        return layout.safeInsets.left + 72.0
+    }
+    
+    private func supportChatListWidthLimits(layout: ContainerViewLayout) -> ClosedRange<CGFloat>? {
+        let maxWidth = min(540.0, layout.size.width - 380.0)
+        guard maxWidth >= 260.0 else {
+            return nil
+        }
+        return 260.0 ... maxWidth
+    }
+    
+    override public func rootContainerResizableMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
+        guard self.context.supportContext != nil, layout.deviceMetrics.type == .tablet, let limits = self.supportChatListWidthLimits(layout: layout) else {
+            return nil
+        }
+        self.supportChatListWidthLayout = layout
+        let width = self.supportChatListWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        return floor(min(max(width, limits.lowerBound), limits.upperBound))
+    }
+    
+    override public func rootContainerMasterWidthDragged(to width: CGFloat, isFinal: Bool) {
+        guard let layout = self.supportChatListWidthLayout, let limits = self.supportChatListWidthLimits(layout: layout) else {
+            return
+        }
+        let width = floor(min(max(width, limits.lowerBound), limits.upperBound))
+        self.supportChatListWidth = width
+        if isFinal {
+            UserDefaults.standard.set(Double(width), forKey: TelegramRootController.supportChatListWidthKey)
+        }
+    }
+    
+    override public func rootContainerMetrics(for layout: ContainerViewLayout) -> LayoutMetrics {
+        guard let supportContext = self.context.supportContext, case .compact = layout.metrics.widthClass else {
+            return layout.metrics
+        }
+        let isLandscape = layout.size.width > layout.size.height
+        let chatListBeside = supportContext.currentChatListBeside
+        var openChatPeerId: EnginePeer.Id?
+        if supportChatListBesideUsesSplitView(chatListBeside, isLandscape: isLandscape), self.rootTabController?.currentController === self.chatListController {
+            for controller in self.viewControllers.reversed() {
+                if let controller = controller as? ChatControllerImpl, let peerId = controller.chatLocation.peerId {
+                    openChatPeerId = peerId
+                    break
+                }
+            }
+        }
+        let showsListBesideChat = openChatPeerId != nil
+        let narrowsList = showsListBesideChat && supportChatListBesideNarrowsList(chatListBeside, isLandscape: isLandscape)
+        self.supportPendingBesideState = (showsListBesideChat && !narrowsList, narrowsList, showsListBesideChat, narrowsList ? openChatPeerId : nil)
+        if showsListBesideChat {
+            return LayoutMetrics(widthClass: .regular, heightClass: .regular, orientation: layout.metrics.orientation, windowSize: layout.metrics.windowSize)
+        }
+        return layout.metrics
+    }
+    
+    override public func applyRootContainerState() {
+        guard let state = self.supportPendingBesideState else {
+            return
+        }
+        self.supportPendingBesideState = nil
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBarItems = state.hidesTabBarItems
+        (self.rootTabController as? TabBarControllerImpl)?.hidesTabBar = state.hidesTabBar
+        (self.chatListController as? ChatListControllerImpl)?.supportShowsListOnly = state.showsListOnly
+        (self.chatListController as? ChatListControllerImpl)?.supportNarrowListPeerId = state.narrowListPeerId
+    }
+    
     public func addRootControllers(showCallsTab: Bool, showNewsTab: Bool) {
-        let tabBarController = TabBarControllerImpl(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        let tabBarController = TabBarControllerImpl(theme: self.presentationData.theme, strings: self.presentationData.strings, maxItemLength: self.context.supportContext != nil ? 96.0 : nil)
         tabBarController.navigationPresentation = .master
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, location: .chatList(groupId: .root), controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
@@ -214,7 +303,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         var controllers: [ViewController] = []
         
-        if showCallsTab {
+        if showCallsTab && self.context.supportContext == nil {
             controllers.append(callListController)
         }
         if showNewsTab {
@@ -257,7 +346,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return
         }
         var controllers: [ViewController] = []
-        if showCallsTab {
+        if showCallsTab && self.context.supportContext == nil {
             controllers.append(self.callListController!)
         }
         if showNewsTab, let newsController = self.newsController {
@@ -392,6 +481,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     @discardableResult
     public func openStoryCamera(mode: StoryCameraMode, customTarget: Stories.PendingTarget?, resumeLiveStream: Bool, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
+        guard self.context.supportContext == nil else {
+            return nil
+        }
         guard let controller = self.viewControllers.last as? ViewController else {
             return nil
         }
@@ -688,6 +780,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     public func proceedWithStoryUpload(target: Stories.PendingTarget, results: [MediaEditorScreenResult], existingMedia: EngineMedia?, forwardInfo: Stories.PendingForwardInfo?, externalState: MediaEditorTransitionOutExternalState, commit: @escaping (@escaping () -> Void) -> Void) {
+        guard self.context.supportContext == nil else {
+            return
+        }
         guard let results = results as? [MediaEditorScreenImpl.Result] else {
             return
         }
@@ -904,6 +999,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController }) {
             rootTabController.selectedIndex = index
         }
+    }
+    
+    public func openAddContact() {
+        let contactsController = self.contactsController ?? ContactsController(context: self.context)
+        self.supportAddContactController = contactsController
+        contactsController.addPressed()
     }
     
     /// Contacts has no tab: the Settings tab, with the screen Settings ▸ Contacts pushes over it.

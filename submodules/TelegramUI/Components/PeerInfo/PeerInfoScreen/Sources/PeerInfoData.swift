@@ -447,6 +447,7 @@ final class PeerInfoScreenData {
     let starsState: StarsContext.State?
     let tonState: StarsContext.State?
     let walletBalance: Int64?
+    let supportUserInfo: SupportUserInfo?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: StarsRevenueStats?
@@ -527,7 +528,8 @@ final class PeerInfoScreenData {
         sharedMediaPeer: EnginePeer? = nil,
         walletBalance: Int64? = nil,
         agentSettingsContext: AgentSettingsContext? = nil,
-        agentState: AgentSettingsContext.State? = nil
+        agentState: AgentSettingsContext.State? = nil,
+        supportUserInfo: SupportUserInfo? = nil
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -564,6 +566,7 @@ final class PeerInfoScreenData {
         self.starsState = starsState
         self.tonState = tonState
         self.walletBalance = walletBalance
+        self.supportUserInfo = supportUserInfo
         self.starsRevenueStatsState = starsRevenueStatsState
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
@@ -1635,19 +1638,22 @@ func peerInfoScreenData(
                 premiumGiftOptions,
                 webAppPermissions,
                 savedMusicContext.state,
-                combineLatest(businessConnectedBot, walletBalance, agentState)
+                combineLatest(businessConnectedBot, walletBalance, agentState, context.supportContext?.userInfo(peerId: userPeerId) ?? .single(nil))
             )
             |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBotAndWalletBalanceAndAgentState -> Signal<PeerInfoScreenData, NoError> in
-                let (businessConnectedBot, walletBalance, agentState) = businessConnectedBotAndWalletBalanceAndAgentState
+                let (businessConnectedBot, walletBalance, agentState, supportUserInfo) = businessConnectedBotAndWalletBalanceAndAgentState
                 var availablePanes = availablePanes
                 if isMyProfile {
-                    availablePanes?.insert(.stories, at: 0)
-                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                    let showsOwnStories = context.supportContext == nil
+                    if showsOwnStories {
+                        availablePanes?.insert(.stories, at: 0)
+                    }
+                    if showsOwnStories, availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
                         if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
                             availablePanes?.insert(.gifts, at: 1)
                         }
                     }
-                    if let hasStoryArchive, hasStoryArchive {
+                    if showsOwnStories, let hasStoryArchive, hasStoryArchive {
                         availablePanes?.append(.storyArchive)
                     }
                 } else if let hasStories {
@@ -1826,7 +1832,8 @@ func peerInfoScreenData(
                         sharedMediaPeer: sharedMediaPeer,
                         walletBalance: walletBalance,
                         agentSettingsContext: agentSettingsContext,
-                        agentState: agentState
+                        agentState: agentState,
+                        supportUserInfo: supportUserInfo
                     )
                 }
             }

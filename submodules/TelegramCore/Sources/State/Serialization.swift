@@ -25,14 +25,16 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "InputSingleMedia.inputSingleMedia": Set(["message"]),
     "InputContact.inputPhoneContact": Set(["phone"]),
     "User.user": Set(["phone"]),
-    "Update.updateUserPhone": Set(["phone"])
+    "Update.updateUserPhone": Set(["phone"]),
+    "help.UserInfo.userInfo": Set(["*"])
 ]
 
 private let redactFunctionParameters: [String: Set<String>] = [
     "messages.sendMessage": Set(["message"]),
     "messages.sendMedia": Set(["message"]),
     "messages.saveDraft": Set(["message"]),
-    "messages.getWebPagePreview": Set(["message"])
+    "messages.getWebPagePreview": Set(["message"]),
+    "help.editUserInfo": Set(["message", "entities"])
 ]
 
 private let alwaysRedactFunctionParameters: [String: Set<String>] = [

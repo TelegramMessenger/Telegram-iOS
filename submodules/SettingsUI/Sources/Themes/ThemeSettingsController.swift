@@ -428,7 +428,8 @@ private func themeSettingsControllerEntries(
     animatedEmojiStickers: [String: [StickerPackItem]],
     accountPeer: EnginePeer?,
     nameColors: PeerNameColors,
-    showsBubbleModeSwitch: Bool
+    showsBubbleModeSwitch: Bool,
+    isSupport: Bool
 ) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -468,7 +469,9 @@ private func themeSettingsControllerEntries(
         colors = collectibleColor.peerNameColors(dark: presentationData.theme.overallDarkAppearance)
     }
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
-    entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    if !isSupport {
+        entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    }
     
     if showsBubbleModeSwitch {
         entries.append(.bubbleMode(presentationData.theme, strings.Appearance_BubbleMode, bubbleMode))
@@ -1193,7 +1196,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let showsBubbleModeSwitch = showsBubbleFreeModeSetting(isBubbleFreeModeAvailable: isBubbleFreeModeAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }), isInUse: !bubbleMode)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, showsBubbleModeSwitch: showsBubbleModeSwitch), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: bubbleModeChanged)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, showsBubbleModeSwitch: showsBubbleModeSwitch, isSupport: context.supportContext != nil), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: bubbleModeChanged)
         
         return (controllerState, (listState, arguments))
     }

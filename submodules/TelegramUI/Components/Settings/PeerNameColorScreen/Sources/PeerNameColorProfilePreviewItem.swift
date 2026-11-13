@@ -294,8 +294,6 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 }
                 self.avatarNode.frame = avatarFrame.offsetBy(dx: coverFrame.minX, dy: 0.0)
                 
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
-                
                 enum CredibilityIcon {
                     case none
                     case premium
@@ -317,7 +315,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                         credibilityIcon = .emojiStatus(emojiStatus)
                     } else if peer.isVerified {
                         credibilityIcon = .verified
-                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    } else if peer.showsPremiumStar && item.context.premiumBadgesShown {
                         credibilityIcon = .premium
                     } else {
                         credibilityIcon = .none

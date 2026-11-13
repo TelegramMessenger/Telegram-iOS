@@ -128,7 +128,7 @@ private func actionForPeer(context: AccountContext, peer: EnginePeer, interfaceS
                 isBroadcast = true
             }
             // Before the participation switch below: a light join (in_news, not joined) shows the News states.
-            switch newsChannelBarAction(isBroadcast: isBroadcast, isInNews: channel.flags.contains(.isInNews), participation: participation, isMuted: isMuted, featureEnabled: isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }), pending: pending) {
+            switch newsChannelBarAction(isBroadcast: isBroadcast, isInNews: channel.flags.contains(.isInNews), participation: participation, isMuted: isMuted, featureEnabled: isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }, isSupportAccount: context.supportContext != nil), pending: pending) {
             case .addToNews:
                 return .addToNews
             case .addedToNews:

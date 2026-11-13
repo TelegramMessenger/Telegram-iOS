@@ -30,7 +30,39 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import SupportTemplates
 import MessageWidget
+
+private func supportTemplatesUpdateNotificationText(strings: PresentationStrings, fileName: String, delta: SupportTemplatesDelta) -> String {
+    let questionText: (SupportTemplatesQuestion) -> String = { question in
+        return strings.Support_Templates_NoticeQuestion.replacingOccurrences(of: "{question}", with: question.question)
+    }
+    let answerText: (SupportTemplatesQuestion) -> String = { question in
+        return strings.Support_Templates_NoticeAnswer.replacingOccurrences(of: "{answer}", with: trimmedString(question.value))
+    }
+    var result = strings.Support_Templates_NoticeTitle.replacingOccurrences(of: "{name}", with: fileName) + "\n\n"
+    if !delta.added.isEmpty {
+        result += strings.Support_Templates_NoticeAdded + "\n\n"
+        for question in delta.added {
+            let keys = strings.Support_Templates_NoticeKeys.replacingOccurrences(of: "{keys}", with: question.originalKeys.joined(separator: ", "))
+            result += questionText(question) + "\n" + keys + "\n" + answerText(question) + "\n\n"
+        }
+    }
+    if !delta.changed.isEmpty {
+        result += strings.Support_Templates_NoticeModified + "\n\n"
+        for question in delta.changed {
+            result += questionText(question) + "\n" + answerText(question) + "\n\n"
+        }
+    }
+    if !delta.removed.isEmpty {
+        result += strings.Support_Templates_NoticeRemoved + "\n\n"
+        for question in delta.removed {
+            result += questionText(question) + "\n\n"
+        }
+    }
+    result += strings.Support_Templates_NoticeOldFile.replacingOccurrences(of: "{name}", with: fileName)
+    return result
+}
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -152,6 +184,10 @@ public final class AccountContextImpl: AccountContext {
 
     public let twoStepAuthData = Promise<TwoStepAuthData?>(nil)
     public let giftAuctionsManager: GiftAuctionsManager?
+    public let supportContext: SupportContext?
+    public let supportTemplates: SupportTemplatesManager?
+    private static var didOfferSupportModeRestart = false
+    private var supportModeLostDisposable: Disposable?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -312,6 +348,21 @@ public final class AccountContextImpl: AccountContext {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.engine = TelegramEngine(account: account)
+        self.supportContext = account.supportContext
+        if sharedContext.applicationBindings.isMainApp && !temp && account.supportContext != nil {
+            let engine = self.engine
+            let currentPresentationData = sharedContext.currentPresentationData
+            let supportTemplates = SupportTemplatesManager(folderPath: account.basePath + "/TEMPLATES", fetch: supportTemplatesUrlSessionFetch(), notify: { fileName, delta in
+                let texts = supportTemplatesNotificationParts(supportTemplatesUpdateNotificationText(strings: currentPresentationData.with { $0 }.strings, fileName: fileName, delta: delta))
+                let _ = engine.messages.addSupportLocalNotification(texts: texts).startStandalone()
+            }, log: { text in
+                Logger.shared.log("SupportTemplates", text)
+            })
+            supportTemplates.reload()
+            self.supportTemplates = supportTemplates
+        } else {
+            self.supportTemplates = nil
+        }
         
         self.imageCache = DirectMediaImageCache(account: account)
         
@@ -637,6 +688,10 @@ public final class AccountContextImpl: AccountContext {
             )
         )
 
+        if sharedContext.applicationBindings.isMainApp && !temp && !account.isSupportUser {
+            self.supportModeLostDisposable = self.watchForLostSupportMode()
+        }
+
         if let walletContext = self.walletContext {
             self.account.walletTransferTasksRunning.set(walletContext.hasTransferBackgroundTasks)
             // widget-sandbox v0.5.0 (sdk-v1 §5.13): message widgets get the wallet where it is available to this user
@@ -704,6 +759,52 @@ public final class AccountContextImpl: AccountContext {
         self.userLimitsConfigurationDisposable?.dispose()
         self.peerNameColorsConfigurationDisposable?.dispose()
         self.isFrozenDisposable?.dispose()
+        self.supportModeLostDisposable?.dispose()
+    }
+    
+    private func watchForLostSupportMode() -> Disposable {
+        let accountId = self.account.id
+        let isSupportUser = self.account.isSupportUser
+        let activeAccountContexts = self.sharedContext.activeAccountContexts
+        return (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.account.peerId))
+        |> map { peer -> String? in
+            if case let .user(user) = peer {
+                return user.phone
+            }
+            return nil
+        }
+        |> filter { phone in
+            return phone != nil
+        }
+        |> take(1)
+        |> filter { phone in
+            return supportModeWasLost(phone: phone, isSupportUser: isSupportUser)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return activeAccountContexts
+            |> filter { primary, _, _ in
+                return primary?.account.id == accountId
+            }
+            |> take(1)
+            |> map { _ -> Void in
+                return Void()
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?.presentSupportModeLost()
+        })
+    }
+    
+    private func presentSupportModeLost() {
+        if AccountContextImpl.didOfferSupportModeRestart {
+            return
+        }
+        AccountContextImpl.didOfferSupportModeRestart = true
+        
+        let presentationData = self.sharedContext.currentPresentationData.with { $0 }
+        self.sharedContext.mainWindow?.present(textAlertController(context: self, title: presentationData.strings.Support_Mode_LostTitle, text: presentationData.strings.Support_Mode_LostText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Support_Mode_LostRestart, action: {
+            exit(0)
+        })]), on: .root)
     }
     
     public func storeSecureIdPassword(password: String) {

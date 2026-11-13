@@ -80,6 +80,8 @@ final class PeerInfoInteraction {
     let openUsernameContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBioContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openNoteContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openSupportInfoContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let editSupportInfo: () -> Void
     let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBirthdayContextMenu: (ASDisplayNode, ContextGesture?) -> Void
@@ -164,6 +166,8 @@ final class PeerInfoInteraction {
         openUsernameContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBioContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openNoteContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openSupportInfoContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        editSupportInfo: @escaping () -> Void,
         openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBirthdayContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
@@ -247,6 +251,8 @@ final class PeerInfoInteraction {
         self.openUsernameContextMenu = openUsernameContextMenu
         self.openBioContextMenu = openBioContextMenu
         self.openNoteContextMenu = openNoteContextMenu
+        self.openSupportInfoContextMenu = openSupportInfoContextMenu
+        self.editSupportInfo = editSupportInfo
         self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
         self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
         self.openBirthdayContextMenu = openBirthdayContextMenu

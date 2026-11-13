@@ -792,9 +792,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 spoilerTextNode = ImmediateTextNodeWithEntities()
                 spoilerTextNode.alpha = 0.0
                 self.spoilerTextNode = spoilerTextNode
-                
-                self.textNode.dustNode?.textNode = spoilerTextNode
             }
+            self.textNode.dustNode?.textNode = spoilerTextNode
             
             spoilerTextNode.displaySpoilers = true
             spoilerTextNode.displaySpoilerEffect = false

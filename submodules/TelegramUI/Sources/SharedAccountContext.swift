@@ -643,8 +643,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         sortIndex = sortOrder.order
                     } else if case let .backupData(backupDataValue) = attribute {
                         backupData = backupDataValue.data
-                    } else if case .supportUserInfo = attribute, !"".isEmpty {
-                        isSupportUser = true
+                    } else if case let .supportUserInfo(info) = attribute {
+                        isSupportUser = info.matchesSupportPhone
                     }
                 }
                 result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment, backupData: backupData, isSupportUser: isSupportUser)

@@ -35,6 +35,11 @@ enum ChatListIntermediateEntry {
     }
 }
 
+public enum ChatListStoredEntry {
+    case chat(ChatListIndex)
+    case hole(ChatListHole)
+}
+
 public enum ChatListRelativePosition {
     case later(than: ChatListIndex?)
     case earlier(than: ChatListIndex?)
@@ -123,6 +128,16 @@ public enum ChatListNamespaceEntry {
     }
 }
 
+func chatListRowKeepsPosition(current: MessageIndex, updated: MessageIndex?, topHole: MessageIndex?) -> Bool {
+    guard let updated, updated != current else {
+        return false
+    }
+    if let topHole {
+        return current > topHole
+    }
+    return true
+}
+
 final class ChatListTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
@@ -132,6 +147,8 @@ final class ChatListTable: Table {
     let emptyMemoryBuffer = MemoryBuffer()
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
+    var holdsRowOrder = false
+    private var cachedTopHoles: [PeerGroupId: MessageIndex?] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.indexTable = indexTable
@@ -167,6 +184,45 @@ final class ChatListTable: Table {
         key.setUInt16(4, value: UInt16.max)
         key.setInt32(4 + 2, value: Int32.max)
         return key
+    }
+    
+    override func clearMemoryCache() {
+        self.cachedTopHoles.removeAll()
+    }
+    
+    private func topHoleIndex(groupId: PeerGroupId) -> MessageIndex? {
+        if let cached = self.cachedTopHoles[groupId] {
+            return cached
+        }
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+            let (_, _, messageIndex, type) = extractKey(key)
+            if type == ChatListEntryType.hole.rawValue {
+                result = messageIndex
+                return false
+            }
+            return true
+        }, limit: 0)
+        self.cachedTopHoles[groupId] = .some(result)
+        return result
+    }
+    
+    func heldRowPeerIds(groupId: PeerGroupId, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [PeerId] {
+        var result: [PeerId] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), values: { key, value in
+            guard case let .message(index, topMessageIndex?) = readEntry(groupId: groupId, key: key, value: value), index.messageIndex != topMessageIndex else {
+                return true
+            }
+            let peerId = index.messageIndex.id.peerId
+            let overrideTimestamp = peerChatInterfaceStateTable.get(peerId)?.overrideChatTimestamp ?? topMessageIndex.timestamp
+            let expected = MessageIndex(id: topMessageIndex.id, timestamp: max(topMessageIndex.timestamp, overrideTimestamp))
+            let expectedIndex = ChatListPeerInclusionIndex(topMessageIndex: expected, inclusion: self.indexTable.get(peerId: peerId).inclusion).includedIndex(peerId: peerId)?.1
+            if expectedIndex != index {
+                result.append(peerId)
+            }
+            return true
+        }, limit: 0)
+        return result
     }
     
     private func ensureInitialized(groupId: PeerGroupId) {
@@ -421,6 +477,10 @@ final class ChatListTable: Table {
                 rawTopMessageIndex = nil
             }
             
+            if self.holdsRowOrder, updatedChatListInclusions[peerId] == nil, let (groupId, currentIndex) = currentGroupAndIndex, chatListRowKeepsPosition(current: currentIndex.messageIndex, updated: topMessageIndex, topHole: self.topHoleIndex(groupId: groupId)) {
+                topMessageIndex = currentIndex.messageIndex
+            }
+            
             var updatedIndex = self.indexTable.setTopMessageIndex(peerId: peerId, index: topMessageIndex)
             if let updatedInclusion = updatedChatListInclusions[peerId] {
                 updatedIndex = self.indexTable.setInclusion(peerId: peerId, inclusion: updatedInclusion)
@@ -504,10 +564,12 @@ final class ChatListTable: Table {
     }
     
     private func justInsertHole(groupId: PeerGroupId, hole: ChatListHole) {
+        self.cachedTopHoles.removeValue(forKey: groupId)
         self.valueBox.set(self.table, key: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: nil, messageIndex: hole.index), type: .hole), value: self.emptyMemoryBuffer)
     }
     
     private func justRemoveHole(groupId: PeerGroupId, index: MessageIndex) {
+        self.cachedTopHoles.removeValue(forKey: groupId)
         self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: nil, messageIndex: index), type: .hole), secure: false)
     }
     
@@ -954,6 +1016,16 @@ final class ChatListTable: Table {
         return result
     }
     
+    func enumerateChatIndices(groupId: PeerGroupId, after index: ChatListIndex, downward: Bool, _ f: (ChatListIndex) -> Bool) {
+        self.valueBox.range(self.table, start: self.key(groupId: groupId, index: index, type: .message), end: downward ? self.lowerBound(groupId: groupId) : self.upperBound(groupId: groupId), keys: { key in
+            let (_, pinningIndex, messageIndex, type) = extractKey(key)
+            if type == ChatListEntryType.message.rawValue {
+                return f(ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex))
+            }
+            return true
+        }, limit: 0)
+    }
+
     func debugList(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
         return self.laterEntries(groupId: groupId, index: (ChatListIndex.absoluteLowerBound, true), messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000, predicate: nil)
     }

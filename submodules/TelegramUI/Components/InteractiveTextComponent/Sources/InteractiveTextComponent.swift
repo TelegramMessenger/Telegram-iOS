@@ -561,7 +561,7 @@ public final class InteractiveTextNodeLayout: NSObject {
         }
     }
     
-    public func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
+    public func attributesAtPoint(_ point: CGPoint, orNearest: Bool, withinLineOnly: Bool = false) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
             if orNearest {
@@ -741,7 +741,8 @@ public final class InteractiveTextNodeLayout: NSObject {
                     default:
                         break
                     }
-                    if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(transformedPoint) {
+                    let lineHitFrame = withinLineOnly ? lineFrame : lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height)
+                    if lineHitFrame.insetBy(dx: -3.0, dy: -3.0).contains(transformedPoint) {
                         var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                         if index == attributedString.length {
                             var closestLowerIndex: Int?
@@ -1453,6 +1454,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         } else {
             return nil
         }
+    }
+
+    public func attributesAtPoint(_ point: CGPoint, withinLineOnly: Bool) -> (Int, [NSAttributedString.Key: Any])? {
+        return self.cachedLayout?.attributesAtPoint(point, orNearest: false, withinLineOnly: withinLineOnly)
     }
     
     public func collapsibleBlockAtPoint(_ point: CGPoint) -> Int? {

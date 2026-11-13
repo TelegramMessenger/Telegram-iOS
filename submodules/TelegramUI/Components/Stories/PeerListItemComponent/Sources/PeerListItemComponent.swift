@@ -1020,7 +1020,7 @@ public final class PeerListItemComponent: Component {
                     }
                 } else if peer.isVerified {
                     statusIcon = .verified(fillColor: component.theme.list.itemCheckColors.fillColor, foregroundColor: component.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                } else if peer.isPremium {
+                } else if peer.showsPremiumStar {
                     statusIcon = .premium(color: component.theme.list.itemAccentColor)
                 }
             }

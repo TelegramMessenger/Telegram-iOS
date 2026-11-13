@@ -65,7 +65,7 @@ enum ChatListViewSpace: Hashable {
     }
 }
 
-private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
+func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
     let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
     return { entry in
         switch entry {

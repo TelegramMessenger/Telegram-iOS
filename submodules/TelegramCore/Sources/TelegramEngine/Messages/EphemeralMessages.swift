@@ -279,10 +279,16 @@ private func updatesWithoutWelcomeMessage(_ updates: Api.Updates, messageId: Mes
     }
 }
 
-func _internal_failStaleEphemeralOutgoingMessages(postbox: Postbox) -> Signal<Void, NoError> {
+func _internal_failStaleEphemeralOutgoingMessages(postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         var messageIds: [MessageId] = []
-        for peerId in Set(transaction.chatListGetAllPeerIds()) {
+        let peerIds: Set<PeerId>
+        if isSupportAccount(transaction: transaction, accountPeerId: accountPeerId) {
+            peerIds = Set(transaction.chatListGetAllPeerIds(groupId: .root) + transaction.chatListGetAllPeerIds(groupId: Namespaces.PeerGroup.archive))
+        } else {
+            peerIds = Set(transaction.chatListGetAllPeerIds())
+        }
+        for peerId in peerIds {
             for namespace in [Namespaces.Message.EphemeralLocal, Namespaces.Message.WelcomeMessageLocal] {
                 transaction.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: Int.max, { id, attributes in
                     if attributes.contains(where: { attribute in

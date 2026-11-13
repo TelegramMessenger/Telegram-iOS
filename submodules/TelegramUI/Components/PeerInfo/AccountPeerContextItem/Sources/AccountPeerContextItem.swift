@@ -104,7 +104,7 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
             if case let .user(user) = self.item.peer {
                 if let emojiStatus = user.emojiStatus {
                     iconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever)
-                } else if user.isPremium {
+                } else if user.showsPremiumStar {
                     iconContent = .premium(color: self.presentationData.theme.list.itemAccentColor)
                 }
             } else if case let .channel(channel) = self.item.peer {

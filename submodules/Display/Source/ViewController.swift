@@ -366,6 +366,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         
     }
     
+    open func narrowMasterRevealUpdated(_ isRevealed: Bool) {
+    }
+    
     open var customData: Any? {
         get {
             return nil

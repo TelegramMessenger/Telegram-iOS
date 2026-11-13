@@ -34,6 +34,12 @@ final class CachedPeerDataTable: Table {
         self.updatedPeers[id] = (previousValue, data)
     }
     
+    func remove(id: PeerId) {
+        self.cachedDatas.removeValue(forKey: id)
+        self.updatedPeers.removeValue(forKey: id)
+        self.valueBox.remove(self.table, key: self.key(id), secure: false)
+    }
+    
     func get(_ id: PeerId) -> CachedPeerData? {
         if let status = self.cachedDatas[id] {
             return status

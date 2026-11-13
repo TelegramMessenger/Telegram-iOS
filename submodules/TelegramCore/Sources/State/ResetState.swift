@@ -52,7 +52,31 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 Logger.shared.log("State", "account reset: the answers are \(Int(FetchedAnswerAge.now() - fetched.fetchStartedAt)) s old, older than the record of recent deletions keeps one; writing nothing, fetching the chat list again")
                 return false
             }
+            let supportAccount = isSupportAccount(transaction: transaction, accountPeerId: accountPeerId)
+            let supportListedPeerIds = supportAccount ? Set(transaction.chatListGetAllPeerIds(groupId: .root) + transaction.chatListGetAllPeerIds(groupId: Namespaces.PeerGroup.archive)) : Set()
+            let supportFolderPeerIds = supportAccount ? supportHiddenChatSweepFolderPeerIds(transaction: transaction) : Set()
+            var supportSkippedCount = 0
+            var supportClearedCount = 0
             for peerId in transaction.chatListGetAllPeerIds() {
+                if supportAccount {
+                    if peerId.namespace == Namespaces.Peer.CloudUser && !supportListedPeerIds.contains(peerId) && !supportFolderPeerIds.contains(peerId) {
+                        supportSkippedCount += 1
+                        continue
+                    }
+                    let chat = supportAccountResetChat(transaction: transaction, peerId: peerId)
+                    if chat != .reset {
+                        if transaction.getPeerChatListInclusion(peerId) != .notIncluded {
+                            transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
+                        }
+                        if chat == .clear {
+                            transaction.removeHistoryAsUnseenPeer(peerId, namespace: Namespaces.Message.Cloud)
+                            supportClearedCount += 1
+                        } else {
+                            supportSkippedCount += 1
+                        }
+                        continue
+                    }
+                }
                 if peerId.namespace != Namespaces.Peer.SecretChat {
                     transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                 }
@@ -74,6 +98,9 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 }
             }
             
+            if supportAccount {
+                Logger.shared.log("State", "account reset: support account skipped \(supportSkippedCount) empty chat(s), cleared \(supportClearedCount) with only sent messages")
+            }
             transaction.removeAllChatListEntries(groupId: .root, exceptPeerNamespace: Namespaces.Peer.SecretChat)
             transaction.removeAllChatListEntries(groupId: .group(1), exceptPeerNamespace: Namespaces.Peer.SecretChat)
             
@@ -115,7 +142,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 let deletedIds = deleteStoredMessagesAsReceivedDeletion(transaction: transaction, mediaBox: postbox.mediaBox, ids: ghostTail)
                 Logger.shared.log("State", "account reset: deleted \(deletedIds.count) stored message(s) above the fetched top messages")
             }
-            transaction.resetIncomingReadStates(fetchedChats.readStates)
+            transaction.resetIncomingReadStates(supportReadStatesToStore(transaction: transaction, accountPeerId: accountPeerId, readStates: fetchedChats.readStates))
             
             for (peerId, autoremoveValue) in fetchedChats.ttlPeriods {
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in

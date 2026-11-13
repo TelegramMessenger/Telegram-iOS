@@ -319,7 +319,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             
             var barButtonItems: [UIBarButtonItem] = []
             let footerContent: AvatarGalleryItemFooterContent = .info
-            if self.peer.id == self.context.account.peerId {
+            if self.peer.id == self.context.account.peerId, self.context.supportContext == nil {
                 let editTitle = entry.videoRepresentations.isEmpty ? self.presentationData.strings.Settings_EditPhoto : self.presentationData.strings.Settings_EditVideo
                 let editButtonNode = AvatarGalleryEditButtonNode(title: editTitle)
                 editButtonNode.contextAction = { [weak self] sourceView, gesture in

@@ -95,6 +95,34 @@ final class NavigationBarPlatterTransitionViewTests: XCTestCase {
         return NavigationBarComponent.Button(id: id, content: .text(title: id, isBold: false), action: { _ in })
     }
 
+    private func badgedChatSide(badge: String, badgeChangesInPlace: Bool) -> NavigationBarPlatterTransitionView.Side {
+        let content = NavigationBarComponent.Content(title: .text(""), back: .back, leftButton: nil, rightButtons: [], backPressed: {}, badge: badge, badgeChangesInPlace: badgeChangesInPlace)
+        return NavigationBarPlatterTransitionView.Side(content: content, theme: self.makeTheme(), strings: NavigationBarStrings(back: "Back", close: "Close", more: "More"), leftInset: 16.0, rightInset: 16.0, trailingButtonsInset: 0.0, rowFrame: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 44.0))
+    }
+
+    // The support account's chat list count changes several times a second: while a pop's capsules settle, a new badge
+    // updates the chat's back button in place. Replacing the capsule's items blurred the button out on every change.
+    func test_badgeChangedInPlace_keepsTheBackButtonItems() {
+        let top = self.side(right: [])
+        let view = self.makeView(bottom: self.badgedChatSide(badge: "80773", badgeChangesInPlace: true), top: top)
+        view.beginTransition(isInteractive: false, toTop: false)
+        self.time.advance(by: 0.1)
+        let itemCount = view.itemsStateForTesting(.leading).count
+        view.setSides(bottom: self.badgedChatSide(badge: "80711", badgeChangesInPlace: true), top: top)
+        XCTAssertEqual(view.itemsStateForTesting(.leading).count, itemCount)
+    }
+
+    // Any other bar replaces the back button's items when its badge changes, as before.
+    func test_badgeChange_replacesTheBackButtonItems() {
+        let top = self.side(right: [])
+        let view = self.makeView(bottom: self.badgedChatSide(badge: "3", badgeChangesInPlace: false), top: top)
+        view.beginTransition(isInteractive: false, toTop: false)
+        self.time.advance(by: 0.1)
+        let itemCount = view.itemsStateForTesting(.leading).count
+        view.setSides(bottom: self.badgedChatSide(badge: "4", badgeChangesInPlace: false), top: top)
+        XCTAssertGreaterThan(view.itemsStateForTesting(.leading).count, itemCount)
+    }
+
     // UIKit pairs every section by index from the edge: a bar with three right pills morphs each into the other bar's
     // pill at the same index, the innermost one included.
     func test_threeRightPills_pairByIndex() {

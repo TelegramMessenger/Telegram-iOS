@@ -19,15 +19,35 @@ public func splitMasterWidth(containerSize: CGSize, division: CGRect?) -> CGFloa
     return min(max(320.0, floor(containerSize.width / 3.0)), floor(containerSize.width / 2.0))
 }
 
+func narrowMasterSwipeCloses(offset: CGFloat, velocity: CGFloat, width: CGFloat) -> Bool {
+    if velocity > 600.0 {
+        return true
+    }
+    return offset > width / 3.0 && velocity > -600.0
+}
+
 final class NavigationSplitContainer: ASDisplayNode {
     private var theme: NavigationControllerTheme
     
     private let masterContainer: NavigationContainer
     private let detailContainer: NavigationContainer
     private let separator: ASDisplayNode
+    private let resizeHandle: ASDisplayNode
+    private var resizableMasterWidth: CGFloat?
+    private var resizeStartWidth: CGFloat = 0.0
+    /// A drag of the split line, with the master width it asks for and whether the drag ended.
+    var masterWidthDragged: ((CGFloat, Bool) -> Void)?
     
     private(set) var masterControllers: [ViewController] = []
     private(set) var detailControllers: [ViewController] = []
+    private var masterWidthOverride: CGFloat?
+    private(set) var detailSwipeOffset: CGFloat = 0.0
+    private(set) var masterContentWidth: CGFloat = 0.0
+    private(set) var layoutMetrics: LayoutMetrics = LayoutMetrics()
+    
+    var detailSwipeIsAvailable: Bool {
+        return self.detailContainer.swipeClosesFirstController
+    }
     // The detail pane's last size and `isBesideBottomTabBar`.
     private var detailLayoutState: (size: CGSize, isBesideBottomTabBar: Bool)?
     
@@ -62,11 +82,38 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.separator = ASDisplayNode()
         self.separator.backgroundColor = theme.separatorColor
         
+        self.resizeHandle = ASDisplayNode()
+        self.resizeHandle.isHidden = true
+        
         super.init()
         
         self.addSubnode(self.masterContainer)
         self.addSubnode(self.detailContainer)
         self.addSubnode(self.separator)
+        self.addSubnode(self.resizeHandle)
+        
+        self.detailContainer.firstControllerSwipe = { [weak self] translation, velocity, state in
+            self?.detailSwipeUpdated(translation: translation, velocity: velocity, state: state)
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.resizeHandle.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.resizePanGesture(_:))))
+    }
+    
+    @objc private func resizePanGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.resizeStartWidth = self.masterContainer.frame.width
+        case .changed:
+            self.masterWidthDragged?(self.resizeStartWidth + recognizer.translation(in: self.view).x, false)
+        case .ended, .cancelled:
+            self.masterWidthDragged?(self.resizeStartWidth + recognizer.translation(in: self.view).x, true)
+        default:
+            break
+        }
     }
     
     func hasNonReadyControllers() -> Bool {
@@ -93,7 +140,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     }
 
     func scrollToTopProxyFrames(layout: ContainerViewLayout) -> (master: CGRect, detail: CGRect) {
-        let masterWidth = splitMasterWidth(containerSize: layout.size, division: layout.division)
+        let masterWidth = self.masterWidthOverride ?? self.resizableMasterWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
         let detailWidth = layout.size.width - masterWidth
         let scrollToTopHeight = max(layout.statusBarHeight ?? layout.safeInsets.top, 1.0)
         
@@ -103,13 +150,85 @@ final class NavigationSplitContainer: ASDisplayNode {
         )
     }
 
-    func update(layout: ContainerViewLayout, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
-        let masterWidth = splitMasterWidth(containerSize: layout.size, division: layout.division)
+    func animateDetailIn() {
+        let duration: Double = 0.3
+        self.detailContainer.layer.animatePosition(from: CGPoint(x: self.detailContainer.bounds.width, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.separator.layer.animatePosition(from: CGPoint(x: self.detailContainer.bounds.width, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+    }
+    
+    func animateDetailOut(over nextContent: UIView) {
+        guard let snapshot = self.detailContainer.view.snapshotView(afterScreenUpdates: false) else {
+            return
+        }
+        snapshot.frame = self.detailContainer.frame
+        nextContent.addSubview(snapshot)
+        snapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: snapshot.bounds.width, y: 0.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshot] _ in
+            snapshot?.removeFromSuperview()
+        })
+    }
+    
+    func detailSwipeUpdated(translation: CGFloat, velocity: CGFloat, state: UIGestureRecognizer.State) {
+        guard let masterWidth = self.masterWidthOverride else {
+            return
+        }
+        let size = self.bounds.size
+        let width = size.width - masterWidth
+        let offset = max(0.0, min(width, translation))
+        switch state {
+        case .began, .changed:
+            if state == .began {
+                for controller in self.masterControllers {
+                    controller.narrowMasterRevealUpdated(true)
+                }
+            }
+            self.detailSwipeOffset = offset
+            self.updatePaneFrames(masterWidth: masterWidth, size: size, transition: .immediate)
+        case .ended, .cancelled:
+            self.detailSwipeOffset = offset
+            if state == .ended, narrowMasterSwipeCloses(offset: offset, velocity: velocity, width: width) {
+                self.detailControllers.last?.navigationBar?.backPressed()
+            }
+            for controller in self.masterControllers {
+                controller.narrowMasterRevealUpdated(false)
+            }
+            self.detailSwipeOffset = 0.0
+            if self.supernode != nil {
+                self.updatePaneFrames(masterWidth: masterWidth, size: size, transition: .animated(duration: 0.3, curve: .spring))
+            }
+        default:
+            break
+        }
+    }
+    
+    private func updatePaneFrames(masterWidth: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
+        let detailMinX = masterWidth + self.detailSwipeOffset
+        transition.updateFrame(node: self.masterContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: detailMinX, height: size.height)))
+        transition.updateFrame(node: self.detailContainer, frame: CGRect(origin: CGPoint(x: detailMinX, y: 0.0), size: CGSize(width: size.width - masterWidth, height: size.height)))
+        transition.updateFrame(node: self.separator, frame: CGRect(origin: CGPoint(x: detailMinX, y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height)))
+    }
+    
+    func prepareMasterFull(layout: ContainerViewLayout, masterWidth: CGFloat, masterControllers: [ViewController]) {
+        self.masterContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.masterContainer.update(layout: layout, canBeClosed: false, controllers: masterControllers, transition: .immediate)
+        self.detailContainer.frame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: layout.size.width - masterWidth, height: layout.size.height))
+        self.separator.frame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height))
+    }
+    
+    func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, resizableMasterWidth: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
+        self.masterWidthOverride = masterWidthOverride
+        self.resizableMasterWidth = masterWidthOverride == nil ? resizableMasterWidth : nil
+        if masterWidthOverride == nil {
+            self.detailSwipeOffset = 0.0
+        }
+        let masterWidth = masterWidthOverride ?? self.resizableMasterWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        self.resizeHandle.isHidden = self.resizableMasterWidth == nil
+        transition.updateFrame(node: self.resizeHandle, frame: CGRect(origin: CGPoint(x: masterWidth - 10.0, y: 0.0), size: CGSize(width: 20.0, height: layout.size.height)))
+        let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, layout.size.width) : masterWidth
         let detailWidth = layout.size.width - masterWidth
+        self.masterContentWidth = masterContentWidth
+        self.layoutMetrics = layout.metrics
         
-        transition.updateFrame(node: self.masterContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: masterWidth, height: layout.size.height)))
-        transition.updateFrame(node: self.detailContainer, frame: CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: detailWidth, height: layout.size.height)))
-        transition.updateFrame(node: self.separator, frame: CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height)))
+        self.updatePaneFrames(masterWidth: masterWidth, size: layout.size, transition: transition)
         
         if let detailsPlaceholderNode {
             let needsTiling = layout.size.width > layout.size.height
@@ -127,7 +246,8 @@ final class NavigationSplitContainer: ASDisplayNode {
         let detailReserved = reservedAreaForPane(corners: layout.reservedCorners, division: layout.division, paneFrame: CGRect(x: masterWidth, y: 0.0, width: detailWidth, height: layout.size.height), containerSize: layout.size)
         
         // The master pane is laid out first, so that its top controller reports its tab bar for the layout it now has.
-        self.masterContainer.update(layout: ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: masterSafeInsets, reservedCorners: masterReserved.corners, division: masterReserved.division, additionalInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: false, controllers: masterControllers, transition: transition)
+        self.detailContainer.firstControllerPreviousItem = masterWidthOverride != nil ? masterControllers.last.flatMap { .item($0.navigationItem) } : nil
+        self.masterContainer.update(layout: ContainerViewLayout(size: CGSize(width: masterContentWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: masterSafeInsets, reservedCorners: masterReserved.corners, division: masterReserved.division, additionalInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), canBeClosed: false, controllers: masterControllers, transition: transition)
         let detailSize = CGSize(width: detailWidth, height: layout.size.height)
         let isBesideBottomTabBar = masterControllers.last?.showsBottomTabBar ?? false
         var detailTransition = transition

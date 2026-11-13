@@ -72,6 +72,24 @@ final class ViewTracker {
         self.postboxStateViews.remove(index)
     }
     
+    func hasMessageHistoryView(peerId: PeerId) -> Bool {
+        for (view, _) in self.messageHistoryViews.copyItems() {
+            switch view.peerIds {
+            case let .single(viewPeerId, _):
+                if viewPeerId == peerId {
+                    return true
+                }
+            case let .associated(viewPeerId, _):
+                if viewPeerId == peerId {
+                    return true
+                }
+            case .external:
+                break
+            }
+        }
+        return false
+    }
+    
     func addMessageHistoryView(_ view: MutableMessageHistoryView) -> (Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>.Index, Signal<(MessageHistoryView, ViewUpdateType), NoError>) {
         let record = (view, ValuePipe<(MessageHistoryView, ViewUpdateType)>())
         

@@ -383,9 +383,16 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
             backPressed: { [weak self] in
                 self?.backPressed()
             },
-            backContextAction: self.backButtonContextAction
+            backContextAction: self.backButtonContextAction,
+            badgeChangesInPlace: self.badgeChangesInPlace,
+            rightButtonsChangeInLayout: self.rightButtonsChangeInLayout
         )
     }
+
+    /// See `NavigationBarComponent.Content.badgeChangesInPlace`.
+    public var badgeChangesInPlace: Bool = false
+    /// See `NavigationBarComponent.Content.rightButtonsChangeInLayout`.
+    public var rightButtonsChangeInLayout: Bool = false
 
     private func update(layout: Layout, transition: ContainedViewLayoutTransition, isContainerLayout: Bool) {
         let size = layout.size

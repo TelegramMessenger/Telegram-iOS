@@ -14,6 +14,12 @@ func _internal_sendBotGame(account: Account, botPeerId: PeerId, game: String, to
         }
 
         var flags: Int32 = 1 << 7
+        if account.isSupportUser && supportSettings(transaction: transaction).sendAllSilently {
+            flags |= 1 << 5
+        }
+        if account.isSupportUser {
+            supportApplyReadOnSend(transaction: transaction, network: account.network, stateManager: account.stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: false, threadId: threadId, replyThreadId: nil)])
+        }
         var replyTo: Api.InputReplyTo?
         if let threadId {
             flags |= 1 << 0
@@ -39,6 +45,12 @@ func _internal_forwardGameWithScore(account: Account, messageId: MessageId, to p
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let _ = transaction.getMessage(messageId), let fromPeer = transaction.getPeer(messageId.peerId), let fromInputPeer = apiInputPeer(fromPeer), let toPeer = transaction.getPeer(peerId), let toInputPeer = apiInputPeer(toPeer) {
             var flags: Int32 = 1 << 8
+            if account.isSupportUser && supportSettings(transaction: transaction).sendAllSilently {
+                flags |= 1 << 5
+            }
+            if account.isSupportUser {
+                supportApplyReadOnSend(transaction: transaction, network: account.network, stateManager: account.stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: false, threadId: threadId, replyThreadId: nil)])
+            }
             
             var sendAsInputPeer: Api.InputPeer?
             if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: account.peerId) {

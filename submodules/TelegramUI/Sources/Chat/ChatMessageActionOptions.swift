@@ -28,7 +28,7 @@ private enum OptionsId: Hashable {
 }
 
 private func maybePresentForwardRichTextPremiumToast(selfController: ChatControllerImpl, chatController: ChatController, contextController: ContextController, messageIds: [EngineMessage.Id]) -> Disposable? {
-    guard !selfController.context.isPremium, !messageIds.isEmpty else {
+    guard !selfController.context.isRichTextUnlocked, !messageIds.isEmpty else {
         return nil
     }
 
@@ -185,7 +185,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceView: 
         messagesCount = .single(1)
     }
     
-    let isPremium = selfController.context.isPremium
+    let isRichTextUnlocked = selfController.context.isRichTextUnlocked
     let accountPeerId = selfController.context.account.peerId
     let items = combineLatest(forwardOptions, selfController.context.account.postbox.messagesAtIds(messageIds), messagesCount)
     |> deliverOnMainQueue
@@ -240,7 +240,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceView: 
         
         var canHideNames = hasNotOwnMessages && hasOther
         var hideNamesEnabled = true
-        if hasRichMessages && !isPremium {
+        if hasRichMessages && !isRichTextUnlocked {
             hideNamesEnabled = false
         }
         if case let .peer(peerId) = selfController.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {

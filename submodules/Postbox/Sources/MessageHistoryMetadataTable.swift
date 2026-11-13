@@ -268,6 +268,17 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
+    func removeInitialized(_ peerId: PeerId) {
+        self.initializedHistoryPeerIds.remove(peerId)
+        self.initializedHistoryPeerIdTags.removeValue(forKey: peerId)
+        self.valueBox.remove(self.table, key: self.peerHistoryInitializedKey(peerId), secure: false)
+        
+        let tagsLowerBound = ValueBoxKey(length: 8 + 1)
+        tagsLowerBound.setInt64(0, value: peerId.toInt64())
+        tagsLowerBound.setInt8(8, value: MetadataPrefix.PeerHistoryTagInitialized.rawValue)
+        self.valueBox.removeRange(self.table, start: tagsLowerBound, end: tagsLowerBound.successor)
+    }
+    
     func isThreadHoleIndexInitialized(peerId: PeerId, threadId: Int64) -> Bool {
         if self.valueBox.exists(self.table, key: self.peerThreadHoleIndexInitializedKey(peerId: peerId, threadId: threadId)) {
             return true

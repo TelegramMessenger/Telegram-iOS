@@ -306,6 +306,7 @@ extension ChatControllerImpl {
 
     /// The chat's own appearance reaches the list only while the list is open; opening and closing send their own.
     func forwardSideListAppearance(_ appearance: SideListAppearance, animated: Bool) {
+        self.forwardSupportInfoSidebarAppearance(appearance, animated: animated)
         guard let panel = self.sideListPanel, self.sideListAppeared else {
             return
         }

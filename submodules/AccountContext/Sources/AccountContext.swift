@@ -15,6 +15,7 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
+import SupportTemplates
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -1156,6 +1157,7 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func getNotificationExceptions() -> Promise<NotificationExceptionsList?>?
         
+    func openAddContact()
     func openContacts()
     func openSettings(edit: Bool)
     func openBirthdaySetup()
@@ -1917,6 +1919,8 @@ public protocol AccountContext: AnyObject {
     var tonContext: StarsContext? { get }
     var walletContext: WalletContext? { get }
     var giftAuctionsManager: GiftAuctionsManager? { get }
+    var supportContext: SupportContext? { get }
+    var supportTemplates: SupportTemplatesManager? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
@@ -1959,6 +1963,41 @@ public protocol AccountContext: AnyObject {
     func requestCall(peerId: EnginePeer.Id, isVideo: Bool, completion: @escaping () -> Void)
     
     func getAppConfigValue(_ key: String) -> Any?
+}
+
+public extension AccountContext {
+    // Support accounts may send rich text without Premium.
+    var isRichTextUnlocked: Bool {
+        return self.isPremium || self.supportContext != nil
+    }
+    
+    // Whether stars show on peers. A support account sees them even where Premium can't be bought; its own star is decided by showsPremiumStar.
+    var premiumBadgesShown: Bool {
+        return supportPremiumBadgesShown(isSupport: self.supportContext != nil, isPremiumDisabled: PremiumConfiguration.with(appConfiguration: self.currentAppConfiguration.with { $0 }).isPremiumDisabled)
+    }
+    
+    // Auto-download for this account. A support account's own switch overrides the shared settings, which stay as stored.
+    var accountAutomaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> {
+        return accountAutomaticMediaDownloadSettingsSignal(sharedContext: self.sharedContext, supportContext: self.supportContext)
+    }
+    
+    var currentAccountAutomaticMediaDownloadSettings: MediaAutoDownloadSettings {
+        let settings = self.sharedContext.currentAutomaticMediaDownloadSettings
+        if let supportContext = self.supportContext, !supportContext.currentAutomaticMediaDownload {
+            return settings.withAutomaticDownloadDisabled()
+        }
+        return settings
+    }
+}
+
+public func accountAutomaticMediaDownloadSettingsSignal(sharedContext: SharedAccountContext, supportContext: SupportContext?) -> Signal<MediaAutoDownloadSettings, NoError> {
+    guard let supportContext else {
+        return sharedContext.automaticMediaDownloadSettings
+    }
+    return combineLatest(sharedContext.automaticMediaDownloadSettings, supportContext.automaticMediaDownload)
+    |> map { settings, isEnabled -> MediaAutoDownloadSettings in
+        return isEnabled ? settings : settings.withAutomaticDownloadDisabled()
+    }
 }
 
 public struct AntiSpamBotConfiguration {

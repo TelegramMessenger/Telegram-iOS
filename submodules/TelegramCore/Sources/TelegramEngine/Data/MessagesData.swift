@@ -76,6 +76,13 @@ public struct EnginePeerReadCounters: Equatable {
         return false
     }
 
+    public var hasNoIncomingMessages: Bool {
+        guard let state = self.state, !state.states.isEmpty else {
+            return false
+        }
+        return state.count == 0 && !state.markedUnread && !self.hasEverRead
+    }
+
     public func isOutgoingMessageIndexRead(_ index: EngineMessage.Index) -> Bool {
         guard let state = self.state else {
             return false

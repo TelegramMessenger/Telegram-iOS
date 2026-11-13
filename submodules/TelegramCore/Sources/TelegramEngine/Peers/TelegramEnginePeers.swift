@@ -217,6 +217,22 @@ public extension TelegramEngine {
         public func supportPeerId() -> Signal<PeerId?, NoError> {
             return _internal_supportPeerId(account: self.account)
         }
+        
+        public func supportCommonGroupsForModeration(userId: PeerId, currentChatId: PeerId) -> Signal<[EnginePeer], NoError> {
+            return _internal_supportCommonGroupsForModeration(account: self.account, userId: userId, currentChatId: currentChatId)
+        }
+
+        public func supportActiveChats() -> Signal<[SupportActiveChat], NoError> {
+            return _internal_supportActiveChats(account: self.account)
+        }
+        
+        public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
+            return _internal_refreshSupportUserInfo(account: self.account, peerId: peerId)
+        }
+        
+        public func saveSupportUserInfo(peerId: PeerId, text: String, entities: [MessageTextEntity]) -> Signal<Never, SaveSupportUserInfoError> {
+            return _internal_saveSupportUserInfo(account: self.account, peerId: peerId, text: text, entities: entities)
+        }
 
         public func inactiveChannelList() -> Signal<[InactiveChannel], NoError> {
             return _internal_inactiveChannelList(network: self.account.network)
@@ -1199,6 +1215,9 @@ public extension TelegramEngine {
                     } else {
                         overrideChatTimestamp = mediaDraftState.timestamp
                     }
+                }
+                if supportKeepsDraftLocal(transaction: transaction, accountPeerId: self.account.peerId, threadId: threadId) {
+                    overrideChatTimestamp = nil
                 }
 
                 let storedState = StoredPeerChatInterfaceState(

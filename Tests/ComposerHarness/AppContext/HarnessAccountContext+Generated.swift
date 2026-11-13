@@ -26,6 +26,7 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
+import SupportTemplates
 import Postbox
 import AccountContext
 
@@ -62,6 +63,12 @@ extension HarnessAccountContext {
     }
     public var giftAuctionsManager : GiftAuctionsManager? {
         fatalError("harness: AccountContext.giftAuctionsManager is not provided")
+    }
+    public var supportContext : SupportContext? {
+        fatalError("harness: AccountContext.supportContext is not provided")
+    }
+    public var supportTemplates : SupportTemplatesManager? {
+        fatalError("harness: AccountContext.supportTemplates is not provided")
     }
     public var currentCountriesConfiguration : Atomic<CountriesConfiguration> {
         fatalError("harness: AccountContext.currentCountriesConfiguration is not provided")
