@@ -126,6 +126,17 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertEqual(supportChatListLoadState(holeTimestamps: [800], loadTill: 0), .loading)
     }
 
+    func testCleanupDoesNotRunForAllChats() {
+        XCTAssertFalse(supportChatListCleanupRuns(cutoffAtLaunch: 0, cutoff: 0))
+    }
+
+    func testCleanupDoesNotRunAfterAChangeThisSession() {
+        XCTAssertTrue(supportChatListCleanupRuns(cutoffAtLaunch: 1000, cutoff: 1000))
+        XCTAssertFalse(supportChatListCleanupRuns(cutoffAtLaunch: 1000, cutoff: 2000))
+        XCTAssertFalse(supportChatListCleanupRuns(cutoffAtLaunch: 1000, cutoff: 500))
+        XCTAssertFalse(supportChatListCleanupRuns(cutoffAtLaunch: nil, cutoff: nil))
+    }
+
     private func isMuted(_ attributes: [MessageAttribute]) -> Bool {
         return attributes.contains(where: { ($0 as? NotificationInfoMessageAttribute)?.flags.contains(.muted) == true })
     }

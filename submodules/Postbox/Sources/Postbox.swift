@@ -113,6 +113,13 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1)) ?? IndexSet()
     }
     
+    /// Whether `peerId`'s message history has been set up. Unlike `getHoles`, this does not set it up: the first
+    /// touch of an untouched history adds a hole over all of it.
+    public func isMessageHistoryInitialized(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryMetadataTable.isInitialized(peerId) ?? false
+    }
+
     public func getThreadIndexHoles(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace) -> IndexSet {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
@@ -192,6 +199,16 @@ public final class Transaction {
     public func clearHistory(_ peerId: PeerId, threadId: Int64?, minTimestamp: Int32?, maxTimestamp: Int32?, namespaces: MessageIdNamespaces, forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: forEachMedia)
+    }
+    
+    public func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        assert(!self.disposed)
+        self.postbox?.removeHistoryAsUnseenPeer(peerId, namespace: namespace)
+    }
+    
+    public func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.hasOpenMessageHistoryView(peerId: peerId) ?? false
     }
     
     public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {
@@ -2475,6 +2492,16 @@ final class PostboxImpl {
         }
     }
     
+    fileprivate func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        return self.viewTracker.hasMessageHistoryView(peerId: peerId)
+    }
+    
+    fileprivate func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        self.clearHistory(peerId, threadId: nil, minTimestamp: nil, maxTimestamp: nil, namespaces: .just(Set([namespace])), forEachMedia: nil)
+        self.messageHistoryMetadataTable.removeInitialized(peerId)
+        self.cachedPeerDataTable.remove(id: peerId)
+    }
+    
     fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {
         self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
@@ -4727,9 +4754,13 @@ final class PostboxImpl {
         }).start()
     }
     
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(usingTempFile: Bool = false) -> Signal<Never, NoError> {
         return Signal { subscriber in
-            self.valueBox.vacuum()
+            if usingTempFile {
+                self.valueBox.vacuumUsingTempFile()
+            } else {
+                self.valueBox.vacuum()
+            }
             subscriber.putCompletion()
             
             return EmptyDisposable
@@ -5454,12 +5485,12 @@ public class Postbox {
         }
     }
 
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(usingTempFile: Bool = false) -> Signal<Never, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
 
             self.impl.with { impl in
-                disposable.set(impl.optimizeStorage().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+                disposable.set(impl.optimizeStorage(usingTempFile: usingTempFile).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable
