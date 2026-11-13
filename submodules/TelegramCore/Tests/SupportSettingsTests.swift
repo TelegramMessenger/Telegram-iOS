@@ -50,6 +50,23 @@ final class SupportSettingsTests: XCTestCase {
         XCTAssertTrue(supportChatListBesideNarrowsList(.everywhere, isLandscape: false))
     }
 
+    func testChatsWithoutIncomingMessagesAreShownByDefaultAndFollowTheSettings() {
+        XCTAssertFalse(SupportSettings.default.hideChatsWithoutIncomingMessages)
+        XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.hideChatsWithoutIncomingMessages, false)
+
+        var settings = SupportSettings.default
+        settings.hideChatsWithoutIncomingMessages = true
+        XCTAssertEqual(PreferencesEntry(settings)?.get(SupportSettings.self)?.hideChatsWithoutIncomingMessages, true)
+
+        let promise = ValuePromise<SupportSettings>(.default)
+        let context = SupportContext(settings: promise.get())
+        var values: [Bool] = []
+        let disposable = context.hidesChatsWithoutIncomingMessages.start(next: { values.append($0) })
+        promise.set(settings)
+        disposable.dispose()
+        XCTAssertEqual(values, [false, true])
+    }
+
     func testKeyboardHidesOnSwitchByDefaultAndFollowsTheSettings() {
         XCTAssertTrue(SupportSettings.default.hideKeyboardOnSwitch)
         XCTAssertEqual(PreferencesEntry(PartialSettings(sendAllSilently: true))?.get(SupportSettings.self)?.hideKeyboardOnSwitch, true)

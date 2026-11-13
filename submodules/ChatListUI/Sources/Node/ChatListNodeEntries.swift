@@ -735,6 +735,9 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         if let peerId = peerId, state.pendingRemovalItemIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
             continue loop
         }
+        if state.supportHidesChatsWithoutIncomingMessages, case .chatList = mode, case let .chatList(chatListIndex) = entry.index, supportHidesChatWithoutIncomingMessages(peerId: chatListIndex.messageIndex.id.peerId, accountPeerId: accountPeerId, isPinned: chatListIndex.pinningIndex != nil, readCounters: entry.readCounters) {
+            continue loop
+        }
         var updatedMessages = entry.messages
         var updatedCombinedReadState = entry.readCounters
         if let peerId = peerId, state.pendingClearHistoryPeerIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {

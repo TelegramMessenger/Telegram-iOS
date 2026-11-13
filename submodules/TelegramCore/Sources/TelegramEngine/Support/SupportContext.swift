@@ -39,6 +39,7 @@ public final class SupportContext {
     private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
+    private let hidesChatsWithoutIncomingMessagesPromise = ValuePromise<Bool>(SupportSettings.default.hideChatsWithoutIncomingMessages, ignoreRepeated: true)
     private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
     private let supportNamePromise = ValuePromise<String>(ignoreRepeated: true)
     private let userInfoState = Atomic(value: UserInfoState())
@@ -139,6 +140,10 @@ public final class SupportContext {
     public var currentHideKeyboardOnSwitch: Bool {
         return self.hideKeyboardOnSwitchValue.with { $0 }
     }
+
+    public var hidesChatsWithoutIncomingMessages: Signal<Bool, NoError> {
+        return self.hidesChatsWithoutIncomingMessagesPromise.get()
+    }
     
     // A switch that keeps the keyboard closed: the chat it opens skips the composer focus a support chat takes on open.
     public func skipComposerFocus(peerId: PeerId, now: Double = CFAbsoluteTimeGetCurrent()) {
@@ -182,6 +187,7 @@ public final class SupportContext {
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
             self.chatListBesidePromise.set(settings.chatListBeside)
+            self.hidesChatsWithoutIncomingMessagesPromise.set(settings.hideChatsWithoutIncomingMessages)
         })
     }
     

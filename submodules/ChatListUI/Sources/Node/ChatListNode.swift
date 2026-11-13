@@ -319,6 +319,7 @@ public struct ChatListNodeState: Equatable {
     public var archiveStoryState: StoryState?
     public var supportChatListLoadTill: Int32?
     public var supportOccupations: [EnginePeer.Id: SupportOccupation] = [:]
+    public var supportHidesChatsWithoutIncomingMessages: Bool = false
     public var supportHidesArchive: Bool = false
     
     public init(
@@ -402,6 +403,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.supportOccupations != rhs.supportOccupations {
+            return false
+        }
+        if lhs.supportHidesChatsWithoutIncomingMessages != rhs.supportHidesChatsWithoutIncomingMessages {
             return false
         }
         if lhs.supportHidesArchive != rhs.supportHidesArchive {
@@ -1373,6 +1377,7 @@ public final class ChatListNode: ListViewImpl {
     private var activityStatusesDisposable: Disposable?
     private var supportChatListLoadTillDisposable: Disposable?
     private var supportOccupationsDisposable: Disposable?
+    private var supportHidesChatsWithoutIncomingMessagesDisposable: Disposable?
     
     private let scrollToTopOptionPromise = Promise<ChatListGlobalScrollOption>(.none)
     public var scrollToTopOption: Signal<ChatListGlobalScrollOption, NoError> {
@@ -2778,10 +2783,18 @@ public final class ChatListNode: ListViewImpl {
             if let strongSelf = self, let chatListView = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListView {
                 let originalList = chatListView.originalList
                 if let range = range.loadedRange {
+                    var loadedItemCount = originalList.items.count
+                    if strongSelf.currentState.supportHidesChatsWithoutIncomingMessages {
+                        loadedItemCount = min(loadedItemCount, chatListView.filteredEntries.count)
+                    }
                     var location: ChatListNodeLocation?
-                    if range.firstIndex < 5, let lastItem = originalList.items.last, originalList.hasLater {
+                    if strongSelf.currentState.supportHidesChatsWithoutIncomingMessages, case let .initial(count, _)? = strongSelf.currentLocation {
+                        if range.lastIndex >= loadedItemCount - 5, originalList.hasEarlier, originalList.items.count >= count - 10 {
+                            location = .initial(count: count + 100, filter: strongSelf.chatListFilter)
+                        }
+                    } else if range.firstIndex < 5, let lastItem = originalList.items.last, originalList.hasLater {
                         location = .navigation(index: lastItem.index, filter: strongSelf.chatListFilter)
-                    } else if range.firstIndex >= 5, range.lastIndex >= originalList.items.count - 5, originalList.hasEarlier, let firstItem = originalList.items.first {
+                    } else if range.firstIndex >= 5, range.lastIndex >= loadedItemCount - 5, originalList.hasEarlier, let firstItem = originalList.items.first {
                         location = .navigation(index: firstItem.index, filter: strongSelf.chatListFilter)
                     }
                     
@@ -2861,6 +2874,14 @@ public final class ChatListNode: ListViewImpl {
                 self?.updateState { state in
                     var state = state
                     state.supportOccupations = occupations
+                    return state
+                }
+            })
+            self.supportHidesChatsWithoutIncomingMessagesDisposable = (supportContext.hidesChatsWithoutIncomingMessages
+            |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                self?.updateState { state in
+                    var state = state
+                    state.supportHidesChatsWithoutIncomingMessages = value
                     return state
                 }
             })
@@ -3311,6 +3332,7 @@ public final class ChatListNode: ListViewImpl {
         self.activityStatusesDisposable?.dispose()
         self.supportChatListLoadTillDisposable?.dispose()
         self.supportOccupationsDisposable?.dispose()
+        self.supportHidesChatsWithoutIncomingMessagesDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
@@ -3712,7 +3734,13 @@ public final class ChatListNode: ListViewImpl {
             }
             
             let updatedOpaqueState: Any? = ChatListOpaqueTransactionState(chatListView: transition.chatListView)
-            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: updatedOpaqueState, completion: completion)
+            let hidesChats = self.currentState.supportHidesChatsWithoutIncomingMessages
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: updatedOpaqueState, completion: { [weak self] visibleRange in
+                completion(visibleRange)
+                if hidesChats {
+                    self?.updateVisibleItemRange(force: true)
+                }
+            })
         }
     }
     

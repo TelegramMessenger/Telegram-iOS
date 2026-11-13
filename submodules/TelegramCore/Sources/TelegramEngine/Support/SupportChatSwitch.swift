@@ -203,17 +203,34 @@ func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFil
     }
 }
 
-func supportChatListNeighbourIsTarget(targetPeerId: PeerId, currentPeerId: PeerId, peer: Peer?) -> Bool {
-    guard targetPeerId != currentPeerId, let peer else {
+// With the setting on, the chat list leaves out a one-to-one chat that never received a message: nothing in it is
+// unread and nothing was ever read. A pinned chat stays.
+public func supportHidesChatWithoutIncomingMessages(peerId: EnginePeer.Id, accountPeerId: EnginePeer.Id, isPinned: Bool, readCounters: EnginePeerReadCounters?) -> Bool {
+    guard peerId.namespace == Namespaces.Peer.CloudUser, peerId != accountPeerId, !isPinned, let readCounters else {
+        return false
+    }
+    return readCounters.hasNoIncomingMessages
+}
+
+func supportChatListNeighbourIsTarget(targetPeerId: PeerId, currentPeerId: PeerId, peer: Peer?, isHiddenWithoutIncomingMessages: Bool = false) -> Bool {
+    guard targetPeerId != currentPeerId, let peer, !isHiddenWithoutIncomingMessages else {
         return false
     }
     return !peer.isForumOrMonoForum
 }
 
 func _internal_supportChatListNeighbour(account: Account, peerId: PeerId, chatListFilterId: Int32?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> EnginePeer? in
+        let hidesChatsWithoutIncomingMessages = supportSettings(transaction: transaction).hideChatsWithoutIncomingMessages
         let target = supportChatListTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, isTarget: { targetPeerId in
-            return supportChatListNeighbourIsTarget(targetPeerId: targetPeerId, currentPeerId: peerId, peer: transaction.getPeer(targetPeerId))
+            let isHidden = hidesChatsWithoutIncomingMessages && supportHidesChatWithoutIncomingMessages(
+                peerId: targetPeerId,
+                accountPeerId: accountPeerId,
+                isPinned: transaction.getPeerChatListIndex(targetPeerId)?.1.pinningIndex != nil,
+                readCounters: transaction.getCombinedPeerReadState(targetPeerId).map { EnginePeerReadCounters(state: $0, isMuted: false) }
+            )
+            return supportChatListNeighbourIsTarget(targetPeerId: targetPeerId, currentPeerId: peerId, peer: transaction.getPeer(targetPeerId), isHiddenWithoutIncomingMessages: isHidden)
         }, getFilterPredicate: getFilterPredicate)
         return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
     }

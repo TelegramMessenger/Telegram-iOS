@@ -103,6 +103,7 @@ private enum SupportSettingsSection: Int32 {
     case sending
     case swipe
     case order
+    case received
     case beside
     case period
     case loading
@@ -121,6 +122,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case swipeToNextChatInfo
         case fixChatsOrder
         case fixChatsOrderInfo
+        case hideChatsWithoutIncoming
+        case hideChatsWithoutIncomingInfo
         case besideHeader
         case beside(Int32)
         case besideInfo
@@ -148,6 +151,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case swipeToNextChatInfo(String)
     case fixChatsOrder(String, Bool)
     case fixChatsOrderInfo(String)
+    case hideChatsWithoutIncoming(String, Bool)
+    case hideChatsWithoutIncomingInfo(String)
     case besideHeader(String)
     case beside(index: Int32, value: SupportChatListBeside, title: String, isSelected: Bool)
     case besideInfo(String)
@@ -175,6 +180,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.swipe.rawValue
         case .fixChatsOrder, .fixChatsOrderInfo:
             return SupportSettingsSection.order.rawValue
+        case .hideChatsWithoutIncoming, .hideChatsWithoutIncomingInfo:
+            return SupportSettingsSection.received.rawValue
         case .besideHeader, .beside, .besideInfo:
             return SupportSettingsSection.beside.rawValue
         case .periodHeader, .period, .periodInfo:
@@ -208,6 +215,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .fixChatsOrder
         case .fixChatsOrderInfo:
             return .fixChatsOrderInfo
+        case .hideChatsWithoutIncoming:
+            return .hideChatsWithoutIncoming
+        case .hideChatsWithoutIncomingInfo:
+            return .hideChatsWithoutIncomingInfo
         case .besideHeader:
             return .besideHeader
         case let .beside(_, value, _, _):
@@ -263,6 +274,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 9
         case .fixChatsOrderInfo:
             return 10
+        case .hideChatsWithoutIncoming:
+            return 11
+        case .hideChatsWithoutIncomingInfo:
+            return 12
         case .besideHeader:
             return 20
         case let .beside(index, _, _, _):
@@ -347,6 +362,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .hideChatsWithoutIncoming(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.hideChatsWithoutIncomingMessages = value
+                    return settings
+                }
+            })
         case let .besideHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .beside(_, value, title, isSelected):
@@ -365,7 +388,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     arguments.selectPeriod(period)
                 }
             })
-        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
+        case let .hideKeyboardOnSwitchInfo(text), let .swipeToNextChatInfo(text), let .fixChatsOrderInfo(text), let .hideChatsWithoutIncomingInfo(text), let .besideInfo(text), let .periodInfo(text), let .loadMoreInfo(text), let .templatesInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .shortcuts(title):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: "", sectionId: self.section, style: .blocks, action: {
@@ -445,6 +468,9 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     entries.append(.fixChatsOrder(strings.Support_FixOrder_Title, settings.fixChatsOrder))
     entries.append(.fixChatsOrderInfo(strings.Support_FixOrder_Info))
+
+    entries.append(.hideChatsWithoutIncoming(strings.Support_HideOutgoingOnly_Title, settings.hideChatsWithoutIncomingMessages))
+    entries.append(.hideChatsWithoutIncomingInfo(strings.Support_HideOutgoingOnly_Info))
 
     entries.append(.besideHeader(strings.Support_ChatListBeside_Header))
     for (index, option) in supportChatListBesideOptions(strings: strings).enumerated() {

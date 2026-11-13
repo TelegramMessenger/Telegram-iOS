@@ -17364,6 +17364,9 @@ Error: %8$@";
 "Support.FixOrder.Title" = "Fix chats order";
 "Support.FixOrder.Info" = "Chats keep their place while messages arrive. Pinning a chat or restarting the app re-sorts the list.";
 
+"Support.HideOutgoingOnly.Title" = "Hide outgoing-only chats";
+"Support.HideOutgoingOnly.Info" = "The chat list leaves out one-to-one chats where the user has never written to you, such as those that only have messages from support. A pinned chat stays, and every chat can still be found in search.";
+
 "Support.ChatListBeside.Header" = "CHAT LIST BESIDE CHATS";
 "Support.ChatListBeside.Off" = "Off";
 "Support.ChatListBeside.Landscape" = "In landscape only";
