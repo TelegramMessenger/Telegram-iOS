@@ -128,7 +128,19 @@ import GlobalControlPanelsContext
 import ComponentFlow
 import ComponentDisplayAdapters
 import UIKitRuntimeUtils
+import SupportTemplates
 import ChatHistoryListViewBackend
+
+private func supportEditText(context: AccountContext, text: String, entities: [MessageTextEntity]) -> (text: String, entities: [MessageTextEntity]) {
+    guard context.supportContext != nil else {
+        return (text, entities)
+    }
+    return supportStrippingHashtag(text: text, entities: entities, range: { $0.range }, updatedRange: { entity, range in
+        var entity = entity
+        entity.range = range
+        return entity
+    })
+}
 
 extension ChatControllerImpl {
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {
@@ -1719,7 +1731,8 @@ extension ChatControllerImpl {
                                 let content = chatInputContent(fromInstantPage: richTextAttribute.instantPage)
                                 editInputState = ChatTextInputState(content: content, selectionRange: content.length ..< content.length)
                             } else {
-                                let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                                let editText = supportEditText(context: strongSelf.context, text: message.text, entities: entities)
+                                let inputText = chatInputStateStringWithAppliedEntities(editText.text, entities: editText.entities)
                                 editInputState = ChatTextInputState(inputText: inputText)
                             }
                             var disableUrlPreviews: [String] = []
@@ -4464,7 +4477,8 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                    let editText = supportEditText(context: self.context, text: message.text, entities: entities)
+                    let inputText = chatInputStateStringWithAppliedEntities(editText.text, entities: editText.entities)
                     var disableUrlPreviews: [String] = []
                     if webpageUrl == nil {
                         disableUrlPreviews = detectUrls(inputText)
