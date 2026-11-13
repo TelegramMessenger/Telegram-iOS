@@ -43,6 +43,7 @@ public final class SupportContext {
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let trailingTagsValue = Atomic<Bool>(value: SupportSettings.default.trailingTags)
     private let collapseMiddleTagsValue = Atomic<Bool>(value: SupportSettings.default.collapseMiddleTags)
+    private let hideProfilePhotosValue = Atomic<Bool>(value: SupportSettings.default.hideProfilePhotos)
     private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
     private let hidesChatsWithoutIncomingMessagesPromise = ValuePromise<Bool>(SupportSettings.default.hideChatsWithoutIncomingMessages, ignoreRepeated: true)
     private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
@@ -162,6 +163,10 @@ public final class SupportContext {
         return self.collapseMiddleTagsValue.with { $0 }
     }
     
+    public var currentHideProfilePhotos: Bool {
+        return self.hideProfilePhotosValue.with { $0 }
+    }
+    
     public var currentHideKeyboardOnSwitch: Bool {
         return self.hideKeyboardOnSwitchValue.with { $0 }
     }
@@ -214,6 +219,7 @@ public final class SupportContext {
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.trailingTagsValue.swap(settings.trailingTags)
             let _ = self.collapseMiddleTagsValue.swap(settings.collapseMiddleTags)
+            let _ = self.hideProfilePhotosValue.swap(settings.hideProfilePhotos)
             let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
             self.chatListBesidePromise.set(settings.chatListBeside)
             self.automaticMediaDownloadPromise.set(settings.automaticMediaDownload)
