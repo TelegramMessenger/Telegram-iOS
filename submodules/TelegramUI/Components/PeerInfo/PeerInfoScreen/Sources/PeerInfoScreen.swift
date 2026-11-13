@@ -6216,6 +6216,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, case let .channel(channel) = data.peer, channel.hasPermission(.postStories) {
                 navigationFlags.channelCanPostStories = true
             }
+            navigationFlags.isStoryPostingDisabled = self.context.supportContext != nil
             navigationFlags.paneKey = self.paneContainerNode.currentPaneKey
             navigationFlags.isSelectingOrReordering = self.state.selectedMessageIds != nil || self.state.selectedStoryIds != nil || self.state.paneIsReordering
             navigationFlags.hasSavedMessageTags = self.data?.hasSavedMessageTags ?? false

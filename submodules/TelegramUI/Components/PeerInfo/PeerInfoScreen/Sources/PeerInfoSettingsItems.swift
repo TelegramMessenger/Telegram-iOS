@@ -50,7 +50,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     var setStatusTitle: String = ""
     let displaySetStatus: Bool
     var hasEmojiStatus = false
-    if case let .user(peer) = data.peer, peer.isPremium {
+    if case let .user(peer) = data.peer, peer.isPremium, context.supportContext == nil {
         if peer.emojiStatus != nil {
             hasEmojiStatus = true
             setStatusTitle = presentationData.strings.PeerInfo_ChangeEmojiStatus

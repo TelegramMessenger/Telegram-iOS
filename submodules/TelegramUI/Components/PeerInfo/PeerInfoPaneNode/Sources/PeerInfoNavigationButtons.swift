@@ -66,6 +66,8 @@ public struct PeerInfoNavigationFlags: Equatable {
     public var canEdit = false
     /// A channel the account may post stories to (and Premium allows it).
     public var channelCanPostStories = false
+    /// A support account, which posts no stories anywhere.
+    public var isStoryPostingDisabled = false
     /// The shared-media pane shown, if any.
     public var paneKey: PeerInfoPaneKey?
     /// Messages or stories selected, or a pane reordering.
@@ -99,7 +101,7 @@ public func peerInfoNavigationButtonSets(_ flags: PeerInfoNavigationFlags) -> (n
     } else if flags.isMyProfile || flags.canEdit {
         normal.right.append(.edit)
     }
-    if flags.channelCanPostStories || flags.isMyProfile {
+    if (flags.channelCanPostStories || flags.isMyProfile) && !flags.isStoryPostingDisabled {
         normal.right.insert(.postStory, at: 0)
     }
     if flags.isSelectingOrReordering {

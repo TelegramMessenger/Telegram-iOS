@@ -2354,6 +2354,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 var i = 0
                 var perksItems: [AnyComponentWithIdentity<Empty>] = []
                 for perk in state.configuration.businessPerks  {
+                    if accountContext?.supportContext != nil && perk != .businessQuickReplies && perk != .businessLinks {
+                        continue
+                    }
                     let isNew = state.newPerks.contains(perk.identifier)
                     let titleComponent = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
@@ -2562,7 +2565,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 
                 let accentColor = environment.theme.list.itemAccentColor
                 var perksItems: [AnyComponentWithIdentity<Empty>] = []
-                if let accountContext = context.component.screenContext.context {
+                if let accountContext = context.component.screenContext.context, accountContext.supportContext == nil {
                     perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
                         style: .glass,
@@ -2639,39 +2642,41 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 ))))
                 
-                perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
-                    style: .glass,
-                    title: AnyComponent(VStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: strings.Business_AddPost,
-                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
-                            )),
-                            maximumNumberOfLines: 0
-                        ))),
-                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: strings.Business_AddPostInfo,
-                                font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)),
-                                textColor: environment.theme.list.itemSecondaryTextColor
-                            )),
-                            maximumNumberOfLines: 0,
-                            lineSpacing: 0.18
-                        )))
-                    ], alignment: .left, spacing: 2.0)),
-                    leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
-                        backgroundColor: UIColor(rgb: 0x41a6a5),
-                        iconName: "Item List/Icons/Stories"
-                    ))), false),
-                    action: {  _ in
-                        guard let accountContext else {
-                            return
+                if accountContext?.supportContext == nil {
+                    perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        style: .glass,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: strings.Business_AddPost,
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 0
+                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: strings.Business_AddPostInfo,
+                                    font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)),
+                                    textColor: environment.theme.list.itemSecondaryTextColor
+                                )),
+                                maximumNumberOfLines: 0,
+                                lineSpacing: 0.18
+                            )))
+                        ], alignment: .left, spacing: 2.0)),
+                        leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
+                            backgroundColor: UIColor(rgb: 0x41a6a5),
+                            iconName: "Item List/Icons/Stories"
+                        ))), false),
+                        action: {  _ in
+                            guard let accountContext else {
+                                return
+                            }
+                            push(accountContext.sharedContext.makeMyStoriesController(context: accountContext, isArchive: false))
                         }
-                        push(accountContext.sharedContext.makeMyStoriesController(context: accountContext, isArchive: false))
-                    }
-                ))))
+                    ))))
+                }
                 
                 let moreBusinessSection = moreBusinessSection.update(
                     component: ListSectionComponent(
@@ -2836,7 +2841,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     layoutBusinessPerks()
                     if context.component.isPremium == true {
                         layoutMoreBusinessPerks()
-                        layoutAdsSettings()
+                        if accountContext?.supportContext == nil {
+                            layoutAdsSettings()
+                        }
                     }
                 } else {
                     layoutPerks()

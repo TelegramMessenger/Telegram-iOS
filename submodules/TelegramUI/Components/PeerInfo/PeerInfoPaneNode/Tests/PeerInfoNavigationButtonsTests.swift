@@ -21,6 +21,11 @@ final class PeerInfoNavigationButtonSetsTests: XCTestCase {
         XCTAssertEqual(self.sets({ $0.isMyProfile = true }).normal.right, [.postStory, .edit])
     }
 
+    func test_supportAccount_hasNoPostStory() {
+        XCTAssertEqual(self.sets({ $0.isMyProfile = true; $0.isStoryPostingDisabled = true }).normal.right, [.edit])
+        XCTAssertEqual(self.sets({ $0.canEdit = true; $0.channelCanPostStories = true; $0.isStoryPostingDisabled = true }).normal.right, [.edit])
+    }
+
     func test_settings() {
         XCTAssertEqual(self.sets({ $0.isSettings = true }).normal, PeerInfoNavigationButtonSet(left: [.qrCode], right: [.search, .edit]))
     }

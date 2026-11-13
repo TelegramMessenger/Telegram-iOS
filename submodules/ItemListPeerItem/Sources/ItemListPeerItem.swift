@@ -387,12 +387,12 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
             }
         }
         
-        public var isPremiumDisabled: Bool {
+        public var premiumBadgesShown: Bool {
             switch self {
             case let .account(context):
-                return PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 })).isPremiumDisabled
+                return context.premiumBadgesShown
             case let .custom(custom):
-                return custom.isPremiumDisabled
+                return !custom.isPremiumDisabled
             }
         }
         
@@ -967,7 +967,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     if let color = emojiStatus.color {
                         credibilityParticleColor = UIColor(rgb: UInt32(bitPattern: color))
                     }
-                } else if item.peer.isPremium && !item.context.isPremiumDisabled {
+                } else if item.peer.showsPremiumStar && item.context.premiumBadgesShown {
                     credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                 }
                 

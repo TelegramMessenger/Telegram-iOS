@@ -874,7 +874,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return appConfiguration
         }
         |> distinctUntilChanged
-        |> map { appConfiguration -> StoriesConfiguration.PostingAvailability in
+        |> map { [isSupportAccount = self.context.supportContext != nil] appConfiguration -> StoriesConfiguration.PostingAvailability in
+            if isSupportAccount {
+                return .disabled
+            }
             let storiesConfiguration = StoriesConfiguration.with(appConfiguration: appConfiguration)
             return storiesConfiguration.posting
         }
@@ -3411,17 +3414,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     var items: [ContextMenuItem] = []
                                     
                     if peer.id == self.context.account.peerId {
-                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, _ in
-                            c?.dismiss(completion: {
-                                guard let self else {
-                                    return
-                                }
+                        if self.context.supportContext == nil {
+                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] c, _ in
+                                c?.dismiss(completion: {
+                                    guard let self else {
+                                        return
+                                    }
                                 
-                                self.openStoryCamera(fromList: true)
-                            })
-                        })))
+                                    self.openStoryCamera(fromList: true)
+                                })
+                            })))
+                        }
                         
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextSavedStories, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
@@ -3447,7 +3452,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                     } else if case let .channel(channel) = peer {
-                        if channel.hasPermission(.postStories) {
+                        if channel.hasPermission(.postStories) && self.context.supportContext == nil {
                             items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] c, _ in
@@ -7165,7 +7170,7 @@ private final class ChatListLocationContext {
                 }
                 if let emojiStatus = user.emojiStatus {
                     return .emoji(emojiStatus)
-                } else if user.isPremium {
+                } else if user.showsPremiumStar {
                     return .premium
                 } else {
                     return nil
