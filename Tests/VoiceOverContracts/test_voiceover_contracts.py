@@ -463,6 +463,19 @@ class AccessibilityPreferencesContractTests(unittest.TestCase):
 
 
 class ReleaseGateContractTests(unittest.TestCase):
+    def test_share_loading_container_calls_pass_localized_strings(self) -> None:
+        call_sites = (
+            "submodules/LanguageLinkPreviewUI/Sources/LanguageLinkPreviewControllerNode.swift",
+            "submodules/ShareController/Sources/ShareControllerNode.swift",
+            "submodules/TelegramCallsUI/Sources/VoiceChatJoinScreen.swift",
+            "submodules/TelegramUI/Components/ShareScreen/Sources/ShareScreen.swift",
+        )
+        for path in call_sites:
+            for line_number, line in enumerate(source(path).splitlines(), start=1):
+                if "ShareLoadingContainerNode(" in line:
+                    with self.subTest(path=path, line=line_number):
+                        self.assertIn("strings:", line)
+
     def test_ui_suite_keeps_tree_audit_and_performance_budget(self) -> None:
         contents = source("Telegram/Tests/Sources/AccessibilityUITests.swift")
         for contract in (

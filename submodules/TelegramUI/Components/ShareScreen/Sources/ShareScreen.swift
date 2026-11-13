@@ -577,7 +577,7 @@ public final class ShareScreen: ViewControllerComponentContainer {
         if case let .preparing(long) = status, long, !(self.loadingNode is ShareProlongedLoadingContainerNode) {
             self.loadingNode = ShareProlongedLoadingContainerNode(theme: data.theme, strings: data.strings, forceNativeAppearance: true, environment: configuration.environment)
         } else if self.loadingNode == nil {
-            self.loadingNode = ShareLoadingContainerNode(theme: data.theme, forceNativeAppearance: true)
+            self.loadingNode = ShareLoadingContainerNode(theme: data.theme, strings: data.strings, forceNativeAppearance: true)
         }
         let loadingState: ShareLoadingState
         switch status {
