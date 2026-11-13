@@ -60,8 +60,9 @@ private final class SupportSettingsControllerArguments {
     let reloadTemplates: () -> Void
     let setRevealedTemplateFile: (String?, String?) -> Void
     let removeTemplateFile: (String) -> Void
+    let openTemplates: (SupportTemplatesSource) -> Void
 
-    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, selectPeriod: @escaping (Int32) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void) {
+    init(updateSettings: @escaping (@escaping (SupportSettings) -> SupportSettings) -> Void, selectPeriod: @escaping (Int32) -> Void, loadMore: @escaping (Int32) -> Void, importTemplates: @escaping () -> Void, reloadTemplates: @escaping () -> Void, setRevealedTemplateFile: @escaping (String?, String?) -> Void, removeTemplateFile: @escaping (String) -> Void, openTemplates: @escaping (SupportTemplatesSource) -> Void) {
         self.updateSettings = updateSettings
         self.selectPeriod = selectPeriod
         self.loadMore = loadMore
@@ -69,6 +70,7 @@ private final class SupportSettingsControllerArguments {
         self.reloadTemplates = reloadTemplates
         self.setRevealedTemplateFile = setRevealedTemplateFile
         self.removeTemplateFile = removeTemplateFile
+        self.openTemplates = openTemplates
     }
 }
 
@@ -111,6 +113,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case loadMoreInfo
         case templatesHeader
         case templatesAutocomplete
+        case templatesOwn
         case templatesImport
         case templatesReload
         case templatesFile(String)
@@ -131,6 +134,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case loadMoreInfo(String)
     case templatesHeader(String)
     case templatesAutocomplete(String, Bool)
+    case templatesOwn(title: String, label: String)
     case templatesImport(String)
     case templatesReload(title: String, isEnabled: Bool)
     case templatesFile(index: Int32, name: String, info: String, isRevealed: Bool)
@@ -148,7 +152,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
             return SupportSettingsSection.loading.rawValue
-        case .templatesHeader, .templatesAutocomplete, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
+        case .templatesHeader, .templatesAutocomplete, .templatesOwn, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
             return SupportSettingsSection.templates.rawValue
         }
     }
@@ -183,6 +187,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .templatesHeader
         case .templatesAutocomplete:
             return .templatesAutocomplete
+        case .templatesOwn:
+            return .templatesOwn
         case .templatesImport:
             return .templatesImport
         case .templatesReload:
@@ -224,6 +230,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 104
         case .templatesAutocomplete:
             return 105
+        case .templatesOwn:
+            return 106
         case .templatesImport:
             return 107
         case .templatesReload:
@@ -296,6 +304,10 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
                     return settings
                 }
             })
+        case let .templatesOwn(title, label):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
+                arguments.openTemplates(.own)
+            })
         case let .templatesImport(title):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.importTemplates()
@@ -308,6 +320,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             })
         case let .templatesFile(_, name, info, isRevealed):
             return LocalizationListItem(presentationData: presentationData, systemStyle: .glass, id: name, title: name, subtitle: info, checked: false, activity: false, loading: false, editing: LocalizationListItemEditing(editable: true, editing: false, revealed: isRevealed, reorderable: false), sectionId: self.section, alwaysPlain: false, action: {
+                arguments.openTemplates(.file(name))
             }, setItemWithRevealedOptions: { id, fromId in
                 arguments.setRevealedTemplateFile(id, fromId)
             }, removeItem: { id in
@@ -373,6 +386,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
     if let templates {
         entries.append(.templatesHeader(strings.Support_Templates_Header))
         entries.append(.templatesAutocomplete(strings.Support_Templates_Autocomplete, settings.templatesAutocomplete))
+        entries.append(.templatesOwn(title: strings.Support_Templates_MyTemplates, label: templates.ownTemplateCount == 0 ? "" : "\(templates.ownTemplateCount)"))
         entries.append(.templatesImport(strings.Support_Templates_Import))
         entries.append(.templatesReload(title: templates.isReloading ? strings.Support_Templates_Reloading : strings.Support_Templates_Reload, isEnabled: !templates.isReloading))
         for (index, file) in templates.files.enumerated() {
@@ -390,6 +404,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
 public func supportSettingsController(context: AccountContext, focusOnItemTag: SupportSettingsEntryTag? = nil) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
 
     let showTemplatesResult: (SupportTemplatesReloadResult, String) -> Void = { result, successText in
         supportPresentTemplatesReloadResult(context: context, result: result, successText: successText, elevatedLayout: false, present: { controller in
@@ -473,6 +488,10 @@ public func supportSettingsController(context: AccountContext, focusOnItemTag: S
         }), TextAlertAction(type: .destructiveAction, title: presentationData.strings.Support_Templates_RemoveFileAction, action: {
             context.supportTemplates?.removeFile(name: name)
         })]), nil)
+    }, openTemplates: { source in
+        if let manager = context.supportTemplates {
+            pushControllerImpl?(supportTemplatesListController(context: context, manager: manager, source: source))
+        }
     })
 
     let settings = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
@@ -498,6 +517,10 @@ public func supportSettingsController(context: AccountContext, focusOnItemTag: S
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
+    }
+
     if let focusOnItemTag {
         var didFocusOnItem = false
         controller.afterTransactionCompleted = { [weak controller] in

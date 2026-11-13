@@ -68,7 +68,7 @@ public final class NavigationSearchView: UIView {
 
     private let backgroundView: GlassBackgroundView
     private let iconView: UIImageView
-    private(set) var searchBarNode: SearchBarNode?
+    public private(set) var searchBarNode: SearchBarNode?
     
     private var close: (background: GlassBackgroundView, icon: UIImageView)?
 

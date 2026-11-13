@@ -49,7 +49,7 @@ func supportTemplatesRewrittenFile(downloaded: Data, url: String, ownKeys: [Stri
         var lines: [String]
     }
 
-    var output = "{URL}\n\(url)\n\n"
+    var output = url.isEmpty ? "" : "{URL}\n\(url)\n\n"
     var block: [Section] = []
     var question = ""
 
