@@ -214,6 +214,13 @@ class ModalContractTests(unittest.TestCase):
             with self.subTest(node_source=node_source):
                 self.assertIn("accessibilityViewIsModal = true", source(node_source))
 
+    def test_text_alert_uses_one_accessibility_link_element_and_view_traits(self) -> None:
+        contents = source("submodules/Display/Source/TextAlertController.swift")
+        self.assertIn("TextAlertTextAccessibilityNode", contents)
+        self.assertIn("UIAccessibilityCustomAction(name: link.text, actionHandler:", contents)
+        self.assertIn("self.view.traitCollection.preferredContentSizeCategory", contents)
+        self.assertNotIn("TextAlertAccessibilityCustomAction", contents)
+
     def test_modal_backgrounds_are_hidden_and_reduce_motion_is_respected(self) -> None:
         alert = source("submodules/Display/Source/AlertControllerNode.swift")
         action_sheet = source("submodules/Display/Source/ActionSheetControllerNode.swift")
