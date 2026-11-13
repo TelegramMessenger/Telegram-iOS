@@ -26,16 +26,16 @@ on:
 
 jobs:
   source-contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run VoiceOver source contracts
         run: python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
 
   simulator-tree-audit:
     runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: false
           fetch-depth: 0

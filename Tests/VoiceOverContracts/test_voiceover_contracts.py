@@ -436,6 +436,10 @@ class ReleaseGateContractTests(unittest.TestCase):
     def test_workflow_runs_both_automated_gate_layers(self) -> None:
         contents = source(".github/workflows/voiceover-gate.yml")
         make = source("build-system/Make/Make.py")
+        self.assertIn("runs-on: ubuntu-24.04", contents)
+        self.assertNotIn("ubuntu-latest", contents)
+        self.assertEqual(contents.count("actions/checkout@v5"), 2)
+        self.assertNotIn("actions/checkout@v4", contents)
         self.assertIn('branches:\n      - "VoiceOver-fixes"\n      - "master"', contents)
         self.assertIn('"Telegram/**/*.swift"', contents)
         self.assertIn('"Telegram/Share/**"', contents)
