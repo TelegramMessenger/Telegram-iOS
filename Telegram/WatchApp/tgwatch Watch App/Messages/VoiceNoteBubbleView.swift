@@ -11,6 +11,8 @@ import SwiftUI
 /// the active `VoicePlaybackController`.
 struct VoiceNoteBubbleView: View {
     let note: VoiceNoteVisual
+    /// The message, so playing it marks it listened; nil in previews.
+    var messageId: Int64? = nil
     let caption: String
     let isOutgoing: Bool
     let replyHeader: ReplyHeader?
@@ -65,7 +67,7 @@ struct VoiceNoteBubbleView: View {
         )
         .foregroundStyle(style.content)
         .contentShape(Rectangle())
-        .onTapGesture { store.togglePlayback(note) }
+        .onTapGesture { store.togglePlayback(note, messageId: messageId) }
     }
 
     @ViewBuilder
@@ -104,6 +106,13 @@ struct VoiceNoteBubbleView: View {
                 Text(formatDuration(note.duration))
                     .font(.system(size: 9))
                     .foregroundStyle(style.secondary)
+                if !note.isListened {
+                    // Not played yet, as iOS marks it: by this account for an incoming message,
+                    // by the recipient for an outgoing one.
+                    Circle()
+                        .fill(style.playFill)
+                        .frame(width: 4, height: 4)
+                }
             }
         }
         .fixedSize(horizontal: true, vertical: false)

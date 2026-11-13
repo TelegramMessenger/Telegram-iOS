@@ -92,6 +92,17 @@ final class VoicePlaybackController {
     /// Entry point the bubble calls. If `note.localPath` is nil the controller
     /// transitions to `.preparing` and waits for the caller to call
     /// `resumeIfReady(note:)` once a path arrives.
+    /// Whether this voice note is loading or playing: after a `toggle`, the tap started it rather
+    /// than paused or cancelled it.
+    func isStarting(_ voiceFileId: Int) -> Bool {
+        switch state {
+        case .preparing(let id, _), .playing(let id):
+            return id == voiceFileId
+        default:
+            return false
+        }
+    }
+
     func toggle(note: VoiceNoteVisual) {
         switch state {
         case .playing(let id) where id == note.voiceFileId:

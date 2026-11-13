@@ -31,6 +31,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
     /// The message content has changed
     case updateMessageContent(UpdateMessageContent)
 
+    /// The message content was opened. Updates voice note messages to "listened", video note messages to "viewed" and starts the self-destruct timer
+    case updateMessageContentOpened(UpdateMessageContentOpened)
+
     /// A new chat has been loaded/created. This update is guaranteed to come before the chat identifier is returned to the application. The chat field changes will be reported through separate updates
     case updateNewChat(UpdateNewChat)
 
@@ -95,6 +98,7 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case updateMessageSendSucceeded
         case updateMessageSendFailed
         case updateMessageContent
+        case updateMessageContentOpened
         case updateNewChat
         case updateChatTitle
         case updateChatPhoto
@@ -141,6 +145,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case .updateMessageContent:
             let value = try UpdateMessageContent(from: decoder)
             self = .updateMessageContent(value)
+        case .updateMessageContentOpened:
+            let value = try UpdateMessageContentOpened(from: decoder)
+            self = .updateMessageContentOpened(value)
         case .updateNewChat:
             let value = try UpdateNewChat(from: decoder)
             self = .updateNewChat(value)
@@ -218,6 +225,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
             try value.encode(to: encoder)
         case .updateMessageContent(let value):
             try container.encode(Kind.updateMessageContent, forKey: .type)
+            try value.encode(to: encoder)
+        case .updateMessageContentOpened(let value):
+            try container.encode(Kind.updateMessageContentOpened, forKey: .type)
             try value.encode(to: encoder)
         case .updateNewChat(let value):
             try container.encode(Kind.updateNewChat, forKey: .type)
@@ -386,6 +396,25 @@ public struct UpdateMessageContent: Codable, Equatable, Hashable {
         self.chatId = chatId
         self.messageId = messageId
         self.newContent = newContent
+    }
+}
+
+/// The message content was opened. Updates voice note messages to "listened", video note messages to "viewed" and starts the self-destruct timer
+public struct UpdateMessageContentOpened: Codable, Equatable, Hashable {
+
+    /// Chat identifier
+    public let chatId: Int64
+
+    /// Message identifier
+    public let messageId: Int64
+
+
+    public init(
+        chatId: Int64,
+        messageId: Int64
+    ) {
+        self.chatId = chatId
+        self.messageId = messageId
     }
 }
 

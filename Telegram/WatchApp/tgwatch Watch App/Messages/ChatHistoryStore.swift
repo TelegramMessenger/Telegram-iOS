@@ -493,12 +493,32 @@ final class ChatHistoryStore {
         }
     }
 
-    func togglePlayback(_ note: VoiceNoteVisual) {
+    func togglePlayback(_ note: VoiceNoteVisual, messageId: Int64? = nil) {
         audioPlayback.tearDown()
         if note.localPath == nil {
             requestFileDownload(fileId: note.voiceFileId, priority: 2)
         }
         voicePlayback.toggle(note: note)
+        if let messageId, voicePlayback.isStarting(note.voiceFileId) {
+            markListened(messageId: messageId)
+        }
+    }
+
+    /// Voice messages already marked listened in this chat, so replaying one doesn't ask again.
+    private var listenedMessageIds: Set<Int64> = []
+
+    /// Playing a voice message marks it listened, as on the iPhone: the chat on other devices no
+    /// longer shows it unplayed, and the sender sees it played. TDLib ignores it for one that
+    /// was already listened to, or for an outgoing one.
+    private func markListened(messageId: Int64) {
+        guard listenedMessageIds.insert(messageId).inserted else { return }
+        Task { [logger, loader, chatId] in
+            do {
+                try await loader.openMessageContent(chatId: chatId, messageId: messageId)
+            } catch {
+                logger.warning("openMessageContent messageId=\(messageId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     func toggleAudioPlayback(_ audio: AudioVisual) {
@@ -547,6 +567,9 @@ final class ChatHistoryStore {
         case .updateMessageContent(let upd) where upd.chatId == chatId:
             window.applyContentUpdate(id: upd.messageId, newContent: upd.newContent)
             primeFiles(from: upd.newContent)
+            scheduleReproject()
+        case .updateMessageContentOpened(let upd) where upd.chatId == chatId:
+            window.applyContentOpened(id: upd.messageId)
             scheduleReproject()
         case .updateDeleteMessages(let upd) where upd.chatId == chatId && upd.isPermanent:
             window.applyDelete(ids: upd.messageIds)

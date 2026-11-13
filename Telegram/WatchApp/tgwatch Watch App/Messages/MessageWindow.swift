@@ -104,6 +104,13 @@ struct MessageWindow: Equatable {
         )
     }
 
+    /// `updateMessageContentOpened`: the voice message was played (here, on another device, or
+    /// by the recipient of an outgoing one), so it no longer shows unplayed.
+    mutating func applyContentOpened(id: Int64) {
+        guard let existing = cache[id], case .messageVoiceNote(let m) = existing.content, !m.isListened else { return }
+        applyContentUpdate(id: id, newContent: .messageVoiceNote(MessageVoiceNote(caption: m.caption, isListened: true, voiceNote: m.voiceNote)))
+    }
+
     /// Patches the cached `messagePoll` whose `poll.id` matches the updated poll
     /// (from `updatePoll`, which carries no message id). No-op if no such message
     /// is in the window. The scan is linear over a small (~30–60) window.
