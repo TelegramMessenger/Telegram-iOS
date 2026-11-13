@@ -549,10 +549,12 @@ their own transactions first.
 
 ### `pts_total_limit`, the Debug override, logs
 
-`currentPtsTotalLimit(transaction:)`: in DEBUG builds `StateSyncDebugSettings.ptsTotalLimitOverride` first (>= 1: that
-value; below 1: nil); else the app-configuration key `pts_total_limit` as a finite `Double`: absent or not a number ->
-`defaultPtsTotalLimit` (10000); below 1 -> nil (no limit); at or above `Int32.max` -> `Int32.max`; else truncated. A
-string value counts as absent. Both pollers read it (`PtsTotalLimitTests`, `PtsTotalLimitNotificationExtensionTests`,
+`currentPtsTotalLimit(transaction:accountPeerId:)`: in DEBUG builds `StateSyncDebugSettings.ptsTotalLimitOverride`
+first (>= 1: that value; below 1: nil); else the app-configuration key `pts_total_limit` as a finite `Double`: absent
+or not a number -> `defaultPtsTotalLimit` (10000); below 1 -> nil (no limit); at or above `Int32.max` -> `Int32.max`;
+else truncated. A string value counts as absent. A support account sends at most `supportPtsTotalLimit` (1000; nil
+stays nil, the override is not capped), so after a long absence it resets rather than replay every missed update.
+Both pollers read it (`PtsTotalLimitTests`, `PtsTotalLimitNotificationExtensionTests`,
 `PtsTotalLimitDebugOverrideTests`). The override is stored under `PreferencesKeys.stateSyncDebugSettings` and written by
 `updateStateSyncDebugSettings(engine:_:)`. `DifferenceChainLog` (app only) is created on a chain's first request:
 `noteRequest(pts:)` per request, `noteTooLong(replyPts:)` per differenceTooLong (not a chain end), `logEnd(endPts:)`
