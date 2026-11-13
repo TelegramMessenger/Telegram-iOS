@@ -80,7 +80,7 @@ final class StickerPickerStore {
         recents = (recs ?? []).map(pickerSticker(from:))
         sets = (setInfos ?? []).map(pickerSet(from:))
         if favs == nil, recs == nil, setInfos == nil {
-            loadState = .failed("Couldn't load stickers")
+            loadState = .failed(L("Watch.Stickers.LoadFailed"))
         } else {
             loadState = .loaded
         }

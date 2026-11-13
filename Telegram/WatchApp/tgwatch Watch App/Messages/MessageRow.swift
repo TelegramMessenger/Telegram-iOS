@@ -107,7 +107,7 @@ func messageRows(
     chatId: Int64,
     today: Foundation.Date,
     calendar: Calendar,
-    locale: Locale = .current,
+    locale: Locale = AppStrings.shared.locale,
     selfUserId: Int64? = nil,
     unreadDividerAfterId: Int64? = nil,
     lastReadOutboxMessageId: Int64 = 0
@@ -309,7 +309,8 @@ func voiceNoteVisual(for content: MessageContent, fileLocals: [Int: File]) -> Vo
         mimeType: m.voiceNote.mimeType,
         waveform: m.voiceNote.waveform,
         caption: m.caption.text,
-        localPath: localPath
+        localPath: localPath,
+        isListened: m.isListened
     )
 }
 
@@ -328,7 +329,7 @@ func audioVisual(for content: MessageContent, fileLocals: [Int: File]) -> AudioV
     let audioFile = fileLocals[a.audio.id] ?? a.audio
     let localPath: String? = (audioFile.local.isDownloadingCompleted && !audioFile.local.path.isEmpty)
         ? audioFile.local.path : nil
-    let displayTitle = a.title.isEmpty ? (a.fileName.isEmpty ? "Audio" : a.fileName) : a.title
+    let displayTitle = a.title.isEmpty ? (a.fileName.isEmpty ? L("Attachment.Audio") : a.fileName) : a.title
     return AudioVisual(
         audioFileId: a.audio.id,
         duration: a.duration,
@@ -351,7 +352,7 @@ func documentVisual(for content: MessageContent, fileLocals: [Int: File]) -> Doc
         ? docFile.local.path : nil
     return DocumentVisual(
         documentFileId: d.document.id,
-        fileName: d.fileName.isEmpty ? "File" : d.fileName,
+        fileName: d.fileName.isEmpty ? L("Message.File") : d.fileName,
         sizeBytes: docFile.size != 0 ? docFile.size : docFile.expectedSize,
         localPath: localPath,
         caption: m.caption.text

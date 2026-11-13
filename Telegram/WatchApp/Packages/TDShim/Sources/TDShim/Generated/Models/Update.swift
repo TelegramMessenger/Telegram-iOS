@@ -31,6 +31,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
     /// The message content has changed
     case updateMessageContent(UpdateMessageContent)
 
+    /// The message content was opened. Updates voice note messages to "listened", video note messages to "viewed" and starts the self-destruct timer
+    case updateMessageContentOpened(UpdateMessageContentOpened)
+
     /// A new chat has been loaded/created. This update is guaranteed to come before the chat identifier is returned to the application. The chat field changes will be reported through separate updates
     case updateNewChat(UpdateNewChat)
 
@@ -82,6 +85,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
     /// A poll was updated; for bots only
     case updatePoll(UpdatePoll)
 
+    /// Some language pack strings have been updated
+    case updateLanguagePackStrings(UpdateLanguagePackStrings)
+
     /// Decoded when the @type is not one of the known cases (forward-compatible).
     case unsupported
 
@@ -92,6 +98,7 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case updateMessageSendSucceeded
         case updateMessageSendFailed
         case updateMessageContent
+        case updateMessageContentOpened
         case updateNewChat
         case updateChatTitle
         case updateChatPhoto
@@ -109,6 +116,7 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case updateUser
         case updateFile
         case updatePoll
+        case updateLanguagePackStrings
     }
 
     public init(from decoder: Decoder) throws {
@@ -137,6 +145,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case .updateMessageContent:
             let value = try UpdateMessageContent(from: decoder)
             self = .updateMessageContent(value)
+        case .updateMessageContentOpened:
+            let value = try UpdateMessageContentOpened(from: decoder)
+            self = .updateMessageContentOpened(value)
         case .updateNewChat:
             let value = try UpdateNewChat(from: decoder)
             self = .updateNewChat(value)
@@ -188,6 +199,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case .updatePoll:
             let value = try UpdatePoll(from: decoder)
             self = .updatePoll(value)
+        case .updateLanguagePackStrings:
+            let value = try UpdateLanguagePackStrings(from: decoder)
+            self = .updateLanguagePackStrings(value)
         }
     }
 
@@ -211,6 +225,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
             try value.encode(to: encoder)
         case .updateMessageContent(let value):
             try container.encode(Kind.updateMessageContent, forKey: .type)
+            try value.encode(to: encoder)
+        case .updateMessageContentOpened(let value):
+            try container.encode(Kind.updateMessageContentOpened, forKey: .type)
             try value.encode(to: encoder)
         case .updateNewChat(let value):
             try container.encode(Kind.updateNewChat, forKey: .type)
@@ -262,6 +279,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
             try value.encode(to: encoder)
         case .updatePoll(let value):
             try container.encode(Kind.updatePoll, forKey: .type)
+            try value.encode(to: encoder)
+        case .updateLanguagePackStrings(let value):
+            try container.encode(Kind.updateLanguagePackStrings, forKey: .type)
             try value.encode(to: encoder)
         case .unsupported:
             try container.encode("unsupported", forKey: .type)
@@ -376,6 +396,25 @@ public struct UpdateMessageContent: Codable, Equatable, Hashable {
         self.chatId = chatId
         self.messageId = messageId
         self.newContent = newContent
+    }
+}
+
+/// The message content was opened. Updates voice note messages to "listened", video note messages to "viewed" and starts the self-destruct timer
+public struct UpdateMessageContentOpened: Codable, Equatable, Hashable {
+
+    /// Chat identifier
+    public let chatId: Int64
+
+    /// Message identifier
+    public let messageId: Int64
+
+
+    public init(
+        chatId: Int64,
+        messageId: Int64
+    ) {
+        self.chatId = chatId
+        self.messageId = messageId
     }
 }
 
@@ -701,6 +740,30 @@ public struct UpdatePoll: Codable, Equatable, Hashable {
 
     public init(poll: Poll) {
         self.poll = poll
+    }
+}
+
+/// Some language pack strings have been updated
+public struct UpdateLanguagePackStrings: Codable, Equatable, Hashable {
+
+    /// Identifier of the updated language pack
+    public let languagePackId: String
+
+    /// Localization target to which the language pack belongs
+    public let localizationTarget: String
+
+    /// List of changed language pack strings; empty if all strings have changed
+    public let strings: [LanguagePackString]
+
+
+    public init(
+        languagePackId: String,
+        localizationTarget: String,
+        strings: [LanguagePackString]
+    ) {
+        self.languagePackId = languagePackId
+        self.localizationTarget = localizationTarget
+        self.strings = strings
     }
 }
 

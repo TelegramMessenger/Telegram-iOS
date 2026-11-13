@@ -23,15 +23,15 @@ func mapAuthState(_ s: AuthorizationState) -> AuthState {
             hasRecoveryEmail: payload.hasRecoveryEmailAddress
         ))
     case .authorizationStateWaitEmailAddress, .authorizationStateWaitEmailCode:
-        return .failed("Email-based login isn't supported in this build yet.")
+        return .failed(L("Watch.Auth.EmailLoginUnsupported"))
     case .authorizationStateWaitOtherDeviceConfirmation(let payload):
         return .waitOtherDeviceConfirmation(link: payload.link)
     case .authorizationStateWaitRegistration:
-        return .failed("Registration is not supported with QR login.")
+        return .failed(L("Watch.Auth.RegistrationUnsupported"))
     case .authorizationStateWaitPremiumPurchase:
-        return .failed("Premium-purchase login isn't supported in this build yet.")
+        return .failed(L("Watch.Auth.PremiumLoginUnsupported"))
     case .unsupported:
-        return .failed("Unsupported authorization state.")
+        return .failed(L("Watch.Auth.UnsupportedState"))
     }
 }
 

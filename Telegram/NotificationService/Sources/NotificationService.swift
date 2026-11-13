@@ -696,7 +696,11 @@ private struct NotificationContent: CustomStringConvertible {
             content.categoryIdentifier = category
         }
         if !self.userInfo.isEmpty {
-            content.userInfo = self.userInfo
+            var userInfo = self.userInfo
+            // Whether the app's passcode lock replaced the content. The watch app draws the sender's
+            // photo only for "0", as the photo is left out below while locked.
+            userInfo["locked"] = self.isLockedMessage != nil ? "1" : "0"
+            content.userInfo = userInfo
         }
         if self.isLockedMessage == nil {
             if !self.attachments.isEmpty {
@@ -1286,6 +1290,9 @@ private final class NotificationServiceHandler {
 
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
                             content.userInfo["accountId"] = "\(recordId.int64)"
+                            // The account's user id, which the watch app compares with the account it is
+                            // logged in to before replying to or opening the chat (`accountId` is local here).
+                            content.userInfo["recipient_id"] = "\(accountPeerId.id._internalGetInt64Value())"
                             
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {

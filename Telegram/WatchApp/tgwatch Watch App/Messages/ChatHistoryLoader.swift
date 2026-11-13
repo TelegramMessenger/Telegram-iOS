@@ -37,6 +37,13 @@ protocol ChatHistoryLoader: Sendable {
     func sendSticker(chatId: Int64, remoteFileId: String, emoji: String, width: Int, height: Int) async throws -> Message
     /// Sends the given coordinate as a static location message (`livePeriod` 0).
     func sendLocation(chatId: Int64, latitude: Double, longitude: Double) async throws -> Message
+    /// Tells TDLib the message's content was opened: a voice message was listened to.
+    func openMessageContent(chatId: Int64, messageId: Int64) async throws
+}
+
+extension ChatHistoryLoader {
+    /// Previews' loaders open nothing.
+    func openMessageContent(chatId: Int64, messageId: Int64) async throws {}
 }
 
 struct TDLibChatHistoryLoader: ChatHistoryLoader {
@@ -188,6 +195,10 @@ struct TDLibChatHistoryLoader: ChatHistoryLoader {
             draftMessage: draft,
             topicId: nil
         )
+    }
+
+    func openMessageContent(chatId: Int64, messageId: Int64) async throws {
+        try await client.openMessageContent(chatId: chatId, messageId: messageId)
     }
 
     func viewMessages(chatId: Int64, messageIds: [Int64], forceRead: Bool) async throws {
