@@ -628,6 +628,9 @@ public extension TelegramEngine {
             return _internal_supportSwitchTargetUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
         }
 
+        public func supportSwipeToNextChatUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportSwipeToNextChat, NoError> {
+            return _internal_supportSwipeToNextChatUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
 
         public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
             let accountPeerId = self.account.peerId

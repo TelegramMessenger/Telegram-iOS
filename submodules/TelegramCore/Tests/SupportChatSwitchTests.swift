@@ -164,6 +164,12 @@ final class SupportChatSwitchTests: XCTestCase {
         }
     }
 
+    func testSwipeGoesTheWaySendingWouldAndDownwardWhenSendingStays() {
+        XCTAssertTrue(supportSwipeIsDownward(.next))
+        XCTAssertFalse(supportSwipeIsDownward(.previous))
+        XCTAssertTrue(supportSwipeIsDownward(.none))
+    }
+
     func testSearchResultsWalkInOrderAndSkipWhatIsNotATarget() {
         let results = [self.peerId(1), self.peerId(2), self.peerId(3), self.peerId(4)]
         let unread: Set<PeerId> = [self.peerId(1), self.peerId(4)]

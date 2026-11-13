@@ -746,6 +746,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
     var offerNextChannelToRead: Bool = false
     var nextChannelToReadDisplayName: Bool = false
+    var nextChannelToReadEmptyTitle: String?
     private var currentOverscrollExpandProgress: CGFloat = 0.0
     private var freezeOverscrollControl: Bool = false
     private var freezeOverscrollControlProgress: Bool = false
@@ -2918,6 +2919,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                         )
                     },
                     isForumThread: self.chatLocation.threadId != nil,
+                    emptyTitle: self.nextChannelToReadEmptyTitle,
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
                     location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,
