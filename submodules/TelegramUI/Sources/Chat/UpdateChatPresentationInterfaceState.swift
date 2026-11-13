@@ -684,6 +684,9 @@ func updateChatPresentationInterfaceStateImpl(
             selfController.customNavigationPanelNode = nil
         }
     }
+    if selfController.context.supportContext != nil && selfController.isNodeLoaded {
+        selfController.supportTemplatesSlashUpdate(updatedChatPresentationInterfaceState)
+    }
     selfController.stateUpdated?(transition)
 }
 

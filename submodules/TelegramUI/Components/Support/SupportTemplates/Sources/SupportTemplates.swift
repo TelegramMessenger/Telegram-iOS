@@ -170,6 +170,35 @@ public final class SupportTemplates {
         return sorted.prefix(SupportTemplates.queryLimit).compactMap { self.files[$0.id.file]?.questions[$0.id.question] }
     }
 
+    public static let slashLimit = 100
+
+    public func slashMatches(_ query: String) -> [SupportTemplatesQuestion] {
+        let normalized = supportTemplatesNormalizedKey(query)
+        if normalized.isEmpty {
+            return self.sortedEntries.prefix(SupportTemplates.slashLimit).map(\.question)
+        }
+        var matches: [(question: SupportTemplatesQuestion, keyLength: Int, order: Int)] = []
+        for (order, entry) in self.sortedEntries.enumerated() {
+            var best: Int?
+            for key in entry.question.normalizedKeys where utf16HasPrefix(key, normalized) {
+                let length = key.utf16.count
+                if best == nil || length < best! {
+                    best = length
+                }
+            }
+            if let best {
+                matches.append((question: entry.question, keyLength: best, order: order))
+            }
+        }
+        matches.sort(by: { lhs, rhs in
+            if lhs.keyLength != rhs.keyLength {
+                return lhs.keyLength < rhs.keyLength
+            }
+            return lhs.order < rhs.order
+        })
+        return matches.prefix(SupportTemplates.slashLimit).map(\.question)
+    }
+
     public func matchExact(_ query: String) -> SupportTemplatesKeyMatch? {
         if query.isEmpty || query.utf16.count > self.maxKeyLength {
             return nil
@@ -221,4 +250,34 @@ public final class SupportTemplates {
         let keyLength = match.key.utf16.count
         return SupportTemplatesExpansion(range: NSRange(location: selection.location - keyLength, length: keyLength), value: match.question.value)
     }
+}
+
+public struct SupportTemplatesSlashQuery: Equatable {
+    public let range: NSRange
+    public let query: String
+}
+
+public func supportTemplatesSlashQuery(text: String, caret: Int) -> SupportTemplatesSlashQuery? {
+    let units = Array(text.utf16)
+    guard caret != NSNotFound, caret <= units.count else {
+        return nil
+    }
+    var index = caret - 1
+    while index >= 0 {
+        let unit = units[index]
+        if isSpaceUnit(unit) {
+            return nil
+        }
+        if unit == 0x2F {
+            if index > 0 {
+                let previous = units[index - 1]
+                if !(isSpaceUnit(previous) || previous == 0x2E || previous == 0x2C) {
+                    return nil
+                }
+            }
+            return SupportTemplatesSlashQuery(range: NSRange(location: index, length: caret - index), query: stringFromUnits(units[(index + 1) ..< caret]))
+        }
+        index -= 1
+    }
+    return nil
 }

@@ -456,6 +456,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var supportDoneIgnoredUntil: Double = 0.0
     let supportDoneUnreadDisposable = MetaDisposable()
     var supportTemplatesAutocomplete = SupportSettings.default.templatesAutocomplete
+    var supportTemplatesSlashRange: NSRange?
     let supportTemplatesSettingsDisposable = MetaDisposable()
     var supportTemplatesStateObserver: SupportTemplatesManager.ObserverToken?
     var supportOccupationPeerId: EnginePeer.Id? {

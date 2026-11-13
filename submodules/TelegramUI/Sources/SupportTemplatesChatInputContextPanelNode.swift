@@ -157,6 +157,7 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
     var lostFocus: (() -> Void)?
 
     private let templates: () -> SupportTemplates
+    let isSlashMode: Bool
     private let searchFont: UIFont
     private let searchAreaHeight: CGFloat
 
@@ -173,8 +174,9 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
     private var validLayout: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat)?
     private var didAppear = false
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext, templates: @escaping () -> SupportTemplates) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext, isSlashMode: Bool = false, templates: @escaping () -> SupportTemplates) {
         self.templates = templates
+        self.isSlashMode = isSlashMode
         let searchFont = Font.regular(floor(fontSize.baseDisplaySize * 16.0 / 17.0))
         self.searchFont = searchFont
         self.searchAreaHeight = ceil(searchFont.lineHeight) + 32.0
@@ -221,7 +223,27 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
         self.contentView.addSubview(self.scrollView)
         self.contentView.addSubview(self.hintLabel)
 
+        self.searchField.isHidden = isSlashMode
+
         self.applyTheme()
+    }
+
+    var selectedRow: SupportTemplatesQuestion? {
+        return self.rows.indices.contains(self.selectedIndex) ? self.rows[self.selectedIndex] : nil
+    }
+
+    func canMoveSelection(_ delta: Int) -> Bool {
+        return self.rows.indices.contains(self.selectedIndex + delta)
+    }
+
+    func updateSlashRows(_ rows: [SupportTemplatesQuestion]) {
+        if self.rows == rows {
+            return
+        }
+        self.rows = rows
+        self.selectedIndex = 0
+        self.scrollView.contentOffset = CGPoint()
+        self.layoutCard(transition: self.didAppear ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
     }
 
     private func applyTheme() {
@@ -266,7 +288,7 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
         self.submit()
     }
 
-    private func moveSelection(_ delta: Int) {
+    func moveSelection(_ delta: Int) {
         let index = self.selectedIndex + delta
         guard self.rows.indices.contains(index) else {
             return
@@ -309,10 +331,11 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
         self.scrollView.contentSize = CGSize(width: cardWidth, height: contentHeight)
         self.hintLabel.isHidden = !self.rows.isEmpty
 
+        let searchHeight = self.isSlashMode ? 0.0 : self.searchAreaHeight
         let listHeight = self.rows.isEmpty ? hintHeight : min(contentHeight, maximumListHeight)
         let cardMaxY = size.height - bottomInset - cardSideInset
         let availableHeight = max(0.0, cardMaxY - cardSideInset)
-        let cardHeight = min(availableHeight, searchAreaHeight + listHeight)
+        let cardHeight = min(availableHeight, searchHeight + listHeight)
         let cardFrame = CGRect(x: leftInset + cardSideInset, y: cardMaxY - cardHeight, width: cardWidth, height: cardHeight)
 
         transition.updateFrame(view: self.cardView, frame: cardFrame)
@@ -321,7 +344,7 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
         self.backgroundView.update(size: cardFrame.size, cornerRadius: cardCornerRadius, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: ComponentTransition(transition))
         transition.updateFrame(view: self.contentView, frame: cardBounds)
         self.searchField.frame = CGRect(x: 8.0, y: 8.0, width: cardWidth - 16.0, height: self.searchAreaHeight - 16.0)
-        let listFrame = CGRect(x: 0.0, y: searchAreaHeight, width: cardWidth, height: max(0.0, cardHeight - searchAreaHeight))
+        let listFrame = CGRect(x: 0.0, y: searchHeight, width: cardWidth, height: max(0.0, cardHeight - searchHeight))
         transition.updateFrame(view: self.scrollView, frame: listFrame)
         self.hintLabel.frame = listFrame.insetBy(dx: 16.0, dy: 0.0)
     }
@@ -339,7 +362,7 @@ final class SupportTemplatesChatInputContextPanelNode: ChatInputContextPanelNode
             self.cardView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.cardView.layer.animatePosition(from: CGPoint(x: 0.0, y: 24.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             DispatchQueue.main.async { [weak self] in
-                guard let self, self.searchField.window != nil else {
+                guard let self, !self.isSlashMode, self.searchField.window != nil else {
                     return
                 }
                 if !self.searchField.becomeFirstResponder() {

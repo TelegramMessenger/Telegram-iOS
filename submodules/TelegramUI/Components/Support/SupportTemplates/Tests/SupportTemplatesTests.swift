@@ -396,4 +396,28 @@ final class SupportHashtagStripTests: XCTestCase {
         XCTAssertEqual(text, "😀 hi")
         XCTAssertEqual(ranges, [0 ..< 5])
     }
+
+    func testSlashQueryAtTheStartOfAWord() {
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "/hi", caret: 3), SupportTemplatesSlashQuery(range: NSRange(location: 0, length: 3), query: "hi"))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "Hello /", caret: 7), SupportTemplatesSlashQuery(range: NSRange(location: 6, length: 1), query: ""))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "a\n/x y", caret: 4), SupportTemplatesSlashQuery(range: NSRange(location: 2, length: 2), query: "x"))
+        XCTAssertEqual(supportTemplatesSlashQuery(text: "ok,/x", caret: 5)?.query, "x")
+    }
+
+    func testNoSlashQueryAfterASpaceOrInsideAWord() {
+        XCTAssertNil(supportTemplatesSlashQuery(text: "/hi there", caret: 9))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "/hi ", caret: 4))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "https://x", caret: 9))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "a/b", caret: 3))
+        XCTAssertNil(supportTemplatesSlashQuery(text: "hello", caret: 5))
+    }
+
+    func testSlashMatchesKeysByPrefixShortestFirst() {
+        let templates = SupportTemplates(files: [
+            "tl_a.txt": parseSupportTemplatesFile(Data("{QUESTION}\nLong\n{KEYS}\nhello\n{VALUE}\n1\n{QUESTION}\nShort\n{KEYS}\nhel\n{VALUE}\n2\n{QUESTION}\nOther\n{KEYS}\nbye\n{VALUE}\n3\n{QUESTION}\nNone\n{VALUE}\n4".utf8))
+        ])
+        XCTAssertEqual(templates.slashMatches("HE").map(\.question), ["Short", "Long"])
+        XCTAssertEqual(templates.slashMatches("x").map(\.question), [])
+        XCTAssertEqual(templates.slashMatches("").count, 4)
+    }
 }

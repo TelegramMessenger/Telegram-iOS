@@ -6,6 +6,7 @@ import TelegramCore
 import AccountContext
 import UndoUI
 import SupportTemplates
+import ChatPresentationInterfaceState
 import SupportContactConfirmScreen
 
 extension ChatControllerImpl {
@@ -25,6 +26,9 @@ extension ChatControllerImpl {
         }
         self.chatDisplayNode.textInputPanelNode?.supportHardwareTabAction = { [weak self] in
             self?.supportTemplatesHardwareTab()
+        }
+        self.chatDisplayNode.textInputPanelNode?.supportReturnAction = { [weak self] in
+            return self?.supportTemplatesSlashReturn() ?? false
         }
         self.supportTemplatesSettingsDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.supportSettings))
         |> map { entry -> Bool in
@@ -72,8 +76,48 @@ extension ChatControllerImpl {
             return
         }
         self.chatDisplayNode.supportTemplatesPanel = nil
+        self.supportTemplatesSlashRange = nil
+        self.chatDisplayNode.textInputPanelNode?.supportSetReturnKeyType(.default)
         self.chatDisplayNode.textInputPanelNode?.supportTemplatesPanelIsOpen = false
         self.chatDisplayNode.requestLayout(.animated(duration: 0.3, curve: .spring))
+    }
+
+    func supportTemplatesSlashUpdate(_ state: ChatPresentationInterfaceState) {
+        let inputState = state.interfaceState.effectiveInputState
+        var slash: SupportTemplatesSlashQuery?
+        if self.supportTemplatesAreAvailable && inputState.selectionRange.isEmpty {
+            slash = supportTemplatesSlashQuery(text: inputState.inputText.string, caret: inputState.selectionRange.lowerBound)
+        }
+        let rows = slash.flatMap { slash in self.context.supportTemplates?.templates.slashMatches(slash.query) } ?? []
+        let panel = self.chatDisplayNode.supportTemplatesPanel
+        guard let slash, !rows.isEmpty else {
+            if let panel, panel.isSlashMode {
+                self.supportTemplatesClose()
+            }
+            return
+        }
+        if let panel {
+            if panel.isSlashMode {
+                self.supportTemplatesSlashRange = slash.range
+                panel.updateSlashRows(rows)
+            }
+            return
+        }
+        self.supportTemplatesSlashRange = slash.range
+        self.supportTemplatesOpen(slashRows: rows)
+    }
+
+    private func supportTemplatesSlashReturn() -> Bool {
+        guard let panel = self.chatDisplayNode.supportTemplatesPanel, panel.isSlashMode, let selected = panel.selectedRow else {
+            return false
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.chatDisplayNode.supportTemplatesPanel === panel else {
+                return
+            }
+            self.supportTemplateChosen(value: selected.value, replacing: self.supportTemplatesSlashRange)
+        }
+        return true
     }
 
     private func supportTemplatesCancel() {
@@ -81,16 +125,24 @@ extension ChatControllerImpl {
         self.supportTemplatesClose()
     }
 
-    private func supportTemplatesOpen() {
+    private func supportTemplatesOpen(slashRows: [SupportTemplatesQuestion]? = nil) {
         guard self.chatDisplayNode.supportTemplatesPanel == nil, let manager = self.context.supportTemplates else {
             return
         }
         let state = self.presentationInterfaceState
-        let panel = SupportTemplatesChatInputContextPanelNode(context: self.context, theme: state.theme, strings: state.strings, fontSize: state.fontSize, chatPresentationContext: self.chatDisplayNode.controllerInteraction.presentationContext, templates: {
+        let panel = SupportTemplatesChatInputContextPanelNode(context: self.context, theme: state.theme, strings: state.strings, fontSize: state.fontSize, chatPresentationContext: self.chatDisplayNode.controllerInteraction.presentationContext, isSlashMode: slashRows != nil, templates: {
             return manager.templates
         })
+        if let slashRows {
+            panel.updateSlashRows(slashRows)
+            self.chatDisplayNode.textInputPanelNode?.supportSetReturnKeyType(.done)
+        }
+        let isSlashMode = slashRows != nil
         panel.chosen = { [weak self] question in
-            self?.supportTemplateChosen(value: question.value, replacing: nil)
+            guard let self else {
+                return
+            }
+            self.supportTemplateChosen(value: question.value, replacing: isSlashMode ? self.supportTemplatesSlashRange : nil)
         }
         panel.cancelled = { [weak self] in
             self?.supportTemplatesCancel()

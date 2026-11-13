@@ -365,6 +365,13 @@ extension ChatControllerImpl {
                     self?.supportPerformShortcut(action)
                 }))
             }
+            if let panel = self.chatDisplayNode.supportTemplatesPanel, panel.isSlashMode {
+                for (input, delta) in [(UIKeyCommand.inputUpArrow, -1), (UIKeyCommand.inputDownArrow, 1)] where panel.canMoveSelection(delta) {
+                    supportShortcuts.append(KeyShortcut(input: input, wantsPriorityOverText: true, action: { [weak panel] in
+                        panel?.moveSelection(delta)
+                    }))
+                }
+            }
         }
 
         return inputShortcuts + otherShortcuts + supportShortcuts

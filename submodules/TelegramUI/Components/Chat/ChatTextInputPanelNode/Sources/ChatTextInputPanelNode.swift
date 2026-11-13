@@ -358,6 +358,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var extendedSearchLayout = false
     
     public var supportTemplatesAction: (() -> Void)?
+    public var supportReturnAction: (() -> Bool)?
     public var supportHardwareTabAction: (() -> Void)?
     private var supportTemplatesButtonIsStacked = false
     public var supportTemplatesPanelIsOpen: Bool = false {
@@ -5186,6 +5187,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     }
     
     public func chatInputTextNodeShouldReturn(modifierFlags: UIKeyModifierFlags) -> Bool {
+        if let supportReturnAction = self.supportReturnAction, supportReturnAction() {
+            return false
+        }
         let supportPressIsNew = self.supportHardwareReturnIsNewPress?() ?? false
         let modifiersSend: Bool
         if let context = self.context, context.sharedContext.currentChatSettings.with({ $0 }).sendWithCmdEnter {
@@ -5211,6 +5215,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         return true
     }
     
+    public func supportSetReturnKeyType(_ returnKeyType: UIReturnKeyType) {
+        guard let richTextInputNode = self.richTextInputNode, richTextInputNode.returnKeyType != returnKeyType else {
+            return
+        }
+        richTextInputNode.returnKeyType = returnKeyType
+        if richTextInputNode.isInputFirstResponder {
+            richTextInputNode.reloadInputViews()
+        }
+    }
+
     public func supportSendIfPossible() {
         if self.sendActionButtons.sendButton.supernode != nil && !self.sendActionButtons.sendButton.isHidden && !self.sendActionButtons.sendContainerNode.alpha.isZero {
             self.sendButtonPressed()
