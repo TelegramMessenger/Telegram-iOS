@@ -2,17 +2,25 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
+public enum SupportSwitchBehavior: Int32 {
+    case none = 0
+    case next = 1
+    case previous = 2
+}
+
 public struct SupportSettings: Codable, Equatable {
     public static let allChatsLoadPeriod: Int32 = 0
 
     public static var `default`: SupportSettings {
-        return SupportSettings(chatLoadPeriod: 7 * 24 * 60 * 60, sendAllSilently: false)
+        return SupportSettings(switchBehavior: .next, chatLoadPeriod: 7 * 24 * 60 * 60, sendAllSilently: false)
     }
 
+    public var switchBehavior: SupportSwitchBehavior
     public var chatLoadPeriod: Int32
     public var sendAllSilently: Bool
 
-    public init(chatLoadPeriod: Int32, sendAllSilently: Bool) {
+    public init(switchBehavior: SupportSwitchBehavior, chatLoadPeriod: Int32, sendAllSilently: Bool) {
+        self.switchBehavior = switchBehavior
         self.chatLoadPeriod = chatLoadPeriod
         self.sendAllSilently = sendAllSilently
     }
@@ -21,6 +29,7 @@ public struct SupportSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         let defaults = SupportSettings.default
 
+        self.switchBehavior = (try container.decodeIfPresent(Int32.self, forKey: "switchBehavior")).flatMap(SupportSwitchBehavior.init(rawValue:)) ?? defaults.switchBehavior
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
     }
@@ -28,6 +37,7 @@ public struct SupportSettings: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
+        try container.encode(self.switchBehavior.rawValue, forKey: "switchBehavior")
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
     }

@@ -995,7 +995,7 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone, handleSupportSwitch in
             guard let strongSelf = self else {
                 return
             }
@@ -1122,9 +1122,13 @@ extension ChatControllerImpl {
                         signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                     }
                     
-                    let _ = (signal
-                    |> deliverOnMainQueue).startStandalone(next: { messageIds in
+                    let supportSwitchTarget = strongSelf.supportSwitchTargetBeforeSend(isRequested: handleSupportSwitch && !shouldDivert, messages: transformedMessages, postpone: postpone)
+                    let _ = (combineLatest(supportSwitchTarget, signal)
+                    |> deliverOnMainQueue).startStandalone(next: { supportSwitchTarget, _ in
                         guard let strongSelf = self else {
+                            return
+                        }
+                        if let supportSwitchTarget, strongSelf.supportSwitch(to: supportSwitchTarget) {
                             return
                         }
                         if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {

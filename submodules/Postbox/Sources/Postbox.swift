@@ -1316,6 +1316,22 @@ public final class Transaction {
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
     }
         
+    public func enumerateChatListIndices(groupId: PeerGroupId, after index: ChatListIndex, downward: Bool, _ f: (ChatListIndex) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.chatListTable.enumerateChatIndices(groupId: groupId, after: index, downward: downward, f)
+    }
+    
+    public func chatListFilterMatcher(groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIndex) -> Bool {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return { _ in false }
+        }
+        let matcher = mappedChatListFilterPredicate(postbox: postbox, currentTransaction: self, groupId: groupId, predicate: predicate)
+        return { index in
+            return matcher(.message(index, nil))
+        }
+    }
+    
     public func getChatListNamespaceEntries(groupId: PeerGroupId, namespace: MessageId.Namespace, summaryTag: MessageTags?) -> [ChatListNamespaceEntry] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {

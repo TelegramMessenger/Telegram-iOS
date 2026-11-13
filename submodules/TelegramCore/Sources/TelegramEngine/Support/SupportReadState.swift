@@ -24,7 +24,7 @@ struct SupportSendReadInfo {
     var replyThreadId: Int64?
 }
 
-func supportSendIsDeferred(attributes: [MessageAttribute]) -> Bool {
+public func supportSendIsDeferred(attributes: [EngineMessage.Attribute]) -> Bool {
     return attributes.contains(where: { $0 is OutgoingScheduleInfoMessageAttribute || $0 is OutgoingQuickReplyMessageAttribute })
 }
 

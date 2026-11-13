@@ -1309,14 +1309,19 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
 public final class ChatControllerNavigationData: CustomViewControllerNavigationData {
     public let peerId: EnginePeer.Id
     public let threadId: Int64?
+    public let keepsVisitedChats: Bool
 
-    public init(peerId: EnginePeer.Id, threadId: Int64?) {
+    public init(peerId: EnginePeer.Id, threadId: Int64?, keepsVisitedChats: Bool = false) {
         self.peerId = peerId
         self.threadId = threadId
+        self.keepsVisitedChats = keepsVisitedChats
     }
     
     public func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary? {
         if let summary = summary as? ChatControllerNavigationDataSummary {
+            if self.keepsVisitedChats {
+                return summary.movingToTop(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
+            }
             return summary.adding(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
         } else {
             return ChatControllerNavigationDataSummary(peerNavigationItems: [ChatNavigationStackItem(peerId: self.peerId, threadId: threadId)])
@@ -1338,6 +1343,13 @@ public final class ChatControllerNavigationDataSummary: CustomViewControllerNavi
         }
         peerNavigationItems.insert(peerNavigationItem, at: 0)
         return ChatControllerNavigationDataSummary(peerNavigationItems: peerNavigationItems)
+    }
+    
+    public func movingToTop(peerNavigationItem: ChatNavigationStackItem) -> ChatControllerNavigationDataSummary {
+        var peerNavigationItems = self.peerNavigationItems
+        peerNavigationItems.removeAll(where: { $0 == peerNavigationItem })
+        peerNavigationItems.insert(peerNavigationItem, at: 0)
+        return ChatControllerNavigationDataSummary(peerNavigationItems: Array(peerNavigationItems.prefix(50)))
     }
 }
 
