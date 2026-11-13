@@ -118,7 +118,7 @@ class ChatNavigationContractTests(unittest.TestCase):
         )
         for contract in (
             "override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool",
-            "self.scrollWithDirection(scrollDirection, distance: distance)",
+            "self.scrollWithDirection(scrollDirection, distance: distance, limitToPreloadMargin: false)",
             "coreListContainsAccessibilityFocus(itemNode.view)",
             "frame.intersects(focusedFrame)",
             "firstAccessibilityElement(in: itemNode.view)",
@@ -128,6 +128,22 @@ class ChatNavigationContractTests(unittest.TestCase):
             "self.loadedIndex(of: itemNode)",
         ):
             self.assertIn(contract, backend)
+        self.assertIn("limitToPreloadMargin: false", backend)
+
+    def test_chat_title_exposes_peer_presence_and_profile_activation(self) -> None:
+        title = source("submodules/TelegramUI/Components/ChatTitleView/Sources/ChatTitleComponent.swift")
+        self.assertIn("self.accessibilityLabel = accessibilityText", title)
+        self.assertIn("self.accessibilityValue = state.string", title)
+        self.assertIn("titleView.isAccessibilityElement = true", title)
+        self.assertIn("titleView.accessibilityTraits = .button", title)
+        self.assertIn("public override func accessibilityActivate() -> Bool", title)
+        self.assertIn("component.tapped()", title)
+
+        profile_header = source(
+            "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift"
+        )
+        self.assertIn("self.subtitleNode.accessibilityLabel = subtitleStringText", profile_header)
+        self.assertIn("self.subtitleNode.isAccessibilityElement = !subtitleIsButton", profile_header)
 
     def test_input_exposes_stable_hit_target_and_screen_frame(self) -> None:
         contents = source(

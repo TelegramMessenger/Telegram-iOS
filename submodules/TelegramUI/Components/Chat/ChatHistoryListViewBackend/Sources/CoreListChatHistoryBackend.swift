@@ -1849,12 +1849,16 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // caught flight does. Rare: the fingers landing catch the motion (`noteTouchDown`), and what remains is
     // an overscroll bounce relaunched when the scroll pan fails to the two-finger selection.
     func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
+        return self.scrollWithDirection(direction, distance: distance, limitToPreloadMargin: true)
+    }
+
+    private func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat, limitToPreloadMargin: Bool) -> Bool {
         let didMoveContentDuringDrag = self.didMoveContentDuringDrag
         defer {
             self.didMoveContentDuringDrag = didMoveContentDuringDrag
         }
         CoreListScrollTrace.log("SCROLL-DIRECTION \(direction) distance=\(distance) \(self.traceLocation())")
-        return self.coreList.scroll(by: direction == .up ? distance : -distance)
+        return self.coreList.scroll(by: direction == .up ? distance : -distance, limitToPreloadMargin: limitToPreloadMargin)
     }
 
     override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
@@ -1885,7 +1889,7 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             }
         }
 
-        guard self.scrollWithDirection(scrollDirection, distance: distance) else {
+        guard self.scrollWithDirection(scrollDirection, distance: distance, limitToPreloadMargin: false) else {
             return false
         }
 

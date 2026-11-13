@@ -674,9 +674,9 @@ public final class CoreVirtualListView: UIView {
     /// nothing restarts it if the steps stop while still overscrolled (until the next touch); accepted, as
     /// the chat's selection rarely starts inside a bounce.
     @discardableResult
-    public func scroll(by distance: CGFloat) -> Bool {
+    public func scroll(by distance: CGFloat, limitToPreloadMargin: Bool = true) -> Bool {
         guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
-        let distance = max(-preloadMargin, min(preloadMargin, distance))
+        let distance = limitToPreloadMargin ? max(-preloadMargin, min(preloadMargin, distance)) : distance
         // Never further past an edge than the offset already is, and never pulled back from overscroll.
         func target(from current: CGFloat) -> CGFloat {
             var target = current - distance

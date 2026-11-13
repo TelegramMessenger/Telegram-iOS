@@ -145,6 +145,20 @@ final class ScrollByTests: XCTestCase {
         XCTAssertEqual(try y(fixture, identity), before - fixture.listView.preloadMargin, accuracy: 1e-6)
     }
 
+    /// VoiceOver page scrolling must move a viewport at a time, while selection auto-scroll keeps its small-step cap.
+    func testAccessibilityPageStepCanExceedThePreloadMargin() throws {
+        let fixture = VirtualListFixture(itemCount: 100, itemHeight: 50, viewport: viewport)
+        fixture.scroll(to: 500)
+        let identity = fixture.listView.items[12].identity
+        let before = try y(fixture, identity)
+
+        XCTAssertGreaterThan(viewport.height, fixture.listView.preloadMargin)
+        XCTAssertTrue(fixture.listView.scroll(by: -viewport.height, limitToPreloadMargin: false))
+
+        XCTAssertEqual(try y(fixture, identity), before - viewport.height, accuracy: 1e-6)
+        XCTAssertEqual(fixture.listView.overscrollDistance, 0, accuracy: 1e-6)
+    }
+
     /// 14 rows at the newest edge: the oldest ones are not loaded, so the far edge is still open when the
     /// step is clamped. A step past the margin would land beyond the edge the rebalance then declares.
     func testALargeStepNeverOverscrollsAnUnloadedEdge() {
