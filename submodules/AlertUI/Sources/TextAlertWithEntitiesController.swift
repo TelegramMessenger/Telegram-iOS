@@ -273,7 +273,7 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
         let maxActionWidth: CGFloat = self.actionNodes.isEmpty ? size.width : floor(size.width / CGFloat(self.actionNodes.count))
         
         var effectiveActionLayout = self.actionLayout
-        if self.traitCollection.preferredContentSizeCategory.isAccessibilityCategory {
+        if self.view.traitCollection.preferredContentSizeCategory.isAccessibilityCategory {
             effectiveActionLayout = .vertical
         }
         var actionHeights: [CGFloat] = []

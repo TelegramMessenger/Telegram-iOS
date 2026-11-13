@@ -221,6 +221,11 @@ class ModalContractTests(unittest.TestCase):
         self.assertIn("self.view.traitCollection.preferredContentSizeCategory", contents)
         self.assertNotIn("TextAlertAccessibilityCustomAction", contents)
 
+    def test_entity_text_alert_reads_traits_from_its_view(self) -> None:
+        contents = source("submodules/AlertUI/Sources/TextAlertWithEntitiesController.swift")
+        self.assertIn("self.view.traitCollection.preferredContentSizeCategory", contents)
+        self.assertNotIn("self.traitCollection.preferredContentSizeCategory", contents)
+
     def test_modal_backgrounds_are_hidden_and_reduce_motion_is_respected(self) -> None:
         alert = source("submodules/Display/Source/AlertControllerNode.swift")
         action_sheet = source("submodules/Display/Source/ActionSheetControllerNode.swift")
