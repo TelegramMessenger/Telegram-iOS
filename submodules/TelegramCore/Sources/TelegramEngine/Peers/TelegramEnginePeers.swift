@@ -217,6 +217,14 @@ public extension TelegramEngine {
         public func supportPeerId() -> Signal<PeerId?, NoError> {
             return _internal_supportPeerId(account: self.account)
         }
+        
+        public func refreshSupportUserInfo(peerId: PeerId) -> Signal<Never, RefreshSupportUserInfoError> {
+            return _internal_refreshSupportUserInfo(account: self.account, peerId: peerId)
+        }
+        
+        public func saveSupportUserInfo(peerId: PeerId, text: String, entities: [MessageTextEntity]) -> Signal<Never, SaveSupportUserInfoError> {
+            return _internal_saveSupportUserInfo(account: self.account, peerId: peerId, text: text, entities: entities)
+        }
 
         public func inactiveChannelList() -> Signal<[InactiveChannel], NoError> {
             return _internal_inactiveChannelList(network: self.account.network)

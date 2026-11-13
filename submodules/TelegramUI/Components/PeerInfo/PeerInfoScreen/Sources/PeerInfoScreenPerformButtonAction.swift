@@ -400,6 +400,15 @@ extension PeerInfoScreenNode {
                 
                 let filteredButtons = allHeaderButtons.subtracting(headerButtons)
                 
+                if strongSelf.context.supportContext != nil, case let .user(user) = peer, user.id != strongSelf.context.account.peerId, strongSelf.peerId.namespace != Namespaces.Peer.SecretChat {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Support_Info_EditTitle, icon: { theme in
+                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        self?.openSupportInfoEditor()
+                    })))
+                }
+                
                 var currentAutoremoveTimeout: Int32?
                 if let cachedData = data.cachedData as? CachedUserData {
                     switch cachedData.autoremoveTimeout {

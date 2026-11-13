@@ -530,6 +530,17 @@ extension ChatControllerImpl {
                     }
                 }
                 
+                let hasSupportUserInfo: Signal<Bool, NoError>
+                if let supportContext = context.supportContext {
+                    hasSupportUserInfo = supportContext.userInfo(peerId: peerId)
+                    |> map { info -> Bool in
+                        return info != nil
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSupportUserInfo = .single(false)
+                }
+                
                 self.titleDisposable = (combineLatest(
                     queue: Queue.mainQueue(),
                     peerView.get(),
@@ -539,9 +550,10 @@ extension ChatControllerImpl {
                     configuration,
                     hasPeerInfo,
                     messageOptionsTitleInfo,
-                    savedMessagesChatsTip
+                    savedMessagesChatsTip,
+                    hasSupportUserInfo
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, configuration, hasPeerInfo, messageOptionsTitleInfo, savedMessagesChatsTip in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, configuration, hasPeerInfo, messageOptionsTitleInfo, savedMessagesChatsTip, hasSupportUserInfo in
                     guard let strongSelf = self else {
                         return
                     }
@@ -613,6 +625,9 @@ extension ChatControllerImpl {
                             var customSubtitle: String?
                             if savedMessagesChatsTip {
                                 customSubtitle = strings.Chat_SavedMessagesStatusViewAsChats
+                            }
+                            if !isScheduledMessages, supportChatTitleShowsWarning(peerId: peerView.peerId, accountPeerId: context.account.peerId, hasUserInfo: hasSupportUserInfo) {
+                                customSubtitle = strings.Support_Info_CheckWarning
                             }
                             
                             // A suspicious peer's emoji status is not shown, as their links are not.

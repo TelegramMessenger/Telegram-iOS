@@ -181,6 +181,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MarqueeComponent",
         "//submodules/TelegramUI/Components/MediaManager/PeerMessagesMediaPlaylist",
         "//submodules/TelegramUI/Components/TextFieldComponent",
+        "//submodules/TelegramUI/Components/Support/SupportUserInfoScreen",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/SideColumnLayout",

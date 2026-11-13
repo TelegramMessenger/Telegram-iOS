@@ -84,6 +84,9 @@ func infoItems(
     let noteContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
         interaction.openNoteContextMenu(node, gesture)
     }
+    let supportInfoContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
+        interaction.openSupportInfoContextMenu(node, gesture)
+    }
     let bioLinkAction: (TextLinkItemActionType, TextLinkItem, ASDisplayNode, CGRect?, Promise<Bool>?) -> Void = { action, item, _, _, _ in
         interaction.performBioLinkAction(action, item)
     }
@@ -107,6 +110,8 @@ func infoItems(
         let ItemAbout = 3003
         let ItemNote = 3004
         let ItemAppFooter = 3005
+        let ItemSupportInfo = 3006
+        let ItemSupportInfoAdd = 3007
         let ItemAffiliate = 4000
         let ItemAffiliateInfo = 4001
         let ItemBusinessHours = 5000
@@ -175,6 +180,20 @@ func infoItems(
                     controller.push(communityController)
                 }
             ))
+        }
+        
+        if context.supportContext != nil, user.id != context.account.peerId, data.chatPeer?.id.namespace != Namespaces.Peer.SecretChat {
+            if let info = data.supportUserInfo {
+                let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: info.date, alwaysShowTime: true).string
+                let entities = generateTextEntities(info.text, enabledTypes: [.mention, .hashtag, .allUrl], currentEntities: info.entities)
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemSupportInfo, label: info.author.isEmpty ? dateText : presentationData.strings.Support_Info_Label.replacingOccurrences(of: "{date}", with: dateText).replacingOccurrences(of: "{author}", with: info.author), text: info.text, entities: entities, handleSpoilers: true, textColor: .primary, textBehavior: .multiLine(maxLines: 0, enabledEntities: []), action: nil, linkItemAction: bioLinkAction, button: nil, contextAction: supportInfoContextAction, requestLayout: { animated in
+                    interaction.requestLayout(animated)
+                }))
+            } else {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: ItemSupportInfoAdd, text: presentationData.strings.Support_Info_AddTitle, action: {
+                    interaction.editSupportInfo()
+                }))
+            }
         }
         
         if let phone = user.phone {
