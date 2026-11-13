@@ -140,7 +140,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, ASScro
         self.contentContainerNode.addSubnode(self.actionButtonNode)
         self.contentContainerNode.addSubnode(self.actionIndicator)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: theme, forceNativeAppearance: false))
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: theme, strings: self.presentationData.strings, forceNativeAppearance: false))
         
         self.actionButtonNode.alpha = 0.0
         self.actionSeparatorNode.alpha = 0.0
@@ -433,7 +433,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, ASScro
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: false), fastOut: true)
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: false), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.disposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6
