@@ -1,5 +1,7 @@
 import Foundation
+import SwiftSignalKit
+
 public final class SupportContext {
-    init() {
+    init(settings: Signal<SupportSettings, NoError>) {
     }
 }
