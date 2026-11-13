@@ -313,6 +313,7 @@ public struct ChatListNodeState: Equatable {
     public var archiveStoryState: StoryState?
     public var supportChatListLoadTill: Int32?
     public var supportOccupations: [EnginePeer.Id: SupportOccupation] = [:]
+    public var supportHidesArchive: Bool = false
     
     public init(
         presentationData: ChatListPresentationData,
@@ -395,6 +396,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.supportOccupations != rhs.supportOccupations {
+            return false
+        }
+        if lhs.supportHidesArchive != rhs.supportHidesArchive {
             return false
         }
         return true
@@ -3754,6 +3758,14 @@ public final class ChatListNode: ListViewImpl {
         if case let .forum(peerId) = inlineNavigationLocation {
             highlightedLocation = ChatListHighlightedLocation(location: .peer(id: peerId), progress: inlineNavigationTransitionFraction)
         }
+        let supportHidesArchive = self.context.supportContext != nil && highlightedLocation != nil
+        if self.currentState.supportHidesArchive != supportHidesArchive {
+            self.updateState { state in
+                var state = state
+                state.supportHidesArchive = supportHidesArchive
+                return state
+            }
+        }
         var navigationLocationPresenceUpdated = false
         if (self.interaction?.inlineNavigationLocation == nil) != (highlightedLocation == nil) {
             navigationLocationPresenceUpdated = true
@@ -3773,7 +3785,7 @@ public final class ChatListNode: ListViewImpl {
             } else {
                 targetTopInset = self.originalTopInset ?? self.insets.top
             }
-            let immediateInsetDelta = self.insets.top - targetTopInset
+            let immediateInsetDelta = self.supportKeepsRowsOnNextInsetChange ? self.supportScrollDistanceKeepingRows(topInset: targetTopInset) : self.insets.top - targetTopInset
             
             self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, additionalScrollDistance: immediateInsetDelta, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: self.visibleSize, insets: UIEdgeInsets(top: targetTopInset, left: self.insets.left, bottom: self.insets.bottom, right: self.insets.right), duration: 0.0, curve: .Default(duration: 0.0)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         }
@@ -3800,6 +3812,11 @@ public final class ChatListNode: ListViewImpl {
             }
         }
         self.previousStoriesInset = storiesInset
+        
+        if self.supportKeepsRowsOnNextInsetChange {
+            self.supportKeepsRowsOnNextInsetChange = false
+            additionalScrollDistance += self.supportScrollDistanceKeepingRows(topInset: updateSizeAndInsets.insets.top)
+        }
         //print("storiesInset: \(storiesInset), additionalScrollDistance: \(additionalScrollDistance)")
         
         var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
@@ -3811,6 +3828,9 @@ public final class ChatListNode: ListViewImpl {
             }
             
             additionalScrollDistance += insetDelta
+        }
+        if self.context.supportContext != nil, transition.isAnimated, updateSizeAndInsets.size.width != self.visibleSize.width {
+            options.insert(.AnimateInsertion)
         }
         self.ignoreStopScrolling = true
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -3859,6 +3879,18 @@ public final class ChatListNode: ListViewImpl {
         })
     }
 
+    public var supportKeepsRowsOnNextInsetChange = false
+    
+    private func supportScrollDistanceKeepingRows(topInset: CGFloat) -> CGFloat {
+        let insetDelta = self.insets.top - topInset
+        guard case let .known(contentOffset) = self.visibleContentOffset() else {
+            return insetDelta
+        }
+        if contentOffset <= 0.0 {
+            return 0.0
+        }
+        return insetDelta > 0.0 ? min(contentOffset, insetDelta) : insetDelta
+    }
     
     public func scrollToChatIfOutsideSafeZone(peerId: EnginePeer.Id) {
         var rowFrame: CGRect?
@@ -3887,6 +3919,7 @@ public final class ChatListNode: ListViewImpl {
             self.setChatListLocation(.scroll(index: index, sourceIndex: self.currentlyVisibleLatestChatListIndex() ?? .chatList(.absoluteLowerBound), scrollPosition: position, animated: true, filter: self.chatListFilter))
         })
     }
+    
     private func setChatListLocation(_ location: ChatListNodeLocation) {
         self.currentLocation = location
         self.chatListLocation.set(location)

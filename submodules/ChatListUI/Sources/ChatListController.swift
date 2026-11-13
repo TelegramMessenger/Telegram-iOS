@@ -218,8 +218,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private(set) var tabContainerData: ([ChatListFilterTabEntry], Bool, Int32?)?
+    public var supportShowsListOnly: Bool = false {
+        didSet {
+            if self.supportShowsListOnly != oldValue, self.isNodeLoaded {
+                self.chatListDisplayNode.effectiveContainerNode.supportKeepRowsOnNextInsetChange()
+            }
+        }
+    }
+    public var supportNarrowListPeerId: EnginePeer.Id? {
+        didSet {
+            guard self.supportNarrowListPeerId != oldValue, self.isNodeLoaded else {
+                return
+            }
+            if let peerId = self.supportNarrowListPeerId, let location = self.chatListDisplayNode.inlineStackContainerNode?.location, location != .forum(peerId: peerId) {
+                DispatchQueue.main.async { [weak self] in
+                    self?.setInlineChatList(location: nil, animated: false)
+                }
+            }
+            if oldValue != nil, self.supportNarrowListPeerId != nil {
+                self.chatListDisplayNode.supportNarrowListPeerUpdated()
+            } else {
+                self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : self.supportFollowedChatLocation, progress: 1.0, transition: .immediate)
+            }
+        }
+    }
+    private(set) var supportNarrowListIsRevealed: Bool = false
+    private var supportFollowedChatLocation: ChatLocation?
     private var supportPreviewIsMoving: Bool = false
+    
     var hasTabs: Bool {
+        if self.supportShowsListOnly {
+            return false
+        }
         if let tabContainerData = self.tabContainerData {
             let isEmpty = tabContainerData.0.count <= 1 || tabContainerData.1
             return !isEmpty
@@ -300,9 +330,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private(set) var globalControlPanelsContextState: GlobalControlPanelsContext.State?
     private var globalControlPanelsContextStateDisposable: Disposable?
     
+    public override func narrowMasterRevealUpdated(_ isRevealed: Bool) {
+        guard self.supportNarrowListIsRevealed != isRevealed else {
+            return
+        }
+        self.supportNarrowListIsRevealed = isRevealed
+        if self.isNodeLoaded, self.supportNarrowListPeerId != nil {
+            self.chatListDisplayNode.supportNarrowListPeerUpdated()
+        }
+    }
+    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
-            self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
+            let location = data as? ChatLocation
+            self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : location, progress: progress, transition: transition)
+            let previousLocation = self.supportFollowedChatLocation
+            self.supportFollowedChatLocation = location
+            if self.supportShowsListOnly, case let .peer(peerId)? = location, location != previousLocation {
+                self.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToChatIfOutsideSafeZone(peerId: peerId)
+            }
         }
     }
     
@@ -1514,6 +1560,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     if openAsInlineForum, case let .channel(channel) = peer, channel.isForum, threadId == nil {
                         self.chatListDisplayNode.clearHighlightAnimated(true)
+                        if self.supportNarrowListPeerId != nil {
+                            navigationController.popToRoot(animated: true)
+                            if self.chatListDisplayNode.inlineStackContainerNode?.location != .forum(peerId: channel.id) {
+                                self.setInlineChatList(location: .forum(peerId: channel.id))
+                            }
+                            return
+                        }
                         if self.chatListDisplayNode.inlineStackContainerNode?.location == .forum(peerId: channel.id) {
                             self.setInlineChatList(location: nil)
                         } else {

@@ -35,6 +35,8 @@ public final class SupportContext {
     private let chatListLoadTillPromise = ValuePromise<Int32>(ignoreRepeated: true)
     private var settingsDisposable: Disposable?
     private var quietSettingsDisposable: Disposable?
+    private let chatListBesideValue = Atomic<SupportChatListBeside>(value: .off)
+    private let chatListBesidePromise = ValuePromise<SupportChatListBeside>(.off, ignoreRepeated: true)
     private let shortcutOverridesValue = Atomic<[SupportShortcutOverride]>(value: [])
     private let hideKeyboardOnSwitchValue = Atomic<Bool>(value: SupportSettings.default.hideKeyboardOnSwitch)
     private let composerFocusSkip = Atomic<(peerId: PeerId, until: Double)?>(value: nil)
@@ -122,6 +124,14 @@ public final class SupportContext {
         return self.chatListLoadTillPromise.get()
     }
     
+    public var chatListBeside: Signal<SupportChatListBeside, NoError> {
+        return self.chatListBesidePromise.get()
+    }
+    
+    public var currentChatListBeside: SupportChatListBeside {
+        return self.chatListBesideValue.with { $0 }
+    }
+    
     public var currentShortcutOverrides: [SupportShortcutOverride] {
         return self.shortcutOverridesValue.with { $0 }
     }
@@ -168,8 +178,10 @@ public final class SupportContext {
             guard let self else {
                 return
             }
+            let _ = self.chatListBesideValue.swap(settings.chatListBeside)
             let _ = self.shortcutOverridesValue.swap(settings.shortcutOverrides)
             let _ = self.hideKeyboardOnSwitchValue.swap(settings.hideKeyboardOnSwitch)
+            self.chatListBesidePromise.set(settings.chatListBeside)
         })
     }
     

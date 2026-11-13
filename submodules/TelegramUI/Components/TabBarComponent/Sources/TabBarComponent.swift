@@ -484,6 +484,7 @@ public final class TabBarComponent: Component {
     public let axis: Axis
     /// Icons without labels, on either axis.
     public let isCompact: Bool
+    public let hidesItems: Bool
     /// A horizontal regular bar takes iOS 27's portrait tab bar layout (`tabBarSystemItemsLayout`); without it, its
     /// items share the available width (`tabBarItemsLayout`), as where iOS would switch to its wide bar.
     public let usesSystemLayout: Bool
@@ -499,6 +500,7 @@ public final class TabBarComponent: Component {
         outerInsets: UIEdgeInsets,
         axis: Axis,
         isCompact: Bool,
+        hidesItems: Bool = false,
         usesSystemLayout: Bool = true
     ) {
         self.theme = theme
@@ -511,6 +513,7 @@ public final class TabBarComponent: Component {
         self.outerInsets = outerInsets
         self.axis = axis
         self.isCompact = isCompact
+        self.hidesItems = hidesItems
         self.usesSystemLayout = usesSystemLayout
     }
     
@@ -543,6 +546,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.isCompact != rhs.isCompact {
+            return false
+        }
+        if lhs.hidesItems != rhs.hidesItems {
             return false
         }
         if lhs.usesSystemLayout != rhs.usesSystemLayout {
@@ -779,7 +785,18 @@ public final class TabBarComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.component?.hidesItems == true, let searchView = self.searchView, point.x < searchView.frame.minX {
+                return nil
+            }
             return super.hitTest(point, with: event)
+        }
+        
+        public var searchButtonFrame: CGRect? {
+            return self.searchView?.frame
+        }
+        
+        public func animateSearchButton(fromOffset offset: CGPoint) {
+            self.searchView?.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
         
         /// The tap without the gesture: what activating an item from VoiceOver does.
@@ -890,7 +907,9 @@ public final class TabBarComponent: Component {
 
             // The search button is as tall as the bar.
             let barHeight: CGFloat
-            if isSystemLayout {
+            if component.hidesItems {
+                barHeight = tabBarCompactItemThickness + innerInset * 2.0
+            } else if isSystemLayout {
                 barHeight = tabBarSystemBarThickness
             } else if component.isCompact {
                 barHeight = tabBarCompactBarThickness
@@ -1075,7 +1094,15 @@ public final class TabBarComponent: Component {
                 tabsFrame.origin.x = -component.outerInsets.left - tabsFrame.width
             }
 
-            transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
+            let itemsWereHidden = previousComponent?.hidesItems ?? false
+            if itemsWereHidden || component.hidesItems {
+                self.contextGestureContainerView.isUserInteractionEnabled = !component.hidesItems
+                transition.setPosition(view: self.contextGestureContainerView, position: tabsFrame.center)
+                transition.setBounds(view: self.contextGestureContainerView, bounds: CGRect(origin: CGPoint(), size: tabsFrame.size))
+                transition.setScale(view: self.contextGestureContainerView, scale: component.hidesItems ? 0.001 : 1.0)
+            } else {
+                transition.setFrame(view: self.contextGestureContainerView, frame: tabsFrame)
+            }
             transition.setFrame(view: self.liquidLensView, frame: CGRect(origin: CGPoint(), size: tabsSize))
             
             var lensSize: CGSize = tabsSize

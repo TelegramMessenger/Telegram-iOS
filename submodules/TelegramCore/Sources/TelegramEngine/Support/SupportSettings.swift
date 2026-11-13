@@ -8,6 +8,20 @@ public enum SupportSwitchBehavior: Int32 {
     case previous = 2
 }
 
+public enum SupportChatListBeside: Int32 {
+    case off = 0
+    case landscape = 1
+    case everywhere = 2
+}
+
+public func supportChatListBesideUsesSplitView(_ value: SupportChatListBeside, isLandscape: Bool) -> Bool {
+    return value == .everywhere || (value == .landscape && isLandscape)
+}
+
+public func supportChatListBesideNarrowsList(_ value: SupportChatListBeside, isLandscape: Bool) -> Bool {
+    return value == .everywhere && !isLandscape
+}
+
 public struct SupportSettings: Codable, Equatable {
     public static let allChatsLoadPeriod: Int32 = 0
 
@@ -21,16 +35,18 @@ public struct SupportSettings: Codable, Equatable {
     public var chatLoadPeriod: Int32
     public var allSearchResults: Bool
     public var sendAllSilently: Bool
+    public var chatListBeside: SupportChatListBeside
     public var shortcutOverrides: [SupportShortcutOverride] = []
     public var hideKeyboardOnSwitch: Bool = true
 
-    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool) {
+    public init(switchBehavior: SupportSwitchBehavior, fixChatsOrder: Bool, templatesAutocomplete: Bool, chatLoadPeriod: Int32, allSearchResults: Bool, sendAllSilently: Bool, chatListBeside: SupportChatListBeside = .off) {
         self.switchBehavior = switchBehavior
         self.fixChatsOrder = fixChatsOrder
         self.templatesAutocomplete = templatesAutocomplete
         self.chatLoadPeriod = chatLoadPeriod
         self.allSearchResults = allSearchResults
         self.sendAllSilently = sendAllSilently
+        self.chatListBeside = chatListBeside
     }
 
     public init(from decoder: Decoder) throws {
@@ -43,6 +59,7 @@ public struct SupportSettings: Codable, Equatable {
         self.chatLoadPeriod = try container.decodeIfPresent(Int32.self, forKey: "chatLoadPeriod") ?? defaults.chatLoadPeriod
         self.allSearchResults = try container.decodeIfPresent(Bool.self, forKey: "allSearchResults") ?? defaults.allSearchResults
         self.sendAllSilently = try container.decodeIfPresent(Bool.self, forKey: "sendAllSilently") ?? defaults.sendAllSilently
+        self.chatListBeside = (try container.decodeIfPresent(Int32.self, forKey: "chatListBeside")).flatMap(SupportChatListBeside.init(rawValue:)) ?? defaults.chatListBeside
         self.shortcutOverrides = try container.decodeIfPresent([SupportShortcutOverride].self, forKey: "shortcutOverrides") ?? defaults.shortcutOverrides
         self.hideKeyboardOnSwitch = try container.decodeIfPresent(Bool.self, forKey: "hideKeyboardOnSwitch") ?? defaults.hideKeyboardOnSwitch
     }
@@ -56,6 +73,7 @@ public struct SupportSettings: Codable, Equatable {
         try container.encode(self.chatLoadPeriod, forKey: "chatLoadPeriod")
         try container.encode(self.allSearchResults, forKey: "allSearchResults")
         try container.encode(self.sendAllSilently, forKey: "sendAllSilently")
+        try container.encode(self.chatListBeside.rawValue, forKey: "chatListBeside")
         try container.encode(self.shortcutOverrides, forKey: "shortcutOverrides")
         try container.encode(self.hideKeyboardOnSwitch, forKey: "hideKeyboardOnSwitch")
     }

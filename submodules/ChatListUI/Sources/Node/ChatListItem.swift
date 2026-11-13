@@ -2459,6 +2459,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         let makeActionButtonTitleNodeLayout = TextNode.asyncLayout(self.actionButtonTitleNode)
         
         let currentItem = self.layoutParams?.0
+        let previousWidth = self.layoutParams?.6.width
         let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
         let currentChatListQuoteSearchResult = self.cachedChatListQuoteSearchResult
@@ -4459,7 +4460,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
-                        let targetAvatarScale: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 54.0 / 17.0) / avatarFrame.width
+                        var targetAvatarSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 54.0 / 17.0)
+                        if item.context.supportContext != nil {
+                            targetAvatarSize = min(targetAvatarSize, 47.0)
+                        }
+                        let targetAvatarScale: CGFloat = targetAvatarSize / avatarFrame.width
                         avatarScale = targetAvatarScale * inlineNavigationLocation.progress + 1.0 * (1.0 - inlineNavigationLocation.progress)
                         
                         let targetAvatarScaleOffset: CGFloat = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
@@ -5143,6 +5148,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if let currentTextSnapshotView {
                         transition.updatePosition(layer: currentTextSnapshotView.layer, position: textNodeFrame.origin)
+                    }
+                    if item.context.supportContext != nil, let previousWidth, previousWidth != params.width {
+                        strongSelf.titleNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.textNode.textNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
                     if let trailingTextBadgeLayoutAndApply {
