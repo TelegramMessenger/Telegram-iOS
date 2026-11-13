@@ -27,6 +27,7 @@ enum SettingsSection: Int, CaseIterable {
     case payment
     case extra
     case support
+    case logout
 }
 
 func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
@@ -71,14 +72,16 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }))
     }
     
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-        interaction.openSettings(.avatar)
-    }))
-    
-    if let peer = data.peer, (peer.addressName ?? "").isEmpty {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
-            interaction.openSettings(.username)
+    if context.supportContext == nil {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+            interaction.openSettings(.avatar)
         }))
+        
+        if let peer = data.peer, (peer.addressName ?? "").isEmpty {
+            items[.edit]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
+                interaction.openSettings(.username)
+            }))
+        }
     }
     
     if let settings = data.globalSettings {
@@ -117,7 +120,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             }))
         }
         
-        if !settings.accountsAndPeers.isEmpty {
+        if !settings.accountsAndPeers.isEmpty || context.supportContext != nil {
             for (peerAccountContext, peer, badgeCount) in settings.accountsAndPeers {
                 let mappedContext = ItemListPeerItem.Context.custom(ItemListPeerItem.Context.Custom(
                     accountPeerId: peerAccountContext.account.peerId,
@@ -149,11 +152,17 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             }))
         }
         
-        items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyProfile, icon: PresentationResourcesSettings.myProfile, action: {
-            interaction.openSettings(.profile)
-        }))
+        if context.supportContext != nil {
+            items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Contacts_AddContact, icon: PresentationResourcesSettings.privateChats, action: {
+                interaction.openSettings(.addContact)
+            }))
+        } else {
+            items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyProfile, icon: PresentationResourcesSettings.myProfile, action: {
+                interaction.openSettings(.profile)
+            }))
+        }
         
-        if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable {
+        if WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable, context.supportContext == nil {
             let balanceText: NSAttributedString
             if let balance = settings.walletBalance, balance > 10_000_000 {
                 var formattedLabel = formatTonAmountText(balance, dateTimeFormat: presentationData.dateTimeFormat)
@@ -196,7 +205,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     }
     
     var appIndex = 1000
-    if let settings = data.globalSettings {
+    if let settings = data.globalSettings, context.supportContext == nil {
         for bot in settings.bots {
             let iconSignal: Signal<UIImage?, NoError>
             if let peer = PeerReference(bot.peer), let icon = bot.icons[.iOSSettingsStatic] {
@@ -222,6 +231,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
     }
     
+    if context.supportContext == nil {
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
     }))
@@ -233,6 +243,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 21, label: contactsWarning ? .badge("!", presentationData.theme.list.itemDestructiveColor) : .none, text: presentationData.strings.Contacts_Title, icon: PresentationResourcesSettings.contacts, action: {
         interaction.openSettings(.contacts)
     }))
+    }
     
     let devicesLabel: String
     if let settings = data.globalSettings, let otherSessionsCount = settings.otherSessionsCount {
@@ -292,7 +303,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.premium)
         }))
     }
-    if let starsState = data.starsState {
+    if let starsState = data.starsState, context.supportContext == nil {
         if !isPremiumDisabled || abs(starsState.balance.value) > 0 {
             let balanceText: NSAttributedString
             if abs(starsState.balance.value) > 0 {
@@ -331,7 +342,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.businessSetup)
         }))
     }
-    if let starsState = data.starsState {
+    if let starsState = data.starsState, context.supportContext == nil {
         if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
             items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 105, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
                 interaction.openSettings(.premiumGift)
@@ -352,15 +363,22 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
     }
     
-    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
-        interaction.openSettings(.support)
-    }))
+    if context.supportContext == nil {
+        items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
+            interaction.openSettings(.support)
+        }))
+    }
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_FAQ, icon: PresentationResourcesSettings.faq, action: {
         interaction.openSettings(.faq)
     }))
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
         interaction.openSettings(.tips)
     }))
+    if context.supportContext != nil {
+        items[.logout]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
+            interaction.openSettings(.logout)
+        }))
+    }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in SettingsSection.allCases {

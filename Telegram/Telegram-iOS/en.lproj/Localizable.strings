@@ -17542,6 +17542,8 @@ Error: %8$@";
 
 "Support.AbuseBot.Title" = "Abuse Bot";
 
+"Support.Login.CountryName" = "Support";
+
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";

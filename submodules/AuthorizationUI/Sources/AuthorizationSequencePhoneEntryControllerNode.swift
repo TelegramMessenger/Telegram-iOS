@@ -219,6 +219,8 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: self.strings) ?? country.name
             if country.id == "FT" {
                 localizedName = self.strings.Login_AnonymousNumbers
+            } else if country.id == "YL", isSupportAccountPhone(number.filter({ $0.isNumber })) {
+                localizedName = self.strings.Support_Login_CountryName
             }
             self.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(20.0), color: self.theme.list.itemAccentColor)
             self.hasCountry = true

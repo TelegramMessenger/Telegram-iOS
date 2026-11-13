@@ -153,6 +153,8 @@ extension PeerInfoScreenNode {
             push(dataAndStorageController(context: self.context))
         case .supportSettings:
             push(supportSettingsController(context: self.context))
+        case .addContact:
+            (self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface)?.openAddContact()
         case .appearance:
             push(themeSettingsController(context: self.context))
         case .language:

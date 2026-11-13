@@ -584,7 +584,7 @@ public class ContactsController: ViewController {
         self.present(actionSheet, in: .window(.root))
     }
     
-    @objc func addPressed() {
+    @objc public func addPressed() {
         let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] status in
