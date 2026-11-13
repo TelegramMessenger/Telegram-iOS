@@ -5,6 +5,15 @@ public struct SupportTemplatesKeyMatch: Equatable {
     public let key: String
 }
 
+public struct SupportTemplatesExpansion: Equatable {
+    public let range: NSRange
+    public let value: String
+}
+
+public func supportTemplateValueIsContact(_ value: String) -> Bool {
+    return value.hasPrefix("contact:")
+}
+
 public final class SupportTemplates {
     public static let queryLimit = 10
     private static let weightStep = 1000
@@ -159,5 +168,24 @@ public final class SupportTemplates {
             }
         }
         return result
+    }
+
+    public func expansion(text: String, selection: NSRange) -> SupportTemplatesExpansion? {
+        let text = text as NSString
+        guard selection.location != NSNotFound, NSMaxRange(selection) <= text.length else {
+            return nil
+        }
+        if selection.length > 0 {
+            guard let match = self.matchExact(text.substring(with: selection)) else {
+                return nil
+            }
+            return SupportTemplatesExpansion(range: selection, value: match.question.value)
+        }
+        let length = min(selection.location, self.maxKeyLength)
+        guard let match = self.matchFromEnd(text.substring(with: NSRange(location: selection.location - length, length: length))) else {
+            return nil
+        }
+        let keyLength = match.key.utf16.count
+        return SupportTemplatesExpansion(range: NSRange(location: selection.location - keyLength, length: keyLength), value: match.question.value)
     }
 }

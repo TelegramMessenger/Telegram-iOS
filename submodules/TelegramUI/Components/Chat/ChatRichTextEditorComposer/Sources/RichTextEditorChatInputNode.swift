@@ -303,6 +303,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         self.editorView.onHardwareReturn = { [weak self] modifierFlags in
             return self?.storedDelegate?.chatInputTextNodeShouldReturn(modifierFlags: modifierFlags) ?? true
         }
+        self.editorView.onHardwareTab = { [weak self] in
+            self?.storedDelegate?.chatInputTextNodeHardwareTab()
+        }
 
         // The caret's own signal, answered by re-applying the field's CURRENT geometry with the
         // reveal attached. `.immediate` on purpose: when the panel is growing the field it is already

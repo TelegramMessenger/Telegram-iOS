@@ -110,6 +110,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
         case loadMore
         case loadMoreInfo
         case templatesHeader
+        case templatesAutocomplete
         case templatesImport
         case templatesReload
         case templatesFile(String)
@@ -129,6 +130,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
     case loadMore(title: String, holeTimestamp: Int32?)
     case loadMoreInfo(String)
     case templatesHeader(String)
+    case templatesAutocomplete(String, Bool)
     case templatesImport(String)
     case templatesReload(title: String, isEnabled: Bool)
     case templatesFile(index: Int32, name: String, info: String, isRevealed: Bool)
@@ -146,7 +148,7 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return SupportSettingsSection.period.rawValue
         case .loadMore, .loadMoreInfo:
             return SupportSettingsSection.loading.rawValue
-        case .templatesHeader, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
+        case .templatesHeader, .templatesAutocomplete, .templatesImport, .templatesReload, .templatesFile, .templatesInfo:
             return SupportSettingsSection.templates.rawValue
         }
     }
@@ -179,6 +181,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return .loadMoreInfo
         case .templatesHeader:
             return .templatesHeader
+        case .templatesAutocomplete:
+            return .templatesAutocomplete
         case .templatesImport:
             return .templatesImport
         case .templatesReload:
@@ -218,6 +222,8 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return 102
         case .templatesHeader:
             return 104
+        case .templatesAutocomplete:
+            return 105
         case .templatesImport:
             return 107
         case .templatesReload:
@@ -282,6 +288,14 @@ private enum SupportSettingsEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .templatesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .templatesAutocomplete(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateSettings { settings in
+                    var settings = settings
+                    settings.templatesAutocomplete = value
+                    return settings
+                }
+            })
         case let .templatesImport(title):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.importTemplates()
@@ -358,6 +372,7 @@ private func supportSettingsEntries(presentationData: PresentationData, settings
 
     if let templates {
         entries.append(.templatesHeader(strings.Support_Templates_Header))
+        entries.append(.templatesAutocomplete(strings.Support_Templates_Autocomplete, settings.templatesAutocomplete))
         entries.append(.templatesImport(strings.Support_Templates_Import))
         entries.append(.templatesReload(title: templates.isReloading ? strings.Support_Templates_Reloading : strings.Support_Templates_Reload, isEnabled: !templates.isReloading))
         for (index, file) in templates.files.enumerated() {

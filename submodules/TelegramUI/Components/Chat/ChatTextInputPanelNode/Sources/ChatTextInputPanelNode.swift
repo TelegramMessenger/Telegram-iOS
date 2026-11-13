@@ -357,6 +357,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var keepSendButtonEnabled = false
     private var extendedSearchLayout = false
     
+    public var supportTemplatesAction: (() -> Void)?
+    public var supportHardwareTabAction: (() -> Void)?
+    private var supportTemplatesButtonIsStacked = false
+    public var supportTemplatesPanelIsOpen: Bool = false {
+        didSet {
+            for (_, button) in self.accessoryItemButtons {
+                button.setSupportTemplatesIsOpen(self.supportTemplatesPanelIsOpen, animated: true)
+            }
+        }
+    }
     public var supportDoneAction: (() -> Void)?
     public var supportDoneIsAvailable: () -> Bool = { false }
     public var supportDoneChatIsUnread: Bool = false {
@@ -1345,7 +1355,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
 
         var accessoryButtonsWidth: CGFloat = 0.0
         var firstButton = true
-        for (_, button) in self.accessoryItemButtons {
+        for (item, button) in self.accessoryItemButtons {
+            if self.supportTemplatesButtonIsStacked, item.key == .supportTemplates {
+                continue
+            }
             if firstButton {
                 firstButton = false
                 accessoryButtonsWidth += self.accessoryButtonInset
@@ -1535,9 +1548,25 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         var isOverflow = false
         if let richTextInputNode = self.richTextInputNode {
             let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right
+            var isSupportTemplatesButtonStacked = false
+            var unstackedTextHeight: CGFloat = 0.0
+            if let presentationInterfaceState = self.presentationInterfaceState, let index = self.accessoryItemButtons.firstIndex(where: { $0.0.key == .supportTemplates }), index + 1 < self.accessoryItemButtons.count {
+                let stackedWidth = accessoryButtonsWidth - self.accessoryItemButtons[index].1.buttonWidth - self.accessoryButtonSpacing
+                let stackedInsets = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: stackedWidth, actionControlsWidth: sendActionControlsWidth)
+                unstackedTextHeight = ceil(richTextInputNode.textHeightForWidth(maxTextWidth, rightInset: textInputViewRealInsets.right))
+                if unstackedTextHeight >= textFieldMinHeight + 10.0 {
+                    isSupportTemplatesButtonStacked = true
+                    accessoryButtonsWidth = stackedWidth
+                    textInputViewRealInsets = stackedInsets
+                }
+            }
+            self.supportTemplatesButtonIsStacked = isSupportTemplatesButtonStacked
             let measuredHeight = richTextInputNode.textHeightForWidth(maxTextWidth, rightInset: textInputViewRealInsets.right)
             
-            let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
+            var unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
+            if isSupportTemplatesButtonStacked && unboundTextFieldHeight < textFieldMinHeight + 10.0 {
+                unboundTextFieldHeight = unstackedTextHeight
+            }
             
             let maxNumberOfLines = max(1, min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22))
             
@@ -3480,10 +3509,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         } else if inputHasText || hasMediaDraft || hasForward || isEditingMedia {
             nextButtonTopRight.x -= sendActionButtonsSize.width
         }
+        var previousAccessoryButtonFrame: CGRect?
         for (item, button) in self.accessoryItemButtons.reversed() {
-            let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
+            let isStackedButton = self.supportTemplatesButtonIsStacked && item.key == .supportTemplates
+            let buttonSize = CGSize(width: button.buttonWidth, height: isStackedButton ? 26.0 : minimalInputHeight)
             button.updateLayout(item: item, size: buttonSize)
-            let buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
+            button.setSupportTemplatesIsOpen(self.supportTemplatesPanelIsOpen, animated: false)
+            var buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
+            if isStackedButton, let previousAccessoryButtonFrame {
+                buttonFrame = CGRect(origin: CGPoint(x: floor(previousAccessoryButtonFrame.midX - buttonSize.width / 2.0), y: floor(previousAccessoryButtonFrame.midY - 26.0 - buttonSize.height / 2.0)), size: buttonSize)
+            }
+            previousAccessoryButtonFrame = buttonFrame
             if button.superview == nil {
                 self.textInputContainerBackgroundView.contentView.addSubview(button)
                 button.frame = buttonFrame.offsetBy(dx: -additionalOffset, dy: 0.0)
@@ -3496,6 +3532,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 transition.updateFrame(layer: button.layer, frame: buttonFrame)
             }
             transition.updateAlpha(layer: button.layer, alpha: audioRecordingItemsAlpha)
+            if isStackedButton {
+                continue
+            }
             nextButtonTopRight.x -= buttonSize.width
             nextButtonTopRight.x -= accessoryButtonSpacing
             switch item.key {
@@ -5294,6 +5333,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public func chatInputTextNodeBackspaceWhileEmpty() {
     }
     
+    public func chatInputTextNodeHardwareTab() {
+        self.supportHardwareTabAction?()
+    }
+    
     public func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
         if action == makeSelectorFromString("_accessibilitySpeak:") {
             if case .format = self.inputMenu.state {
@@ -5642,6 +5685,37 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     /// write, which keeps UIKit's typing steps and records nothing, so undo after ⌘B took back the
     /// typing and left the bold on nothing (`HarnessLegacyFormatShortcutUndoTests`). Returns false
     /// when the input is not the legacy text view, and the caller keeps its own path.
+    public var supportComposerTextAndSelection: (text: String, selection: NSRange)? {
+        guard let richTextInputNode = self.richTextInputNode else {
+            return nil
+        }
+        return (richTextInputNode.currentInputContent().content.plainText, richTextInputNode.selectedRange)
+    }
+    
+    public func supportInsertTemplateValue(_ value: String, replacing range: NSRange?) {
+        let text = NSAttributedString(string: value)
+        if let richTextInputNode = self.richTextInputNode {
+            if let range {
+                richTextInputNode.selectedRange = range
+            }
+            let contentBefore = richTextInputNode.currentInputContent().content
+            if richTextInputNode.insertTextOnUsersBehalf(text), richTextInputNode.currentInputContent().content != contentBefore {
+                return
+            }
+        }
+        let apply: () -> Void = {
+            self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                let replaced = range ?? NSRange(location: current.selectionRange.lowerBound, length: current.selectionRange.count)
+                return (current.replacingFlatRange(replaced, with: text), inputMode)
+            }
+        }
+        if let textView = self.richTextInputNode?.inputView as? ChatInputTextView {
+            textView.performUndoableTextChange(apply)
+        } else {
+            apply()
+        }
+    }
+    
     public func performLegacyFormatShortcut(_ transform: @escaping (ChatTextInputState) -> ChatTextInputState) -> Bool {
         guard let textView = self.richTextInputNode?.inputView as? ChatInputTextView else {
             return false
@@ -6475,6 +6549,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     self.interfaceInteraction?.openPremiumGift()
                 case .suggestPost:
                     self.interfaceInteraction?.openSuggestPost(nil, .default)
+                case .supportTemplates:
+                    self.supportTemplatesAction?()
                 }
                 break
             }

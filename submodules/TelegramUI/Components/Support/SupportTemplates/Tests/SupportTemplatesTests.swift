@@ -228,6 +228,54 @@ final class SupportTemplatesSearchTests: XCTestCase {
     }
 }
 
+final class SupportTemplatesExpansionTests: XCTestCase {
+    private let templates = SupportTemplates(files: ["tl_k.txt": parse("""
+    {QUESTION}
+    Short
+    {KEYS}
+    ay
+    {VALUE}
+    short answer
+    {QUESTION}
+    Long
+    {KEYS}
+    pay
+    {VALUE}
+    long answer
+    """)])
+
+    func testCaretReplacesTheLongestKeyEndingThere() {
+        XCTAssertEqual(templates.expansion(text: "please PAY", selection: NSRange(location: 10, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 7, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "pay later", selection: NSRange(location: 3, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 0, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "okay", selection: NSRange(location: 4, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 2), value: "short answer"))
+    }
+
+    func testCaretOutsideAKeyMatchesNothing() {
+        XCTAssertNil(templates.expansion(text: "pay ", selection: NSRange(location: 4, length: 0)))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: 2, length: 0)))
+        XCTAssertNil(templates.expansion(text: "", selection: NSRange(location: 0, length: 0)))
+    }
+
+    func testSelectionReplacesItselfWhenItIsAKey() {
+        XCTAssertEqual(templates.expansion(text: "a pay b", selection: NSRange(location: 2, length: 3)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 3), value: "long answer"))
+        XCTAssertEqual(templates.expansion(text: "a ay b", selection: NSRange(location: 1, length: 3)), SupportTemplatesExpansion(range: NSRange(location: 1, length: 3), value: "short answer"))
+        XCTAssertNil(templates.expansion(text: "a  pay  b", selection: NSRange(location: 2, length: 5)))
+        XCTAssertNil(templates.expansion(text: "a pa b", selection: NSRange(location: 2, length: 2)))
+    }
+
+    func testPositionsAreUtf16AndOutOfRangeIsNoMatch() {
+        XCTAssertEqual(templates.expansion(text: "😀pay", selection: NSRange(location: 5, length: 0)), SupportTemplatesExpansion(range: NSRange(location: 2, length: 3), value: "long answer"))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: 9, length: 0)))
+        XCTAssertNil(templates.expansion(text: "pay", selection: NSRange(location: NSNotFound, length: 0)))
+    }
+
+    func testContactValue() {
+        XCTAssertTrue(supportTemplateValueIsContact("contact:+100 Sample Name\nHello"))
+        XCTAssertFalse(supportTemplateValueIsContact("Contact: the agent"))
+        XCTAssertFalse(supportTemplateValueIsContact("see contact:"))
+    }
+}
+
 final class SupportHashtagStripTests: XCTestCase {
     private struct Entity: Equatable {
         var range: Range<Int>

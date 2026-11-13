@@ -17382,6 +17382,7 @@ Error: %8$@";
 "Support.ChatLoading.FolderLimit" = "Older chats are not loaded, so this folder may be missing some.";
 
 "Support.Templates.Header" = "TEMPLATES";
+"Support.Templates.Autocomplete" = "Enable templates autocomplete";
 "Support.Templates.Import" = "Import Template Files";
 "Support.Templates.Reload" = "Reload Templates";
 "Support.Templates.Reloading" = "Reloading...";
@@ -17422,6 +17423,10 @@ Error: %8$@";
 "Support.Templates.NoticeKeys" = "K: {keys}";
 "Support.Templates.NoticeAnswer" = "A: {answer}";
 "Support.Templates.NoticeOldFile" = "(old file saved at '{name}.old')";
+"Support.Templates.PanelSearchPlaceholder" = "Search for templates";
+"Support.Templates.PanelSearchHint" = "Search by question, keys or value";
+"Support.Templates.VoiceOverOpen" = "Templates";
+"Support.Templates.VoiceOverClose" = "Close Templates";
 
 "Support.Claims.Taken" = "✋️ chat taken";
 "Support.Claims.Here" = "✋️ {name} is here";
