@@ -435,6 +435,7 @@ class ReleaseGateContractTests(unittest.TestCase):
 
     def test_workflow_runs_both_automated_gate_layers(self) -> None:
         contents = source(".github/workflows/voiceover-gate.yml")
+        make = source("build-system/Make/Make.py")
         self.assertIn('branches:\n      - "VoiceOver-fixes"\n      - "master"', contents)
         self.assertIn('"Telegram/**/*.swift"', contents)
         self.assertIn('"Telegram/Share/**"', contents)
@@ -442,7 +443,9 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("pull_request:", contents)
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--xcodeManagedCodesigning", contents)
-        self.assertNotIn("--disableProvisioningProfiles", contents)
+        self.assertIn("--disableProvisioningProfiles", contents)
+        self.assertIn("testParser.add_argument(\n        '--disableProvisioningProfiles'", make)
+        self.assertIn("if self.disable_provisioning_profiles:\n            combined_arguments += ['--//Telegram:disableProvisioningProfiles']", make)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)
         self.assertIn("runs-on: xcode-27", contents)
