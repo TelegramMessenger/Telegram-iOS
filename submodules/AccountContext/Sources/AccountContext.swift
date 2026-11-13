@@ -15,6 +15,7 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
+import SupportTemplates
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -1918,6 +1919,7 @@ public protocol AccountContext: AnyObject {
     var walletContext: WalletContext? { get }
     var giftAuctionsManager: GiftAuctionsManager? { get }
     var supportContext: SupportContext? { get }
+    var supportTemplates: SupportTemplatesManager? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }

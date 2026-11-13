@@ -25,6 +25,7 @@ swift_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/TelegramUI/Components/Support/SupportTemplates",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/SearchUI:SearchUI",
         "//submodules/MergeLists:MergeLists",

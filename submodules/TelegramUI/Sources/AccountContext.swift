@@ -30,7 +30,39 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import SupportTemplates
 import MessageWidget
+
+private func supportTemplatesUpdateNotificationText(strings: PresentationStrings, fileName: String, delta: SupportTemplatesDelta) -> String {
+    let questionText: (SupportTemplatesQuestion) -> String = { question in
+        return strings.Support_Templates_NoticeQuestion.replacingOccurrences(of: "{question}", with: question.question)
+    }
+    let answerText: (SupportTemplatesQuestion) -> String = { question in
+        return strings.Support_Templates_NoticeAnswer.replacingOccurrences(of: "{answer}", with: trimmedString(question.value))
+    }
+    var result = strings.Support_Templates_NoticeTitle.replacingOccurrences(of: "{name}", with: fileName) + "\n\n"
+    if !delta.added.isEmpty {
+        result += strings.Support_Templates_NoticeAdded + "\n\n"
+        for question in delta.added {
+            let keys = strings.Support_Templates_NoticeKeys.replacingOccurrences(of: "{keys}", with: question.originalKeys.joined(separator: ", "))
+            result += questionText(question) + "\n" + keys + "\n" + answerText(question) + "\n\n"
+        }
+    }
+    if !delta.changed.isEmpty {
+        result += strings.Support_Templates_NoticeModified + "\n\n"
+        for question in delta.changed {
+            result += questionText(question) + "\n" + answerText(question) + "\n\n"
+        }
+    }
+    if !delta.removed.isEmpty {
+        result += strings.Support_Templates_NoticeRemoved + "\n\n"
+        for question in delta.removed {
+            result += questionText(question) + "\n\n"
+        }
+    }
+    result += strings.Support_Templates_NoticeOldFile.replacingOccurrences(of: "{name}", with: fileName)
+    return result
+}
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -153,6 +185,7 @@ public final class AccountContextImpl: AccountContext {
     public let twoStepAuthData = Promise<TwoStepAuthData?>(nil)
     public let giftAuctionsManager: GiftAuctionsManager?
     public let supportContext: SupportContext?
+    public let supportTemplates: SupportTemplatesManager?
     private static var didOfferSupportModeRestart = false
     private var supportModeLostDisposable: Disposable?
     
@@ -316,6 +349,20 @@ public final class AccountContextImpl: AccountContext {
         self.account = account
         self.engine = TelegramEngine(account: account)
         self.supportContext = account.supportContext
+        if sharedContext.applicationBindings.isMainApp && !temp && account.supportContext != nil {
+            let engine = self.engine
+            let currentPresentationData = sharedContext.currentPresentationData
+            let supportTemplates = SupportTemplatesManager(folderPath: account.basePath + "/TEMPLATES", fetch: supportTemplatesUrlSessionFetch(), notify: { fileName, delta in
+                let texts = supportTemplatesNotificationParts(supportTemplatesUpdateNotificationText(strings: currentPresentationData.with { $0 }.strings, fileName: fileName, delta: delta))
+                let _ = engine.messages.addSupportLocalNotification(texts: texts).startStandalone()
+            }, log: { text in
+                Logger.shared.log("SupportTemplates", text)
+            })
+            supportTemplates.reload()
+            self.supportTemplates = supportTemplates
+        } else {
+            self.supportTemplates = nil
+        }
         
         self.imageCache = DirectMediaImageCache(account: account)
         
