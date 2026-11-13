@@ -64,7 +64,8 @@ private func chatListNodeViewUpdateWithCommunitySummaries(account: Account, upda
         additionalItems: update.list.additionalItems,
         hasEarlier: update.list.hasEarlier,
         hasLater: update.list.hasLater,
-        isLoading: update.list.isLoading
+        isLoading: update.list.isLoading,
+        holeIndex: update.list.holeIndex
     )
     let baseUpdate = ChatListNodeViewUpdate(list: baseList, type: update.type, scrollPosition: update.scrollPosition)
 
@@ -103,7 +104,8 @@ private func chatListNodeViewUpdateWithCommunitySummaries(account: Account, upda
             additionalItems: baseList.additionalItems,
             hasEarlier: baseList.hasEarlier,
             hasLater: baseList.hasLater,
-            isLoading: baseList.isLoading
+            isLoading: baseList.isLoading,
+            holeIndex: baseList.holeIndex
         )
         return ChatListNodeViewUpdate(list: list, type: updatedType, scrollPosition: updatedScrollPosition)
     }
@@ -197,6 +199,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
 
 public func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account, shouldLoadCanMessagePeer: Bool) -> Signal<ChatListNodeViewUpdate, NoError> {
     let accountPeerId = account.peerId
+    let keepsChatsAtHoles = account.isSupportUser
     
     switch chatListLocation {
     case let .chatList(groupId):
@@ -213,7 +216,7 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
             signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
-                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: updateType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId, keepsChatsAtHoles: keepsChatsAtHoles), type: updateType, scrollPosition: nil)
             }
             |> mapToSignal { update -> Signal<ChatListNodeViewUpdate, NoError> in
                 return chatListNodeViewUpdateWithCommunitySummaries(account: account, update: update)
@@ -232,7 +235,7 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: genericType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId, keepsChatsAtHoles: keepsChatsAtHoles), type: genericType, scrollPosition: nil)
             }
             |> mapToSignal { update -> Signal<ChatListNodeViewUpdate, NoError> in
                 return chatListNodeViewUpdateWithCommunitySummaries(account: account, update: update)
@@ -255,7 +258,7 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: genericType, scrollPosition: scrollPosition)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId, keepsChatsAtHoles: keepsChatsAtHoles), type: genericType, scrollPosition: scrollPosition)
             }
             |> mapToSignal { update -> Signal<ChatListNodeViewUpdate, NoError> in
                 return chatListNodeViewUpdateWithCommunitySummaries(account: account, update: update)

@@ -311,6 +311,7 @@ public struct ChatListNodeState: Equatable {
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
     public var archiveStoryState: StoryState?
+    public var supportChatListLoadTill: Int32?
     
     public init(
         presentationData: ChatListPresentationData,
@@ -326,7 +327,8 @@ public struct ChatListNodeState: Equatable {
         hiddenItemShouldBeTemporaryRevealed: Bool,
         hiddenPsaPeerId: EnginePeer.Id?,
         selectedThreadIds: Set<Int64>,
-        archiveStoryState: StoryState?
+        archiveStoryState: StoryState?,
+        supportChatListLoadTill: Int32?
     ) {
         self.presentationData = presentationData
         self.editing = editing
@@ -342,6 +344,7 @@ public struct ChatListNodeState: Equatable {
         self.hiddenPsaPeerId = hiddenPsaPeerId
         self.selectedThreadIds = selectedThreadIds
         self.archiveStoryState = archiveStoryState
+        self.supportChatListLoadTill = supportChatListLoadTill
     }
     
     public static func ==(lhs: ChatListNodeState, rhs: ChatListNodeState) -> Bool {
@@ -385,6 +388,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.archiveStoryState != rhs.archiveStoryState {
+            return false
+        }
+        if lhs.supportChatListLoadTill != rhs.supportChatListLoadTill {
             return false
         }
         return true
@@ -738,6 +744,10 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
             }
         case let .HoleEntry(_, theme):
             return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
+        case let .LoadMoreEntry(holeIndex, isLoading, showsFolderLimit, presentationData):
+            return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListLoadMoreItem(presentationData: presentationData, isLoading: isLoading, showsFolderLimit: showsFolderLimit, action: {
+                context.supportContext?.loadMoreChats(holeTimestamp: holeIndex.timestamp)
+            }), directionHint: entry.directionHint)
         case let .GroupReferenceEntry(groupReferenceEntry):
             return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
                 presentationData: groupReferenceEntry.presentationData,
@@ -1061,6 +1071,10 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
+            case let .LoadMoreEntry(holeIndex, isLoading, showsFolderLimit, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListLoadMoreItem(presentationData: presentationData, isLoading: isLoading, showsFolderLimit: showsFolderLimit, action: {
+                    context.supportContext?.loadMoreChats(holeTimestamp: holeIndex.timestamp)
+                }), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(groupReferenceEntry):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
                         presentationData: groupReferenceEntry.presentationData,
@@ -1294,7 +1308,7 @@ public final class ChatListNode: ListViewImpl {
         if let chatListView = self.chatListView {
             return chatListView.filteredEntries.compactMap { item -> EnginePeer.Id? in
                 switch item.stableId {
-                case .Header, .Hole, .SideListAllThreads:
+                case .Header, .Hole, .LoadMore, .SideListAllThreads:
                     return nil
                 case let .PeerId(value):
                     return EnginePeer.Id(value)
@@ -1341,6 +1355,7 @@ public final class ChatListNode: ListViewImpl {
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
+    private var supportChatListLoadTillDisposable: Disposable?
     
     private let scrollToTopOptionPromise = Promise<ChatListGlobalScrollOption>(.none)
     public var scrollToTopOption: Signal<ChatListGlobalScrollOption, NoError> {
@@ -1448,7 +1463,7 @@ public final class ChatListNode: ListViewImpl {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), archiveStoryState: nil)
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), archiveStoryState: nil, supportChatListLoadTill: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -2252,7 +2267,7 @@ public final class ChatListNode: ListViewImpl {
             
             let innerIsMainTab = location == .chatList(groupId: .root) && chatListFilter == nil
             
-            var (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId, isMainTab: innerIsMainTab)
+            var (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId, isMainTab: innerIsMainTab, isFolder: filter != nil)
             if isSideList, case .savedMessagesChats = location, let parentPeer = accountIsPremiumAndPeer.parentPeer, let allThreadsEntry = chatListSideListAllThreadsEntry(entries: rawEntries, parentPeer: parentPeer) {
                 rawEntries.append(allThreadsEntry)
                 rawEntries.sort()
@@ -2537,7 +2552,15 @@ public final class ChatListNode: ListViewImpl {
                 }
             }
             if isEmpty {
-                entries = [.HeaderEntry]
+                var emptyEntries: [ChatListNodeEntry] = entries.filter { entry in
+                    if case .LoadMoreEntry = entry {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                emptyEntries.append(.HeaderEntry)
+                entries = emptyEntries
             }
             
             let processedView = ChatListNodeView(originalList: update.list, filteredEntries: entries, isLoading: isLoading, filter: filter)
@@ -2806,6 +2829,17 @@ public final class ChatListNode: ListViewImpl {
             initialLocation = .initial(count: 200, filter: self.chatListFilter)
         }
         self.setChatListLocation(initialLocation)
+        
+        if let supportContext = context.supportContext {
+            self.supportChatListLoadTillDisposable = (supportContext.chatListLoadTill
+            |> deliverOnMainQueue).startStrict(next: { [weak self] loadTill in
+                self?.updateState { state in
+                    var state = state
+                    state.supportChatListLoadTill = loadTill
+                    return state
+                }
+            })
+        }
         
         let engine = context.engine
         let previousPeerCache = Atomic<[EnginePeer.Id: EnginePeer]>(value: [:])
@@ -3250,6 +3284,7 @@ public final class ChatListNode: ListViewImpl {
     deinit {
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
+        self.supportChatListLoadTillDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
@@ -3579,7 +3614,7 @@ public final class ChatListNode: ListViewImpl {
                                 } else {
                                     break loop
                                 }
-                            case .ArchiveIntro, .EmptyIntro, .SectionHeader, .HeaderEntry, .AdditionalCategory, .TopPeer:
+                            case .LoadMoreEntry, .ArchiveIntro, .EmptyIntro, .SectionHeader, .HeaderEntry, .AdditionalCategory, .TopPeer:
                                 break
                             }
                         }

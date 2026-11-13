@@ -4291,6 +4291,8 @@ private func supportSearchableItems(context: AccountContext) -> [SettingsSearcha
     return [
         item("support", title, synonyms(strings.SettingsSearch_Synonyms_Support), [], nil),
         item("support/silent", strings.Support_Settings_SendSilently, synonyms(strings.Support_Settings_SendSilentlySynonyms), [title], .sendSilently),
+        item("support/chats-period", strings.Support_ChatLoading_SearchPeriod, synonyms(strings.Support_ChatLoading_SearchPeriodSynonyms), [title], .period),
+        item("support/load-more", strings.Support_ChatLoading_SearchLoadMore, synonyms(strings.Support_ChatLoading_SearchLoadMoreSynonyms), [title], .loadMore),
     ]
 }
 

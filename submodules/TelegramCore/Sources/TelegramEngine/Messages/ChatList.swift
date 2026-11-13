@@ -386,6 +386,7 @@ public final class EngineChatList: Equatable {
     public let hasEarlier: Bool
     public let hasLater: Bool
     public let isLoading: Bool
+    public let holeIndex: EngineMessage.Index?
 
     public init(
         items: [Item],
@@ -393,7 +394,8 @@ public final class EngineChatList: Equatable {
         additionalItems: [AdditionalItem],
         hasEarlier: Bool,
         hasLater: Bool,
-        isLoading: Bool
+        isLoading: Bool,
+        holeIndex: EngineMessage.Index? = nil
     ) {
         self.items = items
         self.groupItems = groupItems
@@ -401,6 +403,7 @@ public final class EngineChatList: Equatable {
         self.hasEarlier = hasEarlier
         self.hasLater = hasLater
         self.isLoading = isLoading
+        self.holeIndex = holeIndex
     }
     
     public static func ==(lhs: EngineChatList, rhs: EngineChatList) -> Bool {
@@ -420,6 +423,9 @@ public final class EngineChatList: Equatable {
             return false
         }
         if lhs.isLoading != rhs.isLoading {
+            return false
+        }
+        if lhs.holeIndex != rhs.holeIndex {
             return false
         }
         
@@ -678,8 +684,9 @@ extension EngineChatList.AdditionalItem {
 }
 
 public extension EngineChatList {
-    convenience init(_ view: ChatListView, accountPeerId: PeerId) {
+    convenience init(_ view: ChatListView, accountPeerId: PeerId, keepsChatsAtHoles: Bool) {
         var isLoading = false
+        var holeIndex: EngineMessage.Index?
         
         var displaySavedMessagesAsTopicList = false
         if let value = view.displaySavedMessagesAsTopicList?.get(EngineDisplaySavedChatsAsTopics.self) {
@@ -695,10 +702,18 @@ public extension EngineChatList {
                 if let item = EngineChatList.Item(entry, accountPeerId: accountPeerId, isPremium: isPremium, displayAsTopicList: entry.index.messageIndex.id.peerId == accountPeerId ? displaySavedMessagesAsTopicList : false) {
                     items.append(item)
                 }
-            case .HoleEntry:
-                isLoading = true
-                break loop
+            case let .HoleEntry(hole):
+                if keepsChatsAtHoles {
+                    holeIndex = hole.index
+                } else {
+                    isLoading = true
+                    break loop
+                }
             }
+        }
+        
+        if holeIndex != nil && items.isEmpty {
+            isLoading = true
         }
 
         self.init(
@@ -707,7 +722,8 @@ public extension EngineChatList {
             additionalItems: view.additionalItemEntries.compactMap(EngineChatList.AdditionalItem.init),
             hasEarlier: view.earlierIndex != nil,
             hasLater: view.laterIndex != nil,
-            isLoading: isLoading
+            isLoading: isLoading,
+            holeIndex: holeIndex
         )
     }
 }
