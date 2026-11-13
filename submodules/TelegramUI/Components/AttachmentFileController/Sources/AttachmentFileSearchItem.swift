@@ -353,11 +353,11 @@ private struct AttachmentFileSearchContainerTransition {
     let entries: [AttachmentFileSearchEntry]
 }
 
-private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+private func attachmentFileSearchAccessibilityElementIsFocused(in view: UIView) -> Bool {
     if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
         return true
     }
-    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
+    return view.subviews.contains(where: { attachmentFileSearchAccessibilityElementIsFocused(in: $0) })
 }
 
 private func attachmentFileSearchContainerPreparedRecentTransition(
@@ -811,13 +811,15 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             let isSearching = transition.isSearching
             var focusedEntryId: AttachmentFileSearchEntryId?
             if UIAccessibility.isVoiceOverRunning {
-                for itemNode in self.listNode.visibleItemNodes() {
-                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
-                        continue
+                self.listNode.forEachVisibleItemNode { node in
+                    guard let itemNode = node as? ListViewItemNode else {
+                        return
                     }
-                    if accessibilityElementIsFocused(in: itemNode.view) {
+                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                        return
+                    }
+                    if attachmentFileSearchAccessibilityElementIsFocused(in: itemNode.view) {
                         focusedEntryId = self.displayedEntries[index].stableId
-                        break
                     }
                 }
             }
@@ -827,10 +829,12 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 }
                 strongSelf.displayedEntries = transition.entries
                 if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
-                    for itemNode in strongSelf.listNode.visibleItemNodes() {
-                        if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                    strongSelf.listNode.forEachVisibleItemNode { node in
+                        guard let itemNode = node as? ListViewItemNode, itemNode.index == index else {
+                            return
+                        }
+                        if !attachmentFileSearchAccessibilityElementIsFocused(in: itemNode.view) {
                             UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
-                            break
                         }
                     }
                 }
