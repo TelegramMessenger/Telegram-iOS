@@ -17571,3 +17571,7 @@ Error: %8$@";
 "Support.ContactTemplates.Malformed" = "This contact template is malformed";
 "Support.ContactTemplates.FinishEditing" = "Finish editing before sending a contact template";
 "Support.ContactTemplates.ConfirmTitle" = "Confirmation";
+
+"Support.Moderation.AlsoBanHeader" = "ALSO BAN FROM";
+"Support.Moderation.AlsoBanned_1" = "Also banned from %@ other group. Undo covers this group only.";
+"Support.Moderation.AlsoBanned_any" = "Also banned from %@ other groups. Undo covers this group only.";

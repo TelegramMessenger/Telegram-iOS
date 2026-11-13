@@ -240,6 +240,8 @@ private struct AdminUserActionsSheetState: Equatable {
     var mediaRights: MediaRight
     var communityBanContext: AdminUserActionsCommunityBanContext?
     var banFromCommunity: Bool
+    var commonGroups: [EnginePeer]
+    var alsoBanChatIds: Set<EnginePeer.Id>
 }
 
 private func availableAdminUserActionOptionSections(
@@ -346,6 +348,7 @@ private final class AdminUserActionsContentComponent: Component {
     let toggleMediaRight: (MediaRight) -> Void
     let setBanFromCommunity: (Bool) -> Void
     let openCommunity: (EnginePeer.Id) -> Void
+    let toggleAlsoBanChat: (EnginePeer) -> Void
     
     init(
         context: AccountContext,
@@ -366,7 +369,8 @@ private final class AdminUserActionsContentComponent: Component {
         toggleMediaSectionExpansion: @escaping () -> Void,
         toggleMediaRight: @escaping (MediaRight) -> Void,
         setBanFromCommunity: @escaping (Bool) -> Void,
-        openCommunity: @escaping (EnginePeer.Id) -> Void
+        openCommunity: @escaping (EnginePeer.Id) -> Void,
+        toggleAlsoBanChat: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
         self.chatPeer = chatPeer
@@ -387,6 +391,7 @@ private final class AdminUserActionsContentComponent: Component {
         self.toggleMediaRight = toggleMediaRight
         self.setBanFromCommunity = setBanFromCommunity
         self.openCommunity = openCommunity
+        self.toggleAlsoBanChat = toggleAlsoBanChat
     }
     
     static func ==(lhs: AdminUserActionsContentComponent, rhs: AdminUserActionsContentComponent) -> Bool {
@@ -398,6 +403,7 @@ private final class AdminUserActionsContentComponent: Component {
         private let optionsFooter = ComponentView<Empty>()
         private let configSection = ComponentView<Empty>()
         private let communityBanSection = ComponentView<Empty>()
+        private let alsoBanSection = ComponentView<Empty>()
         private var cachedChevronImage: (UIImage, PresentationTheme)?
         
         func update(component: AdminUserActionsContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -1069,6 +1075,69 @@ private final class AdminUserActionsContentComponent: Component {
                 }
             }
 
+            if !component.sheetState.commonGroups.isEmpty && !component.sheetState.optionBanSelectedPeers.isEmpty {
+                contentHeight += 18.0
+                
+                var transition = transition
+                if self.alsoBanSection.view == nil {
+                    transition = .immediate
+                }
+                
+                var alsoBanItems: [AnyComponentWithIdentity<Empty>] = []
+                for group in component.sheetState.commonGroups {
+                    alsoBanItems.append(AnyComponentWithIdentity(id: group.id, component: AnyComponent(AdminUserActionsPeerComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        baseFontSize: component.presentationData.listsFontSize.baseDisplaySize,
+                        sideInset: 0.0,
+                        title: group.displayTitle(strings: component.strings, displayOrder: .firstLast),
+                        peer: group,
+                        selectionState: .editing(isSelected: component.sheetState.alsoBanChatIds.contains(group.id)),
+                        action: { peer in
+                            component.toggleAlsoBanChat(peer)
+                        }
+                    ))))
+                }
+                
+                let alsoBanSectionSize = self.alsoBanSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: component.theme,
+                        style: .glass,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: component.presentationData.strings.Support_Moderation_AlsoBanHeader,
+                                font: Font.regular(component.presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: component.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: nil,
+                        items: alsoBanItems,
+                        isModal: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100000.0)
+                )
+                let alsoBanSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: alsoBanSectionSize)
+                self.alsoBanSection.parentState = state
+                if let alsoBanSectionView = self.alsoBanSection.view {
+                    if alsoBanSectionView.superview == nil {
+                        self.addSubview(alsoBanSectionView)
+                    }
+                    transition.setFrame(view: alsoBanSectionView, frame: alsoBanSectionFrame)
+                    transition.setAlpha(view: alsoBanSectionView, alpha: 1.0)
+                }
+                contentHeight += alsoBanSectionSize.height
+            } else {
+                self.alsoBanSection.parentState = state
+                if let alsoBanSectionView = self.alsoBanSection.view {
+                    transition.setFrame(view: alsoBanSectionView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: 0.0)))
+                    transition.setAlpha(view: alsoBanSectionView, alpha: 0.0)
+                }
+            }
+            
             contentHeight += 36.0 + 52.0 + 30.0
             
             return CGSize(width: availableSize.width, height: contentHeight)
@@ -1137,6 +1206,10 @@ private final class AdminUserActionsSheetComponent: Component {
         private var banFromCommunity: Bool = false
         private var communityBanContextKey: (communityId: EnginePeer.Id, participantId: EnginePeer.Id)?
         private let communityBanDisposable = MetaDisposable()
+        private var commonGroups: [EnginePeer] = []
+        private var alsoBanChatIds = Set<EnginePeer.Id>()
+        private var didRequestCommonGroups = false
+        private let commonGroupsDisposable = MetaDisposable()
         
         private var previousWasConfigurationExpanded: Bool = false
         
@@ -1146,6 +1219,7 @@ private final class AdminUserActionsSheetComponent: Component {
         
         deinit {
             self.communityBanDisposable.dispose()
+            self.commonGroupsDisposable.dispose()
         }
 
         required init?(coder: NSCoder) {
@@ -1248,6 +1322,31 @@ private final class AdminUserActionsSheetComponent: Component {
             }))
         }
         
+        private func requestCommonGroupsIfNeeded(component: AdminUserActionsSheetComponent) {
+            guard !self.didRequestCommonGroups else {
+                return
+            }
+            self.didRequestCommonGroups = true
+            
+            guard component.context.supportContext != nil, case .chat = component.mode, component.peers.count == 1, case .user = component.peers[0].peer else {
+                return
+            }
+            guard availableAdminUserActionOptionSections(accountPeerId: component.context.account.peerId, chatPeer: component.chatPeer, peers: component.peers, mode: component.mode).contains(.ban) else {
+                return
+            }
+            
+            self.commonGroupsDisposable.set((component.context.engine.peers.supportCommonGroupsForModeration(userId: component.peers[0].peer.id, currentChatId: component.chatPeer.id)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] groups in
+                guard let self else {
+                    return
+                }
+                self.commonGroups = groups
+                if !self.isUpdating {
+                    self.state?.updated(transition: .spring(duration: 0.35))
+                }
+            }))
+        }
+        
         private func calculateMonoforumResult() -> AdminUserActionsSheet.MonoforumResult {
             return AdminUserActionsSheet.MonoforumResult(
                 ban: !self.optionBanSelectedPeers.isEmpty,
@@ -1299,7 +1398,8 @@ private final class AdminUserActionsSheetComponent: Component {
                 deleteAllReactionsFromPeers: deleteAllReactionsFromPeers,
                 banPeers: banPeers,
                 updateBannedRights: updateBannedRights,
-                banFromCommunity: banFromCommunity
+                banFromCommunity: banFromCommunity,
+                alsoBanFromChats: self.optionBanSelectedPeers.isEmpty ? [] : self.commonGroups.map { $0.id }.filter { self.alsoBanChatIds.contains($0) }
             )
         }
         
@@ -1390,6 +1490,7 @@ private final class AdminUserActionsSheetComponent: Component {
             self.component = component
             self.state = state
             self.updateCommunityBanContext(component: component)
+            self.requestCommonGroupsIfNeeded(component: component)
             
             let environmentValue = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environmentValue
@@ -1437,7 +1538,9 @@ private final class AdminUserActionsSheetComponent: Component {
                 participantRights: self.participantRights,
                 mediaRights: self.mediaRights,
                 communityBanContext: self.communityBanContext,
-                banFromCommunity: self.banFromCommunity
+                banFromCommunity: self.banFromCommunity,
+                commonGroups: self.commonGroups,
+                alsoBanChatIds: self.alsoBanChatIds
             )
             
             let commitMainAction: () -> Void = { [weak self] in
@@ -1735,6 +1838,17 @@ private final class AdminUserActionsSheetComponent: Component {
                         openCommunity: { communityId in
                             let controller = component.context.sharedContext.makeCommunityViewScreen(context: component.context, communityId: communityId, mode: .sheet)
                             environmentValue.controller()?.present(controller, in: .window(.root))
+                        },
+                        toggleAlsoBanChat: { [weak self] peer in
+                            guard let self else {
+                                return
+                            }
+                            if self.alsoBanChatIds.contains(peer.id) {
+                                self.alsoBanChatIds.remove(peer.id)
+                            } else {
+                                self.alsoBanChatIds.insert(peer.id)
+                            }
+                            self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                         }
                     )),
                     titleItem: AnyComponent(MultilineTextComponent(
@@ -1861,14 +1975,16 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
         public let banPeers: [EnginePeer.Id]
         public let updateBannedRights: [EnginePeer.Id: TelegramChatBannedRights]
         public let banFromCommunity: CommunityBanResult?
+        public let alsoBanFromChats: [EnginePeer.Id]
         
-        init(reportSpamPeers: [EnginePeer.Id], deleteAllFromPeers: [EnginePeer.Id], deleteAllReactionsFromPeers: [EnginePeer.Id], banPeers: [EnginePeer.Id], updateBannedRights: [EnginePeer.Id: TelegramChatBannedRights], banFromCommunity: CommunityBanResult?) {
+        init(reportSpamPeers: [EnginePeer.Id], deleteAllFromPeers: [EnginePeer.Id], deleteAllReactionsFromPeers: [EnginePeer.Id], banPeers: [EnginePeer.Id], updateBannedRights: [EnginePeer.Id: TelegramChatBannedRights], banFromCommunity: CommunityBanResult?, alsoBanFromChats: [EnginePeer.Id]) {
             self.reportSpamPeers = reportSpamPeers
             self.deleteAllFromPeers = deleteAllFromPeers
             self.deleteAllReactionsFromPeers = deleteAllReactionsFromPeers
             self.banPeers = banPeers
             self.updateBannedRights = updateBannedRights
             self.banFromCommunity = banFromCommunity
+            self.alsoBanFromChats = alsoBanFromChats
         }
     }
     

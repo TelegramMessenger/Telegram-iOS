@@ -69,6 +69,12 @@ extension ChatControllerImpl {
                 }
             }
         }
+        if !result.alsoBanFromChats.isEmpty {
+            if !text.isEmpty {
+                text.append("\n")
+            }
+            text.append(self.presentationData.strings.Support_Moderation_AlsoBanned(Int32(result.alsoBanFromChats.count)))
+        }
         
         do {
             if let reactionPeerId {
@@ -100,6 +106,17 @@ extension ChatControllerImpl {
             for (authorId, rights) in result.updateBannedRights {
                 let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: banLocationPeerId, memberId: authorId, rights: rights).startStandalone()
             }
+            
+            var alsoBanRequests = Signal<Never, NoError>.complete()
+            for chatId in result.alsoBanFromChats {
+                for authorId in result.banPeers {
+                    alsoBanRequests = alsoBanRequests |> then(self.context.engine.peers.removePeerMember(peerId: chatId, memberId: authorId) |> ignoreValues)
+                }
+                for (authorId, rights) in result.updateBannedRights {
+                    alsoBanRequests = alsoBanRequests |> then(self.context.engine.peers.updateChannelMemberBannedRights(peerId: chatId, memberId: authorId, rights: rights) |> ignoreValues)
+                }
+            }
+            let _ = alsoBanRequests.startStandalone()
 
             if let banFromCommunity = result.banFromCommunity {
                 let _ = self.context.engine.peers.toggleCommunityParticipantBanned(communityId: banFromCommunity.communityId, participantId: banFromCommunity.participantId, banned: true).startStandalone()
