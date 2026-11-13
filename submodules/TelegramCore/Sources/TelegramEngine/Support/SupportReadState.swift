@@ -1,4 +1,5 @@
 import Foundation
+internal import TelegramApi
 import Postbox
 import SwiftSignalKit
 
@@ -226,4 +227,66 @@ func managedSupportDeletedUserSweep(postbox: Postbox, accountPeerId: PeerId) -> 
     return Signal<Never, NoError>.complete()
     |> delay(deletedUserSweepStartDelay, queue: Queue.concurrentDefaultQueue())
     |> then(sweep)
+}
+
+private let searchReadStatesPerRequest = 100
+
+// A found chat older than the cutoff has no stored read state. This stores the state alone: no row and no
+// messages, so the unread totals, which count listed chats only, do not move.
+func _internal_supportFetchSearchReadStates(account: Account, peers: [EnginePeer]) -> Signal<Never, NoError> {
+    guard account.isSupportUser else {
+        return .complete()
+    }
+    let accountPeerId = account.peerId
+    let postbox = account.postbox
+    let network = account.network
+
+    func fetch(_ inputPeers: [Api.InputPeer]) -> Signal<Never, NoError> {
+        return network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers.map { .inputDialogPeer(.init(peer: $0)) }))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            guard case let .peerDialogs(data)? = result else {
+                return .complete()
+            }
+            return postbox.transaction { transaction -> Void in
+                var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+                for dialog in data.dialogs {
+                    guard case let .dialog(dialogData) = dialog else {
+                        continue
+                    }
+                    let peerId = dialogData.peer.peerId
+                    if transaction.getCombinedPeerReadState(peerId) == nil, dialogReadStateIsKept(peerId: peerId, responseChats: data.chats, storedPeer: transaction.getPeer(peerId)) {
+                        let markedUnread = (dialogData.flags & (1 << 3)) != 0
+                        transaction.resetIncomingReadStates(supportReadStatesToStore(transaction: transaction, accountPeerId: accountPeerId, readStates: [peerId: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: dialogData.readInboxMaxId, maxOutgoingReadId: dialogData.readOutboxMaxId, maxKnownId: dialogData.topMessage, count: dialogData.unreadCount, markedUnread: markedUnread)]]))
+                    }
+                    notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: dialogData.notifySettings)
+                }
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: data.chats, users: data.users))
+                transaction.updateCurrentPeerNotificationSettings(notificationSettings)
+            }
+            |> ignoreValues
+        }
+    }
+
+    return postbox.transaction { transaction -> [Api.InputPeer] in
+        return peers.compactMap { peer -> Api.InputPeer? in
+            guard transaction.getCombinedPeerReadState(peer.id) == nil else {
+                return nil
+            }
+            return apiInputPeer(peer._asPeer())
+        }
+    }
+    |> mapToSignal { inputPeers -> Signal<Never, NoError> in
+        var result: Signal<Never, NoError> = .complete()
+        var position = 0
+        while position < inputPeers.count {
+            let end = min(position + searchReadStatesPerRequest, inputPeers.count)
+            result = result |> then(fetch(Array(inputPeers[position ..< end])))
+            position = end
+        }
+        return result
+    }
 }

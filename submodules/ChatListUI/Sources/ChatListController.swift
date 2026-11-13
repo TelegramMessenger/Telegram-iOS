@@ -1820,7 +1820,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .never, animated: true).startStandalone()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), purposefulAction: {
-                                    if deactivateOnAction {
+                                    if deactivateOnAction, self?.context.supportContext == nil {
                                         self?.deactivateSearch(animated: false)
                                     }
                                 }, scrollToEndIfExists: scrollToEndIfExists, options: navigationAnimationOptions))
@@ -1864,7 +1864,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .never, animated: true).startStandalone()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), purposefulAction: { [weak self] in
-                                    self?.deactivateSearch(animated: false)
+                                    if self?.context.supportContext == nil {
+                                        self?.deactivateSearch(animated: false)
+                                    }
                                 }, scrollToEndIfExists: scrollToEndIfExists, options: navigationAnimationOptions))
                             }
                             strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)

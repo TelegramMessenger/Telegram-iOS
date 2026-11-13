@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import SwiftSignalKit
 
 let supportChatHistoryLimit = 50
 
@@ -32,6 +33,88 @@ struct SupportChatHistory: Equatable {
     mutating func move(steps: Int) {
         if self.target(steps: steps) != nil {
             self.position += steps
+        }
+    }
+
+    mutating func select(position: Int, peerId: PeerId) {
+        if position >= 0, position < self.peerIds.count, self.peerIds[position] == peerId {
+            self.position = position
+        }
+    }
+}
+
+public struct SupportActiveChat: Equatable {
+    public let position: Int
+    public let occurrence: Int
+    public let peer: RecentlySearchedPeer
+}
+
+func supportActiveChatRows(peerIds: [PeerId]) -> [(position: Int, occurrence: Int, peerId: PeerId)] {
+    var occurrences: [PeerId: Int] = [:]
+    var rows: [(position: Int, occurrence: Int, peerId: PeerId)] = []
+    for (position, peerId) in peerIds.enumerated() {
+        let occurrence = occurrences[peerId, default: 0]
+        occurrences[peerId] = occurrence + 1
+        rows.append((position, occurrence, peerId))
+    }
+    return rows.reversed()
+}
+
+func _internal_supportActiveChats(account: Account) -> Signal<[SupportActiveChat], NoError> {
+    guard let supportContext = account.supportContext else {
+        return .single([])
+    }
+    let postbox = account.postbox
+    return supportContext.chatHistoryPeerIds
+    |> mapToSignal { peerIds -> Signal<[SupportActiveChat], NoError> in
+        if peerIds.isEmpty {
+            return .single([])
+        }
+        let uniquePeerIds = Array(Set(peerIds))
+        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: uniquePeerIds.map { UnreadMessageCountsItem.peer(id: $0, handleThreads: true) })
+        var keys: [PostboxViewKey] = [unreadCountsKey]
+        keys.append(contentsOf: uniquePeerIds.map { .peer(peerId: $0, components: .all) })
+
+        return postbox.combinedView(keys: keys)
+        |> map { view -> [SupportActiveChat] in
+            var unreadCounts: [PeerId: Int32] = [:]
+            if let unreadCountsView = view.views[unreadCountsKey] as? UnreadMessageCountsView {
+                for entry in unreadCountsView.entries {
+                    if case let .peer(peerId, state) = entry {
+                        unreadCounts[peerId] = state?.count ?? 0
+                    }
+                }
+            }
+
+            var result: [SupportActiveChat] = []
+            for row in supportActiveChatRows(peerIds: peerIds) {
+                guard let peerView = view.views[.peer(peerId: row.peerId, components: .all)] as? PeerView, let peer = peerView.peers[row.peerId] else {
+                    continue
+                }
+                var presence: TelegramUserPresence?
+                if peer is TelegramSecretChat, let associatedPeerId = peer.associatedPeerId {
+                    presence = peerView.peerPresences[associatedPeerId] as? TelegramUserPresence
+                } else {
+                    presence = peerView.peerPresences[row.peerId] as? TelegramUserPresence
+                }
+                var unreadCount = unreadCounts[row.peerId] ?? 0
+                if let channel = peer as? TelegramChannel {
+                    if case .member = channel.participationStatus {
+                    } else {
+                        unreadCount = 0
+                    }
+                }
+                var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+                if let cachedData = peerView.cachedData as? CachedChannelData {
+                    subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(cachedData.participantsSummary.memberCount ?? 0))
+                }
+                result.append(SupportActiveChat(
+                    position: row.position,
+                    occurrence: row.occurrence,
+                    peer: RecentlySearchedPeer(peer: RenderedPeer(peerId: row.peerId, peers: SimpleDictionary(peerView.peers), associatedMedia: peerView.media), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary)
+                ))
+            }
+            return result
         }
     }
 }

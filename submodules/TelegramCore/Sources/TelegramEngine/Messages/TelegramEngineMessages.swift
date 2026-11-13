@@ -596,16 +596,20 @@ public extension TelegramEngine {
             return _internal_supportChatListLoadState(account: self.account)
         }
 
-        public func supportSwitchTarget(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
-            return _internal_supportSwitchTarget(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        public func supportSwitchTarget(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+            return _internal_supportSwitchTarget(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
         }
 
         public func supportChatListNeighbour(peerId: EnginePeer.Id, chatListFilterId: Int32?, downward: Bool, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
             return _internal_supportChatListNeighbour(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, getFilterPredicate: getFilterPredicate)
         }
 
-        public func supportMarkDone(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
-            return _internal_supportMarkDone(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        public func supportMarkDone(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
+            return _internal_supportMarkDone(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        }
+
+        public func supportFetchSearchReadStates(peers: [EnginePeer]) -> Signal<Never, NoError> {
+            return _internal_supportFetchSearchReadStates(account: self.account, peers: peers)
         }
 
         public func addSupportLocalNotification(texts: [String]) -> Signal<Never, NoError> {
@@ -620,8 +624,8 @@ public extension TelegramEngine {
             return _internal_supportSendSwitchesChat(account: self.account)
         }
 
-        public func supportSwitchTargetUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer.Id?, NoError> {
-            return _internal_supportSwitchTargetUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+        public func supportSwitchTargetUpdates(peerId: EnginePeer.Id, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [EnginePeer.Id]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer.Id?, NoError> {
+            return _internal_supportSwitchTargetUpdates(account: self.account, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
         }
 
 

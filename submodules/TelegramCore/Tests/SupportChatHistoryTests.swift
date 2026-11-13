@@ -7,6 +7,38 @@ final class SupportChatHistoryTests: XCTestCase {
         return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(value))
     }
 
+    func testSelectMovesToThatEntryAndAPushOfItKeepsTheList() {
+        var history = SupportChatHistory()
+        history.push(peerId: self.peerId(1))
+        history.push(peerId: self.peerId(2))
+        history.push(peerId: self.peerId(3))
+
+        history.select(position: 0, peerId: self.peerId(1))
+        history.push(peerId: self.peerId(1))
+
+        XCTAssertEqual(history.peerIds, [self.peerId(1), self.peerId(2), self.peerId(3)])
+        XCTAssertEqual(history.position, 0)
+        XCTAssertEqual(history.target(steps: 1), self.peerId(2))
+    }
+
+    func testSelectIgnoresAPositionHoldingAnotherChat() {
+        var history = SupportChatHistory()
+        history.push(peerId: self.peerId(1))
+        history.push(peerId: self.peerId(2))
+
+        history.select(position: 0, peerId: self.peerId(2))
+        XCTAssertEqual(history.position, 1)
+        history.select(position: 5, peerId: self.peerId(2))
+        XCTAssertEqual(history.position, 1)
+    }
+
+    func testActiveRowsAreNewestFirstAndKeepRepeats() {
+        let rows = supportActiveChatRows(peerIds: [self.peerId(1), self.peerId(2), self.peerId(1)])
+        XCTAssertEqual(rows.map { $0.position }, [2, 1, 0])
+        XCTAssertEqual(rows.map { $0.peerId }, [self.peerId(1), self.peerId(2), self.peerId(1)])
+        XCTAssertEqual(rows.map { $0.occurrence }, [1, 0, 0])
+    }
+
     func testAnEmptyHistoryHasNoTarget() {
         let history = SupportChatHistory()
         XCTAssertNil(history.target(steps: -1))

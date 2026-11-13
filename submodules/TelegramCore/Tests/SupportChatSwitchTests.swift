@@ -164,6 +164,25 @@ final class SupportChatSwitchTests: XCTestCase {
         }
     }
 
+    func testSearchResultsWalkInOrderAndSkipWhatIsNotATarget() {
+        let results = [self.peerId(1), self.peerId(2), self.peerId(3), self.peerId(4)]
+        let unread: Set<PeerId> = [self.peerId(1), self.peerId(4)]
+        XCTAssertEqual(supportSearchSwitchTarget(peerId: self.peerId(2), resultPeerIds: results, downward: true, isTarget: unread.contains), self.peerId(4))
+        XCTAssertEqual(supportSearchSwitchTarget(peerId: self.peerId(2), resultPeerIds: results, downward: false, isTarget: unread.contains), self.peerId(1))
+    }
+
+    func testSearchResultsEndAtTheirEdges() {
+        let results = [self.peerId(1), self.peerId(2)]
+        let unread: Set<PeerId> = [self.peerId(1), self.peerId(2)]
+        XCTAssertNil(supportSearchSwitchTarget(peerId: self.peerId(2), resultPeerIds: results, downward: true, isTarget: unread.contains))
+        XCTAssertNil(supportSearchSwitchTarget(peerId: self.peerId(1), resultPeerIds: results, downward: false, isTarget: unread.contains))
+    }
+
+    func testAChatOutsideTheSearchResultsDoesNotSwitch() {
+        let results = [self.peerId(1), self.peerId(2)]
+        XCTAssertNil(supportSearchSwitchTarget(peerId: self.peerId(3), resultPeerIds: results, downward: true, isTarget: { _ in true }))
+    }
+
     func testChatListWalkReachesReadChatsAndSkipsOnlyItself() {
         let user = TelegramUser(id: self.peerId(1), accessHash: nil, firstName: "A", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
         XCTAssertTrue(supportChatListNeighbourIsTarget(targetPeerId: self.peerId(1), currentPeerId: self.peerId(2), peer: user))

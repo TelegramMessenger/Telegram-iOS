@@ -90,6 +90,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let insets: UIEdgeInsets
     public let inputHeight: CGFloat
     public let showEmptyResults: Bool
+    public let supportGroupsResultsByChat: Bool
     public let initialScrollingState: ScrollingState?
     public let messageSelected: (EngineMessage) -> Void
     public let peerSelected: (EnginePeer) -> Void
@@ -98,6 +99,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let getSavedPeers: (String) -> Signal<[(EnginePeer, EngineMessage.Index?)], NoError>?
     public let getChats: (String) -> Signal<EngineChatList?, NoError>?
     public let loadMoreSearchResults: () -> Void
+    public let present: (ViewController) -> Void
     
     public init(
         context: AccountContext,
@@ -107,6 +109,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         insets: UIEdgeInsets,
         inputHeight: CGFloat,
         showEmptyResults: Bool,
+        supportGroupsResultsByChat: Bool,
         initialScrollingState: ScrollingState?,
         messageSelected: @escaping (EngineMessage) -> Void,
         peerSelected: @escaping (EnginePeer) -> Void,
@@ -114,7 +117,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
         getSearchResult: @escaping () -> Signal<SearchMessagesResult?, NoError>?,
         getSavedPeers: @escaping (String) -> Signal<[(EnginePeer, EngineMessage.Index?)], NoError>?,
         getChats: @escaping (String) -> Signal<EngineChatList?, NoError>?,
-        loadMoreSearchResults: @escaping () -> Void
+        loadMoreSearchResults: @escaping () -> Void,
+        present: @escaping (ViewController) -> Void
     ) {
         self.context = context
         self.presentation = presentation
@@ -123,6 +127,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.insets = insets
         self.inputHeight = inputHeight
         self.showEmptyResults = showEmptyResults
+        self.supportGroupsResultsByChat = supportGroupsResultsByChat
         self.initialScrollingState = initialScrollingState
         self.messageSelected = messageSelected
         self.peerSelected = peerSelected
@@ -131,6 +136,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.getSavedPeers = getSavedPeers
         self.getChats = getChats
         self.loadMoreSearchResults = loadMoreSearchResults
+        self.present = present
     }
     
     public static func ==(lhs: ChatInlineSearchResultsListComponent, rhs: ChatInlineSearchResultsListComponent) -> Bool {
@@ -153,6 +159,9 @@ public final class ChatInlineSearchResultsListComponent: Component {
             return false
         }
         if lhs.showEmptyResults != rhs.showEmptyResults {
+            return false
+        }
+        if lhs.supportGroupsResultsByChat != rhs.supportGroupsResultsByChat {
             return false
         }
         return true
@@ -252,14 +261,16 @@ public final class ChatInlineSearchResultsListComponent: Component {
         var messages: [EngineMessage]
         var hasEarlier: Bool
         var hasLater: Bool
+        var supportLastMessageIndex: EngineMessage.Index?
         
-        init(id: Int, contentId: ContentId, entries: [Entry], messages: [EngineMessage], hasEarlier: Bool, hasLater: Bool) {
+        init(id: Int, contentId: ContentId, entries: [Entry], messages: [EngineMessage], hasEarlier: Bool, hasLater: Bool, supportLastMessageIndex: EngineMessage.Index? = nil) {
             self.id = id
             self.contentId = contentId
             self.entries = entries
             self.messages = messages
             self.hasEarlier = hasEarlier
             self.hasLater = hasLater
+            self.supportLastMessageIndex = supportLastMessageIndex
         }
     }
     
@@ -291,6 +302,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         
         private var hintDeletedChats = Set<EnginePeer.Id>()
         private var hintAnimateListTransition: Bool = false
+        private var supportAllSearchResults: Bool = true
         
         override public init(frame: CGRect) {
             self.listNode = ListViewImpl()
@@ -453,7 +465,11 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     return
                 }
                 var loadAroundIndex: EngineMessage.Index?
-                if visibleRange.firstIndex <= 5 {
+                if let supportLastMessageIndex = contentsState.supportLastMessageIndex {
+                    if contentsState.hasEarlier, visibleRange.lastIndex >= contentsState.messages.count - 5 {
+                        loadAroundIndex = supportLastMessageIndex
+                    }
+                } else if visibleRange.firstIndex <= 5 {
                     if contentsState.hasLater {
                         loadAroundIndex = contentsState.messages.first?.index
                     }
@@ -621,8 +637,10 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         savedPeers = .single([])
                     }
                     
+                    let allSearchResults: Signal<Bool, NoError> = component.supportGroupsResultsByChat ? supportAllSearchResultsSignal(engine: component.context.engine) : .single(true)
+                    
                     if let historySignal = component.getSearchResult() {
-                        disposable.set((savedPeers
+                        disposable.set((combineLatest(savedPeers
                         |> mapToSignal { savedPeers -> Signal<([(EnginePeer, EngineMessage.Index?)], SearchMessagesResult?), NoError> in
                             if savedPeers.isEmpty {
                                 return historySignal
@@ -635,15 +653,18 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                     return (savedPeers, result)
                                 }
                             }
-                        }
-                        |> deliverOnMainQueue).startStrict(next: { [weak self] savedPeers, result in
+                        }, allSearchResults)
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] found, allSearchResults in
                             guard let self else {
                                 return
                             }
+                            let (savedPeers, result) = found
+                            self.supportAllSearchResults = allSearchResults
                             
-                            let messages: [EngineMessage] = result?.messages.map { entry in
+                            let allMessages: [EngineMessage] = result?.messages.map { entry in
                                 return EngineMessage(entry)
                             } ?? []
+                            let messages = allSearchResults ? allMessages : supportOneRowPerChat(messages: allMessages)
                             
                             var entries: [Entry] = []
                             for (peer, _) in savedPeers {
@@ -662,7 +683,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 entries: entries,
                                 messages: messages,
                                 hasEarlier: !(result?.completed ?? true),
-                                hasLater: false
+                                hasLater: false,
+                                supportLastMessageIndex: allSearchResults ? nil : allMessages.last?.index
                             )
                             if !self.isUpdating {
                                 self.state?.updated(transition: .immediate)
@@ -902,8 +924,13 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         hidePsa: { _ in
                         },
-                        activateChatPreview: { item, _, node, gesture, _ in
-                            gesture?.cancel()
+                        activateChatPreview: { [weak self] item, _, node, gesture, _ in
+                            guard let self, let component = self.component, component.supportGroupsResultsByChat else {
+                                gesture?.cancel()
+                                return
+                            }
+                            self.window?.endEditing(true)
+                            component.present(makeSupportSearchResultsMenu(engine: component.context.engine, presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }), allSearchResults: self.supportAllSearchResults, sourceNode: node, gesture: gesture))
                         },
                         present: { _ in
                         },
@@ -1201,7 +1228,13 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     options: listTransactionOptions,
                     scrollToItem: scrollToItem,
                     updateSizeAndInsets: nil,
-                    updateOpaqueState: contentsState.id
+                    updateOpaqueState: contentsState.id,
+                    completion: { [weak self] displayedRange in
+                        guard let self, contentsState.supportLastMessageIndex != nil else {
+                            return
+                        }
+                        self.listNode.displayedItemRangeChanged(displayedRange, contentsState.id)
+                    }
                 )
                 
                 switch component.contents {

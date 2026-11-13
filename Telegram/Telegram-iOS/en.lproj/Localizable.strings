@@ -17512,6 +17512,12 @@ Error: %8$@";
 "Support.Claims.Taken" = "✋️ chat taken";
 "Support.Claims.Here" = "✋️ {name} is here";
 
+"Support.ActiveChats.Header" = "Active";
+
+"Support.Search.Results" = "Search results";
+"Support.Search.OnePerChat" = "Only one from chat";
+"Support.Search.AllMessages" = "Show all messages";
+
 "Support.AbuseBot.Title" = "Abuse Bot";
 
 "Support.Mode.LostTitle" = "Support Mode Lost";

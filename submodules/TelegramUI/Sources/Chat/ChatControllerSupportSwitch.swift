@@ -35,7 +35,7 @@ extension ChatControllerImpl {
             return .single(nil)
         }
         let accountPeerId = self.context.account.peerId
-        return self.context.engine.messages.supportSwitchTarget(peerId: peerId, chatListFilterId: self.currentChatListFilter, getFilterPredicate: { data in
+        return self.context.engine.messages.supportSwitchTarget(peerId: peerId, chatListFilterId: self.currentChatListFilter, searchResultPeerIds: self.context.supportContext?.searchResultPeerIds, getFilterPredicate: { data in
             return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
         })
     }
@@ -77,7 +77,7 @@ extension ChatControllerImpl {
             return
         }
         let accountPeerId = self.context.account.peerId
-        let _ = (self.context.engine.messages.supportMarkDone(peerId: peerId, chatListFilterId: self.currentChatListFilter, getFilterPredicate: { data in
+        let _ = (self.context.engine.messages.supportMarkDone(peerId: peerId, chatListFilterId: self.currentChatListFilter, searchResultPeerIds: self.context.supportContext?.searchResultPeerIds, getFilterPredicate: { data in
             return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
         })
         |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
@@ -213,7 +213,9 @@ extension ChatControllerImpl {
     func supportSwitchPreload(peerId: EnginePeer.Id) -> Disposable {
         let context = self.context
         let accountPeerId = context.account.peerId
-        return (context.engine.messages.supportSwitchTargetUpdates(peerId: peerId, chatListFilterId: self.currentChatListFilter, getFilterPredicate: { data in
+        return (context.engine.messages.supportSwitchTargetUpdates(peerId: peerId, chatListFilterId: self.currentChatListFilter, searchResultPeerIds: {
+            return context.supportContext?.searchResultPeerIds
+        }, getFilterPredicate: { data in
             return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
         })
         |> mapToSignal { target -> Signal<Never, NoError> in

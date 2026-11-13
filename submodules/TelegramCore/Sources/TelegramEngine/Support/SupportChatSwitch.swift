@@ -107,6 +107,15 @@ func supportFolderSwitchTarget(peerId: PeerId, current: ChatListIndex?, downward
     return nil
 }
 
+// A chat that is not among the results has no neighbours: the list is not a fallback, as on TDesktop.
+func supportSearchSwitchTarget(peerId: PeerId, resultPeerIds: [PeerId], downward: Bool, isTarget: (PeerId) -> Bool) -> PeerId? {
+    guard let position = resultPeerIds.firstIndex(of: peerId) else {
+        return nil
+    }
+    let candidates = downward ? Array(resultPeerIds[(position + 1)...]) : Array(resultPeerIds[..<position].reversed())
+    return candidates.first(where: isTarget)
+}
+
 private func supportSwitchGroup(transaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate?) -> SupportSwitchGroup {
     var pinnedRows: [ChatListIndex] = []
     if predicate != nil {
@@ -126,7 +135,7 @@ private func supportSwitchGroup(transaction: Transaction, groupId: PeerGroupId, 
     )
 }
 
-private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: (ChatListFilterData) -> ChatListFilterPredicate) -> PeerId? {
+private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, getFilterPredicate: (ChatListFilterData) -> ChatListFilterPredicate) -> PeerId? {
     let downward: Bool
     switch supportSettings(transaction: transaction).switchBehavior {
     case .none:
@@ -142,6 +151,9 @@ private func supportSwitchTarget(transaction: Transaction, peerId: PeerId, chatL
             return false
         }
         return !peer.isForumOrMonoForum
+    }
+    if let searchResultPeerIds {
+        return supportSearchSwitchTarget(peerId: peerId, resultPeerIds: searchResultPeerIds, downward: downward, isTarget: isTarget)
     }
     return supportChatListTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, downward: downward, isTarget: isTarget, getFilterPredicate: getFilterPredicate)
 }
@@ -180,10 +192,10 @@ private func supportChatListTarget(transaction: Transaction, peerId: PeerId, cha
     return supportListSwitchTarget(current: index, downward: downward, group: supportSwitchGroup(transaction: transaction, groupId: groupId, predicate: nil), isTarget: isTarget)
 }
 
-func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
+func _internal_supportSwitchTarget(account: Account, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<EnginePeer?, NoError> {
     return account.postbox.transaction { transaction -> EnginePeer? in
-        let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
-        Logger.shared.log("SupportSwitch", "send in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)): \(String(describing: target?.toInt64()))")
+        let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        Logger.shared.log("SupportSwitch", "send in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)) search \(String(describing: searchResultPeerIds?.count)): \(String(describing: target?.toInt64()))")
         return target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) }
     }
 }
@@ -217,13 +229,13 @@ func supportDoneResult(behavior: SupportSwitchBehavior, target: EnginePeer?) -> 
     return behavior == .none ? .stay : .noUnreadChatLeft
 }
 
-func _internal_supportMarkDone(account: Account, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
+func _internal_supportMarkDone(account: Account, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: [PeerId]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<SupportDoneResult, NoError> {
     guard account.isSupportUser else {
         return .single(.stay)
     }
     return account.postbox.transaction { transaction -> SupportDoneResult in
-        let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
-        Logger.shared.log("SupportSwitch", "done in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)): \(String(describing: target?.toInt64()))")
+        let target = supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds, getFilterPredicate: getFilterPredicate)
+        Logger.shared.log("SupportSwitch", "done in \(peerId.toInt64()) filter \(String(describing: chatListFilterId)) search \(String(describing: searchResultPeerIds?.count)): \(String(describing: target?.toInt64()))")
         supportApplyReadOnSend(transaction: transaction, network: account.network, stateManager: account.stateManager, peerId: peerId, sends: [SupportSendReadInfo(isDeferred: false, threadId: nil, replyThreadId: nil)])
         return supportDoneResult(behavior: supportSettings(transaction: transaction).switchBehavior, target: target.flatMap { transaction.getPeer($0) }.map { EnginePeer($0) })
     }
@@ -235,7 +247,7 @@ func _internal_supportSendSwitchesChat(account: Account) -> Signal<Bool, NoError
     }
 }
 
-func _internal_supportSwitchTargetUpdates(account: Account, peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<PeerId?, NoError> {
+func _internal_supportSwitchTargetUpdates(account: Account, peerId: PeerId, chatListFilterId: Int32?, searchResultPeerIds: @escaping () -> [PeerId]?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<PeerId?, NoError> {
     let postbox = account.postbox
     return postbox.combinedView(keys: [
         .preferences(keys: Set([PreferencesKeys.supportSettings])),
@@ -243,7 +255,7 @@ func _internal_supportSwitchTargetUpdates(account: Account, peerId: PeerId, chat
     ])
     |> mapToThrottled { _ -> Signal<PeerId?, NoError> in
         return postbox.transaction { transaction -> PeerId? in
-            return supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, getFilterPredicate: getFilterPredicate)
+            return supportSwitchTarget(transaction: transaction, peerId: peerId, chatListFilterId: chatListFilterId, searchResultPeerIds: searchResultPeerIds(), getFilterPredicate: getFilterPredicate)
         }
         |> then(.complete() |> delay(1.0, queue: Queue.concurrentDefaultQueue()))
     }
