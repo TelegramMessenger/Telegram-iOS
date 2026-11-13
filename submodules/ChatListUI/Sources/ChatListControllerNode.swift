@@ -1904,6 +1904,27 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
     
+    func supportUpdateSearchContent() {
+        guard self.context.supportContext != nil, let contentNode = self.searchDisplayController?.contentNode as? ChatListSearchContainerNode else {
+            return
+        }
+        let narrowPeerId = self.controller?.supportNarrowListIsRevealed == true ? nil : self.controller?.supportNarrowListPeerId
+        var selectedPeerId: EnginePeer.Id?
+        if narrowPeerId == nil, case let .peer(peerId)? = self.controller?.supportFollowedChatLocation {
+            selectedPeerId = peerId
+        }
+        contentNode.supportIsNarrow = narrowPeerId != nil
+        contentNode.supportPresentation = ChatListSearchSupportPresentation(hidesGlobalPeers: self.controller?.supportShowsListOnly == true, narrowPeerId: narrowPeerId, selectedPeerId: selectedPeerId)
+    }
+
+    func supportScrollSearchToChat(peerId: EnginePeer.Id) {
+        (self.searchDisplayController?.contentNode as? ChatListSearchContainerNode)?.supportScrollToChat(peerId: peerId)
+    }
+
+    func supportWalkSearchResults(downward: Bool) -> Bool {
+        return (self.searchDisplayController?.contentNode as? ChatListSearchContainerNode)?.supportWalkResults(downward: downward) ?? false
+    }
+
     func supportNarrowListPeerUpdated() {
         guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, storiesInset) = self.containerLayout else {
             return
@@ -1967,6 +1988,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 navigationBarView.isUserInteractionEnabled = !navigationBarIsHidden
                 ComponentTransition(transition).setBounds(view: navigationBarView, bounds: CGRect(origin: CGPoint(x: 0.0, y: navigationBarIsHidden ? navigationBarView.bounds.height : 0.0), size: navigationBarView.bounds.size))
             }
+            self.supportUpdateSearchContent()
         }
         if supportNarrowListPeerId != nil {
             let statusBarHeight = layout.statusBarHeight ?? 0.0

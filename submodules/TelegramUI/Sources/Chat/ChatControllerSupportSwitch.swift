@@ -102,6 +102,9 @@ extension ChatControllerImpl {
         guard let supportContext = self.context.supportContext, let peerId = self.supportOccupationPeerId, supportContext.allowsHardwarePress(of: .chatHistory) else {
             return
         }
+        if let chatListController = (self.effectiveNavigationController as? TelegramRootController)?.getChatsController() as? ChatListControllerImpl, chatListController.supportSelectSearchResult(downward: downward) {
+            return
+        }
         let accountPeerId = self.context.account.peerId
         let _ = (self.context.engine.messages.supportChatListNeighbour(peerId: peerId, chatListFilterId: self.currentChatListFilter, downward: downward, getFilterPredicate: { data in
             return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)

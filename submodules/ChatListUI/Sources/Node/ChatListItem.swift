@@ -1154,6 +1154,28 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
 private let telegramCodeRegex = try? NSRegularExpression(pattern: "(?<=: )\\b\\d{5,8}\\b(?=\\.)", options: [])
 private let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,8}\\b", options: [])
 
+// A support search lists one chat in several rows; only the selected one is marked.
+private func chatListSupportRowIsSelected(_ item: ChatListItem) -> Bool {
+    if let item = item as? SupportNarrowSearchRecentPeerItem {
+        return item.isMarked
+    }
+    guard let highlight = item.interaction.supportSearchHighlight else {
+        return true
+    }
+    switch highlight {
+    case let .message(messageId):
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.first?.id == messageId
+        }
+        return false
+    case .none:
+        if case let .peer(peerData) = item.content {
+            return peerData.messages.isEmpty
+        }
+        return false
+    }
+}
+
 public class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
         let topicTitleNode: TextNode
@@ -2315,7 +2337,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 reallyHighlighted = true
             }
             if let itemChatLocation = item.content.chatLocation {
-                if itemChatLocation == item.interaction.highlightedChatLocation?.location {
+                if itemChatLocation == item.interaction.highlightedChatLocation?.location, chatListSupportRowIsSelected(item) {
                     reallyHighlighted = true
                 }
             }
@@ -4538,7 +4560,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         itemPeerId = index.messageIndex.id.peerId
                     }
                     
-                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId {
+                    if let itemPeerId = itemPeerId, let inlineNavigationLocation = item.interaction.inlineNavigationLocation, inlineNavigationLocation.location.peerId == itemPeerId, chatListSupportRowIsSelected(item) {
                         let inlineNavigationMarkLayer: SimpleLayer
                         var animateIn = false
                         if let current = strongSelf.inlineNavigationMarkLayer {

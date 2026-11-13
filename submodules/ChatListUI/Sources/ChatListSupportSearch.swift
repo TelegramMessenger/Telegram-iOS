@@ -1,7 +1,14 @@
 import Foundation
 import SwiftSignalKit
+import Display
 import TelegramCore
 import AccountContext
+
+struct ChatListSearchSupportPresentation: Equatable {
+    var hidesGlobalPeers: Bool = false
+    var narrowPeerId: EnginePeer.Id?
+    var selectedPeerId: EnginePeer.Id?
+}
 
 func supportSearchAppliesToPane(hasSupportContext: Bool, key: ChatListSearchPaneKey, location: ChatListControllerLocation) -> Bool {
     guard hasSupportContext, key == .chats, case .chatList = location else {
@@ -98,5 +105,59 @@ func supportSearchRowIsMuted(peer: EnginePeer, muteState: EnginePeer.Notificatio
         default:
             return !privateChatsEnabled
         }
+    }
+}
+
+private func supportNarrowSearchPeerIndex(peer: EnginePeer) -> EngineChatList.Item.Index {
+    return EngineChatList.Item.Index.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 0), timestamp: 0)))
+}
+
+private func supportNarrowSearchPeerContent(peer: EnginePeer) -> ChatListItemContent {
+    return .peer(ChatListItemContent.PeerData(
+        messages: [],
+        peer: EngineRenderedPeer(peer: peer),
+        threadInfo: nil,
+        combinedReadState: nil,
+        isRemovedFromTotalUnreadCount: false,
+        presence: nil,
+        hasUnseenMentions: false,
+        hasUnseenReactions: false,
+        hasUnseenPollVotes: false,
+        draftState: nil,
+        mediaDraftContentType: nil,
+        inputActivities: nil,
+        promoInfo: nil,
+        ignoreUnreadBadge: true,
+        displayAsMessage: false,
+        hasFailedMessages: false,
+        forumTopicData: nil,
+        topForumTopicItems: [],
+        autoremoveTimeout: nil,
+        storyState: nil,
+        requiresPremiumForMessaging: false,
+        displayAsTopicList: false,
+        tags: []
+    ))
+}
+
+func supportNarrowSearchPeerItem(context: AccountContext, presentationData: ChatListPresentationData, peer: EnginePeer, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) -> ListViewItem {
+    return ChatListItem(presentationData: presentationData, context: context, chatListLocation: .chatList(groupId: .root), filterData: nil, index: supportNarrowSearchPeerIndex(peer: peer), content: supportNarrowSearchPeerContent(peer: peer), editing: false, hasActiveRevealControls: false, selected: false, header: header, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
+}
+
+// A chat can be in this list twice, in Active and Recent: only the row that was tapped is marked.
+final class SupportNarrowSearchRecentPeerItem: ChatListItem {
+    let rowId: AnyHashable
+    let isMarked: Bool
+    private let onSelected: () -> Void
+
+    init(context: AccountContext, presentationData: ChatListPresentationData, peer: EnginePeer, header: ListViewItemHeader?, interaction: ChatListNodeInteraction, rowId: AnyHashable, isMarked: Bool, onSelected: @escaping () -> Void) {
+        self.rowId = rowId
+        self.isMarked = isMarked
+        self.onSelected = onSelected
+        super.init(presentationData: presentationData, context: context, chatListLocation: .chatList(groupId: .root), filterData: nil, index: supportNarrowSearchPeerIndex(peer: peer), content: supportNarrowSearchPeerContent(peer: peer), editing: false, hasActiveRevealControls: false, selected: false, header: header, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
+    }
+
+    override func selected(listView: ListView) {
+        self.onSelected()
     }
 }

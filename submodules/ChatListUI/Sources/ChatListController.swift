@@ -222,6 +222,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         didSet {
             if self.supportShowsListOnly != oldValue, self.isNodeLoaded {
                 self.chatListDisplayNode.effectiveContainerNode.supportKeepRowsOnNextInsetChange()
+                self.chatListDisplayNode.supportUpdateSearchContent()
             }
         }
     }
@@ -243,7 +244,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     private(set) var supportNarrowListIsRevealed: Bool = false
-    private var supportFollowedChatLocation: ChatLocation?
+    private(set) var supportFollowedChatLocation: ChatLocation?
     private var supportPreviewIsMoving: Bool = false
     
     var hasTabs: Bool {
@@ -346,8 +347,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: self.supportNarrowListPeerId != nil ? nil : location, progress: progress, transition: transition)
             let previousLocation = self.supportFollowedChatLocation
             self.supportFollowedChatLocation = location
+            self.chatListDisplayNode.supportUpdateSearchContent()
             if self.supportShowsListOnly, case let .peer(peerId)? = location, location != previousLocation {
                 self.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToChatIfOutsideSafeZone(peerId: peerId)
+                self.chatListDisplayNode.supportScrollSearchToChat(peerId: peerId)
             }
         }
     }
@@ -3927,6 +3930,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
     }
     
+    public func supportSelectSearchResult(downward: Bool) -> Bool {
+        guard self.context.supportContext != nil else {
+            return false
+        }
+        return self.chatListDisplayNode.supportWalkSearchResults(downward: downward)
+    }
+
     private func supportMovePreview(contextController: ContextController, peerId: EnginePeer.Id, downward: Bool) {
         if self.supportPreviewIsMoving {
             return
@@ -5098,12 +5108,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let inputShortcuts: [KeyShortcut] = [
             KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], action: { [weak self] in
-                if let strongSelf = self {
+                if let strongSelf = self, !strongSelf.supportSelectSearchResult(downward: false) {
                     strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.previous(unread: false))
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_JumpToNextChat, input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], action: { [weak self] in
-                if let strongSelf = self {
+                if let strongSelf = self, !strongSelf.supportSelectSearchResult(downward: true) {
                     strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.next(unread: false))
                 }
             }),
@@ -5178,10 +5188,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.present(controller, in: .window(.root))
             }))
             supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.previousChat), title: nil, perform: { [weak self] in
-                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.previous(unread: false))
+                if let self, !self.supportSelectSearchResult(downward: false) {
+                    self.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.previous(unread: false))
+                }
             }))
             supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.nextChat), title: nil, perform: { [weak self] in
-                self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.next(unread: false))
+                if let self, !self.supportSelectSearchResult(downward: true) {
+                    self.chatListDisplayNode.effectiveContainerNode.currentItemNode.selectChat(.next(unread: false))
+                }
             }))
             supportShortcuts.append(contentsOf: supportKeyShortcuts(combos: supportContext.shortcutCombos(.showCurrentChat), title: supportShortcutTitle(.showCurrentChat, strings: strings), perform: { [weak self] in
                 self?.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToHighlightedChat()

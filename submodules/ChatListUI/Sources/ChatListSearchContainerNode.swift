@@ -628,6 +628,25 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.selectionPanelNode?.selectedMessages = self.stateValue.selectedMessageIds ?? []
     }
 
+    public var supportIsNarrow: Bool = false
+
+    var supportPresentation: ChatListSearchSupportPresentation {
+        get {
+            return self.paneContainerNode.supportPresentation
+        }
+        set {
+            self.paneContainerNode.supportPresentation = newValue
+        }
+    }
+
+    func supportScrollToChat(peerId: EnginePeer.Id) {
+        (self.paneContainerNode.currentPane?.node as? ChatListSearchListPaneNode)?.supportScrollToChat(peerId: peerId)
+    }
+
+    func supportWalkResults(downward: Bool) -> Bool {
+        return (self.paneContainerNode.currentPane?.node as? ChatListSearchListPaneNode)?.supportWalkResults(downward: downward) ?? false
+    }
+
     public func removeAds() {
         for pane in self.paneContainerNode.currentPanes.values {
             pane.node.removeAds()
@@ -886,7 +905,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         transition.updateFrame(node: self.filterContainerNode, frame: self.filterContainerFrame(layout: layout))
         self.updateFilterContainerNode(layout: layout, transition: transition)
         
-        self.filterContainerNode.isHidden = !self.displaySearchFilters
+        self.filterContainerNode.isHidden = !self.displaySearchFilters || self.supportIsNarrow
         
         if isFirstTime {
             self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

@@ -7908,6 +7908,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.didSupportFocusComposerOnOpen = true
             if self.scheduledActivateInput == nil, !supportContext.takeComposerFocusSkip(peerId: supportOccupationPeerId), !self.supportHidesKeyboard {
                 self.scheduledActivateInput = .text
+                // A chat pushed into the split view is laid out once without the keyboard. When the search field already
+                // holds the keyboard, focusing the composer does not move it, so no layout with its height would follow.
+                DispatchQueue.main.async { [weak self] in
+                    self?.effectiveNavigationController?.requestLayout(transition: .animated(duration: 0.3, curve: .spring))
+                }
             }
         }
 
