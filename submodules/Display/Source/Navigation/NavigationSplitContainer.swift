@@ -32,6 +32,11 @@ final class NavigationSplitContainer: ASDisplayNode {
     private let masterContainer: NavigationContainer
     private let detailContainer: NavigationContainer
     private let separator: ASDisplayNode
+    private let resizeHandle: ASDisplayNode
+    private var resizableMasterWidth: CGFloat?
+    private var resizeStartWidth: CGFloat = 0.0
+    /// A drag of the split line, with the master width it asks for and whether the drag ended.
+    var masterWidthDragged: ((CGFloat, Bool) -> Void)?
     
     private(set) var masterControllers: [ViewController] = []
     private(set) var detailControllers: [ViewController] = []
@@ -77,14 +82,37 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.separator = ASDisplayNode()
         self.separator.backgroundColor = theme.separatorColor
         
+        self.resizeHandle = ASDisplayNode()
+        self.resizeHandle.isHidden = true
+        
         super.init()
         
         self.addSubnode(self.masterContainer)
         self.addSubnode(self.detailContainer)
         self.addSubnode(self.separator)
+        self.addSubnode(self.resizeHandle)
         
         self.detailContainer.firstControllerSwipe = { [weak self] translation, velocity, state in
             self?.detailSwipeUpdated(translation: translation, velocity: velocity, state: state)
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.resizeHandle.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.resizePanGesture(_:))))
+    }
+    
+    @objc private func resizePanGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.resizeStartWidth = self.masterContainer.frame.width
+        case .changed:
+            self.masterWidthDragged?(self.resizeStartWidth + recognizer.translation(in: self.view).x, false)
+        case .ended, .cancelled:
+            self.masterWidthDragged?(self.resizeStartWidth + recognizer.translation(in: self.view).x, true)
+        default:
+            break
         }
     }
     
@@ -112,7 +140,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     }
 
     func scrollToTopProxyFrames(layout: ContainerViewLayout) -> (master: CGRect, detail: CGRect) {
-        let masterWidth = self.masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        let masterWidth = self.masterWidthOverride ?? self.resizableMasterWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
         let detailWidth = layout.size.width - masterWidth
         let scrollToTopHeight = max(layout.statusBarHeight ?? layout.safeInsets.top, 1.0)
         
@@ -186,12 +214,15 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.separator.frame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height))
     }
     
-    func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
+    func update(layout: ContainerViewLayout, masterWidthOverride: CGFloat? = nil, resizableMasterWidth: CGFloat? = nil, masterControllers: [ViewController], detailControllers: [ViewController], detailsPlaceholderNode: NavigationDetailsPlaceholderNode?, transition: ContainedViewLayoutTransition) {
         self.masterWidthOverride = masterWidthOverride
+        self.resizableMasterWidth = masterWidthOverride == nil ? resizableMasterWidth : nil
         if masterWidthOverride == nil {
             self.detailSwipeOffset = 0.0
         }
-        let masterWidth = masterWidthOverride ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        let masterWidth = masterWidthOverride ?? self.resizableMasterWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        self.resizeHandle.isHidden = self.resizableMasterWidth == nil
+        transition.updateFrame(node: self.resizeHandle, frame: CGRect(origin: CGPoint(x: masterWidth - 10.0, y: 0.0), size: CGSize(width: 20.0, height: layout.size.height)))
         let masterContentWidth = masterWidthOverride != nil ? max(masterWidth, layout.size.width) : masterWidth
         let detailWidth = layout.size.width - masterWidth
         self.masterContentWidth = masterContentWidth

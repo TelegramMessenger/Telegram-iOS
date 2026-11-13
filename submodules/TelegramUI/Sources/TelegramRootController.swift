@@ -97,6 +97,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     private var storyUploadEventsDisposable: Disposable?
     private var supportChatListBesideDisposable: Disposable?
     private var supportPendingBesideState: (hidesTabBarItems: Bool, hidesTabBar: Bool, showsListOnly: Bool, narrowListPeerId: EnginePeer.Id?)?
+    private var supportChatListWidth: CGFloat? = (UserDefaults.standard.object(forKey: TelegramRootController.supportChatListWidthKey) as? Double).map { CGFloat($0) }
+    private var supportChatListWidthLayout: ContainerViewLayout?
+    private static let supportChatListWidthKey = "supportChatListColumnWidth"
     
     override public var minimizedContainer: MinimizedContainer? {
         didSet {
@@ -221,6 +224,34 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return nil
         }
         return layout.safeInsets.left + 72.0
+    }
+    
+    private func supportChatListWidthLimits(layout: ContainerViewLayout) -> ClosedRange<CGFloat>? {
+        let maxWidth = min(540.0, layout.size.width - 380.0)
+        guard maxWidth >= 260.0 else {
+            return nil
+        }
+        return 260.0 ... maxWidth
+    }
+    
+    override public func rootContainerResizableMasterWidth(for layout: ContainerViewLayout) -> CGFloat? {
+        guard self.context.supportContext != nil, layout.deviceMetrics.type == .tablet, let limits = self.supportChatListWidthLimits(layout: layout) else {
+            return nil
+        }
+        self.supportChatListWidthLayout = layout
+        let width = self.supportChatListWidth ?? splitMasterWidth(containerSize: layout.size, division: layout.division)
+        return floor(min(max(width, limits.lowerBound), limits.upperBound))
+    }
+    
+    override public func rootContainerMasterWidthDragged(to width: CGFloat, isFinal: Bool) {
+        guard let layout = self.supportChatListWidthLayout, let limits = self.supportChatListWidthLimits(layout: layout) else {
+            return
+        }
+        let width = floor(min(max(width, limits.lowerBound), limits.upperBound))
+        self.supportChatListWidth = width
+        if isFinal {
+            UserDefaults.standard.set(Double(width), forKey: TelegramRootController.supportChatListWidthKey)
+        }
     }
     
     override public func rootContainerMetrics(for layout: ContainerViewLayout) -> LayoutMetrics {
