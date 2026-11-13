@@ -150,10 +150,7 @@ public class UnauthorizedAccount {
                         }
 
                         let user = TelegramUser(user: apiUser)
-                        var isSupportUser = false
-                        if let phone = user.phone, phone.hasPrefix("42"), phone.count <= 5 {
-                            isSupportUser = true
-                        }
+                        let isSupportUser = isSupportAccountPhone(user.phone)
                         let state = AuthorizedAccountState(isTestingEnvironment: testingEnvironment, masterDatacenterId: masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: networkArguments.appVersion, syncContacts: syncContacts)
                         transaction.setState(state)
@@ -384,7 +381,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: phoneNumber, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isSupportUser: isSupportUser))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isSupportUser: resolvedIsSupportUser(storedPhone: phoneNumber, recordAttribute: isSupportUser)))
                                         }
                                     }
                                 case _:
@@ -1235,6 +1232,7 @@ public class Account {
     public let testingEnvironment: Bool
     public let supplementary: Bool
     public let isSupportUser: Bool
+    public let supportContext: SupportContext?
     public let postbox: Postbox
     public let network: Network
     public let networkArguments: NetworkInitializationArguments
@@ -1336,6 +1334,7 @@ public class Account {
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
         self.isSupportUser = isSupportUser
+        self.supportContext = isSupportUser ? SupportContext() : nil
         
         self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         
