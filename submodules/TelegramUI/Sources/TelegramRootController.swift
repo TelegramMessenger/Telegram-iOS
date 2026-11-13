@@ -290,7 +290,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     public func addRootControllers(showCallsTab: Bool, showNewsTab: Bool) {
-        let tabBarController = TabBarControllerImpl(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        let tabBarController = TabBarControllerImpl(theme: self.presentationData.theme, strings: self.presentationData.strings, maxItemLength: self.context.supportContext != nil ? 96.0 : nil)
         tabBarController.navigationPresentation = .master
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, location: .chatList(groupId: .root), controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
@@ -303,7 +303,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         var controllers: [ViewController] = []
         
-        if showCallsTab {
+        if showCallsTab && self.context.supportContext == nil {
             controllers.append(callListController)
         }
         if showNewsTab {
@@ -346,7 +346,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return
         }
         var controllers: [ViewController] = []
-        if showCallsTab {
+        if showCallsTab && self.context.supportContext == nil {
             controllers.append(self.callListController!)
         }
         if showNewsTab, let newsController = self.newsController {

@@ -59,7 +59,7 @@ public struct PeerInfoNavigationButtonSet: Equatable {
 public struct PeerInfoNavigationFlags: Equatable {
     public var isEditing = false
     public var isSettings = false
-    /// A support account, whose Settings have no Edit.
+    /// A support account, whose Settings have no Edit and search from the tab bar.
     public var isSupportSettings = false
     public var isMyProfile = false
     /// `peerInfoCanEdit(...)`.
@@ -92,8 +92,8 @@ public func peerInfoNavigationButtonSets(_ flags: PeerInfoNavigationFlags) -> (n
     }
     if flags.isSettings {
         normal.left.append(.qrCode)
-        normal.right.append(.search)
         if !flags.isSupportSettings {
+            normal.right.append(.search)
             normal.right.append(.edit)
         }
     } else if flags.isMyProfile || flags.canEdit {

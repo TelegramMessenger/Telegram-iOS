@@ -37,14 +37,23 @@ public struct TabBarItemsLayout: Equatable {
 /// those widths. Every other mode gives each item `tabBarItemLength` and the bar hugs its items, except
 /// that a horizontal compact bar hugging them within `tabBarCompactFillThreshold` of `availableLength`
 /// (or beyond it) takes `availableLength`, its items sharing it equally. The widths are unused outside
-/// horizontal regular, and `availableLength` on the vertical axis.
-public func tabBarItemsLayout(axis: TabBarAxis, isCompact: Bool, unboundItemWidths: [CGFloat], availableLength: CGFloat) -> TabBarItemsLayout {
+/// horizontal regular, and `availableLength` on the vertical axis. `maxItemLength` limits what horizontal
+/// regular items share to that length each, so the bar stops short of `availableLength`. `inlineItems`
+/// makes horizontal regular items as thin as compact ones and exactly as long as their unconstrained
+/// widths, for a label beside the icon.
+public func tabBarItemsLayout(axis: TabBarAxis, isCompact: Bool, unboundItemWidths: [CGFloat], availableLength: CGFloat, maxItemLength: CGFloat? = nil, inlineItems: Bool = false) -> TabBarItemsLayout {
     let count = unboundItemWidths.count
-    let thickness = isCompact ? tabBarCompactItemThickness : tabBarItemLength
+    let isInline = inlineItems && axis == .horizontal && !isCompact
+    let thickness = (isCompact || isInline) ? tabBarCompactItemThickness : tabBarItemLength
 
     let lengths: [CGFloat]
-    if axis == .horizontal && !isCompact && count != 0 {
-        let availableItemsLength = availableLength - tabBarInnerInset * 2.0
+    if isInline {
+        lengths = unboundItemWidths.map { ceil($0) }
+    } else if axis == .horizontal && !isCompact && count != 0 {
+        var availableItemsLength = availableLength - tabBarInnerInset * 2.0
+        if let maxItemLength {
+            availableItemsLength = min(availableItemsLength, maxItemLength * CGFloat(count))
+        }
         let equalLength = floorToScreenPixels(availableItemsLength / CGFloat(count))
         if unboundItemWidths.allSatisfy({ $0 <= equalLength }) {
             lengths = Array(repeating: equalLength, count: count)

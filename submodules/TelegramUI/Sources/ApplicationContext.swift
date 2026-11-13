@@ -169,7 +169,7 @@ final class AuthorizedApplicationContext {
         self.context = context
 
         self.showCallsTab = showCallsTab
-        self.showNewsTab = isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 })
+        self.showNewsTab = isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }, isSupportAccount: context.supportContext != nil)
         
         self.notificationController = NotificationContainerController(context: context)
         
@@ -822,9 +822,10 @@ final class AuthorizedApplicationContext {
             }
         })
 
+        let isSupportAccount = context.supportContext != nil
         self.showNewsTabDisposable = (context.appConfiguration
         |> map { appConfiguration -> Bool in
-            return isNewsFeedEnabled(appConfiguration: appConfiguration)
+            return isNewsFeedEnabled(appConfiguration: appConfiguration, isSupportAccount: isSupportAccount)
         }
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] value in

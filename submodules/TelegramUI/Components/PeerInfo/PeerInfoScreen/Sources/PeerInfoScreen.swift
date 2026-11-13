@@ -5161,7 +5161,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     presentationData: self.presentationData,
                     mode: .navigation,
                     placeholder: self.presentationData.strings.Settings_Search,
-                    hasBackground: false,
+                    hasBackground: self.context.supportContext != nil,
+                    hasSeparator: self.context.supportContext != nil,
                     contentNode: SettingsSearchContainerNode(
                         context: self.context,
                         openResult: { [weak self] result in
@@ -5234,7 +5235,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     cancel: { [weak self] in
                         self?.deactivateSearch()
                     },
-                    fieldStyle: .glass
+                    fieldStyle: .glass,
+                    searchBarIsExternal: self.context.supportContext != nil
                 )
             }
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .members = currentPaneKey {
@@ -5359,7 +5361,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, placeholder: nil)
         
         if self.isSettings {
-            (controller.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
+            if self.context.supportContext != nil {
+                controller.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: true), transition: .animated(duration: 0.4, curve: .spring))
+                if let searchBarNode = controller.currentTabBarSearchNode?() as? SearchBarNode {
+                    self.searchDisplayController?.setSearchBar(searchBarNode)
+                    searchBarNode.activate()
+                }
+            } else {
+                (controller.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
+            }
         }
         
         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationBarHeight, transition: .immediate)
@@ -5376,6 +5386,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         if self.isSettings {
             (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
+            if self.context.supportContext != nil {
+                controller.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .animated(duration: 0.4, curve: .spring))
+            }
         }
         
         if let (layout, navigationHeight) = self.validLayout {
@@ -7053,6 +7066,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             }
             self._readyProxy.set(.single(true))
         })
+        
+        if isSettings && context.supportContext != nil {
+            self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .immediate)
+        }
         
         if let sourceMessageId {
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
