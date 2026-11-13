@@ -74,6 +74,40 @@ func supportApplyReadOnSend(transaction: Transaction, network: Network, stateMan
     }
 }
 
+// The id the unread divider goes above the next incoming message after. It is known before that message
+// arrives, so the two land in one list update and slide in together. A chat that keeps no read state never gets one.
+func supportUnreadDividerBoundary(state: CombinedPeerReadState?, topMessageId: Int32?) -> Int32? {
+    guard let state else {
+        return nil
+    }
+    for (namespace, value) in state.states where namespace == Namespaces.Message.Cloud {
+        guard case let .idBased(maxIncomingReadId, _, maxKnownId, _, _) = value else {
+            continue
+        }
+        if value.isUnread {
+            return maxIncomingReadId
+        }
+        if maxKnownId >= Int32.max - 1 {
+            return Int32.max
+        }
+        return max(maxIncomingReadId, topMessageId ?? 0)
+    }
+    return nil
+}
+
+func _internal_supportUnreadDividerBoundary(account: Account, peerId: PeerId) -> Signal<Int32?, NoError> {
+    let key = PostboxViewKey.combinedReadState(peerId: peerId, handleThreads: true)
+    let postbox = account.postbox
+    return postbox.combinedView(keys: [key])
+    |> mapToSignal { views -> Signal<Int32?, NoError> in
+        let state = (views.views[key] as? CombinedReadStateView)?.state
+        return postbox.transaction { transaction -> Int32? in
+            return supportUnreadDividerBoundary(state: state, topMessageId: transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud)?.id.id)
+        }
+    }
+    |> distinctUntilChanged
+}
+
 // TDesktop's History::clearUnreadOnClientSide: a deleted user's chat keeps no unread state on a support account.
 func supportClearsUnread(isSupportAccount: Bool, peer: Peer?) -> Bool {
     return isSupportAccount && (peer?.isDeleted ?? false)

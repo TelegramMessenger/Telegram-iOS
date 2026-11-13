@@ -17351,6 +17351,8 @@ Error: %8$@";
 "Support.Switching.JustSend" = "Just send the reply";
 "Support.Switching.Next" = "Send and switch to next";
 "Support.Switching.Previous" = "Send and switch to previous";
+"Support.Switching.SendWithoutSwitching" = "Send without switching";
+"Support.Switching.NoUnreadChats" = "No more unread chats";
 
 "Support.ChatLoading.Header" = "LOAD CHATS FOR A PERIOD";
 "Support.ChatLoading.All" = "All of them";
@@ -17379,3 +17381,5 @@ Error: %8$@";
 "Support.Mode.LostTitle" = "Support Mode Lost";
 "Support.Mode.LostText" = "This account should have support mode, but it seems it was lost. Restart?";
 "Support.Mode.LostRestart" = "Restart";
+
+"Support.DoneNext.VoiceOver" = "Done, next chat";

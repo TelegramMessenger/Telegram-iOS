@@ -142,6 +142,28 @@ final class SupportChatSwitchTests: XCTestCase {
         XCTAssertNil(self.folderTarget(peer: 2, current: nil, downward: true, groups: [self.group(rows)], isTarget: self.unread(1)))
     }
 
+    func testDoneOpensTheTargetWhenThereIsOne() {
+        let target = EnginePeer(TelegramUser(id: self.peerId(1), accessHash: nil, firstName: "A", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil))
+        guard case let .switchTo(peer) = supportDoneResult(behavior: .next, target: target) else {
+            XCTFail("expected a switch")
+            return
+        }
+        XCTAssertEqual(peer.id, self.peerId(1))
+    }
+
+    func testDoneWithNoTargetTellsNoneIsLeftOnlyWhenSwitchingIsOn() {
+        for behavior in [SupportSwitchBehavior.next, .previous] {
+            guard case .noUnreadChatLeft = supportDoneResult(behavior: behavior, target: nil) else {
+                XCTFail("expected none left for \(behavior)")
+                return
+            }
+        }
+        guard case .stay = supportDoneResult(behavior: .none, target: nil) else {
+            XCTFail("expected stay")
+            return
+        }
+    }
+
     func testDeferredSendsAreRecognised() {
         XCTAssertTrue(supportSendIsDeferred(attributes: [OutgoingScheduleInfoMessageAttribute(scheduleTime: 100, repeatPeriod: nil)]))
         XCTAssertFalse(supportSendIsDeferred(attributes: []))

@@ -995,6 +995,22 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
+        if self.context.supportContext != nil {
+            self.chatDisplayNode.textInputPanelNode?.supportDoneAction = { [weak self] in
+                self?.supportDone()
+            }
+            self.chatDisplayNode.textInputPanelNode?.supportDoneIsAvailable = { [weak self] in
+                return self?.supportOccupationPeerId != nil
+            }
+            if let peerId = self.supportOccupationPeerId {
+                self.supportDoneUnreadDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
+                |> map { $0.isUnread }
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).startStrict(next: { [weak self] isUnread in
+                    self?.chatDisplayNode.textInputPanelNode?.supportDoneChatIsUnread = isUnread
+                }))
+            }
+        }
         self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone, handleSupportSwitch in
             guard let strongSelf = self else {
                 return

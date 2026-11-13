@@ -4,6 +4,7 @@ import TelegramCore
 import AccountContext
 import ChatListUI
 import ChatAvatarNavigationNode
+import UndoUI
 
 func supportMessagesShareContact(_ messages: [EnqueueMessage]) -> Bool {
     return messages.contains(where: { message in
@@ -44,9 +45,38 @@ extension ChatControllerImpl {
             avatarSnapshotState: (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.prepareSnapshotState()
         )
         self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), activateInput: keepsKeyboard ? .text : nil, animated: false, chatListFilter: self.currentChatListFilter, completion: { nextController in
-            (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
+            let nextController = nextController as! ChatControllerImpl
+            // A second tap of a double tap would read this chat before it is seen.
+            nextController.supportDoneIgnoredUntil = CFAbsoluteTimeGetCurrent() + 0.5
+            nextController.animateFromPreviousController(snapshotState: snapshotState)
         }))
         return true
+    }
+
+    func supportDone() {
+        guard self.context.supportContext != nil, let peerId = self.supportOccupationPeerId, CFAbsoluteTimeGetCurrent() >= self.supportDoneIgnoredUntil else {
+            return
+        }
+        let accountPeerId = self.context.account.peerId
+        let _ = (self.context.engine.messages.supportMarkDone(peerId: peerId, chatListFilterId: self.currentChatListFilter, getFilterPredicate: { data in
+            return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+        })
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+            guard let self else {
+                return
+            }
+            switch result {
+            case let .switchTo(peer):
+                if self.supportSwitch(to: peer) {
+                    return
+                }
+            case .noUnreadChatLeft:
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Support_Switching_NoUnreadChats, timeout: nil, customUndoText: nil), action: { _ in return false }), in: .window(.root))
+            case .stay:
+                break
+            }
+            self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+        })
     }
 
     func supportSwitchPreload(peerId: EnginePeer.Id) -> Disposable {

@@ -199,6 +199,15 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     public var switchMode: () -> Void = { }
     public var updateLocked: (Bool) -> Void = { _ in }
     public var updateCancelTranslation: () -> Void = { }
+    public var doneAction: (() -> Void)? {
+        didSet {
+            if (oldValue == nil) != (self.doneAction == nil) {
+                self.updateDoneIcon()
+            }
+        }
+    }
+    private var doneIconView: UIImageView?
+    private var doneIconSkipsNextAnimation = false
     
     private var modeTimeoutTimer: SwiftSignalKit.Timer?
     
@@ -486,6 +495,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.theme = theme
         
         self.updateAnimation(previousMode: self.mode)
+        self.doneIconView?.tintColor = theme.chat.inputPanel.panelControlColor
         
         self.pallete = legacyInputMicPalette(from: theme)
         let decorationTheme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
@@ -514,16 +524,80 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.isEnabled = true
     }
     
+    private func updateDoneIcon() {
+        let showsDone = self.doneAction != nil
+        if showsDone && self.doneIconView == nil {
+            let doneIconView = UIImageView(image: UIImage(bundleImageName: "Chat/Context Menu/Read")?.withRenderingMode(.alwaysTemplate))
+            doneIconView.tintColor = self.theme.chat.inputPanel.panelControlColor
+            doneIconView.contentMode = .center
+            doneIconView.isUserInteractionEnabled = false
+            doneIconView.frame = self.bounds
+            self.insertSubview(doneIconView, at: 0)
+            self.doneIconView = doneIconView
+        }
+        let animated = self.window != nil && !self.doneIconSkipsNextAnimation
+        self.doneIconSkipsNextAnimation = false
+        if let doneIconView = self.doneIconView {
+            self.updateIconVisibility(view: doneIconView, isVisible: showsDone, blurs: true, animated: animated)
+        }
+        if let view = self.animationView.view {
+            self.updateIconVisibility(view: view, isVisible: !showsDone, blurs: true, animated: animated)
+        }
+        if let animationOutput = self.animationOutput {
+            self.updateIconVisibility(view: animationOutput, isVisible: !showsDone, blurs: false, animated: animated)
+        }
+    }
+    
+    private func updateIconVisibility(view: UIView, isVisible: Bool, blurs: Bool, animated: Bool) {
+        let layer = view.layer
+        layer.removeAnimation(forKey: "opacity")
+        layer.removeAnimation(forKey: "transform.scale")
+        let blurRadius: CGFloat = 4.0
+        if !animated {
+            view.isHidden = !isVisible
+            if blurs {
+                ComponentTransition.immediate.setBlur(layer: layer, radius: 0.0)
+            }
+        } else if isVisible {
+            view.isHidden = false
+            if blurs {
+                ComponentTransition.immediate.setBlur(layer: layer, radius: blurRadius)
+                ComponentTransition.easeInOut(duration: 0.2).setBlur(layer: layer, radius: 0.0)
+            }
+            layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            layer.animateSpring(from: 0.4 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+        } else {
+            if blurs {
+                ComponentTransition.easeInOut(duration: 0.2).setBlur(layer: layer, radius: blurRadius)
+            }
+            layer.animateScale(from: 1.0, to: 0.4, duration: 0.2, removeOnCompletion: false)
+            layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] finished in
+                guard finished, let view else {
+                    return
+                }
+                view.isHidden = true
+                view.layer.removeAnimation(forKey: "opacity")
+                view.layer.removeAnimation(forKey: "transform.scale")
+            })
+        }
+    }
+    
     public func micButtonInteractionBegan() {
-        if self.fadeDisabled {
+        if self.fadeDisabled && self.doneAction == nil {
             self.recordingDisabled()
         } else {
             //print("\(CFAbsoluteTimeGetCurrent()) began")
             self.modeTimeoutTimer?.invalidate()
-            let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: 0.19, repeat: false, completion: { [weak self] in
+            let startedWithDoneAction = self.doneAction != nil
+            let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: startedWithDoneAction ? 0.35 : 0.19, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.modeTimeoutTimer = nil
-                    strongSelf.beginRecording()
+                    if startedWithDoneAction && strongSelf.fadeDisabled {
+                        strongSelf.recordingDisabled()
+                    } else {
+                        strongSelf.doneIconSkipsNextAnimation = strongSelf.doneAction != nil
+                        strongSelf.beginRecording()
+                    }
                 }
             }, queue: Queue.mainQueue())
             self.modeTimeoutTimer = modeTimeoutTimer
@@ -543,7 +617,11 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             //print("\(CFAbsoluteTimeGetCurrent()) switch")
             modeTimeoutTimer.invalidate()
             self.modeTimeoutTimer = nil
-            self.switchMode()
+            if let doneAction = self.doneAction {
+                doneAction()
+            } else {
+                self.switchMode()
+            }
         }
         self.endRecording(true)
     }
@@ -708,6 +786,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     private var previousSize = CGSize()
     public func layoutItems() {
         let size = self.bounds.size
+        self.doneIconView?.frame = CGRect(origin: CGPoint(), size: size)
         if size != self.previousSize {
             self.previousSize = size
             if let view = self.animationView.view {
