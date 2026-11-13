@@ -29,7 +29,7 @@ struct QrLoginContent: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Log in to Telegram by QR Code")
+            Text(L("Watch.Login.Title"))
                 .font(.headline)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -61,11 +61,11 @@ struct QrLoginContent: View {
 
     private var instructionSteps: some View {
         VStack(spacing: 4) {
-            Text("Settings on your Phone")
+            Text(L("Watch.Login.StepSettings"))
             Image(systemName: "chevron.down").font(.caption)
-            Text("Devices")
+            Text(L("Settings.Devices"))
             Image(systemName: "chevron.down").font(.caption)
-            Text("Scan QR")
+            Text(L("Settings.AddDevice"))
         }
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
@@ -83,7 +83,7 @@ struct QrLoginContent: View {
                     .accessibilityIdentifier("qrImage")
                     .id(link)
             } else {
-                Text("Could not render QR code")
+                Text(L("Watch.Login.QrRenderError"))
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, minHeight: 120)

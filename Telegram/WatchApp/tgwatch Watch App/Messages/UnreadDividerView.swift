@@ -4,7 +4,7 @@ struct UnreadDividerView: View {
     var body: some View {
         HStack(spacing: 0) {
             Rectangle().fill(Color.gray.opacity(0.35)).frame(height: 0.5)
-            Text("Unread")
+            Text(L("Watch.Conversation.Unread"))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)

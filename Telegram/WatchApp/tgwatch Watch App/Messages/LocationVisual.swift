@@ -63,11 +63,19 @@ func locationVisual(for content: MessageContent, messageDate: Foundation.Date? =
 /// deterministically unit-testable; the view feeds it a ticking `now`.
 func liveUpdatedCaption(updatedAt: Foundation.Date, now: Foundation.Date) -> String {
     let elapsed = max(0, now.timeIntervalSince(updatedAt))
-    if elapsed < 60 { return "Updated just now" }
+    let caption: String
     let minutes = Int(elapsed / 60)
-    if minutes < 60 { return "Updated \(minutes) minute\(minutes == 1 ? "" : "s") ago" }
     let hours = minutes / 60
-    if hours < 24 { return "Updated \(hours) hour\(hours == 1 ? "" : "s") ago" }
-    let days = hours / 24
-    return "Updated \(days) day\(days == 1 ? "" : "s") ago"
+    if elapsed < 60 {
+        caption = L("LiveLocationUpdated.JustNow")
+    } else if minutes < 60 {
+        caption = LPlural("LiveLocationUpdated.MinutesAgo", minutes)
+    } else if hours < 24 {
+        caption = LPlural("Watch.Location.UpdatedHoursAgo", hours)
+    } else {
+        caption = LPlural("Watch.Location.UpdatedDaysAgo", hours / 24)
+    }
+    // The language pack strings are lowercase ("updated …") for inline use;
+    // the bubble shows the caption on its own line, so capitalize it.
+    return caption.prefix(1).uppercased(with: AppStrings.shared.locale) + caption.dropFirst()
 }

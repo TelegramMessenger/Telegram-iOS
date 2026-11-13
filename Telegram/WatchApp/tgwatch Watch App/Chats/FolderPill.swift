@@ -7,7 +7,7 @@ import TDShim
 /// is summed across all chats whose `positions` include `chatList`.
 struct FolderPill: Identifiable, Equatable, Hashable {
     static let allChatsId: Int = -1
-    static let allChatsName = "All"
+    static var allChatsName: String { L("ChatList.Tabs.All") }
 
     let id: Int
     let chatList: ChatList

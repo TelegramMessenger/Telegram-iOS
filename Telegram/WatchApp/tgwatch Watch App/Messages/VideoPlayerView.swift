@@ -118,7 +118,7 @@ struct VideoPlayerView: View {
                     .font(.caption2)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                Button("Retry") {
+                Button(L("Watch.Common.Retry")) {
                     phase = .preparing(progress: 0)
                     store.requestFileDownload(fileId: video.videoFileId, priority: 2)
                     // If the file is already complete on disk, no further updateFile
@@ -214,7 +214,7 @@ struct VideoPlayerView: View {
             .receive(on: DispatchQueue.main)
             .sink { status in
                 if status == .failed {
-                    phase = .failed("Could not play video")
+                    phase = .failed(L("Watch.Video.PlaybackFailed"))
                 } else if status == .readyToPlay {
                     let audioTracks = p.currentItem?.tracks.filter { $0.assetTrack?.mediaType == .audio } ?? []
                     logger.info("ready: audioTracks=\(audioTracks.count, privacy: .public) sessionCategory=\(AVAudioSession.sharedInstance().category.rawValue, privacy: .public)")

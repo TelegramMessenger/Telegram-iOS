@@ -52,14 +52,14 @@ struct LocationSendView: View {
             }
             .padding()
         }
-        .navigationTitle("Location")
+        .navigationTitle(L("Map.ChooseLocationTitle"))
         .task { await controller.start() }
     }
 
     private var locating: some View {
         VStack(spacing: 8) {
             ProgressView()
-            Text("Locating…").font(.caption).foregroundStyle(.secondary)
+            Text(L("Watch.Location.Locating")).font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -70,7 +70,7 @@ struct LocationSendView: View {
                 Text(sendError).font(.caption2).foregroundStyle(.red)
             }
             Button { send(latitude: latitude, longitude: longitude) } label: {
-                if sending { ProgressView() } else { Label("Send", systemImage: "paperplane.fill") }
+                if sending { ProgressView() } else { Label(L("Watch.Compose.Send"), systemImage: "paperplane.fill") }
             }
             .buttonStyle(.borderedProminent)
             .disabled(sending)
@@ -81,7 +81,7 @@ struct LocationSendView: View {
     private var denied: some View {
         VStack(spacing: 8) {
             Image(systemName: "location.slash").font(.system(size: 32)).foregroundStyle(.secondary)
-            Text("Location access is off. Enable it in Settings.")
+            Text(L("Watch.Location.AccessDenied"))
                 .font(.caption).multilineTextAlignment(.center)
         }
     }
@@ -89,7 +89,7 @@ struct LocationSendView: View {
     private func failed(_ reason: String) -> some View {
         VStack(spacing: 10) {
             Text(reason).font(.caption).foregroundStyle(.red).multilineTextAlignment(.center)
-            Button("Retry") { Task { await controller.retry() } }
+            Button(L("Watch.Common.Retry")) { Task { await controller.retry() } }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("locationRetry")
         }
@@ -103,7 +103,7 @@ struct LocationSendView: View {
             if await onSend(latitude, longitude) {
                 onComplete()
             } else {
-                sendError = "Couldn't send. Try again."
+                sendError = L("Watch.Compose.SendFailed")
                 sending = false
             }
         }

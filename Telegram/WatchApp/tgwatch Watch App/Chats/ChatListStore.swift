@@ -73,6 +73,9 @@ final class ChatListStore {
         self.selfUserId = selfUserId
         self.userNames = userNames ?? UserNamesStore()
         self.coalesceUpdates = coalesceUpdates
+        // Rows hold formatted strings; rebuild them when the language pack
+        // changes so server-side string updates show up live.
+        AppStrings.shared.observeChanges(self) { $0.reproject() }
         let mainList: ChatList = .chatListMain
         loadTasks[.main] = Task { [weak self] in
             await self?.loadOnePage(for: mainList)

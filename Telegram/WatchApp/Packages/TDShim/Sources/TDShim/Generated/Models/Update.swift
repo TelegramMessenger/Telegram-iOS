@@ -82,6 +82,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
     /// A poll was updated; for bots only
     case updatePoll(UpdatePoll)
 
+    /// Some language pack strings have been updated
+    case updateLanguagePackStrings(UpdateLanguagePackStrings)
+
     /// Decoded when the @type is not one of the known cases (forward-compatible).
     case unsupported
 
@@ -109,6 +112,7 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case updateUser
         case updateFile
         case updatePoll
+        case updateLanguagePackStrings
     }
 
     public init(from decoder: Decoder) throws {
@@ -188,6 +192,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
         case .updatePoll:
             let value = try UpdatePoll(from: decoder)
             self = .updatePoll(value)
+        case .updateLanguagePackStrings:
+            let value = try UpdateLanguagePackStrings(from: decoder)
+            self = .updateLanguagePackStrings(value)
         }
     }
 
@@ -262,6 +269,9 @@ public indirect enum Update: Codable, Equatable, Hashable {
             try value.encode(to: encoder)
         case .updatePoll(let value):
             try container.encode(Kind.updatePoll, forKey: .type)
+            try value.encode(to: encoder)
+        case .updateLanguagePackStrings(let value):
+            try container.encode(Kind.updateLanguagePackStrings, forKey: .type)
             try value.encode(to: encoder)
         case .unsupported:
             try container.encode("unsupported", forKey: .type)
@@ -701,6 +711,30 @@ public struct UpdatePoll: Codable, Equatable, Hashable {
 
     public init(poll: Poll) {
         self.poll = poll
+    }
+}
+
+/// Some language pack strings have been updated
+public struct UpdateLanguagePackStrings: Codable, Equatable, Hashable {
+
+    /// Identifier of the updated language pack
+    public let languagePackId: String
+
+    /// Localization target to which the language pack belongs
+    public let localizationTarget: String
+
+    /// List of changed language pack strings; empty if all strings have changed
+    public let strings: [LanguagePackString]
+
+
+    public init(
+        languagePackId: String,
+        localizationTarget: String,
+        strings: [LanguagePackString]
+    ) {
+        self.languagePackId = languagePackId
+        self.localizationTarget = localizationTarget
+        self.strings = strings
     }
 }
 

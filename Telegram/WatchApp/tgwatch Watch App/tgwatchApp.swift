@@ -36,18 +36,22 @@ struct TgwatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if let client = manager.activeClient {
-                ContentView()
-                    .environment(client)
-                    .environment(manager)
-                    .id(manager.activeAccountId)
-            } else if !isUnderXCTest {
-                // Under XCTest the scene is not test-driven; suppress
-                // AccountBootstrapView so its .task doesn't call
-                // ensureAccountExists() → factory.make() via NoopTDClientFactory.
-                AccountBootstrapView()
-                    .environment(manager)
+            Group {
+                if let client = manager.activeClient {
+                    ContentView()
+                        .environment(client)
+                        .environment(manager)
+                        .id(manager.activeAccountId)
+                } else if !isUnderXCTest {
+                    // Under XCTest the scene is not test-driven; suppress
+                    // AccountBootstrapView so its .task doesn't call
+                    // ensureAccountExists() → factory.make() via NoopTDClientFactory.
+                    AccountBootstrapView()
+                        .environment(manager)
+                }
             }
+            // Dates and numbers formatted by SwiftUI follow the language pack.
+            .environment(\.locale, AppStrings.shared.locale)
         }
     }
 
