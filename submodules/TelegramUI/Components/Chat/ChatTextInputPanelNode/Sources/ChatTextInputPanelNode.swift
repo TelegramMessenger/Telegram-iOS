@@ -5693,6 +5693,14 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     }
     
     public func supportInsertTemplateValue(_ value: String, replacing range: NSRange?) {
+        if value.isEmpty {
+            // The engine editor's insert ignores empty text, which would leave the key in place.
+            if let range, let richTextInputNode = self.richTextInputNode {
+                richTextInputNode.selectedRange = range
+                richTextInputNode.deleteBackward()
+            }
+            return
+        }
         let text = NSAttributedString(string: value)
         if let richTextInputNode = self.richTextInputNode {
             if let range {

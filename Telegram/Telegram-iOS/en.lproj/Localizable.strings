@@ -17485,3 +17485,7 @@ Error: %8$@";
 "Support.Mode.LostRestart" = "Restart";
 
 "Support.DoneNext.VoiceOver" = "Done, next chat";
+
+"Support.ContactTemplates.Malformed" = "This contact template is malformed";
+"Support.ContactTemplates.FinishEditing" = "Finish editing before sending a contact template";
+"Support.ContactTemplates.ConfirmTitle" = "Confirmation";

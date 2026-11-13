@@ -387,6 +387,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatContextResultPeekContent",
         "//submodules/TelegramUI/Components/Chat/ChatInputContextPanelNode",
         "//submodules/TelegramUI/Components/Support/SupportTemplates",
+        "//submodules/TelegramUI/Components/Support/SupportContactConfirmScreen",
         "//submodules/TelegramUI/Components/Chat/ReplyAccessoryPanelNode",
         "//submodules/TelegramUI/Components/Chat/SuggestPostAccessoryPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageCallBubbleContentNode",

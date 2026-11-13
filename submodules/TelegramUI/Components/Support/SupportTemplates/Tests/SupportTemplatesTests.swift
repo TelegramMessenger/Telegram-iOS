@@ -274,6 +274,75 @@ final class SupportTemplatesExpansionTests: XCTestCase {
         XCTAssertFalse(supportTemplateValueIsContact("Contact: the agent"))
         XCTAssertFalse(supportTemplateValueIsContact("see contact:"))
     }
+
+    private func contact(_ value: String) -> SupportTemplateContact? {
+        return SupportTemplateContact(value: value)
+    }
+
+    func testContactWithFirstNameOnlyAndNoComment() {
+        let result = contact("contact:+100 Sample")
+        XCTAssertEqual(result?.phone, "+100")
+        XCTAssertEqual(result?.firstName, "Sample")
+        XCTAssertEqual(result?.lastName, "")
+        XCTAssertEqual(result?.comment, "")
+    }
+
+    func testContactLastNameJoinsTheRestWithSingleSpaces() {
+        let result = contact("contact:+100  Sample   Name  Two ")
+        XCTAssertEqual(result?.phone, "+100")
+        XCTAssertEqual(result?.firstName, "Sample")
+        XCTAssertEqual(result?.lastName, "Name Two")
+    }
+
+    func testContactCommentIsEverythingAfterTheFirstLineUntrimmed() {
+        let result = contact("contact:+100 Sample Name\nFirst line\n\n Second ")
+        XCTAssertEqual(result?.lastName, "Name")
+        XCTAssertEqual(result?.comment, "First line\n\n Second ")
+    }
+
+    func testMalformedContactIsNil() {
+        XCTAssertNil(contact("contact:"))
+        XCTAssertNil(contact("contact:+100"))
+        XCTAssertNil(contact("contact:+100 \nSample Name"))
+        XCTAssertNil(contact("contact:\n+100 Sample"))
+        XCTAssertNil(contact("Contact:+100 Sample"))
+        XCTAssertNil(contact("plain answer"))
+    }
+
+    func testContactSplitsOnSpacesOnly() {
+        XCTAssertNil(contact("contact:+100\tSample"))
+    }
+
+    func testContactKeepsNonAsciiNamesAndComment() {
+        let result = contact("contact:+100 نمونه 😀\nسلام")
+        XCTAssertEqual(result?.firstName, "نمونه")
+        XCTAssertEqual(result?.lastName, "😀")
+        XCTAssertEqual(result?.comment, "سلام")
+    }
+
+    func testTextToSendInsertsAtTheCaretAndReplacesASelection() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "", selection: NSRange(location: 0, length: 0), replacing: nil), "answer")
+        XCTAssertEqual(result?.textToSend(composerText: "hi  there", selection: NSRange(location: 3, length: 0), replacing: nil), "hi answer there")
+        XCTAssertEqual(result?.textToSend(composerText: "hi bad", selection: NSRange(location: 3, length: 3), replacing: nil), "hi answer")
+    }
+
+    func testTextToSendReplacesAKeyAndUsesUtf16Positions() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "😀 pay", selection: NSRange(location: 6, length: 0), replacing: NSRange(location: 3, length: 3)), "😀 answer")
+    }
+
+    func testTextToSendWithoutACommentIsWhatTheComposerKeeps() {
+        let result = contact("contact:+100 Sample")
+        XCTAssertEqual(result?.textToSend(composerText: "pay", selection: NSRange(location: 3, length: 0), replacing: NSRange(location: 0, length: 3)), "")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: 4, length: 0), replacing: nil), "kept")
+    }
+
+    func testTextToSendIgnoresAnOutOfRangeSelection() {
+        let result = contact("contact:+100 Sample\nanswer")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: NSNotFound, length: 0), replacing: nil), "kept")
+        XCTAssertEqual(result?.textToSend(composerText: "kept", selection: NSRange(location: 9, length: 0), replacing: nil), "kept")
+    }
 }
 
 final class SupportHashtagStripTests: XCTestCase {
