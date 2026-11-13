@@ -5,6 +5,7 @@ import AccountContext
 import ChatListUI
 import ChatAvatarNavigationNode
 import UndoUI
+import NavigationBarNode
 
 func supportMessagesShareContact(_ messages: [EnqueueMessage]) -> Bool {
     return messages.contains(where: { message in
@@ -16,6 +17,13 @@ func supportMessagesShareContact(_ messages: [EnqueueMessage]) -> Bool {
 }
 
 extension ChatControllerImpl {
+    func supportConfigureNavigationBar() {
+        guard self.context.supportContext != nil else {
+            return
+        }
+        (self.navigationBar as? NavigationBarNode)?.badgeChangesInPlace = true
+    }
+
     // Subscribe before the enqueue: the send moves this chat to the top of the list, and transactions run in order.
     func supportSwitchTargetBeforeSend(isRequested: Bool, messages: [EnqueueMessage], postpone: Bool) -> Signal<EnginePeer?, NoError> {
         guard isRequested, !postpone, self.context.supportContext != nil, let peerId = self.supportOccupationPeerId else {

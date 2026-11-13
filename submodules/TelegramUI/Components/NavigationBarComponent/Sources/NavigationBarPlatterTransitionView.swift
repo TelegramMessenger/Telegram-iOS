@@ -1257,12 +1257,12 @@ public final class NavigationBarPlatterTransitionView: UIView {
 }
 
 /// What a capsule shows, to tell a change of its items, from where the bar places its buttons: the back button (with
-/// its badge) and the row's left button for the leading capsule, the row's right buttons for the trailing one; nil when
+/// its badge, unless the content changes the badge in place) and the row's left button for the leading capsule, the row's right buttons for the trailing one; nil when
 /// the bar has no such capsule. A column slot is signed by the shape that takes it (`navigationBarColumnShapeSignature`).
 private func navigationBarCapsuleSignature(_ content: NavigationBarComponent.Content, role: NavigationBarPlatterTransitionView.Role, columnLength: CGFloat?, hidesColumnButtons: Bool) -> [AnyHashable]? {
     let placement = navigationBarButtonPlacement(leftButton: content.leftButton, rightButtons: content.rightButtons, hasBack: content.back != nil, columnLength: columnLength)
     let backInColumn = content.back != nil && placement.columnLayout?.backFrame != nil
-    let backSignature: AnyHashable? = content.back.map { AnyHashable("\($0)-\(content.badge ?? "")") }
+    let backSignature: AnyHashable? = content.back.map { content.badgeChangesInPlace ? AnyHashable("\($0)") : AnyHashable("\($0)-\(content.badge ?? "")") }
     switch role {
     case .leading:
         var signature: [AnyHashable] = []
