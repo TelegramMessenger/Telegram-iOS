@@ -1534,7 +1534,7 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
 /// 2026-10-24): the fill moves no pts while updates keep being applied around it, so a message that arrived while
 /// the page was in flight would never be delivered again if the fill deleted it. Only the account reset deletes a
 /// ghost tail.
-func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId, hole: ChatListHole, staleRestarts: Int = 0) -> Signal<Never, NoError> {
+func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, supportContext: SupportContext? = nil, groupId: PeerGroupId, hole: ChatListHole, staleRestarts: Int = 0) -> Signal<Never, NoError> {
     let location: FetchChatListLocation
     switch groupId {
         case .root:
@@ -1566,7 +1566,10 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                 return false
             }
             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: fetchedChats.peers.union(with: additionalPeers))
-            _internal_applyFetchedChatInputStates(transaction: transaction, accountPeerId: accountPeerId, inputStates: fetchedChats.inputStates)
+            let supportReceivedDrafts = _internal_applyFetchedChatInputStates(transaction: transaction, accountPeerId: accountPeerId, inputStates: fetchedChats.inputStates)
+            if let supportContext, !supportReceivedDrafts.isEmpty {
+                supportContext.addReceivedDrafts(supportReceivedDrafts)
+            }
 
             for (threadMessageId, data) in fetchedChats.threadInfos {
                 if let entry = StoredMessageHistoryThreadInfo(data.data) {
@@ -1690,7 +1693,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             let restarts = staleRestarts + 1
             let restartDelay = FetchedAnswerAge.staleRestartDelay(restarts)
             Logger.shared.log("State", "chat list hole fill: restart \(restarts) in a row after answers too old to store, waiting \(restartDelay) s first")
-            let restart = fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: groupId, hole: hole, staleRestarts: restarts)
+            let restart = fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, supportContext: supportContext, groupId: groupId, hole: hole, staleRestarts: restarts)
             if restartDelay > 0.0 {
                 // Inside this fill's subscription, so whoever holds it (the chat-list hole manager) still cancels the
                 // wait.

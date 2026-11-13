@@ -6597,6 +6597,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let reactionSourceMessageId: EngineMessage.Id?
     private let sourceMessageId: EngineMessage.Id?
     private let callMessages: [EngineMessage]
+    private let supportOccupationDisposable = MetaDisposable()
     let isSettings: Bool
     let isMyProfile: Bool
     /// Opened from the chat side list, which already lists Saved Messages' chats.
@@ -7059,6 +7060,26 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.presentationDataDisposable?.dispose()
         self.accountsAndPeersDisposable?.dispose()
         self.tabBarItemDisposable?.dispose()
+        self.supportOccupationDisposable.dispose()
+    }
+    
+    // A support agent reading the profile of the chat beneath it still holds that chat.
+    private func updateSupportOccupation(isVisible: Bool) {
+        guard isVisible, let supportContext = self.context.supportContext, let viewControllers = self.navigationController?.viewControllers, let index = viewControllers.firstIndex(where: { $0 === self }), index > 0, let chatController = viewControllers[index - 1] as? ChatController, case let .peer(chatPeerId) = chatController.chatLocation, chatPeerId == self.peerId else {
+            self.supportOccupationDisposable.set(nil)
+            return
+        }
+        let peerId = self.peerId
+        self.supportOccupationDisposable.set((self.context.sharedContext.applicationBindings.applicationInForeground
+        |> distinctUntilChanged
+        |> mapToSignal { inForeground -> Signal<Never, NoError> in
+            if !inForeground {
+                return .complete()
+            }
+            return Signal { _ in
+                return supportContext.openChat(peerId: peerId)
+            }
+        }).start())
     }
     
     override public func loadDisplayNode() {
@@ -7136,6 +7157,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
+        self.updateSupportOccupation(isVisible: false)
         self.controllerNode.logoutConfirmationDisposable.set(nil)
         
         self.dismissAllTooltips()
@@ -7299,6 +7321,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.updateSupportOccupation(isVisible: true)
         DispatchQueue.main.async { [weak self] in
             self?.didAppear = true
         }

@@ -335,7 +335,7 @@ the latter. `replayFinalState` runs, in order:
    batch changes that channel's membership after the operation; only forum-topic counting reads it); keeps only
    incoming and was-scheduled ids that `filterStoredMessageIds` says are not stored yet; then
    `applyWalletTransferMessageIds`.
-3. `ReplayContext` (a `final class`, 61 stored properties: inputs, prepass values, accumulators). A class because
+3. `ReplayContext` (a `final class`, 62 stored properties: inputs, prepass values, accumulators). A class because
    `applyDeleteMessages` passes `_internal_deleteMessages` an optional, hence escaping, thread-stats callback that
    writes an accumulator through `self`.
 4. `batchContentAndDeferStateOperations`: adjacent `.AddMessages` at one location merge; scheduled and quick-reply adds
@@ -350,7 +350,12 @@ the latter. `replayFinalState` runs, in order:
    (`readStateOperationTargetsDeletedUser`, `SupportReadStateTests`);
    `.UpdateAttachMenuBots` and `.UpdateWalletTonConnectEvent` do nothing; the four state labels are unreachable; the
    other 83 call one family method: Messages 19, Settings 11, Payments 9, ReadStates 8, Calls 7, Peers 7, ChatList 6,
-   Threads 6, Stories 4, SecretChats 3, Typing 3.
+   Threads 6, Stories 4, SecretChats 3, Typing 3. Two differ on a support account. `applyUpdateChatInputState` stores
+   no main-thread draft, which belongs to the support occupation there (`supportKeepsDraftLocal`); for a chat
+   `supportTracksOccupation` tracks it adds a `SupportReceivedDraft` to the `supportReceivedDrafts` event instead
+   (`SupportDraftsTests`, `SupportOccupationTests`). `applyMergeApiUsers` sets `isPremiumUpdated` by comparing the
+   stored account user with the merged one as `updatePeers` stores it, through `supportUserWithPremiumFromStatus`
+   (Premium when the stored premium promo status names an expiry date; `SupportPremiumFlagTests`).
 6. `applyStateAdvance`, after all content: the account state (`applyUpdateState` force-casts the stored state and keeps
    the stored date under `keepsStoredDate`), then every channel pts, every `invalidatedPts`, every
    `synchronizedUntilMessageId`. Channel writes create a missing `ChannelState` (pts 0 for the last two) and overwrite
@@ -395,7 +400,7 @@ skipped, then `messages.receivedQueue(maxQts:)`, errors swallowed (`testAppliedQ
 
 ### Events
 
-`AccountFinalStateEvents` has 36 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 29
+`AccountFinalStateEvents` has 37 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 30
 from `AccountReplayedFinalState` and 7 from the mutable state. `union(with:)` treats `other` as the later replay: lists
 append, sets unite, flags OR, current-state values (balances, wallet, agent settings and auction state, web pages, typing) take the
 later value, read maxima, `updatedMaxMessageId`, `updatedQts`, `delayNotificatonsUntil` the maximum
@@ -403,7 +408,7 @@ later value, read maxima, `updatedMaxMessageId`, `updatedQts`, `delayNotificaton
 and `updatedMaxMessageId` stay as its terms (`testOwnPresenceOnlyBatchStillQueuesProcessEvents`,
 `testAnotherUsersPresenceOnlyBatchQueuesNoProcessEvents`).
 
-`AccountStateEventHub` (built in `Impl.init`, no reference back) has 25 `ValuePipe`s (no replay), 3 replaying `Promise`s
+`AccountStateEventHub` (built in `Impl.init`, no reference back) has 26 `ValuePipe`s (no replay), 3 replaying `Promise`s
 (`termsOfServiceUpdate`, `appUpdateInfo`, `contactBirthdays`) and 6 subscriber contexts (`grep -c '= ValuePipe<'` and
 `grep -c '= Promise<'` on the file). `dispatch(_:completed:)` (1) starts the transaction that reads the notification
 messages; (2) before returning, in order: `reactionNotificationsPipe` (always; only reactions younger than 20 s),
@@ -411,10 +416,12 @@ messages; (2) before returning, in order: `reactionNotificationsPipe` (always; o
 `authorizationListUpdatesPipe`, `deletedMessagesPipe` (each only when non-empty), `updateConfigRequested`,
 `isPremiumUpdated`; (3) on the queue, one `notificationMessagesPipe` value per dispatch (empty included: each incoming
 id's `messagesForNotification`, then the was-scheduled messages as one entry), then `completed()`.
-`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet updates, agent
-settings, revenue and auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read
-states, sent scheduled ids, delivery reports and conference invitations, in that order (`AccountStateEventHubTests` pins
-only that web-page updates, nil removals included, arrive before the sent scheduled ids). The hub's subscription
+`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet
+transfers, a support account's received drafts (`supportReceivedDraftsPipe`, which `AccountStateManager`'s
+`supportReceivedDrafts()` exposes to `managedSupportOccupation`), other wallet updates, agent settings, revenue and
+auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read states, sent
+scheduled ids, delivery reports and conference invitations, in that order (`AccountStateEventHubTests` pins only that
+web-page updates, nil removals included, arrive before the sent scheduled ids). The hub's subscription
 generators and `modify...` methods hop with `queue.async`, which is always inline (their callers are already on the
 queue).
 
@@ -517,6 +524,13 @@ launch it reads every one-to-one chat Postbox has a chat-list record of and, 500
 `removeHistoryAsUnseenPeer` each one out of the chat list that still stores Cloud messages, unless it is Saved
 Messages, a service user, named by a folder, or has a composer state, unsent messages or an open history view
 (`supportHiddenChatSweepClearsChat`, `SupportHiddenChatSweepTests`).
+
+The reset, `fetchChatListHole` and the pinned-chat sync store fetched read states through `supportReadStatesToStore`:
+on a support account a deleted user's chat gets one with nothing unread, read up to its top stored message and never
+back (`supportClearedReadState`), and `synchronizePeerReadState` confirms a queued operation for such a chat without
+sending it, as for a non-member channel (invariant 30; `SupportReadStateTests`). The reset's
+`_internal_applyFetchedChatInputStates` stores no fetched draft on a support account, as the replay does not, and drops
+the received drafts it returns; `fetchChatListHole` passes them on ("Holes and history fills").
 
 The ghost tail is deleted inside the reset's transaction, without asking the server (spec section 3 point 3, as amended
 2026-10-24). After the top messages and reply targets are stored, `storedCloudMessagesAboveTopMessages` reads, for each
@@ -758,6 +772,10 @@ gone but written again since, which stays stored (`testClearedHistoryIsConfirmed
 On a support account `managedChatListHoles` follows `SupportContext.chatListLoadTill`, the date the chat list loads back
 to (one load period before launch at first, moved back by Load More), and leaves unfilled every chat-list hole whose
 timestamp is at or before it (`supportChatListHoleIsHeld`; 0, all chats, holds none; `SupportChatListLoadingTests`).
+`fetchChatListHole` stores no fetched draft there (`_internal_applyFetchedChatInputStates`) and hands those of tracked
+chats to `SupportContext.addReceivedDrafts`, which `managedSupportOccupation` reads beside the replay's; it stores read
+states as the reset does (`supportReadStatesToStore`).
+
 ### Container order
 
 The push path's merge order comes from containers: `pollChannelSignals` follows `channelRecovery.channelIds` (a `Set`

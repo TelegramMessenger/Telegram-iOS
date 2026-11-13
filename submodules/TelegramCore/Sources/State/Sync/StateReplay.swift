@@ -234,6 +234,8 @@ final class ReplayContext {
     var groupCallMessageUpdates: [GroupCallMessageUpdate] = []
     /// Event. Also read by `finalize`: an added story may queue its peer's stories for sync.
     var storyUpdates: [InternalStoryUpdate] = []
+    /// Event: drafts a support account keeps local, received from another session.
+    var supportReceivedDrafts: [SupportReceivedDraft] = []
     /// Persisted by `finalize`, in order, or as a sync of the namespaces it cannot apply.
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     /// Persisted by `finalize`: the recent stickers; each keeps its latest message.
@@ -645,6 +647,7 @@ final class ReplayContext {
             updatedGroupCallParticipants: updatedGroupCallParticipants,
             groupCallMessageUpdates: groupCallMessageUpdates,
             storyUpdates: storyUpdates,
+            supportReceivedDrafts: supportReceivedDrafts,
             delayNotificatonsUntil: delayNotificatonsUntil,
             updatedIncomingThreadReadStates: updatedIncomingThreadReadStates,
             updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates,

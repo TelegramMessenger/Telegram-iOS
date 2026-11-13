@@ -90,7 +90,7 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: entry.groupId, hole: entry.hole).start())
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, supportContext: supportContext, groupId: entry.groupId, hole: entry.hole).start())
             }
         })
         
