@@ -3044,6 +3044,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private weak var storyCameraTooltip: TooltipScreen?
+    
+    fileprivate func openSupportAbuseBot() {
+        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+        self.present(controller, in: .window(.root))
+        
+        let context = self.context
+        let navigationController = self.navigationController as? NavigationController
+        let _ = (context.engine.peers.resolvePeerByName(name: "AbuseBot", referrer: nil)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(peer) = result else {
+                return .complete()
+            }
+            return .single(peer)
+        }
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller] peer in
+            controller?.dismiss()
+            if let peer, let navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+            }
+        })
+    }
+    
     fileprivate func openStoryCamera(fromList: Bool, gesturePullOffset: CGFloat? = nil, sourceView: UIView? = nil) {
         guard !self.context.isFrozen else {
             let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
@@ -6848,6 +6870,7 @@ private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHas
         "compose": NavigationBarComponent.OverflowInfo(title: strings.Compose_NewMessage, iconName: "Chat List/ComposeIcon", priority: 3),
         "proxy": NavigationBarComponent.OverflowInfo(title: strings.SocksProxySetup_Title, iconName: "Chat List/ProxyShieldIcon", priority: 2),
         "story": NavigationBarComponent.OverflowInfo(title: strings.StoryFeed_AddStory, iconName: "Chat List/AddStoryIcon", priority: 1),
+        "abuseBot": NavigationBarComponent.OverflowInfo(title: strings.Support_AbuseBot_Title, iconName: "Chat/Input/Accessory Panels/MessageSelectionReport", priority: 1),
         "more": NavigationBarComponent.OverflowInfo(title: strings.Common_More, iconName: nil, priority: nil)
     ]
 }
@@ -7397,7 +7420,14 @@ private final class ChatListLocationContext {
                     }
                 }
                 
-                if storyPostingAvailable {
+                if self.context.supportContext != nil {
+                    self.storyButton = NavigationBarComponent.Button(id: "abuseBot",
+                        content: .icon(imageName: "Chat/Input/Accessory Panels/MessageSelectionReport"),
+                        action: { [weak self] _ in
+                            self?.parentController?.openSupportAbuseBot()
+                        }
+                    )
+                } else if storyPostingAvailable {
                     self.storyButton = NavigationBarComponent.Button(id: "story",
                         content: .icon(imageName: "Chat List/AddStoryIcon"),
                         action: { [weak self] sourceView in

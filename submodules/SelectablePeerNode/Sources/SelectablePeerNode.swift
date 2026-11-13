@@ -190,6 +190,7 @@ public final class SelectablePeerNode: ASDisplayNode {
             iconColor: iconColor,
             online: online,
             numberOfLines: numberOfLines,
+            isSupportAccount: context.supportContext != nil,
             synchronousLoad: synchronousLoad
         )
     }
@@ -221,7 +222,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
     }
     
-    public func setup(accountPeerId: EnginePeer.Id, stateManager: AccountStateManager, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool, requiresStars: Int64? = nil, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    public func setup(accountPeerId: EnginePeer.Id, stateManager: AccountStateManager, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool, requiresStars: Int64? = nil, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, isSupportAccount: Bool = false, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
         guard let mainPeer = peer.chatOrMonoforumMainPeer else {
@@ -257,6 +258,9 @@ public final class SelectablePeerNode: ASDisplayNode {
             if mainPeer.isDeleted {
                 overrideImage = .deletedIcon
             }
+        }
+        if overrideImage == nil {
+            overrideImage = supportAvatarImageOverride(isSupportAccount: isSupportAccount, peer: mainPeer)
         }
         self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
