@@ -6148,8 +6148,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let headerInset = sideInsets.base
 
                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
+                self.controller?.reportAvatarCollapsed(self.headerNode.avatarCollapseFraction >= 1.0)
             }
-            
+
             let paneAreaExpansionDistance: CGFloat = 32.0
             let effectiveAreaExpansionFraction: CGFloat
             if self.state.isEditing {
@@ -6610,6 +6611,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let sourceMessageId: EngineMessage.Id?
     private let callMessages: [EngineMessage]
     private let supportOccupationDisposable = MetaDisposable()
+    public var avatarCollapsedUpdated: ((Bool) -> Void)?
+    public private(set) var isAvatarCollapsed: Bool = false
     let isSettings: Bool
     let isMyProfile: Bool
     /// Opened from the chat side list, which already lists Saved Messages' chats.
@@ -7146,6 +7149,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    fileprivate func reportAvatarCollapsed(_ isCollapsed: Bool) {
+        if self.isAvatarCollapsed != isCollapsed {
+            self.isAvatarCollapsed = isCollapsed
+            self.avatarCollapsedUpdated?(isCollapsed)
+        }
+    }
+
     fileprivate func dismissAllTooltips() {
         self.window?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {

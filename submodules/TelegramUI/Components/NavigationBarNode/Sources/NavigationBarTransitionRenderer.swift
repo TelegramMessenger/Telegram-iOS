@@ -228,7 +228,7 @@ final class NavigationBarTransitionRendererImpl: NavigationBarTransitionRenderer
                     return !excluded.contains(ObjectIdentifier(node))
                 }
                 return true
-            }, backPressed: bottomContent.backPressed, badge: bottomContent.badge, backContextAction: bottomContent.backContextAction, badgeChangesInPlace: bottomContent.badgeChangesInPlace)
+            }, backPressed: bottomContent.backPressed, badge: bottomContent.badge, backContextAction: bottomContent.backContextAction, badgeChangesInPlace: bottomContent.badgeChangesInPlace, rightButtonsChangeInLayout: bottomContent.rightButtonsChangeInLayout)
         }
         let topContent = navigationBarTransitionCapsuleContent(topState)
         self.lendNodes(bottom: bottomContent, top: topContent)
@@ -324,7 +324,7 @@ func navigationBarTransitionCapsuleContent(_ state: NavigationBarComponentTransi
 /// The capsules' copy of a content: no title (each bar's own title rides its screen, as in UIKit). Screen nodes stay
 /// as they are: the renderer lends them to the capsules (`NavigationBarNodeLoan`).
 func navigationBarCapsuleContent(_ content: NavigationBarComponent.Content) -> NavigationBarComponent.Content {
-    return NavigationBarComponent.Content(title: .text(""), back: content.back, leftButton: content.leftButton, rightButtons: content.rightButtons, backPressed: content.backPressed, badge: content.badge, backContextAction: content.backContextAction, badgeChangesInPlace: content.badgeChangesInPlace)
+    return NavigationBarComponent.Content(title: .text(""), back: content.back, leftButton: content.leftButton, rightButtons: content.rightButtons, backPressed: content.backPressed, badge: content.badge, backContextAction: content.backContextAction, badgeChangesInPlace: content.badgeChangesInPlace, rightButtonsChangeInLayout: content.rightButtonsChangeInLayout)
 }
 
 /// The screen nodes among a content's buttons.
