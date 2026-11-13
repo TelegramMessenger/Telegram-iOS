@@ -168,6 +168,13 @@ class FocusPersistenceContractTests(unittest.TestCase):
                 self.assertIn("accessibilityElementIsFocused", contents)
                 self.assertIn("UIAccessibility.post(notification: .layoutChanged", contents)
 
+        sticker_search = source(
+            "submodules/TelegramUI/Components/GroupStickerPackSetupController/Sources/GroupStickerSearchContainerNode.swift"
+        )
+        self.assertIn("listNode.forEachVisibleItemNode", sticker_search)
+        self.assertIn("groupStickerSearchAccessibilityElementIsFocused", sticker_search)
+        self.assertNotIn(".visibleItemNodes()", sticker_search)
+
         history = source("submodules/TelegramUI/Sources/ChatHistoryListNode.swift")
         self.assertIn("accessibilityContainsFocus()", history)
         self.assertIn("restoreAccessibilityFocus()", history)
@@ -475,7 +482,7 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("testParser.add_argument(\n        '--disableProvisioningProfiles'", make)
         self.assertIn("if self.disable_provisioning_profiles:\n            combined_arguments += ['--//Telegram:disableProvisioningProfiles']", make)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
-        self.assertIn("actions/upload-artifact@v4", contents)
+        self.assertIn("actions/upload-artifact@v7.0.2", contents)
         self.assertIn("runs-on: xcode-27", contents)
         self.assertIn('/Applications/Xcode_"${XCODE_VERSION}"*.app', contents)
         self.assertIn("Available Xcode applications:", contents)
