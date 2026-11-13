@@ -1080,6 +1080,9 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
+                if strongSelf.context.account.isSupportUser {
+                    return
+                }
                 if strongSelf.canReadHistoryValue {
                     context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
                 } else {
@@ -1089,7 +1092,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
         
         self.unseenReactionsProcessingManager.process = { [weak self] messageIds in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, !strongSelf.context.account.isSupportUser else {
                 return
             }
             if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
@@ -2695,6 +2698,27 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }
     }
     
+    // A support account consumes nothing on view, so a jump button consumes what it lands on: the tap is the agent's act.
+    func supportMarkJumpedMentionSeen(messageId: MessageId) {
+        guard self.context.account.isSupportUser else {
+            return
+        }
+        let context = self.context
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+        |> deliverOnMainQueue).startStandalone(next: { message in
+            guard let message, !message.attributes.contains(where: { ($0 as? ConsumableContentMessageAttribute)?.consumed == false }) else {
+                return
+            }
+            context.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set([messageId]))
+        })
+    }
+    
+    func supportMarkJumpedReactionsAndVotesSeen(messageId: MessageId) {
+        if self.context.account.isSupportUser {
+            self.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set([messageId]))
+        }
+    }
+    
     private func attemptReadingReactions() {
         if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
@@ -3531,7 +3555,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -5058,7 +5082,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 }
             } else if self.interactiveReadReactionsDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
-                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
                         let visibleMessageRange = self.visibleMessageRange
                         self.interactiveReadReactionsDisposable = context.engine.messages.installInteractiveReadReactionsAction(peerId: peerId, getVisibleRange: {
                             return visibleMessageRange.with { $0 }

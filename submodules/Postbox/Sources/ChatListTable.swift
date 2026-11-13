@@ -35,6 +35,11 @@ enum ChatListIntermediateEntry {
     }
 }
 
+public enum ChatListStoredEntry {
+    case chat(ChatListIndex)
+    case hole(ChatListHole)
+}
+
 public enum ChatListRelativePosition {
     case later(than: ChatListIndex?)
     case earlier(than: ChatListIndex?)

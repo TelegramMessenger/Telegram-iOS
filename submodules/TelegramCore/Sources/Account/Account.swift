@@ -1483,7 +1483,7 @@ public class Account {
             
             if value {
                 Logger.shared.log("Account", "Became master")
-                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, pendingReferences: strongSelf.viewTracker.pendingMessageReferences)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager, pendingReferences: strongSelf.viewTracker.pendingMessageReferences, supportContext: strongSelf.supportContext, supplementary: strongSelf.supplementary)
                 
                 let resetPeerHoles = data.resetPeerHoles
                 strongSelf.resetPeerHoleManagement = { peerId in

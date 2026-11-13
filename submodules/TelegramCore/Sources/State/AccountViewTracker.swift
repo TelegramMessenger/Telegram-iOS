@@ -2187,10 +2187,27 @@ public final class AccountViewTracker {
         return account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 20, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Namespaces.Message.allWelcomeMessages), orderStatistics: [], additionalData: [])
     }
     
-    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, trackHoles: Bool = true, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, trackHoles: Bool = true, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false, anchoredAtUpperBound: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
-            if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tag == nil {
+            if anchoredAtUpperBound {
+                signal = account.postbox.aroundMessageHistoryViewForLocation(
+                    chatLocation,
+                    anchor: .upperBound,
+                    ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange,
+                    ignoreMessageIds: ignoreMessageIds,
+                    count: count,
+                    trackHoles: trackHoles,
+                    fixedCombinedReadStates: nil,
+                    topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud],
+                    tag: tag,
+                    appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup,
+                    namespaces: .not(Namespaces.Message.allNonRegular),
+                    orderStatistics: orderStatistics,
+                    additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData),
+                    useRootInterfaceStateForThread: useRootInterfaceStateForThread
+                )
+            } else if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tag == nil {
                 signal = account.postbox.transaction { transaction -> (Peer?, MessageHistoryThreadData?, MessageIndex?) in
                     let interfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
                     

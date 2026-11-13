@@ -389,11 +389,15 @@ final class ReplayContext {
     /// for a channel the account is not a member of is skipped (`readStateOperationTargetsNonMember`), judged by the peer
     /// stored when it comes up, so a join merged earlier in the same replay counts.
     func applyContentOperations(_ operations: [AccountStateMutationOperation]) {
+        let supportAccount = isSupportAccount(transaction: transaction, accountPeerId: accountPeerId)
         for operation in operations {
             walletTonConnectEventBatch.append(contentsOf: walletTonConnectEvents(operation: operation))
             // The server's read state for a channel the account is not a member of is not kept
             // (NonMemberChannelReadState.swift). A join earlier in this replay is already stored.
             if readStateOperationTargetsNonMember(operation, getPeer: { transaction.getPeer($0) }) {
+                continue
+            }
+            if supportAccount && readStateOperationTargetsDeletedUser(operation, getPeer: { transaction.getPeer($0) }) {
                 continue
             }
             switch operation {

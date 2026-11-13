@@ -1307,6 +1307,21 @@ public final class Transaction {
         return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
     }
     
+    public func chatListStoredEntries(groupId: PeerGroupId, earlierThan index: (index: ChatListIndex, isChat: Bool)?, count: Int) -> [ChatListStoredEntry] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: index.flatMap { ($0.index, $0.isChat) }, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count).map { entry -> ChatListStoredEntry in
+            switch entry {
+            case let .message(index, _):
+                return .chat(index)
+            case let .hole(hole):
+                return .hole(hole)
+            }
+        }
+    }
+    
     public func getTopChatListEntries(groupId: PeerGroupId, count: Int) -> [RenderedPeer] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
