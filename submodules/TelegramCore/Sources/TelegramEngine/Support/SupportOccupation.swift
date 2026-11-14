@@ -241,15 +241,7 @@ private final class SupportOccupationManager {
         if self.openPeerId == peerId {
             return
         }
-        self.prepareDisposable.set(nil)
-        self.deliveredDisposable.set(nil)
-        self.claimDisposable.set(nil)
-        self.reoccupyTimer?.invalidate()
-        self.reoccupyTimer = nil
-        if let claimedPeerId = self.claimedPeerId {
-            self.claimedPeerId = nil
-            self.release(peerId: claimedPeerId)
-        }
+        let _ = self.stopClaiming().start()
         self.openPeerId = peerId
         self.openPeerIsReady = false
         guard let peerId else {
@@ -355,11 +347,28 @@ private final class SupportOccupationManager {
         self.claimDisposable.set(supportSaveDraft(postbox: self.postbox, network: self.network, peerId: peerId, text: text).start())
     }
 
-    private func release(peerId: PeerId) {
-        if self.isOccupiedBySomeone(peerId: peerId) {
-            return
+    func releaseClaim() -> Signal<Never, NoError> {
+        let release = self.stopClaiming()
+        self.openPeerId = nil
+        self.openPeerIsReady = false
+        return release
+    }
+
+    private func stopClaiming() -> Signal<Never, NoError> {
+        self.prepareDisposable.set(nil)
+        self.deliveredDisposable.set(nil)
+        self.claimDisposable.set(nil)
+        self.reoccupyTimer?.invalidate()
+        self.reoccupyTimer = nil
+        guard let claimedPeerId = self.claimedPeerId else {
+            return .complete()
         }
-        let _ = supportSaveDraft(postbox: self.postbox, network: self.network, peerId: peerId, text: "").start()
+        self.claimedPeerId = nil
+        if self.isOccupiedBySomeone(peerId: claimedPeerId) {
+            return .complete()
+        }
+        return supportSaveDraft(postbox: self.postbox, network: self.network, peerId: claimedPeerId, text: "")
+        |> ignoreValues
     }
 
     private func updateExpiryTimer() {
@@ -404,6 +413,17 @@ func managedSupportOccupation(postbox: Postbox, network: Network, accountPeerId:
                 })
             })
             let _ = manager.swap(object)
+            disposable.add(supportContext.setReleaseClaim {
+                return Signal { subscriber in
+                    let release = MetaDisposable()
+                    object.with { manager in
+                        release.set(manager.releaseClaim().start(completed: {
+                            subscriber.putCompletion()
+                        }))
+                    }
+                    return release
+                }
+            })
 
             let deliveredMessages: (PeerId) -> Signal<Void, NoError> = { peerId in
                 return pendingMessageManager.deliveredMessageEvents(peerId: peerId)

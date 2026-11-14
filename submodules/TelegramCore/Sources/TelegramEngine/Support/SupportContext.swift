@@ -53,6 +53,8 @@ public final class SupportContext {
     private let openChats = Atomic<[(token: Int, peerId: PeerId)]>(value: [])
     private let nextOpenChatToken = Atomic<Int>(value: 0)
     private let openChatPromise = ValuePromise<PeerId?>(nil, ignoreRepeated: true)
+    private let releaseClaimHandler = Atomic<(id: Int, release: () -> Signal<Never, NoError>)?>(value: nil)
+    private let nextReleaseClaimHandlerId = Atomic<Int>(value: 0)
     private let receivedDraftsPipe = ValuePipe<[SupportReceivedDraft]>()
     private let occupationsPromise = ValuePromise<[PeerId: SupportOccupation]>([:], ignoreRepeated: true)
     private let chatOrderLaunchResortTaken = Atomic<Bool>(value: false)
@@ -269,6 +271,23 @@ public final class SupportContext {
     
     var openChat: Signal<PeerId?, NoError> {
         return self.openChatPromise.get()
+    }
+
+    public func releaseClaim() -> Signal<Never, NoError> {
+        guard let release = self.releaseClaimHandler.with({ $0?.release }) else {
+            return .complete()
+        }
+        return release()
+    }
+
+    func setReleaseClaim(_ release: @escaping () -> Signal<Never, NoError>) -> Disposable {
+        let id = self.nextReleaseClaimHandlerId.modify { $0 + 1 }
+        let _ = self.releaseClaimHandler.swap((id, release))
+        return ActionDisposable { [weak self] in
+            let _ = self?.releaseClaimHandler.modify { current in
+                return current?.id == id ? nil : current
+            }
+        }
     }
     
     func addReceivedDrafts(_ drafts: [SupportReceivedDraft]) {
