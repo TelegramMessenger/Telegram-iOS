@@ -1263,7 +1263,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     private let contextGestureContainerNode: ContextControllerSourceNode
     private let itemGrid: SparseItemGrid
     private let itemGridBinding: SparseItemGridBindingImpl
-    private var gridAccessibilityElements: [MessageId: VisualMediaGridAccessibilityElement] = [:]
+    private var gridAccessibilityElements: [EngineMessage.Id: VisualMediaGridAccessibilityElement] = [:]
     private let listBackgroundView: UIImageView
     private let listMaskView: UIImageView
     private let directMediaImageCache: DirectMediaImageCache
@@ -2065,7 +2065,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         }
 
         var accessibilityElements: [UIAccessibilityElement] = []
-        var validMessageIds: Set<MessageId> = []
+        var validMessageIds: Set<EngineMessage.Id> = []
         self.itemGrid.forEachVisibleItem { [weak self] displayItem in
             guard let self, let itemLayer = displayItem.layer as? GenericItemLayer, let item = itemLayer.item, !itemLayer.isHidden else {
                 return

@@ -5927,8 +5927,8 @@ private final class BottomActionsPanelComponent: Component {
                         self.addSubview(itemComponenView)
                     }
                     itemComponenView.isAccessibilityElement = true
-                    itemComponenView.accessibilityLabel = item.title
-                    itemComponenView.accessibilityTraits = item.isEnabled ? [.button] : [.button, .notEnabled]
+                    itemComponenView.accessibilityLabel = component.items[i].title
+                    itemComponenView.accessibilityTraits = component.items[i].isEnabled ? [.button] : [.button, .notEnabled]
                     for subview in itemComponenView.subviews {
                         subview.accessibilityElementsHidden = true
                     }
