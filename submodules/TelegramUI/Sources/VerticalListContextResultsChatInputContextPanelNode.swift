@@ -563,7 +563,6 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView.accessibilityPageScrolledString = { row, count in
             return interfaceState.strings.VoiceOver_ScrollStatus(row, count).string
         }
-        let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         if self.backgroundIsDark != interfaceState.theme.overallDarkAppearance {
