@@ -367,12 +367,6 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
             let unlockTitle = isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore
 
-            if themeUpdated {
-                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
-                let bottomColor = presentationData.theme.list.plainBackgroundColor
-                unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
-            }
-            
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             let textColor = presentationData.theme.list.itemSecondaryTextColor

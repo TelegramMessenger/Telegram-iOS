@@ -461,7 +461,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             return true
         }
         if let peer = item.data.peer.chatMainPeer {
-            self.activateArea.accessibilityLabel = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            self.activateArea.accessibilityLabel = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         } else {
             self.activateArea.accessibilityLabel = nil
         }
