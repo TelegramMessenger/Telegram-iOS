@@ -140,11 +140,11 @@ public struct ChatListSearchContainerTransition {
     }
 }
 
-private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+private func chatSearchResultsAccessibilityElementIsFocused(in view: UIView) -> Bool {
     if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
         return true
     }
-    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
+    return view.subviews.contains(where: { chatSearchResultsAccessibilityElementIsFocused(in: $0) })
 }
 
 private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], context: AccountContext, interaction: ChatListNodeInteraction, location: ChatListControllerLocation) -> ChatListSearchContainerTransition {
@@ -429,13 +429,13 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
 
             var focusedEntryId: AnyHashable?
             if UIAccessibility.isVoiceOverRunning {
-                for itemNode in self.listNode.visibleItemNodes() {
+                self.listNode.forEachVisibleItemNode { node in
+                    guard let itemNode = node as? ListViewItemNode else { return }
                     guard let index = itemNode.index, self.displayedEntryIds.indices.contains(index) else {
-                        continue
+                        return
                     }
-                    if accessibilityElementIsFocused(in: itemNode.view) {
+                    if chatSearchResultsAccessibilityElementIsFocused(in: itemNode.view) {
                         focusedEntryId = self.displayedEntryIds[index]
-                        break
                     }
                 }
             }
@@ -446,10 +446,10 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
                 }
                 self.displayedEntryIds = transition.stableIds
                 if let focusedEntryId, let index = transition.stableIds.firstIndex(of: focusedEntryId) {
-                    for itemNode in self.listNode.visibleItemNodes() {
-                        if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                    self.listNode.forEachVisibleItemNode { node in
+                        guard let itemNode = node as? ListViewItemNode, itemNode.index == index else { return }
+                        if !chatSearchResultsAccessibilityElementIsFocused(in: itemNode.view) {
                             UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
-                            break
                         }
                     }
                 }
