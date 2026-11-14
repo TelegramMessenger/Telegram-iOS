@@ -221,11 +221,11 @@ private struct InviteContactsTransition {
     let entries: [InviteContactsEntry]
 }
 
-private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+private func inviteContactsAccessibilityElementIsFocused(in view: UIView) -> Bool {
     if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
         return true
     }
-    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
+    return view.subviews.contains(where: { inviteContactsAccessibilityElementIsFocused(in: $0) })
 }
 
 final class InviteContactsControllerNode: ASDisplayNode {
@@ -572,13 +572,13 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 }
                 var focusedEntryId: InviteContactsEntryId?
                 if UIAccessibility.isVoiceOverRunning {
-                    for itemNode in self.listNode.visibleItemNodes() {
+                    self.listNode.forEachVisibleItemNode { node in
+                        guard let itemNode = node as? ListViewItemNode else { return }
                         guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
-                            continue
+                            return
                         }
-                        if accessibilityElementIsFocused(in: itemNode.view) {
+                        if inviteContactsAccessibilityElementIsFocused(in: itemNode.view) {
                             focusedEntryId = self.displayedEntries[index].stableId
-                            break
                         }
                     }
                 }
@@ -586,10 +586,10 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     if let strongSelf = self {
                         strongSelf.displayedEntries = transition.entries
                         if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
-                            for itemNode in strongSelf.listNode.visibleItemNodes() {
-                                if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                            strongSelf.listNode.forEachVisibleItemNode { node in
+                                guard let itemNode = node as? ListViewItemNode, itemNode.index == index else { return }
+                                if !inviteContactsAccessibilityElementIsFocused(in: itemNode.view) {
                                     UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
-                                    break
                                 }
                             }
                         }
