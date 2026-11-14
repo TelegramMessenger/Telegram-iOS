@@ -20,6 +20,9 @@ final class PeerInfoSubtitleBadgeView: HighlightTrackingButton {
         self.backgroundView.isUserInteractionEnabled = false
         
         super.init(frame: CGRect())
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = [.button]
         
         self.addSubview(self.backgroundView)
         
@@ -64,6 +67,8 @@ final class PeerInfoSubtitleBadgeView: HighlightTrackingButton {
     }
     
     func update(title: String, fillColor: UIColor, foregroundColor: UIColor) -> CGSize {
+        self.accessibilityLabel = title
+
         let labelSize = self.labelView.update(
             transition: .immediate,
             component: AnyComponent(Text(text: title, font: Font.regular(11.0), color: foregroundColor)),
@@ -80,6 +85,7 @@ final class PeerInfoSubtitleBadgeView: HighlightTrackingButton {
         if let labelComponentView = self.labelView.view {
             if labelComponentView.superview == nil {
                 labelComponentView.isUserInteractionEnabled = false
+                labelComponentView.accessibilityElementsHidden = true
                 self.addSubview(labelComponentView)
             }
             labelComponentView.frame = CGRect(origin: CGPoint(x: floor((size.width - labelSize.width) * 0.5), y: floor((size.height - labelSize.height) * 0.5)), size: labelSize)

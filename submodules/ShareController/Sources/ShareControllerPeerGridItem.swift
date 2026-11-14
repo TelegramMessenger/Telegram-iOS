@@ -77,6 +77,11 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         self.titleNode.truncationMode = .byTruncatingTail
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = title
+        self.accessibilityTraits = .header
+        self.titleNode.accessibilityElementsHidden = true
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
@@ -179,6 +184,10 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         self.peerNode = SelectablePeerNode()
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        self.peerNode.accessibilityElementsHidden = true
         
         self.peerNode.toggleSelection = { [weak self] isDisabled in
             if let strongSelf = self {
@@ -255,6 +264,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                     online: isOnline,
                     synchronousLoad: synchronousLoad
                 )
+                self.accessibilityLabel = threadData?.info.title ?? peer.compactDisplayTitle
                 if let shimmerNode = self.placeholderNode {
                     self.placeholderNode = nil
                     shimmerNode.removeFromSupernode()
@@ -277,7 +287,9 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                     synchronousLoad: synchronousLoad,
                     storyMode: storyMode
                 )
+                self.accessibilityLabel = strings.StoryFeed_ContextAddStory
             } else {
+                self.isAccessibilityElement = false
                 let shimmerNode: ShimmerEffectNode
                 if let current = self.placeholderNode {
                     shimmerNode = current
@@ -304,6 +316,9 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                 
                 shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: self.bounds.size)
             }
+            if item != nil {
+                self.isAccessibilityElement = true
+            }
             self.currentState = (environment, context, theme, strings, item, search)
             self.setNeedsLayout()
             if let effectivePresence {
@@ -315,13 +330,48 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func updateSelection(animated: Bool) {
         var selected = false
+        var isDisabled = false
         if let controllerInteraction = self.controllerInteraction, let (_, _, _, _, maybeItem, _) = self.currentState, let item = maybeItem {
-            if case let .peer(peer, _, _, _, _, _) = item {
+            if case let .peer(peer, _, _, _, requiresPremiumForMessaging, _) = item {
                 selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
+                isDisabled = requiresPremiumForMessaging
+                self.accessibilityHint = requiresPremiumForMessaging ? self.currentState?.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.peer?.compactDisplayTitle ?? "").string : nil
+            } else {
+                self.accessibilityHint = nil
             }
+        } else {
+            self.accessibilityHint = nil
         }
         
         self.peerNode.updateSelection(selected: selected, animated: animated)
+        self.accessibilityValue = selected ? self.currentState?.strings.VoiceOver_Chat_Selected : nil
+        if selected {
+            self.accessibilityTraits.insert(.selected)
+        } else {
+            self.accessibilityTraits.remove(.selected)
+        }
+        if isDisabled {
+            self.accessibilityTraits.insert(.notEnabled)
+        } else {
+            self.accessibilityTraits.remove(.notEnabled)
+        }
+    }
+
+    override func accessibilityActivate() -> Bool {
+        guard let controllerInteraction = self.controllerInteraction, let item = self.currentState?.item else {
+            return false
+        }
+        switch item {
+        case let .peer(peer, _, _, _, requiresPremiumForMessaging, _):
+            if requiresPremiumForMessaging {
+                controllerInteraction.disabledPeerSelected(peer)
+            } else {
+                controllerInteraction.togglePeer(peer, self.currentState?.search ?? false)
+            }
+        case .story:
+            controllerInteraction.shareStory?()
+        }
+        return true
     }
     
     override func layout() {

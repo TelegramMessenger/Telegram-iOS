@@ -1,0 +1,84 @@
+name: VoiceOver accessibility gate
+
+on:
+  push:
+    branches:
+      - "VoiceOver-fixes"
+      - "master"
+    paths:
+      - "submodules/**/*.swift"
+      - "submodules/**/*.strings"
+      - "Telegram/**/*.swift"
+      - "Telegram/**/*.strings"
+      - "Telegram/Share/**"
+      - "Tests/VoiceOverContracts/**"
+      - ".github/workflows/voiceover-gate.yml"
+  pull_request:
+    paths:
+      - "submodules/**/*.swift"
+      - "submodules/**/*.strings"
+      - "Telegram/**/*.swift"
+      - "Telegram/**/*.strings"
+      - "Telegram/Share/**"
+      - "Tests/VoiceOverContracts/**"
+      - ".github/workflows/voiceover-gate.yml"
+  workflow_dispatch:
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run VoiceOver source contracts
+        run: python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
+
+  simulator-tree-audit:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: Initialize recursive submodules
+        run: |
+          git config --global url."https://github.com/TelegramMessenger/tgcalls.git".insteadOf "https://github.com/Kostenkov-2021/tgcalls.git"
+          git submodule update --init --recursive
+      - name: Select repository Xcode version
+        run: |
+          XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
+          XCODE_PATH=""
+          for candidate in /Applications/Xcode_"${XCODE_VERSION}"*.app; do
+            if [ -d "$candidate/Contents/Developer" ]; then
+              XCODE_PATH="$candidate/Contents/Developer"
+              break
+            fi
+          done
+          if [ -z "$XCODE_PATH" ]; then
+            echo "Xcode ${XCODE_VERSION} is not installed on this runner. Available Xcode applications:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+      - name: Run iOS accessibility tree audit
+        run: |
+          python3 build-system/Make/Make.py \
+            --bazelUserRoot=/private/var/tmp/_bazel_voiceover \
+            test \
+            --configurationPath=build-system/appstore-configuration.json \
+            --xcodeManagedCodesigning \
+            --disableProvisioningProfiles \
+            --target=Telegram:iOSAppUITestSuite
+      - name: Collect XCTest result bundles
+        if: always()
+        run: |
+          mkdir -p voiceover-test-results
+          find bazel-testlogs -name "*.xcresult" -exec cp -R {} voiceover-test-results/ \; || true
+      - name: Upload VoiceOver performance evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: voiceover-xcresult
+          path: voiceover-test-results
+          if-no-files-found: ignore
+          retention-days: 30

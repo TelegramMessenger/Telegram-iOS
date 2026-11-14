@@ -40,11 +40,10 @@ public class ActionSheetCheckboxItem: ActionSheetItem {
 }
 
 public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
-    private let defaultFont: UIFont
-    
     private let theme: ActionSheetControllerTheme
     
     private var item: ActionSheetCheckboxItem?
+    private var usesVerticalTextLayout = false
     
     private let button: HighlightTrackingButton
     private let titleNode: ImmediateTextNode
@@ -55,19 +54,18 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
-        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
         
         self.titleNode = ImmediateTextNode()
-        self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.maximumNumberOfLines = 0
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isAccessibilityElement = false
         
         self.labelNode = ImmediateTextNode()
-        self.labelNode.maximumNumberOfLines = 1
+        self.labelNode.maximumNumberOfLines = 0
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
         self.labelNode.isAccessibilityElement = false
@@ -120,13 +118,17 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetCheckboxItem) {
         self.item = item
         
-        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        let baseFontSize = floor(theme.baseFontSize * 20.0 / 17.0)
+        let scaledFontSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: baseFontSize)
+        let defaultFont = Font.regular(scaledFontSize)
+        self.usesVerticalTextLayout = !item.label.isEmpty && scaledFontSize > baseFontSize * 1.2
         
         self.titleNode.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: defaultFont, textColor: self.theme.secondaryTextColor)
         self.checkNode.isHidden = !item.value
         
         self.accessibilityArea.accessibilityLabel = item.title
+        self.accessibilityArea.accessibilityValue = item.label.isEmpty ? nil : item.label
         
         var accessibilityTraits: UIAccessibilityTraits = [.button]
         if item.value {
@@ -136,21 +138,40 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        let size = CGSize(width: constrainedSize.width, height: 57.0)
-       
-        self.button.frame = CGRect(origin: CGPoint(), size: size)
-        
         var titleOrigin: CGFloat = 50.0
         var checkOrigin: CGFloat = 27.0
+        var rightInset: CGFloat = 15.0
         if let item = self.item, item.style == .alignRight {
             titleOrigin = 24.0
-            checkOrigin = size.width - 22.0
+            checkOrigin = constrainedSize.width - 22.0
+            rightInset = 50.0
         }
+
+        let contentWidth = max(1.0, constrainedSize.width - titleOrigin - rightInset)
+        let labelSize: CGSize
+        let titleSize: CGSize
+        let textHeight: CGFloat
+        if self.usesVerticalTextLayout {
+            titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: constrainedSize.height))
+            labelSize = self.labelNode.updateLayout(CGSize(width: contentWidth, height: constrainedSize.height))
+            textHeight = titleSize.height + 4.0 + labelSize.height
+        } else {
+            labelSize = self.labelNode.updateLayout(CGSize(width: contentWidth * 0.45, height: constrainedSize.height))
+            titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, contentWidth - labelSize.width - 8.0), height: constrainedSize.height))
+            textHeight = max(titleSize.height, labelSize.height)
+        }
+        let size = CGSize(width: constrainedSize.width, height: max(57.0, textHeight + 28.0))
+
+        self.button.frame = CGRect(origin: CGPoint(), size: size)
         
-        let labelSize = self.labelNode.updateLayout(CGSize(width: size.width - 44.0 - 15.0 - 8.0, height: size.height))
-        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 44.0 - labelSize.width - 15.0 - 8.0, height: size.height))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
-        self.labelNode.frame = CGRect(origin: CGPoint(x: size.width - 15.0 - labelSize.width, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        if self.usesVerticalTextLayout {
+            let textOrigin = floorToScreenPixels((size.height - textHeight) / 2.0)
+            self.titleNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: textOrigin), size: titleSize)
+            self.labelNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: textOrigin + titleSize.height + 4.0), size: labelSize)
+        } else {
+            self.titleNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
+            self.labelNode.frame = CGRect(origin: CGPoint(x: size.width - 15.0 - labelSize.width, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        }
         
         if let image = self.checkNode.image {
             self.checkNode.frame = CGRect(origin: CGPoint(x: floor(checkOrigin - (image.size.width / 2.0)), y: floor((size.height - image.size.height) / 2.0)), size: image.size)

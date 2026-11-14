@@ -313,8 +313,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             )
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    // The title view names itself (its label is the title); the title text keeps its earlier, unlisted state.
-                    titleView.isAccessibilityElement = false
+                    // The title component carries the peer name and status as one accessible button.
+                    titleView.isAccessibilityElement = true
+                    titleView.accessibilityTraits = .button
                     self.title.parentState = self.parentTitleState
                     self.parentTitleState._updated = { [weak self] transition, _ in
                         guard let self else {
@@ -452,6 +453,14 @@ public final class ChatTitleComponent: Component {
         // A tap on the title may drift this far, and a back swipe that starts on it takes the touch only past it.
         public var interactiveTransitionMinimumMovement: CGFloat {
             return chatTitleTapMovement
+        }
+
+        public override func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.tapped()
+            return true
         }
         
         private var backgroundView: GlassBackgroundView?

@@ -9,6 +9,22 @@ import TextFormat
 import AccountContext
 import TelegramPresentationData
 
+private final class TabSelectorAccessibilityReorderAction: UIAccessibilityCustomAction {
+    enum Direction {
+        case previous
+        case next
+    }
+
+    let itemId: AnyHashable
+    let direction: Direction
+
+    init(name: String, itemId: AnyHashable, direction: Direction, target: Any, selector: Selector) {
+        self.itemId = itemId
+        self.direction = direction
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 public final class TabSelectorComponent: Component {
     public enum Style {
         case glass
@@ -146,6 +162,8 @@ public final class TabSelectorComponent: Component {
     public let items: [Item]
     public let selectedId: AnyHashable?
     public let reorderItem: ((AnyHashable, AnyHashable) -> Void)?
+    public let accessibilityReorderPreviousTitle: String?
+    public let accessibilityReorderNextTitle: String?
     public let setSelectedId: (AnyHashable) -> Void
     public let transitionFraction: CGFloat?
     
@@ -158,6 +176,8 @@ public final class TabSelectorComponent: Component {
         items: [Item],
         selectedId: AnyHashable?,
         reorderItem: ((AnyHashable, AnyHashable) -> Void)? = nil,
+        accessibilityReorderPreviousTitle: String? = nil,
+        accessibilityReorderNextTitle: String? = nil,
         setSelectedId: @escaping (AnyHashable) -> Void,
         transitionFraction: CGFloat? = nil
     ) {
@@ -169,6 +189,8 @@ public final class TabSelectorComponent: Component {
         self.items = items
         self.selectedId = selectedId
         self.reorderItem = reorderItem
+        self.accessibilityReorderPreviousTitle = accessibilityReorderPreviousTitle
+        self.accessibilityReorderNextTitle = accessibilityReorderNextTitle
         self.setSelectedId = setSelectedId
         self.transitionFraction = transitionFraction
     }
@@ -196,6 +218,12 @@ public final class TabSelectorComponent: Component {
             return false
         }
         if (lhs.reorderItem == nil) != (rhs.reorderItem == nil) {
+            return false
+        }
+        if lhs.accessibilityReorderPreviousTitle != rhs.accessibilityReorderPreviousTitle {
+            return false
+        }
+        if lhs.accessibilityReorderNextTitle != rhs.accessibilityReorderNextTitle {
             return false
         }
         if lhs.transitionFraction != rhs.transitionFraction {
@@ -371,6 +399,18 @@ public final class TabSelectorComponent: Component {
                 self.action()
             }
         }
+
+        private func firstAccessibilityLabel(in view: UIView) -> String? {
+            if let label = view.accessibilityLabel, !label.isEmpty {
+                return label
+            }
+            for subview in view.subviews {
+                if let label = self.firstAccessibilityLabel(in: subview) {
+                    return label
+                }
+            }
+            return nil
+        }
         
         private func updateIsShaking(animated: Bool) {
             if self.isReordering {
@@ -434,7 +474,7 @@ public final class TabSelectorComponent: Component {
             }
         }
         
-        func update(theme: PresentationTheme, size: CGSize, item: Item, isReordering: Bool, transition: ComponentTransition) {
+        func update(theme: PresentationTheme, size: CGSize, item: Item, isSelected: Bool, isReorderMode: Bool, isReordering: Bool, transition: ComponentTransition) {
             self.theme = theme
             self.size = size
             self.isReordering = isReordering
@@ -442,6 +482,23 @@ public final class TabSelectorComponent: Component {
             
             self.containerNode.isGestureEnabled = item.contextAction != nil && !isReordering
             self.tapGesture?.isEnabled = !isReordering
+
+            self.isAccessibilityElement = true
+            self.containerNode.accessibilityElementsHidden = true
+            switch item.content {
+            case let .text(title):
+                self.accessibilityLabel = title
+            case .component:
+                self.accessibilityLabel = self.title.view.flatMap { self.firstAccessibilityLabel(in: $0) }
+            }
+            self.accessibilityValue = nil
+            self.accessibilityTraits = [.button]
+            if isSelected {
+                self.accessibilityTraits.insert(.selected)
+            }
+            if isReorderMode && !item.isReorderable {
+                self.accessibilityTraits.insert(.notEnabled)
+            }
             
             transition.setFrame(view: self.containerButton, frame: CGRect(origin: CGPoint(), size: size))
             
@@ -462,6 +519,24 @@ public final class TabSelectorComponent: Component {
         private var visibleItems: [AnyHashable: VisibleItem] = [:]
         
         private var didInitiallyScroll = false
+
+        @objc private func performAccessibilityReorder(_ action: UIAccessibilityCustomAction) -> Bool {
+            guard let action = action as? TabSelectorAccessibilityReorderAction, let component = self.component, let reorderItem = component.reorderItem, let index = component.items.firstIndex(where: { $0.id == action.itemId }) else {
+                return false
+            }
+            let targetIndex: Int
+            switch action.direction {
+            case .previous:
+                targetIndex = index - 1
+            case .next:
+                targetIndex = index + 1
+            }
+            guard component.items.indices.contains(targetIndex), component.items[targetIndex].isReorderable else {
+                return false
+            }
+            reorderItem(action.itemId, component.items[targetIndex].id)
+            return true
+        }
         
         private var reorderRecognizer: ReorderGestureRecognizer?
         private weak var reorderingItem: VisibleItem?
@@ -809,8 +884,18 @@ public final class TabSelectorComponent: Component {
                         itemTransition.setTransform(view: itemView, transform: CATransform3DIdentity)
                     }
                     
-                    itemView.update(theme: component.theme, size: itemBackgroundRect.size, item: item, isReordering: item.isReorderable && component.reorderItem != nil, transition: itemTransition)
-                    itemView.isSelected = item.id == component.selectedId
+                    itemView.update(theme: component.theme, size: itemBackgroundRect.size, item: item, isSelected: item.id == component.selectedId, isReorderMode: component.reorderItem != nil, isReordering: item.isReorderable && component.reorderItem != nil, transition: itemTransition)
+
+                    var accessibilityActions: [UIAccessibilityCustomAction] = []
+                    if component.reorderItem != nil, item.isReorderable, let itemIndex = component.items.firstIndex(where: { $0.id == item.id }) {
+                        if itemIndex > 0, component.items[itemIndex - 1].isReorderable, let title = component.accessibilityReorderPreviousTitle {
+                            accessibilityActions.append(TabSelectorAccessibilityReorderAction(name: title, itemId: item.id, direction: .previous, target: self, selector: #selector(self.performAccessibilityReorder(_:))))
+                        }
+                        if itemIndex + 1 < component.items.count, component.items[itemIndex + 1].isReorderable, let title = component.accessibilityReorderNextTitle {
+                            accessibilityActions.append(TabSelectorAccessibilityReorderAction(name: title, itemId: item.id, direction: .next, target: self, selector: #selector(self.performAccessibilityReorder(_:))))
+                        }
+                    }
+                    itemView.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
                     
                     itemTransition.setPosition(view: itemTitleView, position: CGPoint(x: itemTitleFrame.minX, y: itemTitleFrame.minY))
                     itemTransition.setBounds(view: itemTitleView, bounds: CGRect(origin: CGPoint(), size: itemTitleFrame.size))

@@ -198,6 +198,7 @@ public final class PinchControllerImpl: ViewController, PinchController, Standal
     private let getContentAreaInScreenSpace: () -> CGRect
 
     private var wasDismissed = false
+    private weak var previousAccessibilityFocus: AnyObject?
 
     private var controllerNode: PinchControllerNode {
         return self.displayNode as! PinchControllerNode
@@ -227,6 +228,7 @@ public final class PinchControllerImpl: ViewController, PinchController, Standal
         self.displayNode = PinchControllerNode(controller: self, sourceNode: self.sourceNode, disableScreenshots: self.disableScreenshots, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
 
         self.displayNodeDidLoad()
+        self.view.accessibilityViewIsModal = true
 
         self._ready.set(.single(true))
     }
@@ -244,16 +246,43 @@ public final class PinchControllerImpl: ViewController, PinchController, Standal
         super.viewDidAppear(animated)
 
         self.controllerNode.animateIn()
+        UIAccessibility.post(notification: .screenChanged, argument: firstAccessibilityElement(in: self.controllerNode.view) ?? self.controllerNode.view)
+    }
+
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if self.previousAccessibilityFocus == nil {
+            self.previousAccessibilityFocus = UIAccessibility.focusedElement(using: .notificationVoiceOver) as AnyObject?
+        }
     }
 
     override public func dismiss(completion: (() -> Void)? = nil) {
         if !self.wasDismissed {
             self.wasDismissed = true
             self.controllerNode.animateOut(completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                completion?()
+                self?.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+                    self?.restoreAccessibilityFocus()
+                    completion?()
+                })
             })
         }
+    }
+
+    override public func accessibilityPerformEscape() -> Bool {
+        guard !self.wasDismissed else {
+            return false
+        }
+        self.dismiss()
+        return true
+    }
+
+    private func restoreAccessibilityFocus() {
+        guard let previousAccessibilityFocus = self.previousAccessibilityFocus else {
+            return
+        }
+        self.previousAccessibilityFocus = nil
+        UIAccessibility.post(notification: .layoutChanged, argument: previousAccessibilityFocus)
     }
 
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {

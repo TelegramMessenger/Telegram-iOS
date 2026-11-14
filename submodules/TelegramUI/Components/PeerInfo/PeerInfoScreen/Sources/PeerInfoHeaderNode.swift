@@ -45,6 +45,33 @@ import BundleIconComponent
 import MarqueeComponent
 import EdgeEffect
 
+private final class PeerInfoHeaderAccessibilityAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
+final class PeerInfoHeaderNavigationTransition {
+    let sourceNavigationBar: NavigationBar
+    let sourceTitleView: ChatTitleView
+    let sourceTitleFrame: CGRect
+    let sourceSubtitleFrame: CGRect
+    let previousAvatarView: UIView?
+    let fraction: CGFloat
+
+    init(sourceNavigationBar: NavigationBar, sourceTitleView: ChatTitleView, sourceTitleFrame: CGRect, sourceSubtitleFrame: CGRect, previousAvatarView: UIView?, fraction: CGFloat) {
+        self.sourceNavigationBar = sourceNavigationBar
+        self.sourceTitleView = sourceTitleView
+        self.sourceTitleFrame = sourceTitleFrame
+        self.sourceSubtitleFrame = sourceSubtitleFrame
+        self.previousAvatarView = previousAvatarView
+        self.fraction = fraction
+    }
+}
+
 final class PeerInfoHeaderRegularContentNode: SparseNode {
     /// VoiceOver: the action buttons' container spans the header from its top, so the frame sort would read the buttons
     /// before the avatar and the name. They are read where they are drawn: after the name, status and balance, before the
@@ -1445,6 +1472,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributes: titleAttributes, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: smallTitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
+        if let peer, peer.isScam {
+            self.titleNode.accessibilityLabel = "\(titleStringText), \(presentationData.strings.Message_ScamAccount)"
+        } else if let peer, peer.isFake {
+            self.titleNode.accessibilityLabel = "\(titleStringText), \(presentationData.strings.Message_FakeAccount)"
+        } else {
+            self.titleNode.accessibilityLabel = titleStringText
+        }
         
         var subtitleRatingSize: CGSize?
 
@@ -1547,6 +1581,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: subtitleStates, mainState: subtitleMainState)
         }
+        self.subtitleNode.accessibilityLabel = subtitleStringText
+        self.subtitleNode.isAccessibilityElement = !subtitleIsButton
+        var subtitleAccessibilityActions: [UIAccessibilityCustomAction] = []
+        if self.isSettings, case let .user(user) = peer {
+            if let phone = user.phone, !phone.isEmpty {
+                subtitleAccessibilityActions.append(PeerInfoHeaderAccessibilityAction(name: presentationData.strings.Settings_CopyPhoneNumber, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, false)
+                }))
+            }
+            if let username = user.addressName, !username.isEmpty {
+                subtitleAccessibilityActions.append(PeerInfoHeaderAccessibilityAction(name: presentationData.strings.Settings_CopyUsername, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayCopyContextMenu?(self.subtitleNodeRawContainer, false, true)
+                }))
+            }
+        }
+        self.subtitleNode.accessibilityCustomActions = subtitleAccessibilityActions.isEmpty ? nil : subtitleAccessibilityActions
         
         var subtitleButtonHorizontalOffset: CGFloat = 0.0
         if subtitleIsButton {
@@ -1566,6 +1622,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleBackgroundButton = HighlightTrackingButtonNode()
                 self.subtitleBackgroundButton = subtitleBackgroundButton
                 self.subtitleNode.addSubnode(subtitleBackgroundButton)
+                subtitleBackgroundButton.isAccessibilityElement = true
+                subtitleBackgroundButton.accessibilityTraits = [.button]
                 
                 subtitleBackgroundButton.addTarget(self, action: #selector(self.subtitleBackgroundPressed), forControlEvents: .touchUpInside)
                 subtitleBackgroundButton.highligthedChanged = { [weak self] highlighted in
@@ -1581,6 +1639,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 }
             }
+            subtitleBackgroundButton.accessibilityLabel = subtitleStringText
             
             let subtitleArrowNode: ASImageNode
             if let current = self.subtitleArrowNode {
@@ -2738,6 +2797,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 }
 
+
                 let music = self.music ?? {
                     let componentView = ComponentView<Empty>()
                     self.music = componentView
@@ -2851,6 +2911,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private func actionButtonPressed(_ buttonNode: PeerInfoHeaderActionButtonNode, gesture: ContextGesture?) {
         self.performButtonAction?(buttonNode.key, nil, gesture)
+    }
+
+    @objc private func performAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? PeerInfoHeaderAccessibilityAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     private func walletBalanceCutoutIcon(color: UIColor) -> UIImage? {

@@ -114,6 +114,8 @@ public final class SegmentedControlNode: ASDisplayNode, ASGestureRecognizerDeleg
                 itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
                 itemNode.titleNode.maximumNumberOfLines = 1
                 itemNode.titleNode.truncationMode = .byTruncatingTail
+                itemNode.accessibilityLabel = item.title
+                itemNode.accessibilityTraits = [.button]
                 itemNode.setTitle(item.title, with: textFont, with: self.theme.textColor, for: .normal)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: .selected)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: [.selected, .highlighted])
@@ -299,6 +301,7 @@ public final class SegmentedControlNode: ASDisplayNode, ASGestureRecognizerDeleg
     
     public func animateSelection(to point: CGPoint, transition: ContainedViewLayoutTransition) -> CGRect {
         self.isUserInteractionEnabled = false
+        self.accessibilityElementsHidden = true
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         
@@ -309,6 +312,7 @@ public final class SegmentedControlNode: ASDisplayNode, ASGestureRecognizerDeleg
     
     public func animateSelection(from point: CGPoint, transition: ContainedViewLayoutTransition) -> CGRect {
         self.isUserInteractionEnabled = true
+        self.accessibilityElementsHidden = false
         self.alpha = 1.0
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         

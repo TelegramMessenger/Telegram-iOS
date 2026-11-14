@@ -674,9 +674,9 @@ public final class CoreVirtualListView: UIView {
     /// nothing restarts it if the steps stop while still overscrolled (until the next touch); accepted, as
     /// the chat's selection rarely starts inside a bounce.
     @discardableResult
-    public func scroll(by distance: CGFloat) -> Bool {
+    public func scroll(by distance: CGFloat, limitToPreloadMargin: Bool = true) -> Bool {
         guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
-        let distance = max(-preloadMargin, min(preloadMargin, distance))
+        let distance = limitToPreloadMargin ? max(-preloadMargin, min(preloadMargin, distance)) : distance
         // Never further past an edge than the offset already is, and never pulled back from overscroll.
         func target(from current: CGFloat) -> CGFloat {
             var target = current - distance
@@ -705,6 +705,35 @@ public final class CoreVirtualListView: UIView {
         previousOffset = current
         engine.setOffset(target)
         handleUserScroll(engine.offset)
+        return true
+    }
+
+    public override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
+        let distance: CGFloat
+        switch direction {
+        case .down:
+            distance = -self.bounds.height
+        case .up:
+            distance = self.bounds.height
+        default:
+            return false
+        }
+
+        guard self.scroll(by: distance, limitToPreloadMargin: false) else {
+            return false
+        }
+
+        let viewportCenterY = self.bounds.midY
+        if let item = self.activeWindow.items.min(by: { lhs, rhs in
+            let lhsCenterY = lhs.view.convert(CGPoint(x: lhs.view.bounds.midX, y: lhs.view.bounds.midY), to: self).y
+            let rhsCenterY = rhs.view.convert(CGPoint(x: rhs.view.bounds.midX, y: rhs.view.bounds.midY), to: self).y
+            return abs(lhsCenterY - viewportCenterY) < abs(rhsCenterY - viewportCenterY)
+        }) {
+            let row = "\(item.index + 1)"
+            let count = "\(self.items.count)"
+            let status = self.accessibilityPageScrolledString?(row, count) ?? "Row \(row) of \(count)"
+            UIAccessibility.post(notification: .pageScrolled, argument: status)
+        }
         return true
     }
 
@@ -846,6 +875,8 @@ public final class CoreVirtualListView: UIView {
     private var previousOffset: CGFloat = 0
     public private(set) var reachedLoadedEdges: Set<CoreListLoadedEdge> = []
     public var onLoadedEdgeReached: ((CoreListLoadedEdge) -> Void)?
+    /// Lets an embedding host localize VoiceOver page status without coupling CoreList to app strings.
+    public var accessibilityPageScrolledString: ((String, String) -> String)?
 
     // Embedding seam (used by the TelegramUI ChatHistoryListViewBackend adapter).
     // User-driven offset delta (drag/momentum/bounce), before window rebasing. Programmatic

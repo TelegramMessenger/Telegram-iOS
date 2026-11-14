@@ -29,6 +29,14 @@ private struct RecommendedPeersListTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let animated: Bool
+    let entries: [RecommendedPeersListEntry]
+}
+
+private func recommendedPeersAccessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { recommendedPeersAccessibilityElementIsFocused(in: $0) })
 }
 
 private enum RecommendedPeersListEntryStableId: Hashable {
@@ -100,7 +108,7 @@ private func preparedTransition(from fromEntries: [RecommendedPeersListEntry], t
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     
-    return RecommendedPeersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
+    return RecommendedPeersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count, entries: toEntries)
 }
 
 private protocol RecommendedPeers {
@@ -124,6 +132,7 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     private let listNode: ListView
     private var currentEntries: [RecommendedPeersListEntry] = []
+    private var displayedEntries: [RecommendedPeersListEntry] = []
     private var enqueuedTransactions: [RecommendedPeersListTransaction] = []
     private var currentState: (RecommendedPeers?, Bool)?
     
@@ -158,11 +167,7 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.chatControllerInteraction = chatControllerInteraction
         self.openPeerContextAction = openPeerContextAction
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.listNode = ListViewImpl()
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
-        }
         
         super.init()
         
@@ -224,6 +229,9 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
         self.currentParams = (size, sideInset, bottomInset, isScrollingLockedAtTop, presentationData)
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         self.presentationDataPromise.set(.single(presentationData))
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -357,7 +365,8 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 unlockButton = ComponentView<Empty>()
                 self.unlockButton = unlockButton
             }
-            
+            let unlockTitle = isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore
+
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             let textColor = presentationData.theme.list.itemSecondaryTextColor
@@ -438,6 +447,9 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             )
             
             if let buttonView = unlockButton.view {
+                buttonView.isAccessibilityElement = true
+                buttonView.accessibilityLabel = unlockTitle
+                buttonView.accessibilityTraits = [.button]
                 if buttonView.superview == nil {
                     self.view.addSubview(buttonView)
                 }
@@ -468,10 +480,32 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         } else {
             options.insert(.Synchronous)
         }
+
+        var focusedEntryId: RecommendedPeersListEntryStableId?
+        if UIAccessibility.isVoiceOverRunning {
+            self.listNode.forEachVisibleItemNode { node in
+                guard let itemNode = node as? ListViewItemNode else { return }
+                guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                    return
+                }
+                if recommendedPeersAccessibilityElementIsFocused(in: itemNode.view) {
+                    focusedEntryId = self.displayedEntries[index].stableId
+                }
+            }
+        }
         
         self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
+            }
+            strongSelf.displayedEntries = transaction.entries
+            if let focusedEntryId, let index = transaction.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                strongSelf.listNode.forEachVisibleItemNode { node in
+                    guard let itemNode = node as? ListViewItemNode, itemNode.index == index else { return }
+                    if !recommendedPeersAccessibilityElementIsFocused(in: itemNode.view) {
+                        UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                    }
+                }
             }
             if !strongSelf.didSetReady {
                 strongSelf.didSetReady = true
