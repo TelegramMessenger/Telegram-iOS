@@ -1899,11 +1899,11 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 guard !didRestoreFocus,
                       let itemNode = node as? ListViewItemNode,
                       let frame = self.loadedFrame(of: itemNode),
-                      frame.intersects(focusedFrame),
-                      let element = firstAccessibilityElement(in: itemNode.view) ?? itemNode.view else {
+                      frame.intersects(focusedFrame) else {
                     return
                 }
                 didRestoreFocus = true
+                let element = firstAccessibilityElement(in: itemNode.view) ?? itemNode.view
                 UIAccessibility.post(notification: .layoutChanged, argument: element)
                 if let index = self.loadedIndex(of: itemNode) {
                     let scrollStatus = self.accessibilityPageScrolledString?("\(index + 1)", "\(self.entries.count)") ?? "Row \(index + 1) of \(self.entries.count)"
