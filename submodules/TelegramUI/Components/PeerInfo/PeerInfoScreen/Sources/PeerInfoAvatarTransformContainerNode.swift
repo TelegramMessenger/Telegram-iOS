@@ -57,10 +57,6 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     var storyData: (totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool, hasLiveItems: Bool)?
     var storyProgress: Float?
     
-    /// VoiceOver: the avatar as one button (the tap opens the photos), over the whole avatar; the image, video, emoji
-    /// markup and story ring under it are not separate elements.
-    private let accessibilityArea = AccessibilityAreaNode()
-    
     init(context: AccountContext) {
         self.context = context
         self.containerNode = ContextControllerSourceNode()

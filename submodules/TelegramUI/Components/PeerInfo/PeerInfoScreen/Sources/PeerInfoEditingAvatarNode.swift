@@ -27,9 +27,6 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         
     var canAttachVideo: Bool = true
     
-    /// VoiceOver: the avatar as one button over its whole frame (the tap opens the photos).
-    private let accessibilityArea = AccessibilityAreaNode()
-    
     init(context: AccountContext) {
         self.context = context
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))

@@ -64,6 +64,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
 }
 
 private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
+    private let selectionNode: PeerInfoScreenSelectableBackgroundNode
     private let maskNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
     private let activateArea: AccessibilityAreaNode
@@ -72,6 +73,8 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
     private var itemNode: ItemListPeerItemNode?
     
     override init() {
+        var bringToFrontForHighlightImpl: (() -> Void)?
+        self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
@@ -81,6 +84,10 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         self.activateArea = AccessibilityAreaNode()
         
         super.init()
+
+        bringToFrontForHighlightImpl = { [weak self] in
+            self?.bringToFrontForHighlight?()
+        }
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)

@@ -2794,6 +2794,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         track = fileName
                     } else {
                         track = presentationData.strings.MediaPlayer_UnknownTrack
+                    }
 
 
                 let music = self.music ?? {
