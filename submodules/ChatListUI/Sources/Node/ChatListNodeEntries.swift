@@ -9,6 +9,7 @@ enum ChatListNodeEntryId: Hashable {
     case Header
     case SideListAllThreads
     case Hole(Int64)
+    case LoadMore
     case PeerId(Int64)
     case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
@@ -124,6 +125,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var storyState: ChatListNodeState.StoryState?
         var requiresPremiumForMessaging: Bool
         var displayAsTopicList: Bool
+        var supportOccupation: String?
         
         init(
             index: EngineChatList.Item.Index,
@@ -153,7 +155,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             revealed: Bool,
             storyState: ChatListNodeState.StoryState?,
             requiresPremiumForMessaging: Bool,
-            displayAsTopicList: Bool
+            displayAsTopicList: Bool,
+            supportOccupation: String? = nil
         ) {
             self.index = index
             self.presentationData = presentationData
@@ -183,6 +186,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.storyState = storyState
             self.requiresPremiumForMessaging = requiresPremiumForMessaging
             self.displayAsTopicList = displayAsTopicList
+            self.supportOccupation = supportOccupation
         }
         
         /// The chat side list's "All Messages" row (`ChatListItemContent.PeerData.isSideListAllThreadsItem`).
@@ -190,6 +194,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
             if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.supportOccupation != rhs.supportOccupation {
                 return false
             }
             if lhs.isSideListAllThreadsItem != rhs.isSideListAllThreadsItem {
@@ -426,6 +433,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
+    case LoadMoreEntry(EngineMessage.Index, isLoading: Bool, showsFolderLimit: Bool, presentationData: ChatListPresentationData)
     case GroupReferenceEntry(GroupReferenceEntryData)
     case ContactEntry(ContactEntryData)
     case ArchiveIntro(presentationData: ChatListPresentationData)
@@ -441,6 +449,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         case let .PeerEntry(peerEntry):
             return .index(peerEntry.index)
         case let .HoleEntry(holeIndex, _):
+            return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
+        case let .LoadMoreEntry(holeIndex, _, _, _):
             return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
         case let .GroupReferenceEntry(groupReferenceEntry):
             return .index(groupReferenceEntry.index)
@@ -475,6 +485,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             }
         case let .HoleEntry(holeIndex, _):
             return .Hole(Int64(holeIndex.id.id))
+        case .LoadMoreEntry:
+            return .LoadMore
         case let .GroupReferenceEntry(groupReferenceEntry):
             return .GroupId(groupReferenceEntry.groupId)
         case let .ContactEntry(contactEntry):
@@ -516,6 +528,12 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         return lhsHole == rhsHole && lhsTheme === rhsTheme
                     default:
                         return false
+                }
+            case let .LoadMoreEntry(lhsHole, lhsIsLoading, lhsShowsFolderLimit, lhsPresentationData):
+                if case let .LoadMoreEntry(rhsHole, rhsIsLoading, rhsShowsFolderLimit, rhsPresentationData) = rhs {
+                    return lhsHole == rhsHole && lhsIsLoading == rhsIsLoading && lhsShowsFolderLimit == rhsShowsFolderLimit && lhsPresentationData === rhsPresentationData
+                } else {
+                    return false
                 }
             case let .GroupReferenceEntry(groupReferenceEntry):
                 if case .GroupReferenceEntry(groupReferenceEntry) = rhs {
@@ -596,6 +614,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     }
 }
 
+func supportOccupationText(_ occupation: SupportOccupation, strings: PresentationStrings) -> String {
+    if occupation.name.isEmpty || occupation.name.hasPrefix("[rand^") {
+        return strings.Support_Claims_Taken
+    }
+    return strings.Support_Claims_Here.replacingOccurrences(of: "{name}", with: occupation.name)
+}
+
 private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt16) -> EngineChatList.Item.Index {
     if case let .chatList(index) = index, let pinningIndex = index.pinningIndex {
         return .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex))
@@ -614,7 +639,7 @@ struct ChatListContactPeer {
     }
 }
 
-func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id, isMainTab: Bool) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id, isMainTab: Bool, isFolder: Bool) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var groupItems = view.groupItems
     if isMainTab && state.archiveStoryState != nil && groupItems.isEmpty {
         groupItems.append(EngineChatList.GroupItem(
@@ -677,7 +702,21 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     
     var hasPinned = false
     
+    var isHoleHeld = false
+    if let holeIndex = view.holeIndex, let loadTill = state.supportChatListLoadTill {
+        isHoleHeld = supportChatListHoleIsHeld(holeTimestamp: holeIndex.timestamp, loadTill: loadTill)
+    }
+    var pendingLoadMoreEntry: ChatListNodeEntry?
+    if case .chatList = mode, let holeIndex = view.holeIndex, isHoleHeld || !view.isLoading {
+        pendingLoadMoreEntry = .LoadMoreEntry(holeIndex, isLoading: !isHoleHeld, showsFolderLimit: isFolder, presentationData: state.presentationData)
+    }
+    
     loop: for entry in view.items {
+        if let loadMoreEntry = pendingLoadMoreEntry, loadMoreEntry.sortIndex < .index(entry.index) {
+            result.append(loadMoreEntry)
+            pendingLoadMoreEntry = nil
+        }
+        
         var peerId: EnginePeer.Id?
         var threadId: Int64?
         var activityItemId: ChatListNodePeerInputActivities.ItemId?
@@ -694,6 +733,9 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             continue loop
         }
         if let peerId = peerId, state.pendingRemovalItemIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
+            continue loop
+        }
+        if state.supportHidesChatsWithoutIncomingMessages, case .chatList = mode, case let .chatList(chatListIndex) = entry.index, supportHidesChatWithoutIncomingMessages(peerId: chatListIndex.messageIndex.id.peerId, accountPeerId: accountPeerId, isPinned: chatListIndex.pinningIndex != nil, readCounters: entry.readCounters) {
             continue loop
         }
         var updatedMessages = entry.messages
@@ -772,7 +814,8 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 )
             },
             requiresPremiumForMessaging: entry.isPremiumRequiredToMessage,
-            displayAsTopicList: entry.displayAsTopicList
+            displayAsTopicList: entry.displayAsTopicList,
+            supportOccupation: threadId == nil ? peerId.flatMap { state.supportOccupations[$0] }.map { supportOccupationText($0, strings: state.presentationData.strings) } : nil
         ))
         
         if let threadInfo, threadInfo.isHidden {
@@ -780,6 +823,10 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         } else {
             result.append(entry)
         }
+    }
+    
+    if let loadMoreEntry = pendingLoadMoreEntry {
+        result.append(loadMoreEntry)
     }
     
     if let hiddenGeneralThread {
@@ -930,7 +977,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         }
         
         if !view.hasLater, case .chatList = mode {
-            for groupReference in groupItems {
+            for groupReference in groupItems where !state.supportHidesArchive {
                 let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
                 var mappedStoryState: ChatListNodeState.StoryState?
                 if let archiveStoryState = state.archiveStoryState {
@@ -1003,7 +1050,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     } else if result.count == 1, case .HoleEntry = result[0] {
         return ([.HeaderEntry], true)
     }
-    return (result, view.isLoading)
+    return (result, view.isLoading && !isHoleHeld)
 }
 
 /// The chat side list's "All Messages" row for a Saved Messages list: the parent's own chat, previewing the latest

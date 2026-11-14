@@ -175,6 +175,8 @@ enum PeerInfoSettingsSection {
     case privacyAndSecurity
     case passwordSetup
     case dataAndStorage
+    case supportSettings
+    case addContact
     case appearance
     case language
     case stickers
@@ -795,6 +797,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openNoteContextMenu(node: node, gesture: gesture)
+            }, openSupportInfoContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openSupportInfoContextMenu(node: node, gesture: gesture)
+            }, editSupportInfo: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.openSupportInfoEditor()
             }, openWorkingHoursContextMenu: { [weak self] node, gesture in
                 guard let self else {
                     return
@@ -2747,6 +2759,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     deinit {
         self.dataDisposable?.dispose()
+        self.supportInfoEditDisposable.dispose()
         self.walletStickersPreloadDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.activeActionDisposable.dispose()
@@ -2842,6 +2855,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         pendingCompletion?()
     }
     
+    let supportInfoEditDisposable = MetaDisposable()
     private let walletStickersPreloadDisposable = MetaDisposable()
     private var preloadedWalletCard: WalletCard?
     private let shareThemePreloadDisposable = MetaDisposable()
@@ -5147,7 +5161,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     presentationData: self.presentationData,
                     mode: .navigation,
                     placeholder: self.presentationData.strings.Settings_Search,
-                    hasBackground: false,
+                    hasBackground: self.context.supportContext != nil,
+                    hasSeparator: self.context.supportContext != nil,
                     contentNode: SettingsSearchContainerNode(
                         context: self.context,
                         openResult: { [weak self] result in
@@ -5220,7 +5235,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     cancel: { [weak self] in
                         self?.deactivateSearch()
                     },
-                    fieldStyle: .glass
+                    fieldStyle: .glass,
+                    searchBarIsExternal: self.context.supportContext != nil
                 )
             }
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .members = currentPaneKey {
@@ -5345,7 +5361,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, placeholder: nil)
         
         if self.isSettings {
-            (controller.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
+            if self.context.supportContext != nil {
+                controller.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: true), transition: .animated(duration: 0.4, curve: .spring))
+                if let searchBarNode = controller.currentTabBarSearchNode?() as? SearchBarNode {
+                    self.searchDisplayController?.setSearchBar(searchBarNode)
+                    searchBarNode.activate()
+                }
+            } else {
+                (controller.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
+            }
         }
         
         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationBarHeight, transition: .immediate)
@@ -5362,6 +5386,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         if self.isSettings {
             (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
+            if self.context.supportContext != nil {
+                controller.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .animated(duration: 0.4, curve: .spring))
+            }
         }
         
         if let (layout, navigationHeight) = self.validLayout {
@@ -6135,8 +6162,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let headerInset = sideInsets.base
 
                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, animateHeader: animateHeader)
+                self.controller?.reportAvatarCollapsed(self.headerNode.avatarCollapseFraction >= 1.0)
             }
-            
+
             let paneAreaExpansionDistance: CGFloat = 32.0
             let effectiveAreaExpansionFraction: CGFloat
             if self.state.isEditing {
@@ -6182,11 +6210,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var navigationFlags = PeerInfoNavigationFlags()
             navigationFlags.isEditing = self.state.isEditing
             navigationFlags.isSettings = self.isSettings
+            navigationFlags.isSupportSettings = self.context.supportContext != nil
             navigationFlags.isMyProfile = self.isMyProfile
             navigationFlags.canEdit = peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact)
             if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, case let .channel(channel) = data.peer, channel.hasPermission(.postStories) {
                 navigationFlags.channelCanPostStories = true
             }
+            navigationFlags.isStoryPostingDisabled = self.context.supportContext != nil
             navigationFlags.paneKey = self.paneContainerNode.currentPaneKey
             navigationFlags.isSelectingOrReordering = self.state.selectedMessageIds != nil || self.state.selectedStoryIds != nil || self.state.paneIsReordering
             navigationFlags.hasSavedMessageTags = self.data?.hasSavedMessageTags ?? false
@@ -6596,6 +6626,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let reactionSourceMessageId: EngineMessage.Id?
     private let sourceMessageId: EngineMessage.Id?
     private let callMessages: [EngineMessage]
+    private let supportOccupationDisposable = MetaDisposable()
+    public var avatarCollapsedUpdated: ((Bool) -> Void)?
+    public private(set) var isAvatarCollapsed: Bool = false
     let isSettings: Bool
     let isMyProfile: Bool
     /// Opened from the chat side list, which already lists Saved Messages' chats.
@@ -7035,6 +7068,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self._readyProxy.set(.single(true))
         })
         
+        if isSettings && context.supportContext != nil {
+            self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .immediate)
+        }
+        
         if let sourceMessageId {
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).start(next: { peer in
@@ -7058,6 +7095,26 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.presentationDataDisposable?.dispose()
         self.accountsAndPeersDisposable?.dispose()
         self.tabBarItemDisposable?.dispose()
+        self.supportOccupationDisposable.dispose()
+    }
+    
+    // A support agent reading the profile of the chat beneath it still holds that chat.
+    private func updateSupportOccupation(isVisible: Bool) {
+        guard isVisible, let supportContext = self.context.supportContext, let viewControllers = self.navigationController?.viewControllers, let index = viewControllers.firstIndex(where: { $0 === self }), index > 0, let chatController = viewControllers[index - 1] as? ChatController, case let .peer(chatPeerId) = chatController.chatLocation, chatPeerId == self.peerId else {
+            self.supportOccupationDisposable.set(nil)
+            return
+        }
+        let peerId = self.peerId
+        self.supportOccupationDisposable.set((self.context.sharedContext.applicationBindings.applicationInForeground
+        |> distinctUntilChanged
+        |> mapToSignal { inForeground -> Signal<Never, NoError> in
+            if !inForeground {
+                return .complete()
+            }
+            return Signal { _ in
+                return supportContext.openChat(peerId: peerId)
+            }
+        }).start())
     }
     
     override public func loadDisplayNode() {
@@ -7112,6 +7169,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    fileprivate func reportAvatarCollapsed(_ isCollapsed: Bool) {
+        if self.isAvatarCollapsed != isCollapsed {
+            self.isAvatarCollapsed = isCollapsed
+            self.avatarCollapsedUpdated?(isCollapsed)
+        }
+    }
+
     fileprivate func dismissAllTooltips() {
         self.window?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {
@@ -7135,6 +7199,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
+        self.updateSupportOccupation(isVisible: false)
         self.controllerNode.logoutConfirmationDisposable.set(nil)
         
         self.dismissAllTooltips()
@@ -7298,6 +7363,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.updateSupportOccupation(isVisible: true)
         DispatchQueue.main.async { [weak self] in
             self?.didAppear = true
         }

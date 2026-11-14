@@ -128,7 +128,19 @@ import GlobalControlPanelsContext
 import ComponentFlow
 import ComponentDisplayAdapters
 import UIKitRuntimeUtils
+import SupportTemplates
 import ChatHistoryListViewBackend
+
+private func supportEditText(context: AccountContext, text: String, entities: [MessageTextEntity]) -> (text: String, entities: [MessageTextEntity]) {
+    guard context.supportContext != nil else {
+        return (text, entities)
+    }
+    return supportStrippingHashtag(text: text, entities: entities, range: { $0.range }, updatedRange: { entity, range in
+        var entity = entity
+        entity.range = range
+        return entity
+    })
+}
 
 extension ChatControllerImpl {
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {
@@ -283,6 +295,7 @@ extension ChatControllerImpl {
             )
         }
         self.chatDisplayNode.historyNode.nextChannelToReadDisplayName = contentData.state.nextChannelToReadDisplayName
+        self.chatDisplayNode.historyNode.nextChannelToReadEmptyTitle = contentData.state.supportSwipeToNextChat ? self.presentationData.strings.Support_SwipeNext_NoUnreadChats : nil
         self.updateNextChannelToReadVisibility()
         
         var animated = false
@@ -995,7 +1008,27 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone in
+        if self.context.supportContext != nil {
+            self.chatDisplayNode.textInputPanelNode?.supportDoneAction = { [weak self] in
+                self?.supportDone()
+            }
+            self.chatDisplayNode.textInputPanelNode?.supportDoneIsAvailable = { [weak self] in
+                return self?.supportOccupationPeerId != nil
+            }
+            self.chatDisplayNode.textInputPanelNode?.supportHardwareReturnIsNewPress = { [weak self] in
+                return self?.context.supportContext?.allowsHardwarePress(of: .composerReturn) ?? false
+            }
+            if let peerId = self.supportOccupationPeerId {
+                self.supportDoneUnreadDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
+                |> map { $0.isUnread }
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).startStrict(next: { [weak self] isUnread in
+                    self?.chatDisplayNode.textInputPanelNode?.supportDoneChatIsUnread = isUnread
+                }))
+            }
+            self.setupSupportTemplates()
+        }
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone, handleSupportSwitch in
             guard let strongSelf = self else {
                 return
             }
@@ -1122,9 +1155,13 @@ extension ChatControllerImpl {
                         signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                     }
                     
-                    let _ = (signal
-                    |> deliverOnMainQueue).startStandalone(next: { messageIds in
+                    let supportSwitchTarget = strongSelf.supportSwitchTargetBeforeSend(isRequested: handleSupportSwitch && !shouldDivert, messages: transformedMessages, postpone: postpone)
+                    let _ = (combineLatest(supportSwitchTarget, signal)
+                    |> deliverOnMainQueue).startStandalone(next: { supportSwitchTarget, _ in
                         guard let strongSelf = self else {
+                            return
+                        }
+                        if let supportSwitchTarget, strongSelf.supportSwitch(to: supportSwitchTarget) {
                             return
                         }
                         if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
@@ -1410,6 +1447,7 @@ extension ChatControllerImpl {
                             case let .result(messageId):
                                 if let messageId = messageId {
                                     strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)))
+                                    strongSelf.chatDisplayNode.historyNode.supportMarkJumpedMentionSeen(messageId: messageId)
                                 }
                             case .loading:
                                 break
@@ -1474,6 +1512,7 @@ extension ChatControllerImpl {
                                         // The history node plays it and marks the message seen, so it does not play again when
                                         // the message is reported on screen.
                                         strongSelf.chatDisplayNode.historyNode.displayUnseenReactionAnimationsAndMarkSeen(messageIds: [messageId])
+                                        strongSelf.chatDisplayNode.historyNode.supportMarkJumpedReactionsAndVotesSeen(messageId: messageId)
                                         
                                         strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
                                     })
@@ -1536,6 +1575,7 @@ extension ChatControllerImpl {
                                     strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = true
                                     strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), scrollPosition: .center(.top), completion: {
                                         strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
+                                        strongSelf.chatDisplayNode.historyNode.supportMarkJumpedReactionsAndVotesSeen(messageId: messageId)
                                     })
                                 }
                             case .loading:
@@ -1696,7 +1736,8 @@ extension ChatControllerImpl {
                                 let content = chatInputContent(fromInstantPage: richTextAttribute.instantPage)
                                 editInputState = ChatTextInputState(content: content, selectionRange: content.length ..< content.length)
                             } else {
-                                let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                                let editText = supportEditText(context: strongSelf.context, text: message.text, entities: entities)
+                                let inputText = chatInputStateStringWithAppliedEntities(editText.text, entities: editText.entities)
                                 editInputState = ChatTextInputState(inputText: inputText)
                             }
                             var disableUrlPreviews: [String] = []
@@ -4441,7 +4482,8 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                    let editText = supportEditText(context: self.context, text: message.text, entities: entities)
+                    let inputText = chatInputStateStringWithAppliedEntities(editText.text, entities: editText.entities)
                     var disableUrlPreviews: [String] = []
                     if webpageUrl == nil {
                         disableUrlPreviews = detectUrls(inputText)
@@ -5507,6 +5549,9 @@ extension ChatControllerImpl {
         historyNode.openNextChannelToRead = { [weak self] peer, threadData, location -> Bool in
             guard let strongSelf = self else {
                 return false
+            }
+            if strongSelf.contentData?.state.supportSwipeToNextChat == true {
+                return strongSelf.supportSwitch(to: peer)
             }
             if let navigationController = strongSelf.effectiveNavigationController {
                 let _ = ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).startStandalone()

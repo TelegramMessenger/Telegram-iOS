@@ -22,6 +22,7 @@ import DeviceLocationManager
 import UrlEscaping
 import ContextUI
 import AlertUI
+import SupportTemplates
 import PresentationDataUtils
 import UndoUI
 import TelegramCallsUI
@@ -322,6 +323,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     /// The layout the chat's container gave it, before a docked side list narrows it (`sideListDockedChatLayout`).
     var sideListFullLayout: ContainerViewLayout?
     var sideListOpenFraction: CGFloat = 0.0
+    var supportInfoSidebar: ChatSupportInfoSidebar?
+    var supportInfoSidebarIsAvailable: Bool = false
+    var supportInfoSidebarHidesAvatarButton: Bool = false
+    var supportInfoSidebarButton: (item: UIBarButtonItem, theme: PresentationTheme)?
     var sideListEdgePanHandler: ChatSideListEdgePanHandler?
     /// The list got its appearance calls: it is out, or on its way out (not just under a finger from the edge).
     var sideListAppeared = false
@@ -448,6 +453,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     var canReadHistoryDisposable: Disposable?
+    let supportOccupationIsVisible = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var supportOccupationDisposable: Disposable?
+    let supportOpenChatDisposable = MetaDisposable()
+    let supportSwitchPreloadDisposable = MetaDisposable()
+    var supportDoneIgnoredUntil: Double = 0.0
+    let supportDoneUnreadDisposable = MetaDisposable()
+    var supportTemplatesAutocomplete = SupportSettings.default.templatesAutocomplete
+    var supportTemplatesSlashRange: NSRange?
+    let supportTemplatesSettingsDisposable = MetaDisposable()
+    var supportTemplatesStateObserver: SupportTemplatesManager.ObserverToken?
+    var supportOccupationPeerId: EnginePeer.Id? {
+        guard case let .peer(peerId) = self.chatLocation, case .standard(.default) = self.mode else {
+            return nil
+        }
+        switch self.subject {
+        case .none, .message:
+            return peerId
+        default:
+            return nil
+        }
+    }
     var computedCanReadHistoryPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     // Screen-capture reporting must not follow canReadHistoryValue: that is also cleared while
     // sheets and context menus (attachment menu, message menus) are shown over a still-visible
@@ -499,6 +525,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var didAppear = false
     var enableAnimations = false
     var scheduledActivateInput: ChatControllerActivateInput?
+    var didSupportFocusComposerOnOpen = false
     
     var raiseToListen: RaiseToListenManager?
     var voicePlaylistDidEndTimestamp: Double = 0.0
@@ -589,7 +616,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if let peerId = self.chatLocation.peerId {
-                return ChatControllerNavigationData(peerId: peerId, threadId: self.chatLocation.threadId)
+                return ChatControllerNavigationData(peerId: peerId, threadId: self.chatLocation.threadId, keepsVisitedChats: self.context.supportContext != nil)
             } else {
                 return nil
             }
@@ -733,7 +760,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
         }
         self.presentationData = presentationData
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        self.automaticMediaDownloadSettings = context.currentAccountAutomaticMediaDownloadSettings
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
@@ -7049,7 +7076,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        self.automaticMediaDownloadSettingsDisposable = (context.sharedContext.automaticMediaDownloadSettings
+        self.automaticMediaDownloadSettingsDisposable = (context.accountAutomaticMediaDownloadSettings
         |> deliverOnMainQueue).startStrict(next: { [weak self] downloadSettings in
             if let strongSelf = self, strongSelf.automaticMediaDownloadSettings != downloadSettings {
                 strongSelf.automaticMediaDownloadSettings = downloadSettings
@@ -7131,6 +7158,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.raiseToListen?.enabled = value
             }
         })
+        
+        if let supportContext = context.supportContext {
+            self.supportOccupationDisposable = (combineLatest(
+                context.sharedContext.applicationBindings.applicationInForeground,
+                self.supportOccupationIsVisible.get()
+            ) |> deliverOnMainQueue).startStrict(next: { [weak self] inForeground, isVisible in
+                guard let self else {
+                    return
+                }
+                if inForeground && isVisible, let peerId = self.supportOccupationPeerId {
+                    supportContext.pushChatHistory(peerId: peerId)
+                    self.supportOpenChatDisposable.set(supportContext.openChat(peerId: peerId))
+                    self.supportSwitchPreloadDisposable.set(self.supportSwitchPreload(peerId: peerId))
+                } else {
+                    self.supportOpenChatDisposable.set(nil)
+                    self.supportSwitchPreloadDisposable.set(nil)
+                }
+            })
+        }
         
         self.networkStateDisposable = (context.account.networkState |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             if let strongSelf = self, case .standard(.default) = strongSelf.presentationInterfaceState.mode {
@@ -7251,6 +7297,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.applicationInForegroundDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
+        self.supportOccupationDisposable?.dispose()
+        self.supportSwitchPreloadDisposable.dispose()
+        self.supportDoneUnreadDisposable.dispose()
+        self.supportTemplatesSettingsDisposable.dispose()
+        if let supportTemplatesStateObserver = self.supportTemplatesStateObserver {
+            self.context.supportTemplates?.removeStateObserver(supportTemplatesStateObserver)
+        }
+        self.supportOpenChatDisposable.dispose()
         self.networkStateDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
@@ -7800,6 +7854,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func loadDisplayNode() {
         self.loadDisplayNodeImpl()
+        self.supportConfigureNavigationBar()
         self.galleryPresentationContext.view = self.view
         self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
             guard let self else {
@@ -7824,7 +7879,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.willAppear = true
             
             // Limit this to reply threads just to be safe now
-            if case .replyThread = self.chatLocation {
+            if case .replyThread = self.chatLocation, !self.context.account.isSupportUser {
                 self.chatDisplayNode.historyNode.refocusOnUnreadMessagesIfNeeded()
             }
         }
@@ -7853,6 +7908,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        if let supportContext = self.context.supportContext, let supportOccupationPeerId = self.supportOccupationPeerId, !self.didSupportFocusComposerOnOpen {
+            self.didSupportFocusComposerOnOpen = true
+            if self.scheduledActivateInput == nil, !supportContext.takeComposerFocusSkip(peerId: supportOccupationPeerId), !self.supportHidesKeyboard {
+                self.scheduledActivateInput = .text
+                // A chat pushed into the split view is laid out once without the keyboard. When the search field already
+                // holds the keyboard, focusing the composer does not move it, so no layout with its height would follow.
+                DispatchQueue.main.async { [weak self] in
+                    self?.effectiveNavigationController?.requestLayout(transition: .animated(duration: 0.3, curve: .spring))
+                }
+            }
+        }
+
         if let scheduledActivateInput = scheduledActivateInput, case .text = scheduledActivateInput {
             self.scheduledActivateInput = nil
             
@@ -7987,6 +8054,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.forwardSideListAppearance(.didAppear, animated: animated)
         
         self.didAppear = true
+        self.supportOccupationIsVisible.set(true)
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
         self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
@@ -8438,6 +8506,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         super.viewWillDisappear(animated)
         self.forwardSideListAppearance(.willDisappear, animated: animated)
 
+        self.supportTemplatesClose()
         self.walletTransferAnimationsVisible = false
         
         if #available(iOS 18.0, *) {
@@ -8451,6 +8520,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
+        self.supportOccupationIsVisible.set(false)
         self.saveInterfaceState()
         
         self.dismissAllTooltips()
@@ -8578,9 +8648,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let layout = self.supportInfoSidebarFullLayout(layout)
         self.sideListFullLayout = layout
         // A docked side list takes the right of the screen: the chat lays out in what is left.
-        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(layout), transition: transition)
+        self.updateSupportInfoSidebar(layout: layout, transition: transition)
+        self.chatContainerLayoutUpdated(self.sideListDockedChatLayout(self.supportInfoSidebarChatLayout(layout)), transition: transition)
     }
 
     private func chatContainerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -9378,8 +9450,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                let supportSwitchTarget = self.supportSwitchTargetBeforeSend(isRequested: !shouldDivert && supportMessagesShareContact(messages), messages: messages, postpone: postpone)
+                let _ = (combineLatest(supportSwitchTarget, enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone)))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] supportSwitchTarget, _ in
+                    if let strongSelf = self, let supportSwitchTarget, strongSelf.supportSwitch(to: supportSwitchTarget) {
+                        return
+                    }
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }

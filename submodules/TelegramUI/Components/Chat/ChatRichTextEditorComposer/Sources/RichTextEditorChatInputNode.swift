@@ -124,6 +124,12 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     ///
     /// The flag is read ONCE, here. Re-reading it per update would let the editor change identity
     /// mid-session with a live document and first responder in it.
+    public var formatKeysNeedSelection: Bool = false {
+        didSet {
+            (self.editorView as? RichTextEditorView)?.formatKeysNeedSelection = self.formatKeysNeedSelection
+        }
+    }
+    
     public init(strings: PresentationStrings,
                 inputBackend: RichTextEditorInputBackendPreference = .legacy,
                 useInputDecEngine: Bool = false) {
@@ -302,6 +308,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // ChatInputTextViewImpl's own \r keyCommand; the native editor surfaces it as onHardwareReturn.
         self.editorView.onHardwareReturn = { [weak self] modifierFlags in
             return self?.storedDelegate?.chatInputTextNodeShouldReturn(modifierFlags: modifierFlags) ?? true
+        }
+        self.editorView.onHardwareTab = { [weak self] in
+            self?.storedDelegate?.chatInputTextNodeHardwareTab()
         }
 
         // The caret's own signal, answered by re-applying the field's CURRENT geometry with the
@@ -1059,6 +1068,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     public func resetInitialPrimaryLanguage() { self.editorView.resetInputPrimaryLanguage() }
     public var keyboardAppearance: UIKeyboardAppearance = .default
     public var autocorrectionType: UITextAutocorrectionType = .default
+    public var returnKeyType: UIReturnKeyType = .default
     /// The theme accent the panel passes (`theme.list.itemAccentColor`), applied the way the legacy node
     /// applies it: as this node's own `tintColor`, which the editor view and the engine text view inside it
     /// inherit. UIKit draws the caret, the selection highlight and the handles with the text view's

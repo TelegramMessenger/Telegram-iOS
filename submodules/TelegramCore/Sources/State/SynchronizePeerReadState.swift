@@ -431,7 +431,7 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
     // without going through the interactive read (a support account's send, the chat list's
     // read toggle, operations persisted by earlier builds).
     let keepsReadState = postbox.transaction { transaction -> Bool in
-        return peerKeepsReadState(transaction.getPeer(peerId))
+        return peerKeepsReadState(transaction.getPeer(peerId)) && !supportClearsUnread(transaction: transaction, accountPeerId: stateManager.accountPeerId, peerId: peerId)
     }
     |> castError(PeerReadStateValidationError.self)
 

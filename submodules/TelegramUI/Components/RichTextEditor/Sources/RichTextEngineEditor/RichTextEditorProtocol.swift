@@ -85,6 +85,7 @@ public protocol RichTextEditor: UIView {
     var canvasBackgroundColor: UIColor? { get set }
     var tapBelowAddsTrailingParagraph: Bool { get set }
     var onHardwareReturn: ((UIKeyModifierFlags) -> Bool)? { get set }
+    var onHardwareTab: (() -> Void)? { get set }
     var onBecameFirstResponder: (() -> Void)? { get set }
     var onResignedFirstResponder: (() -> Void)? { get set }
 
@@ -305,6 +306,10 @@ public extension RichTextEditor {
     func discardUndoHistory() {}
     func performAsOneUndoStep(_ body: () -> Void) { body() }
     func insertInlineRunsOnUsersBehalf(_ runs: [TextRun]) -> Bool { false }
+    var onHardwareTab: (() -> Void)? {
+        get { nil }
+        set {}
+    }
 }
 
 /// `RichTextEngineEditorView` already implements every member above verbatim — that IS R1-R6's

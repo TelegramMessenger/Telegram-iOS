@@ -237,11 +237,11 @@ final class StateSyncFixture {
 
     // MARK: - Seeding
 
-    static func makeUser(id: PeerId, accessHash: Int64? = nil, firstName: String) -> TelegramUser {
+    static func makeUser(id: PeerId, accessHash: Int64? = nil, firstName: String, phone: String? = nil) -> TelegramUser {
         return TelegramUser(
             id: id,
             accessHash: accessHash.map { TelegramPeerAccessHash.personal($0) },
-            firstName: firstName, lastName: nil, username: nil, phone: nil, photo: [],
+            firstName: firstName, lastName: nil, username: nil, phone: phone, photo: [],
             botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [],
             storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil,
             profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil
@@ -288,9 +288,9 @@ final class StateSyncFixture {
 
     /// The account record the manager reads at every poll. `state: nil` is "no inner state",
     /// which makes the first poll bootstrap with `updates.getState`.
-    func seedAccount(state: AuthorizedAccountState.State?, invalidatedChannels: [AuthorizedAccountState.InvalidatedChannel] = []) {
+    func seedAccount(state: AuthorizedAccountState.State?, invalidatedChannels: [AuthorizedAccountState.InvalidatedChannel] = [], accountPhone: String? = nil) {
         let accountPeerId = StateSyncFixture.accountPeerId
-        let user = StateSyncFixture.makeUser(id: accountPeerId, firstName: "Account")
+        let user = StateSyncFixture.makeUser(id: accountPeerId, firstName: "Account", phone: accountPhone)
         self.transaction { transaction -> Void in
             transaction.setState(AuthorizedAccountState(isTestingEnvironment: false, masterDatacenterId: 2, peerId: accountPeerId, state: state, invalidatedChannels: invalidatedChannels))
             updatePeersCustom(transaction: transaction, peers: [user], update: { _, updated in

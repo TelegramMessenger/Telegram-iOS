@@ -33,7 +33,7 @@ final class InChatPrefetchManager {
     
     init(context: AccountContext) {
         self.context = context
-        self.settings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        self.settings = context.currentAccountAutomaticMediaDownloadSettings
     }
     
     deinit {

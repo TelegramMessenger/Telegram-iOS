@@ -510,7 +510,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             var currentCredibilityIconImage: UIImage?
             if let peer = item.topMessage.peers[item.topMessage.id.peerId], peer.id != item.context.account.peerId {
                 if peer.isScam {
@@ -519,7 +518,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                 } else if peer.isVerified {
                     currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                } else if peer.isPremium && item.context.premiumBadgesShown {
                     currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 }
             }

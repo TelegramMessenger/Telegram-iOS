@@ -169,7 +169,7 @@ final class AuthorizedApplicationContext {
         self.context = context
 
         self.showCallsTab = showCallsTab
-        self.showNewsTab = isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 })
+        self.showNewsTab = isNewsFeedEnabled(appConfiguration: context.currentAppConfiguration.with { $0 }, isSupportAccount: context.supportContext != nil)
         
         self.notificationController = NotificationContainerController(context: context)
         
@@ -358,11 +358,16 @@ final class AuthorizedApplicationContext {
                         })
                     }
                     
-                    let inAppNotificationSettings: InAppNotificationSettings
+                    var inAppNotificationSettings: InAppNotificationSettings
                     if let current = strongSelf.inAppNotificationSettings {
                         inAppNotificationSettings = current
                     } else {
                         inAppNotificationSettings = InAppNotificationSettings.defaultSettings
+                    }
+                    if let supportContext = strongSelf.context.supportContext, !supportContext.currentInAppNotifications {
+                        inAppNotificationSettings.playSounds = false
+                        inAppNotificationSettings.vibrate = false
+                        inAppNotificationSettings.displayPreviews = false
                     }
                     
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
@@ -822,9 +827,10 @@ final class AuthorizedApplicationContext {
             }
         })
 
+        let isSupportAccount = context.supportContext != nil
         self.showNewsTabDisposable = (context.appConfiguration
         |> map { appConfiguration -> Bool in
-            return isNewsFeedEnabled(appConfiguration: appConfiguration)
+            return isNewsFeedEnabled(appConfiguration: appConfiguration, isSupportAccount: isSupportAccount)
         }
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] value in

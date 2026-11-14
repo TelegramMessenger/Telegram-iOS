@@ -113,6 +113,13 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1)) ?? IndexSet()
     }
     
+    /// Whether `peerId`'s message history has been set up. Unlike `getHoles`, this does not set it up: the first
+    /// touch of an untouched history adds a hole over all of it.
+    public func isMessageHistoryInitialized(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryMetadataTable.isInitialized(peerId) ?? false
+    }
+
     public func getThreadIndexHoles(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace) -> IndexSet {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
@@ -175,6 +182,21 @@ public final class Transaction {
         self.postbox?.addChatListHole(groupId: groupId, hole: hole)
     }
     
+    public func setHoldsChatListOrder(_ value: Bool) {
+        assert(!self.disposed)
+        self.postbox?.chatListTable.holdsRowOrder = value
+    }
+    
+    public func resortHeldChatListRows(groupIds: [PeerGroupId]) -> Int {
+        assert(!self.disposed)
+        return self.postbox?.resortHeldChatListRows(groupIds: groupIds) ?? 0
+    }
+    
+    public func resortChatListRow(peerId: PeerId) {
+        assert(!self.disposed)
+        self.postbox?.resortChatListRows(peerIds: Set([peerId]))
+    }
+    
     public func deleteMessages(_ messageIds: [MessageId], forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.deleteMessages(messageIds, forEachMedia: forEachMedia)
@@ -192,6 +214,16 @@ public final class Transaction {
     public func clearHistory(_ peerId: PeerId, threadId: Int64?, minTimestamp: Int32?, maxTimestamp: Int32?, namespaces: MessageIdNamespaces, forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: forEachMedia)
+    }
+    
+    public func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        assert(!self.disposed)
+        self.postbox?.removeHistoryAsUnseenPeer(peerId, namespace: namespace)
+    }
+    
+    public func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.hasOpenMessageHistoryView(peerId: peerId) ?? false
     }
     
     public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {
@@ -1299,12 +1331,43 @@ public final class Transaction {
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
     }
         
+    public func enumerateChatListIndices(groupId: PeerGroupId, after index: ChatListIndex, downward: Bool, _ f: (ChatListIndex) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.chatListTable.enumerateChatIndices(groupId: groupId, after: index, downward: downward, f)
+    }
+    
+    public func chatListFilterMatcher(groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIndex) -> Bool {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return { _ in false }
+        }
+        let matcher = mappedChatListFilterPredicate(postbox: postbox, currentTransaction: self, groupId: groupId, predicate: predicate)
+        return { index in
+            return matcher(.message(index, nil))
+        }
+    }
+    
     public func getChatListNamespaceEntries(groupId: PeerGroupId, namespace: MessageId.Namespace, summaryTag: MessageTags?) -> [ChatListNamespaceEntry] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
             return []
         }
         return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
+    }
+    
+    public func chatListStoredEntries(groupId: PeerGroupId, earlierThan index: (index: ChatListIndex, isChat: Bool)?, count: Int) -> [ChatListStoredEntry] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: index.flatMap { ($0.index, $0.isChat) }, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count).map { entry -> ChatListStoredEntry in
+            switch entry {
+            case let .message(index, _):
+                return .chat(index)
+            case let .hole(hole):
+                return .hole(hole)
+            }
+        }
     }
     
     public func getTopChatListEntries(groupId: PeerGroupId, count: Int) -> [RenderedPeer] {
@@ -2425,6 +2488,24 @@ final class PostboxImpl {
         self.chatListTable.replaceHole(groupId: groupId, index: index, hole: hole, operations: &self.currentChatListOperations)
     }
     
+    fileprivate func resortHeldChatListRows(groupIds: [PeerGroupId]) -> Int {
+        var peerIds = Set<PeerId>()
+        for groupId in groupIds {
+            peerIds.formUnion(self.chatListTable.heldRowPeerIds(groupId: groupId, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable))
+        }
+        if !peerIds.isEmpty {
+            self.resortChatListRows(peerIds: peerIds)
+        }
+        return peerIds.count
+    }
+    
+    fileprivate func resortChatListRows(peerIds: Set<PeerId>) {
+        let holdsRowOrder = self.chatListTable.holdsRowOrder
+        self.chatListTable.holdsRowOrder = false
+        self.chatListTable.replay(postbox: self, historyOperationsByPeerId: [:], updatedPeerChatListEmbeddedStates: peerIds, updatedPeerCachedData: [:], updatedChatListInclusions: [:], messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, operations: &self.currentChatListOperations)
+        self.chatListTable.holdsRowOrder = holdsRowOrder
+    }
+    
     fileprivate func addChatListHole(groupId: PeerGroupId, hole: ChatListHole) {
         self.chatListTable.addHole(groupId: groupId, hole: hole, operations: &self.currentChatListOperations)
     }
@@ -2458,6 +2539,16 @@ final class PostboxImpl {
                 self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max - 1, operations: &self.currentPeerHoleOperations)
             }
         }
+    }
+    
+    fileprivate func hasOpenMessageHistoryView(peerId: PeerId) -> Bool {
+        return self.viewTracker.hasMessageHistoryView(peerId: peerId)
+    }
+    
+    fileprivate func removeHistoryAsUnseenPeer(_ peerId: PeerId, namespace: MessageId.Namespace) {
+        self.clearHistory(peerId, threadId: nil, minTimestamp: nil, maxTimestamp: nil, namespaces: .just(Set([namespace])), forEachMedia: nil)
+        self.messageHistoryMetadataTable.removeInitialized(peerId)
+        self.cachedPeerDataTable.remove(id: peerId)
     }
     
     fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: ((Media) -> Void)?) {
@@ -4712,9 +4803,13 @@ final class PostboxImpl {
         }).start()
     }
     
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(usingTempFile: Bool = false) -> Signal<Never, NoError> {
         return Signal { subscriber in
-            self.valueBox.vacuum()
+            if usingTempFile {
+                self.valueBox.vacuumUsingTempFile()
+            } else {
+                self.valueBox.vacuum()
+            }
             subscriber.putCompletion()
             
             return EmptyDisposable
@@ -5439,12 +5534,12 @@ public class Postbox {
         }
     }
 
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(usingTempFile: Bool = false) -> Signal<Never, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
 
             self.impl.with { impl in
-                disposable.set(impl.optimizeStorage().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+                disposable.set(impl.optimizeStorage(usingTempFile: usingTempFile).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable
