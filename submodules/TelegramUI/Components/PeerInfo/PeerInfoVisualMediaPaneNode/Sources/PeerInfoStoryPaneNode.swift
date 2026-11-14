@@ -1542,7 +1542,7 @@ private final class StoryGridAccessibilityElement: UIAccessibilityElement {
         return false
     }
 
-    init(accessibilityContainer container: Any) {
+    override init(accessibilityContainer container: Any) {
         super.init(accessibilityContainer: container)
     }
 
