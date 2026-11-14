@@ -708,6 +708,35 @@ public final class CoreVirtualListView: UIView {
         return true
     }
 
+    public override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
+        let distance: CGFloat
+        switch direction {
+        case .down:
+            distance = -self.bounds.height
+        case .up:
+            distance = self.bounds.height
+        default:
+            return false
+        }
+
+        guard self.scroll(by: distance, limitToPreloadMargin: false) else {
+            return false
+        }
+
+        let viewportCenterY = self.bounds.midY
+        if let item = self.activeWindow.items.min(by: { lhs, rhs in
+            let lhsCenterY = lhs.view.convert(CGPoint(x: lhs.view.bounds.midX, y: lhs.view.bounds.midY), to: self).y
+            let rhsCenterY = rhs.view.convert(CGPoint(x: rhs.view.bounds.midX, y: rhs.view.bounds.midY), to: self).y
+            return abs(lhsCenterY - viewportCenterY) < abs(rhsCenterY - viewportCenterY)
+        }) {
+            let row = "\(item.index + 1)"
+            let count = "\(self.items.count)"
+            let status = self.accessibilityPageScrolledString?(row, count) ?? "Row \(row) of \(count)"
+            UIAccessibility.post(notification: .pageScrolled, argument: status)
+        }
+        return true
+    }
+
     /// The settled screen Y of a hold's edge under the CURRENT geometry.
     private func holdEdgeY(_ edge: CoreListScrollHold.Edge) -> CGFloat {
         switch edge {
@@ -846,6 +875,8 @@ public final class CoreVirtualListView: UIView {
     private var previousOffset: CGFloat = 0
     public private(set) var reachedLoadedEdges: Set<CoreListLoadedEdge> = []
     public var onLoadedEdgeReached: ((CoreListLoadedEdge) -> Void)?
+    /// Lets an embedding host localize VoiceOver page status without coupling CoreList to app strings.
+    public var accessibilityPageScrolledString: ((String, String) -> String)?
 
     // Embedding seam (used by the TelegramUI ChatHistoryListViewBackend adapter).
     // User-driven offset delta (drag/momentum/bounce), before window rebasing. Programmatic
