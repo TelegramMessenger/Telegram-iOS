@@ -282,6 +282,7 @@ typedef enum {
     _glkView.center = CGPointMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0);
     
     RMIntroPageView *firstPage = (RMIntroPageView *)[_pageViews firstObject];
+    [firstPage layoutIfNeeded];
     CGPoint headerTargetPosition = firstPage.headerLabel.center;
     firstPage.headerLabel.center = CGPointMake(headerTargetPosition.x, headerTargetPosition.y + 140.0);
     
