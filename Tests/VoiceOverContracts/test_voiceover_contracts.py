@@ -478,6 +478,7 @@ class ReleaseGateContractTests(unittest.TestCase):
 
     def test_ui_suite_keeps_tree_audit_and_performance_budget(self) -> None:
         contents = source("Telegram/Tests/Sources/AccessibilityUITests.swift")
+        intro = source("submodules/RMIntro/Sources/platform/ios/RMIntroViewController.m")
         for contract in (
             "performAccessibilityAudit()",
             "initialTreeElementBudget",
@@ -496,6 +497,7 @@ class ReleaseGateContractTests(unittest.TestCase):
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, contents)
+        self.assertIn("CGFloat pageControlHeight = 44.0f;", intro)
 
     def test_workflow_runs_both_automated_gate_layers(self) -> None:
         contents = source(".github/workflows/voiceover-gate.yml")
@@ -515,6 +517,7 @@ class ReleaseGateContractTests(unittest.TestCase):
         self.assertIn("testParser.add_argument(\n        '--disableProvisioningProfiles'", make)
         self.assertIn("if self.disable_provisioning_profiles:\n            combined_arguments += ['--//Telegram:disableProvisioningProfiles']", make)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
+        self.assertIn("--testFilter=AccessibilityUITests", contents)
         self.assertIn("actions/upload-artifact@v7.0.2", contents)
         self.assertIn("if-no-files-found: ignore", contents)
         self.assertIn("runs-on: xcode-27", contents)
