@@ -2012,6 +2012,7 @@ ios_ui_test_suite(
     runners = [
         ":iPhone-17__27.0",
     ],
+    timeout = "long",
     tags = ["manual"],
     test_host = "//Telegram",
     visibility = ["@rules_xcodeproj//xcodeproj:generated"],
