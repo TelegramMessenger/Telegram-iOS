@@ -49,7 +49,7 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
-        self.label.maximumNumberOfLines = 1
+        self.label.maximumNumberOfLines = 0
         self.label.displaysAsynchronously = false
         self.label.truncationType = .end
         self.label.isAccessibilityElement = false
@@ -86,7 +86,7 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetSwitchItem) {
         self.item = item
         
-        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        let defaultFont = Font.regular(UIFontMetrics(forTextStyle: .body).scaledValue(for: floor(theme.baseFontSize * 20.0 / 17.0)))
         
         self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.primaryTextColor)
         self.label.isAccessibilityElement = false
@@ -103,13 +103,6 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        let size = CGSize(width: constrainedSize.width, height: 57.0)
-       
-        self.button.frame = CGRect(origin: CGPoint(), size: size)
-        
-        let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - 51.0 - 16.0 * 2.0), height: size.height))
-        self.label.frame = CGRect(origin: CGPoint(x: 16.0, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
-        
         var switchSize = CGSize(width: 51.0, height: 31.0)
         if let switchView = self.switchNode.view as? UISwitch {
             if self.switchNode.bounds.size.width.isZero {
@@ -117,6 +110,12 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
             }
             switchSize = switchView.bounds.size
         }
+
+        let labelSize = self.label.updateLayout(CGSize(width: max(1.0, constrainedSize.width - switchSize.width - 16.0 * 3.0), height: constrainedSize.height))
+        let size = CGSize(width: constrainedSize.width, height: max(57.0, labelSize.height + 28.0))
+
+        self.button.frame = CGRect(origin: CGPoint(), size: size)
+        self.label.frame = CGRect(origin: CGPoint(x: 16.0, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         self.switchNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - switchSize.width, y: floor((size.height - switchSize.height) / 2.0)), size: switchSize)
         
         self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
@@ -127,7 +126,7 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     
     @objc func buttonPressed() {
         let value = !self.switchNode.isOn
-        self.switchNode.setOn(value, animated: true)
+        self.switchNode.setOn(value, animated: !UIAccessibility.isReduceMotionEnabled)
         self.item?.action(value)
     }
 }

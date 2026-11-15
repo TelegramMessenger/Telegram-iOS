@@ -24,6 +24,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let containerNode: ContextControllerSourceNode
     
     let avatarNode: AvatarNode
+    private let accessibilityArea: AccessibilityAreaNode
     private(set) var avatarStoryView: ComponentView<Empty>?
     var videoNode: UniversalVideoNode?
     var markupNode: AvatarVideoNode?
@@ -56,23 +57,24 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     var storyData: (totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool, hasLiveItems: Bool)?
     var storyProgress: Float?
     
-    /// VoiceOver: the avatar as one button (the tap opens the photos), over the whole avatar; the image, video, emoji
-    /// markup and story ring under it are not separate elements.
-    private let accessibilityArea = AccessibilityAreaNode()
-    
     init(context: AccountContext) {
         self.context = context
         self.containerNode = ContextControllerSourceNode()
         
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init()
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.accessibilityArea)
         self.containerNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
         self.avatarNode.frame = self.containerNode.bounds
+        self.accessibilityArea.frame = self.containerNode.bounds
+        self.accessibilityArea.accessibilityTraits = [.button, .image]
+        self.avatarNode.isAccessibilityElement = false
         
         self.accessibilityArea.accessibilityTraits = [.button, .image]
         self.accessibilityArea.activate = { [weak self] in
@@ -332,8 +334,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
 
     func update(peer: EnginePeer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
         self.params = Params(peer: peer, threadId: threadId, threadInfo: threadInfo, item: item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: isSettings)
+        self.accessibilityArea.isAccessibilityElement = peer != nil
 
         if let peer = peer {
+            self.accessibilityArea.accessibilityLabel = threadInfo?.title ?? peer.compactDisplayTitle
+            self.accessibilityArea.activate = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                if threadInfo != nil {
+                    self.emojiTapped?()
+                } else {
+                    self.tapped?()
+                }
+                return true
+            }
+
             let previousItem = self.item
             var item = item
             self.item = item

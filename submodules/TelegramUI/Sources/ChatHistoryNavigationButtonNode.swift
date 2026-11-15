@@ -42,6 +42,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     var badge: String = "" {
         didSet {
             if self.badge != oldValue {
+                self.accessibilityValue = self.badge.isEmpty ? nil : self.badge
                 self.layoutBadge()
             }
         }
@@ -51,7 +52,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     private var preferClearGlass: Bool
     private let type: ChatHistoryNavigationButtonType
     
-    init(theme: PresentationTheme, preferClearGlass: Bool, backgroundNode: WallpaperBackgroundNode, type: ChatHistoryNavigationButtonType) {
+    init(theme: PresentationTheme, strings: PresentationStrings, preferClearGlass: Bool, backgroundNode: WallpaperBackgroundNode, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         self.preferClearGlass = preferClearGlass
         self.type = type
@@ -84,6 +85,21 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.badgeTextNode.reverseAnimationDirection = true
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        switch type {
+        case .down:
+            self.accessibilityLabel = strings.KeyCommand_ScrollDown
+        case .up:
+            self.accessibilityLabel = strings.KeyCommand_ScrollUp
+        case .mentions:
+            self.accessibilityLabel = strings.Conversation_ContextMenuMention
+        case .reactions:
+            self.accessibilityLabel = strings.Conversation_ReadAllReactions
+        case .pollVotes:
+            self.accessibilityLabel = strings.Conversation_ReadAllPollVotes
+        }
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:)))
         self.tapRecognizer = tapRecognizer
@@ -158,6 +174,14 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
                 tapped()
             }
         }
+    }
+
+    override func accessibilityActivate() -> Bool {
+        guard self.isEnabled, let tapped = self.tapped else {
+            return false
+        }
+        tapped()
+        return true
     }
     
     private var currentValue: Int = 0

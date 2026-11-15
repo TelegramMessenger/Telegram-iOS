@@ -20,6 +20,14 @@ private struct GroupsInCommonListTransaction {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let entries: [GroupsInCommonListEntry]
+}
+
+private func groupsInCommonAccessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { groupsInCommonAccessibilityElementIsFocused(in: $0) })
 }
 
 private struct GroupsInCommonListEntry: Comparable, Identifiable {
@@ -57,7 +65,7 @@ private func preparedTransition(from fromEntries: [GroupsInCommonListEntry], to 
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     
-    return GroupsInCommonListTransaction(deletions: deletions, insertions: insertions, updates: updates)
+    return GroupsInCommonListTransaction(deletions: deletions, insertions: insertions, updates: updates, entries: toEntries)
 }
 
 final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
@@ -74,6 +82,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let listNode: ListView
     private var state: GroupsInCommonState?
     private var currentEntries: [GroupsInCommonListEntry] = []
+    private var displayedEntries: [GroupsInCommonListEntry] = []
     private var enqueuedTransactions: [GroupsInCommonListTransaction] = []
     
     private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
@@ -112,11 +121,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.openPeerContextAction = openPeerContextAction
         self.groupsInCommonContext = groupsInCommonContext
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.listNode = ListViewImpl()
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
-        }
 
         self.listBackgroundView = UIImageView()
         self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -197,6 +202,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         
         self.ignoreListBackgroundUpdates = true
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -253,10 +261,32 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
         var options = ListViewDeleteAndInsertOptions()
         options.insert(.Synchronous)
+
+        var focusedPeerId: EnginePeer.Id?
+        if UIAccessibility.isVoiceOverRunning {
+            self.listNode.forEachVisibleItemNode { node in
+                guard let itemNode = node as? ListViewItemNode else { return }
+                guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                    return
+                }
+                if groupsInCommonAccessibilityElementIsFocused(in: itemNode.view) {
+                    focusedPeerId = self.displayedEntries[index].stableId
+                }
+            }
+        }
         
         self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
+            }
+            strongSelf.displayedEntries = transaction.entries
+            if let focusedPeerId, let index = transaction.entries.firstIndex(where: { $0.stableId == focusedPeerId }) {
+                strongSelf.listNode.forEachVisibleItemNode { node in
+                    guard let itemNode = node as? ListViewItemNode, itemNode.index == index else { return }
+                    if !groupsInCommonAccessibilityElementIsFocused(in: itemNode.view) {
+                        UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                    }
+                }
             }
             if !strongSelf.didSetReady {
                 strongSelf.didSetReady = true

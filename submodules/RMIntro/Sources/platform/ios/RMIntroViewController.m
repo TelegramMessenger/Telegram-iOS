@@ -282,6 +282,7 @@ typedef enum {
     _glkView.center = CGPointMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0);
     
     RMIntroPageView *firstPage = (RMIntroPageView *)[_pageViews firstObject];
+    [firstPage layoutIfNeeded];
     CGPoint headerTargetPosition = firstPage.headerLabel.center;
     firstPage.headerLabel.center = CGPointMake(headerTargetPosition.x, headerTargetPosition.y + 140.0);
     
@@ -605,7 +606,10 @@ typedef enum {
         startButtonY += languageButtonSpread;
     }
     
-    _pageControl.frame = CGRectMake(0, pageControlY, self.view.bounds.size.width, 7);
+    // Keep the visual dots centered while giving the adjustable VoiceOver
+    // page control a sufficiently large accessibility hit region.
+    CGFloat pageControlHeight = 44.0f;
+    _pageControl.frame = CGRectMake(0, pageControlY - (pageControlHeight - 7.0f) / 2.0f, self.view.bounds.size.width, pageControlHeight);
     _glkView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
     
     CGFloat startButtonWidth = MIN(430.0 - 48.0, self.view.bounds.size.width - 48.0f);

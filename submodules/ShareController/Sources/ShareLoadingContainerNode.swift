@@ -47,6 +47,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private var theme: PresentationTheme
+    private let strings: PresentationStrings
     private let activityIndicator: ActivityIndicator
     private let statusNode: RadialStatusNode
     private let doneStatusNode: RadialStatusNode
@@ -67,21 +68,41 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
                     self.statusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 1.0, cancelEnabled: false, animateRotation: true), completion: {})
                     self.doneStatusNode.transitionToState(.check(self.theme.actionSheet.controlAccentColor), completion: {})
             }
+            self.updateAccessibilityLabel()
         }
     }
     
-    public init(theme: PresentationTheme, forceNativeAppearance: Bool) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, forceNativeAppearance: Bool) {
         self.theme = theme
+        self.strings = strings
         self.activityIndicator = ActivityIndicator(type: .custom(theme.actionSheet.controlAccentColor, !forceNativeAppearance ? 22.0 : 50.0, 2.0, forceNativeAppearance))
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.doneStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = [.staticText, .updatesFrequently]
+        self.updateAccessibilityLabel()
+        self.activityIndicator.isAccessibilityElement = false
+        self.statusNode.isAccessibilityElement = false
+        self.doneStatusNode.isAccessibilityElement = false
         
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.doneStatusNode)
         self.doneStatusNode.transitionToState(.progress(color: self.theme.actionSheet.controlAccentColor, lineWidth: 2.0, value: 0.0, cancelEnabled: false, animateRotation: true), completion: {})
+    }
+
+    private func updateAccessibilityLabel() {
+        switch self.state {
+        case .preparing:
+            self.accessibilityLabel = self.strings.Channel_NotificationLoading
+        case let .progress(value):
+            self.accessibilityLabel = self.strings.Share_UploadProgress(Int(value * 100.0)).string
+        case .done:
+            self.accessibilityLabel = self.strings.Share_UploadDone
+        }
     }
     
     public func activate() {
@@ -249,6 +270,8 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         
         self.progressTextNode = ImmediateTextNode()
         self.progressTextNode.textAlignment = .center
+        self.progressTextNode.isAccessibilityElement = true
+        self.progressTextNode.accessibilityTraits = [.staticText, .updatesFrequently]
         
         self.progressBackgroundNode = ASDisplayNode()
         self.progressBackgroundNode.backgroundColor = theme.actionSheet.controlAccentColor.withMultipliedAlpha(0.2)
@@ -350,6 +373,7 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         }
         
         self.progressTextNode.attributedText = NSAttributedString(string: progressText, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.actionSheet.primaryTextColor)
+        self.progressTextNode.accessibilityLabel = progressText
         let progressTextSize = self.progressTextNode.updateLayout(size)
         let progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - progressTextSize.height), size: progressTextSize)
         self.progressTextNode.frame = progressTextFrame
@@ -359,9 +383,11 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         
         let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (progressTextFrame.minY - imageSize.height - 20.0)), size: imageSize)
         self.animationNode.frame = animationFrame
+        self.animationNode.isAccessibilityElement = false
         self.animationNode.updateLayout(size: imageSize)
         
         self.doneAnimationNode.frame = animationFrame
+        self.doneAnimationNode.isAccessibilityElement = false
         self.doneAnimationNode.updateLayout(size: imageSize)
         
         self.contentOffsetUpdated?(-size.height + nodeHeight * 0.5, transition)

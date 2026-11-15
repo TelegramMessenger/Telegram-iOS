@@ -130,12 +130,21 @@ public struct ChatListSearchContainerTransition {
     public let deletions: [ListViewDeleteItem]
     public let insertions: [ListViewInsertItem]
     public let updates: [ListViewUpdateItem]
+    public let stableIds: [AnyHashable]
     
-    public init(deletions: [ListViewDeleteItem], insertions: [ListViewInsertItem], updates: [ListViewUpdateItem]) {
+    public init(deletions: [ListViewDeleteItem], insertions: [ListViewInsertItem], updates: [ListViewUpdateItem], stableIds: [AnyHashable] = []) {
         self.deletions = deletions
         self.insertions = insertions
         self.updates = updates
+        self.stableIds = stableIds
     }
+}
+
+private func chatSearchResultsAccessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { chatSearchResultsAccessibilityElementIsFocused(in: $0) })
 }
 
 private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], context: AccountContext, interaction: ChatListNodeInteraction, location: ChatListControllerLocation) -> ChatListSearchContainerTransition {
@@ -145,7 +154,7 @@ private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatLi
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, location: location), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, location: location), directionHint: nil) }
     
-    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, stableIds: toEntries.map { AnyHashable($0.stableId) })
 }
 
 class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
@@ -164,6 +173,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
     private let listNode: ListView
     
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
+    private var displayedEntryIds: [AnyHashable] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var resultsUpdated: ((SearchMessagesResult, SearchMessagesState) -> Void)?
@@ -199,11 +209,15 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         
         self.listNode = ListViewImpl()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
-        }
         
         super.init()
+
+        self.listNode.accessibilityPageScrolledString = { [weak self] row, count in
+            guard let self else {
+                return ""
+            }
+            return self.presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.isOpaque = false
@@ -412,8 +426,33 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
             options.insert(.PreferSynchronousResourceLoading)
+
+            var focusedEntryId: AnyHashable?
+            if UIAccessibility.isVoiceOverRunning {
+                self.listNode.forEachVisibleItemNode { node in
+                    guard let itemNode = node as? ListViewItemNode else { return }
+                    guard let index = itemNode.index, self.displayedEntryIds.indices.contains(index) else {
+                        return
+                    }
+                    if chatSearchResultsAccessibilityElementIsFocused(in: itemNode.view) {
+                        focusedEntryId = self.displayedEntryIds[index]
+                    }
+                }
+            }
             
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.displayedEntryIds = transition.stableIds
+                if let focusedEntryId, let index = transition.stableIds.firstIndex(of: focusedEntryId) {
+                    self.listNode.forEachVisibleItemNode { node in
+                        guard let itemNode = node as? ListViewItemNode, itemNode.index == index else { return }
+                        if !chatSearchResultsAccessibilityElementIsFocused(in: itemNode.view) {
+                            UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                        }
+                    }
+                }
             })
         }
     }

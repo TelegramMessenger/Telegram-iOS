@@ -80,6 +80,21 @@ func textInputTapRecognizerIsEnabled(isInputNodeLoaded: Bool, sendingTextDisable
     return !isInputNodeLoaded || sendingTextDisabled
 }
 
+private func accessibilityTextInputView(in view: UIView) -> UIView {
+    if view is UITextInput {
+        return view
+    }
+    for subview in view.subviews {
+        if !subview.isHidden && subview.alpha > 0.0 {
+            let result = accessibilityTextInputView(in: subview)
+            if result is UITextInput {
+                return result
+            }
+        }
+    }
+    return view
+}
+
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
     return chatTextInputFieldMinHeight(for: presentationInterfaceState.fontSize)
 }
@@ -1221,6 +1236,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         old.resignInputFirstResponder()
         old.asNode.removeFromSupernode()
+        if wasFirstResponder && UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .layoutChanged, argument: new.inputView)
+        }
     }
 
     private func loadTextInputNode(useNative: Bool = false) {
@@ -3407,12 +3425,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if let richTextInputNode = self.richTextInputNode {
             richTextInputNode.textContainerInset = textInputViewRealInsets
             richTextInputNode.textFieldFrame = actualTextFieldFrame
-            // THE pass that applies the field's new height, so it is the one the caret's visibility
-            // depends on: the editor no longer scrolls on its own when the content grows, and the
-            // reveal here is computed against the height being applied rather than the one on screen.
-            // `.immediate` because the panel is already animating that height — animating the offset
-            // inside it would animate the text twice.
             richTextInputNode.updateLayout(size: textFieldFrame.size, caretReveal: .ifNeeded(.immediate))
+            let accessibilityInputView = accessibilityTextInputView(in: richTextInputNode.inputView)
+            let accessibilityBounds = richTextInputNode.inputView.bounds.inset(by: richTextInputNode.inputHitTestSlop)
+            accessibilityInputView.accessibilityIdentifier = "chat.input"
+            accessibilityInputView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(accessibilityBounds, in: richTextInputNode.inputView)
+            accessibilityInputView.accessibilityRespondsToUserInteraction = true
             self.updateInputField(textInputFrame: textFieldFrame, transition: ComponentTransition(transition))
             if shouldUpdateLayout {
                 richTextInputNode.layoutInputField()

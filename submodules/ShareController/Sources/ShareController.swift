@@ -2376,7 +2376,14 @@ public final class ShareController: ViewController {
             if !self.immediateExternalShare {
                 self.controllerNode.animateIn()
             }
+            Queue.mainQueue().after(0.1) { [weak self] in
+                self?.controllerNode.activateInitialAccessibilityFocus()
+            }
         }
+    }
+
+    override public func accessibilityPerformEscape() -> Bool {
+        return self.controllerNode.performAccessibilityEscape()
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

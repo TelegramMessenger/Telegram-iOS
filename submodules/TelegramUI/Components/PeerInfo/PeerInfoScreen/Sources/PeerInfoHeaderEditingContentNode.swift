@@ -27,6 +27,8 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         
         self.avatarTextNode = ImmediateTextNode()
         self.avatarButtonNode = HighlightableButtonNode()
+        self.avatarButtonNode.isAccessibilityElement = true
+        self.avatarButtonNode.accessibilityTraits = [.button]
         
         super.init()
         

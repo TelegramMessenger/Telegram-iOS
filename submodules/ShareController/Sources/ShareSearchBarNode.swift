@@ -18,8 +18,12 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let inputInsets = UIEdgeInsets(top: 10.0, left: 26.0, bottom: 10.0, right: 10.0 + 16.0)
     
     var textUpdated: ((String) -> Void)?
+
+    var accessibilityFocusTarget: UIView {
+        return self.textInputNode.textField
+    }
     
-    init(theme: PresentationTheme, placeholder: String) {
+    init(theme: PresentationTheme, strings: PresentationStrings, placeholder: String) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
@@ -38,6 +42,9 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.displaysAsynchronously = false
         self.clearButton.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor), for: [])
         self.clearButton.isHidden = true
+        self.clearButton.isAccessibilityElement = false
+        self.clearButton.accessibilityLabel = strings.WebSearch_RecentSectionClear
+        self.clearButton.accessibilityTraits = .button
         
         self.textInputNode = TextFieldNode()
         self.textInputNode.fixOffset = false
@@ -108,7 +115,9 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldDidChangeText() {
-        self.clearButton.isHidden = self.textInputNode.textField.text?.isEmpty ?? true
+        let isEmpty = self.textInputNode.textField.text?.isEmpty ?? true
+        self.clearButton.isHidden = isEmpty
+        self.clearButton.isAccessibilityElement = !isEmpty
         self.textUpdated?(self.textInputNode.textField.text ?? "")
     }
     

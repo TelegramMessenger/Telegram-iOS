@@ -1991,9 +1991,9 @@ filegroup(
 )
 
 ios_test_runner(
-    name = "iPhone-17__26.2",
+    name = "iPhone-17__27.0",
     device_type = "iPhone 17",
-    os_version = "26.2",
+    os_version = "27.0",
 )
 
 
@@ -2010,8 +2010,9 @@ ios_ui_test_suite(
     bundle_id = "org.telegram.Telegram-iOS-uitests",
     minimum_os_version = minimum_os_version,
     runners = [
-        ":iPhone-17__26.2",
+        ":iPhone-17__27.0",
     ],
+    timeout = "long",
     tags = ["manual"],
     test_host = "//Telegram",
     visibility = ["@rules_xcodeproj//xcodeproj:generated"],

@@ -101,6 +101,11 @@ private final class PeerInfoScreenCommunityItemNode: PeerInfoScreenItemNode {
 
         self.item = item
         self.selectionNode.pressed = item.action
+        self.activateArea.accessibilityTraits = [.button]
+        self.activateArea.activate = {
+            item.action()
+            return true
+        }
 
         let sideInset: CGFloat = 16.0 + safeInsets.left
         let avatarSize: CGFloat = 30.0

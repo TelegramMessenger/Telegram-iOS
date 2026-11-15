@@ -1,0 +1,11 @@
+--- a/xctestrunner/test_runner/xcresult_util.py
++++ b/xctestrunner/test_runner/xcresult_util.py
+@@ -83,7 +83,7 @@
+     for activity_summary in activity_summaries:
+       if 'attachments' in activity_summary:
+         test_identifier = test_summary_result['identifier']['_value']
+-        for attachment in activity_summary['attachments']['_values']:
++        for attachment in activity_summary['attachments'].get('_values', []):
+           file_name = attachment['filename']['_value']
+           target_file_dir = os.path.join(output_path, 'Attachments',
+                                          test_identifier)

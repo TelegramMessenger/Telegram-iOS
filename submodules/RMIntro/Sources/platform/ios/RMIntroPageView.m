@@ -8,7 +8,9 @@
 
 #import "RMIntroPageView.h"
 
-@implementation RMIntroPageView
+@implementation RMIntroPageView {
+    UIScrollView *_textScrollView;
+}
 
 #define IPAD ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
 
@@ -23,13 +25,18 @@
         self.opaque=YES;
         _headline=headline;
         
-        UILabel *headlineLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, frame.size.width, 64+8)];
-        headlineLabel.font = [UIFont boldSystemFontOfSize:35.0]; //[UIFont fontWithName:@"HelveticaNeue-Light" size:IPAD ? 96/2 : 36];
+        _textScrollView = [[UIScrollView alloc] initWithFrame:self.bounds];
+        _textScrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        _textScrollView.directionalLockEnabled = YES;
+        [self addSubview:_textScrollView];
+
+        UILabel *headlineLabel = [[UILabel alloc] init];
         headlineLabel.text = _headline;
         headlineLabel.textColor = color;
         headlineLabel.textAlignment = NSTextAlignmentCenter;
+        headlineLabel.numberOfLines = 0;
+        headlineLabel.adjustsFontForContentSizeCategory = YES;
         headlineLabel.accessibilityTraits = UIAccessibilityTraitStaticText | UIAccessibilityTraitHeader;
-        headlineLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
         _headerLabel = headlineLabel;
       
         NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
@@ -59,6 +66,7 @@
         }
         
         _description = [[NSMutableAttributedString alloc]initWithString:cleanText];
+        [_description addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:IPAD ? 22.0 : 17.0] range:NSMakeRange(0, _description.length)];
         NSDictionary *boldAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                         [UIFont boldSystemFontOfSize:IPAD ? 22 : 17.0], NSFontAttributeName, nil];
         for (NSValue *nRange in boldRanges)
@@ -71,19 +79,67 @@
                              range:NSMakeRange(0, _description.length)];
         [_description addAttribute:NSForegroundColorAttributeName value:color range:NSMakeRange(0, _description.length)];
         
-        UILabel *descriptionLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 25 + (IPAD ? 22 : 0), frame.size.width, 120+8+5)];
-        descriptionLabel.font = [UIFont systemFontOfSize:IPAD ? 22 : 17.0];
-        descriptionLabel.attributedText = _description;
+        UILabel *descriptionLabel = [[UILabel alloc] init];
         descriptionLabel.numberOfLines=0;
-        descriptionLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
-        [self addSubview:descriptionLabel];
+        descriptionLabel.adjustsFontForContentSizeCategory = YES;
         _descriptionLabel = descriptionLabel;
         
-        [self addSubview:headlineLabel];
+        [_textScrollView addSubview:headlineLabel];
+        [_textScrollView addSubview:descriptionLabel];
+        [self updateFonts];
         
         
     }
     return self;
+}
+
+- (void)updateFonts {
+    UITraitCollection *traits = self.traitCollection;
+    UIFontMetrics *titleMetrics = [UIFontMetrics metricsForTextStyle:UIFontTextStyleLargeTitle];
+    _headerLabel.font = [titleMetrics scaledFontForFont:[UIFont boldSystemFontOfSize:35.0] compatibleWithTraitCollection:traits];
+
+    // UILabel's automatic scaling does not update each font run in attributed text.
+    UIFontMetrics *bodyMetrics = [UIFontMetrics metricsForTextStyle:UIFontTextStyleBody];
+    _descriptionLabel.font = [bodyMetrics scaledFontForFont:[UIFont systemFontOfSize:IPAD ? 22.0 : 17.0] compatibleWithTraitCollection:traits];
+    NSMutableAttributedString *scaledDescription = [_description mutableCopy];
+    [_description enumerateAttribute:NSFontAttributeName inRange:NSMakeRange(0, _description.length) options:0 usingBlock:^(UIFont *font, NSRange range, BOOL *stop) {
+        [scaledDescription addAttribute:NSFontAttributeName value:[bodyMetrics scaledFontForFont:font compatibleWithTraitCollection:traits] range:range];
+    }];
+    _descriptionLabel.attributedText = scaledDescription;
+    [self setNeedsLayout];
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    [super traitCollectionDidChange:previousTraitCollection];
+    if (![self.traitCollection.preferredContentSizeCategory isEqualToString:previousTraitCollection.preferredContentSizeCategory]) {
+        [self updateFonts];
+    }
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    _textScrollView.frame = self.bounds;
+
+    CGFloat inset = 16.0;
+    CGFloat width = CGRectGetWidth(self.bounds);
+    CGFloat textWidth = MAX(0.0, width - 2.0 * inset);
+    CGSize fittingSize = CGSizeMake(textWidth, CGFLOAT_MAX);
+    CGFloat headlineHeight = ceil([_headerLabel sizeThatFits:fittingSize].height);
+    CGFloat descriptionHeight = ceil([_descriptionLabel sizeThatFits:fittingSize].height);
+    CGFloat headlineY = MAX(0.0, floor(36.0 - headlineHeight / 2.0));
+    CGFloat descriptionCenter = 91.5 + (IPAD ? 22.0 : 0.0);
+    CGFloat descriptionY = MAX(headlineY + headlineHeight + 8.0, floor(descriptionCenter - descriptionHeight / 2.0));
+
+    _headerLabel.frame = CGRectMake(inset, headlineY, textWidth, headlineHeight);
+    _descriptionLabel.frame = CGRectMake(inset, descriptionY, textWidth, descriptionHeight);
+    CGFloat viewportHeight = CGRectGetHeight(self.bounds);
+    CGFloat contentHeight = MAX(viewportHeight, CGRectGetMaxY(_descriptionLabel.frame) + 8.0);
+    _textScrollView.contentSize = CGSizeMake(width, contentHeight);
+    _textScrollView.scrollEnabled = contentHeight > viewportHeight;
+    _textScrollView.clipsToBounds = _textScrollView.scrollEnabled;
+    if (!_textScrollView.scrollEnabled) {
+        _textScrollView.contentOffset = CGPointZero;
+    }
 }
 
 

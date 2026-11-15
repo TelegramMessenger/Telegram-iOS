@@ -58,6 +58,9 @@ public final class CollectionTabItemComponent: Component {
                 
         func update(component: CollectionTabItemComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = component.title
+            self.accessibilityTraits = [.staticText]
             
             let environment = environment[EnvironmentType.self].value
                         

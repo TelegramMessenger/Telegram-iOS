@@ -343,6 +343,8 @@ class BazelCommandLine:
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
+        if self.disable_provisioning_profiles:
+            combined_arguments += ['--//Telegram:disableProvisioningProfiles']
         combined_arguments += self.get_define_arguments()
         combined_arguments += self.get_additional_build_arguments()
 
@@ -713,6 +715,8 @@ def test(bazel, arguments):
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
+    if arguments.disableProvisioningProfiles:
+        bazel_command_line.set_disable_provisioning_profiles()
 
     resolve_configuration(
         base_path=os.getcwd(),
@@ -967,6 +971,12 @@ if __name__ == '__main__':
         type=str,
         default=None,
         help='Run only the matching tests (bazel --test_filter; for an ios_unit_test, Class or Class/testMethod).'
+    )
+    testParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='Build simulator test targets without provisioning profiles.'
     )
 
     generateProjectParser = subparsers.add_parser('generateProject', help='Generate Xcode project')
