@@ -217,7 +217,10 @@ local_path_override(
 single_version_override(
     module_name = "xctestrunner",
     patch_strip = 1,
-    patches = ["//build-system/bazel-patches:xctestrunner-collect-test-diagnostics.patch"],
+    patches = [
+        "//build-system/bazel-patches:xctestrunner-collect-test-diagnostics.patch",
+        "//build-system/bazel-patches:xctestrunner-empty-attachments.patch",
+    ],
 )
 
 bazel_dep(name = "rules_swift", repo_name = "build_bazel_rules_swift")
