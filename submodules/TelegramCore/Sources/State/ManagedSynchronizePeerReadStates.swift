@@ -31,6 +31,14 @@ private final class SynchronizePeerReadStatesContextImpl {
     private var activeOperations: [PeerId: Operation] = [:]
     private var pendingOperations: [PeerId: PeerReadStateSynchronizationOperation] = [:]
     
+    // A permanently failing operation must not be restarted in a tight loop: retry
+    // attempts back off exponentially per peer and reset once one completes. The
+    // backoff is tied to the operation that failed, so a *changed* operation for
+    // the same peer (a fresh read of the chat) still starts immediately.
+    private var operationRetryCounts: [PeerId: Int] = [:]
+    private var operationRetryAt: [PeerId: Double] = [:]
+    private var operationRetryLast: [PeerId: PeerReadStateSynchronizationOperation] = [:]
+    
     init(queue: Queue, network: Network, postbox: Postbox, stateManager: AccountStateManager) {
         self.queue = queue
         self.network = network
@@ -58,6 +66,23 @@ private final class SynchronizePeerReadStatesContextImpl {
         let peerIds = Set(self.currentState.keys).union(Set(self.pendingOperations.keys))
         
         for peerId in peerIds {
+            if peerId.id == PeerId.Id.min {
+                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): dropping operation for invalid peer id")
+                let postbox = self.postbox
+                _ = postbox.transaction { transaction -> Void in
+                    transaction.confirmSynchronizedIncomingReadState(peerId)
+                }.startStandalone()
+                continue
+            }
+            if let retryAt = self.operationRetryAt[peerId], CFAbsoluteTimeGetCurrent() < retryAt {
+                if let lastOperation = self.operationRetryLast[peerId], self.currentState[peerId] != lastOperation {
+                    self.operationRetryAt.removeValue(forKey: peerId)
+                    self.operationRetryCounts.removeValue(forKey: peerId)
+                    self.operationRetryLast.removeValue(forKey: peerId)
+                } else {
+                    continue
+                }
+            }
             var maybeOperation: PeerReadStateSynchronizationOperation?
             if let operation = self.currentState[peerId] {
                 maybeOperation = operation
@@ -100,9 +125,22 @@ private final class SynchronizePeerReadStatesContextImpl {
                         }
                         if let activeOperation = activeOperation {
                             if let current = strongSelf.activeOperations[peerId], current === activeOperation {
-                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation retry \(operation)")
+                                let retryCount = (strongSelf.operationRetryCounts[peerId] ?? 0) + 1
+                                strongSelf.operationRetryCounts[peerId] = retryCount
+                                strongSelf.operationRetryLast[peerId] = operation
+                                let delay = min(pow(2.0, Double(retryCount - 1)), 32.0)
+                                strongSelf.operationRetryAt[peerId] = CFAbsoluteTimeGetCurrent() + delay
+                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation retry \(operation), in \(delay)s")
                                 strongSelf.activeOperations.removeValue(forKey: peerId)
-                                strongSelf.update()
+                                strongSelf.queue.after(delay, { [weak strongSelf] in
+                                    guard let strongSelf = strongSelf else {
+                                        return
+                                    }
+                                    if let retryAt = strongSelf.operationRetryAt[peerId], CFAbsoluteTimeGetCurrent() + 0.01 >= retryAt {
+                                        strongSelf.operationRetryAt.removeValue(forKey: peerId)
+                                    }
+                                    strongSelf.update()
+                                })
                             }
                         }
                     }, completed: { [weak self, weak activeOperation] in
@@ -113,6 +151,9 @@ private final class SynchronizePeerReadStatesContextImpl {
                             if let current = strongSelf.activeOperations[peerId], current === activeOperation {
                                 Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation completed \(operation)")
                                 strongSelf.activeOperations.removeValue(forKey: peerId)
+                                strongSelf.operationRetryCounts.removeValue(forKey: peerId)
+                                strongSelf.operationRetryAt.removeValue(forKey: peerId)
+                                strongSelf.operationRetryLast.removeValue(forKey: peerId)
                                 strongSelf.update()
                             }
                         }

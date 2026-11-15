@@ -32,6 +32,17 @@ final class MessageHistorySynchronizeReadStateTable: Table {
     }
     
     func set(_ peerId: PeerId, operation: PeerReadStateSynchronizationOperation?, operations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+        if peerId.id == PeerId.Id.min {
+            // A zero peer id is the minimum sentinel and never a real peer. An operation
+            // queued for it can never complete (it cannot resolve to an InputPeer on
+            // the consumer side) and is retried without backoff forever, pinning a
+            // core. Treat any attempted operation for it as a removal, which also
+            // clears any row left by earlier builds.
+            let noOperation: PeerReadStateSynchronizationOperation? = nil
+            self.updatedPeerIds[peerId] = noOperation
+            operations[peerId] = noOperation
+            return
+        }
         self.updatedPeerIds[peerId] = operation
         operations[peerId] = operation
     }
