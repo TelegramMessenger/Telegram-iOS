@@ -32,6 +32,47 @@ func pollCloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
 }
 
 
+func _internal_requestMessagePollResults(account: Account, messageId: MessageId, pollId: MediaId) -> Signal<Message?, NoError> {
+    guard messageId.namespace == Namespaces.Message.Cloud else {
+        return .single(nil)
+    }
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        guard let message = transaction.getMessage(messageId), message.media.contains(where: { ($0 as? TelegramMediaPoll)?.pollId == pollId }), let peer = transaction.getPeer(messageId.peerId) else {
+            return nil
+        }
+        if let cachedData = transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData, let minAvailableMessageId = cachedData.minAvailableMessageId, messageId <= minAvailableMessageId {
+            return nil
+        }
+        return apiInputPeer(peer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Message?, NoError> in
+        guard let inputPeer else {
+            return .single(nil)
+        }
+        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id, pollHash: 0))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Message?, NoError> in
+            guard let updates else {
+                return .single(nil)
+            }
+            account.stateManager.addUpdates(updates)
+            return account.stateManager.pollStateUpdateCompletion()
+            |> take(1)
+            |> mapToSignal { _ -> Signal<Message?, NoError> in
+                return account.postbox.transaction { transaction -> Message? in
+                    guard let message = transaction.getMessage(messageId), message.media.contains(where: { ($0 as? TelegramMediaPoll)?.pollId == pollId }) else {
+                        return nil
+                    }
+                    return message
+                }
+            }
+        }
+    }
+}
+
 public enum RequestMessageSelectPollOptionError {
     case generic
     case restrictedToSubscribers

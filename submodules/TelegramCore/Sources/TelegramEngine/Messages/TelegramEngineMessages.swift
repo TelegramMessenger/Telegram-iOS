@@ -369,6 +369,10 @@ public extension TelegramEngine {
             return _internal_installInteractiveReadReactionsAction(postbox: self.account.postbox, stateManager: self.account.stateManager, peerId: peerId, getVisibleRange: getVisibleRange, didReadReactionsInMessages: didReadReactionsInMessages)
         }
 
+        public func requestMessagePollResults(messageId: MessageId, pollId: MediaId) -> Signal<Message?, NoError> {
+            return _internal_requestMessagePollResults(account: self.account, messageId: messageId, pollId: pollId)
+        }
+
         public func requestMessageSelectPollOption(messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
             return _internal_requestMessageSelectPollOption(account: self.account, messageId: messageId, opaqueIdentifiers: opaqueIdentifiers)
         }
