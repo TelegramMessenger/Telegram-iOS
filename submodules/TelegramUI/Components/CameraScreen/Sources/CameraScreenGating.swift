@@ -161,6 +161,20 @@ public func cameraScreenPushesAudioSessionOnActivation(mode: CameraScreenModeKin
     return true
 }
 
+public func cameraScreenAudioSessionMixesWithOthers(mode: CameraScreenModeKind) -> Bool {
+    if case .chat = mode {
+        return true
+    }
+    return false
+}
+
+public func cameraScreenDefersActivationUntilTransitionCommits(mode: CameraScreenModeKind, isTablet: Bool) -> Bool {
+    guard case .story = mode else {
+        return false
+    }
+    return !isTablet
+}
+
 public func chatCameraNeedsAudioSession(captureKind: CameraScreenCaptureKind, isRecording: Bool, allowVideo: Bool, hasAudio: Bool) -> Bool {
     guard allowVideo && hasAudio else {
         return false

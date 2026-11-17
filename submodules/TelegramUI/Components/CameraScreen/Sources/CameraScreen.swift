@@ -5445,8 +5445,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     fileprivate private(set) var isCameraActivated = false
     private var cameraActivationLink: SharedDisplayLinkDriver.Link?
 
+    private var isStoryTransitionCommitted = false
+
     private func scheduleCameraActivation() {
         guard !self.isCameraActivated, !self.isDismissed, self.cameraActivationLink == nil else {
+            return
+        }
+        if !self.isStoryTransitionCommitted, cameraScreenDefersActivationUntilTransitionCommits(mode: self.mode.kind, isTablet: self.validLayout?.metrics.isTablet == true) {
             return
         }
         var hasPresentedFrame = false
@@ -5643,7 +5648,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: true), activate: { _ in
+        let withOthers = cameraScreenAudioSessionMixesWithOthers(mode: self.mode.kind)
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: withOthers), activate: { _ in
             if #available(iOS 13.0, *) {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
@@ -6102,6 +6108,12 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
         } else {
             if transitionFraction > 0.33 || velocity > 1000.0 {
+                if !self.isStoryTransitionCommitted {
+                    self.isStoryTransitionCommitted = true
+                    if !self.isDismissed {
+                        self.activateCamera()
+                    }
+                }
                 self.ignoreStatusBar = false
                 self.updateStatusBarAppearance()
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
