@@ -193,6 +193,21 @@ final class CameraScreenGatingTests: XCTestCase {
         XCTAssertFalse(chatCameraNeedsAudioSession(captureKind: .video, isRecording: false, allowVideo: false, hasAudio: true))
     }
 
+    func testCameraAudioSessionPausesOtherAudioOutsideChat() {
+        XCTAssertTrue(cameraScreenAudioSessionMixesWithOthers(mode: .chat))
+        for mode in [CameraScreenModeKind.story, .sticker, .avatar] {
+            XCTAssertFalse(cameraScreenAudioSessionMixesWithOthers(mode: mode))
+        }
+    }
+
+    func testStoryCameraStartsOnlyOnceTheSwipeCommits() {
+        XCTAssertTrue(cameraScreenDefersActivationUntilTransitionCommits(mode: .story, isTablet: false))
+        XCTAssertFalse(cameraScreenDefersActivationUntilTransitionCommits(mode: .story, isTablet: true))
+        for mode in [CameraScreenModeKind.chat, .sticker, .avatar] {
+            XCTAssertFalse(cameraScreenDefersActivationUntilTransitionCommits(mode: mode, isTablet: false))
+        }
+    }
+
     func testHoldRecordingIsVideoInterface() {
         XCTAssertEqual(chatCameraEffectiveCaptureKind(captureKind: .photo, isRecording: false), .photo)
         XCTAssertEqual(chatCameraEffectiveCaptureKind(captureKind: .photo, isRecording: true), .video)
