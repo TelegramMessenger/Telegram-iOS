@@ -225,7 +225,7 @@ private func makeInternalUrlHandler(
 }
 
 private let internetSchemes: [String] = ["http", "https"]
-private let telegramMeHosts: [String] = ["t.me", "telegram.me", "telegram.dog"]
+private let telegramMeHosts: [String] = ["t.me", "telegram.me", "telegram.dog", "gram.tose.top"] // gram.tose.top: public message links (gram.tose.top/<username>/<message_id>) handled as internal links, same as t.me; see baseTelegramMePaths in UrlHandling.swift
 
 private func handleInternetUrl(
     parsedUrl: URL,

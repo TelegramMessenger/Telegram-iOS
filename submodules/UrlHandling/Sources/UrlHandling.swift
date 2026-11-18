@@ -11,7 +11,15 @@ import WalletContext
 
 private let baseTelegramMePaths = [
     "telegram.me",
-    "t.me", "telegram.dog"
+    "t.me", "telegram.dog",
+    // Public message links served by the self-hosted public search
+    // (gram.tose.top/<username>/<message_id>); parsed by the same
+    // t.me path logic via parseInternalUrl. Hardcoded like the t.me
+    // hosts above: there is no server app-config key for additional
+    // internal-link hosts (UrlHandlingConfiguration only carries
+    // autologin/url-auth domains), and the app config comes from
+    // Telegram's servers, so it cannot be driven by configuration.
+    "gram.tose.top"
 ]
 private let telegramWebShortLinkHosts = [
     "a.t.me", 
