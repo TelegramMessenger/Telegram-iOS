@@ -1429,19 +1429,24 @@ func _internal_convertStarGift(account: Account, reference: StarGiftReference) -
 }
 
 func _internal_deleteStarGift(account: Account, reference: StarGiftReference) -> Signal<Never, NoError> {
+    return _internal_deleteStarGiftWithResult(account: account, reference: reference)
+    |> ignoreValues
+}
+
+func _internal_deleteStarGiftWithResult(account: Account, reference: StarGiftReference) -> Signal<Bool, NoError> {
     return account.postbox.transaction { transaction in
         return reference.apiStarGiftReference(transaction: transaction)
     }
-    |> mapToSignal { starGift in
+    |> mapToSignal { starGift -> Signal<Bool, NoError> in
         guard let starGift else {
-            return .complete()
+            return .single(false)
         }
         return account.network.request(Api.functions.payments.deleteStarGift(stargift: starGift))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result in
+        |> mapToSignal { result -> Signal<Bool, NoError> in
             if let result, case .boolTrue = result {
                 let ownerPeerId: EnginePeer.Id
                 if case let .peer(peerId, _) = reference {
@@ -1449,7 +1454,7 @@ func _internal_deleteStarGift(account: Account, reference: StarGiftReference) ->
                 } else {
                     ownerPeerId = account.peerId
                 }
-                return account.postbox.transaction { transaction -> Void in
+                return account.postbox.transaction { transaction -> Bool in
                     transaction.updatePeerCachedData(peerIds: Set([ownerPeerId]), update: { _, cachedData -> CachedPeerData? in
                         if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
                             return cachedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
@@ -1459,11 +1464,11 @@ func _internal_deleteStarGift(account: Account, reference: StarGiftReference) ->
                             return cachedData
                         }
                     })
+                    return true
                 }
             }
-            return .complete()
+            return .single(false)
         }
-        |> ignoreValues
     }
 }
 
