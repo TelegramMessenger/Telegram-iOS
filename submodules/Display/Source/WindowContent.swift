@@ -219,6 +219,32 @@ func isHardwareKeyboardBar(keyboardFrame: CGRect, deviceType: DeviceType, respon
     return false
 }
 
+enum TabletKeyboardLayoutUpdate: Equatable {
+    case ignore
+    case clear
+    case measureFrame
+}
+
+func resolveTabletKeyboardLayoutUpdate(isLocal: Bool?, hasFocusedInput: Bool, endFrame: CGRect?, screenBottom: CGFloat?, isHiding: Bool) -> TabletKeyboardLayoutUpdate {
+    // Visible apps also receive keyboard notifications from other apps in iPad multitasking.
+    // Discard any stale inset after a focus handoff, but leave a still-focused input alone.
+    if isLocal == false {
+        return hasFocusedInput ? .ignore : .clear
+    }
+    if isHiding {
+        return .clear
+    }
+    guard let endFrame else {
+        return .ignore
+    }
+    // The end frame can have zero height when the keyboard is dismissed. Check its position
+    // before discarding an empty frame, which on its own does not indicate a dismissal.
+    if let screenBottom, endFrame.minY >= screenBottom - 1.0 {
+        return .clear
+    }
+    return endFrame.isEmpty ? .ignore : .measureFrame
+}
+
 public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
     if view.isFirstResponder {
         return (view, accessoryHeight)
@@ -677,13 +703,22 @@ public class Window1 {
         #endif
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
-                var isTablet = false
-                if case .regular = strongSelf.windowLayout.metrics.widthClass {
-                    isTablet = true
+                let endFrame = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
+                if strongSelf.deviceMetrics.type == .tablet {
+                    switch strongSelf.tabletKeyboardLayoutUpdate(for: notification, endFrame: endFrame, isHiding: false) {
+                    case .ignore:
+                        return
+                    case .clear:
+                        strongSelf.updateKeyboardHeight(0.0, notification: notification)
+                        return
+                    case .measureFrame:
+                        break
+                    }
                 }
-                
-                var keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
-                if isTablet && keyboardFrame.isEmpty {
+
+                let isRegularWidth = strongSelf.windowLayout.metrics.widthClass == .regular
+                var keyboardFrame = endFrame ?? .zero
+                if isRegularWidth && keyboardFrame.isEmpty {
                     return
                 }
                 
@@ -753,7 +788,7 @@ public class Window1 {
                 
                 var keyboardHeight: CGFloat
                 if keyboardFrame.isEmpty || keyboardFrame.maxY < screenHeight {
-                    if isWindowed || (isTablet && screenHeight - keyboardFrame.maxY < 5.0) {
+                    if isWindowed || (isRegularWidth && screenHeight - keyboardFrame.maxY < 5.0) {
                         if let minKeyboardY {
                             keyboardFrame.origin.y = minKeyboardY
                         }
@@ -792,39 +827,16 @@ public class Window1 {
                     }
                 }
                 
-                var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
-                if duration > Double.ulpOfOne {
-                    if #available(iOS 26.0, *) {
-                    } else {
-                        duration = 0.5
-                    }
-                }
-                let curve: UInt = (notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
-                
-                let transitionCurve: ContainedViewLayoutTransitionCurve
-                if curve == 7 {
-                    transitionCurve = .spring
-                } else {
-                    transitionCurve = .easeInOut
-                }
-                
-                var transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: transitionCurve)
-                
-                
-                if strongSelf.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch, let inputHeight = strongSelf.windowLayout.inputHeight {
-                    if abs(inputHeight - keyboardHeight) <= 44.1 {
-                        transition = .immediate
-                    }
-                }
-                
-                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: transition, overrideTransition: false) }
+                strongSelf.updateKeyboardHeight(keyboardHeight, notification: notification)
             }
         })
         self.keyboardWillHideObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: nil, using: { [weak self] notification in
-            guard let self else {
+            guard let self, self.deviceMetrics.type == .tablet else {
                 return
             }
-            let _ = self
+            if self.tabletKeyboardLayoutUpdate(for: notification, endFrame: nil, isHiding: true) == .clear {
+                self.updateKeyboardHeight(0.0, notification: notification)
+            }
         })
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -1407,6 +1419,33 @@ public class Window1 {
         postUpdateToInterfaceOrientationBlocks.append(f)
     }
     
+    private func tabletKeyboardLayoutUpdate(for notification: Notification, endFrame: CGRect?, isHiding: Bool) -> TabletKeyboardLayoutUpdate {
+        let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? NSNumber)?.boolValue
+        let view = self.hostView.eventView
+        let hasFocusedInput = isLocal == false
+            && (view as? UIWindow ?? view.window)?.isKeyWindow == true
+            && getFirstResponderAndAccessoryHeight(view).0 != nil
+        let screenBottom = (notification.object as? UIScreen)?.coordinateSpace.bounds.maxY
+        return resolveTabletKeyboardLayoutUpdate(isLocal: isLocal, hasFocusedInput: hasFocusedInput, endFrame: endFrame, screenBottom: screenBottom, isHiding: isHiding)
+    }
+
+    private func updateKeyboardHeight(_ keyboardHeight: CGFloat, notification: Notification) {
+        var duration = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
+        if duration > Double.ulpOfOne {
+            if #available(iOS 26.0, *) {
+            } else {
+                duration = 0.5
+            }
+        }
+        let curve = (notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
+        let transitionCurve: ContainedViewLayoutTransitionCurve = curve == 7 ? .spring : .easeInOut
+        var transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: transitionCurve)
+        if self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch, let inputHeight = self.windowLayout.inputHeight, abs(inputHeight - keyboardHeight) <= 44.1 {
+            transition = .immediate
+        }
+        self.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: transition, overrideTransition: false) }
+    }
+
     private func updateLayout(_ update: (inout UpdatingLayout) -> ()) {
         if self.updatingLayout == nil {
             var updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
